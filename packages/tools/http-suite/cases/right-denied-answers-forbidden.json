@@ -1,0 +1,58 @@
+{
+  "id": "right-denied-answers-forbidden",
+  "title": "A roles right the decider denies answers 403 api.forbidden",
+  "checks": ["CHK-018"],
+  "profiles": ["default", "hand-written"],
+  "script": {
+    "decisions": [
+      {
+        "name": "roles",
+        "purpose": "route",
+        "deny": {
+          "code": "api.forbidden"
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:create}}"
+        },
+        "body": {
+          "title": "Not an editor"
+        }
+      },
+      "expect": {
+        "status": 403,
+        "body": {
+          "code": "api.forbidden"
+        }
+      }
+    }
+  ],
+  "hookCalls": [
+    {
+      "hook": "authenticate:user",
+      "operation": "tasks.createTask"
+    },
+    {
+      "hook": "decide:throttle",
+      "operation": "tasks.createTask",
+      "bucket": {
+        "id": "write",
+        "values": ["00000000-0000-4000-8000-000000000001"],
+        "limit": 60,
+        "windowMs": 60000
+      }
+    },
+    {
+      "hook": "decide:roles",
+      "operation": "tasks.createTask"
+    }
+  ]
+}

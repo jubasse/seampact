@@ -1,0 +1,404 @@
+name: JVM plugins
+
+# The Gradle and Maven plugins (ADR 0010, ADR 0011). The Gradle plugin's TestKit builds generate, compile and cache a
+# Spring Boot app from the reference contract, on Java 21 with the Gradle 8.14 floor and on Java 21 and 25 with the
+# repository's Gradle. The Maven plugin's tests build the same app with a real Maven, 3.9 and 4, on Java 21 and 25,
+# and generate one app with both plugins to compare the files with each other and with the spring-boot golden tree. The compiler binary is a stub, so the jobs run with Node removed from the runner. The channel smoke
+# serves a bundle of the reference contract and a tampered copy as a release asset and from a git tag
+# (`scripts/dist-smoke`, which needs Node); each plugin generates and checks the consumer from each channel and refuses
+# the tampered copy. On a pull request or a push they run only when the change touches a watched path; `jvm-plugins` is the one
+# check to require. A pull request to develop runs the Gradle floor and Maven 3.9 on Java 21; a push to develop adds the
+# latest Gradle and Maven 3.9 on Java 25, the other Gradle row and the channel smoke; a pull request to main runs the
+# channel smoke only when the runner, a plugin, the bundle fetcher or the smoke changes; Maven 4 release candidates run
+# nightly.
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  merge_group:
+    types: [checks_requested]
+    branches: [main, develop]
+  workflow_dispatch:
+  # The nightly and manual runs are the only ones that write the Gradle caches, from the first row of each pull request job;
+  # every other run and row reads them.
+  schedule:
+    - cron: "30 0 * * *"
+
+# Maven Resolver retries a 429 or 503 from a registry after a growing pause: the `connector` keys are read by
+# Maven 3.9 (Resolver 1.9), the `transport` keys by Maven 4 (Resolver 2). setup-java keeps this value, `-ntp` included.
+env:
+  MAVEN_ARGS: >-
+    -ntp
+    -Daether.connector.http.retryHandler.count=5 -Daether.connector.http.retryHandler.interval=5000
+    -Daether.transport.http.retryHandler.count=5 -Daether.transport.http.retryHandler.interval=5000
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jvm-plugins-${{ github.event_name }}-${{ github.event_name == 'push' && github.sha || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      jvm-plugins: ${{ steps.detect.outputs.run }}
+      queue: ${{ steps.detect.outputs.queue }}
+      post-merge: ${{ steps.detect.outputs.post-merge }}
+      drift: ${{ steps.detect.outputs.drift }}
+      # The channel smoke fetches from Maven Central: a queue row, which runs only when what it proves changes, and a
+      # push and the drift events always run.
+      channel-smoke: >-
+        ${{ steps.detect.outputs.post-merge == 'true'
+        || (steps.detect.outputs.queue == 'true' && steps.channel-smoke.outputs.run == 'true') }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history without file contents: the change list reads commits and trees only, and only the shared
+          # actions are checked out.
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout: .github/actions
+          persist-credentials: false
+      - name: Detect a change to the JVM modules or what they read
+        id: detect
+        uses: ./.github/actions/lane-changes
+        with:
+          # The JVM modules, the config, bundle and IR schemas, the bundle vectors, the compatibility matrix, the
+          # reference contract and the golden IR, the consumer the Maven tests and the channel smoke run, the smoke's channels, and this workflow.
+          watched-paths: |
+            ^jvm/
+            ^packages/core/spec/schemas/(bundle|config|ir)/
+            ^packages/core/spec/vectors/bundle/
+            ^packages/core/spec/compatibility/
+            ^fixtures/reference/
+            ^fixtures/golden/
+            ^scripts/consumers/targets/spring-boot/
+            ^scripts/dist-smoke/
+            ^\.github/actions/
+            ^\.github/workflows/p6-jvm-plugins\.yml$
+      - name: Detect a change to what the channel smoke proves
+        id: channel-smoke
+        uses: ./.github/actions/lane-changes
+        with:
+          # The runner, both plugins, the runtime the consumer compiles against and the build logic that writes the
+          # version constants G2 compares, the bundle fetcher, the smoke's channels and consumer script, and this workflow.
+          watched-paths: |
+            ^jvm/seampact-runner/
+            ^jvm/seampact-spring-runtime/
+            ^jvm/build-logic/
+            ^jvm/seampact-gradle-plugin/
+            ^jvm/seampact-maven-plugin/
+            ^jvm/seampact-ir/src/main/kotlin/io/github/jubasse/seampact/ir/bundle/
+            ^scripts/dist-smoke/
+            ^scripts/consumers/targets/spring-boot/channel-smoke\.sh$
+            ^\.github/actions/
+            ^\.github/workflows/p6-jvm-plugins\.yml$
+
+  # The PR rows; the post-merge job below runs the same steps on the other row.
+  gradle-plugin:
+    name: &gradle-plugin-name gradle plugin (Java ${{ matrix.test-jdk }}, Gradle ${{ matrix.test-gradle }})
+    needs: changes
+    if: needs.changes.outputs.jvm-plugins == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Gradle 8.14, the floor (Spring Boot 4's), runs on Java 24 at most.
+          - test-jdk: 21
+            test-gradle: "8.14"
+    steps: &gradle-plugin-steps
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Shared with the maven-plugin job through the YAML anchor.
+      - &remove-node
+        name: Remove Node from the runner, so the JVM path is proven to need none
+        shell: bash
+        run: |
+          set -euo pipefail
+          for node in $(which -a node nodejs npm npx corepack 2>/dev/null | sort -u); do
+            sudo rm -f "$node"
+          done
+          if command -v node; then
+            echo "Node is still on the PATH."
+            exit 1
+          fi
+      # Both JDKs are installed: Gradle runs on the last one, and the tests run on the matrix one, which the
+      # toolchain detection finds without a download.
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: |
+            21
+            25
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          # One writer per pull request job, its first row in the nightly or a manual run, so the cache holds one Gradle home and
+          # dependency set per job. The other rows restore that entry; the queue, post-merge and drift copies, which write
+          # none, restore the latest entry of the runner's OS.
+          cache-read-only: >-
+            ${{ (github.event_name != 'schedule' && github.event_name != 'workflow_dispatch') || strategy.job-index != 0 || endsWith(github.job, '-post-merge')
+            || endsWith(github.job, '-queue') || endsWith(github.job, '-drift') }}
+      - uses: ./.github/actions/gradle-retry
+      # The TestKit builds have their own Gradle user home, which setup-gradle does not cache: this keeps its
+      # third-party downloads (the sample apps' Spring Boot dependencies from Maven Central) only. The per-version
+      # caches, the daemons and the seampact cache stay out, and seampact's modules come from a file repository,
+      # which Gradle does not copy into modules-2. Only pushes and nightly runs save, as in the maven-cache action.
+      - name: Compute the TestKit cache key
+        id: testkit-cache-key
+        shell: bash
+        env:
+          JOB_ID: ${{ github.job }}
+          TEST_GRADLE: ${{ matrix.test-gradle }}
+          # The files that declare the sample apps' plugins and dependencies; another test edit keeps the entry.
+          INPUTS_HASH: >-
+            ${{ hashFiles('jvm/seampact-gradle-plugin/src/test/kotlin/io/github/jubasse/seampact/gradle/SampleApp.kt',
+            'jvm/seampact-gradle-plugin/src/test/kotlin/io/github/jubasse/seampact/gradle/GeneratePluginTest.kt',
+            'jvm/seampact-gradle-plugin/src/test/kotlin/io/github/jubasse/seampact/gradle/MatrixCheckTest.kt',
+            'jvm/seampact-gradle-plugin/src/test/kotlin/io/github/jubasse/seampact/gradle/SpringRuntimeCheckTest.kt',
+            'jvm/gradle/libs.versions.toml', 'jvm/gradle.properties') }}
+        run: |
+          set -euo pipefail
+          if [ -z "$INPUTS_HASH" ]; then
+            echo "testkit-cache: hashFiles matched no file; check out the repository before this step." >&2
+            exit 1
+          fi
+          echo "key=gradle-testkit-${RUNNER_OS}-${JOB_ID}-${TEST_GRADLE}-${INPUTS_HASH}" >> "$GITHUB_OUTPUT"
+          echo "restore-prefix=gradle-testkit-${RUNNER_OS}-${JOB_ID}-${TEST_GRADLE}-" >> "$GITHUB_OUTPUT"
+      - name: Restore the TestKit downloads
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: &testkit-cache-paths |
+            jvm/seampact-gradle-plugin/build/testkit/caches/modules-2/files-2.1
+            jvm/seampact-gradle-plugin/build/testkit/caches/modules-2/metadata-2.*
+          key: ${{ steps.testkit-cache-key.outputs.key }}
+          restore-keys: ${{ steps.testkit-cache-key.outputs.restore-prefix }}
+      - name: Check the Gradle plugin on Java ${{ matrix.test-jdk }} and Gradle ${{ matrix.test-gradle }}
+        working-directory: jvm
+        env:
+          TEST_JDK: ${{ matrix.test-jdk }}
+          TEST_GRADLE: ${{ matrix.test-gradle }}
+        run: |
+          set -euo pipefail
+          gradle_flag=()
+          if [ "$TEST_GRADLE" != "wrapper" ]; then gradle_flag=("-PtestGradle=$TEST_GRADLE"); fi
+          ./gradlew :seampact-gradle-plugin:check -PtestJdk="$TEST_JDK" "${gradle_flag[@]}"
+      - name: Save the TestKit downloads
+        if: github.event_name != 'pull_request' && github.event_name != 'merge_group'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: *testkit-cache-paths
+          key: ${{ steps.testkit-cache-key.outputs.key }}
+
+  gradle-plugin-queue:
+    name: *gradle-plugin-name
+    needs: changes
+    if: needs.changes.outputs.queue == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - test-jdk: 25
+            test-gradle: wrapper
+    steps: *gradle-plugin-steps
+
+  gradle-plugin-post-merge:
+    name: *gradle-plugin-name
+    needs: changes
+    if: needs.changes.outputs.post-merge == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - test-jdk: 21
+            test-gradle: wrapper
+    steps: *gradle-plugin-steps
+
+  # The PR rows, on the 3.9 floor; the drift job below runs the same steps on the Maven 4 release candidate.
+  maven-plugin:
+    name: &maven-plugin-name maven plugin (Java ${{ matrix.test-jdk }}, Maven ${{ matrix.test-maven }})
+    needs: changes
+    if: needs.changes.outputs.jvm-plugins == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        test-jdk: [21]
+        test-maven: ["3.9.16"]
+    steps: &maven-plugin-steps
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - *remove-node
+      # Both JDKs are installed: Gradle runs on the last one, and the tests (and their Maven builds) run on the matrix
+      # one, which the toolchain detection finds without a download.
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: |
+            21
+            25
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          # One writer per pull request job, its first row in the nightly or a manual run, so the cache holds one Gradle home and
+          # dependency set per job. The other rows restore that entry; the queue, post-merge and drift copies, which write
+          # none, restore the latest entry of the runner's OS.
+          cache-read-only: >-
+            ${{ (github.event_name != 'schedule' && github.event_name != 'workflow_dispatch') || strategy.job-index != 0 || endsWith(github.job, '-post-merge')
+            || endsWith(github.job, '-queue') || endsWith(github.job, '-drift') }}
+      - uses: ./.github/actions/gradle-retry
+      - name: Check the Maven plugin on Java ${{ matrix.test-jdk }} and Maven ${{ matrix.test-maven }}
+        working-directory: jvm
+        env:
+          TEST_JDK: ${{ matrix.test-jdk }}
+          TEST_MAVEN: ${{ matrix.test-maven }}
+        run: ./gradlew :seampact-maven-plugin:check -PtestJdk="$TEST_JDK" -PtestMaven="$TEST_MAVEN"
+
+  maven-plugin-queue:
+    name: *maven-plugin-name
+    needs: changes
+    if: needs.changes.outputs.queue == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        test-jdk: [25]
+        test-maven: ["3.9.16"]
+    steps: *maven-plugin-steps
+
+  maven-plugin-drift:
+    name: *maven-plugin-name
+    needs: changes
+    if: needs.changes.outputs.drift == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        test-jdk: [21, 25]
+        test-maven: ["4.0.0-rc-7"]
+    steps: *maven-plugin-steps
+
+  channel-smoke:
+    name: channel smoke (${{ matrix.build-tool }})
+    needs: changes
+    if: needs.changes.outputs.channel-smoke == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        build-tool: [gradle, maven]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: 25
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          # One writer per pull request job, its first row in the nightly or a manual run, so the cache holds one Gradle home and
+          # dependency set per job. The other rows restore that entry; the queue, post-merge and drift copies, which write
+          # none, restore the latest entry of the runner's OS.
+          cache-read-only: >-
+            ${{ (github.event_name != 'schedule' && github.event_name != 'workflow_dispatch') || strategy.job-index != 0 || endsWith(github.job, '-post-merge')
+            || endsWith(github.job, '-queue') || endsWith(github.job, '-drift') }}
+      - uses: ./.github/actions/gradle-retry
+      - name: Restore the Maven downloads
+        if: matrix.build-tool == 'maven'
+        uses: ./.github/actions/maven-cache
+        with:
+          step: restore
+      - name: Publish the JVM modules to Maven local
+        if: matrix.build-tool == 'maven'
+        working-directory: jvm
+        run: >-
+          ./gradlew :seampact-ir:publishToMavenLocal :seampact-hooks:publishToMavenLocal
+          :seampact-spring-runtime:publishToMavenLocal :seampact-spring-boot:publishToMavenLocal :seampact-runner:publishToMavenLocal
+          :seampact-maven-plugin:publishToMavenLocal
+      - name: Serve the release and git channels
+        shell: bash
+        run: |
+          set -euo pipefail
+          served="$RUNNER_TEMP/served.json"
+          node --experimental-transform-types --import ./scripts/ir-models/register.ts scripts/dist-smoke/cli.ts serve \
+            --work "$RUNNER_TEMP/channels" > "$served" 2> "$RUNNER_TEMP/channels.log" &
+          for _ in $(seq 1 60); do
+            if [ -s "$served" ]; then exit 0; fi
+            sleep 2
+          done
+          echo "The channels did not start; their log:"
+          cat "$RUNNER_TEMP/channels.log"
+          exit 1
+      # The Maven wrapper downloads its Maven from Maven Central with no retry of its own; this step fetches it into
+      # ~/.m2/wrapper with retries and backoff, so the smoke's runs find it there.
+      - name: Download the Maven wrapper's distribution with retries
+        if: matrix.build-tool == 'maven'
+        shell: bash
+        working-directory: scripts/consumers/targets/spring-boot/maven
+        run: |
+          set -euo pipefail
+          for delay in 10 30 90; do
+            if ./mvnw -B --version; then exit 0; fi
+            echo "Retrying the Maven download in ${delay} s."
+            sleep "$delay"
+          done
+          ./mvnw -B --version
+      - name: Generate and check from each channel with the ${{ matrix.build-tool }} plugin
+        env:
+          BUILD_TOOL: ${{ matrix.build-tool }}
+        run: >-
+          sh scripts/consumers/targets/spring-boot/channel-smoke.sh "$RUNNER_TEMP/served.json" "$BUILD_TOOL"
+          "$RUNNER_TEMP/smoke" "$GITHUB_WORKSPACE/jvm"
+      - name: Save the Maven downloads
+        if: matrix.build-tool == 'maven'
+        uses: ./.github/actions/maven-cache
+        with:
+          step: save
+
+  # The required check: a skipped job passes only when the change filter said skip; a failed or cancelled one fails.
+  jvm-plugins:
+    # Every job this check stands for is listed here, or its failure would not reach the required check.
+    needs:
+      - changes
+      - gradle-plugin
+      - gradle-plugin-queue
+      - gradle-plugin-post-merge
+      - maven-plugin
+      - maven-plugin-queue
+      - maven-plugin-drift
+      - channel-smoke
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .github/actions
+          persist-credentials: false
+      - uses: ./.github/actions/lane-aggregate
+        with:
+          needs: ${{ toJSON(needs) }}
+          should-run: ${{ needs.changes.outputs.jvm-plugins }}
+          allow-skip: ${{ needs.changes.outputs.channel-smoke == 'false' && 'channel-smoke' || '' }}

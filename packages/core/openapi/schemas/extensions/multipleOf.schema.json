@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/openapi/extensions/multipleOf.schema.json",
+  "title": "x-seampact-multipleOf",
+  "description": "The step of an int64 or decimal string, as a decimal literal.",
+  "type": "string",
+  "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+}

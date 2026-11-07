@@ -1,0 +1,23 @@
+import { vineStandardSchema } from "../vine-support.js";
+
+export const ApiEmptyBodySchema = vineStandardSchema({"kind":"object","unknownKeys":"refuse","fields":[]});
+
+export const ArchiveTaskSchema = vineStandardSchema({"kind":"object","unknownKeys":"refuse","fields":[{"key":"reason","optional":false,"type":{"kind":"scalar","base":"string","checks":[{"rule":"minLength","limit":1,"message":"Expected at least 1 character."},{"rule":"maxLength","limit":500,"message":"Expected at most 500 characters."}]}},{"key":"expectedVersion","optional":false,"type":{"kind":"scalar","base":"integer","checks":[{"rule":"minimum","literal":"1"}]}}]});
+
+export const AssignTaskInputSchema = vineStandardSchema({"kind":"object","unknownKeys":"refuse","fields":[{"key":"userId","optional":false,"type":{"kind":"scalar","base":"string","checks":[{"rule":"format","format":"uuid","message":"Expected a UUID: 8-4-4-4-12 hex digits.","layout":"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"}]}}]});
+
+export const CreateTaskSchema = vineStandardSchema({"kind":"object","unknownKeys":"refuse","fields":[{"key":"title","optional":false,"type":{"kind":"scalar","base":"string","checks":[{"rule":"minLength","limit":1,"message":"Expected at least 1 character."},{"rule":"maxLength","limit":200,"message":"Expected at most 200 characters."}]}},{"key":"effort","optional":true,"type":{"kind":"scalar","base":"integer","checks":[{"rule":"minimum","literal":"0"}]}}]});
+
+export const GetTasksBatchInputSchema = vineStandardSchema({"kind":"object","unknownKeys":"refuse","fields":[{"key":"ids","optional":false,"type":{"kind":"array","items":{"kind":"scalar","base":"string","checks":[{"rule":"format","format":"uuid","message":"Expected a UUID: 8-4-4-4-12 hex digits.","layout":"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"}]},"maxItems":200}}]});
+
+export const PaymentEventSchema = vineStandardSchema({"kind":"object","unknownKeys":"refuse","fields":[{"key":"id","optional":false,"type":{"kind":"scalar","base":"string","checks":[]}},{"key":"type","optional":false,"type":{"kind":"scalar","base":"string","checks":[]}},{"key":"data","optional":false,"type":{"kind":"unknown","nullable":false}}]});
+
+export const RecentAuthParamsSchema = vineStandardSchema({"kind":"object","unknownKeys":"refuse","fields":[{"key":"intent","optional":false,"type":{"kind":"enum","values":["purge_task"],"open":false}}]});
+
+export const RolesParamsSchema = vineStandardSchema({"kind":"object","unknownKeys":"refuse","fields":[{"key":"allowed","optional":false,"type":{"kind":"array","items":{"kind":"enum","values":["owner","editor","viewer"],"open":false},"minItems":1}}]});
+
+export const TaskQuerySchema = vineStandardSchema({"kind":"object","unknownKeys":"refuse","fields":[{"key":"text","optional":true,"type":{"kind":"scalar","base":"string","checks":[{"rule":"maxLength","limit":200,"message":"Expected at most 200 characters."}]}},{"key":"states","optional":true,"type":{"kind":"array","items":{"kind":"enum","values":["open","done","archived"],"open":false},"maxItems":3}}]});
+
+export const UpdatePreferencesSchema = vineStandardSchema({"kind":"object","unknownKeys":"refuse","fields":[{"key":"locale","optional":true,"type":{"kind":"scalar","base":"string","checks":[{"rule":"minLength","limit":2,"message":"Expected at least 2 characters."},{"rule":"maxLength","limit":35,"message":"Expected at most 35 characters."}]}},{"key":"digest","optional":true,"type":{"kind":"scalar","base":"boolean","checks":[]}}]});
+
+export const UpdateTaskSchema = vineStandardSchema({"kind":"object","unknownKeys":"refuse","fields":[{"key":"title","optional":true,"type":{"kind":"scalar","base":"string","checks":[{"rule":"minLength","limit":1,"message":"Expected at least 1 character."},{"rule":"maxLength","limit":200,"message":"Expected at most 200 characters."}]}},{"key":"state","optional":true,"type":{"kind":"enum","values":["open","done","archived"],"open":false}},{"key":"effort","optional":true,"type":{"kind":"scalar","base":"integer","checks":[{"rule":"minimum","literal":"0"}]}},{"key":"expectedVersion","optional":false,"type":{"kind":"scalar","base":"integer","checks":[{"rule":"minimum","literal":"1"}]}}]});

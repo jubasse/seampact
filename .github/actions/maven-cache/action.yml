@@ -1,0 +1,70 @@
+# The Maven consumer's downloads: the wrapper's Maven distribution and the third-party artifacts in ~/.m2/repository,
+# so a run takes them from the Actions cache instead of Maven Central, which rate-limits the shared runner addresses.
+# seampact's own modules (io/github/jubasse, published to Maven local by each run) are deleted right after the restore
+# and right before the save, so a build never picks up a stale one: actions/cache archives ~/.m2/repository whole, and
+# a `!` exclusion below it would exclude nothing. Only pushes and nightly runs save: an entry saved by a pull
+# request or a merge group would count against the repository's cache limit for that ref alone. Each workflow keeps
+# its own entry: its builds resolve a different set of artifacts, and a shared key would let the first to save hold
+# the others' downloads back.
+name: Maven consumer cache
+description: Restores or saves the Maven distribution and third-party artifacts of the Spring Boot Maven consumer.
+
+inputs:
+  step:
+    description: "`restore` before the first Maven command, `save` after the last one."
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Compute the cache key
+      id: key
+      shell: bash
+      env:
+        STEP: ${{ inputs.step }}
+        WORKFLOW_NAME: ${{ github.workflow }}
+        INPUTS_HASH: >-
+          ${{ hashFiles('scripts/consumers/targets/spring-boot/maven/pom.xml',
+          'scripts/consumers/targets/spring-boot/maven/.mvn/wrapper/maven-wrapper.properties', 'jvm/gradle/libs.versions.toml') }}
+      run: |
+        set -euo pipefail
+        WORKFLOW_SLUG=$(printf '%s' "$WORKFLOW_NAME" | tr -c 'A-Za-z0-9' '-')
+        if [ "$STEP" != restore ] && [ "$STEP" != save ]; then
+          echo "maven-cache: step is '$STEP'; use restore or save." >&2
+          exit 1
+        fi
+        if [ -z "$INPUTS_HASH" ]; then
+          echo "maven-cache: hashFiles matched no file; check out the repository before this action." >&2
+          exit 1
+        fi
+        echo "key=maven-consumer-${RUNNER_OS}-${WORKFLOW_SLUG}-${INPUTS_HASH}" >> "$GITHUB_OUTPUT"
+        echo "restore-prefix=maven-consumer-${RUNNER_OS}-${WORKFLOW_SLUG}-" >> "$GITHUB_OUTPUT"
+
+    - name: Restore the Maven downloads
+      if: inputs.step == 'restore'
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          ~/.m2/wrapper/dists
+          ~/.m2/repository
+        key: ${{ steps.key.outputs.key }}
+        restore-keys: ${{ steps.key.outputs.restore-prefix }}
+
+    - name: Drop seampact's own modules from the restored repository
+      if: inputs.step == 'restore'
+      shell: bash
+      run: rm -rf ~/.m2/repository/io/github/jubasse
+
+    - name: Drop seampact's own modules before the save
+      if: inputs.step == 'save' && github.event_name != 'pull_request' && github.event_name != 'merge_group'
+      shell: bash
+      run: rm -rf ~/.m2/repository/io/github/jubasse
+
+    - name: Save the Maven downloads
+      if: inputs.step == 'save' && github.event_name != 'pull_request' && github.event_name != 'merge_group'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          ~/.m2/wrapper/dists
+          ~/.m2/repository
+        key: ${{ steps.key.outputs.key }}

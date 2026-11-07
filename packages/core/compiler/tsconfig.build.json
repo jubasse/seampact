@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "rootDir": "src",
+    "outDir": "dist"
+  },
+  "include": ["src"],
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/**/*test-support.ts",
+    "src/**/*.type-check.ts",
+    "src/load/cpu-bound.ts",
+    "src/load/golden.ts"
+  ]
+}

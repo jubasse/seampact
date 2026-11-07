@@ -1,0 +1,9 @@
+  # The Angular api service over the fetch client, with NgRx action groups and effects that send through it.
+  - id: queries
+    use: "@seampact/codegen-angular"
+    apis: [tasks]
+    options:
+      query: fetch
+      state: ngrx
+    link:
+      client: client

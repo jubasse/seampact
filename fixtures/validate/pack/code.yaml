@@ -1,0 +1,6 @@
+# expect: seampact/validate/unknown-keyword /script
+# SCN-047: a pack holding code is refused; a pack is data only (ADR 0008).
+pack: { name: house, version: 1.0.0, extends: [] }
+script: ./index.js
+conventions:
+  pathVersion: none

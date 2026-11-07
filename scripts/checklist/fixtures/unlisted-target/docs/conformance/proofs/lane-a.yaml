@@ -1,0 +1,7 @@
+lane: lane-a
+proofs:
+  - id: CHK-001
+    fixtures: [data/f1.txt]
+    tests:
+      - 'core: src/a.test.txt#works'
+      - 'laravel: src/a.test.txt#works'

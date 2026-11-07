@@ -1,0 +1,3 @@
+api.yaml:3:4: error seampact/load/yaml-boolean: plain 'True' is read as a boolean by YAML 1.1 parsers, or is a boolean not in lowercase (P1). Fix: quote it ('True'), or write true or false.
+api.yaml:4:4: error seampact/load/yaml-boolean: plain 'FALSE' is read as a boolean by YAML 1.1 parsers, or is a boolean not in lowercase (P1). Fix: quote it ('FALSE'), or write true or false.
+api.yaml:5:4: error seampact/load/yaml-boolean: plain 'TRUE' is read as a boolean by YAML 1.1 parsers, or is a boolean not in lowercase (P1). Fix: quote it ('TRUE'), or write true or false.

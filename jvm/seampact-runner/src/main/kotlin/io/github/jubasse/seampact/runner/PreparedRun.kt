@@ -1,0 +1,112 @@
+package io.github.jubasse.seampact.runner
+
+import io.github.jubasse.seampact.ir.binary.BinaryInstall
+import io.github.jubasse.seampact.ir.binary.BinaryPin
+import io.github.jubasse.seampact.ir.bundle.BundleFetcher
+import io.github.jubasse.seampact.ir.bundle.CachedBundle
+import io.github.jubasse.seampact.ir.bundle.MavenArtefactResolver
+import io.github.jubasse.seampact.ir.config.AppConfig
+import io.github.jubasse.seampact.ir.config.AppConfigRead
+import io.github.jubasse.seampact.ir.config.ConfigProblem
+import io.github.jubasse.seampact.ir.config.EntryView
+import io.github.jubasse.seampact.ir.config.LocalSourcePolicy
+import java.nio.file.Path
+import java.util.Properties
+
+/**
+ * What one run of a seampact goal or task reads besides the app config: the build's inputs and resolvers.
+ * [dslTree] is the app config the build file writes, as JSON, named [dslName] in problems; null reads the file.
+ * [springBootVersion], [springSecurityWebVersion] and [springSecurityConfigVersion] are the versions the compile
+ * classpath resolves, null without one. [temporaryDirectory] is the build's own temporary directory, where a run
+ * hands the binary the app config the build file writes and removes it afterwards.
+ */
+public class RunSettings(
+    public val buildTool: BuildTool,
+    public val appDirectory: Path,
+    public val dslTree: String?,
+    public val dslName: String,
+    public val allowLocalVariable: String?,
+    public val springBootVersion: String?,
+    public val springSecurityWebVersion: String?,
+    public val springSecurityConfigVersion: String?,
+    public val binary: BinarySettings,
+    public val bundleCacheDirectory: Path,
+    public val temporaryDirectory: Path,
+    public val binaryCacheDirectory: Path,
+    public val mavenArtefacts: MavenArtefactResolver,
+    public val resolveBinaryArtefact: (BinaryPin.Artifact) -> Path,
+)
+
+/** A run with every entry planned (or refused one by one), or the problems that stop it before any entry. */
+public sealed interface PreparedRun {
+    /**
+     * [warnings] are the compatibility check's, which generate and check print; [binary] installs the pinned binary
+     * once, when a `path` source or the documents first need it. [bundles] holds the bundle sources the entries or the
+     * documents read; [cachedBundle] gives the checked cache directory of a pinned bundle, which the documents run hands to the binary.
+     */
+    public data class Prepared(
+        val config: AppConfig,
+        val bundles: List<CheckedBundle>,
+        val plans: List<EntryPlan>,
+        val warnings: List<ConfigProblem>,
+        internal val binary: () -> BinaryInstall,
+        internal val cachedBundle: (String) -> CachedBundle,
+    ) : PreparedRun
+
+    public data class Refused(val problems: List<ConfigProblem>) : PreparedRun
+}
+
+/**
+ * Reads the app config, gets the IR of each source the JVM entries use, and plans each entry's files, writing
+ * nothing: the steps generate and check share, as the Node CLI's `prepareRun`. The documents are the binary's, asked
+ * by generate and check after this.
+ */
+public fun prepareRun(settings: RunSettings): PreparedRun {
+    val config = when (val read = readAppConfig(settings.appDirectory, settings.dslTree, settings.dslName)) {
+        is AppConfigRead.Read -> read.config
+        is AppConfigRead.Refused -> return PreparedRun.Refused(read.problems)
+    }
+
+    val matrix = checkMatrix(config, settings.springBootVersion, jvmFrameworks())
+    val configProblems = EntryView.unknownSourceProblems(config) + matrix.problems
+    if (configProblems.isNotEmpty()) return PreparedRun.Refused(configProblems)
+
+    // The build's environment, with SEAMPACT_ALLOW_LOCAL as the build's input holds it (git reads the rest).
+    val environment = System.getenv().filterKeys { it != LocalSourcePolicy.ALLOW_LOCAL_VARIABLE } +
+        listOfNotNull(settings.allowLocalVariable?.let { LocalSourcePolicy.ALLOW_LOCAL_VARIABLE to it })
+    val binary by lazy { installBinary(settings.binary, settings.resolveBinaryArtefact, settings.binaryCacheDirectory, settings.buildTool) }
+    val fetcher = BundleFetcher(settings.bundleCacheDirectory, environment, settings.mavenArtefacts)
+    val contractApis = ContractApis(
+        fetcher = fetcher,
+        localSources = LocalSourcePolicy.of(config.allowLocal, environment),
+        localRefusalReason = LocalSourcePolicy.refusalReason(environment),
+        installBinary = { binary },
+    )
+
+    // The binary's documents run fetches nothing: each source it reads is read here, so each bundle can be handed over.
+    val used = EntryView.usedSources(config)
+    val read = used + (documentSources(config) - used.toSet())
+
+    return when (val outcome = contractApis.read(config, read)) {
+        is ContractApisOutcome.Refused -> PreparedRun.Refused(outcome.problems)
+        is ContractApisOutcome.Read -> PreparedRun.Prepared(
+            config,
+            outcome.bundles,
+            planEntries(config, outcome.apis.filter { it.source in used }, settings, runnerVersion()),
+            matrix.warnings,
+            { binary },
+            fetcher::cachedBundle,
+        )
+    }
+}
+
+private const val RUNNER_PROPERTIES = "seampact-runner.properties"
+
+/** The version of the plugins' shared run, which the generated header names: both plugins write the same files. */
+public fun runnerVersion(): String {
+    val properties = Properties()
+    BuildTool::class.java.getResourceAsStream(RUNNER_PROPERTIES)?.use(properties::load)
+        ?: error("The seampact-runner jar holds no $RUNNER_PROPERTIES; it was not built by its own build.")
+
+    return properties.getProperty("version")
+}

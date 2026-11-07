@@ -1,0 +1,30 @@
+# tasks-absolute-urls/api.yaml
+api:
+  name: tasksAbsoluteUrls
+  version: 1
+  kind: product
+  maturity: provisional
+  summary: Notes whose page links are absolute URLs.
+
+conventions:
+  urls: absolute
+
+schemas:
+  NoteId: { type: string, format: uuid }
+  Note:
+    type: object
+    required: [noteId, text]
+    properties:
+      noteId: NoteId
+      text: { type: string, minLength: 1, maxLength: 500 }
+
+surfaces:
+  notes:
+    prefix: /absolute-urls/v{version}
+    identity: user
+    routes:
+      notes:
+        kind: collection
+        id: { noteId: NoteId }
+        item: Note
+        ops: [list, get]

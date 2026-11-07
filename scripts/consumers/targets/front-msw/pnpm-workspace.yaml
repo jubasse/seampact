@@ -1,0 +1,4 @@
+# msw has a postinstall that copies its worker script into the directories an app lists under `msw.workerDirectory`;
+# this consumer lists none and serves the script from the package. The consumer run merges its own settings here.
+allowBuilds:
+  msw: false

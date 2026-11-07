@@ -1,0 +1,1 @@
+api.yaml:6:3: error seampact/load/yaml-anchor: merge key '<<' is not allowed (P5). Fix: use $ref to share a declaration, or extends to share a base.

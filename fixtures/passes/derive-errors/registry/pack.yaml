@@ -1,0 +1,8 @@
+# A pack of the registry fixture: a code and a nature declared by a pack layer.
+pack: { name: errors-pack, version: 1.0.0, extends: [] }
+
+errors:
+  404-gone: { status: 410, nature: conflicted }
+
+natures:
+  conflicted: { base: refused, description: The resource changed under the request. }

@@ -1,0 +1,592 @@
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { localSourcePolicy } from "@seampact/compiler";
+import { afterEach, expect, test } from "vitest";
+import { removeConfigTrees, writeConfigTree } from "./config-test-tree.test-support.js";
+import { readAppConfig } from "./read-app-config.js";
+
+const temporaryDirectories: string[] = [];
+
+afterEach(() => {
+  for (const directory of temporaryDirectories.splice(0))
+    rmSync(directory, { recursive: true, force: true });
+
+  removeConfigTrees();
+});
+
+async function readConfigText(text: string) {
+  const directory = mkdtempSync(join(tmpdir(), "seampact-cli-"));
+
+  temporaryDirectories.push(directory);
+
+  const file = join(directory, "seampact.config.yaml");
+
+  writeFileSync(file, text);
+
+  return readAppConfig(file, "seampact.config.yaml");
+}
+
+test("refuses a reserved key written directly or as a YAML alias", async () => {
+  const direct = await readConfigText(
+    "sources:\n  contracts: { path: ./c }\ntargets:\n  - { id: t, use: x, api: a, options: { __proto__: { polluted: true } } }\n",
+  );
+  const aliased = await readConfigText(
+    "sources:\n  contracts: { path: ./c }\ntargets:\n  - id: t\n    use: x\n    api: a\n    options: { name: &k __proto__, ? *k : { polluted: true } }\n",
+  );
+
+  for (const outcome of [direct, aliased]) {
+    expect(outcome).toMatchObject({
+      status: "refused",
+      problems: [{ code: "config.key.reserved", message: expect.stringContaining("'__proto__'") }],
+    });
+  }
+});
+
+const SERVER_ENTRY_HEAD = "targets:\n  - id: server\n    use: x\n    api: a\n";
+
+test("reads the framework-route allow-list of a target entry", async () => {
+  const outcome = await readConfigText(
+    `${SERVER_ENTRY_HEAD}    frameworkRoutes:\n      - { method: GET, path: /metrics, reason: "Scraped by Prometheus." }\n      - { path: '/admin/queues/**', reason: "The queue dashboard's own routes." }\n`,
+  );
+
+  expect(outcome).toMatchObject({
+    status: "read",
+    config: {
+      entries: [
+        {
+          entry: {
+            frameworkRoutes: [
+              { method: "GET", path: "/metrics", reason: "Scraped by Prometheus." },
+              { path: "/admin/queues/**", reason: "The queue dashboard's own routes." },
+            ],
+          },
+        },
+      ],
+    },
+  });
+});
+
+test.each(["/livewire-*/**", "/livewire*/**", "/*.json", "/a/*-*/z"])(
+  "reads the framework-route pattern %s, a star inside a segment",
+  async (path) => {
+    const outcome = await readConfigText(
+      `${SERVER_ENTRY_HEAD}    frameworkRoutes:\n      - { path: '${path}', reason: r }\n`,
+    );
+
+    expect(outcome).toMatchObject({
+      status: "read",
+      config: { entries: [{ entry: { frameworkRoutes: [{ path, reason: "r" }] } }] },
+    });
+  },
+);
+
+test("reads the framework-route check switched off", async () => {
+  const outcome = await readConfigText(
+    `${SERVER_ENTRY_HEAD}    artefacts: { bootCheck: { frameworkRoutes: false } }\n`,
+  );
+
+  expect(outcome).toMatchObject({
+    status: "read",
+    config: { entries: [{ entry: { artefacts: { bootCheck: { frameworkRoutes: false } } } }] },
+  });
+});
+
+test("reads the strict framework-route check", async () => {
+  const outcome = await readConfigText(
+    `${SERVER_ENTRY_HEAD}    artefacts: { bootCheck: { frameworkRoutes: strict } }\n`,
+  );
+
+  expect(outcome).toMatchObject({
+    status: "read",
+    config: { entries: [{ entry: { artefacts: { bootCheck: { frameworkRoutes: "strict" } } } }] },
+  });
+});
+
+test("refuses a framework-route switch that is neither a boolean nor strict", async () => {
+  const outcome = await readConfigText(
+    `${SERVER_ENTRY_HEAD}    artefacts: { bootCheck: { frameworkRoutes: all } }\n`,
+  );
+
+  expect(outcome).toMatchObject({
+    status: "refused",
+    problems: [
+      {
+        code: "config.schema",
+        message: "'bootCheck.frameworkRoutes' is true, false or 'strict'.",
+      },
+    ],
+  });
+});
+
+test.each(["/api", "/api/v2", "/my-app.v1", "/.well", "/v1..2"])(
+  "reads the mount %s",
+  async (mount) => {
+    const outcome = await readConfigText(`${SERVER_ENTRY_HEAD}    mount: ${mount}\n`);
+
+    expect(outcome).toMatchObject({
+      status: "read",
+      config: { entries: [{ entry: { mount } }] },
+    });
+  },
+);
+
+test.each([
+  ["no leading slash", "api"],
+  ["a trailing slash", "/api/"],
+  ["the root alone", "/"],
+  ["a star", "/api/*"],
+  ["an empty segment", "/api//v1"],
+  ["a space", "'/my api'"],
+  ["a brace", "'/{tenant}'"],
+  ["a percent-encoded character", "/caf%C3%A9"],
+  ["a non-ASCII character", "/café"],
+  ["a dot segment", "/api/."],
+  ["a dot-dot segment", "/.."],
+  ["a dot-dot segment between two others", "/api/../v1"],
+])("refuses a mount with %s", async (_, mount) => {
+  expect(await readConfigText(`${SERVER_ENTRY_HEAD}    mount: ${mount}\n`)).toMatchObject({
+    status: "refused",
+    problems: [{ code: "config.schema", message: expect.stringContaining("'mount'") }],
+  });
+});
+
+test("names the mount rule, dot segments included", async () => {
+  expect(await readConfigText(`${SERVER_ENTRY_HEAD}    mount: /..\n`)).toMatchObject({
+    problems: [
+      {
+        message:
+          "The key 'mount' is '/' then segments of ASCII letters, digits and '-._~!$&'()+,;=@:', with no trailing '/', no '*', no '.' or '..' segment and no segment starting with ':'.",
+      },
+    ],
+  });
+});
+
+test.each(["express@6", "fastapi@0.162", "fastapi@0.0"])(
+  "reads the allowUntested item %s",
+  async (item) => {
+    expect(
+      await readConfigText(`${SERVER_ENTRY_HEAD}    allowUntested: [${item}]\n`),
+    ).toMatchObject({
+      status: "read",
+    });
+  },
+);
+
+test.each(["express@6.1", "express@0", "fastapi@0.01", "fastapi@0."])(
+  "refuses the allowUntested item %s by name, with the fix",
+  async (item) => {
+    expect(
+      await readConfigText(`${SERVER_ENTRY_HEAD}    allowUntested: [${item}]\n`),
+    ).toMatchObject({
+      status: "refused",
+      problems: [
+        {
+          code: "config.schema",
+          message: expect.stringContaining("An `allowUntested` item is"),
+          fix: expect.stringContaining("fastapi@0.162"),
+        },
+      ],
+    });
+  },
+);
+
+test("refuses an allow-list beside the framework-route check switched off", async () => {
+  const outcome = await readConfigText(
+    `${SERVER_ENTRY_HEAD}    artefacts: { bootCheck: { frameworkRoutes: false } }\n    frameworkRoutes:\n      - { path: /metrics, reason: r }\n`,
+  );
+
+  expect(outcome).toMatchObject({
+    status: "refused",
+    problems: [
+      {
+        code: "config.key.conflict",
+        message: expect.stringContaining("'server' allow-lists framework routes"),
+      },
+    ],
+  });
+});
+
+test.each(["keep", "off"])("reads frameworkDocs: %s", async (value) => {
+  const outcome = await readConfigText(`${SERVER_ENTRY_HEAD}    frameworkDocs: ${value}\n`);
+
+  expect(outcome).toMatchObject({
+    status: "read",
+    config: { entries: [{ entry: { frameworkDocs: value } }] },
+  });
+});
+
+test("refuses frameworkDocs: off beside nativeDocs: true, naming both", async () => {
+  const outcome = await readConfigText(
+    `${SERVER_ENTRY_HEAD}    frameworkDocs: off\n    artefacts: { nativeDocs: true }\n`,
+  );
+
+  expect(outcome).toMatchObject({
+    status: "refused",
+    problems: [
+      {
+        code: "config.key.conflict",
+        message: expect.stringMatching(/frameworkDocs: off.*artefacts\.nativeDocs: true/),
+      },
+    ],
+  });
+});
+
+const FRAMEWORK_ROUTE_PATH_RULE =
+  "The key 'path' of a framework route is '/' then segments, each '*', '**', or text without '?', '{' or '}' holding at most two '*'.";
+
+test.each([
+  ["no reason", "{ path: /metrics }", "The key 'reason' is required here."],
+  [
+    "an empty reason",
+    '{ path: /metrics, reason: "" }',
+    "The value must NOT have fewer than 1 characters.",
+  ],
+  ["two stars inside a segment", "{ path: '/metrics**', reason: r }", FRAMEWORK_ROUTE_PATH_RULE],
+  ["three stars", "{ path: '/a/***', reason: r }", FRAMEWORK_ROUTE_PATH_RULE],
+  ["three stars in one segment", "{ path: '/a/*-*-*/z', reason: r }", FRAMEWORK_ROUTE_PATH_RULE],
+  ["a question mark", "{ path: '/a/b?', reason: r }", FRAMEWORK_ROUTE_PATH_RULE],
+  ["a route parameter", "{ path: '/a/{id}', reason: r }", FRAMEWORK_ROUTE_PATH_RULE],
+  ["a closing brace", "{ path: '/a/id}', reason: r }", FRAMEWORK_ROUTE_PATH_RULE],
+  ["a relative path", "{ path: metrics, reason: r }", FRAMEWORK_ROUTE_PATH_RULE],
+  [
+    "an unknown method",
+    "{ method: get, path: /metrics, reason: r }",
+    "The value must be equal to one of the allowed values.",
+  ],
+])("refuses a framework route with %s", async (_, route, message) => {
+  const outcome = await readConfigText(
+    `${SERVER_ENTRY_HEAD}    frameworkRoutes:\n      - ${route}\n`,
+  );
+
+  expect(outcome).toMatchObject({
+    status: "refused",
+    problems: [{ code: "config.schema", message: expect.stringContaining(message) }],
+  });
+});
+
+test("reads every artefact switch, the boot check as a boolean, and allowUntested", async () => {
+  const outcome = await readConfigText(
+    `${SERVER_ENTRY_HEAD}    artefacts: { types: false, nativeDocs: true, bootCheck: false }\n    allowUntested: [express@6]\nchecks: { matrix: error }\n`,
+  );
+
+  expect(outcome).toMatchObject({
+    status: "read",
+    config: {
+      checks: { matrix: "error" },
+      entries: [
+        {
+          entry: {
+            artefacts: { types: false, nativeDocs: true, bootCheck: false },
+            allowUntested: ["express@6"],
+          },
+        },
+      ],
+    },
+  });
+});
+
+test("refuses an allow-list beside the whole boot check switched off", async () => {
+  const outcome = await readConfigText(
+    `${SERVER_ENTRY_HEAD}    artefacts: { bootCheck: false }\n    frameworkRoutes:\n      - { path: /metrics, reason: r }\n`,
+  );
+
+  expect(outcome).toMatchObject({
+    status: "refused",
+    problems: [
+      {
+        code: "config.key.conflict",
+        message: expect.stringContaining("with 'artefacts.bootCheck: false'"),
+      },
+    ],
+  });
+});
+
+test.each([
+  ["an artefact switch that is no boolean", "artefacts: { types: off }", "must be boolean"],
+  ["a boot check of another form", "artefacts: { bootCheck: on }", "'bootCheck' is true, false"],
+  [
+    "an allowUntested item without its major",
+    "allowUntested: [express]",
+    "An `allowUntested` item is",
+  ],
+])("refuses %s", async (_, key, message) => {
+  const outcome = await readConfigText(`${SERVER_ENTRY_HEAD}    ${key}\n`);
+
+  expect(outcome).toMatchObject({
+    status: "refused",
+    problems: [{ code: "config.schema", message: expect.stringContaining(message) }],
+  });
+});
+
+test("refuses a package source that is not an npm package name", async () => {
+  const outcome = await readConfigText(
+    "sources:\n  contracts: { package: ../../x, version: 1.0.0 }\ntargets:\n  - { id: t, use: x, api: a }\n",
+  );
+
+  const scoped = await readConfigText(
+    "sources:\n  contracts: { package: '@acme/tasks.contract', version: 1.0.0 }\ntargets:\n  - { id: t, use: x, api: a }\n",
+  );
+
+  expect(outcome).toMatchObject({ status: "refused" });
+  expect(JSON.stringify(outcome)).toContain("sources.contracts");
+  expect(scoped).toMatchObject({ status: "read" });
+});
+
+test("refuses alias expansion past the YAML budget as a YAML problem", async () => {
+  const doubling = (levels: number) =>
+    `checks:\n  l0: &l0 [x, x]\n${Array.from({ length: levels - 1 }, (_, index) => `  l${index + 1}: &l${index + 1} [*l${index}, *l${index}]\n`).join("")}`;
+
+  expect(await readConfigText(doubling(6))).toMatchObject({
+    status: "refused",
+    problems: [
+      {
+        code: "config.yaml.syntax",
+        message: "Excessive alias count indicates a resource exhaustion attack.",
+      },
+    ],
+  });
+  const withinBudget = await readConfigText(doubling(5));
+
+  expect(withinBudget.status).toBe("refused");
+  expect(JSON.stringify(withinBudget)).not.toContain("config.yaml.syntax");
+});
+
+test("reads a Maven artefact source and refuses a coordinate without a version", async () => {
+  const read = await readConfigText(
+    "sources:\n  contracts: { maven: 'com.acme:tasks-contract:1.0.0', integrity: sha256-x }\ntargets:\n  - { id: t, use: x, api: a }\n",
+  );
+  const refused = await readConfigText(
+    "sources:\n  contracts: { maven: 'com.acme:tasks-contract' }\ntargets:\n  - { id: t, use: x, api: a }\n",
+  );
+
+  expect(read).toMatchObject({ status: "read" });
+  expect(refused).toMatchObject({ status: "refused", problems: [{ code: "config.schema" }] });
+});
+
+test.each(["..:..:1.0.0", ".:-:1.0.0"])("refuses the Maven coordinate %s", async (coordinate) => {
+  const outcome = await readConfigText(`sources:\n  contracts: { maven: '${coordinate}' }\n`);
+
+  expect(outcome).toMatchObject({ status: "refused", problems: [{ code: "config.schema" }] });
+});
+
+test.each(["+", "1.+", "latest.release", "[1.0,2.0)", "1.0-SNAPSHOT"])(
+  "refuses the unpinned Maven version %s by name",
+  async (version) => {
+    const outcome = await readConfigText(
+      `sources:\n  contracts: { maven: 'com.acme:tasks-contract:${version}' }\n`,
+    );
+
+    expect(outcome).toMatchObject({
+      status: "refused",
+      problems: [{ code: "config.source.maven-unpinned" }],
+    });
+  },
+);
+
+const ROOT_FILES = {
+  "seampact.config.yaml":
+    "apps: [apps/api]\nallowLocal: false\nsources:\n  shared: { path: ./contracts }\n",
+  "apps/api/seampact.config.yaml":
+    "sources:\n  own: { path: ./contracts }\ntargets:\n  - { id: types, use: x, api: shared/tasks }\n",
+};
+
+function readTreeApp(directory: string, app = "apps/api") {
+  return readAppConfig(join(directory, app, "seampact.config.yaml"), `${app}/seampact.config.yaml`);
+}
+
+test("folds a listed app's root in: its sources resolved against the root, its allowLocal under the app's", async () => {
+  const directory = writeConfigTree(ROOT_FILES);
+  const outcome = await readTreeApp(directory);
+
+  expect(outcome).toMatchObject({
+    status: "read",
+    config: {
+      allowLocal: false,
+      rootFile: join(directory, "seampact.config.yaml"),
+      sources: new Map([
+        ["shared", { kind: "path", directory: join(directory, "contracts") }],
+        ["own", { kind: "path", directory: join(directory, "apps/api/contracts") }],
+      ]),
+    },
+  });
+
+  const appAllowing = writeConfigTree({
+    ...ROOT_FILES,
+    "apps/api/seampact.config.yaml": "allowLocal: true\n",
+  });
+  const allowing = await readTreeApp(appAllowing);
+
+  expect(allowing).toMatchObject({ status: "read", config: { allowLocal: true } });
+
+  const allowLocal = allowing.status === "read" ? allowing.config.allowLocal : undefined;
+
+  expect(localSourcePolicy(allowLocal, {})).toBe("allow");
+  expect(localSourcePolicy(allowLocal, { SEAMPACT_ALLOW_LOCAL: "false" })).toBe("refuse");
+});
+
+test("refuses a source name defined in both the app and its root, naming both files", async () => {
+  const directory = writeConfigTree({
+    ...ROOT_FILES,
+    "apps/api/seampact.config.yaml": "sources:\n  shared: { path: ./mine }\n",
+  });
+
+  expect(await readTreeApp(directory)).toEqual({
+    status: "refused",
+    problems: [
+      {
+        code: "config.source.duplicate",
+        message:
+          "The source 'shared' is defined both in this app config and in its root config seampact.config.yaml.",
+        fix: "Remove the app's definition to use the root's source, or rename one of them.",
+        where: "apps/api/seampact.config.yaml:2:3 sources.shared",
+      },
+    ],
+  });
+});
+
+test("leaves an app the nearest root does not list alone, and names the root for a source only it defines", async () => {
+  const directory = writeConfigTree({
+    ...ROOT_FILES,
+    "apps/web/seampact.config.yaml": "sources:\n  own: { path: ./c }\n",
+    "apps/other/seampact.config.yaml": ROOT_FILES["apps/api/seampact.config.yaml"],
+  });
+
+  expect(await readTreeApp(directory, "apps/web")).toMatchObject({
+    status: "read",
+    config: {
+      sources: new Map([["own", { kind: "path", directory: join(directory, "apps/web/c") }]]),
+    },
+  });
+  expect(await readTreeApp(directory, "apps/other")).toMatchObject({
+    status: "refused",
+    problems: [
+      {
+        code: "config.app.unlisted",
+        message: expect.stringContaining(
+          "'shared/tasks' names a source of the root config seampact.config.yaml",
+        ),
+        where: "apps/other/seampact.config.yaml:4:5 targets[0]",
+      },
+    ],
+  });
+});
+
+test("walks past a nearer root that does not list the app to the root that does", async () => {
+  const directory = writeConfigTree({
+    ...ROOT_FILES,
+    "apps/seampact.config.yaml": "apps: [other]\n",
+    "apps/other/seampact.config.yaml": "sources:\n  own: { path: ./c }\n",
+  });
+
+  expect(await readTreeApp(directory)).toMatchObject({
+    status: "read",
+    config: {
+      rootFile: join(directory, "seampact.config.yaml"),
+      sources: new Map([
+        ["own", { kind: "path", directory: join(directory, "apps/api/contracts") }],
+        ["shared", { kind: "path", directory: join(directory, "contracts") }],
+      ]),
+    },
+  });
+});
+
+test("refuses an app below an ancestor config with a YAML error, naming that file", async () => {
+  const directory = writeConfigTree({ ...ROOT_FILES, "apps/seampact.config.yaml": "targets: [\n" });
+
+  expect(await readTreeApp(directory)).toMatchObject({
+    status: "refused",
+    problems: [
+      { code: "config.yaml.syntax", where: expect.stringContaining("apps/seampact.config.yaml") },
+    ],
+  });
+});
+
+test("stops the search for a root at the first directory holding .git", async () => {
+  const directory = writeConfigTree({ ...ROOT_FILES, "apps/.git/HEAD": "ref: refs/heads/main\n" });
+
+  expect(await readTreeApp(directory)).toMatchObject({
+    status: "read",
+    config: {
+      sources: new Map([
+        ["own", { kind: "path", directory: join(directory, "apps/api/contracts") }],
+      ]),
+    },
+  });
+});
+
+test("reads the app's openapi key and an empty checks key", async () => {
+  const outcome = await readConfigText(
+    "openapi:\n  tasks: { public: openapi/public.yaml, full: { path: openapi/full.yaml, reasons: omit } }\nchecks: {}\n",
+  );
+
+  expect(outcome).toMatchObject({
+    status: "read",
+    config: {
+      openapi: {
+        tasks: {
+          public: "openapi/public.yaml",
+          full: { path: "openapi/full.yaml", reasons: "omit" },
+        },
+      },
+    },
+  });
+});
+
+test("refuses an api's documents that are neither a path, a placed document nor a document mapping", async () => {
+  const outcome = await readConfigText("openapi:\n  tasks: [openapi/tasks.yaml]\n");
+
+  expect(outcome).toMatchObject({
+    status: "refused",
+    problems: [
+      { code: "config.schema", message: expect.stringContaining("An api's documents are a path") },
+    ],
+  });
+});
+
+test.each([
+  ["native access", `${SERVER_ENTRY_HEAD}    access: { native: "Spring Security." }\n`, "'access'"],
+  [
+    "the boot check's handler switch",
+    `${SERVER_ENTRY_HEAD}    artefacts: { bootCheck: { handlers: false } }\n`,
+    "'handlers'",
+  ],
+  [
+    "a module link",
+    `${SERVER_ENTRY_HEAD}    link: { validators: { module: x } }\n`,
+    "explicit module specifier",
+  ],
+])("refuses by name %s until its bringer reads it", async (_, text, named) => {
+  expect(await readConfigText(text)).toMatchObject({
+    status: "refused",
+    problems: [{ code: "config.key.waits", message: expect.stringContaining(named) }],
+  });
+});
+
+test("names the app to run in when an app-level command is run on a root config", async () => {
+  expect(
+    await readConfigText("apps: [api]\nopenapi: { all: { path: all.yaml, apps: [api] } }\n"),
+  ).toEqual({
+    status: "refused",
+    problems: [
+      {
+        code: "config.root.not-an-app",
+        message:
+          "This file is a monorepo root config (it holds `apps`), and the command runs on one app's config.",
+        fix: "Run the command in one of the apps the root config lists, or pass that app's config with `--config`.",
+        where: "seampact.config.yaml:1:1 apps",
+      },
+    ],
+  });
+});
+
+test("reads the checks and diff settings of an app", async () => {
+  expect(
+    await readConfigText(
+      "checks: { openapi: warning, generated: disabled }\ndiff: { gate: both }\n",
+    ),
+  ).toMatchObject({
+    status: "read",
+    config: { checks: { openapi: "warning", generated: "disabled" }, diff: { gate: "both" } },
+  });
+});

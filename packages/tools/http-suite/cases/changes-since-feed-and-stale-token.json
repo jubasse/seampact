@@ -1,0 +1,121 @@
+{
+  "id": "changes-since-feed-and-stale-token",
+  "title": "A changes feed writes its next token and completeness, refuses a stale token with 410, and reads an instant",
+  "checks": ["CHK-032"],
+  "profiles": ["default"],
+  "apis": ["tasksPaging"],
+  "steps": [
+    {
+      "title": "the first changes, more to come",
+      "request": {
+        "method": "GET",
+        "path": "/paging/v1/changes",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "items": [
+            {
+              "noteId": "30000000-0000-4000-8000-000000000001",
+              "text": "limit 10"
+            }
+          ],
+          "next": "changes-2",
+          "complete": false
+        }
+      }
+    },
+    {
+      "title": "the next token, every change included",
+      "request": {
+        "method": "GET",
+        "path": "/paging/v1/changes",
+        "query": {
+          "since": "changes-2"
+        },
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "items": [],
+          "next": "changes-2",
+          "complete": true
+        }
+      }
+    },
+    {
+      "title": "a stale token",
+      "request": {
+        "method": "GET",
+        "path": "/paging/v1/changes",
+        "query": {
+          "since": "changes-0"
+        },
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 410,
+        "body": {
+          "code": "api.cursor_too_old"
+        }
+      }
+    },
+    {
+      "title": "an instant token",
+      "request": {
+        "method": "GET",
+        "path": "/paging/v1/events",
+        "query": {
+          "since": "2026-10-18T09:00:00Z"
+        },
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "items": [
+            {
+              "noteId": "30000000-0000-4000-8000-000000000001",
+              "text": "since 2026-10-18T09:00:00Z"
+            }
+          ],
+          "complete": true
+        }
+      }
+    },
+    {
+      "title": "an instant token that is not a date-time",
+      "request": {
+        "method": "GET",
+        "path": "/paging/v1/events",
+        "query": {
+          "since": "yesterday"
+        },
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "body": {
+          "code": "api.schema_invalid",
+          "issues": [
+            {
+              "pointer": "/since"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

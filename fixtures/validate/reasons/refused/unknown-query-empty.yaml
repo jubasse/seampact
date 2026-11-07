@@ -1,0 +1,9 @@
+# expect: seampact/validate/reason-required /surfaces/app/unknownQuery
+# unknownQuery with an empty mapping without a reason
+api: { name: tasks, version: 1 }
+surfaces:
+  app:
+    identity: user
+    unknownQuery: {}
+    routes:
+      health: { method: get, output: Health }

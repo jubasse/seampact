@@ -1,0 +1,6 @@
+{
+  "format": "seampact-http-suite-report/1",
+  "target": "spring-boot",
+  "profile": "default",
+  "checks": { "CHK-002": { "outcome": "passed", "cases": ["case-b"] } }
+}

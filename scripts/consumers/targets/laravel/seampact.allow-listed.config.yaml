@@ -1,0 +1,73 @@
+# The config of the allow-listed-framework-route boot variant: the consumer config with GET /v1/unlisted allow-listed.
+# The consumer's app config: the reference contract and one seampact/laravel entry per api, serving every operation;
+# the suite's control routes are allow-listed framework routes.
+outDir: app/Generated
+openapi: none
+sources:
+  contract: { path: contract }
+targets:
+  - id: tasks
+    out: Tasks
+    use: seampact/laravel
+    api: tasks
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { path: /v1/unlisted, method: GET, reason: "The allow-listed-framework-route boot variant (ADR 0015)." }
+  - id: tasksService
+    out: TasksService
+    use: seampact/laravel
+    api: tasksService
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { path: /v1/unlisted, method: GET, reason: "The allow-listed-framework-route boot variant (ADR 0015)." }
+  - id: tasksServiceWrites
+    out: TasksServiceWrites
+    use: seampact/laravel
+    api: tasksServiceWrites
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { path: /v1/unlisted, method: GET, reason: "The allow-listed-framework-route boot variant (ADR 0015)." }
+  - id: tasksDevices
+    out: TasksDevices
+    use: seampact/laravel
+    api: tasksDevices
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { path: /v1/unlisted, method: GET, reason: "The allow-listed-framework-route boot variant (ADR 0015)." }
+  - id: tasksOptionalAuth
+    out: TasksOptionalAuth
+    use: seampact/laravel
+    api: tasksOptionalAuth
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { path: /v1/unlisted, method: GET, reason: "The allow-listed-framework-route boot variant (ADR 0015)." }
+  - id: tasksAbsoluteUrls
+    out: TasksAbsoluteUrls
+    use: seampact/laravel
+    api: tasksAbsoluteUrls
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { path: /v1/unlisted, method: GET, reason: "The allow-listed-framework-route boot variant (ADR 0015)." }
+  - id: tasksResponses
+    out: TasksResponses
+    use: seampact/laravel
+    api: tasksResponses
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { path: /v1/unlisted, method: GET, reason: "The allow-listed-framework-route boot variant (ADR 0015)." }
+  - id: tasksPaging
+    out: TasksPaging
+    use: seampact/laravel
+    api: tasksPaging
+    # The changes-since feed carries the complete page fact, which this target refuses by name in 1.0.
+    operations: { exclude: [listChanges, listEvents] }
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { path: /v1/unlisted, method: GET, reason: "The allow-listed-framework-route boot variant (ADR 0015)." }
+  - id: tasksSplitSort
+    out: TasksSplitSort
+    use: seampact/laravel
+    api: tasksSplitSort
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { path: /v1/unlisted, method: GET, reason: "The allow-listed-framework-route boot variant (ADR 0015)." }

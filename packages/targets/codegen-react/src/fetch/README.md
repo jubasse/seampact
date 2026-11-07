@@ -1,0 +1,1 @@
+The plain fetch renderer of the react target (`query: fetch`): the server-safe `queries.ts` (one fetcher per operation) and the `"use client"` `hooks.ts` built on React state and effects, with no query library.

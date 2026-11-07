@@ -1,0 +1,22 @@
+{
+  "name": "@seampact/pack-crud-rights",
+  "version": "1.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jubasse/seampact.git",
+    "directory": "packages/packs/pack-crud-rights"
+  },
+  "homepage": "https://jubasse.github.io/seampact/features/convention-packs/",
+  "bugs": {
+    "url": "https://github.com/jubasse/seampact/issues"
+  },
+  "description": "Derives a <resource>.<op> right for every list, get, create, update, delete and batch route and requires it first.",
+  "seampact": {
+    "role": "pack",
+    "pack": "pack.yaml"
+  },
+  "files": [
+    "pack.yaml",
+    "README.md"
+  ]
+}

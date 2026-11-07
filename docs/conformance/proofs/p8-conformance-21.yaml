@@ -1,0 +1,42 @@
+# docs/conformance/proofs/p8-conformance-21.yaml
+lane: p8-conformance-21
+proofs:
+  - id: CHK-028
+    fixtures: [fixtures/golden/pack-laravel]
+    tests:
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#the generated client reads every page shape of its paging style pack-laravel: data-wrapped items and a length-aware page'
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#the generated client reads every page shape of its paging style pack-laravel: data-wrapped list and table payloads'
+  - id: CHK-031
+    fixtures: [fixtures/golden/pack-laravel]
+    tests:
+      - "fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#the generated client reads every page shape of its paging style pack-laravel: a page-number request writes the style's page and limit names"
+  - id: CHK-107
+    fixtures: [fixtures/golden/pack-laravel]
+    tests:
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#the generated client reads every page shape of its paging style pack-laravel: data-wrapped items and a length-aware page'
+    refusals:
+      - "nestjs: packages/targets/codegen-nestjs/src/reference-boundary.test.ts#the HAL pack's pages is refused by name"
+      - "fastify: packages/targets/codegen-fastify/src/reference-boundary.test.ts#the HAL pack's pages is refused by name"
+      - "express: packages/targets/codegen-express/src/reference-boundary.test.ts#the HAL pack's pages is refused by name"
+      - "adonis: packages/targets/codegen-adonis/src/reference-boundary.test.ts#the HAL pack's pages is refused by name"
+      - "hono: packages/targets/codegen-hono/src/reference-boundary.test.ts#the HAL pack's pages is refused by name"
+      - "nestjs: packages/targets/codegen-nestjs/src/reference-boundary.test.ts#the Spring pack's pair sort is refused by name"
+      - "fastify: packages/targets/codegen-fastify/src/reference-boundary.test.ts#the Spring pack's pair sort is refused by name"
+      - "express: packages/targets/codegen-express/src/reference-boundary.test.ts#the Spring pack's pair sort is refused by name"
+      - "adonis: packages/targets/codegen-adonis/src/reference-boundary.test.ts#the Spring pack's pair sort is refused by name"
+      - "hono: packages/targets/codegen-hono/src/reference-boundary.test.ts#the Spring pack's pair sort is refused by name"
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#the conformance proofs of the generated client the pack-hal client is refused by name'
+      - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#the conformance proofs of the generated client the pack-spring client is refused by name'
+  - id: CHK-129
+    refusals:
+      - "nestjs: packages/targets/codegen-nestjs/src/reference-boundary.test.ts#the HAL pack's pages is refused by name"
+      - "fastify: packages/targets/codegen-fastify/src/reference-boundary.test.ts#the HAL pack's pages is refused by name"
+      - "express: packages/targets/codegen-express/src/reference-boundary.test.ts#the HAL pack's pages is refused by name"
+      - "adonis: packages/targets/codegen-adonis/src/reference-boundary.test.ts#the HAL pack's pages is refused by name"
+      - "hono: packages/targets/codegen-hono/src/reference-boundary.test.ts#the HAL pack's pages is refused by name"
+      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootGoldenTest.kt#refusesThePackPagesWhoseResourceSlotsItDoesNotRender'
+      - 'laravel: php/codegen/tests/KeptFormsTest.php#testAPageBodyWritingSlotsThePageReplyDoesNotFillIsRefusedByName'
+      - 'symfony: php/codegen/tests/KeptFormsTest.php#testAPageBodyWritingSlotsThePageReplyDoesNotFillIsRefusedByName'
+      - 'fastapi: python/codegen/tests/test_kept_forms.py#test_a_page_body_writing_slots_the_page_reply_does_not_fill_is_refused_by_name'
+      - 'drf: python/codegen/tests/test_kept_forms.py#test_a_page_body_writing_slots_the_page_reply_does_not_fill_is_refused_by_name'
+      - 'ninja: python/codegen/tests/test_kept_forms.py#test_a_page_body_writing_slots_the_page_reply_does_not_fill_is_refused_by_name'

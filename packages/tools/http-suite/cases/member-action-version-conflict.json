@@ -1,0 +1,28 @@
+{
+  "id": "member-action-version-conflict",
+  "title": "A member action that inherits the version answers 409 when stale",
+  "checks": ["CHK-042"],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks/20000000-0000-4000-8000-000000000001/archive",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:archive}}"
+        },
+        "body": {
+          "reason": "finished",
+          "expectedVersion": 3
+        }
+      },
+      "expect": {
+        "status": 409,
+        "body": {
+          "code": "state.conflict"
+        }
+      }
+    }
+  ]
+}

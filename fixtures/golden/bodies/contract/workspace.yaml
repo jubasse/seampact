@@ -1,0 +1,4 @@
+# workspace.yaml: the bodies golden case, one product api
+workspace:
+  apis:
+    notes: ./api.yaml

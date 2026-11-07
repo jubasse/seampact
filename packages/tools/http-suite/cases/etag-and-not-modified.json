@@ -1,0 +1,47 @@
+{
+  "id": "etag-and-not-modified",
+  "title": "A generated ETag, and 304 with no body for a matching If-None-Match",
+  "checks": ["CHK-037", "CHK-069"],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "title": "first read",
+      "request": {
+        "method": "GET",
+        "path": "/v1/me/preferences",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "capture": {
+        "etag": {
+          "header": "etag",
+          "pattern": "^(.+)$"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "headers": {
+          "etag": {
+            "contains": ["\""]
+          }
+        }
+      }
+    },
+    {
+      "title": "conditional read",
+      "request": {
+        "method": "GET",
+        "path": "/v1/me/preferences",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "if-none-match": "{{etag}}"
+        }
+      },
+      "expect": {
+        "status": 304,
+        "bodyText": ""
+      }
+    }
+  ]
+}

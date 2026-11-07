@@ -1,0 +1,48 @@
+{
+  "id": "undeclared-member-stripped-from-page-items",
+  "title": "A member the handler returns on a page item but the schema does not declare is stripped",
+  "checks": ["CHK-049", "CHK-064"],
+  "profiles": ["default"],
+  "script": {
+    "answers": {
+      "tasks.listTasks": {
+        "status": 200,
+        "body": {
+          "items": [
+            {
+              "taskId": "20000000-0000-4000-8000-000000000001",
+              "title": "Write the slice test",
+              "state": "open",
+              "version": 1,
+              "createdAt": "2026-10-18T09:00:00.000Z",
+              "internalNote": "not for the wire"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "query": {
+          "limit": 10
+        },
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": [
+          {
+            "taskId": "20000000-0000-4000-8000-000000000001"
+          }
+        ],
+        "absent": ["/0/internalNote"]
+      }
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+# The verdict of a lane's required check, shared by every lane aggregate job. A composite action, not a reusable
+# workflow: a reusable workflow would rename the check to `caller / job` and break branch protection.
+name: Lane aggregate
+description: >-
+  Fails when a job the aggregate needs failed or was cancelled, or was skipped although the lane's change filter
+  said run. A skipped job passes only when the filter said the lane has nothing to test, when its post-merge or
+  drift rows do not run on this event, or when allow-skip names it.
+
+inputs:
+  needs:
+    description: The aggregate job's `needs` context, as `toJSON(needs)`.
+    required: true
+  should-run:
+    description: >-
+      `true` when the lane's change filter said run (or the lane has no filter), `false` when it said skip.
+    required: true
+  allow-skip:
+    description: >-
+      Needed jobs whose skip is expected on this run, separated by spaces or new lines; empty by default. A job
+      named here may still fail the aggregate by failing or being cancelled.
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Check every needed job
+      shell: bash
+      env:
+        NEEDS_JSON: ${{ inputs.needs }}
+        SHOULD_RUN: ${{ inputs.should-run }}
+        ALLOW_SKIP: ${{ inputs.allow-skip }}
+      run: bash "$GITHUB_ACTION_PATH/aggregate.sh"

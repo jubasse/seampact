@@ -1,0 +1,36 @@
+{
+  "id": "handler-declared-error-answered",
+  "title": "A declared error the handler returns answers its status and code",
+  "checks": ["CHK-157", "CHK-065"],
+  "profiles": ["default"],
+  "script": {
+    "answers": {
+      "tasks.getTask": {
+        "status": 404,
+        "code": "api.not_found"
+      }
+    }
+  },
+  "steps": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks/20000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 404,
+        "headers": {
+          "content-type": {
+            "contains": ["application/problem+json"]
+          }
+        },
+        "body": {
+          "code": "api.not_found"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/openapi/extensions/access.schema.json",
+  "title": "x-seampact-access",
+  "description": "Who may call the operation: a public reason, an identity, or an identity with optional authentication.",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "public": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "const": true
+            }
+          ],
+          "description": "The written reason, or true under `reasons: omit`."
+        }
+      },
+      "required": ["public"],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "identity": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": ["identity"],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "identity": {
+          "type": "string",
+          "minLength": 1
+        },
+        "optionalAuth": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "const": true
+            }
+          ],
+          "description": "The written reason, or true under `reasons: omit`."
+        },
+        "onRefused": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": ["identity", "optionalAuth", "onRefused"],
+      "additionalProperties": false
+    }
+  ]
+}

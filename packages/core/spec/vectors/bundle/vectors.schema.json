@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "The bundle vectors (ADR 0011, schemas/bundle/README.md \"Vectors\")",
+  "description": "vectors.json holds directory vectors (a bundle's files, its source channel and pin, and the pinned-bundle check's outcome) and archive vectors (a tarball and the archive reader's outcome). A reader compares every expected field; `id` and `description` are labels, messages are never compared.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["formatVersion", "directories", "archives"],
+  "properties": {
+    "formatVersion": { "const": 1 },
+    "directories": { "type": "array", "items": { "$ref": "#/$defs/directory" } },
+    "archives": { "type": "array", "items": { "$ref": "#/$defs/archive" } }
+  },
+  "$defs": {
+    "directory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description", "channel", "pin", "files", "expected"],
+      "properties": {
+        "id": { "type": "string" },
+        "description": { "type": "string" },
+        "channel": { "enum": ["package", "release", "git"] },
+        "pin": { "type": ["string", "null"] },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "base64"],
+            "properties": {
+              "path": { "type": "string" },
+              "base64": { "type": "string" }
+            }
+          }
+        },
+        "expected": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ok", "integrity", "failures"],
+          "properties": {
+            "ok": { "type": "boolean" },
+            "integrity": { "type": ["string", "null"] },
+            "failures": { "type": "array", "items": { "$ref": "#/$defs/failure" } }
+          }
+        }
+      }
+    },
+    "archive": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description", "base64", "expected"],
+      "properties": {
+        "id": { "type": "string" },
+        "description": { "type": "string" },
+        "base64": { "type": "string" },
+        "expected": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ok", "paths", "failures"],
+          "properties": {
+            "ok": { "type": "boolean" },
+            "paths": { "type": "array", "items": { "type": "string" } },
+            "failures": { "type": "array", "items": { "$ref": "#/$defs/failure" } }
+          }
+        }
+      }
+    },
+    "failure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code"],
+      "properties": {
+        "code": { "type": "string", "pattern": "^bundle\\.[a-z-]+$" },
+        "file": { "type": "string" },
+        "expected": { "type": "string" },
+        "actual": { "type": "string" }
+      }
+    }
+  }
+}

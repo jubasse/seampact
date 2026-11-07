@@ -1,0 +1,5 @@
+# pack.yaml: a house pack whose entries are offered to every api, used or not
+pack: { name: house, version: 1.0.0, extends: [] }
+
+schemes:
+  partnerKey: { kind: header, name: X-Partner-Key }

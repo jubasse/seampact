@@ -1,0 +1,241 @@
+package com.example.consumer;
+
+import com.example.tasks.api.ArchiveTaskErrors;
+import com.example.tasks.api.ArchiveTaskInput;
+import com.example.tasks.api.ArchiveTaskResult;
+import com.example.tasks.api.AssignTaskInput;
+import com.example.tasks.api.AssignTaskResult;
+import com.example.tasks.api.ChannelsEndpoints;
+import com.example.tasks.api.CreateTaskErrors;
+import com.example.tasks.api.CreateTaskInput;
+import com.example.tasks.api.CreateTaskResult;
+import com.example.tasks.api.DeleteDraftInput;
+import com.example.tasks.api.DeleteDraftResult;
+import com.example.tasks.api.DraftsEndpoints;
+import com.example.tasks.api.GetChannelInput;
+import com.example.tasks.api.GetChannelResult;
+import com.example.tasks.api.GetDraftInput;
+import com.example.tasks.api.GetDraftResult;
+import com.example.tasks.api.GetPreferencesInput;
+import com.example.tasks.api.GetPreferencesResult;
+import com.example.tasks.api.GetTaskErrors;
+import com.example.tasks.api.GetTaskInput;
+import com.example.tasks.api.GetTaskResult;
+import com.example.tasks.api.GetTasksBatchInput;
+import com.example.tasks.api.GetTasksBatchResult;
+import com.example.tasks.api.HooksEndpoints;
+import com.example.tasks.api.PaymentsInput;
+import com.example.tasks.api.PaymentsResult;
+import com.example.tasks.api.ListChannelsInput;
+import com.example.tasks.api.ListChannelsResult;
+import com.example.tasks.api.ListTasksInput;
+import com.example.tasks.api.ListTasksResult;
+import com.example.tasks.api.PurgeTaskInput;
+import com.example.tasks.api.PurgeTaskResult;
+import com.example.tasks.api.SearchTasksInput;
+import com.example.tasks.api.SearchTasksResult;
+import com.example.tasks.api.PreferencesEndpoints;
+import com.example.tasks.api.TasksEndpoints;
+import com.example.tasks.api.UpdatePreferencesInput;
+import com.example.tasks.api.UpdateTaskErrors;
+import com.example.tasks.api.UpdateTaskInput;
+import com.example.tasks.api.UpdateTaskResult;
+import com.example.tasks.api.UpdatePreferencesResult;
+import com.example.tasks.api.schemas.Channel;
+import com.example.tasks.api.schemas.Draft;
+import com.example.tasks.api.schemas.Preferences;
+import com.example.tasks.api.schemas.Task;
+import com.example.tasks.api.schemas.TaskState;
+import com.example.tasks.api.schemas.TaskSearchResult;
+import com.example.tasks.api.spring.DeleteDraft;
+import com.example.tasks.api.spring.GetChannel;
+import com.example.tasks.api.spring.GetDraft;
+import com.example.tasks.api.spring.GetTask;
+import com.example.tasks.api.spring.GetTasksBatch;
+import com.example.tasks.api.spring.ListChannels;
+import com.example.tasks.api.spring.ListTasks;
+import com.example.tasks.api.spring.SearchTasks;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import org.springframework.web.bind.annotation.RestController;
+
+/** The `tasks` api's controllers: one declared success per operation, unless the loaded script answers. */
+final class TasksControllers {
+    private static final String API = "tasks";
+
+    private TasksControllers() {}
+
+    @RestController
+    static final class Hooks implements HooksEndpoints {
+        @Override
+        @com.example.tasks.api.spring.Payments
+        public PaymentsResult payments(PaymentsInput input) {
+            return new PaymentsResult.Status204();
+        }
+    }
+
+    @RestController
+    static final class Channels implements ChannelsEndpoints {
+        private final ScriptedAnswers answers;
+
+        Channels(ScriptedAnswers answers) {
+            this.answers = answers;
+        }
+
+        @Override
+        @ListChannels
+        public ListChannelsResult listChannels(ListChannelsInput input) {
+            return PagedLists.listChannels(input);
+        }
+
+        @Override
+        @GetChannel
+        public GetChannelResult getChannel(GetChannelInput input) {
+            return answers.answer(API, "getChannel", 200, Channel.class, GetChannelResult.Status200::new, Map.<String, java.util.function.Supplier<GetChannelResult>>of())
+                    .orElseGet(() -> new GetChannelResult.Status200(new Channel(input.path().channelId(), "General")));
+        }
+    }
+
+    @RestController
+    static final class Drafts implements DraftsEndpoints {
+        @Override
+        @GetDraft
+        public GetDraftResult getDraft(GetDraftInput input) {
+            return new GetDraftResult.Status200(new Draft(input.path().draftId(), "Draft text"));
+        }
+
+        @Override
+        @DeleteDraft
+        public DeleteDraftResult deleteDraft(DeleteDraftInput input) {
+            return new DeleteDraftResult.Status200(new Draft(input.path().draftId(), "Draft text"));
+        }
+    }
+
+    @RestController
+    static final class CallerPreferences implements PreferencesEndpoints {
+        private static final String DEFAULT_LOCALE = "en";
+
+        @Override
+        @com.example.tasks.api.spring.GetPreferences
+        public GetPreferencesResult getPreferences(GetPreferencesInput input) {
+            return new GetPreferencesResult.Status200(new Preferences(DEFAULT_LOCALE, Optional.empty()));
+        }
+
+        @Override
+        @com.example.tasks.api.spring.UpdatePreferences
+        public UpdatePreferencesResult updatePreferences(UpdatePreferencesInput input) {
+            return new UpdatePreferencesResult.Status200(new Preferences(input.body().locale().orElse(DEFAULT_LOCALE), input.body().digest()));
+        }
+    }
+
+    @RestController
+    static final class Tasks implements TasksEndpoints {
+        private final ScriptedAnswers answers;
+
+        Tasks(ScriptedAnswers answers) {
+            this.answers = answers;
+        }
+
+        @Override
+        @GetTask
+        public GetTaskResult getTask(GetTaskInput input) {
+            requireCallerAndChannel(input);
+
+            return answers.answer(API, "getTask", 200, Task.class, GetTaskResult.Status200::new,
+                            Map.<String, java.util.function.Supplier<GetTaskResult>>of("api.not_found", GetTaskErrors.ApiNotFound::new))
+                    .orElseGet(() -> new GetTaskResult.Status200(SampleData.task(input.path().taskId())));
+        }
+
+        // The handler reads who calls and the channel the resolver answered; a wrong value is a 500 the suite sees.
+        private static void requireCallerAndChannel(GetTaskInput input) {
+            if (input.principal() == null) throw new IllegalStateException("getTask received no principal");
+
+            Object channelId = input.scopes().channel().id();
+            if (!input.path().channelId().equals(channelId)) {
+                throw new IllegalStateException("getTask received the channel '" + channelId + "', not the path's '" + input.path().channelId() + "'");
+            }
+        }
+
+        @Override
+        @com.example.tasks.api.spring.CreateTask
+        public CreateTaskResult createTask(CreateTaskInput input) {
+            Task created = SampleData.task(UUID.randomUUID());
+
+            return answers.answer(API, "createTask", 201, Task.class, CreateTaskResult.Status201::new,
+                            Map.<String, java.util.function.Supplier<CreateTaskResult>>of("api.not_found", CreateTaskErrors.ApiNotFound::new))
+                    .orElseGet(() -> new CreateTaskResult.Status201(new Task(created.taskId(), input.body().title(), created.state(), created.effort(), created.version(), created.createdAt())));
+        }
+
+        @Override
+        @com.example.tasks.api.spring.UpdateTask
+        public UpdateTaskResult updateTask(UpdateTaskInput input) {
+            // Every task is at its first version, so another expected version is stale.
+            if (input.body().expectedVersion() != SampleData.FIRST_VERSION) return new UpdateTaskErrors.StateConflict();
+
+            Task current = SampleData.task(input.path().taskId());
+
+            return new UpdateTaskResult.Status200(withNextVersion(current, input.body().title().orElse(current.title()), current.state()));
+        }
+
+        @Override
+        @com.example.tasks.api.spring.AssignTask
+        public AssignTaskResult assignTask(AssignTaskInput input) {
+            return new AssignTaskResult.Status200(SampleData.task(input.path().taskId()));
+        }
+
+        @Override
+        @com.example.tasks.api.spring.ArchiveTask
+        public ArchiveTaskResult archiveTask(ArchiveTaskInput input) {
+            if (input.body().expectedVersion() != SampleData.FIRST_VERSION) return new ArchiveTaskErrors.StateConflict();
+
+            Task current = SampleData.task(input.path().taskId());
+
+            return new ArchiveTaskResult.Status200(withNextVersion(current, current.title(), TaskState.ARCHIVED));
+        }
+
+        @Override
+        @com.example.tasks.api.spring.PurgeTask
+        public PurgeTaskResult purgeTask(PurgeTaskInput input) {
+            return new PurgeTaskResult.Status204();
+        }
+
+        private static Task withNextVersion(Task current, String title, TaskState state) {
+            return new Task(current.taskId(), title, state, current.effort(), current.version() + 1, current.createdAt());
+        }
+
+        @Override
+        @ListTasks
+        public ListTasksResult listTasks(ListTasksInput input) {
+            return PagedLists.listTasks(answers, input);
+        }
+
+        @Override
+        @GetTasksBatch
+        public GetTasksBatchResult getTasksBatch(GetTasksBatchInput input) {
+            return answers.answer(API, "getTasksBatch", 200, TaskTable.class, GetTasksBatchResult.Status200::new,
+                            Map.<String, java.util.function.Supplier<GetTasksBatchResult>>of())
+                    .orElseGet(() -> sampleBatch(input));
+        }
+
+        private static GetTasksBatchResult sampleBatch(GetTasksBatchInput input) {
+            Map<String, Task> tasks = new LinkedHashMap<>();
+            for (UUID taskId : input.body().ids()) tasks.put(taskId.toString(), SampleData.task(taskId));
+
+            return new GetTasksBatchResult.Status200(tasks);
+        }
+
+        /** A batch read's id-keyed table, a concrete type the app's mapper binds a scripted body to. */
+        static final class TaskTable extends LinkedHashMap<String, Task> {
+            private static final long serialVersionUID = 1L;
+        }
+
+        @Override
+        @SearchTasks
+        public SearchTasksResult searchTasks(SearchTasksInput input) {
+            return new SearchTasksResult.Status200(new TaskSearchResult(List.of(SampleData.task(SampleData.NEW_TASK_ID)), Optional.of(1L)));
+        }
+    }
+}

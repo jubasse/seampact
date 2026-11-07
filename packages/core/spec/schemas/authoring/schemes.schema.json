@@ -1,0 +1,443 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "seampact schemes catalogue",
+  "description": "Security schemes (ADR 0002 section 9). A name-keyed catalogue file.",
+  "type": "object",
+  "properties": {
+    "$include": {
+      "$ref": "common.schema.json#/$defs/include"
+    }
+  },
+  "propertyNames": {
+    "description": "a scheme name (ADR 0002 section 4)",
+    "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$",
+    "not": {
+      "enum": [
+        "__proto__",
+        "constructor",
+        "prototype"
+      ]
+    }
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/entry"
+  },
+  "$defs": {
+    "entry": {
+      "title": "scheme",
+      "description": "kind: cookie, header, query, bearer, basic or signature (ADR 0002 section 9).",
+      "type": "object",
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "signature"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "$ref": "#/$defs/signature"
+      },
+      "else": {
+        "if": {
+          "properties": {
+            "kind": {
+              "const": "bearer"
+            }
+          },
+          "required": [
+            "kind"
+          ]
+        },
+        "then": {
+          "$ref": "#/$defs/bearer"
+        },
+        "else": {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "cookie"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/cookie"
+          },
+          "else": {
+            "if": {
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "header",
+                    "query"
+                  ]
+                }
+              },
+              "required": [
+                "kind"
+              ]
+            },
+            "then": {
+              "$ref": "#/$defs/apiKey"
+            },
+            "else": {
+              "if": {
+                "properties": {
+                  "kind": {
+                    "const": "basic"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              },
+              "then": {
+                "$ref": "#/$defs/basic"
+              },
+              "else": {
+                "$ref": "#/$defs/unknownKind"
+              }
+            }
+          }
+        }
+      }
+    },
+    "cookie": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "cookie"
+          ],
+          "$comment": "ADR 0002 section 9"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "ADR 0002 section 9",
+          "description": "The cookie name."
+        },
+        "csrf": {
+          "$ref": "common.schema.json#/$defs/name",
+          "$comment": "ADR 0002 section 9",
+          "description": "The header scheme a cookie write must also present."
+        },
+        "lint": {
+          "$ref": "common.schema.json#/$defs/lintAllow",
+          "$comment": "ADR 0002 section 12"
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "additionalProperties": false
+    },
+    "apiKey": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "header",
+            "query"
+          ],
+          "$comment": "ADR 0002 section 9"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "ADR 0002 section 9",
+          "description": "The header or query parameter name."
+        },
+        "lint": {
+          "$ref": "common.schema.json#/$defs/lintAllow",
+          "$comment": "ADR 0002 section 12"
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "additionalProperties": false
+    },
+    "bearer": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "bearer"
+          ],
+          "$comment": "ADR 0002 section 9"
+        },
+        "bearerFormat": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "ADR 0002 section 9",
+          "description": "Documents the token's format."
+        },
+        "oauth2": {
+          "type": "object",
+          "properties": {
+            "flows": {
+              "type": "object",
+              "$comment": "ADR 0002 section 9",
+              "description": "An OpenAPI OAuth Flows Object."
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "additionalProperties": false,
+          "if": {
+            "properties": {
+              "$include": true
+            },
+            "required": [
+              "$include"
+            ]
+          },
+          "else": {
+            "properties": {
+              "flows": true
+            },
+            "required": [
+              "flows"
+            ]
+          },
+          "$comment": "ADR 0002 section 9"
+        },
+        "openIdConnect": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "ADR 0002 section 9",
+          "description": "The OpenID Connect discovery URL."
+        },
+        "lint": {
+          "$ref": "common.schema.json#/$defs/lintAllow",
+          "$comment": "ADR 0002 section 12"
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "additionalProperties": false,
+      "if": {
+        "properties": {
+          "oauth2": true
+        },
+        "required": [
+          "oauth2"
+        ]
+      },
+      "then": {
+        "properties": {
+          "openIdConnect": {
+            "title": "conflict",
+            "description": "Write 'oauth2' or 'openIdConnect', never both.",
+            "not": {}
+          }
+        }
+      }
+    },
+    "basic": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "basic"
+          ],
+          "$comment": "ADR 0002 section 9"
+        },
+        "lint": {
+          "$ref": "common.schema.json#/$defs/lintAllow",
+          "$comment": "ADR 0002 section 12"
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "additionalProperties": false
+    },
+    "unknownKind": {
+      "title": "scheme kind",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "cookie",
+            "header",
+            "query",
+            "bearer",
+            "basic",
+            "signature"
+          ],
+          "$comment": "ADR 0002 section 9"
+        }
+      },
+      "if": {
+        "properties": {
+          "$include": true
+        },
+        "required": [
+          "$include"
+        ]
+      },
+      "else": {
+        "properties": {
+          "kind": true
+        },
+        "required": [
+          "kind"
+        ]
+      }
+    },
+    "signature": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "signature"
+          ],
+          "$comment": "ADR 0002 section 9"
+        },
+        "name": {
+          "$ref": "common.schema.json#/$defs/headerName",
+          "$comment": "ADR 0002 section 9",
+          "description": "The header carrying the signature."
+        },
+        "verify": {
+          "enum": [
+            "template",
+            "application"
+          ],
+          "$comment": "ADR 0002 section 9",
+          "description": "Who reads the signature."
+        },
+        "format": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "ADR 0002 section 9",
+          "description": "The layout of the signature header: holds {sig}."
+        },
+        "algorithm": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "ADR 0002 section 9"
+        },
+        "payload": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "ADR 0002 section 9",
+          "description": "What is signed: holds {rawBody}."
+        },
+        "encoding": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "ADR 0002 section 9"
+        },
+        "tolerance": {
+          "$ref": "common.schema.json#/$defs/duration",
+          "$comment": "ADR 0002 section 9"
+        },
+        "key": {
+          "$ref": "#/$defs/key",
+          "$comment": "ADR 0002 section 9"
+        },
+        "headers": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/headerName"
+          },
+          "$comment": "ADR 0002 section 9",
+          "description": "verify: application only: the headers the hook receives."
+        },
+        "lint": {
+          "$ref": "common.schema.json#/$defs/lintAllow",
+          "$comment": "ADR 0002 section 12"
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "additionalProperties": false,
+      "if": {
+        "properties": {
+          "verify": {
+            "const": "application"
+          }
+        },
+        "required": [
+          "verify"
+        ]
+      },
+      "then": {
+        "properties": {
+          "format": {
+            "title": "conflict",
+            "description": "verify: application parses nothing; the authenticate hook verifies.",
+            "not": {}
+          },
+          "algorithm": {
+            "title": "conflict",
+            "description": "verify: application parses nothing; the authenticate hook verifies.",
+            "not": {}
+          },
+          "payload": {
+            "title": "conflict",
+            "description": "verify: application parses nothing; the authenticate hook verifies.",
+            "not": {}
+          },
+          "encoding": {
+            "title": "conflict",
+            "description": "verify: application parses nothing; the authenticate hook verifies.",
+            "not": {}
+          },
+          "tolerance": {
+            "title": "conflict",
+            "description": "verify: application parses nothing; the authenticate hook verifies.",
+            "not": {}
+          }
+        }
+      }
+    },
+    "key": {
+      "type": "object",
+      "description": "{ value: <literal> } or { from: <path, query or header source> } (ADR 0002 section 9).",
+      "properties": {
+        "value": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "ADR 0002 section 9"
+        },
+        "from": {
+          "$ref": "common.schema.json#/$defs/signatureKeySource",
+          "$comment": "ADR 0002 section 9"
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "additionalProperties": false,
+      "if": {
+        "properties": {
+          "value": true
+        },
+        "required": [
+          "value"
+        ]
+      },
+      "then": {
+        "properties": {
+          "from": {
+            "title": "conflict",
+            "description": "A key is a value or a source, not both.",
+            "not": {}
+          }
+        }
+      }
+    }
+  }
+}

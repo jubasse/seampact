@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/openapi/extensions/degradable.schema.json",
+  "title": "x-seampact-degradable",
+  "description": "The parts an operation may leave out when degraded, and the header listing them.",
+  "type": "object",
+  "properties": {
+    "paths": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "header": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": ["paths"],
+  "additionalProperties": false
+}

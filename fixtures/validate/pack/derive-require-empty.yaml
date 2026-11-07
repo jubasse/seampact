@@ -1,0 +1,7 @@
+# expect: seampact/validate/missing-keyword /derive/0/require
+# a derived requirement is { right: <template> } or { rule, params, bucket } (ADR 0002 section 2).
+pack: { name: house, version: 1.0.0 }
+derive:
+  - entry: guard
+    select: { op: [create] }
+    require: {}

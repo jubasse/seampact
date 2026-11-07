@@ -1,0 +1,21 @@
+{
+  "name": "@seampact/signed-webhooks",
+  "version": "0.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jubasse/seampact.git",
+    "directory": "packages/signed-webhooks"
+  },
+  "homepage": "https://jubasse.github.io/seampact/",
+  "bugs": {
+    "url": "https://github.com/jubasse/seampact/issues"
+  },
+  "private": true,
+  "seampact": {
+    "role": "helper"
+  },
+  "dependencies": {
+    "@seampact/hooks": "workspace:*",
+    "zod": "workspace:*"
+  }
+}

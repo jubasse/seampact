@@ -1,0 +1,1 @@
+The front runtime, copied as is beside each front target's generated queries (ADR 0021): request keys, next-page requests, idempotency keys per mutation attempt and plain response headers; type-checked here and in the front consumers.

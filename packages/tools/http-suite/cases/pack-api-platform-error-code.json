@@ -1,0 +1,25 @@
+{
+  "id": "pack-api-platform-error-code",
+  "title": "An error body of the api-platform format is told by its code",
+  "checks": ["CHK-107"],
+  "profiles": ["pack:api-platform"],
+  "steps": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/v1/unknown",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 404,
+        "body": {
+          "@type": "Error",
+          "code": "api.not_found",
+          "status": 404
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,163 @@
+# Boot errors
+
+The generated server checks itself when the app starts. A problem stops the start with a message like this.
+
+```text
+seampact: the api 'notes' cannot start:
+- operation 'getNote': handlers.NotesEndpoints has no method getNote(); fix: implement getNote() on the NotesEndpoints object.
+```
+
+Fix every line, then start again.
+
+| You see | Do |
+|---|---|
+| `the framework route 'GET /docs' is outside the contract and not allow-listed` | List the route under `frameworkRoutes` of the server target, with a reason, then run `seampact generate`. A route with an optional parameter (`/c/:id?`, `/c{/:id}`) also serves `/c`, so `/c/*` alone does not list it: add `/c` too. A route that may take more than one segment (`/c/:rest+`, `/c/:rest{.+}`, or a brace after a param such as `/c/:id{/:page}`) needs `/c/**`. See [OpenAPI and docs](../configuration/openapi-and-docs.md). |
+| A route of yours outside the api's paths is no longer reported | That is the default: only routes that reach a path of the api are checked. Set `artefacts.bootCheck.frameworkRoutes: strict` to check every route. |
+| `... differs from the entry's mount (write the prefix as the entry's 'mount' ...)` | Remove the prefix from the framework (route group, plugin prefix, `basePath`, mount path) and set `mount` on the target entry instead. |
+| `runtime.generated-for-other-version` | The generated code was written by another seampact version than the installed runtime. Run `seampact generate` again, or install the runtime at the generator's version. On PHP, `seampact:generate` still runs under the skew. See [Generate errors](generate.md). |
+| `handlers has no 'NotesEndpoints' object` | Pass one object per generated handler interface. |
+| `handlers.NotesEndpoints has no method getNote()` | Implement the method on that object. |
+| `'bodyValidation' is turned on, but the target generated no output validators` | Set `bodyValidation: true` in the target's `options`, then run `generate`. |
+| `no authenticate hook for the identity 'user'` | Register `authenticate.user` in your hooks. |
+| `no decider for '<name>'` | Register a decider whose `names` lists it, or one with `names: all`. |
+| `no scope resolver for the scope '<scope>'` | Register `scopeResolvers.<scope>`. |
+| `no idempotency store for an idempotent operation` | Register `idempotencyStore`, for example `createMemoryIdempotencyStore()` of `@seampact/idempotency-memory`. |
+| `two deciders claim '<name>'` | Keep the name in one decider. |
+| `the seampact guard is not the last guard of <method>()` | Do not register a guard after the contract decorator on that route. |
+| `<method>() has no input parameter, so its input is never validated` | Add `@<Op>.input() input`, or one of its parts such as `@<Op>.body() body`. |
+| `the app interceptor <name> can answer <route> from its cache` | Keep cache interceptors off contract routes. The contract's `cache` sets the reply headers. |
+| `<decorator> on <method>() writes after the boundary's reply`, `a @Res(), @Response() or @Next() parameter ...` | Remove it: return the reply instead. |
+| `@HttpCode on <method>() sets a status the boundary never writes` | Remove `@HttpCode`. Return the status from the handler. |
+| `@Header on <method>() sets a header the boundary never writes` | Remove `@Header`. Declare the header in the contract's response. |
+| `@Controller('<path>') on <Controller> prefixes the contract route` | Use `@Controller()` with no path. The contract's paths are absolute. |
+| `RouterModule mounts <Module> under '<path>'` | Remove that `RouterModule` entry, or move the controller to a module it does not mount. |
+| `setGlobalPrefix('<prefix>') prefixes <route>` | Exclude the contract routes with the `exclude` option of `setGlobalPrefix`, or remove the prefix. |
+| `the api '<id>' is registered twice` | Import `SeampactModule.forRoot` or `forRootAsync` once per api. |
+| `the NestJS platform is '<x>'` | Use `@nestjs/platform-express`. |
+| `bodyValidation is on, but the target was generated without its response validators` | Set `bodyValidation: true` in the target's `options`, then run `generate`. Or leave `bodyValidation` out of `forRoot`. |
+| `'<key>' is not an option of SeampactModule.forRoot` | `forRoot` takes `{ logger, responses, bodyValidation, unboundOperations }`. |
+| `'responses' is "<x>", not 'strict' or 'warn'`, `'bodyValidation' is "<x>", not true or false` | Pass `'strict'` or `'warn'`, `true` or `false`, or leave the option out. |
+| `no JSON parser read the body of '<operation>'` (a 500 at run time) | Call `configureApp(app)` before `app.listen`, or give the app a JSON parser with `limit: LARGEST_BODY_LIMIT`. |
+| `configureApp found a JSON parser installed before it`, `a JSON parser was installed after configureApp(app)` | Remove your `app.useBodyParser("json", ...)` or `express.json()`, and pass its options to `configureApp(app, { appJsonParser: { limit: "5mb" } })`. Or skip `configureApp` and install the parsers yourself. |
+| `appJsonParser is passed to a second configureApp call` | Pass `appJsonParser` to the app's first `configureApp` call only. |
+| `configureApp's appJsonParser takes limit and strict` | Pass `limit` or `strict` only. For other parser options, skip `configureApp` and install the parsers yourself. |
+| `@<op>.<part>() is on <method>(), the method of '<other>'` | Use the part decorator of the method's own operation, as the fix names. |
+| `createContractDocument of api '<id>' got autoTagControllers: true` | Remove the option: `createContractDocument` sets it to `false`. |
+
+Two checks only warn, and the app still starts: global interceptors that run outside the reply interceptor, and request-scoped interceptors that cannot be checked at boot.
+
+## Symfony
+
+Same start check, run by `bin/console cache:warmup` and on the first request. The message starts with `seampact: the api 'tasks' cannot start:`, or with `the api 'tasks' cannot start:` for the hook lines.
+
+| You see | Do |
+|---|---|
+| `no authenticate hook for the identity '<id>'` | Register one service implementing the generated `<Id>AuthenticateHook`, with autoconfiguration on. At run time the same error reads `seampact: the api '<api>' has no authenticate hook for the identity '<id>'; ...`. |
+| `no decider for '<name>'` | Register a service implementing the api's `Decider` that names it, or `[Decider::EVERY_NAME]`. |
+| `no scope resolver for the scope '<scope>'` | Register a service implementing the api's `ScopeResolver`. |
+| `two deciders claim '<name>'` | Keep the name in one decider. |
+| `no idempotency store for '<operation>'` | Alias `seampact.<api key>.idempotency_store` to a service implementing `Seampact\Hooks\IdempotencyStore`. |
+| `operation '<id>' has no handler` | Register one controller service implementing the `<Resource>Endpoints` interface. |
+| `the method <class>::<method> handles operation '<id>' but is not marked #[SeampactOperation('<id>')]` | Add the attribute. |
+| `the controller <class> carries #[IsGranted]` or `#[IsCsrfTokenValid]`, and the same with `the method <class>::<method> carries` | Remove it. For a plain role check in `#[IsGranted]`, paste the `access_control` rule the message prints; otherwise (a subject, `methods`, `statusCode`, `exceptionCode` or a custom attribute) register `VoterDecider` or write a decider. For `#[IsCsrfTokenValid]`, check the CSRF value in the authenticate hook. |
+| `the controller <class> carries #[IsSignatureValid]`, or the method form | Remove it and use nothing instead: a signed URI is not a form the contract declares. |
+| `framework.http_cache is on` | Turn it off: a reply HttpCache serves never reaches the boundary. |
+| `the input resolver service ... is not registered as a value resolver` | List the api's bundle in `config/bundles.php`. |
+| `the service <id> listens to kernel.request at priority ...`, `... kernel.response at priority ...` | Move your listener inside the boundary's priorities, as the message says. |
+| `the api writes absolute URLs ... and 'seampact_<api>.public_origin' is not set` | Set `public_origin` to the origin clients call, such as `https://api.example.com`: a scheme, a host, an optional port, no path. |
+| `the api writes relative URLs ... and 'seampact_<api>.public_origin' is set` | Remove `public_origin`, or set `api.wire.urls: absolute` in the contract and generate again. |
+| `the PHP extension zlib is not loaded`, `Symfony <x> is not supported` | Enable ext-zlib. Use Symfony 7.4 or 8. |
+| `the service validator is missing` | Run `composer require symfony/validator`, and keep `framework.validation` on. |
+| `the generated settings class ... lacks its ALIAS constant`, `the access table of api '<api>' has no route for operation '<id>'` | The generated code is stale or edited. Run `seampact generate` again, and do not edit the generated files. |
+| `The bundle configuration key seampact_<api>.<key> takes ...` | Fix the value in `config/packages/seampact_<api>.yaml`. `responses` takes `strict` or `warn`, `body_validation` takes `true` or `false`. |
+| `the route of operation '<id>' has the path ...`, `... carries a host, a scheme or a condition` | Import the api's routes with no `prefix`, `host`, `schemes` or `condition`. |
+| `an app route with the path ... is registered before the route of operation '<id>'` | Import the contract routes first. |
+| `the api '<other>' registered before this one answers its catch-all 404` | Set `catchAll: false` on the api whose base path prefixes the other's. |
+| `runtime.worker.unsupported` | Serve the app with php-fpm. Worker runtimes are refused. In a functional test, do not call `disableReboot()`. |
+| `the app route '<name>' (<path>) is not a contract route and the entry's frameworkRoutes does not list it` | List the route under `frameworkRoutes` of the entry, with a reason, then run `generate`. A route whose trailing placeholder has a default (`/c/{id?}`) also serves `/c`, so `/c/*` alone does not list it: add `/c` too. |
+| `operation '<id>' has no route`, `operation '<id>' has <n> routes` | Import the api's resource, type `seampact`, once in your routing configuration. |
+
+An invalid `%env()%` value of the bundle configuration does not stop the start: the api answers 500 on its routes and the log names the key.
+
+## Laravel
+
+The message starts with `seampact: the api '<id>' cannot start:` and lists every problem. It comes at `php artisan route:cache` and at the first HTTP boot while the routes are not cached.
+
+| You see | Do |
+|---|---|
+| `no authenticate hook for the identity 'user': bind <Interface> in the container` | Bind the generated `<Identity>AuthenticateHook` to your class in a service provider. |
+| `no decider for '<name>': tag a Decider naming it, or '*', with 'seampact.<api>.deciders'` | Tag a class implementing the generated `Decider` with that tag. |
+| `no scope resolver for the scope '<scope>': tag a ScopeResolver with ...` | Tag a scope resolver with `seampact.<api>.scope-resolvers`. |
+| `no idempotency store for ...: bind 'seampact.<api>.idempotency-store' ...` | Bind your `IdempotencyStore` implementation under the provider's `IDEMPOTENCY_STORE_KEY`. |
+| `operation '<id>' has no handler: bind <Endpoints> to a controller in the container` | Bind the generated `<Resource>Endpoints` interface to your controller. |
+| `the framework route <METHOD> /<path> is outside the contract: allow-list it in the entry's frameworkRoutes, or remove it` | List the route under `frameworkRoutes` of the entry, with a reason, then run `seampact generate`. A route with an optional parameter (`/c/{id?}`) also serves `/c`, so `/c/*` alone does not list it: add `/c` too. |
+| `operation '<id>' has 0 contract routes: call Route::seampact('<api>') once in the app's routes` | Call `Route::seampact('<api>')` once, from `withRouting(then: ...)` in `bootstrap/app.php`. Call it outside any route group prefix. |
+| `the boundary middleware ... is not the first global middleware` | Remove the global middleware you prepended before it. Two apis whose base paths overlap: set `catch_all: false` on the broader one. |
+| `the access middleware ... is not before SubstituteBindings in the middleware priority` | Do not reorder the middleware priority; put your own entries after the contract's. |
+| `operation '<id>' runs without the access middleware: remove the withoutMiddleware() call on its route` | Remove `withoutMiddleware()` from the contract route. |
+| `the exception handler ... has no 'renderable' method` | Make your handler extend Laravel's `Illuminate\Foundation\Exceptions\Handler`. |
+| `'seampact.<api>.public_origin' is not set` or `... is '<value>', which ...` | The contract writes absolute URLs. Set `public_origin` in `config/seampact/<api>.php` to a scheme, host and optional port, such as `https://api.example.com`. |
+| `the api writes relative URLs ... and 'seampact.<api>.public_origin' is set` | Unset `SEAMPACT_<API>_PUBLIC_ORIGIN` (it fills `public_origin` in `config/seampact/<api>.php`) and run `php artisan config:cache` again if the config is cached, or set `api.wire.urls: absolute` in the contract and generate again. |
+| `Laravel <version> runs here, and the generated code serves Laravel 13 only` | Run the app on Laravel 13. |
+| `ext-zlib is not loaded` | Enable the `zlib` PHP extension. |
+| `... does not return the settings array; regenerate the api '<api>'` | The published `config/seampact/<api>.php` is stale or edited. Run `seampact generate` again, and republish the config if you changed it. |
+| `runtime.octane.unsupported` | Serve the app with php-fpm, or keep this api's provider out of the Octane app. |
+| `seampact: no generated routes for the api '<api>'; list its service provider in bootstrap/providers.php.` | Add the generated `<Api>SeampactServiceProvider` to `bootstrap/providers.php`. |
+| `config('seampact.<api>.middleware.<kind>') is not a list of middleware names` | Set that key in `config/seampact/<api>.php` to a list of strings such as `['auth:sanctum']`, or to `[]`. |
+
+## Django (DRF)
+
+The message starts with `seampact: the api '<id>' cannot start:` and lists every problem. It comes when the server loads the app, and `python manage.py seampact_check` prints the same list.
+
+| You see | Do |
+|---|---|
+| `settings.SEAMPACT['<api>']['public_origin'] is not set` or `... is '<value>', which ...` | The contract writes absolute URLs. Set `public_origin` to a scheme, host and optional port, such as `https://api.example.com`. |
+| `the api '<api>' writes relative URLs ... and settings.SEAMPACT['<api>']['public_origin'] is set` | Remove `public_origin`, or set `api.wire.urls: absolute` in the contract and generate again. |
+| `settings.SEAMPACT['<api>']['access'] has the unknown access kind '<kind>'` | Key `access` by `public`, `optional`, `identity` or `signed`. |
+| `settings.SEAMPACT['<api>']['access'] names the access kind '<kind>', which no operation of the api has` | Remove that kind. |
+| `settings.SEAMPACT['<api>']['access']['<kind>']['<name>'] names '<path>', which ...` | Name DRF classes of the matching base by dotted path: `BaseAuthentication`, `BasePermission` or `BaseThrottle`. |
+| `operation '<id>': no URL pattern serves <path> (its pattern sits at <served path>)` | Include the api's urls at `""` and set the entry's `mount` to the prefix you removed. |
+
+## Django Ninja
+
+The message starts with `seampact: the api '<id>' cannot start:` and lists every problem. It comes when the server loads the app, and `python manage.py seampact_check` prints the same list. See [The boot check](../backend/ninja.md#the-boot-check).
+
+| You see | Do |
+|---|---|
+| `the api '<api>' is not bound: call bind_<api>(...)` | Call `bind_<api>(api, prefix=..., handlers=...)` in the module that builds the `NinjaAPI` your root URLconf includes. |
+| `settings.SEAMPACT['<api>'] is set, and the api takes its values from bind_<api>()` | Remove that settings entry and pass its values to `bind_<api>()`. |
+| `the api '<api>' sets bodyValidation, which this release of seampact-ninja does not serve yet` | Remove `bodyValidation` from the entry and `body_validation` from `bind_<api>()`. |
+| `the api '<api>' writes absolute URLs ... and bind_<api>(public_origin=...) is not set` | Pass `public_origin="https://api.example.com"` (a scheme, a host, an optional port) to `bind_<api>()`. |
+| `the api '<api>' writes relative URLs ... and bind_<api>(public_origin=...) is set` | Drop `public_origin` from the call, or set `api.wire.urls: absolute` in the contract and generate again. |
+| `bind_<api>(access=...) has the unknown access kind '<kind>'` | Key `access` by `public`, `optional`, `identity` or `signed`. |
+| `bind_<api>(access=...) names the access kind '<kind>', which no operation of the api has` | Remove that kind. |
+| `bind_<api>(responses=...) is '<value>'; set one of strict, warn.` | Pass `"strict"`, `"warn"`, or nothing. The same holds for `operations['<id>'].responses`. |
+| `bind_<api>(operations=...)['<id>'] is a <type>; set an OperationSettings.` | Pass `OperationSettings(responses=...)` from `seampact.ninja.runtime` for each operation. |
+| `bind_<api>(body_validation=...) is '<value>'; set True or False.` | Pass a bool, or leave the argument out. |
+| `bind_<api>(access=...) gives the access kind '<kind>' an auth=, and its operation '<id>' declares no code for the role 'unauthenticated' ...` | Declare an `unauthenticated` error on that operation, or remove the `auth=` from the kind. |
+| `bind_<api>(access=...) gives the access kind '<kind>' a throttle, and its operation '<id>' declares no code for the role 'rateLimited' ...` | Declare a `rateLimited` error on that operation, or remove the throttle from the kind. |
+| `operation '<id>': no URL pattern serves <path> (its pattern sits at <served path>); include the NinjaAPI's urls at a prefix that, followed by bind_<api>(prefix=...), equals the entry's mount.` | Make the include prefix of `api.urls` plus `prefix` equal the entry's `mount`. |
+| `seampact: bind_<api>() was already called on this NinjaAPI` (a `BindingError` at import) | Call `bind_<api>()` once per `NinjaAPI`. |
+| `the NinjaAPI's on_exception was replaced after bind_<api>()` | Replace `api.on_exception` before calling `bind_<api>()`. |
+| `bind_<api>() gets ..., which builds a <Class> whose method '<name>' is an async def` | Write the method as a plain `def`, or generate with `views: async`. |
+
+## Spring Boot
+
+The message starts with `seampact: the api '<id>' cannot start:` and lists every problem. See [The boot check](../backend/spring-boot.md#the-boot-check).
+
+| You see | Do |
+|---|---|
+| `operation '<id>': no handler is bound` | Implement the operation in a `@RestController` method with its annotation. In a `@WebMvcTest` slice that loads some controllers, set `seampact.<api>.unbound-operations=warn`. |
+| `'seampact.<api>.unbound-operations' is '<value>', not 'error' or 'warn'` | Set it to `warn` in a test slice, or remove it. |
+| `operation '<id>': Spring MVC maps its handler <method> at <path>, not at the entry's mount followed by the contract path, <path>` | Remove the prefix the app adds (`addPathPrefix`, a class-level `@RequestMapping`) and set the entry's `mount` to it: the generated annotations already hold the mount. |
+
+## FastAPI
+
+Same start check, run on startup by uvicorn (`Application startup failed. Exiting.`), or on the first request without a lifespan. The message starts with `seampact: the api '<api>' cannot start:`.
+
+| You see | Do |
+|---|---|
+| `` the api '<api>' writes absolute URLs ... and the `public_origin` argument of bind_<api>() is not set `` | Pass `public_origin="https://api.example.com"` (the origin clients call: a scheme, a host, an optional port, no path) to `bind_<api>()`. |
+| `` the `public_origin` argument of bind_<api>() is '<value>', which ... `` | Fix the value as the message says: a scheme (`http` or `https`), a host and an optional port. |
+| `` the api '<api>' writes relative URLs ... and the `public_origin` argument of bind_<api>() is set `` | Drop `public_origin` from the call, or set `api.wire.urls: absolute` in the contract and generate again. |
+| `operation '<id>': no route of the app takes '<method> <path>' (its route sits at '<served path>')` | Include the router passed to `bind_<api>()` with no prefix, and set the entry's `mount` to the prefix you removed. |

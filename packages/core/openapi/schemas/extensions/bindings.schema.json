@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/openapi/extensions/bindings.schema.json",
+  "title": "x-seampact-bindings",
+  "description": "Values the boundary copies from one source to another, as value sources.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "from": {
+        "type": "string",
+        "minLength": 1
+      },
+      "to": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": ["from", "to"],
+    "additionalProperties": false
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "format": "seampact-http-suite-report/1",
+  "target": "express",
+  "profile": "default",
+  "checks": {
+    "CHK-001": { "outcome": "passed", "cases": ["case-a"] },
+    "CHK-009": { "outcome": "passed", "cases": ["case-c"] },
+    "CHK-002": { "outcome": "skipped", "cases": ["case-b"] }
+  }
+}

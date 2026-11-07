@@ -1,0 +1,61 @@
+# The config of the 'framework-route-check-off' boot variants: the consumer's, with the framework-route check
+# switched off on every api and no frameworkRoutes.
+outDir: build/generated/sources/seampact/main
+openapi: none
+sources:
+  contract: { path: contract }
+targets:
+  - id: tasks
+    use: io.github.jubasse:seampact-spring-boot
+    api: tasks
+    options: { package: com.example.tasks.api, springSecurity: { matchers: true } }
+    artefacts:
+      bootCheck: { frameworkRoutes: false }
+  - id: tasksService
+    use: io.github.jubasse:seampact-spring-boot
+    api: tasksService
+    options: { package: com.example.tasksservice.api, springSecurity: false }
+    artefacts:
+      bootCheck: { frameworkRoutes: false }
+  - id: tasksServiceWrites
+    use: io.github.jubasse:seampact-spring-boot
+    api: tasksServiceWrites
+    options: { package: com.example.tasksservicewrites.api, springSecurity: false }
+    artefacts:
+      bootCheck: { frameworkRoutes: false }
+  - id: tasksDevices
+    use: io.github.jubasse:seampact-spring-boot
+    api: tasksDevices
+    options: { package: com.example.tasksdevices.api, springSecurity: false }
+    artefacts:
+      bootCheck: { frameworkRoutes: false }
+  - id: tasksOptionalAuth
+    use: io.github.jubasse:seampact-spring-boot
+    api: tasksOptionalAuth
+    options: { package: com.example.tasksoptionalauth.api, springSecurity: false }
+    artefacts:
+      bootCheck: { frameworkRoutes: false }
+  - id: tasksAbsoluteUrls
+    use: io.github.jubasse:seampact-spring-boot
+    api: tasksAbsoluteUrls
+    options: { package: com.example.tasksabsoluteurls.api, springSecurity: false }
+    artefacts:
+      bootCheck: { frameworkRoutes: false }
+  - id: tasksResponses
+    use: io.github.jubasse:seampact-spring-boot
+    api: tasksResponses
+    options: { package: com.example.tasksresponses.api, springSecurity: false }
+    artefacts:
+      bootCheck: { frameworkRoutes: false }
+  - id: tasksPaging
+    use: io.github.jubasse:seampact-spring-boot
+    api: tasksPaging
+    options: { package: com.example.taskspaging.api, springSecurity: false }
+    artefacts:
+      bootCheck: { frameworkRoutes: false }
+  - id: tasksSplitSort
+    use: io.github.jubasse:seampact-spring-boot
+    api: tasksSplitSort
+    options: { package: com.example.taskssplitsort.api, springSecurity: false }
+    artefacts:
+      bootCheck: { frameworkRoutes: false }

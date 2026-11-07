@@ -1,0 +1,39 @@
+# api.yaml: a 404 code of the catalogue attached to every operation
+api: { name: notes, version: 1 }
+
+schemes:
+  bearer: { kind: bearer }
+
+identities:
+  user:
+    schemes: { read: [bearer], write: [bearer] }
+    principal: Principal
+
+schemas:
+  NoteId: { type: string }
+  Principal:
+    type: object
+    required: [userId]
+    properties: { userId: { type: string } }
+  Note:
+    type: object
+    required: [id]
+    properties: { id: NoteId }
+
+errors:
+  notes.gone: { status: 404, title: The note is gone. }
+
+conventions:
+  errors:
+    every: [notes.gone]
+
+surfaces:
+  app:
+    identity: user
+    routes:
+      notes:
+        kind: collection
+        id: { noteId: NoteId }
+        idProperty: id
+        item: Note
+        ops: [get]

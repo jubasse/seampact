@@ -1,0 +1,148 @@
+name: Own validators consumer
+
+# Builds and packs the seampact packages, then installs them from the tarballs into a test consumer whose server
+# entry gives no `validators` link, generates the validators the target writes itself (Ajv on Fastify, VineJS on AdonisJS), typechecks,
+# boots the server and runs `reference slice answers` against it. On a pull request or a push they run only when the
+# change touches the packages, the consumer harness, the reference contract, the toolchain pins or this workflow;
+# `own-validators` is the one check to require.
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  merge_group:
+    types: [checks_requested]
+    branches: [main, develop]
+  workflow_dispatch:
+  # The nightly run holds the drift row (VineJS on AdonisJS 6).
+  schedule:
+    - cron: "30 0 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: own-validators-consumer-${{ github.event_name }}-${{ github.event_name == 'push' && github.sha || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      own-validators: ${{ steps.detect.outputs.run }}
+      queue: ${{ steps.detect.outputs.queue }}
+      drift: ${{ steps.detect.outputs.drift }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history without file contents: the change list reads commits and trees only, and only the shared
+          # actions are checked out.
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout: .github/actions
+          persist-credentials: false
+      - name: Detect a change the own validators consumers depend on
+        id: detect
+        uses: ./.github/actions/lane-changes
+        with:
+          # The packages a Node server consumer installs (core, packs, runtime, the TypeScript, fetch and validator
+          # targets, its own), the http suite, the consumer harness and its overlays, the reference contract and the pins.
+          watched-paths: |
+            ^packages/(core|packs|runtime)/
+            ^packages/targets/codegen-(ts|fetch|zod|yup|class-validator|fastify|adonis)/
+            ^packages/tools/http-suite/
+            ^scripts/consumers/(cli|build-and-pack|consumer-project|install-into|ignore-vendor|packed-packages|run-step|served-app|validator-choice)\.ts$
+            ^scripts/consumers/template/
+            ^scripts/consumers/targets/(fastify|adonis|adonis6)/
+            ^scripts/golden/
+            ^fixtures/reference/
+            ^\.github/actions/
+            ^\.github/workflows/validators-2\.yml$
+            ^pnpm-lock\.yaml$
+            ^pnpm-workspace\.yaml$
+            ^package\.json$
+            ^tsconfig\.base\.json$
+            ^\.nvmrc$
+          # The fast tier: a pull request to develop runs this lane only for its own code.
+          pull-request-paths: |
+            ^packages/targets/codegen-adonis/runtime/vine-support\.ts$
+            ^scripts/consumers/validator-choice\.ts$
+            ^\.github/workflows/validators-2\.yml$
+
+  own-validators-consumer:
+    needs: changes
+    if: needs.changes.outputs.own-validators == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [fastify]
+        validators: [ajv]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Run the ${{ matrix.target }} consumer on ${{ matrix.validators }} from packed tarballs
+        run: node scripts/consumers/cli.ts --target "${{ matrix.target }}" --validators "${{ matrix.validators }}" --dir "$RUNNER_TEMP/test-seampact-${{ matrix.target }}-${{ matrix.validators }}"
+
+  own-validators-consumer-vinejs:
+    needs: changes
+    if: needs.changes.outputs.own-validators == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [adonis]
+        validators: [vinejs]
+    steps: &vinejs-consumer-steps
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Run the ${{ matrix.target }} consumer on ${{ matrix.validators }} from packed tarballs
+        run: node scripts/consumers/cli.ts --target "${{ matrix.target }}" --validators "${{ matrix.validators }}" --dir "$RUNNER_TEMP/test-seampact-${{ matrix.target }}-${{ matrix.validators }}"
+
+  own-validators-consumer-vinejs-drift:
+    needs: changes
+    if: needs.changes.outputs.drift == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [adonis6]
+        validators: [vinejs]
+    steps: *vinejs-consumer-steps
+
+  # The required check: a skipped job passes only when the change filter said skip; a failed or cancelled one fails.
+  # The matrix rows are not required checks: a skipped matrix job reports one unexpanded name, never the row names.
+  own-validators:
+    # Every job this check stands for is listed here, or its failure would not reach the required check.
+    needs: [changes, own-validators-consumer, own-validators-consumer-vinejs, own-validators-consumer-vinejs-drift]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .github/actions
+          persist-credentials: false
+      - uses: ./.github/actions/lane-aggregate
+        with:
+          needs: ${{ toJSON(needs) }}
+          should-run: ${{ needs.changes.outputs.own-validators }}

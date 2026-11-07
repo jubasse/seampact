@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/openapi/extensions/format.schema.json",
+  "title": "x-seampact-format",
+  "description": "The wire format of the document or of an operation that differs from it.",
+  "type": "string",
+  "minLength": 1
+}

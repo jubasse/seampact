@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/openapi/extensions/concurrency.schema.json",
+  "title": "x-seampact-concurrency",
+  "description": "Where the expected version is read, and the field of the item holding it.",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "field": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": ["version", "field"],
+  "additionalProperties": false
+}

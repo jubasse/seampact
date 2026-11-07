@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "seampact enums catalogue",
+  "description": "Enums: values, source, reason, fallback (ADR 0002 section 12). A name-keyed catalogue file.",
+  "type": "object",
+  "properties": {
+    "$include": {
+      "$ref": "common.schema.json#/$defs/include"
+    }
+  },
+  "propertyNames": {
+    "description": "an enum name (ADR 0002 section 4)",
+    "pattern": "^(?:[A-Z][A-Za-z0-9]*|\\$include)$",
+    "not": {
+      "enum": [
+        "__proto__",
+        "constructor",
+        "prototype"
+      ]
+    }
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/entry"
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "properties": {
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "$comment": "ADR 0002 section 12"
+        },
+        "source": {
+          "$ref": "#/$defs/source",
+          "$comment": "ADR 0002 section 12"
+        },
+        "reason": {
+          "type": "string",
+          "$comment": "ADR 0002 section 12",
+          "description": "Optional docs: why the enum is local."
+        },
+        "fallback": {
+          "type": "string",
+          "$comment": "ADR 0002 section 12",
+          "description": "The member a client maps an unknown value to."
+        },
+        "codeNames": {
+          "type": "object",
+          "properties": {
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "propertyNames": {
+            "description": "an enum value (ADR 0002 section 2)",
+            "pattern": "^(?:[^$].*|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
+          },
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1
+          },
+          "$comment": "ADR 0002 section 12"
+        },
+        "summary": {
+          "$ref": "common.schema.json#/$defs/summary",
+          "$comment": "ADR 0002 section 12"
+        },
+        "description": {
+          "$ref": "common.schema.json#/$defs/description",
+          "$comment": "ADR 0002 section 12"
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "additionalProperties": false
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "vocabulary": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "ADR 0002 section 12",
+          "description": "An external vocabulary: a free label."
+        },
+        "enum": {
+          "$ref": "common.schema.json#/$defs/schemaName",
+          "$comment": "ADR 0002 section 12",
+          "description": "Takes another enum's values."
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "additionalProperties": false,
+      "if": {
+        "properties": {
+          "vocabulary": true
+        },
+        "required": [
+          "vocabulary"
+        ]
+      },
+      "then": {
+        "properties": {
+          "enum": {
+            "title": "conflict",
+            "description": "A source is a vocabulary or an enum, not both.",
+            "not": {}
+          }
+        }
+      }
+    }
+  }
+}

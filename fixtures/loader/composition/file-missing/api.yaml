@@ -1,0 +1,7 @@
+api:
+  name: tasks
+surfaces:
+  app:
+    routes:
+      get:
+        description: { $file: ./docs/get-task.md }

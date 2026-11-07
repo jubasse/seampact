@@ -1,0 +1,1 @@
+The plain fetch renderer of the vue target (`query: fetch`): `composables.ts`, built on Vue's `ref` and `watch` alone over the shared fetcher factory of codegen-core, with no query library and no cache.

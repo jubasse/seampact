@@ -1,0 +1,19 @@
+{
+  "testResults": [
+    {
+      "name": "<root>/src/a.test.txt",
+      "assertionResults": [
+        {
+          "title": "works",
+          "fullName": "works",
+          "status": "passed"
+        },
+        {
+          "title": "fails",
+          "fullName": "fails",
+          "status": "failed"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,609 @@
+# The standalone compiler binary (ADR 0010): five binaries built on one Linux job, the macOS ones re-signed ad hoc
+# on macOS runners, a SHA-256 manifest of the final files, the pins written from it, one `seampact-compiler` wheel
+# per binary, and a smoke on each platform's own runner (the binary, then its wheel in a clean venv). On a pull
+# request or a push the jobs run only when the change touches a watched path. A pull request to develop builds the
+# five binaries; a push to develop adds the manifest, the pins, the wheels and the linux-x64, win32-x64 and
+# linux-arm64 smokes on unsigned binaries, and the nightly and a manual run sign the macOS
+# binaries and smoke them too (an unsigned binary does not run on Apple Silicon); `binary` is the one check to require.
+# The release workflow calls this one: a call runs every row, embeds the packs as npm packed them, and attests the
+# binaries and the wheels only when it asks. Nothing here uploads to a release or a registry.
+name: p3-binary
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  merge_group:
+    types: [checks_requested]
+    branches: [main, develop]
+  workflow_dispatch:
+  # The nightly run holds the drift rows (macOS signing and smoke).
+  schedule:
+    - cron: "30 0 * * *"
+  workflow_call:
+    inputs:
+      # A call is marked by this input, never inferred from another one: an empty `version` or artefact name (a
+      # misspelt caller output) fails the call by name instead of building in pull-request mode. On every other
+      # trigger the input is absent, so it reads false.
+      release-call:
+        description: A release build. Leave it at true; only this workflow's own triggers run without it.
+        required: false
+        type: boolean
+        default: true
+      version:
+        description: >-
+          The release version. The pins and the wheels carry it, and the checkout's seampact-compiler must already be
+          at it, unless `stamp` is set.
+        required: true
+        type: string
+      packed-packs-artifact:
+        description: >-
+          An artefact of the calling run holding the `pnpm pack` tarballs at its top level; the binaries embed the
+          first-party packs from them, so they vendor the bytes npm publishes.
+        required: true
+        type: string
+      stamp:
+        description: >-
+          A dry run's call on a commit not stamped at `version`: each job stamps its checkout with it
+          (scripts/release/stamp.ts) before using it, so the binaries, the wheels and the pins carry it.
+        required: false
+        type: boolean
+        default: false
+      attest:
+        description: >-
+          Attest the binaries and the wheels. The caller grants `id-token: write` and `attestations: write` to this
+          workflow's job either way; the dry run leaves this false.
+        required: false
+        type: boolean
+        default: false
+    outputs:
+      version:
+        description: The version the pins and the wheels carry.
+        value: ${{ jobs.changes.outputs.version }}
+      assets-artifact:
+        description: The five binaries and SHA256SUMS, hashed after the macOS signature.
+        value: ${{ jobs.manifest.outputs.artifact }}
+      sums-sha256:
+        description: >-
+          The SHA-256 of the SHA256SUMS this run hashed and attested; the caller checks it before uploading the assets.
+        value: ${{ jobs.manifest.outputs.sums-sha256 }}
+      pins-artifact:
+        description: The `binaries.json` of seampact/ir and seampact-ir, written from SHA256SUMS.
+        value: ${{ jobs.pins.outputs.artifact }}
+      wheels-artifact:
+        description: The five seampact-compiler platform wheels.
+        value: ${{ jobs.wheels.outputs.artifact }}
+      wheels-sha256:
+        description: >-
+          The SHA-256 of the `sha256sum` list of the five wheels (C-locale order); the caller checks every wheel against it.
+        value: ${{ jobs.wheels.outputs.sha256 }}
+
+permissions:
+  contents: read
+
+# A call is a part of its caller's run: its own group, so no other run cancels or queues it.
+concurrency:
+  group: p3-binary-${{ inputs.release-call && github.run_id || format('{0}-{1}', github.event_name, github.event_name == 'push' && github.sha || github.ref) }}
+  cancel-in-progress: ${{ !inputs.release-call && github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      binary: ${{ steps.detect.outputs.run }}
+      queue: ${{ steps.detect.outputs.queue }}
+      post-merge: ${{ steps.detect.outputs.post-merge }}
+      drift: ${{ steps.detect.outputs.drift }}
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history without file contents: the change list reads commits and trees only, and only the shared
+          # actions and the two projects of the version check are checked out.
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout: |
+            .github/actions
+            python/compiler
+            python/ir
+          persist-credentials: false
+      # A call fails here when an input is empty, or when the compiler or the `compiler` extra of seampact-ir is not
+      # at the release version.
+      - name: The version of the pins and the wheels
+        id: version
+        env:
+          RELEASE_CALL: ${{ inputs.release-call == true }}
+          CALLER_VERSION: ${{ inputs.version }}
+          PACKED_PACKS_ARTIFACT: ${{ inputs.packed-packs-artifact }}
+          STAMP: ${{ inputs.stamp == true }}
+        run: |
+          if [ "$RELEASE_CALL" != true ]; then
+            version="$(python3 python/compiler/release_version.py .)"
+          elif [ -z "$PACKED_PACKS_ARTIFACT" ]; then
+            echo "The call's \`packed-packs-artifact\` input is empty: name the calling run's artefact of the \`pnpm pack\` tarballs."
+            exit 1
+          elif [ "$STAMP" = true ]; then
+            # The jobs stamp their checkouts with it; the stamp refuses a version of another form.
+            if [ -z "$CALLER_VERSION" ]; then
+              echo "The call's \`version\` input is empty: pass the version the dry run stamps."
+              exit 1
+            fi
+            version="$CALLER_VERSION"
+          else
+            version="$(python3 python/compiler/release_version.py . --release "$CALLER_VERSION")"
+          fi
+          echo "version=$version" | tee -a "$GITHUB_OUTPUT"
+      - name: Detect a change the binary is built from
+        id: lane
+        uses: ./.github/actions/lane-changes
+        with:
+          # The compiler binary cache key's roots (the CLI's dependency closure and the binary package) and the
+          # fixtures the smoke apps read.
+          watched-paths: |
+            ^packages/(core|packs)/
+            ^packages/tools/binary/
+            ^fixtures/reference/
+            ^fixtures/golden/pack-[^/]+/contract/
+            ^\.github/actions/
+            ^\.github/workflows/p3-binary\.yml$
+            ^python/compiler/
+            ^python/pyproject\.toml$
+            ^pnpm-lock\.yaml$
+            ^pnpm-workspace\.yaml$
+            ^package\.json$
+            ^\.npmrc$
+            ^tsconfig(\.base)?\.json$
+            ^\.nvmrc$
+      # A call builds what the release ships: every row, whatever the change.
+      - name: Run every row on a release call
+        id: detect
+        env:
+          RELEASE_CALL: ${{ inputs.release-call == true }}
+          LANE_RUN: ${{ steps.lane.outputs.run }}
+          LANE_QUEUE: ${{ steps.lane.outputs.queue }}
+          LANE_POST_MERGE: ${{ steps.lane.outputs.post-merge }}
+          LANE_DRIFT: ${{ steps.lane.outputs.drift }}
+        run: |
+          if [ "$RELEASE_CALL" = true ]; then
+            printf 'run=true\nqueue=true\npost-merge=true\ndrift=true\n' >> "$GITHUB_OUTPUT"
+          else
+            printf 'run=%s\nqueue=%s\npost-merge=%s\ndrift=%s\n' \
+              "$LANE_RUN" "$LANE_QUEUE" "$LANE_POST_MERGE" "$LANE_DRIFT" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    name: build (linux, five binaries)
+    needs: changes
+    if: needs.changes.outputs.binary == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      # No dependency cache in a release call: the released binaries come from the lock file alone.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: ${{ !inputs.release-call && 'pnpm' || '' }}
+          package-manager-cache: ${{ !inputs.release-call }}
+      - run: pnpm install --frozen-lockfile
+      - name: Stamp the checkout (dry-run call)
+        if: inputs.stamp
+        env:
+          VERSION: ${{ inputs.version }}
+        run: node scripts/release/stamp.ts "$VERSION"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: inputs.release-call
+        with:
+          name: ${{ inputs.packed-packs-artifact }}
+          path: ${{ runner.temp }}/packed-packs
+      # A call embeds the packs from their npm tarballs, and the reference installs them from the same tarballs.
+      - name: Build the five binaries
+        working-directory: packages/tools/binary
+        env:
+          PACKED_PACKS: ${{ inputs.release-call && format('{0}/packed-packs', runner.temp) || '' }}
+        run: node scripts/build.mjs ${PACKED_PACKS:+--packed-packs "$PACKED_PACKS"}
+      - name: Write the Node CLI reference
+        working-directory: packages/tools/binary
+        env:
+          PACKED_PACKS: ${{ inputs.release-call && format('{0}/packed-packs', runner.temp) || '' }}
+        run: node scripts/reference.mjs ${PACKED_PACKS:+--packed-packs "$PACKED_PACKS"}
+      - name: Record sizes
+        working-directory: packages/tools/binary
+        run: |
+          {
+            echo "### Build (ubuntu-24.04)"
+            echo "Build script: $(cat dist/build-seconds.txt) s. Bytes and gzip level 9 bytes per binary:"
+            echo '```'
+            cat dist/sizes.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: binary-unsigned
+          path: packages/tools/binary/dist/bin/
+          retention-days: 3
+          if-no-files-found: error
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: binary-reference
+          path: packages/tools/binary/dist/reference/
+          include-hidden-files: true
+          retention-days: 3
+          if-no-files-found: error
+
+  sign-macos:
+    name: sign (${{ matrix.id }})
+    needs: [changes, build]
+    if: needs.changes.outputs.drift == 'true'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { id: darwin-arm64, runner: macos-15, binary: seampact-darwin-arm64 }
+          - { id: darwin-x64, runner: macos-15-intel, binary: seampact-darwin-x64 }
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: binary-unsigned
+          path: bin
+      - name: Re-sign ad hoc (the injection leaves no valid signature)
+        run: |
+          # The injected binary may carry no signature to remove, and then the command fails; the strict verify in
+          # the next step is the real gate.
+          codesign --remove-signature "bin/${{ matrix.binary }}" || true
+          codesign --force --sign - "bin/${{ matrix.binary }}"
+      - name: Gate, the signature is valid and present
+        # Hosted macOS runners run an unsigned binary, so a run proves nothing about the signature.
+        run: |
+          codesign --verify --strict --verbose=2 "bin/${{ matrix.binary }}"
+          codesign -dv "bin/${{ matrix.binary }}" 2>&1 | tee signature.txt
+          grep -q '^Signature=adhoc$' signature.txt
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: binary-signed-${{ matrix.id }}
+          path: bin/${{ matrix.binary }}
+          retention-days: 3
+          if-no-files-found: error
+
+  manifest:
+    name: manifest (hash after signing)
+    # Runs on the build alone when signing does not run, so the smoke still tests the unsigned binaries; a failed
+    # or cancelled signing stops it, and in a call signing must have succeeded; the aggregate fails on that job.
+    # A queue row, which the arm64 post-merge smoke also needs.
+    needs: [changes, build, sign-macos]
+    if: >-
+      ${{ !cancelled() && needs.build.result == 'success'
+      && (needs.changes.outputs.queue == 'true' || needs.changes.outputs.post-merge == 'true')
+      && (needs.sign-macos.result == 'success'
+      || (needs.sign-macos.result == 'skipped' && !inputs.release-call)) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      artifact: binary-assets
+      sums-sha256: ${{ steps.manifest.outputs.sums-sha256 }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: binary-unsigned
+          path: release
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: needs.sign-macos.result == 'success'
+        with:
+          pattern: binary-signed-*
+          merge-multiple: true
+          path: release
+      - name: Write the manifest of the final files
+        id: manifest
+        run: |
+          node packages/tools/binary/scripts/manifest.mjs write release
+          echo "sums-sha256=$(sha256sum release/SHA256SUMS | cut -d ' ' -f 1)" | tee -a "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: binary-assets
+          path: release/
+          # A call's artefacts outlast the wait for the release approval.
+          retention-days: ${{ inputs.release-call && 30 || 7 }}
+          if-no-files-found: error
+
+  # The pins seampact/ir and seampact-ir embed in a release. The monorepo keeps the empty pin, so nothing is committed.
+  pins:
+    name: pins (from SHA256SUMS)
+    needs: [changes, manifest]
+    if: ${{ !cancelled() && needs.manifest.result == 'success' && needs.changes.outputs.queue == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      artifact: binary-pins
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: binary-assets
+          path: release
+      - name: Write binaries.json
+        env:
+          VERSION: ${{ needs.changes.outputs.version }}
+        run: |
+          mkdir pins
+          node packages/tools/binary/scripts/pins.mjs "$VERSION" release/SHA256SUMS pins/binaries.json
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: binary-pins
+          path: pins/
+          # A call's artefacts outlast the wait for the release approval.
+          retention-days: ${{ inputs.release-call && 30 || 7 }}
+          if-no-files-found: error
+
+  # One wheel per binary, holding it unchanged; the build hook checks each against SHA256SUMS. No sdist.
+  wheels:
+    name: wheels (seampact-compiler)
+    needs: [changes, manifest]
+    if: ${{ !cancelled() && needs.manifest.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      artifact: compiler-wheels
+      sha256: ${{ steps.wheels.outputs.sha256 }}
+    defaults:
+      run:
+        working-directory: python
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: inputs.stamp
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - name: Stamp the checkout (dry-run call)
+        if: inputs.stamp
+        working-directory: .
+        env:
+          VERSION: ${{ inputs.version }}
+        run: node scripts/release/stamp.ts "$VERSION"
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        id: python
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.6"
+          enable-cache: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: binary-assets
+          path: ${{ runner.temp }}/assets
+      - name: Build the five platform wheels
+        id: wheels
+        env:
+          UV_PYTHON: ${{ steps.python.outputs.python-path }}
+          UV_PYTHON_DOWNLOADS: never
+          SEAMPACT_COMPILER_ASSETS: ${{ runner.temp }}/assets
+          WHEELS: ${{ runner.temp }}/wheels
+        run: |
+          # An artefact keeps no file mode, and the wheel records the binary's.
+          chmod +x "$SEAMPACT_COMPILER_ASSETS"/seampact-*
+          while read -r asset; do
+            SEAMPACT_COMPILER_ASSET="$asset" uv build --wheel --package seampact-compiler --out-dir "$WHEELS"
+          done < <(cut -d ' ' -f 3 "$SEAMPACT_COMPILER_ASSETS/SHA256SUMS")
+          ls -l "$WHEELS"
+          wheel_count="$(find "$WHEELS" -name '*.whl' | wc -l)"
+          [ "$wheel_count" -eq 5 ] || { echo "built $wheel_count wheels, not one per binary"; exit 1; }
+          echo "sha256=$(cd "$WHEELS" && LC_ALL=C sha256sum -- *.whl | sha256sum | cut -d ' ' -f 1)" | tee -a "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: compiler-wheels
+          path: ${{ runner.temp }}/wheels/*.whl
+          # A call's artefacts outlast the wait for the release approval.
+          retention-days: ${{ inputs.release-call && 30 || 7 }}
+          if-no-files-found: error
+
+  # The PR rows; the post-merge and drift jobs below run the same steps on the other platforms.
+  smoke:
+    name: &smoke-name smoke (${{ matrix.id }})
+    needs: [changes, sign-macos, manifest, wheels]
+    if: >-
+      ${{ !cancelled() && needs.manifest.result == 'success' && needs.wheels.result == 'success'
+      && needs.changes.outputs.queue == 'true' }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { id: linux-x64, runner: ubuntu-24.04, binary: seampact-linux-x64 }
+          - { id: win32-x64, runner: windows-2025, binary: seampact-win32-x64.exe }
+    defaults: &smoke-defaults
+      run:
+        shell: bash
+    steps: &smoke-steps
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - name: Stamp the checkout (dry-run call)
+        if: inputs.stamp
+        env:
+          VERSION: ${{ inputs.version }}
+        run: node scripts/release/stamp.ts "$VERSION"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: binary-assets
+          path: bin
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: binary-reference
+          path: reference
+      - name: Verify the five binaries against the manifest
+        run: node packages/tools/binary/scripts/manifest.mjs check bin
+      - name: Make the binary executable
+        if: runner.os != 'Windows'
+        run: chmod +x "bin/${{ matrix.binary }}"
+      - name: Check the runner architecture against the matrix id
+        run: |
+          want="${MATRIX_ID#*-}"
+          got="$(node -p process.arch)"
+          machine="$(uname -m)"
+          case "$machine" in
+            x86_64 | AMD64 | amd64 | x64) machine_arch=x64 ;;
+            aarch64 | arm64) machine_arch=arm64 ;;
+            *) machine_arch="$machine" ;;
+          esac
+          if [ "$RUNNER_OS" = macOS ] && [ "$(sysctl -in sysctl.proc_translated 2>/dev/null || echo 0)" = 1 ]; then
+            machine_arch="$machine_arch (Rosetta)"
+          fi
+          echo "runner: ${{ matrix.runner }}, uname -m: $machine, machine arch: $machine_arch, node arch: $got, binary: $want"
+          [ "$got" = "$want" ] || { echo "node architecture $got is not $want"; exit 1; }
+          [ "$machine_arch" = "$want" ] || { echo "machine architecture $machine_arch is not $want"; exit 1; }
+        env:
+          MATRIX_ID: ${{ matrix.id }}
+      - name: macOS, the shipped signature is valid
+        if: runner.os == 'macOS' && needs.sign-macos.result == 'success'
+        run: |
+          codesign --verify --strict --verbose=2 "bin/${{ matrix.binary }}"
+          codesign -dv "bin/${{ matrix.binary }}" 2>&1 | grep -q '^Signature=adhoc$'
+      - name: Windows, the PE security directory is empty
+        if: runner.os == 'Windows'
+        run: |
+          # Fail closed: the script must print its verdict line, or the guard did not run.
+          out="$(node packages/tools/binary/scripts/pe.mjs check "bin/${{ matrix.binary }}")"
+          echo "$out"
+          [ "$out" = "pe: security directory offset 0, size 0" ] || { echo "pe check did not confirm an empty security directory"; exit 1; }
+      - name: Smoke
+        run: |
+          {
+            echo "### Smoke ${{ matrix.id }} (${{ matrix.runner }})"
+            echo "| platform | result | size MiB | first launch ms | warm start median of 7 ms |"
+            echo "|---|---|---|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
+          node packages/tools/binary/scripts/smoke.mjs "bin/${{ matrix.binary }}" reference --label "${{ matrix.id }}"
+      - name: Smoke with a non-UTC TZ, a non-English LANG and yaml's debug variables set
+        if: matrix.id == 'linux-x64'
+        env:
+          SMOKE_ENV: '{"TZ":"Asia/Kolkata","LANG":"fr_FR.UTF-8","LC_ALL":"fr_FR.UTF-8","LOG_TOKENS":"1","LOG_STREAM":"1"}'
+        run: node packages/tools/binary/scripts/smoke.mjs "bin/${{ matrix.binary }}" reference --label "linux-x64 TZ=Asia/Kolkata LANG=fr_FR.UTF-8 LOG_TOKENS LOG_STREAM"
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: compiler-wheels
+          path: wheels
+      # pip picks the wheel by its platform tag, so a wrong tag fails the install.
+      - name: Install this platform's wheel in a clean venv and run its binary
+        env:
+          MATRIX_BINARY: ${{ matrix.binary }}
+        run: |
+          python -m venv wheel-venv
+          if [ "$RUNNER_OS" = Windows ]; then venv_python=wheel-venv/Scripts/python.exe; else venv_python=wheel-venv/bin/python; fi
+          "$venv_python" -m pip install --no-index --find-links wheels seampact-compiler
+          "$venv_python" -I python/compiler/wheel_smoke.py "$MATRIX_BINARY" bin
+
+  smoke-post-merge:
+    name: *smoke-name
+    needs: [changes, sign-macos, manifest, wheels]
+    if: >-
+      ${{ !cancelled() && needs.manifest.result == 'success' && needs.wheels.result == 'success'
+      && needs.changes.outputs.post-merge == 'true' }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { id: linux-arm64, runner: ubuntu-24.04-arm, binary: seampact-linux-arm64 }
+    defaults: *smoke-defaults
+    steps: *smoke-steps
+
+  smoke-drift:
+    name: *smoke-name
+    needs: [changes, sign-macos, manifest, wheels]
+    if: >-
+      ${{ !cancelled() && needs.manifest.result == 'success' && needs.wheels.result == 'success'
+      && needs.changes.outputs.drift == 'true' }}
+    runs-on: ${{ matrix.runner }}
+    # macOS runners queue and start slowly.
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { id: darwin-arm64, runner: macos-15, binary: seampact-darwin-arm64 }
+          - { id: darwin-x64, runner: macos-15-intel, binary: seampact-darwin-x64 }
+    defaults: *smoke-defaults
+    steps: *smoke-steps
+
+  # The required check: a skipped job passes only when the change filter said skip; a failed or cancelled one fails.
+  binary:
+    # Every job this check stands for is listed here, or its failure would not reach the required check.
+    needs: [changes, build, sign-macos, manifest, pins, wheels, smoke, smoke-post-merge, smoke-drift]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .github/actions
+          persist-credentials: false
+      - uses: ./.github/actions/lane-aggregate
+        with:
+          needs: ${{ toJSON(needs) }}
+          should-run: ${{ needs.changes.outputs.binary }}
+          # Signing is a drift row: a pull request and a push smoke unsigned binaries. The manifest, the pins, the
+          # wheels and the smokes are queue rows: a pull request to develop builds the binaries only.
+          allow-skip: >-
+            ${{ format('{0} {1}', needs.changes.outputs.drift == 'false' && 'sign-macos' || '',
+            needs.changes.outputs.queue == 'false' && 'manifest pins wheels smoke' || '') }}
+
+  attest:
+    name: attest (when the caller asks)
+    if: inputs.release-call && inputs.attest
+    needs: [manifest, smoke, smoke-post-merge, smoke-drift]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: binary-assets
+          path: release
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: compiler-wheels
+          path: wheels
+      # The binaries as SHA256SUMS lists them, checked against the digest the manifest job output, and the wheels.
+      - name: List the subjects
+        env:
+          SUMS_SHA256: ${{ needs.manifest.outputs.sums-sha256 }}
+        run: |
+          echo "$SUMS_SHA256  release/SHA256SUMS" | sha256sum --check --strict
+          cp release/SHA256SUMS subjects.txt
+          (cd wheels && sha256sum ./*.whl | sed 's#  \./#  #') >> subjects.txt
+          cat subjects.txt
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-checksums: subjects.txt

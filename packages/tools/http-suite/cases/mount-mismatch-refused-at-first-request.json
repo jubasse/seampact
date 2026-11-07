@@ -1,0 +1,21 @@
+{
+  "id": "mount-mismatch-refused-at-first-request",
+  "title": "A contract route served under a framework prefix its entry's mount does not state answers 500 api.internal",
+  "checks": ["CHK-161"],
+  "profiles": ["default"],
+  "targets": ["express", "adonis"],
+  "steps": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/mounted/v1/health"
+      },
+      "expect": {
+        "status": 500,
+        "body": {
+          "code": "api.internal"
+        }
+      }
+    }
+  ]
+}

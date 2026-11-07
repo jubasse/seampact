@@ -1,0 +1,31 @@
+"""The root URLconf of the Django Ninja consumer: the NinjaAPI that serves the `tasks` and `tasksService` apis, the
+suite's control views outside its base path, and the framework routes of the unlisted and patterned boot variants."""
+
+from typing import Final
+
+from api import api
+from control import hook_calls, load_script, log_lines
+from django.http import HttpRequest, JsonResponse
+from django.urls import URLPattern, URLResolver, path
+from seampact_consumer_suite.boot_variant import PATTERNED_ROUTE, serves_patterned_route, serves_unlisted_route
+from seampact_consumer_suite.control_routes import HOOK_CALLS_PATH, LOG_LINES_PATH, SCRIPT_PATH
+
+UNLISTED_PATH: Final = "v1/unlisted"
+
+
+def _unlisted(request: HttpRequest) -> JsonResponse:
+    return JsonResponse({"route": "unlisted"})
+
+
+urlpatterns: list[URLPattern | URLResolver] = [
+    path("", api.urls),
+    path(SCRIPT_PATH.removeprefix("/"), load_script),
+    path(HOOK_CALLS_PATH.removeprefix("/"), hook_calls),
+    path(LOG_LINES_PATH.removeprefix("/"), log_lines),
+]
+
+if serves_unlisted_route():
+    urlpatterns.append(path(UNLISTED_PATH, _unlisted))
+
+if serves_patterned_route():
+    urlpatterns.append(path(PATTERNED_ROUTE.removeprefix("/"), _unlisted))

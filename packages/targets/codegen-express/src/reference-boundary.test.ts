@@ -1,0 +1,176 @@
+import { readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import {
+  expectedNonPathScopeSourceRefusals,
+  FORMS_REFUSED_BY_ONE_ZERO,
+  GENERATE_TIMEOUT_MILLISECONDS,
+  generateReferenceProject,
+  generateWithRefusedForm,
+  generateWithRightsVersionHeader,
+  hooksRequirementErrors,
+  nonPathScopeSourceRefusals,
+  projectDirectory,
+  publicTasksApi,
+  REFERENCE_COMPILER_OPTIONS,
+  RIGHTS_VERSION_OPERATION,
+  referenceLinks,
+  referenceServerOutput,
+  refusalOf,
+  TYPE_CHECK_TIMEOUT_MILLISECONDS,
+  typeErrorsOf,
+} from "@seampact/codegen-core/node-server/test-support";
+import { beforeAll, describe, expect, test } from "vitest";
+import { target as expressTarget } from "./index.js";
+
+const PROJECT = projectDirectory(import.meta.url, "reference-boundary");
+const INDEX_CHECK = "index-exports.check.ts";
+// The fixed exports of ADR 0018 "Placement", each read through the api's index.
+const FIXED_EXPORTS = [
+  "router",
+  "preRoutingErrorHandler",
+  "renderPreRoutingError",
+  "renderContractError",
+  "isContractRoute",
+  "keepRawBody",
+  "LARGEST_BODY_LIMIT",
+  "MAX_CHECKED_ERROR_BODY_BYTES",
+  "MAX_RENDERED_ISSUES",
+];
+
+let files: string[] = [];
+
+beforeAll(async () => {
+  files = await generateReferenceProject(PROJECT, expressTarget, { bodyValidation: true });
+  writeFileSync(
+    join(PROJECT, INDEX_CHECK),
+    [
+      'import * as Tasks from "./generated/server/tasks/index.js";',
+      'import type * as TasksTypes from "./generated/server/tasks/index.js";',
+      "",
+      `export const exported = [${FIXED_EXPORTS.map((name) => `Tasks.${name}`).join(", ")}];`,
+      "export type Exported = [TasksTypes.TasksEndpoints, TasksTypes.SeampactHooks];",
+      "",
+    ].join("\n"),
+  );
+}, GENERATE_TIMEOUT_MILLISECONDS);
+
+describe("the generated reference router compiles", () => {
+  test(
+    "both apis' types, validators and Express router type-check together",
+    () => {
+      expect(
+        typeErrorsOf(PROJECT, [...files, join(PROJECT, INDEX_CHECK)], REFERENCE_COMPILER_OPTIONS),
+      ).toEqual([]);
+    },
+    TYPE_CHECK_TIMEOUT_MILLISECONDS,
+  );
+
+  test("the generated comments name the handlers key and carry no NestJS wording", () => {
+    const module = readFileSync(join(PROJECT, "generated/server/tasks/express.ts"), "utf8");
+    const hooks = readFileSync(join(PROJECT, "generated/server/tasks/hooks.ts"), "utf8");
+
+    expect(module).toContain("keyed by its name");
+    expect(hooks).not.toContain("SeampactModule");
+  });
+
+  test("the compression option is Fastify's: Express refuses it by name", () => {
+    expect(expressTarget.parseOptions({ compression: "off" })).toMatchObject({
+      status: "refused",
+      refusals: [{ code: "options.unknown" }],
+    });
+    expect(expressTarget.parseOptions({ frameworkEtag: "keep" })).toMatchObject({
+      status: "parsed",
+    });
+  });
+
+  test("catchAll takes a boolean and refuses anything else", () => {
+    expect(expressTarget.parseOptions({ catchAll: false })).toMatchObject({
+      status: "parsed",
+      options: { catchAll: false },
+    });
+    expect(expressTarget.parseOptions({})).toMatchObject({ options: { catchAll: true } });
+    expect(expressTarget.parseOptions({ catchAll: "no" })).toMatchObject({
+      status: "refused",
+      refusals: [{ code: "options.catchAll.invalid" }],
+    });
+  });
+
+  test("the route table lists a static segment before a param at the same place", () => {
+    const routes = readFileSync(join(PROJECT, "generated/server/tasks/routes.ts"), "utf8");
+    const firstParamTask = routes.indexOf('"/v1/channels/{channelId}/tasks/{taskId}');
+
+    expect(routes.indexOf('"/v1/channels/{channelId}/tasks/search"')).toBeLessThan(firstParamTask);
+    expect(routes.indexOf('"/v1/channels/{channelId}/tasks/batch"')).toBeLessThan(firstParamTask);
+  });
+});
+
+describe("an api with only public operations asks for no hooks", () => {
+  test(
+    "it registers without hooks, and an api that needs hooks still requires them",
+    async () => {
+      const project = projectDirectory(import.meta.url, "public-api");
+      const files = await generateReferenceProject(project, expressTarget, {}, publicTasksApi);
+      const errors = hooksRequirementErrors(project, files, {
+        publicTasks: [
+          'declare const handlers: Parameters<typeof Tasks.router>[0]["handlers"];',
+          "export const router = Tasks.router({ handlers });",
+        ].join("\n"),
+        guardedService: [
+          'declare const handlers: Parameters<typeof Service.router>[0]["handlers"];',
+          "export const router = Service.router({ handlers });",
+        ].join("\n"),
+      });
+
+      expect(errors.publicTasks).toEqual([]);
+      expect(errors.guardedService).toHaveLength(1);
+      expect(errors.guardedService[0]).toContain("hooks");
+    },
+    GENERATE_TIMEOUT_MILLISECONDS + TYPE_CHECK_TIMEOUT_MILLISECONDS,
+  );
+});
+
+// The forms 1.0 refuses by name (`FORMS_REFUSED_BY_ONE_ZERO`): generation refuses, it does not warn.
+describe("the forms 1.0 refuses", () => {
+  test("a scope id read from a source other than the path is refused by name at its source", async () => {
+    const refusals = await nonPathScopeSourceRefusals(expressTarget, {
+      links: await referenceLinks(PROJECT, "tasks"),
+      outputDirectory: referenceServerOutput(PROJECT, "tasks"),
+    });
+
+    expect(refusals).toEqual(expectedNonPathScopeSourceRefusals());
+  });
+
+  test.each(FORMS_REFUSED_BY_ONE_ZERO)("$title is refused by name", async (form) => {
+    const outcome = await generateWithRefusedForm(expressTarget, form, {
+      links: await referenceLinks(PROJECT, "tasks"),
+      outputDirectory: referenceServerOutput(PROJECT, "tasks"),
+    });
+
+    expect(outcome).toMatchObject({
+      status: "refused",
+      refusals: expect.arrayContaining([expect.objectContaining(refusalOf(form))]),
+    });
+  });
+});
+
+// The rights-version header (CHK-013) answers on the response, which no handler can write: generation refuses it by
+// name at its declaration rather than drop it.
+describe("the rights-version header", () => {
+  test("is refused by name at generation", async () => {
+    const outcome = await generateWithRightsVersionHeader(expressTarget, {
+      links: await referenceLinks(PROJECT, "tasksService"),
+      outputDirectory: referenceServerOutput(PROJECT, "tasksService"),
+    });
+
+    expect(outcome).toMatchObject({
+      status: "refused",
+      refusals: expect.arrayContaining([
+        expect.objectContaining({
+          code: "identity.response.header.unsupported",
+          member: "/headers/rightsVersion",
+          operation: RIGHTS_VERSION_OPERATION,
+        }),
+      ]),
+    });
+  });
+});

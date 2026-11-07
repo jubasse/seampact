@@ -1,0 +1,9 @@
+{
+  "format": "seampact-http-suite-report/1",
+  "target": "nestjs",
+  "profile": "default",
+  "checks": {
+    "CHK-001": { "outcome": "passed", "cases": ["case-a"] },
+    "CHK-002": { "outcome": "refused", "cases": ["case-b"] }
+  }
+}

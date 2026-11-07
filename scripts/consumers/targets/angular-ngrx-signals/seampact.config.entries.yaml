@@ -1,0 +1,9 @@
+  # The Angular api service over the fetch client, with a Signal Store feature per operation that sends through it.
+  - id: queries
+    use: "@seampact/codegen-angular"
+    apis: [tasks]
+    options:
+      query: fetch
+      state: ngrx-signals
+    link:
+      client: client

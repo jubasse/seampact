@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/openapi/extensions/csrf.schema.json",
+  "title": "x-seampact-csrf",
+  "description": "A CSRF exemption with its reason.",
+  "type": "object",
+  "properties": {
+    "exempt": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "const": true
+        }
+      ],
+      "description": "The written reason, or true under `reasons: omit`."
+    }
+  },
+  "required": ["exempt"],
+  "additionalProperties": false
+}

@@ -1,0 +1,59 @@
+{
+  "name": "@seampact/codegen-nestjs",
+  "description": "Generates the NestJS boundary around your controllers: a decorator per operation, the access guard, an input decorator whose pipe validates, a handler wrapper or opt-in reply interceptor that writes the checked reply, the error filter and a boot check, validating with zod.",
+  "version": "1.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jubasse/seampact.git",
+    "directory": "packages/targets/codegen-nestjs"
+  },
+  "homepage": "https://jubasse.github.io/seampact/backend/nestjs/",
+  "bugs": {
+    "url": "https://github.com/jubasse/seampact/issues"
+  },
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "seampact": {
+    "role": "target"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "@seampact/codegen-core": "workspace:*",
+    "@seampact/spec": "workspace:*"
+  },
+  "dependencies": {
+    "prettier": "3.9.10"
+  },
+  "devDependencies": {
+    "@nestjs/common": "12.3.2",
+    "@nestjs/core": "12.3.2",
+    "@nestjs/platform-express": "12.3.2",
+    "@nestjs/swagger": "12.0.4",
+    "@nestjs/testing": "12.3.2",
+    "@seampact/codegen-core": "workspace:*",
+    "@seampact/spec": "workspace:*",
+    "@types/node": "24.19.2",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2",
+    "typescript": "6.0.3",
+    "zod": "4.6.7"
+  }
+}

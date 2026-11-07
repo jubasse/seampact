@@ -1,0 +1,27 @@
+  # Plain fetch composables over the fetch client: Vue refs and watchers, no query library.
+  - id: queries
+    use: "@seampact/codegen-vue"
+    apis: [tasks, tasksService]
+    options:
+      query: fetch
+    link:
+      client: client
+  # The same fetchers without composables, as server code reads its data.
+  - id: queriesPlain
+    use: "@seampact/codegen-vue"
+    apis: [tasks]
+    options:
+      query: fetch
+    artefacts:
+      composables: false
+    link:
+      client: client
+  # Declared errors returned as data.
+  - id: queriesData
+    use: "@seampact/codegen-vue"
+    apis: [tasks]
+    options:
+      query: fetch
+      errors: data
+    link:
+      client: client

@@ -1,0 +1,91 @@
+# Bodies beyond JSON, refused (ADR 0002 section 7): a file in a form, a file above the body limit, a file inside
+# a JSON body, a form input that is no object, an opaque form field, a file inside a JSON text field, a file below
+# a multipart field's top level (in an object, in a list of lists), and a batch file above the batch body limit.
+api: { name: uploads, version: 1, kind: product }
+
+conventions:
+  bodyLimit: 1MiB
+  batch: { bodyLimit: 2MiB }
+
+schemas:
+  ReportId: { type: string }
+  Report:
+    type: object
+    required: [reportId]
+    properties:
+      reportId: ReportId
+  WithFile:
+    type: object
+    properties:
+      file: { file: { media: [image/png] } }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      formFile:
+        method: post
+        inputMedia: form
+        input:
+          type: object
+          properties:
+            file: { file: { media: [image/png] } }
+      tooLarge:
+        method: post
+        inputMedia: multipart
+        input:
+          type: object
+          properties:
+            file: { file: { media: [image/png], maxSize: 2MiB } }
+      jsonFile:
+        method: post
+        input:
+          type: object
+          properties:
+            file: { file: { media: [image/png] } }
+      formScalar:
+        method: post
+        inputMedia: form
+        input: { type: string }
+      formOpaque:
+        method: post
+        inputMedia: form
+        input:
+          type: object
+          properties:
+            anything: { opaque: "The caller sends any shape." }
+      formJsonText:
+        method: post
+        inputMedia: form
+        input:
+          type: object
+          properties:
+            meta: { type: string, contentMediaType: application/json, contentSchema: WithFile }
+      multipartObject:
+        method: post
+        inputMedia: multipart
+        input:
+          type: object
+          properties:
+            doc:
+              type: object
+              properties:
+                scan: { file: { media: [image/png] } }
+      multipartPages:
+        method: post
+        inputMedia: multipart
+        input:
+          type: object
+          properties:
+            pages: { type: array, items: { type: array, items: { file: { media: [image/png] } } } }
+      reports:
+        kind: collection
+        id: { reportId: ReportId }
+        item: Report
+        ops:
+          batch:
+            inputMedia: multipart
+            input:
+              type: object
+              properties:
+                file: { file: { media: [image/png], maxSize: 3MiB } }

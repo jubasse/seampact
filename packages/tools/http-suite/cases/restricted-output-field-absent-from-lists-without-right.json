@@ -1,0 +1,95 @@
+{
+  "id": "restricted-output-field-absent-from-lists-without-right",
+  "title": "A restricted output field is absent from each list item and batch entry for a caller without its right",
+  "checks": ["CHK-025"],
+  "profiles": ["default", "hand-written"],
+  "script": {
+    "decisions": [
+      {
+        "name": "tasks.seeEffort",
+        "purpose": "field",
+        "deny": {
+          "code": "api.forbidden"
+        }
+      }
+    ],
+    "answers": {
+      "tasks.listTasks": {
+        "status": 200,
+        "body": {
+          "items": [
+            {
+              "taskId": "20000000-0000-4000-8000-000000000001",
+              "title": "Estimate the slice",
+              "state": "open",
+              "effort": 5,
+              "version": 1,
+              "createdAt": "2026-10-18T09:00:00.000Z"
+            }
+          ]
+        }
+      },
+      "tasks.getTasksBatch": {
+        "status": 200,
+        "body": {
+          "20000000-0000-4000-8000-000000000001": {
+            "taskId": "20000000-0000-4000-8000-000000000001",
+            "title": "Estimate the slice",
+            "state": "open",
+            "effort": 5,
+            "version": 1,
+            "createdAt": "2026-10-18T09:00:00.000Z"
+          }
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "title": "listTasks",
+      "request": {
+        "method": "GET",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "query": {
+          "limit": 10
+        },
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": [
+          {
+            "taskId": "20000000-0000-4000-8000-000000000001",
+            "title": "Estimate the slice"
+          }
+        ],
+        "absent": ["/0/effort"]
+      }
+    },
+    {
+      "title": "getTasksBatch",
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks/batch",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        },
+        "body": {
+          "ids": ["20000000-0000-4000-8000-000000000001"]
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "20000000-0000-4000-8000-000000000001": {
+            "taskId": "20000000-0000-4000-8000-000000000001",
+            "title": "Estimate the slice"
+          }
+        },
+        "absent": ["/20000000-0000-4000-8000-000000000001/effort"]
+      }
+    }
+  ]
+}

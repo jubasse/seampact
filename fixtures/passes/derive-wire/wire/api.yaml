@@ -1,0 +1,139 @@
+# The derive.wire members of PR 1: body limits (route, inherited, batch, convention), the api's unknown-key policy,
+# credential parameters of each scheme kind, the CSRF header on cookie-only and mixed writes, identity headers by
+# side and `for`, a header-tagged union input and the idempotency key, its exemption and a signed route.
+api: { name: wire, version: 1 }
+
+conventions:
+  bodyLimit: 512KiB
+  batch: { maxIds: 50, bodyLimit: 4MiB }
+  input:
+    unknownKeys: { ignore: "Older clients still send fields the api dropped." }
+  idempotency: { header: Idempotency-Key, replayHeader: Idempotency-Replayed, lifetime: 1h, methods: [post, delete] }
+
+schemes:
+  sessionCookie: { kind: cookie, name: __Host-session, csrf: csrfToken }
+  csrfToken: { kind: header, name: X-Csrf-Token }
+  bearer: { kind: bearer }
+  basicAuth: { kind: basic }
+  deviceToken: { kind: header, name: X-Device-Token }
+  mapsKey: { kind: query, name: key }
+  stripeSignature:
+    kind: signature
+    name: Stripe-Signature
+    format: 't={ts},v1={sig}'
+    algorithm: hmac-sha256
+    payload: '{ts}.{rawBody}'
+    encoding: hex
+    tolerance: 5m
+    key: { value: stripe }
+
+headers:
+  deadline: { name: X-Deadline, in: request, semantic: deadline }
+  trace: { name: traceparent, in: request, semantic: traceContext }
+  served: { name: traceresponse, in: response, semantic: traceContext }
+  rightsVersion: { semantic: versionToken, response: X-Rights-Version, request: If-Rights-Version }
+
+identities:
+  member:
+    schemes: { read: [sessionCookie], write: [sessionCookie] }
+    principal: MemberPrincipal
+    headers:
+      rightsVersion: { from: principal.rightsVersion, stale: api.rights_version_stale }
+      served: { for: reads }
+  mixed:
+    schemes: { read: [sessionCookie, bearer], write: [sessionCookie, bearer] }
+    principal: MemberPrincipal
+  robot:
+    schemes: { read: [bearer], write: [bearer, basicAuth] }
+    principal: MemberPrincipal
+    headers:
+      deadline: { required: true }
+      trace: { for: writes }
+  device:
+    schemes: { read: [deviceToken], write: [deviceToken] }
+    principal: MemberPrincipal
+  partner:
+    schemes: { read: [mapsKey], write: [] }
+    principal: MemberPrincipal
+  stripe:
+    kind: signed
+    scheme: stripeSignature
+    principal: MemberPrincipal
+
+errors:
+  api.rights_version_stale: { status: 409, nature: conflict, title: The rights changed since the token was read. }
+
+schemas:
+  MemberPrincipal:
+    type: object
+    required: [memberId, rightsVersion]
+    properties: { memberId: { type: string }, rightsVersion: { type: string } }
+  Note:
+    type: object
+    required: [text]
+    properties: { text: { type: string } }
+  StrictNote:
+    type: object
+    required: [text]
+    properties: { text: { type: string } }
+  PushEvent: { type: object, required: [ref], properties: { ref: { type: string } } }
+  PingEvent: { type: object, required: [zen], properties: { zen: { type: string } } }
+  GithubEvent:
+    discriminator: { from: header.X-GitHub-Event }
+    oneOf:
+      push: PushEvent
+      ping: PingEvent
+
+surfaces:
+  app:
+    identity: member
+    routes:
+      notes:
+        input: Note
+        output: Note
+        method: post
+      bigNotes:
+        method: put
+        bodyLimit: 20MiB
+        input: { $ref: StrictNote, unknownKeys: refuse }
+        output: Note
+      archive:
+        method: post
+        idempotency: { exempt: "Archiving twice leaves the note archived." }
+      board:
+        method: get
+        output: Note
+  mixed:
+    identity: mixed
+    bodyLimit: 2MiB
+    routes:
+      comments:
+        method: post
+        input: Note
+      comment:
+        method: delete
+        csrf: { exempt: "Deleting a comment twice is harmless and the token page is cached." }
+  robots:
+    identity: robot
+    routes:
+      jobs: { method: post, input: Note, output: Note }
+      status: { method: get, output: Note }
+      feed:
+        method: get
+        access: { optionalAuth: "Anonymous robots read the public feed." }
+        output: Note
+  devices:
+    identity: device
+    routes:
+      ping: { method: post }
+  partner:
+    identity: partner
+    routes:
+      tiles: { method: get, output: Note }
+  hooks:
+    routes:
+      stripe: { method: post, identity: stripe, input: Note }
+      github:
+        method: post
+        access: { public: "GitHub signs nothing the api checks yet." }
+        input: GithubEvent

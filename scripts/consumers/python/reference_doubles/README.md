@@ -1,0 +1,1 @@
+Framework-free hook doubles of every api of the reference contract that a Python consumer app copies in beside its generated packages (the DRF, FastAPI and Django Ninja consumers): the `user`, `stripe`, `service` and `device` identities, deciders, scope resolver and unexpected-error listener, answering from the loaded script and the suite's credentials.

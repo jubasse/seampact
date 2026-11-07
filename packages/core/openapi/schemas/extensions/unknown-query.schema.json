@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/openapi/extensions/unknown-query.schema.json",
+  "title": "x-seampact-unknown-query",
+  "description": "An operation that ignores undeclared query keys, with its reason.",
+  "type": "object",
+  "properties": {
+    "ignore": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "const": true
+        }
+      ],
+      "description": "The written reason, or true under `reasons: omit`."
+    }
+  },
+  "required": ["ignore"],
+  "additionalProperties": false
+}

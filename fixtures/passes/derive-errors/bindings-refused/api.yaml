@@ -1,0 +1,24 @@
+# Refused role bindings (ADR 0002 section 11 "Error roles", ADR 0006 section 6): a binding to an unregistered code in
+# the conventions and on a node, a bound code without the role's required datum, and a default code redeclared with
+# params that drop the delay conventions.rateLimit names.
+api: { name: shop, version: 1, kind: product }
+
+conventions:
+  rateLimit: { header: Retry-After, param: retryAfterMs, unit: s }
+  errors:
+    derived:
+      notFound: shop.missing
+      sortKeyForbidden: shop.sort_denied
+
+errors:
+  shop.sort_denied: { status: 403, params: { detail: { type: string } } }
+  api.rate_limited: { status: 429, params: { wait: { type: integer, minimum: 0 } } }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: The fixture checks role bindings only. }
+    errorRoles:
+      forbidden: { code: shop.denied }
+    routes:
+      ping: { method: get }

@@ -1,0 +1,240 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App;
+
+use App\Controller\AppController;
+use App\Controller\SuiteControlController;
+use App\Controller\UnlistedRouteController;
+use App\Generated\Tasks\Symfony\TasksRouteLoader;
+use App\Generated\Tasks\Symfony\TasksSeampactBundle;
+use App\Generated\TasksAbsoluteUrls\Symfony\TasksAbsoluteUrlsRouteLoader;
+use App\Generated\TasksAbsoluteUrls\Symfony\TasksAbsoluteUrlsSeampactBundle;
+use App\Generated\TasksAbsoluteUrls\Symfony\UserAuthenticateHook as AbsoluteUrlsUserAuthenticateHook;
+use App\Generated\TasksDevices\Symfony\TasksDevicesRouteLoader;
+use App\Generated\TasksDevices\Symfony\TasksDevicesSeampactBundle;
+use App\Generated\TasksOptionalAuth\Symfony\TasksOptionalAuthRouteLoader;
+use App\Generated\TasksOptionalAuth\Symfony\TasksOptionalAuthSeampactBundle;
+use App\Generated\TasksOptionalAuth\Symfony\UserAuthenticateHook as OptionalAuthUserAuthenticateHook;
+use App\Generated\TasksPaging\Symfony\TasksPagingRouteLoader;
+use App\Generated\TasksPaging\Symfony\TasksPagingSeampactBundle;
+use App\Generated\TasksResponses\Symfony\TasksResponsesRouteLoader;
+use App\Generated\TasksResponses\Symfony\TasksResponsesSeampactBundle;
+use App\Generated\TasksResponses\Symfony\UserAuthenticateHook as ResponsesUserAuthenticateHook;
+use App\Generated\TasksService\Symfony\TasksServiceRouteLoader;
+use App\Generated\TasksService\Symfony\TasksServiceSeampactBundle;
+use App\Generated\TasksServiceWrites\Symfony\TasksServiceWritesRouteLoader;
+use App\Generated\TasksServiceWrites\Symfony\TasksServiceWritesSeampactBundle;
+use App\Generated\TasksSplitSort\Symfony\TasksSplitSortRouteLoader;
+use App\Generated\TasksSplitSort\Symfony\TasksSplitSortSeampactBundle;
+use App\Suite\ChannelResolver;
+use App\Suite\ForbiddenProbeMatcher;
+use App\Suite\SuiteLogger;
+use App\Suite\TasksDecider;
+use App\Suite\UserHook;
+use Seampact\ConsumerSuite\BootVariant;
+use Seampact\ConsumerSuite\FileIdempotencyStore;
+use Seampact\ConsumerSuite\SuiteFiles;
+use Seampact\Symfony\Runtime\Hooks;
+use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
+use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
+use Symfony\Bundle\SecurityBundle\SecurityBundle;
+use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
+use Symfony\Component\DependencyInjection\Loader\Configurator\DefaultsConfigurator;
+use Symfony\Component\HttpFoundation\ChainRequestMatcher;
+use Symfony\Component\HttpFoundation\RequestMatcher\HeaderRequestMatcher;
+use Symfony\Component\HttpKernel\Kernel as BaseKernel;
+use Symfony\Component\Routing\Loader\Configurator\RoutingConfigurator;
+use Symfony\Component\Security\Core\User\InMemoryUser;
+
+use function Symfony\Component\DependencyInjection\Loader\Configurator\inline_service;
+use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
+
+/**
+ * The consumer app: FrameworkBundle, SecurityBundle with one lazy `http_basic` firewall on the tasks api's paths, its
+ * `login_throttling` and two `access_control` rules keyed on suite headers, the second on the generated identity
+ * request matcher, the RateLimiter the throttle decider counts in, the file idempotency store, and the bundles of every
+ * api, the `tasksAbsoluteUrls` one with its public origin. The boot variant leaves out the service it names and gets a cache directory of its
+ * own; `SEAMPACT_SUITE_CACHE_DIR` moves the cache for a boot run.
+ */
+final class Kernel extends BaseKernel
+{
+    use MicroKernelTrait;
+
+    public const SUITE_USER = 'suite-user';
+    public const SUITE_PASSWORD = 'suite-password';
+    /** Failed `http_basic` logins of one user name a client may send per window before `login_throttling` answers 429. */
+    public const LOGIN_ATTEMPTS = 3;
+    private const LOGIN_WINDOW = '10 seconds';
+    /** The header of the `access_control` rule on the generated identity matcher; public routes never match it. */
+    public const IDENTITY_PROBE_HEADER = 'x-seampact-suite-identity-probe';
+    private const IDENTITY_PROBE_MATCHER = 'suite.identity_probe_matcher';
+    private const ADMIN_ROLE = 'ROLE_SUITE_ADMIN';
+    private const CONTROL_STATE_FILE = '/var/suite-control.json';
+    private const CREDENTIALS_FILE = '/credentials.json';
+    private const CACHE_VARIABLE = 'SEAMPACT_SUITE_CACHE_DIR';
+    private const RESPONSES_VARIABLE = 'SEAMPACT_SUITE_RESPONSES';
+    // The origin the tasksAbsoluteUrls api writes its absolute URLs from, never the request's Host.
+    private const PUBLIC_ORIGIN = 'https://api.seampact.test';
+    private const LEFT_OUT_BY_VARIANT = [
+        'missing-decider' => TasksDecider::class,
+        'missing-scope-resolver' => ChannelResolver::class,
+        'missing-handler' => AppController::class,
+    ];
+    // The user hook's generated interfaces outside the tasks api, keyed by api id.
+    private const USER_HOOKS_OUTSIDE_TASKS = [
+        'tasksOptionalAuth' => OptionalAuthUserAuthenticateHook::class,
+        'tasksAbsoluteUrls' => AbsoluteUrlsUserAuthenticateHook::class,
+        'tasksResponses' => ResponsesUserAuthenticateHook::class,
+    ];
+
+    public function registerBundles(): iterable
+    {
+        yield new FrameworkBundle();
+        yield new SecurityBundle();
+        yield new TasksSeampactBundle();
+        yield new TasksServiceSeampactBundle();
+        yield new TasksServiceWritesSeampactBundle();
+        yield new TasksDevicesSeampactBundle();
+        yield new TasksOptionalAuthSeampactBundle();
+        yield new TasksAbsoluteUrlsSeampactBundle();
+        yield new TasksResponsesSeampactBundle();
+        yield new TasksPagingSeampactBundle();
+        yield new TasksSplitSortSeampactBundle();
+    }
+
+    public function boot(): void
+    {
+        SuiteFiles::configure($this->getProjectDir() . self::CONTROL_STATE_FILE, $this->getProjectDir() . self::CREDENTIALS_FILE);
+
+        parent::boot();
+    }
+
+    public function getCacheDir(): string
+    {
+        $cacheDirectory = getenv(self::CACHE_VARIABLE);
+        if (is_string($cacheDirectory) && $cacheDirectory !== '') {
+            return $cacheDirectory;
+        }
+
+        return $this->getProjectDir() . '/var/cache/' . $this->environment . '/' . (BootVariant::current() ?? 'configured');
+    }
+
+    public function getLogDir(): string
+    {
+        return $this->getProjectDir() . '/var/log';
+    }
+
+    private function configureContainer(ContainerConfigurator $container): void
+    {
+        $container->parameters()->set('seampact_suite.responses', 'strict');
+        $container->extension('framework', [
+            'secret' => 'seampact-suite',
+            'http_method_override' => false,
+            'handle_all_throwables' => true,
+            'php_errors' => ['log' => true],
+            'validation' => ['enabled' => true],
+            'router' => ['utf8' => true],
+            // One request a window: the throttle decider spends the throttled user's bucket by its first request.
+            'rate_limiter' => ['suite_throttle' => ['policy' => 'fixed_window', 'limit' => 1, 'interval' => '1 hour']],
+        ]);
+        $container->extension('security', [
+            'password_hashers' => [InMemoryUser::class => 'plaintext'],
+            'providers' => ['suite_users' => ['memory' => ['users' => [self::SUITE_USER => ['password' => self::SUITE_PASSWORD, 'roles' => ['ROLE_USER']]]]]],
+            'firewalls' => ['contract' => ['pattern' => '^/v1', 'lazy' => true, 'stateless' => true, 'provider' => 'suite_users', 'http_basic' => ['realm' => 'seampact suite'], 'login_throttling' => ['max_attempts' => self::LOGIN_ATTEMPTS, 'interval' => self::LOGIN_WINDOW]]],
+            'access_control' => [
+                ['request_matcher' => ForbiddenProbeMatcher::class, 'roles' => [self::ADMIN_ROLE]],
+                ['request_matcher' => self::IDENTITY_PROBE_MATCHER, 'roles' => [self::ADMIN_ROLE]],
+            ],
+        ]);
+        // Read at run time, so one container serves every responses mode.
+        $container->extension('seampact_tasks', ['responses' => '%env(default:seampact_suite.responses:' . self::RESPONSES_VARIABLE . ')%']);
+        $container->extension('seampact_tasks_absolute_urls', ['public_origin' => self::PUBLIC_ORIGIN]);
+
+        $services = $container->services()->defaults()->autowire()->autoconfigure();
+        // The generated tree is loaded with the app's classes, as the skeleton's services.yaml loads it.
+        $services->load('App\\', __DIR__ . '/')
+            ->exclude([__DIR__ . '/Kernel.php', ...array_map(self::sourceFileOf(...), self::leftOutClasses())]);
+        if (BootVariant::leavesOutAuthenticateHook()) {
+            self::registerUserHookOutsideTasks($services);
+        }
+        $services->set('logger', SuiteLogger::class);
+        $services->set(TasksSeampactBundle::IDEMPOTENCY_STORE_SERVICE, FileIdempotencyStore::class);
+        $services->set(TasksServiceWritesSeampactBundle::IDEMPOTENCY_STORE_SERVICE, FileIdempotencyStore::class);
+        $services->set(TasksResponsesSeampactBundle::IDEMPOTENCY_STORE_SERVICE, FileIdempotencyStore::class);
+        // The generated request matcher of the tasks api's identity routes, narrowed to the suite's probe header.
+        $services->set(self::IDENTITY_PROBE_MATCHER, ChainRequestMatcher::class)->args([[
+            service('seampact.tasks.matcher.identity'),
+            inline_service(HeaderRequestMatcher::class)->args([self::IDENTITY_PROBE_HEADER]),
+        ]]);
+    }
+
+    private function configureRoutes(RoutingConfigurator $routes): void
+    {
+        // The mount-mismatch boot variant imports the tasks api's routes under a prefix its entry's mount does not state.
+        // An import is added to the routes when its configurator is released, so neither is kept in a variable.
+        if (BootVariant::mountsUnderMismatchedPrefix()) {
+            $routes->import(TasksRouteLoader::RESOURCE, TasksRouteLoader::TYPE)->prefix(BootVariant::MISMATCHED_MOUNT);
+        } else {
+            $routes->import(TasksRouteLoader::RESOURCE, TasksRouteLoader::TYPE);
+        }
+        $routes->import(TasksServiceRouteLoader::RESOURCE, TasksServiceRouteLoader::TYPE);
+        $routes->import(TasksServiceWritesRouteLoader::RESOURCE, TasksServiceWritesRouteLoader::TYPE);
+        $routes->import(TasksDevicesRouteLoader::RESOURCE, TasksDevicesRouteLoader::TYPE);
+        $routes->import(TasksOptionalAuthRouteLoader::RESOURCE, TasksOptionalAuthRouteLoader::TYPE);
+        $routes->import(TasksAbsoluteUrlsRouteLoader::RESOURCE, TasksAbsoluteUrlsRouteLoader::TYPE);
+        $routes->import(TasksResponsesRouteLoader::RESOURCE, TasksResponsesRouteLoader::TYPE);
+        $routes->import(TasksPagingRouteLoader::RESOURCE, TasksPagingRouteLoader::TYPE);
+        $routes->import(TasksSplitSortRouteLoader::RESOURCE, TasksSplitSortRouteLoader::TYPE);
+
+        // The suite's control routes (ADR 0015 "Control routes"), allow-listed in seampact.config.yaml.
+        $routes->add('suite_script', '/__seampact/script')->methods(['PUT'])->controller([SuiteControlController::class, 'loadScript']);
+        $routes->add('suite_hook_calls', '/__seampact/hook-calls')->methods(['GET'])->controller([SuiteControlController::class, 'hookCalls']);
+        $routes->add('suite_log_lines', '/__seampact/log-lines')->methods(['GET'])->controller([SuiteControlController::class, 'logLines']);
+
+        if (BootVariant::servesUnlistedRoute()) {
+            $routes->add('suite_unlisted', '/v1/unlisted')->methods(['GET'])->controller(UnlistedRouteController::class);
+        }
+        if (BootVariant::servesPatternedRoute()) {
+            $routes->add('suite_patterned', BootVariant::PATTERNED_ROUTE)->methods(['GET'])->controller(UnlistedRouteController::class);
+        }
+    }
+
+    /**
+     * The classes the boot variant leaves out of the container. The app built with `health` filtered out has no
+     * `AppController` source at all (`assemble.sh`), since its generated code has no `AppEndpoints`.
+     *
+     * @return list<class-string>
+     */
+    private static function leftOutClasses(): array
+    {
+        $byVariant = self::LEFT_OUT_BY_VARIANT[BootVariant::current() ?? ''] ?? null;
+
+        return $byVariant === null ? [] : [$byVariant];
+    }
+
+    /**
+     * Leaves the `tasks` api without an authenticate hook for the identity `user` and keeps it on the other apis, as
+     * the Laravel app unbinds only the tasks api's interface: `UserHook` implements all three, so autoconfiguration
+     * would tag it for each.
+     */
+    private static function registerUserHookOutsideTasks(DefaultsConfigurator $services): void
+    {
+        $hook = $services->set(UserHook::class)->autoconfigure(false);
+        foreach (self::USER_HOOKS_OUTSIDE_TASKS as $api => $interface) {
+            $hook->tag(Hooks::tag($api, Hooks::AUTHENTICATE_TAG_SUFFIX), [Hooks::HOOK_ATTRIBUTE => $interface]);
+        }
+    }
+
+    /** @param class-string $class */
+    private static function sourceFileOf(string $class): string
+    {
+        $file = (new \ReflectionClass($class))->getFileName();
+        if ($file === false) {
+            throw new \LogicException("the class {$class} has no source file to leave out");
+        }
+
+        return $file;
+    }
+}

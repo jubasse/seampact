@@ -1,0 +1,10 @@
+{
+  "id": "allow-listed-framework-route-boots",
+  "title": "The app serving a framework route its config allow-lists with a reason starts",
+  "checks": ["CHK-063"],
+  "profiles": ["boot"],
+  "boot": {
+    "variant": "allow-listed-framework-route",
+    "outcome": "starts"
+  }
+}

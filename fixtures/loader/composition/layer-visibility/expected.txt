@@ -1,0 +1,2 @@
+base.yaml:5:22: error seampact/load/name-not-visible: 'Owner' is used in 'base.yaml' but declared only in 'api.yaml' (layer 'api'), which 'base' does not build on. Fix: move the declaration into the shared file or the base.
+  api.yaml:5:3: declared here.

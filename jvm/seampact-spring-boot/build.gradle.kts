@@ -1,0 +1,129 @@
+// seampact-spring-boot (ADR 0022): the Spring Boot server target, a pure generator both build plugins call. Its
+// golden tree is compiled by javac of the test JDK against Spring Boot 4 and seampact-spring-runtime, then its
+// records' redaction is checked.
+
+import io.github.jubasse.seampact.conventions.WriteVersionConstant
+import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
+
+plugins {
+    id("seampact.library-module")
+    alias(libs.plugins.kotlin.jvm)
+}
+
+description = "The seampact Spring Boot server generator both build plugins call."
+
+// `-PtestJdk=<major>` also compiles the golden tree on that JDK (the convention plugin runs the tests on it).
+val testJdk: String? = providers.gradleProperty("testJdk").orNull
+
+// `-PupdateGolden` rewrites the golden tree from the generator instead of comparing with it.
+val updateGolden: Boolean = providers.gradleProperty("updateGolden").isPresent
+
+val repositoryRoot = rootProject.projectDir.parentFile
+
+val goldenDirectory = layout.projectDirectory.dir("src/test/golden")
+
+// The golden tree of the opt-ins every default leaves off: Spring Security, springdoc, `frameworkDocs: off`.
+val optInsGoldenDirectory = layout.projectDirectory.dir("src/test/golden-opt-ins")
+
+dependencies {
+    api(project(":seampact-ir"))
+    implementation(libs.javapoet)
+    implementation(libs.kotlinx.serialization.json)
+
+    // Test only: the generator and the runtime of one build carry one version (ADR 0025, G1).
+    testImplementation(project(":seampact-spring-runtime"))
+    testImplementation(platform(libs.junit.bom))
+    testImplementation(libs.junit.jupiter)
+    testImplementation(kotlin("test"))
+    testRuntimeOnly(libs.junit.platform.launcher)
+}
+
+// The version the generated code carries, which the runtime's boot check compares with its own (ADR 0025, G3).
+val writeTargetVersion = tasks.register<WriteVersionConstant>("writeTargetVersion") {
+    version = project.version.toString()
+    className = "io.github.jubasse.seampact.springboot.SpringBootTargetVersion"
+    documentation = "The version of the seampact-spring-boot target, which it stamps into the code it generates."
+    outputDirectory = layout.buildDirectory.dir("generated/target-version")
+}
+
+sourceSets.main {
+    java.srcDir(writeTargetVersion)
+}
+
+kotlin {
+    explicitApi()
+    compilerOptions {
+        allWarningsAsErrors = true
+        // The Gradle plugin loads this module on the Kotlin its lowest supported Gradle embeds (8.14: Kotlin 2.0).
+        apiVersion = KotlinVersion.KOTLIN_2_0
+        languageVersion = KotlinVersion.KOTLIN_2_0
+        freeCompilerArgs.add("-Xsuppress-version-warnings")
+    }
+}
+
+tasks.test {
+    useJUnitPlatform()
+    systemProperty("seampact.repositoryRoot", repositoryRoot.absolutePath)
+    systemProperty("seampact.goldenDirectory", goldenDirectory.asFile.absolutePath)
+    systemProperty("seampact.optInsGoldenDirectory", optInsGoldenDirectory.asFile.absolutePath)
+    systemProperty("seampact.updateGolden", updateGolden.toString())
+    inputs.dir(repositoryRoot.resolve("fixtures/golden/reference"))
+    inputs.dir(repositoryRoot.resolve("fixtures/golden/pack-spring"))
+    inputs.dir(repositoryRoot.resolve("fixtures/golden/pack-hal"))
+    inputs.dir(repositoryRoot.resolve("fixtures/golden/pack-api-platform"))
+    inputs.dir(goldenDirectory)
+    inputs.dir(optInsGoldenDirectory)
+    // An update run rewrites the golden tree, so it always runs. A local copy: the spec must not capture the script.
+    val rewritesGolden = updateGolden
+    outputs.cacheIf { !rewritesGolden }
+    outputs.upToDateWhen { !rewritesGolden }
+}
+
+// The golden tree as an app compiles it: the Spring Boot 4 starters the generated code needs, the runtime, and
+// the checks that run the compiled tree: its records' redaction and the boundary runtime on mock requests.
+val golden: SourceSet = sourceSets.create("golden") {
+    java.srcDir(goldenDirectory)
+    java.srcDir(optInsGoldenDirectory)
+    java.srcDir("src/goldenCheck/java")
+    // The opt-ins tree's `frameworkDocs: off` file, which a golden check hands to springdoc.
+    resources.srcDir(optInsGoldenDirectory)
+    resources.include("*.properties")
+}
+
+dependencies {
+    "goldenImplementation"(platform(libs.spring.boot.dependencies))
+    "goldenImplementation"(libs.spring.boot.starter.webmvc)
+    "goldenImplementation"(libs.spring.boot.starter.validation)
+    "goldenImplementation"(libs.spring.boot.starter.security)
+    "goldenImplementation"(libs.swagger.annotations.jakarta)
+    "goldenImplementation"(libs.springdoc.webmvc.api)
+    "goldenImplementation"(project(":seampact-spring-runtime"))
+    "goldenImplementation"(libs.spring.test)
+    "goldenImplementation"(platform(libs.junit.bom))
+    "goldenImplementation"(libs.junit.jupiter)
+    "goldenRuntimeOnly"(libs.junit.platform.launcher)
+}
+
+tasks.named<JavaCompile>(golden.compileJavaTaskName) {
+    // The golden tree is compared first, so a stale tree fails by its diff, not by a compile error.
+    mustRunAfter(tasks.test)
+    options.compilerArgs.addAll(listOf("-Xlint:all", "-Werror"))
+    if (testJdk != null) {
+        javaCompiler = javaToolchains.compilerFor {
+            languageVersion = JavaLanguageVersion.of(testJdk)
+        }
+    }
+}
+
+val goldenTest = tasks.register<Test>("goldenTest") {
+    description = "Compiles the golden tree against Spring Boot 4 on the test JDK and checks its redaction."
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+    testClassesDirs = golden.output.classesDirs
+    classpath = golden.runtimeClasspath
+    useJUnitPlatform()
+    shouldRunAfter(tasks.test)
+}
+
+tasks.check {
+    dependsOn(goldenTest)
+}

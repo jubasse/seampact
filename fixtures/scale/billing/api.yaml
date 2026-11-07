@@ -1,0 +1,25 @@
+# billing/api.yaml: the hooks payload by hand; resources, routes and their schemas are generated
+api:
+  name: billing
+  version: 1
+  kind: product
+  maturity: provisional
+  summary: Invoices, payments and the hooks that report them.
+  compat: { policy: additive-only }
+
+requirements:
+  accountEditor: { right: roles, params: { allowed: [owner, editor] } }
+  writeThrottle: { rule: throttle, bucket: write }
+
+schemas:
+  PaymentEvent:
+    type: object
+    required: [id, type, data]
+    properties:
+      id: { type: string }
+      type: { type: string }
+      data: { opaque: "The sender's object depends on the event type and its API version." }
+  $include: ./generated/schemas.yaml
+
+surfaces:
+  $include: ./generated/surfaces.yaml

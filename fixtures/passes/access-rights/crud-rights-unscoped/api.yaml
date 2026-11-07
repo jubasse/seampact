@@ -1,0 +1,51 @@
+# An api with the CRUD rights pack and no scope above its routes: a collection and a single derive rights whose
+# subject is none (ADR 0008, "the innermost scope when it has one, and none otherwise").
+api: { name: notes, version: 1 }
+packs: [./pack.yaml]
+
+schemes:
+  bearer: { kind: bearer }
+
+identities:
+  user:
+    schemes: { read: [bearer], write: [bearer] }
+    principal: UserPrincipal
+
+schemas:
+  NoteId: { type: string, format: uuid }
+  UserPrincipal:
+    type: object
+    required: [userId]
+    properties: { userId: { type: string } }
+  Note:
+    type: object
+    required: [noteId, title]
+    properties: { noteId: NoteId, title: { type: string } }
+  CreateNote:
+    type: object
+    required: [title]
+    properties: { title: { type: string } }
+  Settings:
+    type: object
+    required: [theme]
+    properties: { theme: { type: string } }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: user
+    routes:
+      notes:
+        kind: collection
+        id: { noteId: NoteId }
+        item: Note
+        ops:
+          list: { paging: none }
+          create: { input: CreateNote }
+      settings:
+        kind: single
+        owner: caller
+        item: Settings
+        ops:
+          get: {}
+          update: { input: Settings }

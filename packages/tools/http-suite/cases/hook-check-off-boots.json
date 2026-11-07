@@ -1,0 +1,10 @@
+{
+  "id": "hook-check-off-boots",
+  "title": "With the hook check switched off, the app without an authenticate hook starts",
+  "checks": ["CHK-147"],
+  "profiles": ["boot"],
+  "boot": {
+    "variant": "hook-check-off",
+    "outcome": "starts"
+  }
+}

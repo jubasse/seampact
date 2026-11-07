@@ -1,0 +1,72 @@
+# Rule proofs and bucket uses access.rights refuses (ADR 0002 section 9, ADR 0004 section 13): a body proof named
+# as an input field, two proofs of one name with different schemas, a body proof on a route without a body or on
+# a non-object input, a signed identity's route left without input, and a bucket key the route cannot fill.
+api: { name: vault, version: 1 }
+
+schemes:
+  bearer: { kind: bearer }
+  hookSignature:
+    kind: signature
+    name: Hook-Signature
+    format: 'v1={sig}'
+    algorithm: hmac-sha256
+    payload: '{rawBody}'
+    encoding: hex
+    key: { value: hook }
+
+identities:
+  user:
+    schemes: { read: [bearer], write: [bearer] }
+    principal: UserPrincipal
+  hook: { kind: signed, scheme: hookSignature, principal: HookCaller }
+
+schemas:
+  Token: { type: string }
+  Rename:
+    type: object
+    required: [token]
+    properties: { token: Token }
+  UserPrincipal:
+    type: object
+    required: [userId]
+    properties: { userId: { type: string } }
+  HookCaller:
+    type: object
+    required: [account]
+    properties: { account: { type: string } }
+
+rules:
+  recentAuth: { proof: { in: body, name: token, schema: Token } }
+  pinned: { proof: { in: body, name: token, schema: { type: integer } } }
+  throttle: { bucket: true }
+
+buckets:
+  perName: { key: [body.name] }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: user
+    routes:
+      rename:
+        method: post
+        input: Rename
+        requires: [{ rule: recentAuth }, { rule: throttle, bucket: perName }]
+        responses: { 204: {} }
+      lock:
+        method: post
+        requires: [{ rule: recentAuth }, { rule: pinned }]
+        responses: { 204: {} }
+      peek:
+        method: get
+        requires: [{ rule: recentAuth }]
+      tag:
+        method: post
+        input: { type: array, items: Token }
+        requires: [{ rule: recentAuth }]
+        responses: { 204: {} }
+  hooks:
+    prefix: /v{version}/hooks
+    identity: hook
+    routes:
+      ping: { method: post, responses: { 204: {} } }

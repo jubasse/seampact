@@ -1,0 +1,314 @@
+{
+  "errors": {
+    "api.schema_invalid": {
+      "code": "api.schema_invalid",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 400
+      },
+      "params": "ApiSchemaInvalidParams",
+      "example": {
+        "issues": [
+          {
+            "pointer": "/title",
+            "rule": "minLength"
+          }
+        ]
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/api.schema_invalid"
+      },
+      "default": "schemaInvalid"
+    },
+    "api.rate_limited": {
+      "code": "api.rate_limited",
+      "family": "api",
+      "nature": "unavailable",
+      "http": {
+        "status": 429
+      },
+      "params": "ApiRateLimitedParams",
+      "example": {
+        "retryAfterMs": 1500
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/api.rate_limited"
+      },
+      "default": "rateLimited"
+    },
+    "api.reauthentication_required": {
+      "code": "api.reauthentication_required",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 401
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/api.reauthentication_required"
+      }
+    },
+    "api.unauthenticated": {
+      "code": "api.unauthenticated",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 401
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.unauthenticated"
+      },
+      "default": "unauthenticated"
+    },
+    "api.forbidden": {
+      "code": "api.forbidden",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 403
+      },
+      "params": "ApiForbiddenParams",
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.forbidden"
+      },
+      "default": "forbidden"
+    },
+    "api.csrf_invalid": {
+      "code": "api.csrf_invalid",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 403
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.csrf_invalid"
+      },
+      "default": "csrfInvalid"
+    },
+    "api.sort_key_forbidden": {
+      "code": "api.sort_key_forbidden",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 403
+      },
+      "params": "ApiSortKeyForbiddenParams",
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.sort_key_forbidden"
+      },
+      "default": "sortKeyForbidden"
+    },
+    "api.not_found": {
+      "code": "api.not_found",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 404
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.not_found"
+      },
+      "default": "notFound"
+    },
+    "state.conflict": {
+      "code": "state.conflict",
+      "family": "state",
+      "nature": "refused",
+      "http": {
+        "status": 409
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/state.conflict"
+      },
+      "default": "stateConflict"
+    },
+    "api.idempotency_in_progress": {
+      "code": "api.idempotency_in_progress",
+      "family": "api",
+      "nature": "unavailable",
+      "http": {
+        "status": 409
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.idempotency_in_progress"
+      },
+      "default": "idempotencyInProgress"
+    },
+    "api.precondition_failed": {
+      "code": "api.precondition_failed",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 412
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.precondition_failed"
+      },
+      "default": "preconditionFailed"
+    },
+    "api.idempotency_key_reused": {
+      "code": "api.idempotency_key_reused",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 422
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.idempotency_key_reused"
+      },
+      "default": "idempotencyKeyReused"
+    },
+    "api.precondition_required": {
+      "code": "api.precondition_required",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 428
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.precondition_required"
+      },
+      "default": "preconditionRequired"
+    },
+    "api.cursor_too_old": {
+      "code": "api.cursor_too_old",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 410
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.cursor_too_old"
+      },
+      "default": "gone"
+    },
+    "api.payload_too_large": {
+      "code": "api.payload_too_large",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 413
+      },
+      "params": "ApiPayloadTooLargeParams",
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.payload_too_large"
+      },
+      "default": "payloadTooLarge"
+    },
+    "api.unsupported_media_type": {
+      "code": "api.unsupported_media_type",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 415
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.unsupported_media_type"
+      },
+      "default": "unsupportedMediaType"
+    },
+    "api.internal": {
+      "code": "api.internal",
+      "family": "api",
+      "nature": "failed",
+      "http": {
+        "status": 500
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.internal"
+      },
+      "default": "undeclaredStatus"
+    },
+    "api.upstream_unavailable": {
+      "code": "api.upstream_unavailable",
+      "family": "api",
+      "nature": "unavailable",
+      "http": {
+        "status": 502
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.upstream_unavailable"
+      },
+      "default": "upstreamUnavailable"
+    },
+    "api.service_unavailable": {
+      "code": "api.service_unavailable",
+      "family": "api",
+      "nature": "unavailable",
+      "http": {
+        "status": 503
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.service_unavailable"
+      },
+      "default": "serviceUnavailable"
+    },
+    "api.upstream_timeout": {
+      "code": "api.upstream_timeout",
+      "family": "api",
+      "nature": "unavailable",
+      "http": {
+        "status": 504
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.upstream_timeout"
+      },
+      "default": "upstreamTimeout"
+    },
+    "api.deadline_exceeded": {
+      "code": "api.deadline_exceeded",
+      "family": "api",
+      "nature": "unavailable",
+      "http": {
+        "status": 504
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.deadline_exceeded"
+      },
+      "default": "deadlineExceeded"
+    }
+  },
+  "natures": {}
+}

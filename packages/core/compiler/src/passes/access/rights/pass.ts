@@ -1,0 +1,253 @@
+import {
+  type DraftIR,
+  type DraftOperationInput,
+  type PassPart,
+  type PassReadonly,
+  pipelineCopy,
+} from "../../../pipeline/seam.js";
+import { accessRightsCheckBucketKeys } from "./bucket-keys.js";
+import { type AccessRightsCatalogues, accessRightsCatalogues } from "./catalogues.js";
+import { accessRightsFieldRights } from "./field-rights.js";
+import { accessRightsFilteredBy } from "./filtered-by.js";
+import {
+  type AccessRightsDeriveEntry,
+  accessRightsDeclareRight,
+  accessRightsDeriveEntries,
+  accessRightsSelects,
+} from "./packs.js";
+import { type AccessRightsProofs, accessRightsProofs } from "./proofs.js";
+import { accessRightsMember } from "./read.js";
+import { accessRightsReporter } from "./report.js";
+import {
+  accessRightsCheckRequirementEntries,
+  accessRightsItemChecks,
+  accessRightsRequirements,
+} from "./requires.js";
+import { accessRightsRestrictionReaching } from "./restricted-fields.js";
+import { accessRightsRefuseErrorParams } from "./restricted-positions.js";
+import { accessRightsRestrictionChecks } from "./restrictions.js";
+import { accessRightsApi, accessRightsRoutes } from "./routes.js";
+import type { AccessRightsContext } from "./schema-use.js";
+import { accessRightsOperationScopes } from "./scopes.js";
+import { type AccessRightsSortKeyRights, accessRightsSortKeyRights } from "./sort-keys.js";
+
+// The access.rights half (ADR 0006 sections 2 and 3): the `rights`, `rules`, `scopes` and `buckets` catalogues
+// and, per operation, the resolved `scopes`, the ordered `requires` (pack-derived rights and requirements
+// included), `fieldRights`, `filteredBy`, the rights of its sort keys and its rule proofs (header parameters,
+// `input.proofs`, or a proof-only input where tree.nodes wrote none), and checks the key sources of each bucket it
+// counts in. It reads each operation's `id`, `op`, `method`, `safe`, `origin`, input, query and header params,
+// responses and sort keys (tree.nodes), its `access`, the `identities` and the `schemes` (access.identity), `packs` to name a pack
+// derivation, and `schemas` for the principal fields a subject reads, the restricted fields and the input fields.
+//
+// Import pipeline values and types from `pipeline/seam.js` only, never from `pipeline/index.js`, the orchestrator
+// or the registry: the registry imports this module, so any of those would close an import cycle (`seam.ts`).
+export const accessRightsPass: PassPart<"access.rights"> = {
+  pass: "access",
+  half: "access.rights",
+  reads: [
+    "packs",
+    "schemas",
+    "identities",
+    "schemes",
+    "operations[].id",
+    "operations[].op",
+    "operations[].method",
+    "operations[].safe",
+    "operations[].origin",
+    "operations[].access",
+    "operations[].input.media",
+    "operations[].input.schema",
+    "operations[].input.origin",
+    "operations[].input.fields",
+    "operations[].params.query",
+    "operations[].params.header",
+    "operations[].responses",
+    "operations[].paging.sortKeys[].key",
+    "operations[].paging.sortKeys[].origin",
+  ],
+  writes: [
+    "rights",
+    "rules",
+    "scopes",
+    "buckets",
+    "operations[].scopes",
+    "operations[].requires",
+    "operations[].fieldRights",
+    "operations[].filteredBy",
+    "operations[].params.header",
+    "operations[].input.media",
+    "operations[].input.schema",
+    "operations[].input.origin",
+    "operations[].input.rawBody",
+    "operations[].input.schema.unknownKeys",
+    "operations[].input.proofs",
+    "operations[].paging.sortKeys[].right",
+    "operations[].paging.sortKeys[].subject",
+    "operations[].paging.sortKeys[].derivedFrom",
+  ],
+  run: (draft, context) => {
+    accessRightsRun(draft, context);
+  },
+};
+
+function accessRightsRun(draft: DraftIR, context: AccessRightsContext): void {
+  const reporter = accessRightsReporter(context);
+  const api = accessRightsApi(context);
+  const catalogues = accessRightsCatalogues(context, reporter);
+  const entries = accessRightsDeriveEntries(context, draft.packs);
+  const routes = accessRightsRoutes(draft, context, api).map((route) => ({
+    route,
+    scopes: accessRightsOperationScopes(context, reporter, catalogues, route.node),
+  }));
+
+  // Every pack-derived right is declared before any requirement names one.
+  for (const { route, scopes } of routes)
+    for (const entry of entriesWith(entries, "declareRight"))
+      if (accessRightsSelects(context, entry, route, api))
+        accessRightsDeclareRight(context, reporter, catalogues, {
+          entry,
+          route,
+          scopes,
+          schemas: draft.schemas,
+        });
+
+  const checks = accessRightsItemChecks();
+  const restrictions = accessRightsRestrictionChecks(
+    accessRightsRestrictionReaching(draft.schemas),
+  );
+
+  accessRightsCheckRequirementEntries(context, reporter, catalogues, checks);
+  accessRightsRefuseErrorParams(context, {
+    reporter,
+    schemas: draft.schemas,
+    checks: restrictions,
+  });
+  const built = routes.map(({ route, scopes }) => {
+    const requires = accessRightsRequirements(context, reporter, catalogues, checks, {
+      route,
+      scopes,
+      api,
+      entries,
+      schemas: draft.schemas,
+    });
+    const proofs = accessRightsProofs(context, reporter, catalogues, {
+      route,
+      requires,
+      schemas: draft.schemas,
+      identities: draft.identities,
+      schemes: draft.schemes,
+    });
+
+    accessRightsCheckBucketKeys(reporter, catalogues, {
+      route,
+      requires,
+      ...inputAfterProofs(route.operation.input, proofs),
+      schemas: draft.schemas,
+    });
+
+    return {
+      scopes,
+      requires,
+      proofs,
+      fieldRights: accessRightsFieldRights(context, reporter, catalogues, restrictions, {
+        route,
+        scopes,
+        schemas: draft.schemas,
+      }),
+      filteredBy: accessRightsFilteredBy(reporter, catalogues, route),
+      sortKeys: accessRightsSortKeyRights(context, reporter, catalogues, restrictions, {
+        route,
+        scopes,
+        schemas: draft.schemas,
+      }),
+    };
+  });
+
+  writeCatalogues(draft, catalogues);
+
+  // `accessRightsRoutes` maps the draft's operations in order, so the two lists pair by index.
+  for (const [index, operation] of draft.operations.entries()) {
+    const members = built[index];
+
+    if (members === undefined)
+      throw new Error(`access.rights built no route for operation ${operation.id ?? index}`);
+    operation.scopes = members.scopes;
+    operation.requires = members.requires;
+    operation.fieldRights = members.fieldRights;
+
+    if (members.filteredBy !== undefined) operation.filteredBy = members.filteredBy;
+
+    writeSortKeyRights(operation, members.sortKeys);
+    writeProofs(operation, members.proofs);
+  }
+}
+
+// The input a route ends with and its body proofs, for the bucket keys that read the body.
+const inputAfterProofs = (
+  declared: PassReadonly<DraftOperationInput> | undefined,
+  proofs: AccessRightsProofs,
+) => {
+  const input = proofs.createdInput ?? declared;
+
+  return {
+    ...(input === undefined ? {} : { input }),
+    proofs: proofs.createdInput?.proofs ?? proofs.proofs,
+    refusedProofs: proofs.refusedBodyProofs,
+  };
+};
+
+// A created input is written in one assignment; a declared one gains its proofs only.
+function writeProofs(operation: DraftIR["operations"][number], proofs: AccessRightsProofs): void {
+  if (proofs.headers.length > 0) {
+    if (operation.params === undefined)
+      throw new Error(`tree.nodes wrote no params on operation ${operation.id}`);
+    operation.params.header.push(...proofs.headers);
+  }
+
+  if (proofs.createdInput !== undefined) {
+    operation.input = proofs.createdInput;
+
+    return;
+  }
+
+  if (proofs.proofs.length === 0) return;
+
+  if (operation.input === undefined)
+    throw new Error(
+      `access.rights built body proofs for operation ${operation.id}, which has no input`,
+    );
+  operation.input.proofs = proofs.proofs;
+}
+
+function writeSortKeyRights(
+  operation: DraftIR["operations"][number],
+  rights: AccessRightsSortKeyRights,
+): void {
+  for (const [index, { right, subject, derivedFrom }] of rights) {
+    const sortKey = operation.paging?.sortKeys[index];
+
+    if (sortKey === undefined)
+      throw new Error(`access.rights found no sort key ${index} on operation ${operation.id}`);
+    sortKey.right = right;
+
+    if (subject !== undefined) sortKey.subject = pipelineCopy(subject);
+
+    if (derivedFrom !== undefined) sortKey.derivedFrom = derivedFrom;
+  }
+}
+
+const entriesWith = (
+  entries: readonly AccessRightsDeriveEntry[],
+  effect: string,
+): AccessRightsDeriveEntry[] =>
+  entries.filter((entry) => accessRightsMember(entry.settings, effect) !== undefined);
+
+function writeCatalogues(draft: DraftIR, catalogues: AccessRightsCatalogues): void {
+  for (const [id, right] of catalogues.rights) draft.rights[id] = right;
+
+  for (const [id, rule] of catalogues.rules) draft.rules[id] = rule;
+
+  for (const [id, scope] of catalogues.scopes) draft.scopes[id] = scope;
+
+  for (const [id, bucket] of catalogues.buckets) draft.buckets[id] = bucket;
+}

@@ -1,0 +1,5 @@
+# expect: seampact/validate/unknown-keyword /surfaces
+# A pack holds no tree.
+pack: { name: house, version: 1.0.0 }
+surfaces:
+  app: { routes: {} }

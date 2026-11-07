@@ -1,0 +1,170 @@
+# Write the handlers (Hono)
+
+This page replaces the NestJS page. Two earlier pages change when you use Hono 4 on Node.
+
+In [Install](../getting-started/01-install.md), use these dependencies in `package.json`. You do not need `experimentalDecorators` in `tsconfig.json`.
+
+```json
+  "dependencies": {
+    "@hono/node-server": "2.1.5",
+    "hono": "4.13.14",
+    "zod": "4.6.7"
+  },
+```
+
+Keep `@seampact/server-runtime`, which Install put in `dependencies`: the generated code imports it. Keep it at the version of your other seampact packages. Yarn Plug'n'Play is not supported: the check before generating looks for `@seampact/server-runtime` in `node_modules`.
+
+In [Generate](../getting-started/03-generate-and-run.md), the `server` target uses `@seampact/codegen-hono`.
+
+```yaml
+  - id: server
+    use: "@seampact/codegen-hono"
+    apis: [notes]
+    link:
+      types: types
+      validators: validators
+```
+
+The generated `NotesEndpoints` interface lists one method per operation. Each method returns the status and body the contract allows; `Notes.Status` and `Notes.ErrorCode` name them. Create `src/notes-handlers.ts`.
+
+```ts
+import { randomUUID } from "node:crypto";
+import type * as NotesHono from "./__generated__/server/notes/index.js";
+import * as Notes from "./__generated__/types/notes/index.js";
+
+const notes = new Map<string, Notes.schemas.Note>();
+
+export const notesEndpoints: NotesHono.NotesEndpoints = {
+  listNotes() {
+    return { status: Notes.Status.Ok, body: { items: [...notes.values()] } };
+  },
+
+  getNote(input) {
+    const note = notes.get(input.path.noteId);
+
+    if (note === undefined)
+      return { status: Notes.Status.NotFound, code: Notes.ErrorCode.ApiNotFound };
+
+    return { status: Notes.Status.Ok, body: note };
+  },
+
+  createNote(input) {
+    const note = { noteId: randomUUID(), createdAt: new Date().toISOString(), ...input.body };
+
+    notes.set(note.noteId, note);
+
+    return { status: Notes.Status.Created, body: note };
+  },
+
+  deleteNote(input) {
+    if (!notes.delete(input.path.noteId))
+      return { status: Notes.Status.NotFound, code: Notes.ErrorCode.ApiNotFound };
+
+    return { status: Notes.Status.NoContent };
+  },
+};
+```
+
+`listNotes` returns every note; a real app reads `input.query.cursor` to page through them.
+
+Types come from `types/notes`. The handlers interface and `registerRoutes` come from `server/notes`.
+
+Create `src/main.ts`. A public api needs no hooks. `onError` makes a failing handler answer in the contract's error format. `checkFrameworkRoutes` must run after the last route is added and before the app serves.
+
+```ts
+import { serve } from "@hono/node-server";
+import { Hono } from "hono";
+import * as NotesHono from "./__generated__/server/notes/index.js";
+import { notesEndpoints } from "./notes-handlers.js";
+
+const app = new Hono();
+
+app.onError((error, c) => NotesHono.renderContractError(c, error));
+
+NotesHono.registerRoutes(app, { handlers: { NotesEndpoints: notesEndpoints } });
+
+NotesHono.checkFrameworkRoutes(app);
+
+serve({ fetch: app.fetch, port: 3000 });
+```
+
+Typecheck.
+
+```sh
+npx tsc -p .
+```
+
+You see no output.
+
+A throttler's 429 works out of the box with `hono-rate-limiter`. When the operation's `rateLimited` code requires `retryAfterMs`, seampact fills it from the throttler's `Retry-After` (seconds or an HTTP date), read from the reply or from the exception. Without a usable `Retry-After`, the reply is a logged 500 (with an optional `retryAfterMs`, the code is answered without it) that names the fix: answer the code from the handler with its params.
+
+## Who is calling
+
+When an operation declares an identity, its handler's `input` also has `principal`: what your authenticate hook returned, typed with the identity's principal schema. A public operation has no `principal`.
+
+When an operation runs in a scope, `input.scopes` has one entry per scope, as your resolver returned it. An operation in no scope has no `scopes`.
+
+Both are read-only and are not part of the request: spreading or serialising `input` leaves them out. Type the parameter with `HandlerInputs`.
+
+```ts
+getNote(input: NotesHono.HandlerInputs["getNote"]) {
+  const ownerId = input.principal.userId;
+  const workspaceId = input.scopes.workspace.id;
+```
+
+The scope's `value` is `unknown`: narrow it before use.
+
+## Test your routes
+
+Build the app as `main.ts` does, without `serve`, and send requests with `app.request`. Send the credential header your authenticate hook reads.
+
+```ts
+const reply = await app.request(`/v1/notes/${noteId}`, { headers: { authorization: "Bearer test-user" } });
+```
+
+To test a handler without HTTP, call it with a plain input. Add `principal` and `scopes` yourself: nothing checks them on a direct call.
+
+```ts
+const reply = await notesEndpoints.getNote({ path: { noteId }, principal: { userId } });
+```
+
+To use test hooks, pass them to `registerRoutes` in the test app: `registerRoutes(app, { handlers, hooks: testHooks })`.
+
+An exception your handler throws reaches your `onError`. With the `onError` of `main.ts`, the client gets the api's 500 and seampact logs the exception. With `NODE_ENV=development`, `renderContractError` leaves the exception to Hono instead: seampact logs its message and the file and line it came from, and Hono answers its plain 500. To show your own reply while you develop, return it from `onError` before the call.
+
+## Behind a reverse proxy and in Docker
+
+Hono has no trust-proxy setting. Behind a proxy, `getConnInfo` gives the proxy's address: in `clientAddress`, read the last `X-Forwarded-For` entry instead, and only when the request comes from your proxy. Your hooks get the address it returns.
+
+The proxy forwards the contract's paths as they are (`/v1/notes`): strip only a prefix you added in front, such as `/api`. Call `registerRoutes` on an app without `basePath()`: a base path is refused at boot. To serve the api under a prefix, set `mount: /api` on the target entry instead.
+
+Page links are query-only (`?page=2`), so they stay right behind a proxy that strips a prefix. A client resolves them against the URL it called, not the API base URL.
+
+Check your variables once at start, with your validator, and stop when one is missing. Keep `.env` out of the image: add it to `.dockerignore`, and pass values with `docker run -e` or mounted secret files.
+
+## Wiring reference
+
+Every server target takes four options: `bodyValidation` (check the success bodies your code writes outside the handler result, off by default; a handler result is typed already), `frameworkEtag` (`strip` by default removes an ETag the framework adds to a reply your code wrote outside the contract; `keep` leaves it), `catchAll` (`true` by default answers the api's 404 for a path under its base path that no route serves, or a method it does not serve; `false` leaves those requests to your app) and `responses`, which decides what happens when your handler answers something the contract does not declare: `strict` (the default) replaces the reply with a 500 in the api's format, `warn` lets it through and logs it. When you register the api, `logger: { warn, error }` sends the messages seampact writes (such as that log) to your logger instead of `console`; the logger is shared by the whole generated api, so the last registration wins.
+
+Register the routes on the app that serves, and pass the client address your runtime gives (here `@hono/node-server`). The boundary reads the raw bytes of signed routes itself; render refusals raised before a route ran from your `onError`.
+
+```ts
+TasksHono.registerRoutes(app, {
+  handlers: { TasksEndpoints: tasksHandlers },
+  hooks: tasksHooks(),
+  clientAddress: (c) => getConnInfo(c).remote.address,
+});
+app.onError(async (error, c) => (await TasksHono.renderPreRoutingError(c, error)) ?? c.text("error", 500));
+```
+
+Next: [run it](../getting-started/03-generate-and-run.md#run-it).
+
+## Versioned writes and query lists
+
+A write versioned with `header.If-Match` answers 428 when the header is missing or empty, before the handler runs. A weak tag (`W/"7"`) is accepted, and the handler receives the version unquoted (`7`). A stale version is a 412: the handler returns the `preconditionFailed` error. See [Catch lost updates](../contract/07-advanced.md#catch-lost-updates).
+
+A query list is read in the default `repeat` form (`tag=a&tag=b`) or as `comma`. The `brackets` form is refused by `generate`.
+
+An identity header written on a response (a `versionToken` header, or one declared `in: response`) is refused by `generate` (`identity.response.header.unsupported`): no handler can write it yet.
+
+A sort key restricted by a right (`paging.sortKey.restricted.unsupported`) and an input field right below the top level of the input (`fieldRight.nestedPointer.unsupported`) are refused by `generate`. Leave the key out of `sortable`, and put the field at the top level.

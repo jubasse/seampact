@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/openapi/extensions/nature.schema.json",
+  "title": "x-seampact-nature",
+  "description": "The base nature of an error code, and its contract nature when it declares one.",
+  "type": "object",
+  "properties": {
+    "base": {
+      "type": "string",
+      "minLength": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": ["base"],
+  "additionalProperties": false
+}

@@ -1,0 +1,23 @@
+{
+  "id": "pack-laravel-error-code",
+  "title": "An error body of the laravel format is told by its code",
+  "checks": ["CHK-107"],
+  "profiles": ["pack:laravel"],
+  "steps": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/v1/unknown",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 404,
+        "body": {
+          "code": "api.not_found"
+        }
+      }
+    }
+  ]
+}

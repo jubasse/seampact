@@ -1,0 +1,48 @@
+{
+  "id": "pack-laravel-empty-list-last-is-first",
+  "title": "An empty list counts no page, and its last link is the first page",
+  "checks": ["CHK-107"],
+  "profiles": ["pack:laravel"],
+  "script": {
+    "answers": {
+      "tasks.listTasks": {
+        "status": 200,
+        "body": {
+          "items": [],
+          "total": 0
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "query": {
+          "per_page": 2
+        },
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "data": [],
+          "links": {
+            "first": "?per_page=2&page=1",
+            "last": "?per_page=2&page=1",
+            "prev": null,
+            "next": null
+          },
+          "meta": {
+            "current_page": 1,
+            "last_page": 0,
+            "total": 0
+          }
+        }
+      }
+    }
+  ]
+}

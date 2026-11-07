@@ -1,0 +1,78 @@
+# docs/conformance/proofs/p2-tree-nodes.yaml
+lane: p2-tree-nodes
+proofs:
+  - id: CHK-150
+    fixtures: [fixtures/passes/tree-nodes/bodies, fixtures/passes/tree-nodes/bodies-refused]
+    tests:
+      - 'core: packages/core/compiler/src/passes/tree/nodes/input.test.ts#bodies beyond JSON: form and multipart fields with their wires'
+      - 'core: packages/core/compiler/src/passes/tree/nodes/input.test.ts#field wire shared: $expected.kind'
+      - "core: packages/core/compiler/src/passes/tree/nodes/input.test.ts#bodies beyond JSON: a derived form field's wire is asked at its position in the input schema"
+  - id: CHK-151
+    fixtures: [fixtures/passes/tree-nodes/bodies, fixtures/passes/tree-nodes/bodies-refused]
+    tests:
+      - 'core: packages/core/compiler/src/passes/tree/nodes/input.test.ts#bodies beyond JSON: form and multipart fields with their wires'
+      - 'core: packages/core/compiler/src/passes/tree/nodes/input.test.ts#bodies beyond JSON: files only in multipart within the body limit, form inputs are objects'
+  - id: CHK-145
+    fixtures: [fixtures/passes/tree-nodes/ops-and-ids]
+    tests:
+      - 'core: packages/core/compiler/src/passes/tree/nodes/names.test.ts#ops expand to routes ($conventions)'
+      - 'core: packages/core/compiler/src/passes/tree/nodes/names.test.ts#ops expand to routes (fixture ops-and-ids)'
+  - id: CHK-057
+    fixtures: [fixtures/passes/tree-nodes/ops-and-ids, fixtures/passes/tree-nodes/routes-refused]
+    tests:
+      - 'core: packages/core/compiler/src/passes/tree/nodes/api.test.ts#path versions: $name'
+      - "core: packages/core/compiler/src/passes/tree/nodes/api.test.ts#path versions: the api's path version, the version kind and the mismatch stated"
+  - id: CHK-108
+    fixtures: [fixtures/passes/tree-nodes/ops-and-ids, fixtures/passes/tree-nodes/routes-refused]
+    tests:
+      - 'core: packages/core/compiler/src/passes/tree/nodes/api.test.ts#path versions: $name'
+      - 'core: packages/core/compiler/src/passes/tree/nodes/api.test.ts#path versions: pathVersion none set by a pack'
+  - id: CHK-134
+    fixtures: []
+    tests:
+      - 'core: packages/core/compiler/src/passes/tree/nodes/routes.test.ts#unknown query keys: the nearest unknownQuery, else the convention, with its reason and origin'
+  - id: CHK-009
+    fixtures: []
+    tests:
+      - 'core: packages/core/compiler/src/passes/tree/nodes/routes.test.ts#unknown query keys: the nearest unknownQuery, else the convention, with its reason and origin'
+  - id: CHK-106
+    fixtures: [fixtures/passes/tree-nodes/shapes-refused]
+    tests:
+      - "core: packages/core/compiler/src/passes/tree/nodes/shapes.test.ts#paging declared: the route's style or none, else the convention's, with limits, token and sort keys"
+      - 'core: packages/core/compiler/src/passes/tree/nodes/shapes.test.ts#paging declared: a list with neither a style nor a default names both fixes'
+  - id: CHK-035
+    fixtures: []
+    tests:
+      - 'core: packages/core/compiler/src/passes/tree/nodes/shapes.test.ts#batch read: a safe POST of the hoisted ids input, answered as a table, within the batch budget'
+  - id: CHK-056
+    fixtures: []
+    tests:
+      - 'core: packages/core/compiler/src/passes/tree/nodes/shapes.test.ts#lifecycle members: deprecated, upstream, stated maturity, internal, tags, docs and extensions'
+  - id: CHK-105
+    fixtures: [fixtures/reference]
+    tests:
+      - 'core: packages/core/compiler/src/passes/tree/nodes/formats.test.ts#formats and paging styles: bare from the core where undeclared, every declared format and style compiled, used or not'
+      - 'core: packages/core/compiler/src/passes/tree/nodes/formats.test.ts#formats and paging styles: a declared bare replaces the core one, its error kept by the formats without one'
+  - id: CHK-126
+    fixtures: [fixtures/passes/tree-nodes/formats-refused]
+    tests:
+      - 'core: packages/core/compiler/src/passes/tree/nodes/formats.test.ts#tree.nodes diagnostics are located: formats and paging styles'
+      - 'core: packages/core/compiler/src/passes/tree/nodes/formats.test.ts#formats and paging styles: name slots, sequences, escaped keys, typed meta fields and error headers'
+  - id: CHK-128
+    fixtures: [fixtures/passes/tree-nodes/formats-refused]
+    tests:
+      - 'core: packages/core/compiler/src/passes/tree/nodes/formats.test.ts#formats and paging styles: the handler result follows the roles each style writes'
+      - 'core: packages/core/compiler/src/passes/tree/nodes/formats.test.ts#tree.nodes diagnostics are located: formats and paging styles'
+  - id: CHK-052
+    fixtures: [fixtures/reference]
+    tests:
+      - 'core: packages/core/compiler/src/passes/tree/nodes/relays.test.ts#relay routes copy the public shape'
+      - 'core: packages/core/compiler/src/passes/tree/nodes/relays.test.ts#relay routes copy from an imported IR the same shape, and name what it holds unknown'
+      - 'core: packages/core/compiler/src/passes/tree/nodes/relays.test.ts#tree.nodes diagnostics are located: relays'
+      - 'core: packages/core/compiler/src/passes/tree/nodes/relays.test.ts#an imported operation that contradicts its own IR is refused, located, not an internal error'
+      - 'core: packages/core/compiler/src/passes/tree/nodes/relays.test.ts#an imported paging style holding a member this compiler does not know is refused, not copied'
+      - 'core: packages/core/compiler/src/passes/tree/nodes/pass.test.ts#tree halves on the reference contract (%s)'
+  - id: CHK-053
+    fixtures: []
+    tests:
+      - 'core: packages/core/compiler/src/passes/tree/nodes/shapes.test.ts#route examples: request and success values checked against what the handler returns, table keys by the id, errors unchecked'

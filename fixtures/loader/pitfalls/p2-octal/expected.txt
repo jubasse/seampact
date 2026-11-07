@@ -1,0 +1,1 @@
+api.yaml:3:7: error seampact/load/yaml-number-format: plain number '012' is not written in plain decimal (P2). Fix: quote it, or write the number in plain decimal.

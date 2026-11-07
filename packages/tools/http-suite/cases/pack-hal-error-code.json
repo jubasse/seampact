@@ -1,0 +1,24 @@
+{
+  "id": "pack-hal-error-code",
+  "title": "An error body of the hal format is told by its code",
+  "checks": ["CHK-107"],
+  "profiles": ["pack:hal"],
+  "steps": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/v1/unknown",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 404,
+        "body": {
+          "code": "api.not_found",
+          "status": 404
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+# expect: seampact/validate/unknown-keyword /packs
+# A pack extends packs through its manifest; 'packs' is a key of an api or a base.
+pack: { name: house, version: 1.0.0 }
+packs: ['@seampact/pack-crud-rights']

@@ -1,0 +1,22 @@
+{
+  "name": "@seampact/pack-laravel",
+  "version": "1.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jubasse/seampact.git",
+    "directory": "packages/packs/pack-laravel"
+  },
+  "homepage": "https://jubasse.github.io/seampact/features/convention-packs/",
+  "bugs": {
+    "url": "https://github.com/jubasse/seampact/issues"
+  },
+  "description": "Laravel API Resources and paginators: data wrapping, length-aware and cursor pages.",
+  "seampact": {
+    "role": "pack",
+    "pack": "pack.yaml"
+  },
+  "files": [
+    "pack.yaml",
+    "README.md"
+  ]
+}

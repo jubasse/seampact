@@ -1,0 +1,33 @@
+{
+  "name": "seampact/signed-webhooks",
+  "description": "Verifies template-signed webhooks for PHP (ADR 0013): HMAC over the raw body, timestamp tolerance and secret rotation.",
+  "type": "library",
+  "license": "MIT",
+  "require": {
+    "php": ">=8.3.36 <8.4 || >=8.4.27 <8.5 || >=8.5.12"
+  },
+  "require-dev": {
+    "phpstan/phpstan": "2.2.16",
+    "phpunit/phpunit": "11.5.56"
+  },
+  "autoload": {
+    "psr-4": {
+      "Seampact\\SignedWebhooks\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Seampact\\SignedWebhooks\\Tests\\": "tests/"
+    }
+  },
+  "config": {
+    "platform": {
+      "php": "8.3.36"
+    },
+    "sort-packages": true
+  },
+  "scripts": {
+    "test": "phpunit",
+    "analyse": "phpstan analyse"
+  }
+}

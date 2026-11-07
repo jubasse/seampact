@@ -1,0 +1,7 @@
+api.yaml:3:4: error seampact/load/yaml-boolean: plain 'yes' is read as a boolean by YAML 1.1 parsers, or is a boolean not in lowercase (P1). Fix: quote it ('yes'), or write true or false.
+api.yaml:4:4: error seampact/load/yaml-boolean: plain 'on' is read as a boolean by YAML 1.1 parsers, or is a boolean not in lowercase (P1). Fix: quote it ('on'), or write true or false.
+api.yaml:5:4: error seampact/load/yaml-boolean: plain 'off' is read as a boolean by YAML 1.1 parsers, or is a boolean not in lowercase (P1). Fix: quote it ('off'), or write true or false.
+api.yaml:6:4: error seampact/load/yaml-boolean: plain 'y' is read as a boolean by YAML 1.1 parsers, or is a boolean not in lowercase (P1). Fix: quote it ('y'), or write true or false.
+api.yaml:7:4: error seampact/load/yaml-boolean: plain 'n' is read as a boolean by YAML 1.1 parsers, or is a boolean not in lowercase (P1). Fix: quote it ('n'), or write true or false.
+api.yaml:8:4: error seampact/load/yaml-boolean: plain 'Yes' is read as a boolean by YAML 1.1 parsers, or is a boolean not in lowercase (P1). Fix: quote it ('Yes'), or write true or false.
+api.yaml:9:4: error seampact/load/yaml-boolean: plain 'OFF' is read as a boolean by YAML 1.1 parsers, or is a boolean not in lowercase (P1). Fix: quote it ('OFF'), or write true or false.

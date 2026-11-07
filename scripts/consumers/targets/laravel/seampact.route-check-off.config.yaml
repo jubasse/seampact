@@ -1,0 +1,63 @@
+# The config of the framework-route-check-off boot variants: the consumer config with the framework-route check off on
+# every api and no frameworkRoutes.
+outDir: app/Generated
+openapi: none
+sources:
+  contract: { path: contract }
+targets:
+  - id: tasks
+    out: Tasks
+    use: seampact/laravel
+    api: tasks
+    artefacts:
+      bootCheck: { frameworkRoutes: false }
+  - id: tasksService
+    out: TasksService
+    use: seampact/laravel
+    api: tasksService
+    artefacts:
+      bootCheck: { frameworkRoutes: false }
+  - id: tasksServiceWrites
+    out: TasksServiceWrites
+    use: seampact/laravel
+    api: tasksServiceWrites
+    artefacts:
+      bootCheck: { frameworkRoutes: false }
+  - id: tasksDevices
+    out: TasksDevices
+    use: seampact/laravel
+    api: tasksDevices
+    artefacts:
+      bootCheck: { frameworkRoutes: false }
+  - id: tasksOptionalAuth
+    out: TasksOptionalAuth
+    use: seampact/laravel
+    api: tasksOptionalAuth
+    artefacts:
+      bootCheck: { frameworkRoutes: false }
+  - id: tasksAbsoluteUrls
+    out: TasksAbsoluteUrls
+    use: seampact/laravel
+    api: tasksAbsoluteUrls
+    artefacts:
+      bootCheck: { frameworkRoutes: false }
+  - id: tasksResponses
+    out: TasksResponses
+    use: seampact/laravel
+    api: tasksResponses
+    artefacts:
+      bootCheck: { frameworkRoutes: false }
+  - id: tasksPaging
+    out: TasksPaging
+    use: seampact/laravel
+    api: tasksPaging
+    # The changes-since feed carries the complete page fact, which this target refuses by name in 1.0.
+    operations: { exclude: [listChanges, listEvents] }
+    artefacts:
+      bootCheck: { frameworkRoutes: false }
+  - id: tasksSplitSort
+    out: TasksSplitSort
+    use: seampact/laravel
+    api: tasksSplitSort
+    artefacts:
+      bootCheck: { frameworkRoutes: false }

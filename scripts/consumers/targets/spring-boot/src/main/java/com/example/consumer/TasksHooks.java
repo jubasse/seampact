@@ -1,0 +1,148 @@
+package com.example.consumer;
+
+import com.example.tasks.api.TasksDecider;
+import com.example.tasks.api.TasksScopeResolver;
+import com.example.tasks.api.TasksUnexpectedErrorListener;
+import com.example.tasks.api.UserAuthenticateHook;
+import com.example.tasks.api.UserAuthenticateRequest;
+import com.example.tasks.api.schemas.RolesParams;
+import com.example.tasks.api.schemas.UserPrincipal;
+import io.github.jubasse.seampact.hooks.AuthenticateResult;
+import io.github.jubasse.seampact.hooks.Decision;
+import io.github.jubasse.seampact.hooks.ResolvedScope;
+import io.github.jubasse.seampact.hooks.ScopeIdSource;
+import io.github.jubasse.seampact.hooks.ScopeResolution;
+import io.github.jubasse.seampact.springboot.runtime.Denial;
+import io.github.jubasse.seampact.springboot.runtime.RequirementCall;
+import io.github.jubasse.seampact.springboot.runtime.ScopeCall;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import org.springframework.stereotype.Component;
+
+/** The `tasks` api's hook doubles: they record each call and answer what the loaded script says. */
+final class TasksHooks {
+    private static final String API = "tasks";
+
+    private TasksHooks() {}
+
+    /** The `user` identity: a bearer token of the credentials, or the same token as the session cookie. */
+    @Component
+    @SkippedUnder({"missing-authenticate-hook", "framework-route-check-off-missing-hook", "hook-check-off"})
+    static final class UserHook implements UserAuthenticateHook {
+        @Override
+        public AuthenticateResult<UserPrincipal, Denial> authenticate(UserAuthenticateRequest request) {
+            SuiteControl.recordHookCall("authenticate:user", API, request.operation().id());
+
+            return UserTokens.userIdOf(request.credentials().bearer(), request.credentials().sessionCookie())
+                    .<AuthenticateResult<UserPrincipal, Denial>>map(userId -> new AuthenticateResult.Authenticated<>(new UserPrincipal(userId)))
+                    .orElseGet(() -> new AuthenticateResult.Denied<>(Denial.of("api.unauthenticated")));
+        }
+    }
+
+    /** Denies what the script denies; allows every other right and rule. */
+    @Component
+    @SkippedUnder("missing-decider")
+    static final class ScriptedDecider implements TasksDecider {
+        private static final String THROTTLE_RULE = "throttle";
+        private static final String ROLES_RIGHT = "roles";
+        private static final String RATE_LIMITED = "api.rate_limited";
+
+        @Override
+        public Set<String> names() {
+            return Set.of(EVERY_NAME);
+        }
+
+        @Override
+        public Decision<Denial> decide(RequirementCall request) {
+            SuiteControl.recordHookCall("decide:" + request.name(), API, request.operation().id(), request.bucket());
+
+            assertRolesRequestComplete(request);
+
+            Optional<String> denied = SuiteControl.scriptedDecision(request.name(), Purposes.nameOf(request.purpose()));
+            if (denied.isPresent()) return new Decision.Denied<>(denialOf(denied.get()));
+
+            boolean throttledUser = request.principal() instanceof UserPrincipal user && user.userId().toString().equals(Credentials.text("throttledUserId"));
+            if (THROTTLE_RULE.equals(request.name()) && throttledUser) return new Decision.Denied<>(denialOf(RATE_LIMITED));
+
+            return new Decision.Allowed<>();
+        }
+
+        // A scripted denial is one of the api's decide codes; the rate limit carries its delay.
+        private static Denial denialOf(String code) {
+            return RATE_LIMITED.equals(code) ? Denial.of(code, Map.of("retryAfterMs", Credentials.number("throttleRetryAfterMs"))) : Denial.of(code);
+        }
+
+        private static void assertRolesRequestComplete(RequirementCall request) {
+            if (!ROLES_RIGHT.equals(request.name())) return;
+
+            boolean hasAllowed = request.params().filter(RolesParams.class::isInstance).map(RolesParams.class::cast)
+                    .map(params -> params.allowed() != null).orElse(false);
+            if (!hasAllowed || request.subject().isEmpty()) {
+                throw new IllegalStateException("the '" + ROLES_RIGHT + "' decide request lacks its 'allowed' param or its scope subject: the boundary dropped them");
+            }
+        }
+    }
+
+    /**
+     * The app's own decider for the overridden right (CHK-091): it records under its own hook name and denies what the
+     * script denies, while every other right and rule reaches the generic decider.
+     */
+    @Component
+    @SkippedUnder("missing-decider")
+    static final class OverriddenRightDecider implements TasksDecider {
+        private static final String OVERRIDDEN_RIGHT = "tasks.update";
+
+        @Override
+        public Set<String> names() {
+            return Set.of(OVERRIDDEN_RIGHT);
+        }
+
+        @Override
+        public Decision<Denial> decide(RequirementCall request) {
+            SuiteControl.recordHookCall("decide-override:" + request.name(), API, request.operation().id(), request.bucket());
+
+            return SuiteControl.scriptedDecision(request.name(), Purposes.nameOf(request.purpose()))
+                    .<Decision<Denial>>map(code -> new Decision.Denied<>(Denial.of(code)))
+                    .orElseGet(Decision.Allowed::new);
+        }
+    }
+
+    /** Resolves a declared channel id to itself, the sample user a member of every channel but one, unless the script denies the scope. */
+    @Component
+    @SkippedUnder("missing-scope-resolver")
+    static final class ChannelResolver implements TasksScopeResolver {
+        // The sample channel the sample user is not a member of: the resolver denies it, so no handler runs for it.
+        private static final String NON_MEMBER_CHANNEL_ID = "10000000-0000-4000-8000-0000000000ff";
+
+        @Override
+        public String scope() {
+            return "channel";
+        }
+
+        @Override
+        public ScopeResolution<ResolvedScope<?, ?>, Denial> resolveScope(ScopeCall request) {
+            if (!(request.source() instanceof ScopeIdSource.Declared<Object> declared)) {
+                throw new IllegalStateException("the consumer resolves declared scope ids only, not '" + request.scope() + "'");
+            }
+
+            Optional<String> denied = SuiteControl.scriptedScopeDenial(request.scope());
+            if (denied.isPresent()) return new ScopeResolution.Denied<>(Denial.of(denied.get()));
+
+            if (NON_MEMBER_CHANNEL_ID.equals(String.valueOf(declared.id()))) {
+                return new ScopeResolution.Denied<>(Denial.of("api.not_found"));
+            }
+
+            return new ScopeResolution.Resolved<>(new ResolvedScope<>(request.scope(), declared.id(), Optional.empty()));
+        }
+    }
+
+    /** Writes each unexpected failure to the log, which the log-lines route captures. */
+    @Component
+    static final class TasksUnexpectedErrors implements TasksUnexpectedErrorListener {
+        @Override
+        public void onUnexpectedError(UnexpectedFailure failure) {
+            UnexpectedFailures.log(failure.api(), failure.operation(), failure.reason(), failure.cause());
+        }
+    }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "@seampact/pack-api-platform",
+  "version": "1.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jubasse/seampact.git",
+    "directory": "packages/packs/pack-api-platform"
+  },
+  "homepage": "https://jubasse.github.io/seampact/features/convention-packs/",
+  "bugs": {
+    "url": "https://github.com/jubasse/seampact/issues"
+  },
+  "description": "JSON-LD items, Hydra collections and the iri-reference format for API Platform.",
+  "seampact": {
+    "role": "pack",
+    "pack": "pack.yaml"
+  },
+  "files": [
+    "pack.yaml",
+    "README.md"
+  ]
+}

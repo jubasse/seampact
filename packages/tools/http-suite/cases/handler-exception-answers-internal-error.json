@@ -1,0 +1,30 @@
+{
+  "id": "handler-exception-answers-internal-error",
+  "title": "An exception thrown by a handler answers 500 api.internal",
+  "checks": ["CHK-157"],
+  "profiles": ["default"],
+  "script": {
+    "answers": {
+      "tasks.getChannel": {
+        "throws": "the channel store is down"
+      }
+    }
+  },
+  "steps": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 500,
+        "body": {
+          "code": "api.internal"
+        }
+      }
+    }
+  ]
+}

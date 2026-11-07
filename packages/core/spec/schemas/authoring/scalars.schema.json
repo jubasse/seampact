@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "seampact scalars catalogue",
+  "description": "Named formats: a base type plus portable refinements (ADR 0003 section 8). A name-keyed catalogue file.",
+  "type": "object",
+  "properties": {
+    "$include": {
+      "$ref": "common.schema.json#/$defs/include"
+    }
+  },
+  "propertyNames": {
+    "description": "a scalar (named format) name (ADR 0002 section 4)",
+    "pattern": "^(?:[a-z][A-Za-z0-9]*(?:-[a-z0-9]+)*|\\$include)$",
+    "not": {
+      "enum": [
+        "__proto__",
+        "constructor",
+        "prototype"
+      ]
+    }
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/entry"
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "enum": [
+            "string",
+            "integer"
+          ],
+          "$comment": "ADR 0003 section 8"
+        },
+        "pattern": {
+          "type": "string",
+          "$comment": "ADR 0003 section 9"
+        },
+        "minLength": {
+          "type": "integer",
+          "minimum": 0,
+          "$comment": "ADR 0003 section 8"
+        },
+        "maxLength": {
+          "type": "integer",
+          "minimum": 0,
+          "$comment": "ADR 0003 section 8"
+        },
+        "minimum": {
+          "type": "number",
+          "$comment": "ADR 0003 section 8"
+        },
+        "maximum": {
+          "type": "number",
+          "$comment": "ADR 0003 section 8"
+        },
+        "exclusiveMinimum": {
+          "type": "number",
+          "$comment": "ADR 0003 section 8"
+        },
+        "exclusiveMaximum": {
+          "type": "number",
+          "$comment": "ADR 0003 section 8"
+        },
+        "multipleOf": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "$comment": "ADR 0003 section 8"
+        },
+        "title": {
+          "type": "string",
+          "$comment": "ADR 0003 section 8"
+        },
+        "description": {
+          "$ref": "common.schema.json#/$defs/description",
+          "$comment": "ADR 0003 section 8"
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "additionalProperties": false,
+      "if": {
+        "properties": {
+          "$include": true
+        },
+        "required": [
+          "$include"
+        ]
+      },
+      "else": {
+        "properties": {
+          "type": true
+        },
+        "required": [
+          "type"
+        ]
+      }
+    }
+  }
+}

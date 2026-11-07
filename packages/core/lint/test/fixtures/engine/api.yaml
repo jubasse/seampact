@@ -1,0 +1,23 @@
+# api.yaml: two routes under one surface
+api: { name: demo, version: 1 }
+
+schemes:
+  bearer: { kind: bearer }
+
+identities:
+  user:
+    schemes: { read: [bearer], write: [bearer] }
+    principal: Principal
+
+schemas:
+  Principal:
+    type: object
+    required: [userId]
+    properties: { userId: { type: string } }
+
+surfaces:
+  app:
+    identity: user
+    routes:
+      alpha: { method: get, output: Principal }
+      beta: { method: get, output: Principal, lint: { allow: { test/probee: "A misspelt id." } } }

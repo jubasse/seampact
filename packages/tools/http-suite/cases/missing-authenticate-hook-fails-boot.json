@@ -1,0 +1,11 @@
+{
+  "id": "missing-authenticate-hook-fails-boot",
+  "title": "The app without an authenticate hook for an identity refuses to start",
+  "checks": ["CHK-062"],
+  "profiles": ["boot"],
+  "boot": {
+    "variant": "missing-authenticate-hook",
+    "outcome": "refuses",
+    "diagnostic": ["the api 'tasks' cannot start", "no authenticate hook for the identity 'user'"]
+  }
+}

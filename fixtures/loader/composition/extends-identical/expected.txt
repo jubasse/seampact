@@ -1,0 +1,2 @@
+api.yaml:5:3: error seampact/load/declaration-twice: 'api.forbidden' (errors) is declared by both 'base' (base.yaml) and 'api' (api.yaml), and a declaration is never overridden, even when the two are identical. Fix: remove the copy.
+  base.yaml:2:3: first declared here.

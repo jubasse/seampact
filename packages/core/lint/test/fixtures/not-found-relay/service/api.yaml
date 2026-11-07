@@ -1,0 +1,26 @@
+# api.yaml: relays the route of the notes api
+api: { name: notesService, version: 1, kind: service, caller: { identity: service, right: callerService } }
+
+schemes:
+  bearer: { kind: bearer }
+
+identities:
+  service:
+    schemes: { read: [bearer], write: [bearer] }
+    principal: Caller
+
+schemas:
+  Caller:
+    type: object
+    required: [name]
+    properties: { name: { type: string } }
+
+rights:
+  callerService:
+    params: { allowed: { type: array, items: { type: string }, minItems: 1 } }
+
+surfaces:
+  internal:
+    requires: [{ right: callerService, params: { allowed: [catalog] } }]
+    routes:
+      getNote: { relays: notes.getNote }

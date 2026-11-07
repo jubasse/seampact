@@ -1,0 +1,1 @@
+The validator agreement runner: generates the validators of each first-party provider from the agreement contract and checks that they give the same verdict and contract rule per table row (scripts/validator-agreement).

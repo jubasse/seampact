@@ -1,0 +1,397 @@
+package io.github.jubasse.seampact.springboot
+
+import io.github.jubasse.seampact.ir.model.ArrayTypeUse
+import io.github.jubasse.seampact.ir.model.BasicScheme
+import io.github.jubasse.seampact.ir.model.BucketId
+import io.github.jubasse.seampact.ir.model.ContractIR
+import io.github.jubasse.seampact.ir.model.CredentialIdentity
+import io.github.jubasse.seampact.ir.model.DerivedIdempotency
+import io.github.jubasse.seampact.ir.model.EnumId
+import io.github.jubasse.seampact.ir.model.EnumTypeUse
+import io.github.jubasse.seampact.ir.model.ErrorCode
+import io.github.jubasse.seampact.ir.model.ExemptIdempotency
+import io.github.jubasse.seampact.ir.model.Extensions
+import io.github.jubasse.seampact.ir.model.FileTypeUse
+import io.github.jubasse.seampact.ir.model.HttpMethod
+import io.github.jubasse.seampact.ir.model.IdempotencyEnforcement
+import io.github.jubasse.seampact.ir.model.IdentityAccess
+import io.github.jubasse.seampact.ir.model.IdentityId
+import io.github.jubasse.seampact.ir.model.MapSchema
+import io.github.jubasse.seampact.ir.model.ObjectSchema
+import io.github.jubasse.seampact.ir.model.OpaqueTypeUse
+import io.github.jubasse.seampact.ir.model.Operation
+import io.github.jubasse.seampact.ir.model.OptionalAccess
+import io.github.jubasse.seampact.ir.model.Principal
+import io.github.jubasse.seampact.ir.model.QueryScheme
+import io.github.jubasse.seampact.ir.model.QueryWireKind
+import io.github.jubasse.seampact.ir.model.RefTypeUse
+import io.github.jubasse.seampact.ir.model.ResponseShape
+import io.github.jubasse.seampact.ir.model.RightRequirement
+import io.github.jubasse.seampact.ir.model.RuleRequirement
+import io.github.jubasse.seampact.ir.model.ScalarType
+import io.github.jubasse.seampact.ir.model.ScalarTypeUse
+import io.github.jubasse.seampact.ir.model.SchemaId
+import io.github.jubasse.seampact.ir.model.SchemaPrincipal
+import io.github.jubasse.seampact.ir.model.SchemeId
+import io.github.jubasse.seampact.ir.model.SignatureScheme
+import io.github.jubasse.seampact.ir.model.SignedIdentity
+import io.github.jubasse.seampact.ir.model.TemplateSignature
+import io.github.jubasse.seampact.ir.model.TypeUse
+import io.github.jubasse.seampact.ir.model.UnionSchema
+import io.github.jubasse.seampact.ir.model.UnknownKeysPolicy
+import io.github.jubasse.seampact.ir.model.ValueSchemeKey
+
+private const val JSON_MEDIA = "application/json"
+private val CONSUMER_BODY_MEDIA = listOf("application/x-www-form-urlencoded", "multipart/form-data")
+private const val INT64_FORMAT = "int64"
+/** The string formats the boundary runtime's structural pass checks. */
+private val CHECKED_STRING_FORMATS = setOf("uuid", "date-time", "date", "decimal")
+/** The derivation of the 304 an ETag answers: the boundary's, never the handler's. */
+internal const val ETAG_DERIVATION = "cache.etag"
+private const val OUTPUT_DIRECTION = "output"
+private val TOP_LEVEL_POINTER = Regex("^/[^/]+$")
+private const val PATH_SOURCE = "path"
+private const val BODY_SOURCE = "body"
+internal const val HEADER_SOURCE = "header"
+private val BUCKET_KEY_SOURCES = setOf(PATH_SOURCE, "scope", "principal")
+private val PAYLOAD_SHAPES = listOf(ResponseShape.ITEM, ResponseShape.TABLE, ResponseShape.LIST, ResponseShape.PAGE)
+
+/**
+ * What one api's generation reads from its kept operations (ADR 0022 "Refused by name or waiting"): the operations,
+ * and the object schemas, enums, error codes and identities they reach. A form no kept operation carries is neither
+ * generated nor refused; a kept form this release does not generate is refused by name with the release that brings it.
+ */
+internal class KeptForms(private val ir: ContractIR, private val refusals: Refusals) {
+    val operations: List<Pair<Int, Operation>> = ir.operations.withIndex().map { (index, operation) -> index to operation }
+    val objects = LinkedHashMap<SchemaId, ObjectSchema>()
+    val enums = LinkedHashSet<EnumId>()
+    val errors = LinkedHashSet<ErrorCode>()
+    val identities = LinkedHashSet<IdentityId>()
+    /** The params schema of each asked right and rule that declares one: its decide request carries it typed. */
+    val rightParams = LinkedHashMap<String, SchemaId>()
+    val ruleParams = LinkedHashMap<String, SchemaId>()
+    /** The response headers the boundary writes from each response's own IR headers. */
+    val responseHeaders = ResponseHeaderEntries(ir, refusals)
+    private val readAccessDeclarationKeys = HashSet<String>()
+
+    init {
+        checkApiForms()
+        for ((index, operation) in operations) readOperation(operation, IrPlace.ofOperation(index, operation.id))
+    }
+
+    private fun checkApiForms() {
+        if (ir.extensionKeys.isNotEmpty()) {
+            refusals.waiting("extensionKeys", "Typed extension values", IrPlace.ROOT.below("extensionKeys"), Delivery.AFTER_1_0)
+        }
+    }
+
+    private fun readOperation(operation: Operation, at: IrPlace) {
+        checkOperationForms(operation, at)
+        readAccessDeclarations(operation)
+
+        if (operation.method is HttpMethod.Unknown) refusals.unknownValue(at.below("method"), operation.method.value)
+
+        listOf("path" to operation.params.path, "query" to operation.params.query, "header" to operation.params.header).forEach { (location, params) ->
+            params.forEachIndexed { index, param ->
+                val paramAt = at.below("params", location, index)
+                if (param.default != null) refusals.waiting("param.default", "A parameter default", paramAt.below("default"), Delivery.AFTER_1_0)
+                // The runtime reads a query value under its declared name, never `name[]`.
+                val wire = param.wire
+                if (wire?.kind == QueryWireKind.LIST && wire.brackets) {
+                    refusals.waiting("query.list.brackets", "A query list in brackets form", paramAt.below("wire", "brackets"), Delivery.AFTER_1_0)
+                }
+                readType(param.type, paramAt.below("type"))
+            }
+        }
+
+        operation.input?.let { input ->
+            if (input.media.value != JSON_MEDIA) {
+                val delivery = if (input.media.value in CONSUMER_BODY_MEDIA) Delivery.CONSUMER else Delivery.AFTER_1_0
+                refusals.waiting("input.media", "A '${input.media.value}' body", at.below("input", "media"), delivery)
+            }
+            if (!input.proofs.isNullOrEmpty() && input.schema !is RefTypeUse) {
+                refusals.waiting("input.proofs", "Proof fields beside a body that is not an object schema", at.below("input", "proofs"), Delivery.AFTER_1_0)
+            }
+            input.proofs?.forEachIndexed { index, proof -> readType(proof.schema, at.below("input", "proofs", index, "schema")) }
+            readType(input.schema, at.below("input", "schema"))
+        }
+
+        operation.responses.indices.forEach { index -> readResponse(operation, index, at) }
+
+        operation.errors.forEachIndexed { index, error -> readError(error.code, at.below("errors", index, "code")) }
+
+        identityOf(operation)?.let { identityId -> readIdentity(identityId, at.below("access", "identity")) }
+        readCredentialSchemes(operation, at.below("access"))
+    }
+
+    // The query and HTTP Basic schemes no Spring boundary reads a credential from, refused as the Node servers do.
+    private fun readCredentialSchemes(operation: Operation, at: IrPlace) {
+        val schemeIds = when (val access = operation.access) {
+            is IdentityAccess -> access.schemes
+            is OptionalAccess -> access.schemes
+            else -> return
+        }
+
+        for (schemeId in schemeIds) {
+            val scheme = ir.schemes[schemeId]
+            if (scheme is QueryScheme || scheme is BasicScheme) {
+                refusals.waiting("scheme.${scheme.kind}", "A '${scheme.kind}' credential scheme", at, Delivery.CONSUMER)
+            }
+        }
+    }
+
+    private fun checkOperationForms(operation: Operation, at: IrPlace) {
+        checkPaging(ir, operation, at, refusals)
+
+        // The boundary reads a header version before the input, so a missing one answers 428 (grammar section 6).
+        val version = operation.concurrency?.version
+        if (version?.in_?.value == HEADER_SOURCE && version.name == null) {
+            refusals.inconsistent("ir.concurrency.version.name", "A header version without its header name", at.below("concurrency", "version"))
+        }
+
+        when (val idempotency = operation.idempotency) {
+            null, is ExemptIdempotency -> Unit
+            is DerivedIdempotency -> if (idempotency.enforce is IdempotencyEnforcement.Unknown) {
+                refusals.unknownValue(at.below("idempotency", "enforce"), idempotency.enforce.value)
+            }
+            else -> refusals.unknownValue(at.below("idempotency", "kind"), idempotency.kind)
+        }
+
+        operation.requires.forEachIndexed { index, requirement ->
+            if (requirement !is RuleRequirement) return@forEachIndexed
+            requirement.bucket?.let { bucketId -> checkBucket(bucketId, at.below("requires", index, "bucket")) }
+
+            val proof = ir.rules[requirement.rule]?.proof
+            if (proof != null && proof.in_.value != BODY_SOURCE) {
+                refusals.waiting("rule.proof.placement", "A rule proof in '${proof.in_.value}'", IrPlace.ROOT.below("rules", requirement.rule, "proof", "in"), Delivery.AFTER_1_0)
+            }
+        }
+
+        checkRuntimeForms(operation, at)
+    }
+
+    /**
+     * The rights, rules and scopes an operation asks: a declared params schema is generated, and an extension value is
+     * refused once, since no hook request carries it yet.
+     */
+    private fun readAccessDeclarations(operation: Operation) {
+        val askedRights = operation.requires.filterIsInstance<RightRequirement>().map { it.right } + operation.fieldRights.map { it.right }
+        for (right in askedRights) {
+            val declared = ir.rights[right] ?: continue
+            if (!readAccessDeclarationKeys.add("rights/$right")) continue
+            declared.params?.let { schemaId -> readRequirementParams(rightParams, right, schemaId, "rights") }
+            refuseExtensions("right", "rights", right, declared.extensions)
+        }
+
+        for (rule in operation.requires.filterIsInstance<RuleRequirement>().map { it.rule }) {
+            val declared = ir.rules[rule] ?: continue
+            if (!readAccessDeclarationKeys.add("rules/$rule")) continue
+            declared.params?.let { schemaId -> readRequirementParams(ruleParams, rule, schemaId, "rules") }
+            refuseExtensions("rule", "rules", rule, declared.extensions)
+        }
+
+        for (scope in operation.scopes.map { it.scope }) {
+            val declared = ir.scopes[scope] ?: continue
+            if (readAccessDeclarationKeys.add("scopes/$scope")) refuseExtensions("scope", "scopes", scope, declared.extensions)
+        }
+    }
+
+    private fun readRequirementParams(params: MutableMap<String, SchemaId>, name: String, schemaId: SchemaId, member: String) {
+        params[name] = schemaId
+        readSchema(schemaId, IrPlace.ROOT.below(member, name, "params"))
+    }
+
+    private fun refuseExtensions(kind: String, member: String, name: String, extensions: Extensions) {
+        if (extensions.isNotEmpty()) {
+            refusals.waiting("$kind.extensions", "An extension value of the $kind '$name'", IrPlace.ROOT.below(member, name, "extensions"), Delivery.AFTER_1_0)
+        }
+    }
+
+    // A throttle rule's bucket: its key reads the request's path, a resolved scope or the principal.
+    private fun checkBucket(bucketId: BucketId, at: IrPlace) {
+        val bucket = ir.buckets[bucketId]
+        if (bucket == null) {
+            refusals.inconsistent("bucket.undeclared", "The bucket '$bucketId' is not declared", at)
+            return
+        }
+
+        bucket.key.forEachIndexed { index, source ->
+            if (source.in_.value !in BUCKET_KEY_SOURCES || source.name == null) {
+                refusals.waiting("bucket.key", "A bucket key read from '${source.in_.value}'", IrPlace.ROOT.below("buckets", bucketId, "key", index), Delivery.AFTER_1_0)
+            }
+        }
+    }
+
+    // Forms the boundary runtime does not run yet, refused by name as on the Node targets.
+    private fun checkRuntimeForms(operation: Operation, at: IrPlace) {
+        if (operation.principalRequires.isNotEmpty()) refusals.waiting("principalRequires", "A principal requirement", at.below("principalRequires"), Delivery.AFTER_1_0)
+        if (operation.bindings.isNotEmpty()) refusals.waiting("bindings", "A principal binding", at.below("bindings"), Delivery.AFTER_1_0)
+        if (operation.upstream.isNotEmpty()) refusals.waiting("upstream", "An upstream service call", at.below("upstream"), Delivery.AFTER_1_0)
+        if (operation.degradable != null) refusals.waiting("degradable", "A degradable operation", at.below("degradable"), Delivery.AFTER_1_0)
+        if (operation.features.isNotEmpty()) refusals.waiting("features", "An operation feature", at.below("features"), Delivery.AFTER_1_0)
+
+        operation.fieldRights.forEachIndexed { index, fieldRight ->
+            if (fieldRight.direction.value != OUTPUT_DIRECTION && !TOP_LEVEL_POINTER.matches(fieldRight.pointer)) {
+                refusals.waiting("fieldRight.nestedPointer", "An input field right below the top level", at.below("fieldRights", index, "pointer"), Delivery.AFTER_1_0)
+            }
+        }
+
+        operation.scopes.forEachIndexed { index, scope ->
+            if (scope.source.in_.value != PATH_SOURCE) refusals.waiting("scope.source", "A scope id read from '${scope.source.in_.value}'", at.below("scopes", index, "source"), Delivery.AFTER_1_0)
+        }
+    }
+
+    private fun readResponse(operation: Operation, index: Int, at: IrPlace) {
+        val response = operation.responses[index]
+        val responseAt = at.below("responses", index)
+
+        // The 304 of an ETag is the boundary's, never a handler arm.
+        if (response.derivedFrom?.derivation == ETAG_DERIVATION) return
+
+        when (response.shape) {
+            ResponseShape.ITEM, ResponseShape.TABLE, ResponseShape.LIST, ResponseShape.EMPTY -> Unit
+            ResponseShape.PAGE -> if (operation.paging?.style == null) {
+                refusals.inconsistent("paging.style.missing", "A 'page' response has no paging style", responseAt.below("shape"))
+            }
+            ResponseShape.BINARY, ResponseShape.REDIRECT ->
+                refusals.waiting("response.shape", "A '${response.shape.value}' response", responseAt.below("shape"), Delivery.CONSUMER)
+            is ResponseShape.Unknown -> refusals.unknownValue(responseAt.below("shape"), response.shape.value)
+        }
+
+        responseHeaders.read(operation, response, responseAt)
+
+        // A derived header is the boundary's; one the route writes itself has no member in the handler result yet.
+        response.headers.forEachIndexed { headerIndex, header ->
+            if (header.derivedFrom == null) {
+                refusals.waiting("response.header", "The response header '${header.name}', written by the route,", responseAt.below("headers", headerIndex), Delivery.AFTER_1_0)
+            }
+        }
+
+        if (response.shape in PAYLOAD_SHAPES && response.media != JSON_MEDIA) {
+            refusals.waiting("response.media", "A '${response.media ?: "missing"}' response body", responseAt.below("media"), Delivery.AFTER_1_0)
+        }
+        if (response.shape in PAYLOAD_SHAPES && response.body == null) {
+            refusals.inconsistent("response.body.missing", "A '${response.shape.value}' response has no body", responseAt)
+        }
+
+        if (response.shape in PAYLOAD_SHAPES && response.body != null) checkSuccessFormat(ir, operation, response.shape, refusals)
+
+        response.body?.let { readType(it, responseAt.below("body")) }
+    }
+
+    private fun readError(code: ErrorCode, at: IrPlace) {
+        val declaration = ir.errors[code]
+        if (declaration == null) {
+            refusals.inconsistent("error.code.undeclared", "The error code '$code' is not in the errors registry", at)
+            return
+        }
+
+        if (!errors.add(code)) return
+        declaration.params?.let { readSchema(it, IrPlace.ROOT.below("errors", code, "params")) }
+    }
+
+    private fun readIdentity(identityId: IdentityId, at: IrPlace) {
+        if (identityId in identities) return
+
+        when (val identity = ir.identities[identityId]) {
+            null -> refusals.inconsistent("identity.undeclared", "The identity '$identityId' is not declared", at)
+            is SignedIdentity -> {
+                if (!checkSignatureScheme(identity.signed, IrPlace.ROOT.below("identities", identityId, "signed"))) return
+                identities += identityId
+                readPrincipal(identityId, identity.principal)
+            }
+            is CredentialIdentity -> {
+                identities += identityId
+                readPrincipal(identityId, identity.principal)
+            }
+            else -> refusals.unknownValue(at, identity.kind)
+        }
+    }
+
+    private fun readPrincipal(identityId: IdentityId, principal: Principal) {
+        val principalAt = IrPlace.ROOT.below("identities", identityId, "principal")
+        when (principal) {
+            is SchemaPrincipal -> readSchema(principal.schema, principalAt.below("schema"))
+            else -> refusals.waiting("principal.variants", "A principal of several variants", principalAt, Delivery.AFTER_1_0)
+        }
+    }
+
+    // A signed identity's scheme: a named header, verified by its template with a key id the contract writes.
+    private fun checkSignatureScheme(schemeId: SchemeId, at: IrPlace): Boolean {
+        val scheme = ir.schemes[schemeId] as? SignatureScheme
+        if (scheme == null) {
+            refusals.inconsistent("scheme.unresolved", "The signature scheme '$schemeId' is not declared", at)
+            return false
+        }
+
+        val schemeAt = IrPlace.ROOT.below("schemes", schemeId)
+        val signature = scheme.signature
+        if (signature !is TemplateSignature) {
+            refusals.waiting("signature.application", "A signature verified by the application", schemeAt.below("signature"), Delivery.AFTER_1_0)
+            return false
+        }
+        if (signature.key !is ValueSchemeKey) {
+            refusals.waiting("signature.key.source", "A signature key read from the request", schemeAt.below("signature", "key"), Delivery.AFTER_1_0)
+            return false
+        }
+        if (scheme.name == null) {
+            refusals.inconsistent("scheme.signature.header", "The signature scheme '$schemeId' names no header", schemeAt)
+            return false
+        }
+
+        return true
+    }
+
+    private fun readType(type: TypeUse, at: IrPlace) {
+        when (type) {
+            is RefTypeUse -> {
+                if (type.unknownKeys?.policy == UnknownKeysPolicy.KEEP) {
+                    refusals.waiting("unknownKeys.keep", "'unknownKeys: keep'", at.below("unknownKeys"), Delivery.AFTER_1_0)
+                }
+                readSchema(type.schema, at)
+            }
+            is ArrayTypeUse -> readType(type.items, at.below("items"))
+            is EnumTypeUse -> if (ir.enums.containsKey(type.enum)) {
+                enums += type.enum
+            } else {
+                refusals.inconsistent("enum.undeclared", "The enum '${type.enum}' is not declared", at)
+            }
+            is ScalarTypeUse -> readScalar(type, at)
+            is FileTypeUse -> refusals.waiting("type.file", "A file value", at, Delivery.CONSUMER)
+            is OpaqueTypeUse -> Unit
+            is TypeUse.Unknown -> refusals.unknownValue(at.below("kind"), type.kind)
+        }
+    }
+
+    private fun readScalar(type: ScalarTypeUse, at: IrPlace) {
+        if (type.type is ScalarType.Unknown) refusals.unknownValue(at.below("type"), type.type.value)
+        if (type.format == INT64_FORMAT) refusals.waiting("format.int64", "An 'int64' value", at.below("format"), Delivery.AFTER_1_0)
+        if (type.type == ScalarType.STRING && type.format != null && type.format !in CHECKED_STRING_FORMATS) {
+            refusals.waiting("format.string", "The string format '${type.format}'", at.below("format"), Delivery.CONSUMER)
+        }
+        if (type.content != null) refusals.waiting("scalar.content", "A JSON string content", at.below("content"), Delivery.AFTER_1_0)
+    }
+
+    private fun readSchema(schemaId: SchemaId, at: IrPlace) {
+        if (schemaId in objects) return
+
+        val schemaAt = IrPlace.ROOT.below("schemas", schemaId)
+        when (val schema = ir.schemas[schemaId]) {
+            null -> refusals.inconsistent("schema.undeclared", "The schema '$schemaId' is not declared", at)
+            is ObjectSchema -> {
+                objects[schemaId] = schema
+                schema.properties.forEachIndexed { index, property ->
+                    val propertyAt = schemaAt.below("properties", index)
+                    // The boundary fills no default yet, so an optional member with one would reach the handler absent.
+                    if (property.default != null) {
+                        refusals.waiting("property.default", "The default of property '${property.name}'", propertyAt.below("default"), Delivery.AFTER_1_0)
+                    }
+                    readType(property.type, propertyAt.below("type"))
+                }
+            }
+            is UnionSchema -> refusals.waiting("schema.union", "A union", schemaAt, Delivery.AFTER_1_0)
+            is MapSchema -> refusals.waiting("schema.map", "A map", schemaAt, Delivery.AFTER_1_0)
+            else -> refusals.unknownValue(schemaAt.below("kind"), schema.kind)
+        }
+    }
+}

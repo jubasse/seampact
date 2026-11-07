@@ -1,0 +1,331 @@
+{
+  "getChannel": {
+    "scopes": [
+      {
+        "scope": "channel",
+        "source": {
+          "in": "path",
+          "name": "channelId"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+        }
+      }
+    ],
+    "requires": [
+      {
+        "kind": "right",
+        "right": "channels.get",
+        "derivedFrom": {
+          "derivation": "pack.crud-rights.crud",
+          "from": [
+            {
+              "layer": "pack:crud-rights",
+              "pointer": "/derive/0/require"
+            }
+          ]
+        },
+        "subject": {
+          "source": {
+            "in": "path",
+            "name": "channelId"
+          },
+          "defaulted": true
+        }
+      },
+      {
+        "kind": "right",
+        "right": "channels.member",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/channels/member/requires/0"
+        },
+        "subject": {
+          "source": {
+            "in": "scope",
+            "name": "channel"
+          },
+          "defaulted": true
+        }
+      }
+    ]
+  },
+  "listTasks": {
+    "scopes": [
+      {
+        "scope": "channel",
+        "source": {
+          "in": "path",
+          "name": "channelId"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+        }
+      }
+    ],
+    "requires": [
+      {
+        "kind": "right",
+        "right": "tasks.list",
+        "derivedFrom": {
+          "derivation": "pack.crud-rights.crud",
+          "from": [
+            {
+              "layer": "pack:crud-rights",
+              "pointer": "/derive/0/require"
+            }
+          ]
+        },
+        "subject": {
+          "source": {
+            "in": "scope",
+            "name": "channel"
+          },
+          "defaulted": true
+        }
+      },
+      {
+        "kind": "right",
+        "right": "channels.member",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/channels/member/requires/0"
+        },
+        "subject": {
+          "source": {
+            "in": "scope",
+            "name": "channel"
+          },
+          "defaulted": true
+        }
+      }
+    ]
+  },
+  "createTask": {
+    "scopes": [
+      {
+        "scope": "channel",
+        "source": {
+          "in": "path",
+          "name": "channelId"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+        }
+      }
+    ],
+    "requires": [
+      {
+        "kind": "right",
+        "right": "tasks.create",
+        "derivedFrom": {
+          "derivation": "pack.crud-rights.crud",
+          "from": [
+            {
+              "layer": "pack:crud-rights",
+              "pointer": "/derive/0/require"
+            }
+          ]
+        },
+        "subject": {
+          "source": {
+            "in": "scope",
+            "name": "channel"
+          },
+          "defaulted": true
+        }
+      },
+      {
+        "kind": "right",
+        "right": "channels.member",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/channels/member/requires/0"
+        },
+        "subject": {
+          "source": {
+            "in": "scope",
+            "name": "channel"
+          },
+          "defaulted": true
+        }
+      },
+      {
+        "kind": "rule",
+        "rule": "throttle",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/create/requires/0"
+        },
+        "bucket": "perUser"
+      }
+    ]
+  },
+  "getTasksBatch": {
+    "scopes": [
+      {
+        "scope": "channel",
+        "source": {
+          "in": "path",
+          "name": "channelId"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+        }
+      }
+    ],
+    "requires": [
+      {
+        "kind": "right",
+        "right": "tasks.batch",
+        "derivedFrom": {
+          "derivation": "pack.crud-rights.crud",
+          "from": [
+            {
+              "layer": "pack:crud-rights",
+              "pointer": "/derive/0/require"
+            }
+          ]
+        },
+        "subject": {
+          "source": {
+            "in": "scope",
+            "name": "channel"
+          },
+          "defaulted": true
+        }
+      },
+      {
+        "kind": "right",
+        "right": "channels.member",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/channels/member/requires/0"
+        },
+        "subject": {
+          "source": {
+            "in": "scope",
+            "name": "channel"
+          },
+          "defaulted": true
+        }
+      }
+    ]
+  },
+  "updateTask": {
+    "scopes": [
+      {
+        "scope": "channel",
+        "source": {
+          "in": "path",
+          "name": "channelId"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+        }
+      }
+    ],
+    "requires": [
+      {
+        "kind": "right",
+        "right": "tasks.update",
+        "derivedFrom": {
+          "derivation": "pack.crud-rights.crud",
+          "from": [
+            {
+              "layer": "pack:crud-rights",
+              "pointer": "/derive/0/require"
+            }
+          ]
+        },
+        "subject": {
+          "source": {
+            "in": "path",
+            "name": "taskId"
+          },
+          "defaulted": true
+        }
+      },
+      {
+        "kind": "rule",
+        "rule": "throttle",
+        "derivedFrom": {
+          "derivation": "pack.crud-rights.writes",
+          "from": [
+            {
+              "layer": "pack:crud-rights",
+              "pointer": "/derive/1/require"
+            }
+          ]
+        },
+        "bucket": "perUser"
+      },
+      {
+        "kind": "right",
+        "right": "channels.member",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/channels/member/requires/0"
+        },
+        "subject": {
+          "source": {
+            "in": "scope",
+            "name": "channel"
+          },
+          "defaulted": true
+        }
+      }
+    ]
+  },
+  "archiveTask": {
+    "scopes": [
+      {
+        "scope": "channel",
+        "source": {
+          "in": "path",
+          "name": "channelId"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+        }
+      }
+    ],
+    "requires": [
+      {
+        "kind": "rule",
+        "rule": "throttle",
+        "derivedFrom": {
+          "derivation": "pack.crud-rights.writes",
+          "from": [
+            {
+              "layer": "pack:crud-rights",
+              "pointer": "/derive/1/require"
+            }
+          ]
+        },
+        "bucket": "perUser"
+      },
+      {
+        "kind": "right",
+        "right": "channels.member",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/channels/member/requires/0"
+        },
+        "subject": {
+          "source": {
+            "in": "scope",
+            "name": "channel"
+          },
+          "defaulted": true
+        }
+      }
+    ]
+  }
+}

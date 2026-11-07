@@ -1,0 +1,28 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Seampact\Laravel;
+
+use Seampact\Codegen\Delivery;
+use Seampact\Codegen\FormArrival;
+use Seampact\Codegen\FormReleases;
+use Seampact\Codegen\PendingForm;
+
+/** The release of the laravel target that brings each pending form (ADR 0023 "Refused by name or waiting" and "Delivery"). */
+final class LaravelReleases implements FormReleases
+{
+    public function arrivalOf(PendingForm $form): ?FormArrival
+    {
+        return match ($form) {
+            PendingForm::Proofs, PendingForm::RightRequirement, PendingForm::RuleRequirement, PendingForm::Idempotency,
+            PendingForm::Throttle, PendingForm::RetryHeader, PendingForm::DerivedResponseHeader, PendingForm::ErrorNoStore,
+            PendingForm::Paging, PendingForm::PagingParam, PendingForm::PageResponse, PendingForm::Cache, PendingForm::SignedAccess,
+            PendingForm::RawBody, PendingForm::Opaque, PendingForm::Sensitive, PendingForm::AbsoluteUrls, PendingForm::Deadline,
+            PendingForm::Relays => null,
+            PendingForm::Multipart, PendingForm::File, PendingForm::BinaryResponse, PendingForm::RedirectResponse => FormArrival::later(Delivery::Consumer),
+            PendingForm::ListResponse => FormArrival::later(Delivery::AfterOneZero),
+            PendingForm::Union => FormArrival::later(Delivery::ContractNeed),
+        };
+    }
+}

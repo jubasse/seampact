@@ -1,0 +1,29 @@
+{
+  "id": "restricted-input-field-kept-with-right",
+  "title": "A restricted input field under strip, sent with its right, reaches the handler",
+  "checks": ["CHK-092"],
+  "profiles": ["default", "hand-written"],
+  "steps": [
+    {
+      "request": {
+        "method": "PATCH",
+        "path": "/v1/me/preferences",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:keep}}"
+        },
+        "body": {
+          "locale": "fr",
+          "digest": true
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "locale": "fr",
+          "digest": true
+        }
+      }
+    }
+  ]
+}

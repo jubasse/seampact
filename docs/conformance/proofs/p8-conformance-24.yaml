@@ -1,0 +1,7 @@
+# docs/conformance/proofs/p8-conformance-24.yaml
+lane: p8-conformance-24
+proofs:
+  - id: CHK-170
+    tests:
+      - 'nestjs: packages/targets/codegen-nestjs/src/framework-docs.test.ts#frameworkDocs off is refused with the fix that removes the SwaggerModule.setup call'
+      - 'nestjs: packages/targets/codegen-nestjs/src/native-docs.test.ts#nativeDocs off generates nothing for the framework document'

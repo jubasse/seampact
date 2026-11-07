@@ -1,0 +1,69 @@
+# The consumer's app config: the reference contract as a local `path` source, compiled by the pinned binary, and one
+# spring-boot entry per api, serving every operation of the api (ADR 0022); the tasks api also generates the Spring
+# Security beans with the customizer, which `SuiteSecurity` wires.
+outDir: build/generated/sources/seampact/main
+openapi: none
+sources:
+  contract: { path: contract }
+targets:
+  - id: tasks
+    use: io.github.jubasse:seampact-spring-boot
+    api: tasks
+    options: { package: com.example.tasks.api, springSecurity: { matchers: true } }
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { path: "/v1/patterned/**", reason: "The 'pattern-allow-listed-framework-route' boot variant's framework routes." }
+  - id: tasksService
+    use: io.github.jubasse:seampact-spring-boot
+    api: tasksService
+    options: { package: com.example.tasksservice.api, springSecurity: false }
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { path: "/v1/patterned/**", reason: "The 'pattern-allow-listed-framework-route' boot variant's framework routes." }
+  - id: tasksServiceWrites
+    use: io.github.jubasse:seampact-spring-boot
+    api: tasksServiceWrites
+    options: { package: com.example.tasksservicewrites.api, springSecurity: false }
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { path: "/v1/patterned/**", reason: "The 'pattern-allow-listed-framework-route' boot variant's framework routes." }
+  - id: tasksDevices
+    use: io.github.jubasse:seampact-spring-boot
+    api: tasksDevices
+    options: { package: com.example.tasksdevices.api, springSecurity: false }
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { path: "/v1/patterned/**", reason: "The 'pattern-allow-listed-framework-route' boot variant's framework routes." }
+  - id: tasksOptionalAuth
+    use: io.github.jubasse:seampact-spring-boot
+    api: tasksOptionalAuth
+    options: { package: com.example.tasksoptionalauth.api, springSecurity: false }
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { path: "/v1/patterned/**", reason: "The 'pattern-allow-listed-framework-route' boot variant's framework routes." }
+  - id: tasksAbsoluteUrls
+    use: io.github.jubasse:seampact-spring-boot
+    api: tasksAbsoluteUrls
+    options: { package: com.example.tasksabsoluteurls.api, springSecurity: false }
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { path: "/v1/patterned/**", reason: "The 'pattern-allow-listed-framework-route' boot variant's framework routes." }
+  - id: tasksResponses
+    use: io.github.jubasse:seampact-spring-boot
+    api: tasksResponses
+    options: { package: com.example.tasksresponses.api, springSecurity: false }
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { path: "/v1/patterned/**", reason: "The 'pattern-allow-listed-framework-route' boot variant's framework routes." }
+  - id: tasksPaging
+    use: io.github.jubasse:seampact-spring-boot
+    api: tasksPaging
+    options: { package: com.example.taskspaging.api, springSecurity: false }
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+  - id: tasksSplitSort
+    use: io.github.jubasse:seampact-spring-boot
+    api: tasksSplitSort
+    options: { package: com.example.taskssplitsort.api, springSecurity: false }
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }

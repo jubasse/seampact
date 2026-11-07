@@ -1,0 +1,3 @@
+packs/a.yaml:1:1: error seampact/load/pack-cycle: pack extends cycle (P8): packs/a.yaml -> packs/b.yaml -> packs/a.yaml. Fix: break the cycle by removing one extends of it.
+  packs/a.yaml:1:34: 'a' extends from here.
+  packs/b.yaml:1:34: 'b' extends from here.

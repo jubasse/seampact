@@ -1,0 +1,58 @@
+{
+  "cases": [
+    { "case": "side by side", "outs": ["api", "web"], "codes": [] },
+    { "case": "a shared name prefix only", "outs": ["gen", "gen-web"], "codes": [] },
+    { "case": "the same directory", "outs": ["gen", "gen"], "codes": ["config.out.overlap"] },
+    {
+      "case": "the same directory written two ways",
+      "outs": ["web/../api", "api"],
+      "codes": ["config.out.overlap"]
+    },
+    { "case": "one inside the other", "outs": ["gen", "gen/web"], "codes": ["config.out.overlap"] },
+    {
+      "case": "names that differ only by case",
+      "outs": ["Api", "api"],
+      "codes": ["config.out.case-overlap"]
+    },
+    {
+      "case": "one inside the other once case is ignored",
+      "outs": ["Gen", "gen/web"],
+      "codes": ["config.out.case-overlap"]
+    },
+    {
+      "case": "an accented letter in both cases",
+      "outs": ["é", "É"],
+      "codes": ["config.out.case-overlap"]
+    },
+    {
+      "case": "a trailing slash and a different case",
+      "outs": ["api/", "Api"],
+      "codes": ["config.out.case-overlap"]
+    },
+    {
+      "case": "a deep difference of case under a nested directory",
+      "outs": ["gen/Web", "GEN/web/x"],
+      "codes": ["config.out.case-overlap"]
+    },
+    {
+      "case": "a dotted capital i and a plain i are two names",
+      "outs": ["İ", "i"],
+      "codes": []
+    },
+    {
+      "case": "an accent written composed and decomposed",
+      "outs": ["\u00e9", "e\u0301"],
+      "codes": ["config.out.case-overlap"]
+    },
+    {
+      "case": "two different accented names",
+      "outs": ["\u00e9", "e\u0302"],
+      "codes": []
+    },
+    {
+      "case": "a sharp s and its upper case",
+      "outs": ["straße", "STRASSE"],
+      "codes": ["config.out.case-overlap"]
+    }
+  ]
+}

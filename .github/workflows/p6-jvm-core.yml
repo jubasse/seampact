@@ -1,0 +1,217 @@
+name: JVM core
+
+# The JVM path to the IR (ADR 0010, ADR 0011): the bundle reader and verifier on the shared bundle vectors, the
+# bundle channels, the app config reader and each entry's IR view, the generated-file writer, the pinned standalone
+# binary and its runner, and the compiler's classifier publication, on Java 21 and 25 (A13). A
+# Node job builds the linux x64 binary; the Java job runs with Node removed from the runner and compiles the
+# reference contract with that binary, whose IR must equal the golden IR byte for byte. A Windows job runs the binary
+# cache checks on a real NTFS ACL: the profile, the ACEs, the junctions and the SIDs. On a pull request or a push they run
+# only when the change touches a watched path; `jvm-core` is the one check to require. A pull request to develop
+# runs Java 21; a push to develop adds Java 25 and the Windows job, which a pull request to main runs only when the
+# binary cache code or this workflow changes.
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  merge_group:
+    types: [checks_requested]
+    branches: [main, develop]
+  workflow_dispatch:
+  # The nightly and manual runs are the only ones that write the Gradle caches, from the first row of each pull request job;
+  # every other run and row reads them.
+  schedule:
+    - cron: "30 0 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jvm-core-${{ github.event_name }}-${{ github.event_name == 'push' && github.sha || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      jvm-core: ${{ steps.detect.outputs.run }}
+      queue: ${{ steps.detect.outputs.queue }}
+      # A queue row, which a push and the drift events also run.
+      windows-cache: >-
+        ${{ steps.detect.outputs.post-merge == 'true'
+        || (steps.detect.outputs.queue == 'true' && steps.windows-cache.outputs.run == 'true') }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history without file contents: the change list reads commits and trees only, and only the shared
+          # actions are checked out.
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout: .github/actions
+          persist-credentials: false
+      - name: Detect a change to the JVM modules or what they read
+        id: detect
+        uses: ./.github/actions/lane-changes
+        with:
+          # The JVM modules, the bundle, config and IR schemas, the bundle vectors, the compatibility matrix, the reference contract and the
+          # golden IR, the binary package, the signed webhook vectors, the workspace and toolchain pins and this workflow.
+          watched-paths: |
+            ^jvm/
+            ^packages/core/spec/schemas/(bundle|config|ir)/
+            ^packages/core/spec/vectors/bundle/
+            ^packages/core/spec/compatibility/
+            ^fixtures/reference/
+            ^fixtures/golden/
+            ^packages/tools/binary/
+            ^packages/runtime/signed-webhooks/vectors/
+            ^\.github/actions/
+            ^\.github/workflows/p6-jvm-core\.yml$
+            ^pnpm-lock\.yaml$
+            ^pnpm-workspace\.yaml$
+            ^package\.json$
+            ^\.nvmrc$
+      - name: Detect a change to the binary cache code
+        id: windows-cache
+        uses: ./.github/actions/lane-changes
+        with:
+          # The binary cache code and its tests, the shared actions and this workflow.
+          watched-paths: |
+            ^jvm/seampact-ir/src/(main|test)/kotlin/io/github/jubasse/seampact/ir/binary/
+            ^\.github/actions/
+            ^\.github/workflows/p6-jvm-core\.yml$
+
+  binary:
+    name: binary (linux x64)
+    needs: changes
+    if: needs.changes.outputs.jvm-core == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Restore or build the compiler binary
+        uses: ./.github/actions/compiler-binary
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: jvm-core-binary-linux-x64
+          path: packages/tools/binary/dist/bin/seampact-linux-x64
+          retention-days: 3
+          if-no-files-found: error
+
+  java:
+    needs: [changes, binary]
+    if: needs.changes.outputs.jvm-core == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        test-jdk: [21]
+    steps: &java-steps
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Remove Node from the runner, so the JVM path is proven to need none
+        shell: bash
+        run: |
+          set -euo pipefail
+          for node in $(which -a node nodejs npm npx corepack 2>/dev/null | sort -u); do
+            sudo rm -f "$node"
+          done
+          if command -v node; then
+            echo "Node is still on the PATH."
+            exit 1
+          fi
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: jvm-core-binary-linux-x64
+          path: bin
+      # Both JDKs are installed: Gradle runs on the last one, and the tests run on the matrix one, which the
+      # toolchain detection finds without a download.
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: |
+            21
+            25
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          # One writer per pull request job, its first row in the nightly or a manual run, so the cache holds one Gradle home and
+          # dependency set per job. The other rows restore that entry; the queue, post-merge and drift copies, which write
+          # none, restore the latest entry of the runner's OS.
+          cache-read-only: >-
+            ${{ (github.event_name != 'schedule' && github.event_name != 'workflow_dispatch') || strategy.job-index != 0 || endsWith(github.job, '-post-merge')
+            || endsWith(github.job, '-queue') || endsWith(github.job, '-drift') }}
+      - uses: ./.github/actions/gradle-retry
+      - name: Check the JVM core modules on Java ${{ matrix.test-jdk }}
+        working-directory: jvm
+        run: |
+          ./gradlew :seampact-ir:check :seampact-compiler:check :seampact-runner:check :seampact-signed-webhooks:check \
+            -PtestJdk=${{ matrix.test-jdk }} -PseampactBinary="$GITHUB_WORKSPACE/bin/seampact-linux-x64"
+      # ADR 0011 "Unpublished installs for test consumers": every module installs to Maven local and resolves from it.
+      - name: Publish to Maven local and resolve every module from it
+        if: matrix.test-jdk == 25
+        run: jvm/build-logic/maven-local/check.sh "$RUNNER_TEMP/maven-local"
+
+  java-queue:
+    needs: [changes, binary]
+    if: needs.changes.outputs.queue == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        test-jdk: [25]
+    steps: *java-steps
+
+  windows-cache:
+    name: binary cache checks (Windows)
+    needs: changes
+    if: needs.changes.outputs.windows-cache == 'true'
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: |
+            21
+            25
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          # One writer per pull request job, its first row in the nightly or a manual run, so the cache holds one Gradle home and
+          # dependency set per job. The other rows restore that entry; the queue, post-merge and drift copies, which write
+          # none, restore the latest entry of the runner's OS.
+          cache-read-only: >-
+            ${{ (github.event_name != 'schedule' && github.event_name != 'workflow_dispatch') || strategy.job-index != 0 || endsWith(github.job, '-post-merge')
+            || endsWith(github.job, '-queue') || endsWith(github.job, '-drift') }}
+      - uses: ./.github/actions/gradle-retry
+      # The tests probe the runner's file system, which no task input sees, so they never come from the cache.
+      - name: Run the binary cache tests on Windows
+        working-directory: jvm
+        shell: bash
+        run: ./gradlew :seampact-ir:test --rerun --tests 'io.github.jubasse.seampact.ir.binary.*'
+
+  # The required check: a skipped job passes only when the change filter said skip; a failed or cancelled one fails.
+  jvm-core:
+    # Every job this check stands for is listed here, or its failure would not reach the required check.
+    needs: [changes, binary, java, java-queue, windows-cache]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .github/actions
+          persist-credentials: false
+      - uses: ./.github/actions/lane-aggregate
+        with:
+          needs: ${{ toJSON(needs) }}
+          should-run: ${{ needs.changes.outputs.jvm-core }}
+          allow-skip: ${{ needs.changes.outputs.windows-cache == 'false' && 'windows-cache' || '' }}

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/openapi/extensions/opaque.schema.json",
+  "title": "x-seampact-opaque",
+  "description": "The written reason, or true under `reasons: omit`.",
+  "anyOf": [
+    {
+      "type": "string",
+      "minLength": 1
+    },
+    {
+      "const": true
+    }
+  ]
+}

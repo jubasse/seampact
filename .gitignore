@@ -6,3 +6,6 @@ coverage/
 .DS_Store
 .favir/
 .vitest/
+.eslintcache
+.bench-output/
+__pycache__/

@@ -2,8 +2,9 @@
   "$schema": "https://unpkg.com/@changesets/config@4.0.1/schema.json",
   "changelog": "@changesets/cli/changelog",
   "commit": false,
-  "access": "restricted",
-  "baseBranch": "main",
+  "access": "public",
+  "baseBranch": "develop",
+  "fixed": [["@seampact/*"]],
   "updateInternalDependencies": "patch",
   "ignore": []
 }

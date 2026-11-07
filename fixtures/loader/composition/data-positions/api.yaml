@@ -1,0 +1,14 @@
+# A query field named `default` is a name, so its mapping is processed: the $include is merged.
+# An example's `value` is data, so its mapping is kept as written, $include included.
+api: { name: tasks }
+conventions:
+  paging: { default: cursor, maxLimit: 100 }
+surfaces:
+  app:
+    routes:
+      tasks:
+        method: get
+        query:
+          default: { $include: ./fields/default.yaml }
+        examples:
+          raw: { status: 200, value: { $include: ./never-read.yaml } }

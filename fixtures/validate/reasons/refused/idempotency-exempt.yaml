@@ -1,0 +1,8 @@
+# expect: seampact/validate/reason-required /surfaces/app/routes/search/idempotency/exempt
+# idempotency.exempt without a reason
+api: { name: tasks, version: 1 }
+surfaces:
+  app:
+    identity: user
+    routes:
+      search: { method: post, idempotency: { exempt: null }, input: Query, output: Result }

@@ -1,0 +1,66 @@
+# The config of the hook-check-off and filtered-out-handler boot variants: the consumer config with the hook check off
+# and the health operation filtered out on the tasks api.
+outDir: app/Generated
+openapi: none
+sources:
+  contract: { path: contract }
+targets:
+  - id: tasks
+    out: Tasks
+    use: seampact/laravel
+    api: tasks
+    operations: { exclude: [health] }
+    artefacts:
+      bootCheck: { hooks: "off" }
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+  - id: tasksService
+    out: TasksService
+    use: seampact/laravel
+    api: tasksService
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+  - id: tasksServiceWrites
+    out: TasksServiceWrites
+    use: seampact/laravel
+    api: tasksServiceWrites
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+  - id: tasksDevices
+    out: TasksDevices
+    use: seampact/laravel
+    api: tasksDevices
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+  - id: tasksOptionalAuth
+    out: TasksOptionalAuth
+    use: seampact/laravel
+    api: tasksOptionalAuth
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+  - id: tasksAbsoluteUrls
+    out: TasksAbsoluteUrls
+    use: seampact/laravel
+    api: tasksAbsoluteUrls
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+  - id: tasksResponses
+    out: TasksResponses
+    use: seampact/laravel
+    api: tasksResponses
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+  - id: tasksPaging
+    out: TasksPaging
+    use: seampact/laravel
+    api: tasksPaging
+    # The changes-since feed carries the complete page fact, which this target refuses by name in 1.0.
+    operations: { exclude: [listChanges, listEvents] }
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+  - id: tasksSplitSort
+    out: TasksSplitSort
+    use: seampact/laravel
+    api: tasksSplitSort
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }

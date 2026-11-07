@@ -1,0 +1,71 @@
+{
+  "name": "@seampact/codegen-react",
+  "description": "Generates TanStack Query or SWR options and React hooks, an RTK Query api, or plain fetch hooks with no query library, over the typed fetch client, with keys, invalidation and paging read from the contract.",
+  "version": "1.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jubasse/seampact.git",
+    "directory": "packages/targets/codegen-react"
+  },
+  "homepage": "https://jubasse.github.io/seampact/frontend/react/",
+  "bugs": {
+    "url": "https://github.com/jubasse/seampact/issues"
+  },
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "seampact": {
+    "role": "target"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "@reduxjs/toolkit": ">=2.6 <3",
+    "@seampact/codegen-core": "workspace:*",
+    "@seampact/spec": "workspace:*",
+    "@tanstack/react-query": ">=5.90 <6",
+    "react": ">=18",
+    "react-redux": ">=9 <10",
+    "swr": ">=2 <3"
+  },
+  "peerDependenciesMeta": {
+    "@reduxjs/toolkit": {
+      "optional": true
+    },
+    "@tanstack/react-query": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "react-redux": {
+      "optional": true
+    },
+    "swr": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "prettier": "3.9.10"
+  },
+  "devDependencies": {
+    "@seampact/codegen-core": "workspace:*",
+    "@seampact/spec": "workspace:*"
+  }
+}

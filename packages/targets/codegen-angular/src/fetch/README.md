@@ -1,0 +1,1 @@
+The plain fetch renderer of the angular target (`query: fetch`): `service.ts`, the `<Api>Api` service with signal readers on Angular's `resource()` and mutations over the shared fetcher factory of codegen-core, and `http-client-fetch.ts`, the fetch that sends through the app's `HttpClient`.

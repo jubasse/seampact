@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/openapi/extensions/budget-ms.schema.json",
+  "title": "x-seampact-budget-ms",
+  "description": "The operation's time budget in milliseconds.",
+  "type": "integer",
+  "minimum": 0
+}

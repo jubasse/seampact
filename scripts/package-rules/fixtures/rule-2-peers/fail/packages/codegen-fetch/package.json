@@ -1,0 +1,20 @@
+{
+  "name": "@seampact/codegen-fetch",
+  "version": "0.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jubasse/seampact.git",
+    "directory": "packages/codegen-fetch"
+  },
+  "homepage": "https://jubasse.github.io/seampact/",
+  "bugs": {
+    "url": "https://github.com/jubasse/seampact/issues"
+  },
+  "private": true,
+  "seampact": {
+    "role": "target"
+  },
+  "peerDependencies": {
+    "@seampact/spec": "*"
+  }
+}

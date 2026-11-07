@@ -1,0 +1,38 @@
+{
+  "name": "@seampact/diff",
+  "description": "Classifies the changes between two contract versions as additive or breaking, per direction.",
+  "version": "1.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jubasse/seampact.git",
+    "directory": "packages/core/diff"
+  },
+  "homepage": "https://jubasse.github.io/seampact/features/diff/",
+  "bugs": {
+    "url": "https://github.com/jubasse/seampact/issues"
+  },
+  "type": "module",
+  "main": "./src/index.ts",
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "seampact": {
+    "role": "core"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@seampact/spec": "workspace:*"
+  }
+}

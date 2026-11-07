@@ -1,0 +1,1 @@
+The runtime a server target copies into the generated tree only when its `nativeDocs` artefact is on: the guards that merge seampact's OpenAPI components into the framework's own document (ADR 0009 "Artefacts and the compatibility matrix").

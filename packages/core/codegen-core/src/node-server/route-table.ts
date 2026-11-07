@@ -1,0 +1,1328 @@
+import {
+  type ContractIR,
+  isKnownVariant,
+  type Operation,
+  type Param,
+  type Principal,
+  type QueryWire,
+  type SchemaId,
+  type Template,
+  type TypeUse,
+  type WireFormat,
+} from "@seampact/spec/ir";
+import type { ValidatorsDescriptor } from "../descriptors.js";
+import type { FrameworkRouteCheck, HookBootCheck } from "../framework-route-check.js";
+import { type GenerateWarning, warnLeftToHandler } from "../generate-warning.js";
+import { importSpecifier } from "../import-specifier.js";
+import { below, type IrLocation, operationLocation } from "../ir-location.js";
+import type { Link } from "../links.js";
+import {
+  refuseInconsistentIr,
+  refuseNotGeneratedYet,
+  refuseUnknownValueAt,
+} from "../located-refusals.js";
+import { refuseBracketsQueryList } from "../not-generated-forms.js";
+import { queryListWireOf } from "../query-list-wire.js";
+import type { Refusal } from "../refusal.js";
+import { askedRequirements } from "./asked-requirements.js";
+import { fingerprintHeaderNames } from "./fingerprint-headers.js";
+import { identityResponseHeaderRefusals, operationIdentityHeaders } from "./identity-headers.js";
+import type { CompressionOption, FrameworkEtagMode } from "./options.js";
+import { pageBodyTemplate, pagingEntry } from "./paging-entry.js";
+import { encodedSegmentRefusals } from "./path-segment-refusals.js";
+import { responseHeaderEntries } from "./response-headers.js";
+import { servedResponseShape } from "./response-shape.js";
+import { compareRouteSpecificity } from "./route-order.js";
+import {
+  isSlot,
+  jsonValue,
+  SourceExpression,
+  type SourceValue,
+  sourceOf,
+  template,
+} from "./route-table-source.js";
+import { SERVER_RUNTIME_PACKAGE } from "./server-runtime-check.js";
+import { successEnvelope } from "./success-envelope.js";
+
+// The route table module of one api: every operation as the node-server runtime reads it (`ContractApi`), with
+// the validators link's input validator per operation. A form the runtime does not serve is refused by name.
+
+export interface RouteTableOptions {
+  /** The full version of the target package that generates the table. */
+  readonly generatorVersion: string;
+  /** Adds each JSON response's item validator, for the target option `bodyValidation`. */
+  readonly withItemValidators: boolean;
+  /** The entry's framework-route check, read by the boot check of the app's routes outside the contract. */
+  readonly frameworkRoutes: FrameworkRouteCheck;
+  /** The entry's hook boot check level, read by the boot check of the hooks. */
+  readonly hookCheck: HookBootCheck;
+  /** The entry's `mount`, written before every route path and base path; empty for none. */
+  readonly mount: string;
+  /** The entry's `compression` and `frameworkEtag` options, read by the outgoing reply. */
+  readonly compression: CompressionOption;
+  readonly frameworkEtag: FrameworkEtagMode;
+  /** The entry's `catchAll` option: false leaves a request the contract does not serve to the app. */
+  readonly catchAll: boolean;
+}
+
+const API_LOCATION: IrLocation = { member: "" };
+const JSON_MEDIA = "application/json";
+const BOUNDARY_ENFORCEMENT = "boundary";
+const VERSION_HEADER_SOURCE = "header";
+const IF_MATCH_HEADER = "if-match";
+
+// The validators link's descriptor and the module's imports of its validators.
+interface ValidatorLink {
+  readonly validators: ValidatorsDescriptor;
+  readonly imports: ModuleImports;
+}
+
+// The allow-list as written in the config, each entry copied member by member, and the (mounted) base paths whose
+// overlapping app routes the check reads, unless it is strict.
+function frameworkRoutesValue(
+  check: FrameworkRouteCheck,
+  basePaths: readonly string[],
+): SourceValue {
+  if (check.status === "off") return { status: "off" };
+
+  return {
+    status: "on",
+    allowed: check.allowed.map((allowance) => ({
+      ...(allowance.method === undefined ? {} : { method: allowance.method.toUpperCase() }),
+      path: allowance.path,
+      reason: allowance.reason,
+    })),
+    scope: check.scope === "strict" ? "strict" : { basePaths: [...basePaths] },
+  };
+}
+
+/**
+ * The route table module source, or the refusals of every form it cannot serve; `warnings` gets each form the
+ * boundary leaves to the handler.
+ */
+export function routeTableSource(
+  ir: ContractIR,
+  validators: Link<"validators">,
+  fromFile: string,
+  options: RouteTableOptions,
+  refusals: Refusal[],
+  warnings: GenerateWarning[],
+): string {
+  const imports = new ModuleImports(validators, fromFile);
+  const format = errorFormat(ir, refusals);
+
+  refusals.push(...encodedSegmentRefusals(ir));
+  refusals.push(...accessExtensionRefusals(ir));
+
+  ir.operations.forEach((operation, index) => {
+    const location = operationLocation(index, operation.id);
+
+    warnings.push(...handlerForms(ir, operation, location));
+    refusals.push(...identityResponseHeaderRefusals(ir, operation));
+  });
+
+  const routes = ir.operations
+    .map((operation, index) => ({ operation, index }))
+    .sort((left, right) => compareRouteSpecificity(left.operation.path, right.operation.path))
+    .map(({ operation, index }) =>
+      routeEntry(
+        ir,
+        operation,
+        operationLocation(index, operation.id),
+        validators.descriptor,
+        imports,
+        options,
+        refusals,
+      ),
+    );
+  const shapes = outputShapes(ir, refusals);
+
+  if (ir.api.wire.urls !== "relative") {
+    refusals.push(
+      ir.api.wire.urls === "absolute"
+        ? refuseNotGeneratedYet(
+            "wire.urls.absolute",
+            "Absolute URLs",
+            below(API_LOCATION, "api", "wire", "urls"),
+          )
+        : refuseUnknownValueAt(below(API_LOCATION, "api", "wire", "urls"), ir.api.wire.urls),
+    );
+  }
+
+  const basePaths = [
+    ...new Set(
+      Object.values(ir.api.surfaces).map((surface) => `${options.mount}${surface.prefix}`),
+    ),
+  ];
+  const frameworkRoutes = frameworkRoutesValue(options.frameworkRoutes, basePaths);
+  const table: SourceValue = {
+    id: ir.api.id,
+    generatorVersion: options.generatorVersion,
+    basePaths,
+    format,
+    routes,
+    shapes,
+    frameworkRoutes,
+    hookCheck: options.hookCheck,
+    compression: options.compression,
+    frameworkEtag: options.frameworkEtag,
+    catchAll: options.catchAll,
+  };
+
+  return [
+    `import type { ContractApi } from "${SERVER_RUNTIME_PACKAGE}";`,
+    ...imports.lines(),
+    "",
+    "/** Every operation of the api as the boundary checks it. */",
+    `export const CONTRACT_API: ContractApi = ${sourceOf(table)};`,
+    "",
+  ].join("\n");
+}
+
+class ModuleImports {
+  private readonly aliases = new Map<string, string>();
+
+  constructor(
+    private readonly link: Link<"validators">,
+    private readonly fromFile: string,
+  ) {}
+
+  expression(module: string, exportName: string): SourceExpression {
+    let alias = this.aliases.get(module);
+
+    if (alias === undefined) {
+      alias = `validators${this.aliases.size}`;
+      this.aliases.set(module, alias);
+    }
+
+    return new SourceExpression(`${alias}.${exportName}`);
+  }
+
+  lines(): string[] {
+    return [...this.aliases].map(
+      ([module, alias]) =>
+        `import * as ${alias} from "${importSpecifier(this.link, { module, export: "" }, this.fromFile)}";`,
+    );
+  }
+}
+
+function routeEntry(
+  ir: ContractIR,
+  operation: Operation,
+  location: IrLocation,
+  validators: ValidatorsDescriptor,
+  imports: ModuleImports,
+  options: RouteTableOptions,
+  refusals: Refusal[],
+): SourceValue {
+  refuseOperationForms(operation, location, refusals);
+
+  const validatorRef = Object.hasOwn(validators.operations, operation.id)
+    ? validators.operations[operation.id]?.input
+    : undefined;
+
+  if (validatorRef === undefined) {
+    refusals.push(
+      refuseInconsistentIr(
+        "link.validators.operation.missing",
+        "The validators link has no input validator for this operation",
+        location,
+      ),
+    );
+  }
+
+  return {
+    id: operation.id,
+    method: operation.method,
+    path: `${options.mount}${operation.path}`,
+    safe: operation.safe,
+    access: accessEntry(ir, operation, location, { validators, imports }, refusals),
+    scopes: operation.scopes.map((scope, index) => ({
+      scope: scope.scope,
+      source: scopeSource(
+        scope.source,
+        below(location, "scopes", String(index), "source"),
+        refusals,
+      ),
+      errors: ir.scopes[scope.scope]?.errors ?? [],
+    })),
+    requires: operation.requires.map((requirement, index) =>
+      requirementEntry(ir, requirement, below(location, "requires", String(index)), refusals),
+    ),
+    fieldRights: operation.fieldRights.map((fieldRight, index) => {
+      const fieldLocation = below(location, "fieldRights", String(index));
+
+      if (fieldRight.direction === "input" && !/^\/[^/]+$/.test(fieldRight.pointer)) {
+        refusals.push(
+          refuseNotGeneratedYet(
+            "fieldRight.nestedPointer",
+            "An input field right below the top level",
+            below(fieldLocation, "pointer"),
+          ),
+        );
+      }
+
+      return {
+        direction: fieldRight.direction,
+        pointer: fieldRight.pointer,
+        right: fieldRight.right,
+        schema: fieldRight.schema,
+        params: jsonValue(fieldRight.params),
+        subject:
+          fieldRight.subject === undefined
+            ? undefined
+            : {
+                type: subjectType(ir, fieldRight.right),
+                source: valueSource(
+                  fieldRight.subject.source,
+                  below(fieldLocation, "subject"),
+                  refusals,
+                ),
+              },
+        inputPolicy: fieldRight.inputPolicy,
+        errors: ir.rights[fieldRight.right]?.errors ?? [],
+      };
+    }),
+    params: {
+      path: operation.params.path.map(pathParamRule),
+      query: operation.params.query.map((param, index) =>
+        queryRule(param, location, below(location, "params", "query", index, "wire"), refusals),
+      ),
+      headers: operation.params.header.map((param) => paramRule(param, param.name.toLowerCase())),
+    },
+    input: inputEntry(operation, location, refusals),
+    validator:
+      validatorRef === undefined
+        ? null
+        : imports.expression(validatorRef.module, validatorRef.export),
+    idempotency: idempotencyEntry(operation, location, refusals),
+    versionHeader: versionHeaderEntry(operation, location, refusals),
+    responses: operation.responses.map((response, index) => ({
+      status: response.status,
+      shape: servedResponseShape(
+        response.shape,
+        below(location, "responses", String(index)),
+        refusals,
+      ),
+      body:
+        response.body === undefined
+          ? undefined
+          : valueShape(
+              response.body,
+              below(location, "responses", String(index), "body"),
+              refusals,
+            ),
+      itemValidator: options.withItemValidators
+        ? itemValidator(response.body, validators, imports)
+        : undefined,
+      tableKeyProperty:
+        response.shape === "table"
+          ? tableKeyProperty(operation, below(location, "resource", "idProperty"), refusals)
+          : undefined,
+      headers: responseHeaderEntries(
+        ir,
+        operation,
+        response,
+        below(location, "responses", String(index)),
+        options.mount,
+        refusals,
+      ),
+      ...successEnvelope(ir, operation, response, pageBodyTemplate(ir, operation), refusals),
+    })),
+    errors: Object.fromEntries(
+      operation.errors.map((error, index) => [
+        error.code,
+        errorEntry(ir, error, below(location, "errors", String(index)), refusals),
+      ]),
+    ),
+    paging: pagingEntry(ir, operation, location, refusals),
+    cache:
+      operation.cache === undefined
+        ? undefined
+        : {
+            etag: operation.cache.etag,
+            cacheControl: Object.fromEntries(
+              operation.cache.perCallerKind.map((entry) => [entry.caller, entry.cacheControl]),
+            ),
+            noStore: operation.cache.noStore,
+            vary: operation.cache.vary,
+          },
+  };
+}
+
+// Forms the boundary validates or passes on but does not enforce: the handler does (ADR 0016 "Left to the handler").
+// `filteredBy` is not one: grammar section 10 makes it the application's by design, so it is no warning.
+function handlerForms(
+  ir: ContractIR,
+  operation: Operation,
+  location: IrLocation,
+): GenerateWarning[] {
+  const identityHeaders = operationIdentityHeaders(ir, operation);
+  const forms: [
+    form: string,
+    description: string,
+    present: boolean,
+    member: string,
+    fix: string,
+  ][] = [
+    [
+      "concurrency",
+      "The version check",
+      operation.concurrency !== undefined,
+      "concurrency",
+      concurrencyFix(operation),
+    ],
+    [
+      "owner",
+      "The caller ownership",
+      operation.owner !== undefined,
+      "owner",
+      "Scope the handler's reads and writes to the authenticated principal.",
+    ],
+    [
+      "deadline",
+      "The request deadline",
+      operation.deadlineHeader !== undefined || operation.budgetMs !== undefined,
+      operation.deadlineHeader === undefined ? "budgetMs" : "deadlineHeader",
+      "Read the deadline header the boundary validated and stop the work when it passes.",
+    ],
+    [
+      "paging.sortKeys",
+      "The page order by the sort keys",
+      (operation.paging?.sortKeys.length ?? 0) > 0,
+      "paging",
+      "Order the page by the sort keys in the input, mapping each to a fixed column, never writing the client's string into the query; the boundary already refuses a key the operation does not declare.",
+    ],
+    [
+      "identity.headers",
+      `The headers of the identity '${identityHeaders?.identityId ?? ""}'`,
+      (identityHeaders?.requestSideUses ?? 0) > 0,
+      "access",
+      "Read the identity headers the boundary validated in the handler.",
+    ],
+  ];
+
+  return forms.flatMap(([form, description, present, member, fix]) =>
+    present ? [warnLeftToHandler(form, description, below(location, member), fix)] : [],
+  );
+}
+
+// A header version answers a stale tag with 412 (grammar section 6); `If-Match` reaches the handler unquoted, and
+// the item's ETag carries the version as text.
+function concurrencyFix(operation: Operation): string {
+  const version = operation.concurrency?.version;
+
+  if (version?.in !== VERSION_HEADER_SOURCE)
+    return "Compare the version in the input with the stored one and answer the stateConflict code when they differ.";
+
+  if (version.name?.toLowerCase() !== IF_MATCH_HEADER)
+    return "Compare the version header in the input with the stored one and answer the preconditionFailed code when they differ.";
+
+  return 'Compare the If-Match version in the input (unquoted, `7` for `"7"` or `W/"7"`) with the stored one and answer the preconditionFailed code when they differ; keep the stored version an integer or visible ASCII text without `"`, which the item\'s ETag can carry.';
+}
+
+// The extension values of a right, rule or scope an operation asks: the decide and resolve requests do not carry them
+// yet, so each is refused once rather than dropped.
+function accessExtensionRefusals(ir: ContractIR): Refusal[] {
+  const asked = new Set<string>();
+
+  for (const operation of ir.operations) {
+    for (const { member, name } of askedRequirements(operation)) asked.add(`${member}/${name}`);
+
+    for (const scope of operation.scopes) asked.add(`scopes/${scope.scope}`);
+  }
+
+  const declarations = [
+    ...Object.entries(ir.rights).map(([name, right]) => ({
+      kind: "right",
+      member: "rights",
+      name,
+      extensions: right.extensions,
+    })),
+    ...Object.entries(ir.rules).map(([name, rule]) => ({
+      kind: "rule",
+      member: "rules",
+      name,
+      extensions: rule.extensions,
+    })),
+    ...Object.entries(ir.scopes).map(([name, scope]) => ({
+      kind: "scope",
+      member: "scopes",
+      name,
+      extensions: scope.extensions,
+    })),
+  ];
+
+  return declarations
+    .filter(
+      ({ member, name, extensions }) =>
+        asked.has(`${member}/${name}`) && Object.keys(extensions).length > 0,
+    )
+    .map(({ kind, member, name }) =>
+      refuseNotGeneratedYet(
+        `${kind}.extensions`,
+        `An extension value of the ${kind} '${name}'`,
+        below(API_LOCATION, member, name, "extensions"),
+      ),
+    );
+}
+
+// Forms the reference contract does not hold, refused until a consumer needs them (A47).
+function refuseOperationForms(
+  operation: Operation,
+  location: IrLocation,
+  refusals: Refusal[],
+): void {
+  const absentForms: [form: string, description: string, present: boolean, member: string][] = [
+    [
+      "principalRequires",
+      "A principal requirement",
+      operation.principalRequires.length > 0,
+      "principalRequires",
+    ],
+    ["bindings", "A principal binding", operation.bindings.length > 0, "bindings"],
+    ["upstream", "An upstream service call", operation.upstream.length > 0, "upstream"],
+    ["degradable", "A degradable operation", operation.degradable !== undefined, "degradable"],
+    ["features", "An operation feature", operation.features.length > 0, "features"],
+    [
+      "extensions",
+      "An operation extension value",
+      Object.keys(operation.extensions).length > 0,
+      "extensions",
+    ],
+    [
+      "paging.sortKey.restricted",
+      "A restricted sort key",
+      (operation.paging?.sortKeys ?? []).some((key) => key.right !== undefined),
+      "paging",
+    ],
+  ];
+
+  for (const [form, description, present, member] of absentForms) {
+    if (present) refusals.push(refuseNotGeneratedYet(form, description, below(location, member)));
+  }
+}
+
+function accessEntry(
+  ir: ContractIR,
+  operation: Operation,
+  location: IrLocation,
+  link: ValidatorLink,
+  refusals: Refusal[],
+): SourceValue {
+  const access = operation.access;
+  const accessLocation = below(location, "access");
+
+  if (!isKnownVariant("Access", access)) {
+    refusals.push(refuseUnknownValueAt(below(accessLocation, "kind"), access.kind));
+
+    return null;
+  }
+
+  if (access.kind === "public") return { kind: "public" };
+
+  if (access.kind === "optional") {
+    refusals.push(
+      refuseNotGeneratedYet("access.optional", "Optional authentication", accessLocation),
+    );
+
+    return null;
+  }
+
+  const identity = ir.identities[access.identity];
+
+  if (identity === undefined || !isKnownVariant("Identity", identity)) {
+    refusals.push(
+      refuseInconsistentIr(
+        "identity.unresolved",
+        `The identity '${access.identity}' is not declared`,
+        accessLocation,
+      ),
+    );
+
+    return null;
+  }
+
+  const anonymousAllowed = operation.callerKinds.includes("anonymous");
+  const csrf = operation.csrf;
+  const csrfHeader =
+    csrf !== undefined && isKnownVariant("Csrf", csrf) && csrf.kind === "derived"
+      ? csrf.header
+      : undefined;
+
+  const principal = principalEntry(identity.principal, link, accessLocation, refusals);
+
+  if (identity.kind === "signed") {
+    return {
+      kind: "identity",
+      identity: access.identity,
+      anonymousAllowed,
+      credentials: [],
+      signed: signedSource(ir, identity.signed, accessLocation, refusals),
+      ...principal,
+    };
+  }
+
+  return {
+    kind: "identity",
+    identity: access.identity,
+    ...principal,
+    anonymousAllowed,
+    credentials: access.schemes.map((schemeId) =>
+      credentialSource(ir, schemeId, accessLocation, refusals),
+    ),
+    csrfHeader,
+  };
+}
+
+// The principal schema's output validator: the boundary checks every principal a hook returns against it.
+function principalEntry(
+  principal: Principal,
+  link: ValidatorLink,
+  location: IrLocation,
+  refusals: Refusal[],
+): { principalSchema?: string; principalValidator?: SourceExpression } {
+  if (!isKnownVariant("Principal", principal)) {
+    refusals.push(refuseUnknownValueAt(below(location, "principal", "kind"), principal.kind));
+
+    return {};
+  }
+
+  if (principal.kind === "variants") {
+    refusals.push(
+      refuseNotGeneratedYet("principal.variants", "A principal with variants", location),
+    );
+
+    return {};
+  }
+
+  const validatorRef = Object.hasOwn(link.validators.schemas, principal.schema)
+    ? link.validators.schemas[principal.schema]?.output
+    : undefined;
+
+  if (validatorRef === undefined) {
+    refusals.push(
+      refuseInconsistentIr(
+        "link.validators.principal.missing",
+        `The validators link has no output validator for the principal schema '${principal.schema}'`,
+        location,
+      ),
+    );
+
+    return {};
+  }
+
+  return {
+    principalSchema: principal.schema,
+    principalValidator: link.imports.expression(validatorRef.module, validatorRef.export),
+  };
+}
+
+// A scope id is validated by the operation's input validator before its resolver runs, so it is a path param.
+function scopeSource(
+  source: { in: string; name?: string },
+  location: IrLocation,
+  refusals: Refusal[],
+): SourceValue {
+  if (source.in !== "path") {
+    refusals.push(
+      refuseNotGeneratedYet("scope.source", `A scope id read from '${source.in}'`, location),
+    );
+
+    return { in: source.in, name: source.name };
+  }
+
+  return valueSource(source, location, refusals);
+}
+
+function credentialSource(
+  ir: ContractIR,
+  schemeId: string,
+  location: IrLocation,
+  refusals: Refusal[],
+): SourceValue {
+  const scheme = ir.schemes[schemeId];
+
+  if (scheme === undefined || !isKnownVariant("Scheme", scheme)) {
+    refusals.push(
+      refuseInconsistentIr(
+        "scheme.unresolved",
+        `The scheme '${schemeId}' is not declared or not known`,
+        location,
+      ),
+    );
+
+    return null;
+  }
+
+  switch (scheme.kind) {
+    case "bearer":
+      return { scheme: schemeId, in: "bearer" };
+    case "cookie":
+      return { scheme: schemeId, in: "cookie", name: scheme.name };
+    case "header":
+      return { scheme: schemeId, in: "header", name: (scheme.name ?? schemeId).toLowerCase() };
+    default:
+      refusals.push(
+        refuseNotGeneratedYet(
+          `scheme.${scheme.kind}`,
+          `A '${scheme.kind}' credential scheme`,
+          location,
+        ),
+      );
+
+      return null;
+  }
+}
+
+function signedSource(
+  ir: ContractIR,
+  schemeId: string,
+  location: IrLocation,
+  refusals: Refusal[],
+): SourceValue {
+  const scheme = ir.schemes[schemeId];
+
+  if (scheme === undefined || !isKnownVariant("Scheme", scheme) || scheme.kind !== "signature") {
+    refusals.push(
+      refuseInconsistentIr(
+        "scheme.unresolved",
+        `The signature scheme '${schemeId}' is not declared`,
+        location,
+      ),
+    );
+
+    return null;
+  }
+
+  const signature = scheme.signature;
+
+  if (signature.verify !== "template" || !("payload" in signature)) {
+    refusals.push(
+      refuseNotGeneratedYet(
+        "signature.application",
+        "A signature verified by the application",
+        location,
+      ),
+    );
+
+    return null;
+  }
+
+  if (!isKnownVariant("SchemeKey", signature.key) || signature.key.kind !== "value") {
+    refusals.push(
+      refuseNotGeneratedYet(
+        "signature.key.source",
+        "A signature key read from the request",
+        location,
+      ),
+    );
+
+    return null;
+  }
+
+  if (scheme.name === undefined) {
+    refusals.push(
+      refuseInconsistentIr(
+        "scheme.signature.header",
+        `The signature scheme '${schemeId}' names no header`,
+        location,
+      ),
+    );
+
+    return null;
+  }
+
+  return {
+    scheme: schemeId,
+    header: scheme.name.toLowerCase(),
+    format: signature.format,
+    keyId: signature.key.value,
+    template: {
+      algorithm: signature.algorithm,
+      payload: signature.payload,
+      encoding: signature.encoding,
+      toleranceMs: signature.toleranceMs,
+    },
+  };
+}
+
+function requirementEntry(
+  ir: ContractIR,
+  requirement: Operation["requires"][number],
+  location: IrLocation,
+  refusals: Refusal[],
+): SourceValue {
+  if (!isKnownVariant("Requirement", requirement)) {
+    refusals.push(refuseUnknownValueAt(below(location, "kind"), requirement.kind));
+
+    return null;
+  }
+
+  if (requirement.kind === "right") {
+    return {
+      kind: "right",
+      name: requirement.right,
+      params: jsonValue(requirement.params),
+      subject:
+        requirement.subject === undefined
+          ? undefined
+          : {
+              type: subjectType(ir, requirement.right),
+              source: valueSource(requirement.subject.source, below(location, "subject"), refusals),
+            },
+      errors: ir.rights[requirement.right]?.errors ?? [],
+    };
+  }
+
+  const rule = ir.rules[requirement.rule];
+  const proof = rule?.proof;
+
+  if (proof !== undefined && proof.in !== "body") {
+    refusals.push(
+      refuseNotGeneratedYet("rule.proof.placement", `A rule proof in '${proof.in}'`, location),
+    );
+  }
+
+  const bucket = requirement.bucket === undefined ? undefined : ir.buckets[requirement.bucket];
+
+  return {
+    kind: "rule",
+    name: requirement.rule,
+    params: jsonValue(requirement.params),
+    proof: proof?.name,
+    bucket:
+      bucket === undefined
+        ? undefined
+        : {
+            id: bucket.id,
+            key: bucket.key.map((source) =>
+              valueSource(source, below(location, "bucket"), refusals),
+            ),
+            limit: bucket.limit,
+            windowMs: bucket.windowMs,
+          },
+    errors: rule?.errors ?? [],
+  };
+}
+
+function subjectType(ir: ContractIR, rightId: string): string {
+  const subject = ir.rights[rightId]?.subject;
+
+  if (subject === undefined || !isKnownVariant("RightSubject", subject)) return rightId;
+
+  if (subject.kind === "resource") return subject.type.segments.join("-");
+
+  if (subject.kind === "scope") return subject.scope;
+
+  return rightId;
+}
+
+const VALUE_SOURCES = ["path", "scope", "principal", "holderField"] as const;
+
+function valueSource(
+  source: { in: string; name?: string },
+  location: IrLocation,
+  refusals: Refusal[],
+): SourceValue {
+  if (!VALUE_SOURCES.some((known) => known === source.in) || source.name === undefined) {
+    refusals.push(
+      refuseNotGeneratedYet("valueSource", `A value read from '${source.in}'`, location),
+    );
+  }
+
+  return { in: source.in, name: source.name };
+}
+
+function paramRule(param: Param, name: string): SourceValue {
+  return { name, decoding: scalarDecoding(param.type) };
+}
+
+// Percent-encoded, a code point takes up to 12 characters (4 UTF-8 bytes) and an ASCII character 3.
+const ENCODED_CODE_POINT_LENGTH = 12;
+const ENCODED_ASCII_LENGTH = 3;
+// A uuid is 36 unreserved ASCII characters, sent as is; a client that percent-encodes them is out of contract.
+const UUID_ENCODED_LENGTH = 36;
+// A pattern part that can match a non-ASCII character: a non-ASCII literal, `.`, a negated class, a Unicode or hex
+// escape, or a negated shorthand.
+const NON_ASCII_PATTERN_PART = /[^\x20-\x7e]|\.|\[\^|\\[DWSpPux]/;
+
+// A path param's rule with the longest percent-encoded form of its value, for a router that bounds the encoded
+// length (Fastify's `maxParamLength`): a uuid, or a string with a `maxLength`.
+function pathParamRule(param: Param): SourceValue {
+  const type = param.type;
+  const scalar = isKnownVariant("TypeUse", type) && type.kind === "scalar" ? type : undefined;
+  const maxLength = scalar?.refinements.maxLength;
+  const encodedMaxLength =
+    scalar?.format === "uuid"
+      ? UUID_ENCODED_LENGTH
+      : maxLength === undefined
+        ? undefined
+        : maxLength * encodedCharacterLength(scalar?.refinements.pattern?.source);
+
+  if (encodedMaxLength === undefined) return paramRule(param, param.name);
+
+  return { name: param.name, decoding: scalarDecoding(type), encodedMaxLength };
+}
+
+// A JSON Schema pattern matches anywhere in the value (ADR 0003 section 9), so only a pattern anchored at both ends,
+// without a top-level alternation, and made of ASCII parts bounds every character to ASCII.
+function encodedCharacterLength(pattern: string | undefined): number {
+  if (
+    pattern === undefined ||
+    !pattern.startsWith("^") ||
+    !pattern.endsWith("$") ||
+    pattern.endsWith("\\$") ||
+    hasTopLevelAlternation(pattern) ||
+    NON_ASCII_PATTERN_PART.test(pattern)
+  ) {
+    return ENCODED_CODE_POINT_LENGTH;
+  }
+
+  return ENCODED_ASCII_LENGTH;
+}
+
+function hasTopLevelAlternation(pattern: string): boolean {
+  let groupDepth = 0;
+  let inClass = false;
+
+  for (let position = 0; position < pattern.length; position++) {
+    const character = pattern[position];
+
+    if (character === "\\") {
+      position += 1;
+    } else if (inClass) {
+      inClass = character !== "]";
+    } else if (character === "[") {
+      inClass = true;
+    } else if (character === "(") {
+      groupDepth += 1;
+    } else if (character === ")") {
+      groupDepth -= 1;
+    } else if (character === "|" && groupDepth === 0) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function scalarDecoding(type: TypeUse): string {
+  if (isKnownVariant("TypeUse", type) && type.kind === "scalar") {
+    if (type.type === "integer" || type.type === "number") return "number";
+
+    if (type.type === "boolean") return "boolean";
+  }
+
+  return "text";
+}
+
+function queryRule(
+  param: Param,
+  location: IrLocation,
+  wireLocation: IrLocation,
+  refusals: Refusal[],
+): SourceValue {
+  const wire = param.wire;
+
+  if (wire === undefined) return paramRule(param, param.name);
+
+  if (wire.kind === "list" && wire.brackets) {
+    refusals.push(refuseBracketsQueryList(wireLocation));
+  } else if (wire.style !== "form") {
+    refusals.push(
+      refuseNotGeneratedYet(
+        "query.wire",
+        `The query wire form of '${param.name}'`,
+        below(location, "params", "query"),
+      ),
+    );
+  }
+
+  if (wire.kind === "list") return listRule(param, wire);
+
+  const decoding = wire.kind === "number" ? "number" : wire.kind === "boolean" ? "boolean" : "text";
+
+  return { name: param.name, decoding };
+}
+
+// Text items keep the rule as it was before item decoding, so a text list's generated rule names no `items`.
+function listRule(param: Param, wire: QueryWire): SourceValue {
+  const items =
+    isKnownVariant("TypeUse", param.type) && param.type.kind === "array"
+      ? scalarDecoding(param.type.items)
+      : "text";
+
+  if (items === "text") return { name: param.name, decoding: queryListWireOf(wire) };
+
+  return { name: param.name, decoding: queryListWireOf(wire), items };
+}
+
+function inputEntry(operation: Operation, location: IrLocation, refusals: Refusal[]): SourceValue {
+  const input = operation.input;
+
+  if (input === undefined) return undefined;
+
+  if (input.media !== JSON_MEDIA) {
+    refusals.push(
+      refuseNotGeneratedYet(
+        "input.media",
+        `A '${input.media}' request body`,
+        below(location, "input", "media"),
+      ),
+    );
+  }
+
+  return { media: input.media, limitBytes: input.bodyLimitBytes, rawBody: input.rawBody };
+}
+
+// A version sent in a header is read by the boundary first: a missing one answers 428, never 400 (grammar section 6).
+function versionHeaderEntry(
+  operation: Operation,
+  location: IrLocation,
+  refusals: Refusal[],
+): SourceValue {
+  const version = operation.concurrency?.version;
+
+  if (version?.in !== VERSION_HEADER_SOURCE) return undefined;
+
+  const name = version.name?.toLowerCase();
+
+  if (name === undefined) {
+    refusals.push(
+      refuseInconsistentIr(
+        "ir.concurrency.version.name",
+        "A header version without its header name",
+        below(location, "concurrency", "version"),
+      ),
+    );
+
+    return undefined;
+  }
+
+  return { name, entityTag: name === IF_MATCH_HEADER };
+}
+
+function idempotencyEntry(
+  operation: Operation,
+  location: IrLocation,
+  refusals: Refusal[],
+): SourceValue {
+  const idempotency = operation.idempotency;
+
+  if (idempotency === undefined) return undefined;
+
+  if (!isKnownVariant("Idempotency", idempotency)) {
+    refusals.push(refuseUnknownValueAt(below(location, "idempotency", "kind"), idempotency.kind));
+
+    return undefined;
+  }
+
+  if (idempotency.kind === "exempt") return undefined;
+
+  if (idempotency.enforce !== BOUNDARY_ENFORCEMENT) {
+    refusals.push(
+      refuseNotGeneratedYet(
+        "idempotency.enforce",
+        `Idempotency enforced by '${idempotency.enforce}'`,
+        below(location, "idempotency"),
+      ),
+    );
+  }
+
+  return {
+    header: idempotency.header,
+    replayHeader: idempotency.replayHeader,
+    lifetimeMs: idempotency.lifetimeMs,
+    fingerprintHeaders: fingerprintHeaderNames(operation.params.header),
+  };
+}
+
+function errorEntry(
+  ir: ContractIR,
+  error: Operation["errors"][number],
+  location: IrLocation,
+  refusals: Refusal[],
+): SourceValue {
+  const declaration = ir.errors[error.code];
+
+  if (declaration === undefined) {
+    refusals.push(
+      refuseInconsistentIr(
+        "error.unresolved",
+        `The error code '${error.code}' is not declared`,
+        location,
+      ),
+    );
+
+    return null;
+  }
+
+  const paramMembers = objectParamMembers(ir, declaration.params);
+  const roles =
+    error.roles?.map((binding) => binding.role) ??
+    (declaration.default === undefined ? [] : [declaration.default]);
+  const roleParams = Object.fromEntries(
+    (error.roles ?? []).flatMap((binding, index) =>
+      binding.params === undefined
+        ? []
+        : [
+            [
+              binding.role,
+              template(binding.params, below(location, "roles", String(index), "params"), refusals),
+            ],
+          ],
+    ),
+  );
+
+  return {
+    code: error.code,
+    title: declaration.title,
+    status: declaration.http.status,
+    nature: declaration.nature,
+    roles,
+    roleParams: Object.keys(roleParams).length === 0 ? undefined : roleParams,
+    retryHeader:
+      error.retryHeader === undefined
+        ? undefined
+        : {
+            name: error.retryHeader.name,
+            param: error.retryHeader.param,
+            unit: error.retryHeader.unit,
+          },
+    requiresParams: paramsRequireAMember(declaration.params, paramMembers) ? true : undefined,
+    requiredParams: namesOf(paramMembers?.filter((member) => member.required)),
+    paramNames: namesOf(paramMembers),
+    noStore: declaration.noStore === true ? true : undefined,
+  };
+}
+
+// The members of an error code's object params schema; undefined when there are no params or they are not an object,
+// whose members the boundary can never fill itself.
+function objectParamMembers(
+  ir: ContractIR,
+  paramsSchema: SchemaId | undefined,
+): readonly { readonly name: string; readonly required: boolean }[] | undefined {
+  const schema =
+    paramsSchema !== undefined && Object.hasOwn(ir.schemas, paramsSchema)
+      ? ir.schemas[paramsSchema]
+      : undefined;
+
+  if (schema === undefined || !isKnownVariant("Schema", schema) || schema.kind !== "object") {
+    return undefined;
+  }
+
+  return schema.properties.map((property) => ({
+    name: property.name,
+    required: !property.optional && property.default === undefined,
+  }));
+}
+
+function namesOf(members: ReturnType<typeof objectParamMembers>): string[] | undefined {
+  return members === undefined || members.length === 0
+    ? undefined
+    : members.map((member) => member.name);
+}
+
+// Whether the params schema has a member with no default the reply must carry; a schema that is not an object counts
+// as required, so a status alone never answers it.
+function paramsRequireAMember(
+  paramsSchema: SchemaId | undefined,
+  members: ReturnType<typeof objectParamMembers>,
+): boolean {
+  if (paramsSchema === undefined) return false;
+
+  return members === undefined || members.some((member) => member.required);
+}
+
+// Whether a template writes the slot anywhere: as a value, a member name, a text part or inside a nested template.
+function templateWritesSlot(node: Template, slot: string): boolean {
+  if (!isKnownVariant("Template", node)) return false;
+
+  if (node.kind === "slot") return node.slot === slot;
+
+  if (node.kind === "text") {
+    return node.parts.some(
+      (part) => isKnownVariant("TextPart", part) && part.kind === "slot" && part.slot === slot,
+    );
+  }
+
+  if (node.kind === "array") return node.items.some((item) => templateWritesSlot(item, slot));
+
+  if (node.kind === "each") return templateWritesSlot(node.as, slot);
+
+  if (node.kind !== "object") return false;
+
+  return node.members.some(
+    (member) =>
+      (isKnownVariant("MemberName", member.name) &&
+        member.name.kind === "slot" &&
+        member.name.slot === slot) ||
+      templateWritesSlot(member.value, slot),
+  );
+}
+
+function errorFormat(ir: ContractIR, refusals: Refusal[]): SourceValue {
+  const formatIds = [...new Set(ir.operations.map((operation) => operation.format))];
+  const formatId = formatIds[0];
+  const location = below(API_LOCATION, "formats", formatId ?? "");
+
+  if (formatIds.length > 1) {
+    refusals.push(
+      refuseNotGeneratedYet("format.several", "Several error formats in one api", location),
+    );
+  }
+
+  const format: WireFormat | undefined = formatId === undefined ? undefined : ir.formats[formatId];
+
+  if (format === undefined) {
+    return {
+      media: JSON_MEDIA,
+      body: { kind: "object", members: [] },
+      codeMember: "code",
+      mergeParams: false,
+    };
+  }
+
+  if (format.error.headers.length > 0) {
+    refusals.push(
+      refuseNotGeneratedYet(
+        "format.error.headers",
+        "Error format headers",
+        below(location, "error", "headers"),
+      ),
+    );
+  }
+
+  const body = template(format.error.body, below(location, "error", "body"), refusals);
+
+  if (!templateWritesSlot(format.error.body, "code")) {
+    refusals.push(
+      refuseNotGeneratedYet(
+        "format.error.codeless",
+        "An error body that writes no code",
+        below(location, "error", "body"),
+      ),
+    );
+  }
+
+  const members =
+    isKnownVariant("Template", format.error.body) && format.error.body.kind === "object"
+      ? format.error.body.members
+      : [];
+  const codeMembers = members.flatMap((member) =>
+    isKnownVariant("MemberName", member.name) &&
+    member.name.kind === "text" &&
+    isSlot(member.value, "code")
+      ? [member.name.text]
+      : [],
+  );
+
+  return {
+    media: format.error.media,
+    body,
+    codeMember: codeMembers.includes("code") ? "code" : (codeMembers[0] ?? "code"),
+    mergeParams:
+      isKnownVariant("Template", format.error.body) &&
+      format.error.body.kind === "object" &&
+      format.error.body.merge === "params",
+  };
+}
+
+function valueShape(type: TypeUse, location: IrLocation, refusals: Refusal[]): SourceValue {
+  if (!isKnownVariant("TypeUse", type)) {
+    refusals.push(refuseUnknownValueAt(below(location, "kind"), type.kind));
+
+    return { kind: "leaf" };
+  }
+
+  switch (type.kind) {
+    case "scalar":
+    case "enum":
+      return { kind: "leaf" };
+    case "ref":
+      return { kind: "ref", schema: type.schema };
+    case "array":
+      return { kind: "array", items: valueShape(type.items, below(location, "items"), refusals) };
+    default:
+      refusals.push(
+        refuseNotGeneratedYet(`output.${type.kind}`, `A '${type.kind}' output value`, location),
+      );
+
+      return { kind: "leaf" };
+  }
+}
+
+// Each schema an output may reach: an object keeps its declared members, an enum is a leaf.
+function outputShapes(ir: ContractIR, refusals: Refusal[]): SourceValue {
+  const shapes: Record<string, SourceValue> = {};
+
+  for (const [schemaId, schema] of Object.entries(ir.schemas)) {
+    const location = below(API_LOCATION, "schemas", schemaId);
+
+    if (!isKnownVariant("Schema", schema)) {
+      refusals.push(refuseUnknownValueAt(below(location, "kind"), schema.kind));
+      continue;
+    }
+
+    if (!schema.directions.includes("output")) continue;
+
+    if (schema.kind !== "object") {
+      refusals.push(
+        refuseNotGeneratedYet("output.schema", `A '${schema.kind}' output schema`, location),
+      );
+      continue;
+    }
+
+    shapes[schemaId] = {
+      kind: "object",
+      properties: Object.fromEntries(
+        schema.properties.map((property, index) => [
+          property.name,
+          valueShape(property.type, below(location, "properties", String(index), "type"), refusals),
+        ]),
+      ),
+    };
+  }
+
+  return shapes;
+}
+
+// A table is keyed by each item's id property (ADR 0002 section 6), which the operation's resource carries.
+function tableKeyProperty(
+  operation: Operation,
+  location: IrLocation,
+  refusals: Refusal[],
+): string | undefined {
+  const idProperty = operation.resource?.idProperty;
+
+  if (idProperty === undefined) {
+    refusals.push(
+      refuseInconsistentIr(
+        "operation.table.idProperty.missing",
+        "A table response whose operation's resource has no item id property",
+        location,
+      ),
+    );
+  }
+
+  return idProperty;
+}
+
+function itemValidator(
+  body: TypeUse | undefined,
+  validators: ValidatorsDescriptor,
+  imports: ModuleImports,
+): SourceValue {
+  if (body === undefined || !isKnownVariant("TypeUse", body)) return undefined;
+
+  const item = body.kind === "array" ? body.items : body;
+
+  if (!isKnownVariant("TypeUse", item) || item.kind !== "ref") return undefined;
+
+  const ref = Object.hasOwn(validators.schemas, item.schema)
+    ? validators.schemas[item.schema]?.output
+    : undefined;
+
+  return ref === undefined ? undefined : imports.expression(ref.module, ref.export);
+}

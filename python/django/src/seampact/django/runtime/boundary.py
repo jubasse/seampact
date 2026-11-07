@@ -1,0 +1,561 @@
+"""The base of each api's generated boundary middleware (ADR 0027 "The boundary middleware"): the app lists the
+generated class first in `MIDDLEWARE`, and Django builds it once, when it builds the request handler, which runs the
+boot check. On a contract request it runs step 1 (the raw-path match, the bounded body read and the decoding) and
+answers its own refusals; on the way back it runs the route-chosen check, answers a recorded exception by its role,
+runs the outgoing response check, and settles the request's idempotency record with the reply that goes out."""
+
+import inspect
+import logging
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterator, Mapping, Sequence
+from dataclasses import dataclass, field
+from types import MappingProxyType
+from typing import ClassVar, Final
+from urllib.parse import quote
+
+from asgiref.sync import iscoroutinefunction, markcoroutinefunction, sync_to_async
+from django.conf import settings
+from django.core.exceptions import (
+    BadRequest,
+    DisallowedHost,
+    ImproperlyConfigured,
+    PermissionDenied,
+    RequestDataTooBig,
+    SuspiciousOperation,
+)
+from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBase, StreamingHttpResponse
+from django.urls import URLPattern
+
+from seampact.codegen.runtime.body_reader import PAYLOAD_TOO_LARGE_ROLE
+from seampact.codegen.runtime.contract import NOT_FOUND_ROLE, ApiContract
+from seampact.codegen.runtime.cors_preflight import is_cors_preflight
+from seampact.codegen.runtime.failures import BoundaryFailureError, ContractRefusal
+from seampact.codegen.runtime.framework_routes import FrameworkRouteRule
+from seampact.codegen.runtime.framework_versions import AcceptedFramework, framework_version_warnings
+from seampact.codegen.runtime.input_decoding import IncomingRequest, Issue, decode_input, role_refusal, schema_invalid
+from seampact.codegen.runtime.ir_view import ir_int, ir_map
+from seampact.codegen.runtime.raw_target import RawTarget, asgi_raw_target, without_origin, wsgi_raw_target
+from seampact.codegen.runtime.replies import CONTENT_TYPE, role_reply
+from seampact.codegen.runtime.reply_verdict import (
+    MAX_CHECKED_ERROR_BODY_BYTES,
+    FrameworkEtagMode,
+    OutgoingReply,
+    ResponsesMode,
+    verdict,
+)
+from seampact.codegen.runtime.sync_driver import run_without_suspension
+from seampact.django.runtime.api_configuration import configuration_of
+from seampact.django.runtime.boot_check import (
+    boot_problems,
+    contract_of_view,
+    operation_route_name,
+    settings_hook_problems,
+    settings_problems,
+)
+from seampact.django.runtime.contract_replies import (
+    django_response,
+    logger,
+    refusal_response,
+    report_unexpected,
+    role_answer,
+    unexpected_response,
+)
+from seampact.django.runtime.error_handlers import wrap_error_handlers
+from seampact.django.runtime.idempotency_records import abandon_claim, settle_claim
+from seampact.django.runtime.request_state import BoundaryState, attach, state_of
+
+type GetResponse = Callable[[HttpRequest], HttpResponseBase] | Callable[[HttpRequest], Awaitable[HttpResponseBase]]
+
+_NOT_FOUND_STATUS: Final = 404
+_ROLE_OF_EXCEPTION: Final = (
+    (Http404, NOT_FOUND_ROLE, 404),
+    (PermissionDenied, "forbidden", 403),
+    (RequestDataTooBig, PAYLOAD_TOO_LARGE_ROLE, 413),
+)
+_CROSSED: Final = "an exception crossed the boundary"
+_STREAM_FAILED: Final = "the stream failed after its head went out"
+_TECHNICAL_PAGE_STATUSES: Final = frozenset({400, 404})
+_HTML: Final = "text/html"
+_HEAD: Final = "HEAD"
+_WSGI_CHUNK_BYTES: Final = 65536
+_SCRIPT_PREFIX_SAFE: Final = "/"
+
+
+@dataclass(frozen=True, slots=True)
+class RecordedRole:
+    """The role an exception takes on a contract route, its status, and the slots its role binding renders."""
+
+    role: str
+    status: int
+    slots: Mapping[str, object] = field(default_factory=dict)
+
+
+class ContractBoundary:
+    """Runs sync or async, as the middleware inside it lets Django choose (ADR 0027 "Sync and async")."""
+
+    api: ClassVar[str]
+    generated_by: ClassVar[str]
+    contract: ClassVar[ApiContract]
+    settings_keys: ClassVar[Sequence[str]] = ()
+    handler_resources: ClassVar[Mapping[str, Sequence[str]]] = MappingProxyType({})
+    frameworks: ClassVar[Sequence[AcceptedFramework]] = ()
+    framework_routes: ClassVar[Sequence[FrameworkRouteRule]] = ()
+    # The target options of ADR 0026 the boundary reads, as the generator recorded them; `settings.SEAMPACT` and an
+    # operation's own value win over them.
+    responses: ClassVar[str] = "strict"
+    body_validation: ClassVar[bool] = False
+    framework_etag: ClassVar[str] = "strip"
+    catch_all: ClassVar[bool] = True
+    boot_check: ClassVar[bool] = True
+    boot_check_framework_routes: ClassVar[bool] = True
+    boot_check_hooks: ClassVar[bool] = True
+    # DRF's urls module serves the contract paths as written, so an `include()` prefix would move them; a target
+    # whose patterns sit under the app's own prefix (Ninja's `api.urls`) leaves the sum to the resolver match.
+    include_prefix_refused: ClassVar[bool] = True
+    sync_capable: ClassVar[bool] = True
+    async_capable: ClassVar[bool] = True
+    _gaps_logged: ClassVar[bool] = False
+
+    @classmethod
+    def target_settings_problems(cls, own: Mapping[str, object]) -> list[str]:
+        """The problems of the settings keys a target adds; a target's own boundary base overrides it."""
+        return []
+
+    @classmethod
+    def configuration_problems(cls) -> list[str]:
+        """The problems of the api's run-time values: its `settings.SEAMPACT` entry, unless the target reads them
+        from elsewhere."""
+        return settings_problems(cls)
+
+    @classmethod
+    def hook_configuration_problems(cls) -> list[str]:
+        """The hooks the contract needs and the configuration does not give, and those it gives in vain."""
+        return settings_hook_problems(cls)
+
+    @classmethod
+    def recorded_role(cls, recorded: BaseException) -> RecordedRole | None:
+        """The role of an exception the target's framework rendered before the view (Ninja's `auth=` and throttles);
+        None leaves it to Django's own exceptions."""
+        return None
+
+    @classmethod
+    def prepare_urlconf(cls) -> None:
+        """Runs once the root URLconf is imported, before the boot check: a target marks its views there."""
+
+    @classmethod
+    def is_framework_pattern(cls, pattern: URLPattern) -> bool:
+        """A pattern of the framework itself (Ninja's docs), accepted under the api's base paths."""
+        return False
+
+    @classmethod
+    def unserved_path_fix(cls) -> str:
+        """How the app makes a contract path reach its generated view, when no URL pattern serves it."""
+        return 'include the api\'s urls module at "" in the root URLconf, without a prefix'
+
+    def __init__(self, get_response: GetResponse) -> None:
+        self.get_response = get_response
+        self.async_mode = iscoroutinefunction(get_response)
+
+        if self.async_mode:
+            markcoroutinefunction(self)
+
+        wrap_error_handlers()
+        type(self).prepare_urlconf()
+        problems = boot_problems(type(self)) if self.boot_check else []
+
+        if problems:
+            listed = "\n".join(f"- {problem}" for problem in problems)
+            raise ImproperlyConfigured(f"seampact: the api '{self.api}' cannot start:\n{listed}")
+
+        if self.boot_check:
+            _log_untested_minors(type(self))
+
+    def __call__(self, request: HttpRequest) -> HttpResponseBase | Awaitable[HttpResponseBase]:
+        if self.async_mode:
+            return self.__acall__(request)
+
+        early = self._step_one(request)
+
+        if early is not None:
+            return _without_head_body(request, early)
+
+        try:
+            reply: object = self.get_response(request)
+        except Exception as propagated:
+            self._report_propagated(request, propagated)
+            raise
+
+        return self._settled(request, reply)
+
+    async def __acall__(self, request: HttpRequest) -> HttpResponseBase:
+        """The idempotency record is settled or released in the thread the sync views run in, so a store that uses
+        the ORM works as it does under WSGI."""
+        early = self._step_one(request)
+
+        if early is not None:
+            return _without_head_body(request, early)
+
+        try:
+            reply = self.get_response(request)
+            settled: object = await reply if inspect.isawaitable(reply) else reply
+        except Exception as propagated:
+            await sync_to_async(self._report_propagated, thread_sensitive=True)(request, propagated)
+            raise
+
+        return await sync_to_async(self._settled, thread_sensitive=True)(request, settled)
+
+    def _settled(self, request: HttpRequest, reply: object) -> HttpResponseBase:
+        """The reply checked; a middleware inside that answered no response gets the api's 500 on a contract request,
+        unless the app asked Django to propagate exceptions."""
+        if isinstance(reply, HttpResponseBase):
+            return self._checked(request, reply)
+
+        failure = BoundaryFailureError(
+            f"seampact: the middleware inside the boundary answered a {type(reply).__qualname__}, not a response."
+        )
+        state = state_of(request, self.api)
+
+        if state is None:
+            raise failure
+
+        abandon_claim(request, state)
+
+        if settings.DEBUG_PROPAGATE_EXCEPTIONS:
+            report_unexpected(request, self.contract, state.operation_id, _CROSSED, failure)
+            raise failure
+
+        return _without_head_body(
+            request, unexpected_response(request, self.contract, state.operation_id, _CROSSED, failure)
+        )
+
+    def _report_propagated(self, request: HttpRequest, propagated: Exception) -> None:
+        """`DEBUG_PROPAGATE_EXCEPTIONS` re-raises into the boundary: it logs, tells the listener, and re-raises."""
+        state = state_of(request, self.api)
+
+        if state is not None:
+            abandon_claim(request, state)
+            report_unexpected(request, self.contract, state.operation_id, _CROSSED, propagated)
+
+    def _step_one(self, request: HttpRequest) -> HttpResponseBase | None:
+        """The boundary's own reply, or None to hand the request on."""
+        target = _raw_target(request)
+
+        if target is None:
+            return None
+
+        if not target.raw:
+            self._log_gaps_once()
+
+        if is_cors_preflight(request.method or "", request.headers.keys()):
+            return None
+
+        matched = self.contract.match(request.method or "", target.path)
+
+        if matched is None:
+            return None
+
+        if matched.operation_id is None:
+            if not self.catch_all:
+                return None
+
+            unserved = role_reply(self.contract, None, NOT_FOUND_ROLE, _NOT_FOUND_STATUS)
+            return django_response(request, self.contract, unserved)
+
+        operation_id = matched.operation_id
+        headers = {name.lower(): value for name, value in request.headers.items()}
+        incoming = IncomingRequest(request.method or "", target, headers, self._body_chunks(request, operation_id))
+
+        try:
+            decoded = run_without_suspension(
+                decode_input(self.contract, operation_id, matched.raw_parameters, incoming)
+            )
+        except ContractRefusal as refused:
+            return refusal_response(request, self.contract, operation_id, refused)
+        except BoundaryFailureError as failure:
+            return unexpected_response(request, self.contract, operation_id, "decoding the input failed", failure)
+
+        request_path = _script_prefix(request) + target.path
+        attach(request, BoundaryState(self.contract, operation_id, matched.raw_parameters, decoded, request_path))
+        _route_without_origin(request)
+
+        return None
+
+    async def _body_chunks(self, request: HttpRequest, operation_id: str) -> AsyncIterator[bytes]:
+        """`request.body`, so the app can read it again; under WSGI, a chunked body without `Content-Length` from
+        `wsgi.input` when the server terminates it, else the client's 400."""
+        transfer_encoding = (request.headers.get("Transfer-Encoding") or "").lower()
+        chunked_without_length = "CONTENT_LENGTH" not in request.META and "chunked" in transfer_encoding
+
+        if chunked_without_length and not hasattr(request, "scope"):
+            for chunk in self._terminated_input(request, operation_id):
+                yield chunk
+            return
+
+        try:
+            body = request.body
+        except RequestDataTooBig:
+            raise role_refusal(
+                self.contract, operation_id, PAYLOAD_TOO_LARGE_ROLE, {"limitBytes": self._limit(operation_id)}
+            ) from None
+
+        yield body
+
+    def _terminated_input(self, request: HttpRequest, operation_id: str) -> list[bytes]:
+        stream = request.META.get("wsgi.input")
+
+        if request.META.get("wsgi.input_terminated") is not True or stream is None:
+            raise schema_invalid(self.contract, operation_id, [Issue("body", "", "type")])
+
+        chunks: list[bytes] = []
+        received = 0
+        limit = self._limit(operation_id) or 0
+
+        # One chunk past the limit is enough for the bounded read to refuse it.
+        while received <= limit and (chunk := stream.read(_WSGI_CHUNK_BYTES)):
+            chunks.append(chunk)
+            received += len(chunk)
+
+        return chunks
+
+    def _limit(self, operation_id: str) -> int | None:
+        return ir_int(ir_map(self.contract.operation(operation_id), "input"), "bodyLimitBytes")
+
+    def _checked(self, request: HttpRequest, response: HttpResponseBase) -> HttpResponseBase:
+        state = state_of(request, self.api)
+
+        if state is None:
+            return response
+
+        checked = self._checked_reply(request, state, response)
+        settle_claim(request, state, checked)
+
+        return checked
+
+    def _checked_reply(
+        self, request: HttpRequest, state: BoundaryState, response: HttpResponseBase
+    ) -> HttpResponseBase:
+        route_check = self._route_chosen(request, state)
+
+        if route_check is not None:
+            return _without_head_body(request, route_check)
+
+        recorded = self._recorded_answer(request, state, response)
+
+        if recorded is not None:
+            return _without_head_body(request, recorded)
+
+        written = state.authored.find(_outgoing(response), request.method or "")
+
+        if settings.DEBUG and written is None and _is_technical_page(response):
+            logger(self.api).warning("seampact: Django's debug page leaves on operation %s", state.operation_id)
+            return response
+
+        return _without_head_body(request, self._outgoing_check(request, state, response))
+
+    def _route_chosen(self, request: HttpRequest, state: BoundaryState) -> HttpResponseBase | None:
+        """The path's 404 when routing chose another view than the generated one of the matched operation."""
+        resolved = request.resolver_match
+
+        if resolved is None:
+            return None
+
+        own_view = contract_of_view(resolved.func) is self.contract
+        route_name = operation_route_name(self.contract, state.operation_id)
+
+        if own_view and resolved.url_name == route_name:
+            return None
+
+        reply = role_reply(self.contract, state.operation_id, NOT_FOUND_ROLE, _NOT_FOUND_STATUS)
+
+        return django_response(request, self.contract, reply)
+
+    def _recorded_answer(
+        self, request: HttpRequest, state: BoundaryState, response: HttpResponseBase
+    ) -> HttpResponseBase | None:
+        """The answer to the exception a wrapped handler or the receiver recorded; None to check the reply as
+        written."""
+        recorded = state.recorded
+
+        if recorded is None or state.authored.find(_outgoing(response), request.method or "") is not None:
+            return None
+
+        if isinstance(recorded, DisallowedHost):
+            logger(self.api).warning("seampact: a request for a host this deployment does not serve: %s", recorded)
+            return response
+
+        target_role = self.recorded_role(recorded)
+
+        if target_role is not None:
+            return self._role_reply(request, state, target_role.role, target_role.status, target_role.slots)
+
+        for exception_class, role, status in _ROLE_OF_EXCEPTION:
+            if isinstance(recorded, exception_class):
+                return self._role_reply(request, state, role, status)
+
+        if isinstance(recorded, BadRequest | SuspiciousOperation):
+            return None
+
+        if settings.DEBUG:
+            report_unexpected(request, self.contract, state.operation_id, _CROSSED, recorded)
+            return response
+
+        return unexpected_response(request, self.contract, state.operation_id, _CROSSED, recorded)
+
+    def _role_reply(
+        self,
+        request: HttpRequest,
+        state: BoundaryState,
+        role: str,
+        status: int,
+        slots: Mapping[str, object] = MappingProxyType({}),
+    ) -> HttpResponseBase:
+        reply = role_answer(
+            self.contract, state.operation_id, role, status, {"limitBytes": self._limit(state.operation_id), **slots}
+        )
+
+        if reply is None:
+            reason = f"the operation declares no code for the role '{role}' nor a single code of status {status}"
+            return unexpected_response(request, self.contract, state.operation_id, reason, state.recorded)
+
+        return django_response(request, self.contract, reply)
+
+    def _outgoing_check(
+        self, request: HttpRequest, state: BoundaryState, response: HttpResponseBase
+    ) -> HttpResponseBase:
+        judged = verdict(
+            self.contract,
+            state.operation_id,
+            _outgoing(response),
+            authored=state.authored,
+            method=request.method or "",
+            admitted=state.admitted_operation == state.operation_id,
+            responses=self._responses_mode(state.operation_id),
+            framework_etag=FrameworkEtagMode(self.framework_etag),
+        )
+
+        if judged.violation is not None:
+            report_unexpected(request, self.contract, state.operation_id, f"outgoing check: {judged.violation}", None)
+
+        if judged.replaced:
+            replaced = HttpResponse(judged.reply.body or b"", status=judged.reply.status)
+
+            for name, value in judged.reply.headers:
+                replaced[name] = value
+
+            return replaced
+
+        if judged.reply.header("etag") is None and response.has_header("ETag"):
+            del response["ETag"]
+
+        if isinstance(response, StreamingHttpResponse):
+            response.streaming_content = self._watched_chunks(request, state.operation_id, response.streaming_content)
+
+        return response
+
+    def _watched_chunks(
+        self, request: HttpRequest, operation_id: str, chunks: Iterator[bytes] | AsyncIterator[bytes]
+    ) -> Iterator[bytes] | AsyncIterator[bytes]:
+        """The chunks at the writer's pace; a failure after the head went out cannot be replaced, so it is reported
+        and the body ends short (ADR 0026 "The outgoing response check")."""
+        if isinstance(chunks, AsyncIterator):
+            return self._watched_async_chunks(request, operation_id, chunks)
+
+        return self._watched_sync_chunks(request, operation_id, chunks)
+
+    def _watched_sync_chunks(self, request: HttpRequest, operation_id: str, chunks: Iterator[bytes]) -> Iterator[bytes]:
+        try:
+            yield from chunks
+        except Exception as failure:
+            report_unexpected(request, self.contract, operation_id, _STREAM_FAILED, failure)
+
+    async def _watched_async_chunks(
+        self, request: HttpRequest, operation_id: str, chunks: AsyncIterator[bytes]
+    ) -> AsyncIterator[bytes]:
+        try:
+            async for chunk in chunks:
+                yield chunk
+        except Exception as failure:
+            report_unexpected(request, self.contract, operation_id, _STREAM_FAILED, failure)
+
+    def _responses_mode(self, operation_id: str) -> ResponsesMode:
+        """The operation's `responses` in the api's configuration, else the api's, else the generated option."""
+        return ResponsesMode(configuration_of(self.api).responses(operation_id) or self.responses)
+
+    @classmethod
+    def _log_gaps_once(cls) -> None:
+        if cls._gaps_logged:
+            return
+
+        cls._gaps_logged = True
+        logging.getLogger(f"seampact.{cls.api}").warning(
+            "seampact: the server gives no raw request target, so the boundary matches the decoded path: an encoded "
+            "slash, an encoded dot segment and a raw ';' in a path cannot be refused, and a chunked request body "
+            "without Content-Length is refused. Serve the app with gunicorn or uvicorn."
+        )
+
+
+def _log_untested_minors(boundary: type[ContractBoundary]) -> None:
+    """One warning for the installed minors outside the tested ones: the api serves, with a notice."""
+    warnings = framework_version_warnings(boundary.frameworks, boundary.api)
+
+    if warnings:
+        listed = "\n".join(f"- {warning}" for warning in warnings)
+        logging.getLogger(f"seampact.{boundary.api}").warning(
+            "seampact: the api '%s' serves untested:\n%s", boundary.api, listed
+        )
+
+
+def _route_without_origin(request: HttpRequest) -> None:
+    """uvicorn passes the origin of an absolute-form target in the ASGI `path`, and Django routes `path_info`: the
+    contract request is routed by its path alone, as gunicorn's `PATH_INFO` already is."""
+    path_info = without_origin(request.path_info)
+
+    if path_info == request.path_info:
+        return
+
+    request.path = request.path.removesuffix(request.path_info) + path_info
+    request.path_info = path_info
+
+
+def _script_prefix(request: HttpRequest) -> str:
+    """The prefix the raw target lost before the match, as page links name it: the ASGI `root_path` or the WSGI
+    `SCRIPT_NAME`, percent-encoded."""
+    scope = getattr(request, "scope", None)
+    prefix = scope.get("root_path", "") if isinstance(scope, dict) else request.META.get("SCRIPT_NAME", "")
+
+    return quote(str(prefix).rstrip("/"), safe=_SCRIPT_PREFIX_SAFE)
+
+
+def _raw_target(request: HttpRequest) -> RawTarget | None:
+    scope = getattr(request, "scope", None)
+
+    if isinstance(scope, dict):
+        return asgi_raw_target(scope)
+
+    return wsgi_raw_target(request.META)
+
+
+def _outgoing(response: HttpResponseBase) -> OutgoingReply:
+    headers = tuple((name.lower(), value) for name, value in response.items())
+
+    if response.streaming or not isinstance(response, HttpResponse):
+        return OutgoingReply(response.status_code, headers, None)
+
+    body = response.content
+
+    return OutgoingReply(response.status_code, headers, body if len(body) <= MAX_CHECKED_ERROR_BODY_BYTES else None)
+
+
+def _is_technical_page(response: HttpResponseBase) -> bool:
+    """Django's technical 404 page, or its technical page of a `BadRequest` or `SuspiciousOperation`: the pages it
+    renders under `DEBUG` without calling a handler. Its technical 500 follows a recorded exception instead."""
+    is_html = str(response.get(CONTENT_TYPE) or "").startswith(_HTML)
+
+    return is_html and response.status_code in _TECHNICAL_PAGE_STATUSES
+
+
+def _without_head_body(request: HttpRequest, response: HttpResponseBase) -> HttpResponseBase:
+    """`HEAD` runs the path's `GET` operation; the boundary drops the body."""
+    if (request.method or "").upper() == _HEAD and isinstance(response, HttpResponse):
+        response.content = b""
+
+    return response

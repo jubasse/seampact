@@ -1,0 +1,128 @@
+// Steps 6 and 7 of the check order (ADR 0012): the whole request validated in one pass by the validators link,
+// then restricted input fields.
+import { type AccessGrant, type CheckState, decide } from "./access-checks.js";
+import { ContractError, roleParams } from "./contract-error.js";
+import type { ContractRoute, PagingEntry } from "./contract-route.js";
+import { schemaInvalidError, validateRequest } from "./input-issues.js";
+import { isPlainObject } from "./plain-object.js";
+import { sentVersion } from "./version-header.js";
+
+const FORBIDDEN_ROLE = "forbidden";
+
+/**
+ * Step 6: the validated input `{ path, query, headers, body }`, or a 400 with every issue. A version header is read
+ * first, so its absence answers 428, and an `If-Match` tag reaches the handler unquoted. The validation steps 4 and
+ * 5 recorded on the grant is reused, never run twice; without a grant (a refusal before the access steps) the
+ * request is validated here.
+ */
+export async function validateRequestInput(
+  state: CheckState,
+  grant?: AccessGrant,
+): Promise<unknown> {
+  const version = sentVersion(state.route, state.request);
+  const validation = grant?.validation ?? (await validateRequest(state));
+
+  if (validation.issues.length > 0) throw schemaInvalidError(state.route, validation.issues);
+
+  return withSentVersion(state.route, version, withServedLimit(state.route, validation.value));
+}
+
+// The version header as the handler compares it: `"7"` and `W/"7"` both hand over `7`.
+function withSentVersion(
+  route: ContractRoute,
+  version: string | undefined,
+  input: unknown,
+): unknown {
+  const header = route.versionHeader?.name;
+
+  if (version === undefined || header === undefined) return input;
+
+  if (!isPlainObject(input) || !isPlainObject(input.headers))
+    throw new Error(`the validated input of '${route.id}' has no headers to hand its version in`);
+
+  return { ...input, headers: { ...input.headers, [header]: version } };
+}
+
+// The paging limit the handler receives: the contract's default when the client sent none, and the clamped limit
+// for a larger one under `overLimit: clamp`.
+function withServedLimit(route: ContractRoute, input: unknown): unknown {
+  const paging = route.paging;
+
+  if (paging?.limitParam === undefined) return input;
+
+  if (!isPlainObject(input) || !isPlainObject(input.query)) return input;
+
+  const servedLimit = servedLimitOf(paging, input.query[paging.limitParam]);
+
+  if (servedLimit === undefined) return input;
+
+  return { ...input, query: { ...input.query, [paging.limitParam]: servedLimit } };
+}
+
+// The limit to hand over in place of the sent one, or undefined to keep the sent one.
+function servedLimitOf(paging: PagingEntry, sentLimit: unknown): number | undefined {
+  if (sentLimit === undefined) return paging.defaultLimit;
+
+  if (paging.clampedLimit === undefined || typeof sentLimit !== "number") return undefined;
+
+  return sentLimit > paging.clampedLimit ? paging.clampedLimit : undefined;
+}
+
+/** Step 7: a restricted input field sent without its right is refused with its pointer, or stripped. */
+export async function checkRestrictedInput(
+  state: CheckState,
+  grant: AccessGrant,
+  input: unknown,
+): Promise<unknown> {
+  const inputRights = state.route.fieldRights.filter(
+    (fieldRight) => fieldRight.direction === "input",
+  );
+
+  if (inputRights.length === 0 || !isPlainObject(input) || !isPlainObject(input.body)) return input;
+
+  const body: Record<string, unknown> = { ...input.body };
+
+  for (const fieldRight of inputRights) {
+    const member = topLevelMember(fieldRight.pointer);
+
+    if (!Object.hasOwn(body, member)) continue;
+
+    const denial = await decide(state, grant, {
+      kind: "right",
+      name: fieldRight.right,
+      params: fieldRight.params,
+      subject: fieldRight.subject,
+      errors: fieldRight.errors,
+      purpose: { kind: "field", pointer: fieldRight.pointer, direction: "input" },
+    });
+
+    if (denial === undefined) continue;
+
+    // A decider failure is a 500 reported to the hook, never a denial to strip or to render with the pointer.
+    if (denial.unexpectedCause !== undefined) throw denial;
+
+    if (fieldRight.inputPolicy === "strip") {
+      delete body[member];
+      continue;
+    }
+
+    throw new ContractError(denial.code, forbiddenParams(state.route, denial, fieldRight.pointer));
+  }
+
+  return { ...input, body };
+}
+
+/** The member a top-level pointer such as `/effort` names. */
+export function topLevelMember(pointer: string): string {
+  return pointer.slice(1).replaceAll("~1", "/").replaceAll("~0", "~");
+}
+
+// The decider's params, with the restricted field's pointer when the code binds the `forbidden` role's data.
+function forbiddenParams(route: ContractRoute, denial: ContractError, pointer: string): unknown {
+  const entry = Object.hasOwn(route.errors, denial.code) ? route.errors[denial.code] : undefined;
+  const rendered = entry === undefined ? undefined : roleParams(entry, FORBIDDEN_ROLE, { pointer });
+
+  if (!isPlainObject(rendered)) return denial.params;
+
+  return { ...(isPlainObject(denial.params) ? denial.params : {}), ...rendered };
+}

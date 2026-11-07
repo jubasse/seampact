@@ -1,0 +1,19 @@
+# docs/conformance/proofs/p8-conformance-25.yaml
+lane: p8-conformance-25
+proofs:
+  - id: CHK-070
+    fixtures: [fixtures/reference]
+    tests:
+      - 'fetch: test-seampact-front-fetch/test/front/fetch-client.browser.test.mts#a list renders its items and reads the next cursor from the Link header'
+      - 'fetch: test-seampact-front-fetch/test/front/fetch-client.browser.test.mts#a create answers the created task'
+      - 'zod: test-seampact-hono/test/http-suite.test.mts#unknown-body-key-refused: An undeclared body key is refused by default'
+      - 'zod: test-seampact-hono/test/http-suite.test.mts#unknown-enum-value-refused: An enum value the schema does not list is refused on input'
+  - id: CHK-140
+    fixtures:
+      - fixtures/reference
+      - fixtures/golden/pack-api-platform/contract
+      - fixtures/golden/pack-crud-rights/contract
+      - fixtures/golden/pack-hal/contract
+      - fixtures/golden/pack-laravel/contract
+      - fixtures/golden/pack-spring/contract
+    tests: ['core: ci: p3-binary.yml#smoke']

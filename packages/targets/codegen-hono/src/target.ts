@@ -1,0 +1,20 @@
+import type { Target } from "@seampact/codegen-core";
+import { nodeServerTarget } from "@seampact/codegen-core/node-server";
+import { serverTargetCompatibility } from "@seampact/spec/compatibility";
+import { format } from "prettier";
+import packageJson from "../package.json" with { type: "json" };
+import { honoModuleSource } from "./hono-module.js";
+
+// The Hono target, as the CLI loads it. Its placement is the `hono` module of each api, over the Hono placement and
+// the Web-standard modules of `@seampact/server-runtime`.
+export const target: Target = nodeServerTarget({
+  packageName: packageJson.name,
+  packageVersion: packageJson.version,
+  format,
+  placement: {
+    frameworkModule: "hono",
+    frameworkSource: honoModuleSource,
+  },
+  validatorStyles: serverTargetCompatibility(packageJson.name).validatorStyles,
+  frameworkDocsOffFix: "this framework writes no document of its own; remove the key",
+});

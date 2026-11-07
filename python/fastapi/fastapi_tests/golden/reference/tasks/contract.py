@@ -1,0 +1,9779 @@
+"""The contract of api 'tasks' as its boundary reads it."""
+
+import typing as _typing
+
+import seampact.codegen.runtime.contract as _contract
+
+from . import schemas as _schemas
+
+CONTRACT: _typing.Final = _contract.ApiContract(
+    api="tasks",
+    generated_by="1.0.0",
+    mount="",
+    ir_view={
+        "api": {
+            "id": "tasks",
+            "name": {
+                "segments": [
+                    "tasks",
+                ],
+                "role": "schema",
+            },
+            "version": {
+                "kind": "path",
+                "number": 1,
+            },
+            "kind": "product",
+            "pathVersion": {
+                "value": "prefix",
+                "origin": {
+                    "layer": "api",
+                    "pointer": "/api/version",
+                },
+            },
+            "maturity": "provisional",
+            "compat": {
+                "policy": "additive-only",
+            },
+            "wire": {
+                "int64": "string",
+                "outputEnums": "enum",
+                "urls": "relative",
+            },
+            "surfaces": {
+                "app": {
+                    "name": {
+                        "segments": [
+                            "app",
+                        ],
+                        "role": "schema",
+                    },
+                    "prefix": "/v1",
+                    "pathVersion": "prefix",
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/app",
+                    },
+                },
+                "hooks": {
+                    "name": {
+                        "segments": [
+                            "hooks",
+                        ],
+                        "role": "schema",
+                    },
+                    "prefix": "/v1/hooks",
+                    "pathVersion": "prefix",
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/hooks",
+                    },
+                },
+            },
+            "documents": {
+                "full": {
+                    "surfaces": [
+                        "app",
+                        "hooks",
+                    ],
+                    "internal": "include",
+                },
+                "public": {
+                    "surfaces": [
+                        "app",
+                    ],
+                    "internal": "exclude",
+                },
+            },
+            "docs": {
+                "summary": "Tasks shared inside channels.",
+            },
+            "extensions": {},
+            "origin": {
+                "layer": "api",
+                "pointer": "/api",
+            },
+        },
+        "errors": {
+            "api.csrf_invalid": {
+                "code": "api.csrf_invalid",
+                "family": "api",
+                "nature": "refused",
+                "http": {
+                    "status": 403,
+                },
+                "docs": {},
+                "origin": {
+                    "layer": "core",
+                    "pointer": "/errors/api.csrf_invalid",
+                },
+                "default": "csrfInvalid",
+            },
+            "api.forbidden": {
+                "code": "api.forbidden",
+                "family": "api",
+                "nature": "refused",
+                "http": {
+                    "status": 403,
+                },
+                "params": "ApiForbiddenParams",
+                "docs": {},
+                "origin": {
+                    "layer": "core",
+                    "pointer": "/errors/api.forbidden",
+                },
+                "default": "forbidden",
+            },
+            "api.idempotency_in_progress": {
+                "code": "api.idempotency_in_progress",
+                "family": "api",
+                "nature": "unavailable",
+                "http": {
+                    "status": 409,
+                },
+                "docs": {},
+                "origin": {
+                    "layer": "core",
+                    "pointer": "/errors/api.idempotency_in_progress",
+                },
+                "default": "idempotencyInProgress",
+            },
+            "api.idempotency_key_reused": {
+                "code": "api.idempotency_key_reused",
+                "family": "api",
+                "nature": "refused",
+                "http": {
+                    "status": 422,
+                },
+                "docs": {},
+                "origin": {
+                    "layer": "core",
+                    "pointer": "/errors/api.idempotency_key_reused",
+                },
+                "default": "idempotencyKeyReused",
+            },
+            "api.internal": {
+                "code": "api.internal",
+                "family": "api",
+                "nature": "failed",
+                "http": {
+                    "status": 500,
+                },
+                "docs": {},
+                "origin": {
+                    "layer": "core",
+                    "pointer": "/errors/api.internal",
+                },
+                "default": "undeclaredStatus",
+            },
+            "api.not_found": {
+                "code": "api.not_found",
+                "family": "api",
+                "nature": "refused",
+                "http": {
+                    "status": 404,
+                },
+                "docs": {},
+                "origin": {
+                    "layer": "core",
+                    "pointer": "/errors/api.not_found",
+                },
+                "default": "notFound",
+            },
+            "api.payload_too_large": {
+                "code": "api.payload_too_large",
+                "family": "api",
+                "nature": "refused",
+                "http": {
+                    "status": 413,
+                },
+                "params": "ApiPayloadTooLargeParams",
+                "docs": {},
+                "origin": {
+                    "layer": "core",
+                    "pointer": "/errors/api.payload_too_large",
+                },
+                "default": "payloadTooLarge",
+            },
+            "api.rate_limited": {
+                "code": "api.rate_limited",
+                "family": "api",
+                "nature": "unavailable",
+                "http": {
+                    "status": 429,
+                },
+                "params": "ApiRateLimitedParams",
+                "example": {
+                    "retryAfterMs": 1500,
+                },
+                "docs": {},
+                "origin": {
+                    "layer": "shared",
+                    "pointer": "/errors/api.rate_limited",
+                },
+                "default": "rateLimited",
+            },
+            "api.reauthentication_required": {
+                "code": "api.reauthentication_required",
+                "family": "api",
+                "nature": "refused",
+                "http": {
+                    "status": 401,
+                },
+                "docs": {},
+                "origin": {
+                    "layer": "shared",
+                    "pointer": "/errors/api.reauthentication_required",
+                },
+            },
+            "api.schema_invalid": {
+                "code": "api.schema_invalid",
+                "family": "api",
+                "nature": "refused",
+                "http": {
+                    "status": 400,
+                },
+                "params": "ApiSchemaInvalidParams",
+                "example": {
+                    "issues": [
+                        {
+                            "pointer": "/title",
+                            "rule": "minLength",
+                        },
+                    ],
+                },
+                "docs": {},
+                "origin": {
+                    "layer": "shared",
+                    "pointer": "/errors/api.schema_invalid",
+                },
+                "default": "schemaInvalid",
+            },
+            "api.unauthenticated": {
+                "code": "api.unauthenticated",
+                "family": "api",
+                "nature": "refused",
+                "http": {
+                    "status": 401,
+                },
+                "docs": {},
+                "origin": {
+                    "layer": "core",
+                    "pointer": "/errors/api.unauthenticated",
+                },
+                "default": "unauthenticated",
+            },
+            "api.unsupported_media_type": {
+                "code": "api.unsupported_media_type",
+                "family": "api",
+                "nature": "refused",
+                "http": {
+                    "status": 415,
+                },
+                "docs": {},
+                "origin": {
+                    "layer": "core",
+                    "pointer": "/errors/api.unsupported_media_type",
+                },
+                "default": "unsupportedMediaType",
+            },
+            "state.conflict": {
+                "code": "state.conflict",
+                "family": "state",
+                "nature": "refused",
+                "http": {
+                    "status": 409,
+                },
+                "docs": {},
+                "origin": {
+                    "layer": "core",
+                    "pointer": "/errors/state.conflict",
+                },
+                "default": "stateConflict",
+            },
+        },
+        "formats": {
+            "bare": {
+                "id": "bare",
+                "origin": {
+                    "layer": "core",
+                    "pointer": "/formats/bare",
+                },
+                "media": "application/json",
+                "absent": "omit",
+                "success": {
+                    "item": {
+                        "body": {
+                            "kind": "slot",
+                            "slot": "payload",
+                            "path": [],
+                        },
+                        "headers": [],
+                    },
+                    "table": {
+                        "body": {
+                            "kind": "slot",
+                            "slot": "payload",
+                            "path": [],
+                        },
+                        "headers": [],
+                    },
+                    "list": {
+                        "body": {
+                            "kind": "slot",
+                            "slot": "payload",
+                            "path": [],
+                        },
+                        "headers": [],
+                    },
+                    "page": {
+                        "body": {
+                            "kind": "slot",
+                            "slot": "items",
+                            "path": [],
+                        },
+                        "headers": [],
+                    },
+                },
+                "meta": {},
+                "error": {
+                    "media": "application/problem+json",
+                    "body": {
+                        "kind": "object",
+                        "members": [
+                            {
+                                "name": {
+                                    "kind": "text",
+                                    "text": "type",
+                                },
+                                "value": {
+                                    "kind": "slot",
+                                    "slot": "code",
+                                    "path": [],
+                                },
+                            },
+                            {
+                                "name": {
+                                    "kind": "text",
+                                    "text": "title",
+                                },
+                                "value": {
+                                    "kind": "slot",
+                                    "slot": "title",
+                                    "path": [],
+                                },
+                            },
+                            {
+                                "name": {
+                                    "kind": "text",
+                                    "text": "status",
+                                },
+                                "value": {
+                                    "kind": "slot",
+                                    "slot": "status",
+                                    "path": [],
+                                },
+                            },
+                            {
+                                "name": {
+                                    "kind": "text",
+                                    "text": "detail",
+                                },
+                                "value": {
+                                    "kind": "slot",
+                                    "slot": "detail",
+                                    "path": [],
+                                },
+                            },
+                            {
+                                "name": {
+                                    "kind": "text",
+                                    "text": "instance",
+                                },
+                                "value": {
+                                    "kind": "slot",
+                                    "slot": "instance",
+                                    "path": [],
+                                },
+                            },
+                            {
+                                "name": {
+                                    "kind": "text",
+                                    "text": "code",
+                                },
+                                "value": {
+                                    "kind": "slot",
+                                    "slot": "code",
+                                    "path": [],
+                                },
+                            },
+                            {
+                                "name": {
+                                    "kind": "text",
+                                    "text": "nature",
+                                },
+                                "value": {
+                                    "kind": "slot",
+                                    "slot": "nature",
+                                    "path": [],
+                                },
+                            },
+                            {
+                                "name": {
+                                    "kind": "text",
+                                    "text": "traceId",
+                                },
+                                "value": {
+                                    "kind": "slot",
+                                    "slot": "traceId",
+                                    "path": [],
+                                },
+                            },
+                        ],
+                        "merge": "params",
+                    },
+                    "headers": [],
+                },
+            },
+        },
+        "identities": {
+            "service": {
+                "id": "service",
+                "kind": "credential",
+                "schemes": {
+                    "read": [
+                        "internalToken",
+                    ],
+                    "write": [
+                        "internalToken",
+                    ],
+                    "optionalRead": [],
+                },
+                "principal": {
+                    "kind": "schema",
+                    "schema": "ServicePrincipal",
+                },
+                "errors": [],
+                "headers": [
+                    {
+                        "header": "actorSurface",
+                        "for": "writes",
+                        "required": True,
+                        "schema": {
+                            "kind": "enum",
+                            "enum": "Surface",
+                        },
+                        "origin": {
+                            "layer": "shared",
+                            "pointer": "/identities/service/headers/actorSurface",
+                        },
+                    },
+                    {
+                        "header": "deadline",
+                        "for": "all",
+                        "required": True,
+                        "origin": {
+                            "layer": "shared",
+                            "pointer": "/identities/service/headers/deadline",
+                        },
+                    },
+                    {
+                        "header": "trace",
+                        "for": "all",
+                        "required": False,
+                        "origin": {
+                            "layer": "shared",
+                            "pointer": "/identities/service/headers/trace",
+                        },
+                    },
+                ],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "shared",
+                    "pointer": "/identities/service",
+                },
+            },
+            "stripe": {
+                "id": "stripe",
+                "kind": "signed",
+                "signed": "stripeSignature",
+                "principal": {
+                    "kind": "schema",
+                    "schema": "WebhookCaller",
+                },
+                "errors": [],
+                "headers": [],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "shared",
+                    "pointer": "/identities/stripe",
+                },
+            },
+            "user": {
+                "id": "user",
+                "kind": "credential",
+                "schemes": {
+                    "read": [
+                        "bearer",
+                        "sessionCookie",
+                    ],
+                    "write": [
+                        "bearer",
+                        "sessionCookie",
+                    ],
+                    "optionalRead": [],
+                },
+                "principal": {
+                    "kind": "schema",
+                    "schema": "UserPrincipal",
+                },
+                "errors": [],
+                "headers": [],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "shared",
+                    "pointer": "/identities/user",
+                },
+            },
+        },
+        "schemes": {
+            "bearer": {
+                "id": "bearer",
+                "kind": "bearer",
+                "origin": {
+                    "layer": "shared",
+                    "pointer": "/schemes/bearer",
+                },
+            },
+            "csrfToken": {
+                "id": "csrfToken",
+                "kind": "header",
+                "name": "X-Csrf-Token",
+                "origin": {
+                    "layer": "shared",
+                    "pointer": "/schemes/csrfToken",
+                },
+            },
+            "internalToken": {
+                "id": "internalToken",
+                "kind": "bearer",
+                "bearer": {
+                    "format": "jwt",
+                },
+                "origin": {
+                    "layer": "shared",
+                    "pointer": "/schemes/internalToken",
+                },
+            },
+            "sessionCookie": {
+                "id": "sessionCookie",
+                "kind": "cookie",
+                "name": "__Host-session",
+                "csrf": "csrfToken",
+                "origin": {
+                    "layer": "shared",
+                    "pointer": "/schemes/sessionCookie",
+                },
+            },
+            "stripeSignature": {
+                "id": "stripeSignature",
+                "kind": "signature",
+                "name": "Stripe-Signature",
+                "signature": {
+                    "verify": "template",
+                    "format": "t={ts},v1={sig}",
+                    "algorithm": "hmac-sha256",
+                    "payload": "{ts}.{rawBody}",
+                    "encoding": "hex",
+                    "toleranceMs": 300000,
+                    "key": {
+                        "kind": "value",
+                        "value": "stripe",
+                    },
+                },
+                "origin": {
+                    "layer": "shared",
+                    "pointer": "/schemes/stripeSignature",
+                },
+            },
+        },
+        "scopes": {
+            "channel": {
+                "id": "channel",
+                "idSchema": {
+                    "kind": "scalar",
+                    "type": "string",
+                    "format": "uuid",
+                    "refinements": {},
+                },
+                "errors": [
+                    "api.not_found",
+                ],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "shared",
+                    "pointer": "/scopes/channel",
+                },
+            },
+        },
+        "rights": {
+            "preferences.digest": {
+                "id": "preferences.digest",
+                "subject": {
+                    "kind": "none",
+                },
+                "errors": [
+                    "api.forbidden",
+                ],
+                "docs": {
+                    "summary": "Lets the caller turn on the email digest.",
+                },
+                "extensions": {},
+                "origin": {
+                    "layer": "api",
+                    "pointer": "/rights/preferences.digest",
+                },
+            },
+            "roles": {
+                "id": "roles",
+                "params": "RolesParams",
+                "subject": {
+                    "kind": "scope",
+                    "scope": "channel",
+                },
+                "errors": [
+                    "api.forbidden",
+                ],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "shared",
+                    "pointer": "/rights/roles",
+                },
+            },
+            "tasks.read": {
+                "id": "tasks.read",
+                "subject": {
+                    "kind": "scope",
+                    "scope": "channel",
+                },
+                "errors": [
+                    "api.forbidden",
+                ],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "shared",
+                    "pointer": "/rights/tasks.read",
+                },
+            },
+            "tasks.seeEffort": {
+                "id": "tasks.seeEffort",
+                "subject": {
+                    "kind": "resource",
+                    "type": {
+                        "segments": [
+                            "task",
+                        ],
+                        "role": "schema",
+                    },
+                    "idSchema": {
+                        "kind": "scalar",
+                        "type": "string",
+                        "format": "uuid",
+                        "refinements": {},
+                    },
+                },
+                "errors": [
+                    "api.forbidden",
+                ],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "shared",
+                    "pointer": "/rights/tasks.seeEffort",
+                },
+            },
+            "tasks.update": {
+                "id": "tasks.update",
+                "subject": {
+                    "kind": "resource",
+                    "type": {
+                        "segments": [
+                            "task",
+                        ],
+                        "role": "schema",
+                    },
+                    "idSchema": {
+                        "kind": "scalar",
+                        "type": "string",
+                        "format": "uuid",
+                        "refinements": {},
+                    },
+                },
+                "errors": [
+                    "api.forbidden",
+                    "api.not_found",
+                ],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "shared",
+                    "pointer": "/rights/tasks.update",
+                },
+            },
+        },
+        "rules": {
+            "recentAuth": {
+                "id": "recentAuth",
+                "params": "RecentAuthParams",
+                "takesBucket": False,
+                "proof": {
+                    "in": "body",
+                    "name": "reauthToken",
+                    "schema": {
+                        "kind": "scalar",
+                        "type": "string",
+                        "refinements": {
+                            "minLength": 1,
+                            "maxLength": 512,
+                        },
+                    },
+                },
+                "errors": [
+                    "api.reauthentication_required",
+                ],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "shared",
+                    "pointer": "/rules/recentAuth",
+                },
+            },
+            "throttle": {
+                "id": "throttle",
+                "takesBucket": True,
+                "errors": [
+                    "api.rate_limited",
+                ],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "shared",
+                    "pointer": "/rules/throttle",
+                },
+            },
+        },
+        "buckets": {
+            "write": {
+                "id": "write",
+                "key": [
+                    {
+                        "in": "principal",
+                        "name": "userId",
+                    },
+                ],
+                "limit": 60,
+                "windowMs": 60000,
+                "origin": {
+                    "layer": "shared",
+                    "pointer": "/buckets/write",
+                },
+            },
+        },
+        "pagings": {
+            "cursor": {
+                "id": "cursor",
+                "origin": {
+                    "layer": "shared",
+                    "pointer": "/pagings/cursor",
+                },
+                "position": "cursor",
+                "absent": "omit",
+                "request": [
+                    {
+                        "role": "cursor",
+                        "in": "query",
+                        "name": "cursor",
+                    },
+                    {
+                        "role": "limit",
+                        "in": "query",
+                        "name": "limit",
+                    },
+                    {
+                        "role": "sort",
+                        "in": "query",
+                        "name": "sort",
+                        "style": "signed",
+                    },
+                ],
+                "response": {
+                    "body": {
+                        "kind": "slot",
+                        "slot": "items",
+                        "path": [],
+                    },
+                    "meta": [],
+                    "headers": [],
+                    "links": [
+                        {
+                            "rel": "next",
+                            "role": "next",
+                        },
+                    ],
+                },
+                "handlerResult": [
+                    "nextCursor",
+                ],
+            },
+        },
+        "schemas": {
+            "ApiEmptyBody": {
+                "kind": "object",
+                "properties": [],
+                "id": "ApiEmptyBody",
+                "name": {
+                    "segments": [
+                        "api",
+                        "empty",
+                        "body",
+                    ],
+                    "role": "schema",
+                },
+                "directions": [
+                    "input",
+                ],
+                "examples": [],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "core",
+                    "pointer": "/schemas/ApiEmptyBody",
+                },
+            },
+            "ApiForbiddenParams": {
+                "kind": "object",
+                "properties": [
+                    {
+                        "name": "pointer",
+                        "type": {
+                            "kind": "scalar",
+                            "type": "string",
+                            "refinements": {},
+                        },
+                        "optional": True,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "core",
+                            "pointer": "/errors/api.forbidden/params/pointer",
+                        },
+                    },
+                ],
+                "id": "ApiForbiddenParams",
+                "name": {
+                    "segments": [
+                        "api",
+                        "forbidden",
+                    ],
+                    "role": "params",
+                },
+                "directions": [
+                    "output",
+                ],
+                "examples": [],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "core",
+                    "pointer": "/errors/api.forbidden/params",
+                },
+            },
+            "ApiPayloadTooLargeParams": {
+                "kind": "object",
+                "properties": [
+                    {
+                        "name": "limitBytes",
+                        "type": {
+                            "kind": "scalar",
+                            "type": "integer",
+                            "refinements": {
+                                "minimum": "0",
+                            },
+                        },
+                        "optional": True,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "core",
+                            "pointer": "/errors/api.payload_too_large/params/limitBytes",
+                        },
+                    },
+                ],
+                "id": "ApiPayloadTooLargeParams",
+                "name": {
+                    "segments": [
+                        "api",
+                        "payload",
+                        "too",
+                        "large",
+                    ],
+                    "role": "params",
+                },
+                "directions": [
+                    "output",
+                ],
+                "examples": [],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "core",
+                    "pointer": "/errors/api.payload_too_large/params",
+                },
+            },
+            "ApiRateLimitedParams": {
+                "kind": "object",
+                "properties": [
+                    {
+                        "name": "retryAfterMs",
+                        "type": {
+                            "kind": "scalar",
+                            "type": "integer",
+                            "refinements": {
+                                "minimum": "0",
+                                "maximum": "9007199254740991",
+                            },
+                        },
+                        "optional": False,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "shared",
+                            "pointer": "/errors/api.rate_limited/params/retryAfterMs",
+                        },
+                    },
+                ],
+                "id": "ApiRateLimitedParams",
+                "name": {
+                    "segments": [
+                        "api",
+                        "rate",
+                        "limited",
+                    ],
+                    "role": "params",
+                },
+                "directions": [
+                    "output",
+                ],
+                "examples": [],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "shared",
+                    "pointer": "/errors/api.rate_limited/params",
+                },
+            },
+            "ApiSchemaInvalidParams": {
+                "kind": "object",
+                "properties": [
+                    {
+                        "name": "issues",
+                        "type": {
+                            "kind": "array",
+                            "items": {
+                                "kind": "ref",
+                                "schema": "IssuesItem",
+                            },
+                        },
+                        "optional": False,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "shared",
+                            "pointer": "/errors/api.schema_invalid/params/issues",
+                        },
+                    },
+                ],
+                "id": "ApiSchemaInvalidParams",
+                "name": {
+                    "segments": [
+                        "api",
+                        "schema",
+                        "invalid",
+                    ],
+                    "role": "params",
+                },
+                "directions": [
+                    "output",
+                ],
+                "examples": [],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "shared",
+                    "pointer": "/errors/api.schema_invalid/params",
+                },
+            },
+            "ArchiveTask": {
+                "kind": "object",
+                "properties": [
+                    {
+                        "name": "reason",
+                        "type": {
+                            "kind": "scalar",
+                            "type": "string",
+                            "refinements": {
+                                "minLength": 1,
+                                "maxLength": 500,
+                            },
+                        },
+                        "optional": False,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/schemas/ArchiveTask/properties/reason",
+                        },
+                    },
+                    {
+                        "name": "expectedVersion",
+                        "type": {
+                            "kind": "scalar",
+                            "type": "integer",
+                            "refinements": {
+                                "minimum": "1",
+                            },
+                        },
+                        "optional": False,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/concurrency/version",
+                        },
+                        "derivedFrom": {
+                            "derivation": "concurrency.version",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/concurrency/version",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": (
+                                        "/surfaces/app/routes/channels/member/routes/tasks/member/routes/archive/"
+                                        "concurrency"
+                                    ),
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "id": "ArchiveTask",
+                "name": {
+                    "segments": [
+                        "archive",
+                        "task",
+                    ],
+                    "role": "schema",
+                },
+                "directions": [
+                    "input",
+                ],
+                "examples": [],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "api",
+                    "pointer": "/schemas/ArchiveTask",
+                },
+            },
+            "AssignTaskInput": {
+                "kind": "object",
+                "properties": [
+                    {
+                        "name": "userId",
+                        "type": {
+                            "kind": "scalar",
+                            "type": "string",
+                            "format": "uuid",
+                            "refinements": {},
+                        },
+                        "optional": False,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "api",
+                            "pointer": (
+                                "/surfaces/app/routes/channels/member/routes/tasks/member/routes/assign/input/"
+                                "properties/userId"
+                            ),
+                        },
+                    },
+                ],
+                "id": "AssignTaskInput",
+                "name": {
+                    "segments": [
+                        "assign",
+                        "task",
+                    ],
+                    "role": "input",
+                },
+                "directions": [
+                    "input",
+                ],
+                "examples": [],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/assign/input",
+                },
+            },
+            "Channel": {
+                "kind": "object",
+                "properties": [
+                    {
+                        "name": "channelId",
+                        "type": {
+                            "kind": "scalar",
+                            "type": "string",
+                            "format": "uuid",
+                            "refinements": {},
+                        },
+                        "optional": False,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/schemas/Channel/properties/channelId",
+                        },
+                    },
+                    {
+                        "name": "name",
+                        "type": {
+                            "kind": "scalar",
+                            "type": "string",
+                            "refinements": {
+                                "minLength": 1,
+                                "maxLength": 100,
+                            },
+                        },
+                        "optional": False,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/schemas/Channel/properties/name",
+                        },
+                    },
+                ],
+                "id": "Channel",
+                "name": {
+                    "segments": [
+                        "channel",
+                    ],
+                    "role": "schema",
+                },
+                "directions": [
+                    "output",
+                ],
+                "examples": [],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "api",
+                    "pointer": "/schemas/Channel",
+                },
+            },
+            "CreateTask": {
+                "kind": "object",
+                "properties": [
+                    {
+                        "name": "title",
+                        "type": {
+                            "kind": "scalar",
+                            "type": "string",
+                            "refinements": {
+                                "minLength": 1,
+                                "maxLength": 200,
+                            },
+                        },
+                        "optional": False,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "shared",
+                            "pointer": "/schemas/Task/properties/title",
+                        },
+                    },
+                    {
+                        "name": "effort",
+                        "type": {
+                            "kind": "scalar",
+                            "type": "integer",
+                            "refinements": {
+                                "minimum": "0",
+                            },
+                        },
+                        "optional": True,
+                        "nullable": False,
+                        "sensitive": False,
+                        "restrictedTo": {
+                            "right": "roles",
+                            "params": {
+                                "allowed": [
+                                    "owner",
+                                ],
+                            },
+                            "origin": {
+                                "layer": "api",
+                                "pointer": "/schemas/CreateTask/properties/effort/restrictedTo",
+                            },
+                        },
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "shared",
+                            "pointer": "/schemas/Task/properties/effort",
+                        },
+                    },
+                ],
+                "id": "CreateTask",
+                "name": {
+                    "segments": [
+                        "create",
+                        "task",
+                    ],
+                    "role": "schema",
+                },
+                "directions": [
+                    "input",
+                ],
+                "examples": [],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "api",
+                    "pointer": "/schemas/CreateTask",
+                },
+            },
+            "Draft": {
+                "kind": "object",
+                "properties": [
+                    {
+                        "name": "draftId",
+                        "type": {
+                            "kind": "scalar",
+                            "type": "string",
+                            "format": "uuid",
+                            "refinements": {},
+                        },
+                        "optional": False,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/schemas/Draft/properties/draftId",
+                        },
+                    },
+                    {
+                        "name": "body",
+                        "type": {
+                            "kind": "scalar",
+                            "type": "string",
+                            "refinements": {
+                                "maxLength": 20000,
+                            },
+                        },
+                        "optional": False,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/schemas/Draft/properties/body",
+                        },
+                    },
+                ],
+                "id": "Draft",
+                "name": {
+                    "segments": [
+                        "draft",
+                    ],
+                    "role": "schema",
+                },
+                "directions": [
+                    "output",
+                ],
+                "examples": [],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "api",
+                    "pointer": "/schemas/Draft",
+                },
+            },
+            "GetTasksBatchInput": {
+                "kind": "object",
+                "properties": [
+                    {
+                        "name": "ids",
+                        "type": {
+                            "kind": "array",
+                            "items": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "format": "uuid",
+                                "refinements": {},
+                            },
+                            "maxItems": 200,
+                        },
+                        "optional": False,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/batch/maxIds",
+                        },
+                        "derivedFrom": {
+                            "derivation": "batch.read",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/batch",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "id": "GetTasksBatchInput",
+                "name": {
+                    "segments": [
+                        "get",
+                        "tasks",
+                        "batch",
+                    ],
+                    "role": "input",
+                },
+                "directions": [
+                    "input",
+                ],
+                "examples": [],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/batch",
+                },
+            },
+            "Health": {
+                "kind": "object",
+                "properties": [
+                    {
+                        "name": "status",
+                        "type": {
+                            "kind": "scalar",
+                            "type": "string",
+                            "refinements": {},
+                        },
+                        "optional": False,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/schemas/Health/properties/status",
+                        },
+                    },
+                ],
+                "id": "Health",
+                "name": {
+                    "segments": [
+                        "health",
+                    ],
+                    "role": "schema",
+                },
+                "directions": [
+                    "output",
+                ],
+                "examples": [],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "api",
+                    "pointer": "/schemas/Health",
+                },
+            },
+            "IssuesItem": {
+                "kind": "object",
+                "properties": [
+                    {
+                        "name": "pointer",
+                        "type": {
+                            "kind": "scalar",
+                            "type": "string",
+                            "refinements": {},
+                        },
+                        "optional": False,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "shared",
+                            "pointer": "/schemas/Issues/items/properties/pointer",
+                        },
+                    },
+                    {
+                        "name": "rule",
+                        "type": {
+                            "kind": "scalar",
+                            "type": "string",
+                            "refinements": {},
+                        },
+                        "optional": False,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "shared",
+                            "pointer": "/schemas/Issues/items/properties/rule",
+                        },
+                    },
+                ],
+                "id": "IssuesItem",
+                "name": {
+                    "segments": [
+                        "issues",
+                    ],
+                    "role": "item",
+                },
+                "directions": [
+                    "output",
+                ],
+                "examples": [],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "shared",
+                    "pointer": "/schemas/Issues/items",
+                },
+            },
+            "PaymentEvent": {
+                "kind": "object",
+                "properties": [
+                    {
+                        "name": "id",
+                        "type": {
+                            "kind": "scalar",
+                            "type": "string",
+                            "refinements": {},
+                        },
+                        "optional": False,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/schemas/PaymentEvent/properties/id",
+                        },
+                    },
+                    {
+                        "name": "type",
+                        "type": {
+                            "kind": "scalar",
+                            "type": "string",
+                            "refinements": {},
+                        },
+                        "optional": False,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/schemas/PaymentEvent/properties/type",
+                        },
+                    },
+                    {
+                        "name": "data",
+                        "type": {
+                            "kind": "opaque",
+                            "reason": "Stripe's object depends on the event type and its API version.",
+                            "origin": {
+                                "layer": "api",
+                                "pointer": "/schemas/PaymentEvent/properties/data",
+                            },
+                        },
+                        "optional": False,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/schemas/PaymentEvent/properties/data",
+                        },
+                    },
+                ],
+                "id": "PaymentEvent",
+                "name": {
+                    "segments": [
+                        "payment",
+                        "event",
+                    ],
+                    "role": "schema",
+                },
+                "directions": [
+                    "input",
+                ],
+                "examples": [],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "api",
+                    "pointer": "/schemas/PaymentEvent",
+                },
+            },
+            "Preferences": {
+                "kind": "object",
+                "properties": [
+                    {
+                        "name": "locale",
+                        "type": {
+                            "kind": "scalar",
+                            "type": "string",
+                            "refinements": {
+                                "minLength": 2,
+                                "maxLength": 35,
+                            },
+                        },
+                        "optional": False,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/schemas/Preferences/properties/locale",
+                        },
+                    },
+                    {
+                        "name": "digest",
+                        "type": {
+                            "kind": "scalar",
+                            "type": "boolean",
+                            "refinements": {},
+                        },
+                        "optional": True,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/schemas/Preferences/properties/digest",
+                        },
+                    },
+                ],
+                "id": "Preferences",
+                "name": {
+                    "segments": [
+                        "preferences",
+                    ],
+                    "role": "schema",
+                },
+                "directions": [
+                    "output",
+                ],
+                "examples": [],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "api",
+                    "pointer": "/schemas/Preferences",
+                },
+            },
+            "RecentAuthParams": {
+                "kind": "object",
+                "properties": [
+                    {
+                        "name": "intent",
+                        "type": {
+                            "kind": "enum",
+                            "enum": "ReauthIntent",
+                        },
+                        "optional": False,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "shared",
+                            "pointer": "/rules/recentAuth/params/intent",
+                        },
+                    },
+                ],
+                "id": "RecentAuthParams",
+                "name": {
+                    "segments": [
+                        "recent",
+                        "auth",
+                    ],
+                    "role": "params",
+                },
+                "directions": [
+                    "input",
+                ],
+                "examples": [],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "shared",
+                    "pointer": "/rules/recentAuth/params",
+                },
+            },
+            "RolesParams": {
+                "kind": "object",
+                "properties": [
+                    {
+                        "name": "allowed",
+                        "type": {
+                            "kind": "array",
+                            "items": {
+                                "kind": "enum",
+                                "enum": "Role",
+                            },
+                            "minItems": 1,
+                        },
+                        "optional": False,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "shared",
+                            "pointer": "/rights/roles/params/allowed",
+                        },
+                    },
+                ],
+                "id": "RolesParams",
+                "name": {
+                    "segments": [
+                        "roles",
+                    ],
+                    "role": "params",
+                },
+                "directions": [
+                    "input",
+                ],
+                "examples": [],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "shared",
+                    "pointer": "/rights/roles/params",
+                },
+            },
+            "ServicePrincipal": {
+                "kind": "object",
+                "properties": [
+                    {
+                        "name": "service",
+                        "type": {
+                            "kind": "enum",
+                            "enum": "Service",
+                        },
+                        "optional": False,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "shared",
+                            "pointer": "/schemas/ServicePrincipal/properties/service",
+                        },
+                    },
+                    {
+                        "name": "userId",
+                        "type": {
+                            "kind": "scalar",
+                            "type": "string",
+                            "format": "uuid",
+                            "refinements": {},
+                        },
+                        "optional": False,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "shared",
+                            "pointer": "/schemas/ServicePrincipal/properties/userId",
+                        },
+                    },
+                ],
+                "id": "ServicePrincipal",
+                "name": {
+                    "segments": [
+                        "service",
+                        "principal",
+                    ],
+                    "role": "schema",
+                },
+                "directions": [
+                    "output",
+                ],
+                "examples": [],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "shared",
+                    "pointer": "/schemas/ServicePrincipal",
+                },
+            },
+            "Task": {
+                "kind": "object",
+                "properties": [
+                    {
+                        "name": "taskId",
+                        "type": {
+                            "kind": "scalar",
+                            "type": "string",
+                            "format": "uuid",
+                            "refinements": {},
+                        },
+                        "optional": False,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "shared",
+                            "pointer": "/schemas/Task/properties/taskId",
+                        },
+                    },
+                    {
+                        "name": "title",
+                        "type": {
+                            "kind": "scalar",
+                            "type": "string",
+                            "refinements": {
+                                "minLength": 1,
+                                "maxLength": 200,
+                            },
+                        },
+                        "optional": False,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "shared",
+                            "pointer": "/schemas/Task/properties/title",
+                        },
+                    },
+                    {
+                        "name": "state",
+                        "type": {
+                            "kind": "enum",
+                            "enum": "TaskState",
+                        },
+                        "optional": False,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "shared",
+                            "pointer": "/schemas/Task/properties/state",
+                        },
+                    },
+                    {
+                        "name": "effort",
+                        "type": {
+                            "kind": "scalar",
+                            "type": "integer",
+                            "refinements": {
+                                "minimum": "0",
+                            },
+                        },
+                        "optional": True,
+                        "nullable": False,
+                        "sensitive": False,
+                        "restrictedTo": {
+                            "right": "tasks.seeEffort",
+                            "origin": {
+                                "layer": "shared",
+                                "pointer": "/schemas/Task/properties/effort/restrictedTo",
+                            },
+                        },
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "shared",
+                            "pointer": "/schemas/Task/properties/effort",
+                        },
+                    },
+                    {
+                        "name": "version",
+                        "type": {
+                            "kind": "scalar",
+                            "type": "integer",
+                            "refinements": {
+                                "minimum": "1",
+                            },
+                        },
+                        "optional": False,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "shared",
+                            "pointer": "/schemas/Task/properties/version",
+                        },
+                    },
+                    {
+                        "name": "createdAt",
+                        "type": {
+                            "kind": "scalar",
+                            "type": "string",
+                            "format": "date-time",
+                            "refinements": {},
+                        },
+                        "optional": False,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "shared",
+                            "pointer": "/schemas/Task/properties/createdAt",
+                        },
+                    },
+                ],
+                "id": "Task",
+                "name": {
+                    "segments": [
+                        "task",
+                    ],
+                    "role": "schema",
+                },
+                "directions": [
+                    "output",
+                ],
+                "examples": [],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "shared",
+                    "pointer": "/schemas/Task",
+                },
+            },
+            "TaskQuery": {
+                "kind": "object",
+                "properties": [
+                    {
+                        "name": "text",
+                        "type": {
+                            "kind": "scalar",
+                            "type": "string",
+                            "refinements": {
+                                "maxLength": 200,
+                            },
+                        },
+                        "optional": True,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/schemas/TaskQuery/properties/text",
+                        },
+                    },
+                    {
+                        "name": "states",
+                        "type": {
+                            "kind": "array",
+                            "items": {
+                                "kind": "enum",
+                                "enum": "TaskState",
+                            },
+                            "maxItems": 3,
+                        },
+                        "optional": True,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/schemas/TaskQuery/properties/states",
+                        },
+                    },
+                ],
+                "id": "TaskQuery",
+                "name": {
+                    "segments": [
+                        "task",
+                        "query",
+                    ],
+                    "role": "schema",
+                },
+                "directions": [
+                    "input",
+                ],
+                "examples": [],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "api",
+                    "pointer": "/schemas/TaskQuery",
+                },
+            },
+            "TaskSearchResult": {
+                "kind": "object",
+                "properties": [
+                    {
+                        "name": "items",
+                        "type": {
+                            "kind": "array",
+                            "items": {
+                                "kind": "ref",
+                                "schema": "Task",
+                            },
+                        },
+                        "optional": False,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/schemas/TaskSearchResult/properties/items",
+                        },
+                    },
+                    {
+                        "name": "total",
+                        "type": {
+                            "kind": "scalar",
+                            "type": "integer",
+                            "refinements": {
+                                "minimum": "0",
+                            },
+                        },
+                        "optional": True,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/schemas/TaskSearchResult/properties/total",
+                        },
+                    },
+                ],
+                "id": "TaskSearchResult",
+                "name": {
+                    "segments": [
+                        "task",
+                        "search",
+                        "result",
+                    ],
+                    "role": "schema",
+                },
+                "directions": [
+                    "output",
+                ],
+                "examples": [],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "api",
+                    "pointer": "/schemas/TaskSearchResult",
+                },
+            },
+            "UpdatePreferences": {
+                "kind": "object",
+                "properties": [
+                    {
+                        "name": "locale",
+                        "type": {
+                            "kind": "scalar",
+                            "type": "string",
+                            "refinements": {
+                                "minLength": 2,
+                                "maxLength": 35,
+                            },
+                        },
+                        "optional": True,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/schemas/Preferences/properties/locale",
+                        },
+                    },
+                    {
+                        "name": "digest",
+                        "type": {
+                            "kind": "scalar",
+                            "type": "boolean",
+                            "refinements": {},
+                        },
+                        "optional": True,
+                        "nullable": False,
+                        "sensitive": False,
+                        "restrictedTo": {
+                            "right": "preferences.digest",
+                            "inputPolicy": "strip",
+                            "origin": {
+                                "layer": "api",
+                                "pointer": "/schemas/UpdatePreferences/properties/digest/restrictedTo",
+                            },
+                        },
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/schemas/Preferences/properties/digest",
+                        },
+                    },
+                ],
+                "id": "UpdatePreferences",
+                "name": {
+                    "segments": [
+                        "update",
+                        "preferences",
+                    ],
+                    "role": "schema",
+                },
+                "directions": [
+                    "input",
+                ],
+                "examples": [],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "api",
+                    "pointer": "/schemas/UpdatePreferences",
+                },
+            },
+            "UpdateTask": {
+                "kind": "object",
+                "properties": [
+                    {
+                        "name": "title",
+                        "type": {
+                            "kind": "scalar",
+                            "type": "string",
+                            "refinements": {
+                                "minLength": 1,
+                                "maxLength": 200,
+                            },
+                        },
+                        "optional": True,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "shared",
+                            "pointer": "/schemas/Task/properties/title",
+                        },
+                    },
+                    {
+                        "name": "state",
+                        "type": {
+                            "kind": "enum",
+                            "enum": "TaskState",
+                        },
+                        "optional": True,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "shared",
+                            "pointer": "/schemas/Task/properties/state",
+                        },
+                    },
+                    {
+                        "name": "effort",
+                        "type": {
+                            "kind": "scalar",
+                            "type": "integer",
+                            "refinements": {
+                                "minimum": "0",
+                            },
+                        },
+                        "optional": True,
+                        "nullable": False,
+                        "sensitive": False,
+                        "restrictedTo": {
+                            "right": "tasks.seeEffort",
+                            "origin": {
+                                "layer": "shared",
+                                "pointer": "/schemas/Task/properties/effort/restrictedTo",
+                            },
+                        },
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "shared",
+                            "pointer": "/schemas/Task/properties/effort",
+                        },
+                    },
+                    {
+                        "name": "expectedVersion",
+                        "type": {
+                            "kind": "scalar",
+                            "type": "integer",
+                            "refinements": {
+                                "minimum": "1",
+                            },
+                        },
+                        "optional": False,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/concurrency/version",
+                        },
+                        "derivedFrom": {
+                            "derivation": "concurrency.version",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/concurrency/version",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "id": "UpdateTask",
+                "name": {
+                    "segments": [
+                        "update",
+                        "task",
+                    ],
+                    "role": "schema",
+                },
+                "directions": [
+                    "input",
+                ],
+                "examples": [],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "api",
+                    "pointer": "/schemas/UpdateTask",
+                },
+            },
+            "UserPrincipal": {
+                "kind": "object",
+                "properties": [
+                    {
+                        "name": "userId",
+                        "type": {
+                            "kind": "scalar",
+                            "type": "string",
+                            "format": "uuid",
+                            "refinements": {},
+                        },
+                        "optional": False,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "shared",
+                            "pointer": "/schemas/UserPrincipal/properties/userId",
+                        },
+                    },
+                ],
+                "id": "UserPrincipal",
+                "name": {
+                    "segments": [
+                        "user",
+                        "principal",
+                    ],
+                    "role": "schema",
+                },
+                "directions": [
+                    "output",
+                ],
+                "examples": [],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "shared",
+                    "pointer": "/schemas/UserPrincipal",
+                },
+            },
+            "WebhookCaller": {
+                "kind": "object",
+                "properties": [
+                    {
+                        "name": "account",
+                        "type": {
+                            "kind": "scalar",
+                            "type": "string",
+                            "refinements": {},
+                        },
+                        "optional": False,
+                        "nullable": False,
+                        "sensitive": False,
+                        "deprecated": False,
+                        "docs": {},
+                        "extensions": {},
+                        "origin": {
+                            "layer": "shared",
+                            "pointer": "/schemas/WebhookCaller/properties/account",
+                        },
+                    },
+                ],
+                "id": "WebhookCaller",
+                "name": {
+                    "segments": [
+                        "webhook",
+                        "caller",
+                    ],
+                    "role": "schema",
+                },
+                "directions": [
+                    "output",
+                ],
+                "examples": [],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "shared",
+                    "pointer": "/schemas/WebhookCaller",
+                },
+            },
+        },
+        "enums": {
+            "ReauthIntent": {
+                "id": "ReauthIntent",
+                "name": {
+                    "segments": [
+                        "reauth",
+                        "intent",
+                    ],
+                    "role": "schema",
+                },
+                "values": [
+                    "purge_task",
+                ],
+                "localReason": "The actions that ask for a fresh sign-in.",
+                "directions": [
+                    "input",
+                ],
+                "docs": {},
+                "origin": {
+                    "layer": "shared",
+                    "pointer": "/enums/ReauthIntent",
+                },
+            },
+            "Role": {
+                "id": "Role",
+                "name": {
+                    "segments": [
+                        "role",
+                    ],
+                    "role": "schema",
+                },
+                "values": [
+                    "owner",
+                    "editor",
+                    "viewer",
+                ],
+                "localReason": "Roles are local to this product.",
+                "directions": [
+                    "input",
+                ],
+                "docs": {},
+                "origin": {
+                    "layer": "shared",
+                    "pointer": "/enums/Role",
+                },
+            },
+            "Service": {
+                "id": "Service",
+                "name": {
+                    "segments": [
+                        "service",
+                    ],
+                    "role": "schema",
+                },
+                "values": [
+                    "catalog",
+                    "ticketing",
+                ],
+                "localReason": "The product's internal services.",
+                "directions": [
+                    "input",
+                    "output",
+                ],
+                "docs": {},
+                "origin": {
+                    "layer": "shared",
+                    "pointer": "/enums/Service",
+                },
+            },
+            "Surface": {
+                "id": "Surface",
+                "name": {
+                    "segments": [
+                        "surface",
+                    ],
+                    "role": "schema",
+                },
+                "values": [
+                    "app",
+                    "studio",
+                ],
+                "localReason": "The product's entry points.",
+                "directions": [
+                    "input",
+                ],
+                "docs": {},
+                "origin": {
+                    "layer": "shared",
+                    "pointer": "/enums/Surface",
+                },
+            },
+            "TaskState": {
+                "id": "TaskState",
+                "name": {
+                    "segments": [
+                        "task",
+                        "state",
+                    ],
+                    "role": "schema",
+                },
+                "values": [
+                    "open",
+                    "done",
+                    "archived",
+                ],
+                "localReason": "Task states belong to this api.",
+                "directions": [
+                    "input",
+                    "output",
+                ],
+                "docs": {},
+                "origin": {
+                    "layer": "shared",
+                    "pointer": "/enums/TaskState",
+                },
+            },
+        },
+        "operations": [
+            {
+                "kind": "httpOperation",
+                "id": "archiveTask",
+                "name": {
+                    "segments": [
+                        "archive",
+                        "task",
+                    ],
+                    "role": "operation",
+                },
+                "surface": "app",
+                "resource": {
+                    "type": "tasks",
+                    "idParam": "taskId",
+                    "idProperty": "taskId",
+                },
+                "features": [],
+                "method": "post",
+                "path": "/v1/channels/{channelId}/tasks/{taskId}/archive",
+                "safe": False,
+                "params": {
+                    "path": [
+                        {
+                            "name": "channelId",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "format": "uuid",
+                                "refinements": {},
+                            },
+                            "required": True,
+                            "origin": {
+                                "layer": "api",
+                                "pointer": "/surfaces/app/routes/channels/id/channelId",
+                            },
+                        },
+                        {
+                            "name": "taskId",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "format": "uuid",
+                                "refinements": {},
+                            },
+                            "required": True,
+                            "origin": {
+                                "layer": "api",
+                                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/id/taskId",
+                            },
+                        },
+                    ],
+                    "query": [],
+                    "header": [
+                        {
+                            "name": "Authorization",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "refinements": {},
+                            },
+                            "required": False,
+                            "derivedFrom": {
+                                "derivation": "identity.authenticate",
+                                "from": [
+                                    {
+                                        "layer": "api",
+                                        "pointer": "/surfaces/app/identity",
+                                    },
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/schemes/bearer",
+                                    },
+                                ],
+                            },
+                        },
+                        {
+                            "name": "X-Csrf-Token",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "refinements": {},
+                            },
+                            "required": False,
+                            "derivedFrom": {
+                                "derivation": "csrf.cookieWrite",
+                                "from": [
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/identities/user",
+                                    },
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/schemes/sessionCookie",
+                                    },
+                                ],
+                            },
+                        },
+                        {
+                            "name": "Idempotency-Key",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "refinements": {},
+                            },
+                            "required": True,
+                            "derivedFrom": {
+                                "derivation": "idempotency.write",
+                                "from": [
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/conventions/idempotency",
+                                    },
+                                ],
+                            },
+                        },
+                    ],
+                },
+                "unknownQuery": {
+                    "policy": "refuse",
+                },
+                "access": {
+                    "kind": "identity",
+                    "identity": "user",
+                    "schemes": [
+                        "bearer",
+                        "sessionCookie",
+                    ],
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/app/identity",
+                    },
+                },
+                "callerKinds": [
+                    "identified",
+                ],
+                "principalRequires": [],
+                "scopes": [
+                    {
+                        "scope": "channel",
+                        "source": {
+                            "in": "path",
+                            "name": "channelId",
+                        },
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/channels/member/scopes/channel",
+                        },
+                    },
+                ],
+                "requires": [],
+                "bindings": [],
+                "input": {
+                    "media": "application/json",
+                    "schema": {
+                        "kind": "ref",
+                        "schema": "ArchiveTask",
+                    },
+                    "bodyLimitBytes": 1048576,
+                    "rawBody": False,
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/archive/input",
+                    },
+                },
+                "responses": [
+                    {
+                        "status": 200,
+                        "media": "application/json",
+                        "body": {
+                            "kind": "ref",
+                            "schema": "Task",
+                        },
+                        "shape": "item",
+                        "headers": [
+                            {
+                                "name": "Idempotency-Replayed",
+                                "type": {
+                                    "kind": "scalar",
+                                    "type": "boolean",
+                                    "refinements": {},
+                                },
+                                "required": False,
+                                "derivedFrom": {
+                                    "derivation": "idempotency.write",
+                                    "from": [
+                                        {
+                                            "layer": "shared",
+                                            "pointer": "/conventions/idempotency",
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/archive/output",
+                        },
+                        "derivedFrom": {
+                            "derivation": "response.format",
+                            "from": [
+                                {
+                                    "layer": "core",
+                                    "pointer": "/formats/bare",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "errors": [
+                    {
+                        "code": "api.schema_invalid",
+                        "roles": [
+                            {
+                                "role": "schemaInvalid",
+                                "params": {
+                                    "kind": "object",
+                                    "members": [
+                                        {
+                                            "name": {
+                                                "kind": "text",
+                                                "text": "issues",
+                                            },
+                                            "value": {
+                                                "kind": "each",
+                                                "of": "issues",
+                                                "as": {
+                                                    "kind": "object",
+                                                    "members": [
+                                                        {
+                                                            "name": {
+                                                                "kind": "text",
+                                                                "text": "pointer",
+                                                            },
+                                                            "value": {
+                                                                "kind": "slot",
+                                                                "slot": "item",
+                                                                "path": [
+                                                                    "pointer",
+                                                                ],
+                                                            },
+                                                        },
+                                                        {
+                                                            "name": {
+                                                                "kind": "text",
+                                                                "text": "rule",
+                                                            },
+                                                            "value": {
+                                                                "kind": "slot",
+                                                                "slot": "item",
+                                                                "path": [
+                                                                    "rule",
+                                                                ],
+                                                            },
+                                                        },
+                                                    ],
+                                                },
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "input.invalid",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/idempotency",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": (
+                                        "/surfaces/app/routes/channels/member/routes/tasks/member/routes/archive"
+                                    ),
+                                },
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/errors/derived/schemaInvalid",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.unauthenticated",
+                        "roles": [
+                            {
+                                "role": "unauthenticated",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "identity.authenticate",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/identity",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.csrf_invalid",
+                        "roles": [
+                            {
+                                "role": "csrfInvalid",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "csrf.cookieWrite",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/identities/user",
+                                },
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/schemes/sessionCookie",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.not_found",
+                        "roles": [
+                            {
+                                "role": "notFound",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "member.notFound",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": (
+                                        "/surfaces/app/routes/channels/member/routes/tasks/member/routes/archive"
+                                    ),
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/scopes/channel",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.idempotency_in_progress",
+                        "roles": [
+                            {
+                                "role": "idempotencyInProgress",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "idempotency.write",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/idempotency",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "state.conflict",
+                        "roles": [
+                            {
+                                "role": "stateConflict",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "concurrency.version",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/concurrency",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": (
+                                        "/surfaces/app/routes/channels/member/routes/tasks/member/routes/archive/"
+                                        "concurrency"
+                                    ),
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.payload_too_large",
+                        "roles": [
+                            {
+                                "role": "payloadTooLarge",
+                                "params": {
+                                    "kind": "object",
+                                    "members": [
+                                        {
+                                            "name": {
+                                                "kind": "text",
+                                                "text": "limitBytes",
+                                            },
+                                            "value": {
+                                                "kind": "slot",
+                                                "slot": "limitBytes",
+                                                "path": [],
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "body.limit",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": (
+                                        "/surfaces/app/routes/channels/member/routes/tasks/member/routes/archive/input"
+                                    ),
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.unsupported_media_type",
+                        "roles": [
+                            {
+                                "role": "unsupportedMediaType",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "body.media",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": (
+                                        "/surfaces/app/routes/channels/member/routes/tasks/member/routes/archive/input"
+                                    ),
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.idempotency_key_reused",
+                        "roles": [
+                            {
+                                "role": "idempotencyKeyReused",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "idempotency.write",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/idempotency",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.internal",
+                        "roles": [
+                            {
+                                "role": "undeclaredStatus",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "response.undeclared",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/errors/every/0",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": (
+                                        "/surfaces/app/routes/channels/member/routes/tasks/member/routes/archive"
+                                    ),
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "fieldRights": [
+                    {
+                        "schema": "Task",
+                        "pointer": "/effort",
+                        "right": "tasks.seeEffort",
+                        "subject": {
+                            "source": {
+                                "in": "holderField",
+                                "name": "taskId",
+                            },
+                        },
+                        "direction": "output",
+                        "derivedFrom": {
+                            "derivation": "fieldRight.restricted",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/schemas/Task/properties/effort/restrictedTo",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "idempotency": {
+                    "kind": "derived",
+                    "header": "Idempotency-Key",
+                    "replayHeader": "Idempotency-Replayed",
+                    "lifetimeMs": 86400000,
+                    "required": True,
+                    "enforce": "boundary",
+                    "derivedFrom": {
+                        "derivation": "idempotency.write",
+                        "from": [
+                            {
+                                "layer": "shared",
+                                "pointer": "/conventions/idempotency",
+                            },
+                        ],
+                    },
+                },
+                "concurrency": {
+                    "version": {
+                        "in": "body",
+                        "name": "expectedVersion",
+                    },
+                    "field": "version",
+                    "derivedFrom": {
+                        "derivation": "concurrency.version",
+                        "from": [
+                            {
+                                "layer": "api",
+                                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/concurrency",
+                            },
+                            {
+                                "layer": "api",
+                                "pointer": (
+                                    "/surfaces/app/routes/channels/member/routes/tasks/member/routes/archive/"
+                                    "concurrency"
+                                ),
+                            },
+                        ],
+                    },
+                },
+                "upstream": [],
+                "maturity": {
+                    "level": "provisional",
+                    "source": "api",
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/api/maturity",
+                    },
+                },
+                "internal": True,
+                "csrf": {
+                    "kind": "derived",
+                    "header": "X-Csrf-Token",
+                    "derivedFrom": {
+                        "derivation": "csrf.cookieWrite",
+                        "from": [
+                            {
+                                "layer": "shared",
+                                "pointer": "/identities/user",
+                            },
+                            {
+                                "layer": "shared",
+                                "pointer": "/schemes/sessionCookie",
+                            },
+                        ],
+                    },
+                },
+                "format": "bare",
+                "tags": [],
+                "examples": {},
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/archive",
+                },
+            },
+            {
+                "kind": "httpOperation",
+                "id": "assignTask",
+                "name": {
+                    "segments": [
+                        "assign",
+                        "task",
+                    ],
+                    "role": "operation",
+                },
+                "surface": "app",
+                "resource": {
+                    "type": "tasks",
+                    "idParam": "taskId",
+                    "idProperty": "taskId",
+                },
+                "features": [],
+                "method": "post",
+                "path": "/v1/channels/{channelId}/tasks/{taskId}/assign",
+                "safe": False,
+                "params": {
+                    "path": [
+                        {
+                            "name": "channelId",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "format": "uuid",
+                                "refinements": {},
+                            },
+                            "required": True,
+                            "origin": {
+                                "layer": "api",
+                                "pointer": "/surfaces/app/routes/channels/id/channelId",
+                            },
+                        },
+                        {
+                            "name": "taskId",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "format": "uuid",
+                                "refinements": {},
+                            },
+                            "required": True,
+                            "origin": {
+                                "layer": "api",
+                                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/id/taskId",
+                            },
+                        },
+                    ],
+                    "query": [],
+                    "header": [
+                        {
+                            "name": "Authorization",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "refinements": {},
+                            },
+                            "required": False,
+                            "derivedFrom": {
+                                "derivation": "identity.authenticate",
+                                "from": [
+                                    {
+                                        "layer": "api",
+                                        "pointer": "/surfaces/app/identity",
+                                    },
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/schemes/bearer",
+                                    },
+                                ],
+                            },
+                        },
+                        {
+                            "name": "X-Csrf-Token",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "refinements": {},
+                            },
+                            "required": False,
+                            "derivedFrom": {
+                                "derivation": "csrf.cookieWrite",
+                                "from": [
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/identities/user",
+                                    },
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/schemes/sessionCookie",
+                                    },
+                                ],
+                            },
+                        },
+                        {
+                            "name": "Idempotency-Key",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "refinements": {},
+                            },
+                            "required": True,
+                            "derivedFrom": {
+                                "derivation": "idempotency.write",
+                                "from": [
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/conventions/idempotency",
+                                    },
+                                ],
+                            },
+                        },
+                    ],
+                },
+                "unknownQuery": {
+                    "policy": "refuse",
+                },
+                "access": {
+                    "kind": "identity",
+                    "identity": "user",
+                    "schemes": [
+                        "bearer",
+                        "sessionCookie",
+                    ],
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/app/identity",
+                    },
+                },
+                "callerKinds": [
+                    "identified",
+                ],
+                "principalRequires": [],
+                "scopes": [
+                    {
+                        "scope": "channel",
+                        "source": {
+                            "in": "path",
+                            "name": "channelId",
+                        },
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/channels/member/scopes/channel",
+                        },
+                    },
+                ],
+                "requires": [
+                    {
+                        "kind": "right",
+                        "right": "roles",
+                        "params": {
+                            "allowed": [
+                                "owner",
+                                "editor",
+                            ],
+                        },
+                        "subject": {
+                            "source": {
+                                "in": "scope",
+                                "name": "channel",
+                            },
+                            "defaulted": True,
+                        },
+                        "entry": "channelEditor",
+                        "origin": {
+                            "layer": "api",
+                            "pointer": (
+                                "/surfaces/app/routes/channels/member/routes/tasks/member/routes/assign/requires/0"
+                            ),
+                        },
+                    },
+                ],
+                "bindings": [],
+                "input": {
+                    "media": "application/json",
+                    "schema": {
+                        "kind": "ref",
+                        "schema": "AssignTaskInput",
+                    },
+                    "bodyLimitBytes": 1048576,
+                    "rawBody": False,
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/assign/input",
+                    },
+                },
+                "responses": [
+                    {
+                        "status": 200,
+                        "media": "application/json",
+                        "body": {
+                            "kind": "ref",
+                            "schema": "Task",
+                        },
+                        "shape": "item",
+                        "headers": [
+                            {
+                                "name": "Idempotency-Replayed",
+                                "type": {
+                                    "kind": "scalar",
+                                    "type": "boolean",
+                                    "refinements": {},
+                                },
+                                "required": False,
+                                "derivedFrom": {
+                                    "derivation": "idempotency.write",
+                                    "from": [
+                                        {
+                                            "layer": "shared",
+                                            "pointer": "/conventions/idempotency",
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/assign/output",
+                        },
+                        "derivedFrom": {
+                            "derivation": "response.format",
+                            "from": [
+                                {
+                                    "layer": "core",
+                                    "pointer": "/formats/bare",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "errors": [
+                    {
+                        "code": "api.schema_invalid",
+                        "roles": [
+                            {
+                                "role": "schemaInvalid",
+                                "params": {
+                                    "kind": "object",
+                                    "members": [
+                                        {
+                                            "name": {
+                                                "kind": "text",
+                                                "text": "issues",
+                                            },
+                                            "value": {
+                                                "kind": "each",
+                                                "of": "issues",
+                                                "as": {
+                                                    "kind": "object",
+                                                    "members": [
+                                                        {
+                                                            "name": {
+                                                                "kind": "text",
+                                                                "text": "pointer",
+                                                            },
+                                                            "value": {
+                                                                "kind": "slot",
+                                                                "slot": "item",
+                                                                "path": [
+                                                                    "pointer",
+                                                                ],
+                                                            },
+                                                        },
+                                                        {
+                                                            "name": {
+                                                                "kind": "text",
+                                                                "text": "rule",
+                                                            },
+                                                            "value": {
+                                                                "kind": "slot",
+                                                                "slot": "item",
+                                                                "path": [
+                                                                    "rule",
+                                                                ],
+                                                            },
+                                                        },
+                                                    ],
+                                                },
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "input.invalid",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/idempotency",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/assign",
+                                },
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/errors/derived/schemaInvalid",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.unauthenticated",
+                        "roles": [
+                            {
+                                "role": "unauthenticated",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "identity.authenticate",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/identity",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.csrf_invalid",
+                        "roles": [
+                            {
+                                "role": "csrfInvalid",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "csrf.cookieWrite",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/identities/user",
+                                },
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/schemes/sessionCookie",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.forbidden",
+                        "derivedFrom": {
+                            "derivation": "requirement.errors",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": (
+                                        "/surfaces/app/routes/channels/member/routes/tasks/member/routes/assign/"
+                                        "requires/0"
+                                    ),
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.not_found",
+                        "roles": [
+                            {
+                                "role": "notFound",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "member.notFound",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/assign",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/scopes/channel",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.idempotency_in_progress",
+                        "roles": [
+                            {
+                                "role": "idempotencyInProgress",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "idempotency.write",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/idempotency",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.payload_too_large",
+                        "roles": [
+                            {
+                                "role": "payloadTooLarge",
+                                "params": {
+                                    "kind": "object",
+                                    "members": [
+                                        {
+                                            "name": {
+                                                "kind": "text",
+                                                "text": "limitBytes",
+                                            },
+                                            "value": {
+                                                "kind": "slot",
+                                                "slot": "limitBytes",
+                                                "path": [],
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "body.limit",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": (
+                                        "/surfaces/app/routes/channels/member/routes/tasks/member/routes/assign/input"
+                                    ),
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.unsupported_media_type",
+                        "roles": [
+                            {
+                                "role": "unsupportedMediaType",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "body.media",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": (
+                                        "/surfaces/app/routes/channels/member/routes/tasks/member/routes/assign/input"
+                                    ),
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.idempotency_key_reused",
+                        "roles": [
+                            {
+                                "role": "idempotencyKeyReused",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "idempotency.write",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/idempotency",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.internal",
+                        "roles": [
+                            {
+                                "role": "undeclaredStatus",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "response.undeclared",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/errors/every/0",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/assign",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "fieldRights": [
+                    {
+                        "schema": "Task",
+                        "pointer": "/effort",
+                        "right": "tasks.seeEffort",
+                        "subject": {
+                            "source": {
+                                "in": "holderField",
+                                "name": "taskId",
+                            },
+                        },
+                        "direction": "output",
+                        "derivedFrom": {
+                            "derivation": "fieldRight.restricted",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/schemas/Task/properties/effort/restrictedTo",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "idempotency": {
+                    "kind": "derived",
+                    "header": "Idempotency-Key",
+                    "replayHeader": "Idempotency-Replayed",
+                    "lifetimeMs": 86400000,
+                    "required": True,
+                    "enforce": "boundary",
+                    "derivedFrom": {
+                        "derivation": "idempotency.write",
+                        "from": [
+                            {
+                                "layer": "shared",
+                                "pointer": "/conventions/idempotency",
+                            },
+                        ],
+                    },
+                },
+                "upstream": [],
+                "maturity": {
+                    "level": "provisional",
+                    "source": "api",
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/api/maturity",
+                    },
+                },
+                "internal": False,
+                "csrf": {
+                    "kind": "derived",
+                    "header": "X-Csrf-Token",
+                    "derivedFrom": {
+                        "derivation": "csrf.cookieWrite",
+                        "from": [
+                            {
+                                "layer": "shared",
+                                "pointer": "/identities/user",
+                            },
+                            {
+                                "layer": "shared",
+                                "pointer": "/schemes/sessionCookie",
+                            },
+                        ],
+                    },
+                },
+                "format": "bare",
+                "tags": [],
+                "examples": {},
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/assign",
+                },
+            },
+            {
+                "kind": "httpOperation",
+                "id": "createTask",
+                "name": {
+                    "segments": [
+                        "create",
+                        "task",
+                    ],
+                    "role": "operation",
+                },
+                "surface": "app",
+                "op": "create",
+                "resource": {
+                    "type": "tasks",
+                    "idProperty": "taskId",
+                },
+                "features": [],
+                "method": "post",
+                "path": "/v1/channels/{channelId}/tasks",
+                "safe": False,
+                "params": {
+                    "path": [
+                        {
+                            "name": "channelId",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "format": "uuid",
+                                "refinements": {},
+                            },
+                            "required": True,
+                            "origin": {
+                                "layer": "api",
+                                "pointer": "/surfaces/app/routes/channels/id/channelId",
+                            },
+                        },
+                    ],
+                    "query": [],
+                    "header": [
+                        {
+                            "name": "Authorization",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "refinements": {},
+                            },
+                            "required": False,
+                            "derivedFrom": {
+                                "derivation": "identity.authenticate",
+                                "from": [
+                                    {
+                                        "layer": "api",
+                                        "pointer": "/surfaces/app/identity",
+                                    },
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/schemes/bearer",
+                                    },
+                                ],
+                            },
+                        },
+                        {
+                            "name": "X-Csrf-Token",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "refinements": {},
+                            },
+                            "required": False,
+                            "derivedFrom": {
+                                "derivation": "csrf.cookieWrite",
+                                "from": [
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/identities/user",
+                                    },
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/schemes/sessionCookie",
+                                    },
+                                ],
+                            },
+                        },
+                        {
+                            "name": "Idempotency-Key",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "refinements": {},
+                            },
+                            "required": True,
+                            "derivedFrom": {
+                                "derivation": "idempotency.write",
+                                "from": [
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/conventions/idempotency",
+                                    },
+                                ],
+                            },
+                        },
+                    ],
+                },
+                "unknownQuery": {
+                    "policy": "refuse",
+                },
+                "access": {
+                    "kind": "identity",
+                    "identity": "user",
+                    "schemes": [
+                        "bearer",
+                        "sessionCookie",
+                    ],
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/app/identity",
+                    },
+                },
+                "callerKinds": [
+                    "identified",
+                ],
+                "principalRequires": [],
+                "scopes": [
+                    {
+                        "scope": "channel",
+                        "source": {
+                            "in": "path",
+                            "name": "channelId",
+                        },
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/channels/member/scopes/channel",
+                        },
+                    },
+                ],
+                "requires": [
+                    {
+                        "kind": "rule",
+                        "rule": "throttle",
+                        "bucket": "write",
+                        "entry": "writeThrottle",
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/create/requires/0",
+                        },
+                    },
+                    {
+                        "kind": "right",
+                        "right": "roles",
+                        "params": {
+                            "allowed": [
+                                "owner",
+                                "editor",
+                            ],
+                        },
+                        "subject": {
+                            "source": {
+                                "in": "scope",
+                                "name": "channel",
+                            },
+                            "defaulted": True,
+                        },
+                        "entry": "channelEditor",
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/create/requires/1",
+                        },
+                    },
+                ],
+                "bindings": [],
+                "input": {
+                    "media": "application/json",
+                    "schema": {
+                        "kind": "ref",
+                        "schema": "CreateTask",
+                    },
+                    "bodyLimitBytes": 1048576,
+                    "rawBody": False,
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/create/input",
+                    },
+                },
+                "responses": [
+                    {
+                        "status": 201,
+                        "media": "application/json",
+                        "body": {
+                            "kind": "ref",
+                            "schema": "Task",
+                        },
+                        "shape": "item",
+                        "headers": [
+                            {
+                                "name": "Idempotency-Replayed",
+                                "type": {
+                                    "kind": "scalar",
+                                    "type": "boolean",
+                                    "refinements": {},
+                                },
+                                "required": False,
+                                "derivedFrom": {
+                                    "derivation": "idempotency.write",
+                                    "from": [
+                                        {
+                                            "layer": "shared",
+                                            "pointer": "/conventions/idempotency",
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/item",
+                        },
+                        "derivedFrom": {
+                            "derivation": "response.format",
+                            "from": [
+                                {
+                                    "layer": "core",
+                                    "pointer": "/formats/bare",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "errors": [
+                    {
+                        "code": "api.schema_invalid",
+                        "roles": [
+                            {
+                                "role": "schemaInvalid",
+                                "params": {
+                                    "kind": "object",
+                                    "members": [
+                                        {
+                                            "name": {
+                                                "kind": "text",
+                                                "text": "issues",
+                                            },
+                                            "value": {
+                                                "kind": "each",
+                                                "of": "issues",
+                                                "as": {
+                                                    "kind": "object",
+                                                    "members": [
+                                                        {
+                                                            "name": {
+                                                                "kind": "text",
+                                                                "text": "pointer",
+                                                            },
+                                                            "value": {
+                                                                "kind": "slot",
+                                                                "slot": "item",
+                                                                "path": [
+                                                                    "pointer",
+                                                                ],
+                                                            },
+                                                        },
+                                                        {
+                                                            "name": {
+                                                                "kind": "text",
+                                                                "text": "rule",
+                                                            },
+                                                            "value": {
+                                                                "kind": "slot",
+                                                                "slot": "item",
+                                                                "path": [
+                                                                    "rule",
+                                                                ],
+                                                            },
+                                                        },
+                                                    ],
+                                                },
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "input.invalid",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/idempotency",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/create",
+                                },
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/errors/derived/schemaInvalid",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.unauthenticated",
+                        "roles": [
+                            {
+                                "role": "unauthenticated",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "identity.authenticate",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/identity",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.csrf_invalid",
+                        "roles": [
+                            {
+                                "role": "csrfInvalid",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "csrf.cookieWrite",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/identities/user",
+                                },
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/schemes/sessionCookie",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.forbidden",
+                        "roles": [
+                            {
+                                "role": "forbidden",
+                                "params": {
+                                    "kind": "object",
+                                    "members": [
+                                        {
+                                            "name": {
+                                                "kind": "text",
+                                                "text": "pointer",
+                                            },
+                                            "value": {
+                                                "kind": "slot",
+                                                "slot": "pointer",
+                                                "path": [],
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "requirement.errors",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/schemas/CreateTask/properties/effort/restrictedTo",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": (
+                                        "/surfaces/app/routes/channels/member/routes/tasks/ops/create/requires/1"
+                                    ),
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.not_found",
+                        "derivedFrom": {
+                            "derivation": "scope.errors",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/scopes/channel",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.idempotency_in_progress",
+                        "roles": [
+                            {
+                                "role": "idempotencyInProgress",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "idempotency.write",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/idempotency",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.payload_too_large",
+                        "roles": [
+                            {
+                                "role": "payloadTooLarge",
+                                "params": {
+                                    "kind": "object",
+                                    "members": [
+                                        {
+                                            "name": {
+                                                "kind": "text",
+                                                "text": "limitBytes",
+                                            },
+                                            "value": {
+                                                "kind": "slot",
+                                                "slot": "limitBytes",
+                                                "path": [],
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "body.limit",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/create/input",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.unsupported_media_type",
+                        "roles": [
+                            {
+                                "role": "unsupportedMediaType",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "body.media",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/create/input",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.idempotency_key_reused",
+                        "roles": [
+                            {
+                                "role": "idempotencyKeyReused",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "idempotency.write",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/idempotency",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.rate_limited",
+                        "retryHeader": {
+                            "name": "Retry-After",
+                            "param": "retryAfterMs",
+                            "unit": "s",
+                            "derivedFrom": {
+                                "derivation": "rule.bucket",
+                                "from": [
+                                    {
+                                        "layer": "api",
+                                        "pointer": (
+                                            "/surfaces/app/routes/channels/member/routes/tasks/ops/create/requires/0"
+                                        ),
+                                    },
+                                ],
+                            },
+                        },
+                        "derivedFrom": {
+                            "derivation": "requirement.errors",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": (
+                                        "/surfaces/app/routes/channels/member/routes/tasks/ops/create/requires/0"
+                                    ),
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.internal",
+                        "roles": [
+                            {
+                                "role": "undeclaredStatus",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "response.undeclared",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/errors/every/0",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/create",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "fieldRights": [
+                    {
+                        "schema": "CreateTask",
+                        "pointer": "/effort",
+                        "right": "roles",
+                        "params": {
+                            "allowed": [
+                                "owner",
+                            ],
+                        },
+                        "subject": {
+                            "source": {
+                                "in": "scope",
+                                "name": "channel",
+                            },
+                        },
+                        "direction": "input",
+                        "inputPolicy": "reject",
+                        "derivedFrom": {
+                            "derivation": "fieldRight.restricted",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/schemas/CreateTask/properties/effort/restrictedTo",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "schema": "Task",
+                        "pointer": "/effort",
+                        "right": "tasks.seeEffort",
+                        "subject": {
+                            "source": {
+                                "in": "holderField",
+                                "name": "taskId",
+                            },
+                        },
+                        "direction": "output",
+                        "derivedFrom": {
+                            "derivation": "fieldRight.restricted",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/schemas/Task/properties/effort/restrictedTo",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "idempotency": {
+                    "kind": "derived",
+                    "header": "Idempotency-Key",
+                    "replayHeader": "Idempotency-Replayed",
+                    "lifetimeMs": 86400000,
+                    "required": True,
+                    "enforce": "boundary",
+                    "derivedFrom": {
+                        "derivation": "idempotency.write",
+                        "from": [
+                            {
+                                "layer": "shared",
+                                "pointer": "/conventions/idempotency",
+                            },
+                        ],
+                    },
+                },
+                "upstream": [],
+                "maturity": {
+                    "level": "provisional",
+                    "source": "api",
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/api/maturity",
+                    },
+                },
+                "internal": False,
+                "csrf": {
+                    "kind": "derived",
+                    "header": "X-Csrf-Token",
+                    "derivedFrom": {
+                        "derivation": "csrf.cookieWrite",
+                        "from": [
+                            {
+                                "layer": "shared",
+                                "pointer": "/identities/user",
+                            },
+                            {
+                                "layer": "shared",
+                                "pointer": "/schemes/sessionCookie",
+                            },
+                        ],
+                    },
+                },
+                "format": "bare",
+                "tags": [],
+                "examples": {},
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/create",
+                },
+            },
+            {
+                "kind": "httpOperation",
+                "id": "deleteDraft",
+                "name": {
+                    "segments": [
+                        "delete",
+                        "draft",
+                    ],
+                    "role": "operation",
+                },
+                "surface": "app",
+                "op": "delete",
+                "resource": {
+                    "type": "drafts",
+                    "idParam": "draftId",
+                    "idProperty": "draftId",
+                },
+                "features": [],
+                "method": "delete",
+                "path": "/v1/me/drafts/{draftId}",
+                "safe": False,
+                "params": {
+                    "path": [
+                        {
+                            "name": "draftId",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "format": "uuid",
+                                "refinements": {},
+                            },
+                            "required": True,
+                            "origin": {
+                                "layer": "api",
+                                "pointer": "/surfaces/app/routes/me/routes/drafts/id/draftId",
+                            },
+                        },
+                    ],
+                    "query": [],
+                    "header": [
+                        {
+                            "name": "Authorization",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "refinements": {},
+                            },
+                            "required": False,
+                            "derivedFrom": {
+                                "derivation": "identity.authenticate",
+                                "from": [
+                                    {
+                                        "layer": "api",
+                                        "pointer": "/surfaces/app/identity",
+                                    },
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/schemes/bearer",
+                                    },
+                                ],
+                            },
+                        },
+                        {
+                            "name": "X-Csrf-Token",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "refinements": {},
+                            },
+                            "required": False,
+                            "derivedFrom": {
+                                "derivation": "csrf.cookieWrite",
+                                "from": [
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/identities/user",
+                                    },
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/schemes/sessionCookie",
+                                    },
+                                ],
+                            },
+                        },
+                        {
+                            "name": "Idempotency-Key",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "refinements": {},
+                            },
+                            "required": True,
+                            "derivedFrom": {
+                                "derivation": "idempotency.write",
+                                "from": [
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/conventions/idempotency",
+                                    },
+                                ],
+                            },
+                        },
+                    ],
+                },
+                "unknownQuery": {
+                    "policy": "refuse",
+                },
+                "access": {
+                    "kind": "identity",
+                    "identity": "user",
+                    "schemes": [
+                        "bearer",
+                        "sessionCookie",
+                    ],
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/app/identity",
+                    },
+                },
+                "callerKinds": [
+                    "identified",
+                ],
+                "principalRequires": [],
+                "scopes": [],
+                "requires": [],
+                "bindings": [],
+                "responses": [
+                    {
+                        "status": 200,
+                        "media": "application/json",
+                        "body": {
+                            "kind": "ref",
+                            "schema": "Draft",
+                        },
+                        "shape": "item",
+                        "headers": [
+                            {
+                                "name": "Idempotency-Replayed",
+                                "type": {
+                                    "kind": "scalar",
+                                    "type": "boolean",
+                                    "refinements": {},
+                                },
+                                "required": False,
+                                "derivedFrom": {
+                                    "derivation": "idempotency.write",
+                                    "from": [
+                                        {
+                                            "layer": "shared",
+                                            "pointer": "/conventions/idempotency",
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/me/routes/drafts/ops/delete/output",
+                        },
+                        "derivedFrom": {
+                            "derivation": "response.format",
+                            "from": [
+                                {
+                                    "layer": "core",
+                                    "pointer": "/formats/bare",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "errors": [
+                    {
+                        "code": "api.schema_invalid",
+                        "roles": [
+                            {
+                                "role": "schemaInvalid",
+                                "params": {
+                                    "kind": "object",
+                                    "members": [
+                                        {
+                                            "name": {
+                                                "kind": "text",
+                                                "text": "issues",
+                                            },
+                                            "value": {
+                                                "kind": "each",
+                                                "of": "issues",
+                                                "as": {
+                                                    "kind": "object",
+                                                    "members": [
+                                                        {
+                                                            "name": {
+                                                                "kind": "text",
+                                                                "text": "pointer",
+                                                            },
+                                                            "value": {
+                                                                "kind": "slot",
+                                                                "slot": "item",
+                                                                "path": [
+                                                                    "pointer",
+                                                                ],
+                                                            },
+                                                        },
+                                                        {
+                                                            "name": {
+                                                                "kind": "text",
+                                                                "text": "rule",
+                                                            },
+                                                            "value": {
+                                                                "kind": "slot",
+                                                                "slot": "item",
+                                                                "path": [
+                                                                    "rule",
+                                                                ],
+                                                            },
+                                                        },
+                                                    ],
+                                                },
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "input.invalid",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/idempotency",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/me/routes/drafts/ops/delete",
+                                },
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/errors/derived/schemaInvalid",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.unauthenticated",
+                        "roles": [
+                            {
+                                "role": "unauthenticated",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "identity.authenticate",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/identity",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.csrf_invalid",
+                        "roles": [
+                            {
+                                "role": "csrfInvalid",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "csrf.cookieWrite",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/identities/user",
+                                },
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/schemes/sessionCookie",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.not_found",
+                        "roles": [
+                            {
+                                "role": "notFound",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "member.notFound",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/me/routes/drafts/ops/delete",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/me/routes/drafts/owner",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.idempotency_in_progress",
+                        "roles": [
+                            {
+                                "role": "idempotencyInProgress",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "idempotency.write",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/idempotency",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.idempotency_key_reused",
+                        "roles": [
+                            {
+                                "role": "idempotencyKeyReused",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "idempotency.write",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/idempotency",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.internal",
+                        "roles": [
+                            {
+                                "role": "undeclaredStatus",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "response.undeclared",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/errors/every/0",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/me/routes/drafts/ops/delete",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "fieldRights": [],
+                "idempotency": {
+                    "kind": "derived",
+                    "header": "Idempotency-Key",
+                    "replayHeader": "Idempotency-Replayed",
+                    "lifetimeMs": 86400000,
+                    "required": True,
+                    "enforce": "boundary",
+                    "derivedFrom": {
+                        "derivation": "idempotency.write",
+                        "from": [
+                            {
+                                "layer": "shared",
+                                "pointer": "/conventions/idempotency",
+                            },
+                        ],
+                    },
+                },
+                "owner": {
+                    "kind": "caller",
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/app/routes/me/routes/drafts/owner",
+                    },
+                },
+                "upstream": [],
+                "maturity": {
+                    "level": "provisional",
+                    "source": "api",
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/api/maturity",
+                    },
+                },
+                "internal": False,
+                "csrf": {
+                    "kind": "derived",
+                    "header": "X-Csrf-Token",
+                    "derivedFrom": {
+                        "derivation": "csrf.cookieWrite",
+                        "from": [
+                            {
+                                "layer": "shared",
+                                "pointer": "/identities/user",
+                            },
+                            {
+                                "layer": "shared",
+                                "pointer": "/schemes/sessionCookie",
+                            },
+                        ],
+                    },
+                },
+                "format": "bare",
+                "tags": [],
+                "examples": {},
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/me/routes/drafts/ops/delete",
+                },
+            },
+            {
+                "kind": "httpOperation",
+                "id": "getChannel",
+                "name": {
+                    "segments": [
+                        "get",
+                        "channel",
+                    ],
+                    "role": "operation",
+                },
+                "surface": "app",
+                "op": "get",
+                "resource": {
+                    "type": "channels",
+                    "idParam": "channelId",
+                    "idProperty": "channelId",
+                },
+                "features": [],
+                "method": "get",
+                "path": "/v1/channels/{channelId}",
+                "safe": True,
+                "params": {
+                    "path": [
+                        {
+                            "name": "channelId",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "format": "uuid",
+                                "refinements": {},
+                            },
+                            "required": True,
+                            "origin": {
+                                "layer": "api",
+                                "pointer": "/surfaces/app/routes/channels/id/channelId",
+                            },
+                        },
+                    ],
+                    "query": [],
+                    "header": [
+                        {
+                            "name": "Authorization",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "refinements": {},
+                            },
+                            "required": False,
+                            "derivedFrom": {
+                                "derivation": "identity.authenticate",
+                                "from": [
+                                    {
+                                        "layer": "api",
+                                        "pointer": "/surfaces/app/identity",
+                                    },
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/schemes/bearer",
+                                    },
+                                ],
+                            },
+                        },
+                    ],
+                },
+                "unknownQuery": {
+                    "policy": "refuse",
+                },
+                "access": {
+                    "kind": "identity",
+                    "identity": "user",
+                    "schemes": [
+                        "bearer",
+                        "sessionCookie",
+                    ],
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/app/identity",
+                    },
+                },
+                "callerKinds": [
+                    "identified",
+                ],
+                "principalRequires": [],
+                "scopes": [
+                    {
+                        "scope": "channel",
+                        "source": {
+                            "in": "path",
+                            "name": "channelId",
+                        },
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/channels/member/scopes/channel",
+                        },
+                    },
+                ],
+                "requires": [],
+                "bindings": [],
+                "responses": [
+                    {
+                        "status": 200,
+                        "media": "application/json",
+                        "body": {
+                            "kind": "ref",
+                            "schema": "Channel",
+                        },
+                        "shape": "item",
+                        "headers": [],
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/channels/item",
+                        },
+                        "derivedFrom": {
+                            "derivation": "response.format",
+                            "from": [
+                                {
+                                    "layer": "core",
+                                    "pointer": "/formats/bare",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "errors": [
+                    {
+                        "code": "api.schema_invalid",
+                        "roles": [
+                            {
+                                "role": "schemaInvalid",
+                                "params": {
+                                    "kind": "object",
+                                    "members": [
+                                        {
+                                            "name": {
+                                                "kind": "text",
+                                                "text": "issues",
+                                            },
+                                            "value": {
+                                                "kind": "each",
+                                                "of": "issues",
+                                                "as": {
+                                                    "kind": "object",
+                                                    "members": [
+                                                        {
+                                                            "name": {
+                                                                "kind": "text",
+                                                                "text": "pointer",
+                                                            },
+                                                            "value": {
+                                                                "kind": "slot",
+                                                                "slot": "item",
+                                                                "path": [
+                                                                    "pointer",
+                                                                ],
+                                                            },
+                                                        },
+                                                        {
+                                                            "name": {
+                                                                "kind": "text",
+                                                                "text": "rule",
+                                                            },
+                                                            "value": {
+                                                                "kind": "slot",
+                                                                "slot": "item",
+                                                                "path": [
+                                                                    "rule",
+                                                                ],
+                                                            },
+                                                        },
+                                                    ],
+                                                },
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "input.invalid",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/ops/1",
+                                },
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/errors/derived/schemaInvalid",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.unauthenticated",
+                        "roles": [
+                            {
+                                "role": "unauthenticated",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "identity.authenticate",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/identity",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.not_found",
+                        "derivedFrom": {
+                            "derivation": "scope.errors",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/scopes/channel",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.internal",
+                        "roles": [
+                            {
+                                "role": "undeclaredStatus",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "response.undeclared",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/errors/every/0",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/ops/1",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "fieldRights": [],
+                "upstream": [],
+                "maturity": {
+                    "level": "provisional",
+                    "source": "api",
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/api/maturity",
+                    },
+                },
+                "internal": False,
+                "format": "bare",
+                "tags": [],
+                "examples": {},
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/channels/ops/1",
+                },
+            },
+            {
+                "kind": "httpOperation",
+                "id": "getDraft",
+                "name": {
+                    "segments": [
+                        "get",
+                        "draft",
+                    ],
+                    "role": "operation",
+                },
+                "surface": "app",
+                "op": "get",
+                "resource": {
+                    "type": "drafts",
+                    "idParam": "draftId",
+                    "idProperty": "draftId",
+                },
+                "features": [],
+                "method": "get",
+                "path": "/v1/me/drafts/{draftId}",
+                "safe": True,
+                "params": {
+                    "path": [
+                        {
+                            "name": "draftId",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "format": "uuid",
+                                "refinements": {},
+                            },
+                            "required": True,
+                            "origin": {
+                                "layer": "api",
+                                "pointer": "/surfaces/app/routes/me/routes/drafts/id/draftId",
+                            },
+                        },
+                    ],
+                    "query": [],
+                    "header": [
+                        {
+                            "name": "Authorization",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "refinements": {},
+                            },
+                            "required": False,
+                            "derivedFrom": {
+                                "derivation": "identity.authenticate",
+                                "from": [
+                                    {
+                                        "layer": "api",
+                                        "pointer": "/surfaces/app/identity",
+                                    },
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/schemes/bearer",
+                                    },
+                                ],
+                            },
+                        },
+                    ],
+                },
+                "unknownQuery": {
+                    "policy": "refuse",
+                },
+                "access": {
+                    "kind": "identity",
+                    "identity": "user",
+                    "schemes": [
+                        "bearer",
+                        "sessionCookie",
+                    ],
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/app/identity",
+                    },
+                },
+                "callerKinds": [
+                    "identified",
+                ],
+                "principalRequires": [],
+                "scopes": [],
+                "requires": [],
+                "bindings": [],
+                "responses": [
+                    {
+                        "status": 200,
+                        "media": "application/json",
+                        "body": {
+                            "kind": "ref",
+                            "schema": "Draft",
+                        },
+                        "shape": "item",
+                        "headers": [],
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/me/routes/drafts/item",
+                        },
+                        "derivedFrom": {
+                            "derivation": "response.format",
+                            "from": [
+                                {
+                                    "layer": "core",
+                                    "pointer": "/formats/bare",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "errors": [
+                    {
+                        "code": "api.schema_invalid",
+                        "roles": [
+                            {
+                                "role": "schemaInvalid",
+                                "params": {
+                                    "kind": "object",
+                                    "members": [
+                                        {
+                                            "name": {
+                                                "kind": "text",
+                                                "text": "issues",
+                                            },
+                                            "value": {
+                                                "kind": "each",
+                                                "of": "issues",
+                                                "as": {
+                                                    "kind": "object",
+                                                    "members": [
+                                                        {
+                                                            "name": {
+                                                                "kind": "text",
+                                                                "text": "pointer",
+                                                            },
+                                                            "value": {
+                                                                "kind": "slot",
+                                                                "slot": "item",
+                                                                "path": [
+                                                                    "pointer",
+                                                                ],
+                                                            },
+                                                        },
+                                                        {
+                                                            "name": {
+                                                                "kind": "text",
+                                                                "text": "rule",
+                                                            },
+                                                            "value": {
+                                                                "kind": "slot",
+                                                                "slot": "item",
+                                                                "path": [
+                                                                    "rule",
+                                                                ],
+                                                            },
+                                                        },
+                                                    ],
+                                                },
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "input.invalid",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/me/routes/drafts/ops/get",
+                                },
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/errors/derived/schemaInvalid",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.unauthenticated",
+                        "roles": [
+                            {
+                                "role": "unauthenticated",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "identity.authenticate",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/identity",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.not_found",
+                        "roles": [
+                            {
+                                "role": "notFound",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "member.notFound",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/me/routes/drafts/ops/get",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/me/routes/drafts/owner",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.internal",
+                        "roles": [
+                            {
+                                "role": "undeclaredStatus",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "response.undeclared",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/errors/every/0",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/me/routes/drafts/ops/get",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "fieldRights": [],
+                "owner": {
+                    "kind": "caller",
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/app/routes/me/routes/drafts/owner",
+                    },
+                },
+                "upstream": [],
+                "maturity": {
+                    "level": "provisional",
+                    "source": "api",
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/api/maturity",
+                    },
+                },
+                "internal": False,
+                "format": "bare",
+                "tags": [],
+                "examples": {},
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/me/routes/drafts/ops/get",
+                },
+            },
+            {
+                "kind": "httpOperation",
+                "id": "getPreferences",
+                "name": {
+                    "segments": [
+                        "get",
+                        "preferences",
+                    ],
+                    "role": "operation",
+                },
+                "surface": "app",
+                "op": "get",
+                "resource": {
+                    "type": "preferences",
+                },
+                "features": [],
+                "method": "get",
+                "path": "/v1/me/preferences",
+                "safe": True,
+                "params": {
+                    "path": [],
+                    "query": [],
+                    "header": [
+                        {
+                            "name": "Authorization",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "refinements": {},
+                            },
+                            "required": False,
+                            "derivedFrom": {
+                                "derivation": "identity.authenticate",
+                                "from": [
+                                    {
+                                        "layer": "api",
+                                        "pointer": "/surfaces/app/identity",
+                                    },
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/schemes/bearer",
+                                    },
+                                ],
+                            },
+                        },
+                        {
+                            "name": "If-None-Match",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "refinements": {},
+                            },
+                            "required": False,
+                            "derivedFrom": {
+                                "derivation": "cache.etag",
+                                "from": [
+                                    {
+                                        "layer": "api",
+                                        "pointer": "/surfaces/app/routes/me/routes/preferences/ops/get/cache",
+                                    },
+                                ],
+                            },
+                        },
+                    ],
+                },
+                "unknownQuery": {
+                    "policy": "refuse",
+                },
+                "access": {
+                    "kind": "identity",
+                    "identity": "user",
+                    "schemes": [
+                        "bearer",
+                        "sessionCookie",
+                    ],
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/app/identity",
+                    },
+                },
+                "callerKinds": [
+                    "identified",
+                ],
+                "principalRequires": [],
+                "scopes": [],
+                "requires": [],
+                "bindings": [],
+                "responses": [
+                    {
+                        "status": 200,
+                        "media": "application/json",
+                        "body": {
+                            "kind": "ref",
+                            "schema": "Preferences",
+                        },
+                        "shape": "item",
+                        "headers": [
+                            {
+                                "name": "ETag",
+                                "type": {
+                                    "kind": "scalar",
+                                    "type": "string",
+                                    "refinements": {},
+                                },
+                                "required": True,
+                                "derivedFrom": {
+                                    "derivation": "cache.etag",
+                                    "from": [
+                                        {
+                                            "layer": "api",
+                                            "pointer": "/surfaces/app/routes/me/routes/preferences/ops/get/cache",
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/me/routes/preferences/item",
+                        },
+                        "derivedFrom": {
+                            "derivation": "response.format",
+                            "from": [
+                                {
+                                    "layer": "core",
+                                    "pointer": "/formats/bare",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "status": 304,
+                        "shape": "empty",
+                        "headers": [
+                            {
+                                "name": "ETag",
+                                "type": {
+                                    "kind": "scalar",
+                                    "type": "string",
+                                    "refinements": {},
+                                },
+                                "required": True,
+                                "derivedFrom": {
+                                    "derivation": "cache.etag",
+                                    "from": [
+                                        {
+                                            "layer": "api",
+                                            "pointer": "/surfaces/app/routes/me/routes/preferences/ops/get/cache",
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "cache.etag",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/me/routes/preferences/ops/get/cache",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "errors": [
+                    {
+                        "code": "api.schema_invalid",
+                        "roles": [
+                            {
+                                "role": "schemaInvalid",
+                                "params": {
+                                    "kind": "object",
+                                    "members": [
+                                        {
+                                            "name": {
+                                                "kind": "text",
+                                                "text": "issues",
+                                            },
+                                            "value": {
+                                                "kind": "each",
+                                                "of": "issues",
+                                                "as": {
+                                                    "kind": "object",
+                                                    "members": [
+                                                        {
+                                                            "name": {
+                                                                "kind": "text",
+                                                                "text": "pointer",
+                                                            },
+                                                            "value": {
+                                                                "kind": "slot",
+                                                                "slot": "item",
+                                                                "path": [
+                                                                    "pointer",
+                                                                ],
+                                                            },
+                                                        },
+                                                        {
+                                                            "name": {
+                                                                "kind": "text",
+                                                                "text": "rule",
+                                                            },
+                                                            "value": {
+                                                                "kind": "slot",
+                                                                "slot": "item",
+                                                                "path": [
+                                                                    "rule",
+                                                                ],
+                                                            },
+                                                        },
+                                                    ],
+                                                },
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "input.invalid",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/me/routes/preferences/ops/get",
+                                },
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/errors/derived/schemaInvalid",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.unauthenticated",
+                        "roles": [
+                            {
+                                "role": "unauthenticated",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "identity.authenticate",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/identity",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.not_found",
+                        "roles": [
+                            {
+                                "role": "notFound",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "owner.caller",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/me/routes/preferences/owner",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.internal",
+                        "roles": [
+                            {
+                                "role": "undeclaredStatus",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "response.undeclared",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/errors/every/0",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/me/routes/preferences/ops/get",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "fieldRights": [],
+                "owner": {
+                    "kind": "caller",
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/app/routes/me/routes/preferences/owner",
+                    },
+                },
+                "cache": {
+                    "family": "minute",
+                    "directives": {
+                        "maxAgeMs": 60000,
+                        "immutable": False,
+                        "noCache": False,
+                        "mustRevalidate": False,
+                    },
+                    "anonymous": "private",
+                    "vary": [
+                        "Authorization",
+                        "Cookie",
+                    ],
+                    "etag": True,
+                    "perCallerKind": [
+                        {
+                            "caller": "identified",
+                            "cacheControl": "private, max-age=60",
+                        },
+                    ],
+                    "noStore": False,
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/app/routes/me/routes/preferences/ops/get/cache",
+                    },
+                    "derivedFrom": {
+                        "derivation": "cache.headers",
+                        "from": [
+                            {
+                                "layer": "api",
+                                "pointer": "/surfaces/app/routes/me/routes/preferences/ops/get/cache",
+                            },
+                            {
+                                "layer": "shared",
+                                "pointer": "/conventions/cache/families/minute",
+                            },
+                        ],
+                    },
+                },
+                "upstream": [],
+                "maturity": {
+                    "level": "provisional",
+                    "source": "api",
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/api/maturity",
+                    },
+                },
+                "internal": False,
+                "format": "bare",
+                "tags": [],
+                "examples": {},
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/me/routes/preferences/ops/get",
+                },
+            },
+            {
+                "kind": "httpOperation",
+                "id": "getTask",
+                "name": {
+                    "segments": [
+                        "get",
+                        "task",
+                    ],
+                    "role": "operation",
+                },
+                "surface": "app",
+                "op": "get",
+                "resource": {
+                    "type": "tasks",
+                    "idParam": "taskId",
+                    "idProperty": "taskId",
+                },
+                "features": [],
+                "method": "get",
+                "path": "/v1/channels/{channelId}/tasks/{taskId}",
+                "safe": True,
+                "params": {
+                    "path": [
+                        {
+                            "name": "channelId",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "format": "uuid",
+                                "refinements": {},
+                            },
+                            "required": True,
+                            "origin": {
+                                "layer": "api",
+                                "pointer": "/surfaces/app/routes/channels/id/channelId",
+                            },
+                        },
+                        {
+                            "name": "taskId",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "format": "uuid",
+                                "refinements": {},
+                            },
+                            "required": True,
+                            "origin": {
+                                "layer": "api",
+                                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/id/taskId",
+                            },
+                        },
+                    ],
+                    "query": [],
+                    "header": [
+                        {
+                            "name": "Authorization",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "refinements": {},
+                            },
+                            "required": False,
+                            "derivedFrom": {
+                                "derivation": "identity.authenticate",
+                                "from": [
+                                    {
+                                        "layer": "api",
+                                        "pointer": "/surfaces/app/identity",
+                                    },
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/schemes/bearer",
+                                    },
+                                ],
+                            },
+                        },
+                    ],
+                },
+                "unknownQuery": {
+                    "policy": "refuse",
+                },
+                "access": {
+                    "kind": "identity",
+                    "identity": "user",
+                    "schemes": [
+                        "bearer",
+                        "sessionCookie",
+                    ],
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/app/identity",
+                    },
+                },
+                "callerKinds": [
+                    "identified",
+                ],
+                "principalRequires": [],
+                "scopes": [
+                    {
+                        "scope": "channel",
+                        "source": {
+                            "in": "path",
+                            "name": "channelId",
+                        },
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/channels/member/scopes/channel",
+                        },
+                    },
+                ],
+                "requires": [],
+                "bindings": [],
+                "responses": [
+                    {
+                        "status": 200,
+                        "media": "application/json",
+                        "body": {
+                            "kind": "ref",
+                            "schema": "Task",
+                        },
+                        "shape": "item",
+                        "headers": [],
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/item",
+                        },
+                        "derivedFrom": {
+                            "derivation": "response.format",
+                            "from": [
+                                {
+                                    "layer": "core",
+                                    "pointer": "/formats/bare",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "errors": [
+                    {
+                        "code": "api.schema_invalid",
+                        "roles": [
+                            {
+                                "role": "schemaInvalid",
+                                "params": {
+                                    "kind": "object",
+                                    "members": [
+                                        {
+                                            "name": {
+                                                "kind": "text",
+                                                "text": "issues",
+                                            },
+                                            "value": {
+                                                "kind": "each",
+                                                "of": "issues",
+                                                "as": {
+                                                    "kind": "object",
+                                                    "members": [
+                                                        {
+                                                            "name": {
+                                                                "kind": "text",
+                                                                "text": "pointer",
+                                                            },
+                                                            "value": {
+                                                                "kind": "slot",
+                                                                "slot": "item",
+                                                                "path": [
+                                                                    "pointer",
+                                                                ],
+                                                            },
+                                                        },
+                                                        {
+                                                            "name": {
+                                                                "kind": "text",
+                                                                "text": "rule",
+                                                            },
+                                                            "value": {
+                                                                "kind": "slot",
+                                                                "slot": "item",
+                                                                "path": [
+                                                                    "rule",
+                                                                ],
+                                                            },
+                                                        },
+                                                    ],
+                                                },
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "input.invalid",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/get",
+                                },
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/errors/derived/schemaInvalid",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.unauthenticated",
+                        "roles": [
+                            {
+                                "role": "unauthenticated",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "identity.authenticate",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/identity",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.not_found",
+                        "roles": [
+                            {
+                                "role": "notFound",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "member.notFound",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/get",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/scopes/channel",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.internal",
+                        "roles": [
+                            {
+                                "role": "undeclaredStatus",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "response.undeclared",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/errors/every/0",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/get",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "fieldRights": [
+                    {
+                        "schema": "Task",
+                        "pointer": "/effort",
+                        "right": "tasks.seeEffort",
+                        "subject": {
+                            "source": {
+                                "in": "holderField",
+                                "name": "taskId",
+                            },
+                        },
+                        "direction": "output",
+                        "derivedFrom": {
+                            "derivation": "fieldRight.restricted",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/schemas/Task/properties/effort/restrictedTo",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "upstream": [],
+                "maturity": {
+                    "level": "provisional",
+                    "source": "api",
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/api/maturity",
+                    },
+                },
+                "internal": False,
+                "format": "bare",
+                "tags": [],
+                "examples": {},
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/get",
+                },
+            },
+            {
+                "kind": "httpOperation",
+                "id": "getTasksBatch",
+                "name": {
+                    "segments": [
+                        "get",
+                        "tasks",
+                        "batch",
+                    ],
+                    "role": "operation",
+                },
+                "surface": "app",
+                "op": "batch",
+                "resource": {
+                    "type": "tasks",
+                    "idProperty": "taskId",
+                },
+                "features": [],
+                "method": "post",
+                "path": "/v1/channels/{channelId}/tasks/batch",
+                "safe": True,
+                "params": {
+                    "path": [
+                        {
+                            "name": "channelId",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "format": "uuid",
+                                "refinements": {},
+                            },
+                            "required": True,
+                            "origin": {
+                                "layer": "api",
+                                "pointer": "/surfaces/app/routes/channels/id/channelId",
+                            },
+                        },
+                    ],
+                    "query": [],
+                    "header": [
+                        {
+                            "name": "Authorization",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "refinements": {},
+                            },
+                            "required": False,
+                            "derivedFrom": {
+                                "derivation": "identity.authenticate",
+                                "from": [
+                                    {
+                                        "layer": "api",
+                                        "pointer": "/surfaces/app/identity",
+                                    },
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/schemes/bearer",
+                                    },
+                                ],
+                            },
+                        },
+                    ],
+                },
+                "unknownQuery": {
+                    "policy": "refuse",
+                },
+                "access": {
+                    "kind": "identity",
+                    "identity": "user",
+                    "schemes": [
+                        "bearer",
+                        "sessionCookie",
+                    ],
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/app/identity",
+                    },
+                },
+                "callerKinds": [
+                    "identified",
+                ],
+                "principalRequires": [],
+                "scopes": [
+                    {
+                        "scope": "channel",
+                        "source": {
+                            "in": "path",
+                            "name": "channelId",
+                        },
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/channels/member/scopes/channel",
+                        },
+                    },
+                ],
+                "requires": [],
+                "bindings": [],
+                "input": {
+                    "media": "application/json",
+                    "schema": {
+                        "kind": "ref",
+                        "schema": "GetTasksBatchInput",
+                    },
+                    "bodyLimitBytes": 2097152,
+                    "rawBody": False,
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/batch",
+                    },
+                },
+                "responses": [
+                    {
+                        "status": 200,
+                        "media": "application/json",
+                        "body": {
+                            "kind": "ref",
+                            "schema": "Task",
+                        },
+                        "shape": "table",
+                        "headers": [],
+                        "derivedFrom": {
+                            "derivation": "batch.read",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/batch",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "errors": [
+                    {
+                        "code": "api.schema_invalid",
+                        "roles": [
+                            {
+                                "role": "schemaInvalid",
+                                "params": {
+                                    "kind": "object",
+                                    "members": [
+                                        {
+                                            "name": {
+                                                "kind": "text",
+                                                "text": "issues",
+                                            },
+                                            "value": {
+                                                "kind": "each",
+                                                "of": "issues",
+                                                "as": {
+                                                    "kind": "object",
+                                                    "members": [
+                                                        {
+                                                            "name": {
+                                                                "kind": "text",
+                                                                "text": "pointer",
+                                                            },
+                                                            "value": {
+                                                                "kind": "slot",
+                                                                "slot": "item",
+                                                                "path": [
+                                                                    "pointer",
+                                                                ],
+                                                            },
+                                                        },
+                                                        {
+                                                            "name": {
+                                                                "kind": "text",
+                                                                "text": "rule",
+                                                            },
+                                                            "value": {
+                                                                "kind": "slot",
+                                                                "slot": "item",
+                                                                "path": [
+                                                                    "rule",
+                                                                ],
+                                                            },
+                                                        },
+                                                    ],
+                                                },
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "input.invalid",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/batch",
+                                },
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/errors/derived/schemaInvalid",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.unauthenticated",
+                        "roles": [
+                            {
+                                "role": "unauthenticated",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "identity.authenticate",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/identity",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.not_found",
+                        "derivedFrom": {
+                            "derivation": "scope.errors",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/scopes/channel",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.payload_too_large",
+                        "roles": [
+                            {
+                                "role": "payloadTooLarge",
+                                "params": {
+                                    "kind": "object",
+                                    "members": [
+                                        {
+                                            "name": {
+                                                "kind": "text",
+                                                "text": "limitBytes",
+                                            },
+                                            "value": {
+                                                "kind": "slot",
+                                                "slot": "limitBytes",
+                                                "path": [],
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "body.limit",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/batch",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.unsupported_media_type",
+                        "roles": [
+                            {
+                                "role": "unsupportedMediaType",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "body.media",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/batch",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.internal",
+                        "roles": [
+                            {
+                                "role": "undeclaredStatus",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "response.undeclared",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/errors/every/0",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/batch",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "fieldRights": [
+                    {
+                        "schema": "Task",
+                        "pointer": "/effort",
+                        "right": "tasks.seeEffort",
+                        "subject": {
+                            "source": {
+                                "in": "holderField",
+                                "name": "taskId",
+                            },
+                        },
+                        "direction": "output",
+                        "derivedFrom": {
+                            "derivation": "fieldRight.restricted",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/schemas/Task/properties/effort/restrictedTo",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "upstream": [],
+                "maturity": {
+                    "level": "provisional",
+                    "source": "api",
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/api/maturity",
+                    },
+                },
+                "internal": False,
+                "format": "bare",
+                "tags": [],
+                "examples": {},
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/batch",
+                },
+            },
+            {
+                "kind": "httpOperation",
+                "id": "health",
+                "name": {
+                    "segments": [
+                        "health",
+                    ],
+                    "role": "operation",
+                },
+                "surface": "app",
+                "features": [],
+                "method": "get",
+                "path": "/v1/health",
+                "safe": True,
+                "params": {
+                    "path": [],
+                    "query": [],
+                    "header": [],
+                },
+                "unknownQuery": {
+                    "policy": "refuse",
+                },
+                "access": {
+                    "kind": "public",
+                    "reason": "Probes call it before any user exists.",
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/app/routes/health/access",
+                    },
+                },
+                "callerKinds": [
+                    "anonymous",
+                ],
+                "principalRequires": [],
+                "scopes": [],
+                "requires": [],
+                "bindings": [],
+                "responses": [
+                    {
+                        "status": 200,
+                        "media": "application/json",
+                        "body": {
+                            "kind": "ref",
+                            "schema": "Health",
+                        },
+                        "shape": "item",
+                        "headers": [],
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/health/output",
+                        },
+                        "derivedFrom": {
+                            "derivation": "response.format",
+                            "from": [
+                                {
+                                    "layer": "core",
+                                    "pointer": "/formats/bare",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "errors": [
+                    {
+                        "code": "api.schema_invalid",
+                        "roles": [
+                            {
+                                "role": "schemaInvalid",
+                                "params": {
+                                    "kind": "object",
+                                    "members": [
+                                        {
+                                            "name": {
+                                                "kind": "text",
+                                                "text": "issues",
+                                            },
+                                            "value": {
+                                                "kind": "each",
+                                                "of": "issues",
+                                                "as": {
+                                                    "kind": "object",
+                                                    "members": [
+                                                        {
+                                                            "name": {
+                                                                "kind": "text",
+                                                                "text": "pointer",
+                                                            },
+                                                            "value": {
+                                                                "kind": "slot",
+                                                                "slot": "item",
+                                                                "path": [
+                                                                    "pointer",
+                                                                ],
+                                                            },
+                                                        },
+                                                        {
+                                                            "name": {
+                                                                "kind": "text",
+                                                                "text": "rule",
+                                                            },
+                                                            "value": {
+                                                                "kind": "slot",
+                                                                "slot": "item",
+                                                                "path": [
+                                                                    "rule",
+                                                                ],
+                                                            },
+                                                        },
+                                                    ],
+                                                },
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "input.invalid",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/health",
+                                },
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/errors/derived/schemaInvalid",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.internal",
+                        "roles": [
+                            {
+                                "role": "undeclaredStatus",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "response.undeclared",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/errors/every/0",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/health",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "fieldRights": [],
+                "upstream": [],
+                "maturity": {
+                    "level": "provisional",
+                    "source": "api",
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/api/maturity",
+                    },
+                },
+                "internal": False,
+                "format": "bare",
+                "tags": [],
+                "examples": {},
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/health",
+                },
+            },
+            {
+                "kind": "httpOperation",
+                "id": "listChannels",
+                "name": {
+                    "segments": [
+                        "list",
+                        "channels",
+                    ],
+                    "role": "operation",
+                },
+                "surface": "app",
+                "op": "list",
+                "resource": {
+                    "type": "channels",
+                    "idProperty": "channelId",
+                },
+                "features": [],
+                "method": "get",
+                "path": "/v1/channels",
+                "safe": True,
+                "params": {
+                    "path": [],
+                    "query": [
+                        {
+                            "name": "cursor",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "refinements": {},
+                            },
+                            "required": False,
+                            "wire": {
+                                "kind": "text",
+                                "style": "form",
+                                "explode": True,
+                                "brackets": False,
+                            },
+                            "derivedFrom": {
+                                "derivation": "paging.params",
+                                "from": [
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/conventions/paging/default",
+                                    },
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/pagings/cursor",
+                                    },
+                                ],
+                            },
+                        },
+                        {
+                            "name": "limit",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "integer",
+                                "refinements": {
+                                    "minimum": "1",
+                                    "maximum": "100",
+                                },
+                            },
+                            "required": False,
+                            "wire": {
+                                "kind": "number",
+                                "style": "form",
+                                "explode": True,
+                                "brackets": False,
+                            },
+                            "derivedFrom": {
+                                "derivation": "paging.params",
+                                "from": [
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/conventions/paging/default",
+                                    },
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/pagings/cursor",
+                                    },
+                                ],
+                            },
+                        },
+                    ],
+                    "header": [
+                        {
+                            "name": "Authorization",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "refinements": {},
+                            },
+                            "required": False,
+                            "derivedFrom": {
+                                "derivation": "identity.authenticate",
+                                "from": [
+                                    {
+                                        "layer": "api",
+                                        "pointer": "/surfaces/app/identity",
+                                    },
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/schemes/bearer",
+                                    },
+                                ],
+                            },
+                        },
+                    ],
+                },
+                "unknownQuery": {
+                    "policy": "refuse",
+                },
+                "access": {
+                    "kind": "identity",
+                    "identity": "user",
+                    "schemes": [
+                        "bearer",
+                        "sessionCookie",
+                    ],
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/app/identity",
+                    },
+                },
+                "callerKinds": [
+                    "identified",
+                ],
+                "principalRequires": [],
+                "scopes": [],
+                "requires": [],
+                "bindings": [],
+                "responses": [
+                    {
+                        "status": 200,
+                        "media": "application/json",
+                        "body": {
+                            "kind": "ref",
+                            "schema": "Channel",
+                        },
+                        "shape": "page",
+                        "headers": [
+                            {
+                                "name": "Link",
+                                "type": {
+                                    "kind": "scalar",
+                                    "type": "string",
+                                    "refinements": {},
+                                },
+                                "required": False,
+                                "derivedFrom": {
+                                    "derivation": "paging.params",
+                                    "from": [
+                                        {
+                                            "layer": "shared",
+                                            "pointer": "/conventions/paging/default",
+                                        },
+                                        {
+                                            "layer": "shared",
+                                            "pointer": "/pagings/cursor",
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/channels/item",
+                        },
+                        "derivedFrom": {
+                            "derivation": "response.format",
+                            "from": [
+                                {
+                                    "layer": "core",
+                                    "pointer": "/formats/bare",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "errors": [
+                    {
+                        "code": "api.schema_invalid",
+                        "roles": [
+                            {
+                                "role": "schemaInvalid",
+                                "params": {
+                                    "kind": "object",
+                                    "members": [
+                                        {
+                                            "name": {
+                                                "kind": "text",
+                                                "text": "issues",
+                                            },
+                                            "value": {
+                                                "kind": "each",
+                                                "of": "issues",
+                                                "as": {
+                                                    "kind": "object",
+                                                    "members": [
+                                                        {
+                                                            "name": {
+                                                                "kind": "text",
+                                                                "text": "pointer",
+                                                            },
+                                                            "value": {
+                                                                "kind": "slot",
+                                                                "slot": "item",
+                                                                "path": [
+                                                                    "pointer",
+                                                                ],
+                                                            },
+                                                        },
+                                                        {
+                                                            "name": {
+                                                                "kind": "text",
+                                                                "text": "rule",
+                                                            },
+                                                            "value": {
+                                                                "kind": "slot",
+                                                                "slot": "item",
+                                                                "path": [
+                                                                    "rule",
+                                                                ],
+                                                            },
+                                                        },
+                                                    ],
+                                                },
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "input.invalid",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/paging/default",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/ops/0",
+                                },
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/errors/derived/schemaInvalid",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.unauthenticated",
+                        "roles": [
+                            {
+                                "role": "unauthenticated",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "identity.authenticate",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/identity",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.internal",
+                        "roles": [
+                            {
+                                "role": "undeclaredStatus",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "response.undeclared",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/errors/every/0",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/ops/0",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "fieldRights": [],
+                "paging": {
+                    "style": "cursor",
+                    "maxLimit": 100,
+                    "defaultLimit": 100,
+                    "overLimit": "reject",
+                    "sortKeys": [],
+                    "origin": {
+                        "layer": "shared",
+                        "pointer": "/conventions/paging/default",
+                    },
+                },
+                "upstream": [],
+                "maturity": {
+                    "level": "provisional",
+                    "source": "api",
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/api/maturity",
+                    },
+                },
+                "internal": False,
+                "format": "bare",
+                "tags": [],
+                "examples": {},
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/channels/ops/0",
+                },
+            },
+            {
+                "kind": "httpOperation",
+                "id": "listTasks",
+                "name": {
+                    "segments": [
+                        "list",
+                        "tasks",
+                    ],
+                    "role": "operation",
+                },
+                "surface": "app",
+                "op": "list",
+                "resource": {
+                    "type": "tasks",
+                    "idProperty": "taskId",
+                },
+                "features": [],
+                "method": "get",
+                "path": "/v1/channels/{channelId}/tasks",
+                "safe": True,
+                "params": {
+                    "path": [
+                        {
+                            "name": "channelId",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "format": "uuid",
+                                "refinements": {},
+                            },
+                            "required": True,
+                            "origin": {
+                                "layer": "api",
+                                "pointer": "/surfaces/app/routes/channels/id/channelId",
+                            },
+                        },
+                    ],
+                    "query": [
+                        {
+                            "name": "state",
+                            "type": {
+                                "kind": "array",
+                                "items": {
+                                    "kind": "enum",
+                                    "enum": "TaskState",
+                                },
+                            },
+                            "required": False,
+                            "wire": {
+                                "kind": "list",
+                                "style": "form",
+                                "explode": True,
+                                "brackets": False,
+                            },
+                            "origin": {
+                                "layer": "api",
+                                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/list/query/state?",
+                            },
+                        },
+                        {
+                            "name": "cursor",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "refinements": {},
+                            },
+                            "required": False,
+                            "wire": {
+                                "kind": "text",
+                                "style": "form",
+                                "explode": True,
+                                "brackets": False,
+                            },
+                            "derivedFrom": {
+                                "derivation": "paging.params",
+                                "from": [
+                                    {
+                                        "layer": "api",
+                                        "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/list/paging",
+                                    },
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/pagings/cursor",
+                                    },
+                                ],
+                            },
+                        },
+                        {
+                            "name": "limit",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "integer",
+                                "refinements": {
+                                    "minimum": "1",
+                                    "maximum": "50",
+                                },
+                            },
+                            "required": False,
+                            "wire": {
+                                "kind": "number",
+                                "style": "form",
+                                "explode": True,
+                                "brackets": False,
+                            },
+                            "derivedFrom": {
+                                "derivation": "paging.params",
+                                "from": [
+                                    {
+                                        "layer": "api",
+                                        "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/list/paging",
+                                    },
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/pagings/cursor",
+                                    },
+                                ],
+                            },
+                        },
+                        {
+                            "name": "sort",
+                            "type": {
+                                "kind": "array",
+                                "items": {
+                                    "kind": "scalar",
+                                    "type": "string",
+                                    "refinements": {
+                                        "pattern": {
+                                            "source": "^(?:createdAt|-createdAt)$",
+                                            "normalized": "^(?:createdAt|-createdAt)$",
+                                        },
+                                    },
+                                },
+                            },
+                            "required": False,
+                            "wire": {
+                                "kind": "list",
+                                "style": "form",
+                                "explode": False,
+                                "brackets": False,
+                            },
+                            "derivedFrom": {
+                                "derivation": "paging.params",
+                                "from": [
+                                    {
+                                        "layer": "api",
+                                        "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/list/paging",
+                                    },
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/pagings/cursor",
+                                    },
+                                ],
+                            },
+                        },
+                    ],
+                    "header": [
+                        {
+                            "name": "Authorization",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "refinements": {},
+                            },
+                            "required": False,
+                            "derivedFrom": {
+                                "derivation": "identity.authenticate",
+                                "from": [
+                                    {
+                                        "layer": "api",
+                                        "pointer": "/surfaces/app/identity",
+                                    },
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/schemes/bearer",
+                                    },
+                                ],
+                            },
+                        },
+                    ],
+                },
+                "unknownQuery": {
+                    "policy": "refuse",
+                },
+                "access": {
+                    "kind": "identity",
+                    "identity": "user",
+                    "schemes": [
+                        "bearer",
+                        "sessionCookie",
+                    ],
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/app/identity",
+                    },
+                },
+                "callerKinds": [
+                    "identified",
+                ],
+                "principalRequires": [],
+                "scopes": [
+                    {
+                        "scope": "channel",
+                        "source": {
+                            "in": "path",
+                            "name": "channelId",
+                        },
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/channels/member/scopes/channel",
+                        },
+                    },
+                ],
+                "requires": [],
+                "bindings": [],
+                "responses": [
+                    {
+                        "status": 200,
+                        "media": "application/json",
+                        "body": {
+                            "kind": "ref",
+                            "schema": "Task",
+                        },
+                        "shape": "page",
+                        "headers": [
+                            {
+                                "name": "Link",
+                                "type": {
+                                    "kind": "scalar",
+                                    "type": "string",
+                                    "refinements": {},
+                                },
+                                "required": False,
+                                "derivedFrom": {
+                                    "derivation": "paging.params",
+                                    "from": [
+                                        {
+                                            "layer": "api",
+                                            "pointer": (
+                                                "/surfaces/app/routes/channels/member/routes/tasks/ops/list/paging"
+                                            ),
+                                        },
+                                        {
+                                            "layer": "shared",
+                                            "pointer": "/pagings/cursor",
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/item",
+                        },
+                        "derivedFrom": {
+                            "derivation": "response.format",
+                            "from": [
+                                {
+                                    "layer": "core",
+                                    "pointer": "/formats/bare",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "errors": [
+                    {
+                        "code": "api.schema_invalid",
+                        "roles": [
+                            {
+                                "role": "schemaInvalid",
+                                "params": {
+                                    "kind": "object",
+                                    "members": [
+                                        {
+                                            "name": {
+                                                "kind": "text",
+                                                "text": "issues",
+                                            },
+                                            "value": {
+                                                "kind": "each",
+                                                "of": "issues",
+                                                "as": {
+                                                    "kind": "object",
+                                                    "members": [
+                                                        {
+                                                            "name": {
+                                                                "kind": "text",
+                                                                "text": "pointer",
+                                                            },
+                                                            "value": {
+                                                                "kind": "slot",
+                                                                "slot": "item",
+                                                                "path": [
+                                                                    "pointer",
+                                                                ],
+                                                            },
+                                                        },
+                                                        {
+                                                            "name": {
+                                                                "kind": "text",
+                                                                "text": "rule",
+                                                            },
+                                                            "value": {
+                                                                "kind": "slot",
+                                                                "slot": "item",
+                                                                "path": [
+                                                                    "rule",
+                                                                ],
+                                                            },
+                                                        },
+                                                    ],
+                                                },
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "input.invalid",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/list",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/list/paging",
+                                },
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/errors/derived/schemaInvalid",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.unauthenticated",
+                        "roles": [
+                            {
+                                "role": "unauthenticated",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "identity.authenticate",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/identity",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.not_found",
+                        "derivedFrom": {
+                            "derivation": "scope.errors",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/scopes/channel",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.internal",
+                        "roles": [
+                            {
+                                "role": "undeclaredStatus",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "response.undeclared",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/errors/every/0",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/list",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "fieldRights": [
+                    {
+                        "schema": "Task",
+                        "pointer": "/effort",
+                        "right": "tasks.seeEffort",
+                        "subject": {
+                            "source": {
+                                "in": "holderField",
+                                "name": "taskId",
+                            },
+                        },
+                        "direction": "output",
+                        "derivedFrom": {
+                            "derivation": "fieldRight.restricted",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/schemas/Task/properties/effort/restrictedTo",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "paging": {
+                    "style": "cursor",
+                    "maxLimit": 50,
+                    "defaultLimit": 50,
+                    "overLimit": "reject",
+                    "sortKeys": [
+                        {
+                            "key": "createdAt",
+                            "origin": {
+                                "layer": "api",
+                                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/list/sortable/0",
+                            },
+                        },
+                    ],
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/list/paging",
+                    },
+                },
+                "filteredBy": "tasks.read",
+                "upstream": [],
+                "maturity": {
+                    "level": "provisional",
+                    "source": "api",
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/api/maturity",
+                    },
+                },
+                "internal": False,
+                "format": "bare",
+                "tags": [],
+                "examples": {},
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/list",
+                },
+            },
+            {
+                "kind": "httpOperation",
+                "id": "payments",
+                "name": {
+                    "segments": [
+                        "payments",
+                    ],
+                    "role": "operation",
+                },
+                "surface": "hooks",
+                "features": [],
+                "method": "post",
+                "path": "/v1/hooks/payments",
+                "safe": False,
+                "params": {
+                    "path": [],
+                    "query": [],
+                    "header": [
+                        {
+                            "name": "Stripe-Signature",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "refinements": {},
+                            },
+                            "required": True,
+                            "derivedFrom": {
+                                "derivation": "identity.authenticate",
+                                "from": [
+                                    {
+                                        "layer": "api",
+                                        "pointer": "/surfaces/hooks/identity",
+                                    },
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/schemes/stripeSignature",
+                                    },
+                                ],
+                            },
+                        },
+                    ],
+                },
+                "unknownQuery": {
+                    "policy": "refuse",
+                },
+                "access": {
+                    "kind": "identity",
+                    "identity": "stripe",
+                    "schemes": [
+                        "stripeSignature",
+                    ],
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/hooks/identity",
+                    },
+                },
+                "callerKinds": [
+                    "identified",
+                ],
+                "principalRequires": [],
+                "scopes": [],
+                "requires": [],
+                "bindings": [],
+                "input": {
+                    "media": "application/json",
+                    "schema": {
+                        "kind": "ref",
+                        "schema": "PaymentEvent",
+                    },
+                    "bodyLimitBytes": 1048576,
+                    "rawBody": True,
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/hooks/routes/payments/input",
+                    },
+                },
+                "responses": [
+                    {
+                        "status": 204,
+                        "shape": "empty",
+                        "headers": [],
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/surfaces/hooks/routes/payments/responses/204",
+                        },
+                        "derivedFrom": {
+                            "derivation": "response.format",
+                            "from": [
+                                {
+                                    "layer": "core",
+                                    "pointer": "/formats/bare",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "errors": [
+                    {
+                        "code": "api.schema_invalid",
+                        "roles": [
+                            {
+                                "role": "schemaInvalid",
+                                "params": {
+                                    "kind": "object",
+                                    "members": [
+                                        {
+                                            "name": {
+                                                "kind": "text",
+                                                "text": "issues",
+                                            },
+                                            "value": {
+                                                "kind": "each",
+                                                "of": "issues",
+                                                "as": {
+                                                    "kind": "object",
+                                                    "members": [
+                                                        {
+                                                            "name": {
+                                                                "kind": "text",
+                                                                "text": "pointer",
+                                                            },
+                                                            "value": {
+                                                                "kind": "slot",
+                                                                "slot": "item",
+                                                                "path": [
+                                                                    "pointer",
+                                                                ],
+                                                            },
+                                                        },
+                                                        {
+                                                            "name": {
+                                                                "kind": "text",
+                                                                "text": "rule",
+                                                            },
+                                                            "value": {
+                                                                "kind": "slot",
+                                                                "slot": "item",
+                                                                "path": [
+                                                                    "rule",
+                                                                ],
+                                                            },
+                                                        },
+                                                    ],
+                                                },
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "input.invalid",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/hooks/routes/payments",
+                                },
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/errors/derived/schemaInvalid",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.unauthenticated",
+                        "roles": [
+                            {
+                                "role": "unauthenticated",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "identity.authenticate",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/identities/stripe",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/hooks/identity",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.payload_too_large",
+                        "roles": [
+                            {
+                                "role": "payloadTooLarge",
+                                "params": {
+                                    "kind": "object",
+                                    "members": [
+                                        {
+                                            "name": {
+                                                "kind": "text",
+                                                "text": "limitBytes",
+                                            },
+                                            "value": {
+                                                "kind": "slot",
+                                                "slot": "limitBytes",
+                                                "path": [],
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "body.limit",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/hooks/routes/payments/input",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.unsupported_media_type",
+                        "roles": [
+                            {
+                                "role": "unsupportedMediaType",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "body.media",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/hooks/routes/payments/input",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.internal",
+                        "roles": [
+                            {
+                                "role": "undeclaredStatus",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "response.undeclared",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/errors/every/0",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/hooks/routes/payments",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "fieldRights": [],
+                "upstream": [],
+                "maturity": {
+                    "level": "provisional",
+                    "source": "api",
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/api/maturity",
+                    },
+                },
+                "internal": False,
+                "format": "bare",
+                "tags": [],
+                "examples": {},
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/hooks/routes/payments",
+                },
+            },
+            {
+                "kind": "httpOperation",
+                "id": "purgeTask",
+                "name": {
+                    "segments": [
+                        "purge",
+                        "task",
+                    ],
+                    "role": "operation",
+                },
+                "surface": "app",
+                "resource": {
+                    "type": "tasks",
+                    "idParam": "taskId",
+                    "idProperty": "taskId",
+                },
+                "features": [],
+                "method": "post",
+                "path": "/v1/channels/{channelId}/tasks/{taskId}/purge",
+                "safe": False,
+                "params": {
+                    "path": [
+                        {
+                            "name": "channelId",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "format": "uuid",
+                                "refinements": {},
+                            },
+                            "required": True,
+                            "origin": {
+                                "layer": "api",
+                                "pointer": "/surfaces/app/routes/channels/id/channelId",
+                            },
+                        },
+                        {
+                            "name": "taskId",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "format": "uuid",
+                                "refinements": {},
+                            },
+                            "required": True,
+                            "origin": {
+                                "layer": "api",
+                                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/id/taskId",
+                            },
+                        },
+                    ],
+                    "query": [],
+                    "header": [
+                        {
+                            "name": "Authorization",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "refinements": {},
+                            },
+                            "required": False,
+                            "derivedFrom": {
+                                "derivation": "identity.authenticate",
+                                "from": [
+                                    {
+                                        "layer": "api",
+                                        "pointer": "/surfaces/app/identity",
+                                    },
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/schemes/bearer",
+                                    },
+                                ],
+                            },
+                        },
+                        {
+                            "name": "X-Csrf-Token",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "refinements": {},
+                            },
+                            "required": False,
+                            "derivedFrom": {
+                                "derivation": "csrf.cookieWrite",
+                                "from": [
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/identities/user",
+                                    },
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/schemes/sessionCookie",
+                                    },
+                                ],
+                            },
+                        },
+                        {
+                            "name": "Idempotency-Key",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "refinements": {},
+                            },
+                            "required": True,
+                            "derivedFrom": {
+                                "derivation": "idempotency.write",
+                                "from": [
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/conventions/idempotency",
+                                    },
+                                ],
+                            },
+                        },
+                    ],
+                },
+                "unknownQuery": {
+                    "policy": "refuse",
+                },
+                "access": {
+                    "kind": "identity",
+                    "identity": "user",
+                    "schemes": [
+                        "bearer",
+                        "sessionCookie",
+                    ],
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/app/identity",
+                    },
+                },
+                "callerKinds": [
+                    "identified",
+                ],
+                "principalRequires": [],
+                "scopes": [
+                    {
+                        "scope": "channel",
+                        "source": {
+                            "in": "path",
+                            "name": "channelId",
+                        },
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/channels/member/scopes/channel",
+                        },
+                    },
+                ],
+                "requires": [
+                    {
+                        "kind": "rule",
+                        "rule": "recentAuth",
+                        "params": {
+                            "intent": "purge_task",
+                        },
+                        "origin": {
+                            "layer": "api",
+                            "pointer": (
+                                "/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge/requires/0"
+                            ),
+                        },
+                    },
+                ],
+                "bindings": [],
+                "input": {
+                    "media": "application/json",
+                    "schema": {
+                        "kind": "ref",
+                        "schema": "ApiEmptyBody",
+                    },
+                    "bodyLimitBytes": 1048576,
+                    "rawBody": False,
+                    "proofs": [
+                        {
+                            "name": "reauthToken",
+                            "schema": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "refinements": {
+                                    "minLength": 1,
+                                    "maxLength": 512,
+                                },
+                            },
+                            "derivedFrom": {
+                                "derivation": "rule.proof",
+                                "from": [
+                                    {
+                                        "layer": "api",
+                                        "pointer": (
+                                            "/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge/"
+                                            "requires/0"
+                                        ),
+                                    },
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/rules/recentAuth/proof",
+                                    },
+                                ],
+                            },
+                        },
+                    ],
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge/requires/0",
+                    },
+                },
+                "responses": [
+                    {
+                        "status": 204,
+                        "shape": "empty",
+                        "headers": [
+                            {
+                                "name": "Idempotency-Replayed",
+                                "type": {
+                                    "kind": "scalar",
+                                    "type": "boolean",
+                                    "refinements": {},
+                                },
+                                "required": False,
+                                "derivedFrom": {
+                                    "derivation": "idempotency.write",
+                                    "from": [
+                                        {
+                                            "layer": "shared",
+                                            "pointer": "/conventions/idempotency",
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "origin": {
+                            "layer": "api",
+                            "pointer": (
+                                "/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge/responses/204"
+                            ),
+                        },
+                        "derivedFrom": {
+                            "derivation": "response.format",
+                            "from": [
+                                {
+                                    "layer": "core",
+                                    "pointer": "/formats/bare",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "errors": [
+                    {
+                        "code": "api.schema_invalid",
+                        "roles": [
+                            {
+                                "role": "schemaInvalid",
+                                "params": {
+                                    "kind": "object",
+                                    "members": [
+                                        {
+                                            "name": {
+                                                "kind": "text",
+                                                "text": "issues",
+                                            },
+                                            "value": {
+                                                "kind": "each",
+                                                "of": "issues",
+                                                "as": {
+                                                    "kind": "object",
+                                                    "members": [
+                                                        {
+                                                            "name": {
+                                                                "kind": "text",
+                                                                "text": "pointer",
+                                                            },
+                                                            "value": {
+                                                                "kind": "slot",
+                                                                "slot": "item",
+                                                                "path": [
+                                                                    "pointer",
+                                                                ],
+                                                            },
+                                                        },
+                                                        {
+                                                            "name": {
+                                                                "kind": "text",
+                                                                "text": "rule",
+                                                            },
+                                                            "value": {
+                                                                "kind": "slot",
+                                                                "slot": "item",
+                                                                "path": [
+                                                                    "rule",
+                                                                ],
+                                                            },
+                                                        },
+                                                    ],
+                                                },
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "input.invalid",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/idempotency",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge",
+                                },
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/errors/derived/schemaInvalid",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.reauthentication_required",
+                        "derivedFrom": {
+                            "derivation": "requirement.errors",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": (
+                                        "/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge/"
+                                        "requires/0"
+                                    ),
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.unauthenticated",
+                        "roles": [
+                            {
+                                "role": "unauthenticated",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "identity.authenticate",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/identity",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.csrf_invalid",
+                        "roles": [
+                            {
+                                "role": "csrfInvalid",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "csrf.cookieWrite",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/identities/user",
+                                },
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/schemes/sessionCookie",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.not_found",
+                        "roles": [
+                            {
+                                "role": "notFound",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "member.notFound",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/scopes/channel",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.idempotency_in_progress",
+                        "roles": [
+                            {
+                                "role": "idempotencyInProgress",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "idempotency.write",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/idempotency",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.payload_too_large",
+                        "roles": [
+                            {
+                                "role": "payloadTooLarge",
+                                "params": {
+                                    "kind": "object",
+                                    "members": [
+                                        {
+                                            "name": {
+                                                "kind": "text",
+                                                "text": "limitBytes",
+                                            },
+                                            "value": {
+                                                "kind": "slot",
+                                                "slot": "limitBytes",
+                                                "path": [],
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "body.limit",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": (
+                                        "/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge/"
+                                        "requires/0"
+                                    ),
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.unsupported_media_type",
+                        "roles": [
+                            {
+                                "role": "unsupportedMediaType",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "body.media",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": (
+                                        "/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge/"
+                                        "requires/0"
+                                    ),
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.idempotency_key_reused",
+                        "roles": [
+                            {
+                                "role": "idempotencyKeyReused",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "idempotency.write",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/idempotency",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.internal",
+                        "roles": [
+                            {
+                                "role": "undeclaredStatus",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "response.undeclared",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/errors/every/0",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "fieldRights": [],
+                "idempotency": {
+                    "kind": "derived",
+                    "header": "Idempotency-Key",
+                    "replayHeader": "Idempotency-Replayed",
+                    "lifetimeMs": 86400000,
+                    "required": True,
+                    "enforce": "boundary",
+                    "derivedFrom": {
+                        "derivation": "idempotency.write",
+                        "from": [
+                            {
+                                "layer": "shared",
+                                "pointer": "/conventions/idempotency",
+                            },
+                        ],
+                    },
+                },
+                "upstream": [],
+                "maturity": {
+                    "level": "provisional",
+                    "source": "api",
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/api/maturity",
+                    },
+                },
+                "internal": False,
+                "csrf": {
+                    "kind": "derived",
+                    "header": "X-Csrf-Token",
+                    "derivedFrom": {
+                        "derivation": "csrf.cookieWrite",
+                        "from": [
+                            {
+                                "layer": "shared",
+                                "pointer": "/identities/user",
+                            },
+                            {
+                                "layer": "shared",
+                                "pointer": "/schemes/sessionCookie",
+                            },
+                        ],
+                    },
+                },
+                "format": "bare",
+                "tags": [],
+                "examples": {},
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge",
+                },
+            },
+            {
+                "kind": "httpOperation",
+                "id": "searchTasks",
+                "name": {
+                    "segments": [
+                        "search",
+                        "tasks",
+                    ],
+                    "role": "operation",
+                },
+                "surface": "app",
+                "resource": {
+                    "type": "tasks",
+                    "idProperty": "taskId",
+                },
+                "features": [],
+                "method": "post",
+                "path": "/v1/channels/{channelId}/tasks/search",
+                "safe": False,
+                "params": {
+                    "path": [
+                        {
+                            "name": "channelId",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "format": "uuid",
+                                "refinements": {},
+                            },
+                            "required": True,
+                            "origin": {
+                                "layer": "api",
+                                "pointer": "/surfaces/app/routes/channels/id/channelId",
+                            },
+                        },
+                    ],
+                    "query": [],
+                    "header": [
+                        {
+                            "name": "Authorization",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "refinements": {},
+                            },
+                            "required": False,
+                            "derivedFrom": {
+                                "derivation": "identity.authenticate",
+                                "from": [
+                                    {
+                                        "layer": "api",
+                                        "pointer": "/surfaces/app/identity",
+                                    },
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/schemes/bearer",
+                                    },
+                                ],
+                            },
+                        },
+                        {
+                            "name": "X-Csrf-Token",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "refinements": {},
+                            },
+                            "required": False,
+                            "derivedFrom": {
+                                "derivation": "csrf.cookieWrite",
+                                "from": [
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/identities/user",
+                                    },
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/schemes/sessionCookie",
+                                    },
+                                ],
+                            },
+                        },
+                    ],
+                },
+                "unknownQuery": {
+                    "policy": "refuse",
+                },
+                "access": {
+                    "kind": "identity",
+                    "identity": "user",
+                    "schemes": [
+                        "bearer",
+                        "sessionCookie",
+                    ],
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/app/identity",
+                    },
+                },
+                "callerKinds": [
+                    "identified",
+                ],
+                "principalRequires": [],
+                "scopes": [
+                    {
+                        "scope": "channel",
+                        "source": {
+                            "in": "path",
+                            "name": "channelId",
+                        },
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/channels/member/scopes/channel",
+                        },
+                    },
+                ],
+                "requires": [
+                    {
+                        "kind": "right",
+                        "right": "tasks.read",
+                        "subject": {
+                            "source": {
+                                "in": "scope",
+                                "name": "channel",
+                            },
+                            "defaulted": True,
+                        },
+                        "origin": {
+                            "layer": "api",
+                            "pointer": (
+                                "/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search/requires/0"
+                            ),
+                        },
+                    },
+                ],
+                "bindings": [],
+                "input": {
+                    "media": "application/json",
+                    "schema": {
+                        "kind": "ref",
+                        "schema": "TaskQuery",
+                    },
+                    "bodyLimitBytes": 1048576,
+                    "rawBody": False,
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search/input",
+                    },
+                },
+                "responses": [
+                    {
+                        "status": 200,
+                        "media": "application/json",
+                        "body": {
+                            "kind": "ref",
+                            "schema": "TaskSearchResult",
+                        },
+                        "shape": "item",
+                        "headers": [],
+                        "origin": {
+                            "layer": "api",
+                            "pointer": (
+                                "/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search/output"
+                            ),
+                        },
+                        "derivedFrom": {
+                            "derivation": "response.format",
+                            "from": [
+                                {
+                                    "layer": "core",
+                                    "pointer": "/formats/bare",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "errors": [
+                    {
+                        "code": "api.schema_invalid",
+                        "roles": [
+                            {
+                                "role": "schemaInvalid",
+                                "params": {
+                                    "kind": "object",
+                                    "members": [
+                                        {
+                                            "name": {
+                                                "kind": "text",
+                                                "text": "issues",
+                                            },
+                                            "value": {
+                                                "kind": "each",
+                                                "of": "issues",
+                                                "as": {
+                                                    "kind": "object",
+                                                    "members": [
+                                                        {
+                                                            "name": {
+                                                                "kind": "text",
+                                                                "text": "pointer",
+                                                            },
+                                                            "value": {
+                                                                "kind": "slot",
+                                                                "slot": "item",
+                                                                "path": [
+                                                                    "pointer",
+                                                                ],
+                                                            },
+                                                        },
+                                                        {
+                                                            "name": {
+                                                                "kind": "text",
+                                                                "text": "rule",
+                                                            },
+                                                            "value": {
+                                                                "kind": "slot",
+                                                                "slot": "item",
+                                                                "path": [
+                                                                    "rule",
+                                                                ],
+                                                            },
+                                                        },
+                                                    ],
+                                                },
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "input.invalid",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": (
+                                        "/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search"
+                                    ),
+                                },
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/errors/derived/schemaInvalid",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.unauthenticated",
+                        "roles": [
+                            {
+                                "role": "unauthenticated",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "identity.authenticate",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/identity",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.csrf_invalid",
+                        "roles": [
+                            {
+                                "role": "csrfInvalid",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "csrf.cookieWrite",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/identities/user",
+                                },
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/schemes/sessionCookie",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.forbidden",
+                        "derivedFrom": {
+                            "derivation": "requirement.errors",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": (
+                                        "/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search/"
+                                        "requires/0"
+                                    ),
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.not_found",
+                        "derivedFrom": {
+                            "derivation": "scope.errors",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/scopes/channel",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.payload_too_large",
+                        "roles": [
+                            {
+                                "role": "payloadTooLarge",
+                                "params": {
+                                    "kind": "object",
+                                    "members": [
+                                        {
+                                            "name": {
+                                                "kind": "text",
+                                                "text": "limitBytes",
+                                            },
+                                            "value": {
+                                                "kind": "slot",
+                                                "slot": "limitBytes",
+                                                "path": [],
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "body.limit",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": (
+                                        "/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search/"
+                                        "input"
+                                    ),
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.unsupported_media_type",
+                        "roles": [
+                            {
+                                "role": "unsupportedMediaType",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "body.media",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": (
+                                        "/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search/"
+                                        "input"
+                                    ),
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.internal",
+                        "roles": [
+                            {
+                                "role": "undeclaredStatus",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "response.undeclared",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/errors/every/0",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": (
+                                        "/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search"
+                                    ),
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "fieldRights": [
+                    {
+                        "schema": "TaskSearchResult",
+                        "pointer": "/items/*/effort",
+                        "right": "tasks.seeEffort",
+                        "subject": {
+                            "source": {
+                                "in": "holderField",
+                                "name": "taskId",
+                            },
+                        },
+                        "direction": "output",
+                        "derivedFrom": {
+                            "derivation": "fieldRight.restricted",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/schemas/Task/properties/effort/restrictedTo",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "idempotency": {
+                    "kind": "exempt",
+                    "reason": "A read with a body; replaying it is harmless.",
+                    "origin": {
+                        "layer": "api",
+                        "pointer": (
+                            "/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search/idempotency"
+                        ),
+                    },
+                },
+                "budgetMs": 300,
+                "upstream": [],
+                "maturity": {
+                    "level": "provisional",
+                    "source": "api",
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/api/maturity",
+                    },
+                },
+                "internal": False,
+                "csrf": {
+                    "kind": "derived",
+                    "header": "X-Csrf-Token",
+                    "derivedFrom": {
+                        "derivation": "csrf.cookieWrite",
+                        "from": [
+                            {
+                                "layer": "shared",
+                                "pointer": "/identities/user",
+                            },
+                            {
+                                "layer": "shared",
+                                "pointer": "/schemes/sessionCookie",
+                            },
+                        ],
+                    },
+                },
+                "format": "bare",
+                "tags": [],
+                "examples": {
+                    "firstPage": {
+                        "status": 200,
+                        "value": {
+                            "items": [
+                                {
+                                    "createdAt": "2027-01-15T09:30:00Z",
+                                    "state": "open",
+                                    "taskId": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42",
+                                    "title": "Write the brief",
+                                    "version": 1,
+                                },
+                            ],
+                            "total": 1,
+                        },
+                    },
+                },
+                "docs": {
+                    "summary": "Search the channel's tasks with a structured query.",
+                },
+                "extensions": {},
+                "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search",
+                },
+            },
+            {
+                "kind": "httpOperation",
+                "id": "updatePreferences",
+                "name": {
+                    "segments": [
+                        "update",
+                        "preferences",
+                    ],
+                    "role": "operation",
+                },
+                "surface": "app",
+                "op": "update",
+                "resource": {
+                    "type": "preferences",
+                },
+                "features": [],
+                "method": "patch",
+                "path": "/v1/me/preferences",
+                "safe": False,
+                "params": {
+                    "path": [],
+                    "query": [],
+                    "header": [
+                        {
+                            "name": "Authorization",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "refinements": {},
+                            },
+                            "required": False,
+                            "derivedFrom": {
+                                "derivation": "identity.authenticate",
+                                "from": [
+                                    {
+                                        "layer": "api",
+                                        "pointer": "/surfaces/app/identity",
+                                    },
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/schemes/bearer",
+                                    },
+                                ],
+                            },
+                        },
+                        {
+                            "name": "X-Csrf-Token",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "refinements": {},
+                            },
+                            "required": False,
+                            "derivedFrom": {
+                                "derivation": "csrf.cookieWrite",
+                                "from": [
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/identities/user",
+                                    },
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/schemes/sessionCookie",
+                                    },
+                                ],
+                            },
+                        },
+                        {
+                            "name": "Idempotency-Key",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "refinements": {},
+                            },
+                            "required": True,
+                            "derivedFrom": {
+                                "derivation": "idempotency.write",
+                                "from": [
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/conventions/idempotency",
+                                    },
+                                ],
+                            },
+                        },
+                    ],
+                },
+                "unknownQuery": {
+                    "policy": "refuse",
+                },
+                "access": {
+                    "kind": "identity",
+                    "identity": "user",
+                    "schemes": [
+                        "bearer",
+                        "sessionCookie",
+                    ],
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/app/identity",
+                    },
+                },
+                "callerKinds": [
+                    "identified",
+                ],
+                "principalRequires": [],
+                "scopes": [],
+                "requires": [],
+                "bindings": [],
+                "input": {
+                    "media": "application/json",
+                    "schema": {
+                        "kind": "ref",
+                        "schema": "UpdatePreferences",
+                    },
+                    "bodyLimitBytes": 1048576,
+                    "rawBody": False,
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/app/routes/me/routes/preferences/ops/update/input",
+                    },
+                },
+                "responses": [
+                    {
+                        "status": 200,
+                        "media": "application/json",
+                        "body": {
+                            "kind": "ref",
+                            "schema": "Preferences",
+                        },
+                        "shape": "item",
+                        "headers": [
+                            {
+                                "name": "Idempotency-Replayed",
+                                "type": {
+                                    "kind": "scalar",
+                                    "type": "boolean",
+                                    "refinements": {},
+                                },
+                                "required": False,
+                                "derivedFrom": {
+                                    "derivation": "idempotency.write",
+                                    "from": [
+                                        {
+                                            "layer": "shared",
+                                            "pointer": "/conventions/idempotency",
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/me/routes/preferences/item",
+                        },
+                        "derivedFrom": {
+                            "derivation": "response.format",
+                            "from": [
+                                {
+                                    "layer": "core",
+                                    "pointer": "/formats/bare",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "errors": [
+                    {
+                        "code": "api.schema_invalid",
+                        "roles": [
+                            {
+                                "role": "schemaInvalid",
+                                "params": {
+                                    "kind": "object",
+                                    "members": [
+                                        {
+                                            "name": {
+                                                "kind": "text",
+                                                "text": "issues",
+                                            },
+                                            "value": {
+                                                "kind": "each",
+                                                "of": "issues",
+                                                "as": {
+                                                    "kind": "object",
+                                                    "members": [
+                                                        {
+                                                            "name": {
+                                                                "kind": "text",
+                                                                "text": "pointer",
+                                                            },
+                                                            "value": {
+                                                                "kind": "slot",
+                                                                "slot": "item",
+                                                                "path": [
+                                                                    "pointer",
+                                                                ],
+                                                            },
+                                                        },
+                                                        {
+                                                            "name": {
+                                                                "kind": "text",
+                                                                "text": "rule",
+                                                            },
+                                                            "value": {
+                                                                "kind": "slot",
+                                                                "slot": "item",
+                                                                "path": [
+                                                                    "rule",
+                                                                ],
+                                                            },
+                                                        },
+                                                    ],
+                                                },
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "input.invalid",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/idempotency",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/me/routes/preferences/ops/update",
+                                },
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/errors/derived/schemaInvalid",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.unauthenticated",
+                        "roles": [
+                            {
+                                "role": "unauthenticated",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "identity.authenticate",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/identity",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.csrf_invalid",
+                        "roles": [
+                            {
+                                "role": "csrfInvalid",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "csrf.cookieWrite",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/identities/user",
+                                },
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/schemes/sessionCookie",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.not_found",
+                        "roles": [
+                            {
+                                "role": "notFound",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "owner.caller",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/me/routes/preferences/owner",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.idempotency_in_progress",
+                        "roles": [
+                            {
+                                "role": "idempotencyInProgress",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "idempotency.write",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/idempotency",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.payload_too_large",
+                        "roles": [
+                            {
+                                "role": "payloadTooLarge",
+                                "params": {
+                                    "kind": "object",
+                                    "members": [
+                                        {
+                                            "name": {
+                                                "kind": "text",
+                                                "text": "limitBytes",
+                                            },
+                                            "value": {
+                                                "kind": "slot",
+                                                "slot": "limitBytes",
+                                                "path": [],
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "body.limit",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/me/routes/preferences/ops/update/input",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.unsupported_media_type",
+                        "roles": [
+                            {
+                                "role": "unsupportedMediaType",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "body.media",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/me/routes/preferences/ops/update/input",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.idempotency_key_reused",
+                        "roles": [
+                            {
+                                "role": "idempotencyKeyReused",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "idempotency.write",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/idempotency",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.internal",
+                        "roles": [
+                            {
+                                "role": "undeclaredStatus",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "response.undeclared",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/errors/every/0",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/me/routes/preferences/ops/update",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "fieldRights": [
+                    {
+                        "schema": "UpdatePreferences",
+                        "pointer": "/digest",
+                        "right": "preferences.digest",
+                        "direction": "input",
+                        "inputPolicy": "strip",
+                        "derivedFrom": {
+                            "derivation": "fieldRight.restricted",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/schemas/UpdatePreferences/properties/digest/restrictedTo",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "idempotency": {
+                    "kind": "derived",
+                    "header": "Idempotency-Key",
+                    "replayHeader": "Idempotency-Replayed",
+                    "lifetimeMs": 86400000,
+                    "required": True,
+                    "enforce": "boundary",
+                    "derivedFrom": {
+                        "derivation": "idempotency.write",
+                        "from": [
+                            {
+                                "layer": "shared",
+                                "pointer": "/conventions/idempotency",
+                            },
+                        ],
+                    },
+                },
+                "owner": {
+                    "kind": "caller",
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/app/routes/me/routes/preferences/owner",
+                    },
+                },
+                "upstream": [],
+                "maturity": {
+                    "level": "provisional",
+                    "source": "api",
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/api/maturity",
+                    },
+                },
+                "internal": False,
+                "csrf": {
+                    "kind": "derived",
+                    "header": "X-Csrf-Token",
+                    "derivedFrom": {
+                        "derivation": "csrf.cookieWrite",
+                        "from": [
+                            {
+                                "layer": "shared",
+                                "pointer": "/identities/user",
+                            },
+                            {
+                                "layer": "shared",
+                                "pointer": "/schemes/sessionCookie",
+                            },
+                        ],
+                    },
+                },
+                "format": "bare",
+                "tags": [],
+                "examples": {},
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/me/routes/preferences/ops/update",
+                },
+            },
+            {
+                "kind": "httpOperation",
+                "id": "updateTask",
+                "name": {
+                    "segments": [
+                        "update",
+                        "task",
+                    ],
+                    "role": "operation",
+                },
+                "surface": "app",
+                "op": "update",
+                "resource": {
+                    "type": "tasks",
+                    "idParam": "taskId",
+                    "idProperty": "taskId",
+                },
+                "features": [],
+                "method": "patch",
+                "path": "/v1/channels/{channelId}/tasks/{taskId}",
+                "safe": False,
+                "params": {
+                    "path": [
+                        {
+                            "name": "channelId",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "format": "uuid",
+                                "refinements": {},
+                            },
+                            "required": True,
+                            "origin": {
+                                "layer": "api",
+                                "pointer": "/surfaces/app/routes/channels/id/channelId",
+                            },
+                        },
+                        {
+                            "name": "taskId",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "format": "uuid",
+                                "refinements": {},
+                            },
+                            "required": True,
+                            "origin": {
+                                "layer": "api",
+                                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/id/taskId",
+                            },
+                        },
+                    ],
+                    "query": [],
+                    "header": [
+                        {
+                            "name": "Authorization",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "refinements": {},
+                            },
+                            "required": False,
+                            "derivedFrom": {
+                                "derivation": "identity.authenticate",
+                                "from": [
+                                    {
+                                        "layer": "api",
+                                        "pointer": "/surfaces/app/identity",
+                                    },
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/schemes/bearer",
+                                    },
+                                ],
+                            },
+                        },
+                        {
+                            "name": "X-Csrf-Token",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "refinements": {},
+                            },
+                            "required": False,
+                            "derivedFrom": {
+                                "derivation": "csrf.cookieWrite",
+                                "from": [
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/identities/user",
+                                    },
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/schemes/sessionCookie",
+                                    },
+                                ],
+                            },
+                        },
+                        {
+                            "name": "Idempotency-Key",
+                            "type": {
+                                "kind": "scalar",
+                                "type": "string",
+                                "refinements": {},
+                            },
+                            "required": True,
+                            "derivedFrom": {
+                                "derivation": "idempotency.write",
+                                "from": [
+                                    {
+                                        "layer": "shared",
+                                        "pointer": "/conventions/idempotency",
+                                    },
+                                ],
+                            },
+                        },
+                    ],
+                },
+                "unknownQuery": {
+                    "policy": "refuse",
+                },
+                "access": {
+                    "kind": "identity",
+                    "identity": "user",
+                    "schemes": [
+                        "bearer",
+                        "sessionCookie",
+                    ],
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/app/identity",
+                    },
+                },
+                "callerKinds": [
+                    "identified",
+                ],
+                "principalRequires": [],
+                "scopes": [
+                    {
+                        "scope": "channel",
+                        "source": {
+                            "in": "path",
+                            "name": "channelId",
+                        },
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/channels/member/scopes/channel",
+                        },
+                    },
+                ],
+                "requires": [
+                    {
+                        "kind": "right",
+                        "right": "tasks.update",
+                        "subject": {
+                            "source": {
+                                "in": "path",
+                                "name": "taskId",
+                            },
+                            "defaulted": True,
+                        },
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/update/requires/0",
+                        },
+                    },
+                ],
+                "bindings": [],
+                "input": {
+                    "media": "application/json",
+                    "schema": {
+                        "kind": "ref",
+                        "schema": "UpdateTask",
+                    },
+                    "bodyLimitBytes": 1048576,
+                    "rawBody": False,
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/update/input",
+                    },
+                },
+                "responses": [
+                    {
+                        "status": 200,
+                        "media": "application/json",
+                        "body": {
+                            "kind": "ref",
+                            "schema": "Task",
+                        },
+                        "shape": "item",
+                        "headers": [
+                            {
+                                "name": "Idempotency-Replayed",
+                                "type": {
+                                    "kind": "scalar",
+                                    "type": "boolean",
+                                    "refinements": {},
+                                },
+                                "required": False,
+                                "derivedFrom": {
+                                    "derivation": "idempotency.write",
+                                    "from": [
+                                        {
+                                            "layer": "shared",
+                                            "pointer": "/conventions/idempotency",
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "origin": {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/item",
+                        },
+                        "derivedFrom": {
+                            "derivation": "response.format",
+                            "from": [
+                                {
+                                    "layer": "core",
+                                    "pointer": "/formats/bare",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "errors": [
+                    {
+                        "code": "api.schema_invalid",
+                        "roles": [
+                            {
+                                "role": "schemaInvalid",
+                                "params": {
+                                    "kind": "object",
+                                    "members": [
+                                        {
+                                            "name": {
+                                                "kind": "text",
+                                                "text": "issues",
+                                            },
+                                            "value": {
+                                                "kind": "each",
+                                                "of": "issues",
+                                                "as": {
+                                                    "kind": "object",
+                                                    "members": [
+                                                        {
+                                                            "name": {
+                                                                "kind": "text",
+                                                                "text": "pointer",
+                                                            },
+                                                            "value": {
+                                                                "kind": "slot",
+                                                                "slot": "item",
+                                                                "path": [
+                                                                    "pointer",
+                                                                ],
+                                                            },
+                                                        },
+                                                        {
+                                                            "name": {
+                                                                "kind": "text",
+                                                                "text": "rule",
+                                                            },
+                                                            "value": {
+                                                                "kind": "slot",
+                                                                "slot": "item",
+                                                                "path": [
+                                                                    "rule",
+                                                                ],
+                                                            },
+                                                        },
+                                                    ],
+                                                },
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "input.invalid",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/idempotency",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/update",
+                                },
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/errors/derived/schemaInvalid",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.unauthenticated",
+                        "roles": [
+                            {
+                                "role": "unauthenticated",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "identity.authenticate",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/identity",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.csrf_invalid",
+                        "roles": [
+                            {
+                                "role": "csrfInvalid",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "csrf.cookieWrite",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/identities/user",
+                                },
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/schemes/sessionCookie",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.forbidden",
+                        "roles": [
+                            {
+                                "role": "forbidden",
+                                "params": {
+                                    "kind": "object",
+                                    "members": [
+                                        {
+                                            "name": {
+                                                "kind": "text",
+                                                "text": "pointer",
+                                            },
+                                            "value": {
+                                                "kind": "slot",
+                                                "slot": "pointer",
+                                                "path": [],
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "requirement.errors",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/schemas/Task/properties/effort/restrictedTo",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": (
+                                        "/surfaces/app/routes/channels/member/routes/tasks/ops/update/requires/0"
+                                    ),
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.not_found",
+                        "roles": [
+                            {
+                                "role": "notFound",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "member.notFound",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/update",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": (
+                                        "/surfaces/app/routes/channels/member/routes/tasks/ops/update/requires/0"
+                                    ),
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/scopes/channel",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.idempotency_in_progress",
+                        "roles": [
+                            {
+                                "role": "idempotencyInProgress",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "idempotency.write",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/idempotency",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "state.conflict",
+                        "roles": [
+                            {
+                                "role": "stateConflict",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "concurrency.version",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/concurrency",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.payload_too_large",
+                        "roles": [
+                            {
+                                "role": "payloadTooLarge",
+                                "params": {
+                                    "kind": "object",
+                                    "members": [
+                                        {
+                                            "name": {
+                                                "kind": "text",
+                                                "text": "limitBytes",
+                                            },
+                                            "value": {
+                                                "kind": "slot",
+                                                "slot": "limitBytes",
+                                                "path": [],
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "body.limit",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/update/input",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.unsupported_media_type",
+                        "roles": [
+                            {
+                                "role": "unsupportedMediaType",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "body.media",
+                            "from": [
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/update/input",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.idempotency_key_reused",
+                        "roles": [
+                            {
+                                "role": "idempotencyKeyReused",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "idempotency.write",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/idempotency",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "code": "api.internal",
+                        "roles": [
+                            {
+                                "role": "undeclaredStatus",
+                            },
+                        ],
+                        "derivedFrom": {
+                            "derivation": "response.undeclared",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/conventions/errors/every/0",
+                                },
+                                {
+                                    "layer": "api",
+                                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/update",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "fieldRights": [
+                    {
+                        "schema": "Task",
+                        "pointer": "/effort",
+                        "right": "tasks.seeEffort",
+                        "subject": {
+                            "source": {
+                                "in": "holderField",
+                                "name": "taskId",
+                            },
+                        },
+                        "direction": "output",
+                        "derivedFrom": {
+                            "derivation": "fieldRight.restricted",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/schemas/Task/properties/effort/restrictedTo",
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        "schema": "UpdateTask",
+                        "pointer": "/effort",
+                        "right": "tasks.seeEffort",
+                        "subject": {
+                            "source": {
+                                "in": "path",
+                                "name": "taskId",
+                            },
+                        },
+                        "direction": "input",
+                        "inputPolicy": "reject",
+                        "derivedFrom": {
+                            "derivation": "fieldRight.restricted",
+                            "from": [
+                                {
+                                    "layer": "shared",
+                                    "pointer": "/schemas/Task/properties/effort/restrictedTo",
+                                },
+                            ],
+                        },
+                    },
+                ],
+                "idempotency": {
+                    "kind": "derived",
+                    "header": "Idempotency-Key",
+                    "replayHeader": "Idempotency-Replayed",
+                    "lifetimeMs": 86400000,
+                    "required": True,
+                    "enforce": "boundary",
+                    "derivedFrom": {
+                        "derivation": "idempotency.write",
+                        "from": [
+                            {
+                                "layer": "shared",
+                                "pointer": "/conventions/idempotency",
+                            },
+                        ],
+                    },
+                },
+                "concurrency": {
+                    "version": {
+                        "in": "body",
+                        "name": "expectedVersion",
+                    },
+                    "field": "version",
+                    "derivedFrom": {
+                        "derivation": "concurrency.version",
+                        "from": [
+                            {
+                                "layer": "api",
+                                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/concurrency",
+                            },
+                        ],
+                    },
+                },
+                "upstream": [],
+                "maturity": {
+                    "level": "provisional",
+                    "source": "api",
+                    "origin": {
+                        "layer": "api",
+                        "pointer": "/api/maturity",
+                    },
+                },
+                "internal": False,
+                "csrf": {
+                    "kind": "derived",
+                    "header": "X-Csrf-Token",
+                    "derivedFrom": {
+                        "derivation": "csrf.cookieWrite",
+                        "from": [
+                            {
+                                "layer": "shared",
+                                "pointer": "/identities/user",
+                            },
+                            {
+                                "layer": "shared",
+                                "pointer": "/schemes/sessionCookie",
+                            },
+                        ],
+                    },
+                },
+                "format": "bare",
+                "tags": [],
+                "examples": {},
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/update",
+                },
+            },
+        ],
+    },
+    members={
+        "ApiEmptyBody": {},
+        "ApiForbiddenParams": {
+            "pointer": "pointer",
+        },
+        "ApiPayloadTooLargeParams": {
+            "limitBytes": "limit_bytes",
+        },
+        "ApiRateLimitedParams": {
+            "retryAfterMs": "retry_after_ms",
+        },
+        "ApiSchemaInvalidParams": {
+            "issues": "issues",
+        },
+        "ArchiveTask": {
+            "reason": "reason",
+            "expectedVersion": "expected_version",
+        },
+        "AssignTaskInput": {
+            "userId": "user_id",
+        },
+        "Channel": {
+            "channelId": "channel_id",
+            "name": "name",
+        },
+        "CreateTask": {
+            "title": "title",
+            "effort": "effort",
+        },
+        "Draft": {
+            "draftId": "draft_id",
+            "body": "body",
+        },
+        "GetTasksBatchInput": {
+            "ids": "ids",
+        },
+        "Health": {
+            "status": "status",
+        },
+        "IssuesItem": {
+            "pointer": "pointer",
+            "rule": "rule",
+        },
+        "PaymentEvent": {
+            "id": "id_",
+            "type": "type_",
+            "data": "data",
+        },
+        "Preferences": {
+            "locale": "locale",
+            "digest": "digest",
+        },
+        "RecentAuthParams": {
+            "intent": "intent",
+        },
+        "RolesParams": {
+            "allowed": "allowed",
+        },
+        "ServicePrincipal": {
+            "service": "service",
+            "userId": "user_id",
+        },
+        "Task": {
+            "taskId": "task_id",
+            "title": "title",
+            "state": "state",
+            "effort": "effort",
+            "version": "version",
+            "createdAt": "created_at",
+        },
+        "TaskQuery": {
+            "text": "text",
+            "states": "states",
+        },
+        "TaskSearchResult": {
+            "items": "items",
+            "total": "total",
+        },
+        "UpdatePreferences": {
+            "locale": "locale",
+            "digest": "digest",
+        },
+        "UpdateTask": {
+            "title": "title",
+            "state": "state",
+            "effort": "effort",
+            "expectedVersion": "expected_version",
+        },
+        "UserPrincipal": {
+            "userId": "user_id",
+        },
+        "WebhookCaller": {
+            "account": "account",
+        },
+    },
+    operation_members={
+        "archiveTask": {
+            "path": {
+                "channelId": "channel_id",
+                "taskId": "task_id",
+            },
+            "header": {
+                "Idempotency-Key": "idempotency_key",
+            },
+        },
+        "assignTask": {
+            "path": {
+                "channelId": "channel_id",
+                "taskId": "task_id",
+            },
+            "header": {
+                "Idempotency-Key": "idempotency_key",
+            },
+        },
+        "createTask": {
+            "path": {
+                "channelId": "channel_id",
+            },
+            "header": {
+                "Idempotency-Key": "idempotency_key",
+            },
+        },
+        "deleteDraft": {
+            "path": {
+                "draftId": "draft_id",
+            },
+            "header": {
+                "Idempotency-Key": "idempotency_key",
+            },
+        },
+        "getChannel": {
+            "path": {
+                "channelId": "channel_id",
+            },
+        },
+        "getDraft": {
+            "path": {
+                "draftId": "draft_id",
+            },
+        },
+        "getPreferences": {
+            "header": {
+                "If-None-Match": "if_none_match",
+            },
+        },
+        "getTask": {
+            "path": {
+                "channelId": "channel_id",
+                "taskId": "task_id",
+            },
+        },
+        "getTasksBatch": {
+            "path": {
+                "channelId": "channel_id",
+            },
+        },
+        "health": {},
+        "listChannels": {
+            "query": {
+                "cursor": "cursor",
+                "limit": "limit",
+            },
+        },
+        "listTasks": {
+            "path": {
+                "channelId": "channel_id",
+            },
+            "query": {
+                "state": "state",
+                "cursor": "cursor",
+                "limit": "limit",
+                "sort": "sort",
+            },
+        },
+        "payments": {},
+        "purgeTask": {
+            "path": {
+                "channelId": "channel_id",
+                "taskId": "task_id",
+            },
+            "header": {
+                "Idempotency-Key": "idempotency_key",
+            },
+            "proofs": {
+                "reauthToken": "reauth_token",
+            },
+        },
+        "searchTasks": {
+            "path": {
+                "channelId": "channel_id",
+            },
+        },
+        "updatePreferences": {
+            "header": {
+                "Idempotency-Key": "idempotency_key",
+            },
+        },
+        "updateTask": {
+            "path": {
+                "channelId": "channel_id",
+                "taskId": "task_id",
+            },
+            "header": {
+                "Idempotency-Key": "idempotency_key",
+            },
+        },
+    },
+    params_models={
+        "RecentAuthParams": _schemas.RecentAuthParams,
+        "RolesParams": _schemas.RolesParams,
+    },
+)

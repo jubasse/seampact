@@ -1,0 +1,70 @@
+# The consumer's app config: the reference contract and one seampact/symfony entry per api, serving every operation;
+# the suite's control routes are allow-listed framework routes.
+outDir: src/Generated
+openapi: none
+sources:
+  contract: { path: contract }
+targets:
+  - id: tasks
+    out: Tasks
+    use: seampact/symfony
+    api: tasks
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { path: "/v1/patterned/**", reason: "The pattern-allow-listed-framework-route boot variant (ADR 0015)." }
+  - id: tasksService
+    out: TasksService
+    use: seampact/symfony
+    api: tasksService
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { path: "/v1/patterned/**", reason: "The pattern-allow-listed-framework-route boot variant (ADR 0015)." }
+  - id: tasksServiceWrites
+    out: TasksServiceWrites
+    use: seampact/symfony
+    api: tasksServiceWrites
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { path: "/v1/patterned/**", reason: "The pattern-allow-listed-framework-route boot variant (ADR 0015)." }
+  - id: tasksDevices
+    out: TasksDevices
+    use: seampact/symfony
+    api: tasksDevices
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { path: "/v1/patterned/**", reason: "The pattern-allow-listed-framework-route boot variant (ADR 0015)." }
+  - id: tasksOptionalAuth
+    out: TasksOptionalAuth
+    use: seampact/symfony
+    api: tasksOptionalAuth
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { path: "/v1/patterned/**", reason: "The pattern-allow-listed-framework-route boot variant (ADR 0015)." }
+  - id: tasksAbsoluteUrls
+    out: TasksAbsoluteUrls
+    use: seampact/symfony
+    api: tasksAbsoluteUrls
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { path: "/v1/patterned/**", reason: "The pattern-allow-listed-framework-route boot variant (ADR 0015)." }
+  - id: tasksResponses
+    out: TasksResponses
+    use: seampact/symfony
+    api: tasksResponses
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { path: "/v1/patterned/**", reason: "The pattern-allow-listed-framework-route boot variant (ADR 0015)." }
+  - id: tasksPaging
+    out: TasksPaging
+    use: seampact/symfony
+    api: tasksPaging
+    # The changes-since feed carries the complete page fact, which this target refuses by name in 1.0.
+    operations: { exclude: [listChanges, listEvents] }
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+  - id: tasksSplitSort
+    out: TasksSplitSort
+    use: seampact/symfony
+    api: tasksSplitSort
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }

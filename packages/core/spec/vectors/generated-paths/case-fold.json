@@ -1,0 +1,214 @@
+{
+  "pairs": [
+    {
+      "first": "Tasks.ts",
+      "second": "tasks.ts",
+      "collide": true
+    },
+    {
+      "first": "tasks.ts",
+      "second": "task.ts",
+      "collide": false
+    },
+    {
+      "first": "a.ts",
+      "second": "b.ts",
+      "collide": false
+    },
+    {
+      "first": "é.ts",
+      "second": "É.ts",
+      "collide": true
+    },
+    {
+      "first": "ß.ts",
+      "second": "ss.ts",
+      "collide": true
+    },
+    {
+      "first": "ß.ts",
+      "second": "SS.ts",
+      "collide": true
+    },
+    {
+      "first": "ẞ.ts",
+      "second": "ss.ts",
+      "collide": true
+    },
+    {
+      "first": "ẞ.ts",
+      "second": "ß.ts",
+      "collide": true
+    },
+    {
+      "first": "ẞ.ts",
+      "second": "SS.ts",
+      "collide": true
+    },
+    {
+      "first": "ss.ts",
+      "second": "SS.ts",
+      "collide": true
+    },
+    {
+      "first": "İ.ts",
+      "second": "i̇.ts",
+      "collide": true
+    },
+    {
+      "first": "İ.ts",
+      "second": "i.ts",
+      "collide": false
+    },
+    {
+      "first": "ı.ts",
+      "second": "I.ts",
+      "collide": true
+    },
+    {
+      "first": "ı.ts",
+      "second": "i.ts",
+      "collide": true
+    },
+    {
+      "first": "I.ts",
+      "second": "i.ts",
+      "collide": true
+    },
+    {
+      "first": "ς.ts",
+      "second": "σ.ts",
+      "collide": true
+    },
+    {
+      "first": "ς.ts",
+      "second": "Σ.ts",
+      "collide": true
+    },
+    {
+      "first": "σ.ts",
+      "second": "Σ.ts",
+      "collide": true
+    },
+    {
+      "first": "ΑΣ.ts",
+      "second": "ας.ts",
+      "collide": true
+    },
+    {
+      "first": "ΑΣ.ts",
+      "second": "ασ.ts",
+      "collide": true
+    },
+    {
+      "first": "ΑΣ/.ts",
+      "second": "ας/.ts",
+      "collide": true
+    },
+    {
+      "first": "K.ts",
+      "second": "k.ts",
+      "collide": true
+    },
+    {
+      "first": "K.ts",
+      "second": "K.ts",
+      "collide": true
+    },
+    {
+      "first": "Å.ts",
+      "second": "å.ts",
+      "collide": true
+    },
+    {
+      "first": "Å.ts",
+      "second": "Å.ts",
+      "collide": true
+    },
+    {
+      "first": "Ω.ts",
+      "second": "ω.ts",
+      "collide": true
+    },
+    {
+      "first": "Ω.ts",
+      "second": "Ω.ts",
+      "collide": true
+    },
+    {
+      "first": "ﬁ.ts",
+      "second": "fi.ts",
+      "collide": true
+    },
+    {
+      "first": "ﬀ.ts",
+      "second": "ff.ts",
+      "collide": true
+    },
+    {
+      "first": "ﬆ.ts",
+      "second": "st.ts",
+      "collide": true
+    },
+    {
+      "first": "ﬃ.ts",
+      "second": "ffi.ts",
+      "collide": true
+    },
+    {
+      "first": "ſ.ts",
+      "second": "s.ts",
+      "collide": true
+    },
+    {
+      "first": "ſ.ts",
+      "second": "S.ts",
+      "collide": true
+    },
+    {
+      "first": "ǅ.ts",
+      "second": "ǆ.ts",
+      "collide": true
+    },
+    {
+      "first": "ǅ.ts",
+      "second": "Ǆ.ts",
+      "collide": true
+    },
+    {
+      "first": "Ꭰ.ts",
+      "second": "ꭰ.ts",
+      "collide": true
+    },
+    {
+      "first": "ᾳ.ts",
+      "second": "ΑΙ.ts",
+      "collide": true
+    },
+    {
+      "first": "ŉ.ts",
+      "second": "ʼn.ts",
+      "collide": true
+    },
+    {
+      "first": "և.ts",
+      "second": "եւ.ts",
+      "collide": true
+    },
+    {
+      "first": "𐐀.ts",
+      "second": "𐐨.ts",
+      "collide": true
+    },
+    {
+      "first": "𞤀.ts",
+      "second": "𞤢.ts",
+      "collide": true
+    },
+    {
+      "first": "é.ts",
+      "second": "é.ts",
+      "collide": false
+    }
+  ]
+}

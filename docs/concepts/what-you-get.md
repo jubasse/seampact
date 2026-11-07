@@ -1,0 +1,51 @@
+# What seampact generates, and what it leaves to you
+
+From one YAML contract:
+
+| Output | What you get |
+|---|---|
+| Types | One TypeScript type per schema, request and reply. |
+| Validators | zod, yup, class-validator, VineJS or Ajv schemas that check every input. |
+| Server boundary | Routes for NestJS, Express, Fastify, AdonisJS or Hono. They validate input, call your access hooks, and check each reply against the contract before it is sent. |
+| Built-in rules | Paging, rate limits, idempotency keys, ETags, CSRF, signed requests and field rights, declared in the contract and enforced at the boundary. You plug in the stores and decisions. |
+| Errors | One error format, RFC 9457 `problem+json` by default, with typed error codes per route. |
+| Clients | A typed `fetch` client, and TanStack Query, SWR or RTK Query hooks for React. |
+| Docs | OpenAPI 3.1 documents, and on NestJS and Fastify your framework's own Swagger kept in line with the contract. |
+| Editor support | Schemas that complete and check the contract's names as you type. |
+
+From the CLI:
+
+| Command | What it does |
+|---|---|
+| `seampact init` | Starts a project: a config and an example contract. |
+| `seampact generate` | Writes the code above into `__generated__`. |
+| `seampact check` | Fails CI when generated files or documents differ from the contract. |
+| `seampact diff` | Classifies the changes between two versions and fails on a breaking one. |
+| `seampact lint` | Reports contract mistakes before you generate. |
+| `seampact explain tasks.updateTask` | Prints one route whole: params, rules, errors, and where each one comes from. |
+| `seampact bundle` | Packs a contract so other repositories, Node or JVM, pin and reuse it. |
+
+Declare API semantics once. Derive framework-native boundaries from them.
+
+seampact is a contract system for HTTP APIs. You describe an API in plain YAML files: its endpoints, schemas, errors, who may call each route and what each route requires. seampact compiles them into a canonical intermediate representation (IR), and everything else is derived from it: an OpenAPI 3.1 document, lint, a compatibility diff between two versions, and generated code for the frameworks you use.
+
+seampact generates boundaries, not implementations.
+
+- **Generated:** named types, validators, the route table, one handler interface per resource (or tag, or operation) with exact input and output types, typed clients, derived errors and headers, and the utilities that place the access and validation checks around your controller: a decorator per operation in NestJS, a composed annotation in Spring, a FormRequest and middleware in Laravel, an attribute, a listener and a value resolver in Symfony, a listener and a decorated provider in API Platform.
+- **Yours:** the controllers, which implement the generated interfaces, what a handler does, where data lives, how a credential is checked, how a right is decided and which tenant a request belongs to. seampact never generates a controller, and everything it generates goes to one directory, `__generated__` by default.
+
+seampact is not a framework. Generated code uses your framework's own mechanisms (composite decorators, guards and exception filters in NestJS, interceptors, argument resolvers and `ProblemDetail` in Spring, Form Requests and API Resources in Laravel, listeners and normalizers in Symfony) and never replaces them. Which OpenAPI documents you get is your choice, per app: seampact's document (the default for an app that serves routes; a frontend with client targets only writes none unless it asks), your framework's own document (`@nestjs/swagger`, springdoc, API Platform's) completed by the opt-in `nativeDocs` artefact so it agrees with the contract, both, or none. seampact never turns your framework's own generation off unless you ask, and a monorepo can also write one document across its apps.
+
+Access is checked through three generated, typed hooks: authenticate, decide and resolve scope. You answer them with the library you already use (Clerk, better-auth, Passport, CASL, spatie/laravel-permission, Laravel Gates, Symfony Voters, Spring Security) or with your own code. Your application refuses to start while an identity, right, rule or scope has no hook, or a route has no handler. Or keep your framework's own access rules: turn the access hooks off and seampact exports each route's access for them to enforce.
+
+seampact imposes nothing: not a wire format, a page shape, error codes, header names, a versioning scheme, a permission model, a validator, a client library or a code style. Where it needs a value to work, it has a default you can rename; everything else comes from your contract or from opt-in packs. What it does demand is explicitness: every route states who may call it, and every exception states its reason.
+
+By default a response is the bare payload and an error is an RFC 9457 `application/problem+json` body, with default error codes you can rename or replace with your own (`TASK_NOT_FOUND` works). Paged lists declare their own parameter names and page shape, or take them from a pack. Bodies are JSON, forms or multipart uploads, responses may be file downloads or redirects, and a value a third party shapes freely can be declared opaque. Envelopes, JSON:API, HAL, JSON-LD and Hydra, Laravel resources and paginators, Spring `Page`, or your own house format come from opt-in convention packs.
+
+## What seampact does not do
+
+- Generate business logic, persistence, an authentication check or an authorization decision.
+- Provide a server framework, or a TypeScript API to write contracts: YAML is the only way to declare one. An importer from an existing OpenAPI document is planned for v3.
+- Read environment variables or config files: the generated code takes the backend URL and every setting as an argument, and your app owns its config and secrets.
+- Impose right names, roles, a permission model, a tenancy scheme, a wire format or a code style.
+- Model WebSocket, Server-Sent Events, gRPC or GraphQL. The IR leaves room for them; see [ADR 0014](../adr/0014-room-for-real-time-and-rpc.md).

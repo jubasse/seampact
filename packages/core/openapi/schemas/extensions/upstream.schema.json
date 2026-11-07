@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/openapi/extensions/upstream.schema.json",
+  "title": "x-seampact-upstream",
+  "description": "The upstream services the operation calls.",
+  "type": "array",
+  "items": {
+    "type": "string",
+    "minLength": 1
+  }
+}

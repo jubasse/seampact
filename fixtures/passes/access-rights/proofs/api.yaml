@@ -1,0 +1,110 @@
+# Rule proofs access.rights writes (ADR 0002 section 9, ADR 0004 section 13): a header proof as a derived header
+# parameter; body proofs in requirement order, two rules reading one name with one schema sharing an element;
+# a proof-only input on a POST action without input; proofs added to a declared JSON input, to a form input with
+# their wire, and to a signed route's input; a proof-only input on a signed route, with the identity's policy;
+# and a throttle bucket counting a field of a form input.
+api: { name: vault, version: 1 }
+
+schemes:
+  bearer: { kind: bearer }
+  hookSignature:
+    kind: signature
+    name: Hook-Signature
+    format: 't={ts},v1={sig}'
+    algorithm: hmac-sha256
+    payload: '{ts}.{rawBody}'
+    encoding: hex
+    tolerance: 5m
+    key: { value: hook }
+
+identities:
+  user:
+    schemes: { read: [bearer], write: [bearer] }
+    principal: UserPrincipal
+  hook:
+    kind: signed
+    scheme: hookSignature
+    principal: HookCaller
+    unknownKeys: { ignore: The sender adds event fields without notice. }
+
+schemas:
+  SecretId: { type: string, format: uuid }
+  ReauthToken: { type: string, minLength: 1, maxLength: 512 }
+  OtpCode: { type: string, pattern: '^[0-9]{6}$' }
+  Secret:
+    type: object
+    required: [secretId, label]
+    properties: { secretId: SecretId, label: { type: string } }
+  UpdateSecret:
+    type: object
+    properties: { label: { type: string } }
+  ShareForm:
+    type: object
+    required: [email]
+    properties: { email: { type: string }, note: { type: string } }
+  HookEvent:
+    type: object
+    required: [kind]
+    properties: { kind: { type: string } }
+  UserPrincipal:
+    type: object
+    required: [userId]
+    properties: { userId: { type: string } }
+  HookCaller:
+    type: object
+    required: [account]
+    properties: { account: { type: string } }
+
+rules:
+  recentAuth: { proof: { in: body, name: reauthToken, schema: ReauthToken } }
+  sameSession: { proof: { in: body, name: reauthToken, schema: ReauthToken } }
+  otp: { proof: { in: header, name: X-Otp, schema: OtpCode } }
+  throttle: { bucket: true }
+
+buckets:
+  perUser: { key: [principal.userId], limit: 60, window: 1m }
+  perEmail: { key: [body.email, address], limit: 5, window: 15m }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: user
+    routes:
+      secrets:
+        kind: collection
+        id: { secretId: SecretId }
+        item: Secret
+        ops:
+          update: { input: UpdateSecret, requires: [{ rule: recentAuth }] }
+        member:
+          routes:
+            reveal:
+              method: post
+              requires: [{ rule: otp }, { rule: recentAuth }, { rule: sameSession }]
+              responses:
+                204: {}
+            share:
+              method: post
+              inputMedia: form
+              input: ShareForm
+              requires:
+                - { rule: recentAuth }
+                - { rule: throttle, bucket: perEmail }
+                - { rule: throttle, bucket: perUser }
+              responses:
+                204: {}
+  hooks:
+    prefix: /v{version}/hooks
+    identity: hook
+    routes:
+      events:
+        method: post
+        input: HookEvent
+        requires: [{ rule: recentAuth }]
+        responses:
+          204: {}
+      ping:
+        method: post
+        requires: [{ rule: recentAuth }]
+        responses:
+          204: {}

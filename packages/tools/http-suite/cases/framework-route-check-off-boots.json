@@ -1,0 +1,10 @@
+{
+  "id": "framework-route-check-off-boots",
+  "title": "With the framework-route check switched off, the app serving an unlisted framework route starts",
+  "checks": ["CHK-147"],
+  "profiles": ["boot"],
+  "boot": {
+    "variant": "framework-route-check-off",
+    "outcome": "starts"
+  }
+}

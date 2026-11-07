@@ -1,0 +1,7 @@
+# CHK-142: An unpaged list, without a reason.
+api: { name: tasks, version: 1 }
+surfaces:
+  app:
+    identity: user
+    routes:
+      tags: { method: get, item: Tag, paging: none }

@@ -1,0 +1,41 @@
+{
+  "name": "@seampact/hooks",
+  "description": "The neutral hook interfaces and idempotency store interface every generated Node server boundary types against.",
+  "version": "1.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jubasse/seampact.git",
+    "directory": "packages/runtime/hooks"
+  },
+  "homepage": "https://jubasse.github.io/seampact/concepts/packages/",
+  "bugs": {
+    "url": "https://github.com/jubasse/seampact/issues"
+  },
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "main": "./src/index.ts",
+  "publishConfig": {
+    "main": "./dist/cjs/index.js",
+    "types": "./dist/cjs/index.d.ts",
+    "exports": {
+      ".": {
+        "import": {
+          "types": "./dist/index.d.ts",
+          "default": "./dist/index.js"
+        },
+        "require": {
+          "types": "./dist/cjs/index.d.ts",
+          "default": "./dist/cjs/index.js"
+        }
+      }
+    }
+  },
+  "seampact": {
+    "role": "hooks"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}

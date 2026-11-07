@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/openapi/extensions/max-size.schema.json",
+  "title": "x-seampact-max-size",
+  "description": "The largest file a multipart field accepts, in bytes.",
+  "type": "integer",
+  "minimum": 0
+}

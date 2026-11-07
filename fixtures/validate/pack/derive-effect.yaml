@@ -1,0 +1,8 @@
+# expect: seampact/validate/unknown-keyword /derive/0/run
+# derive entries take effects from a closed set (ADR 0008).
+pack: { name: house, version: 1.0.0 }
+derive:
+  - entry: audit
+    select: { op: [create] }
+    attachErrors: [api.forbidden]
+    run: ./audit.js

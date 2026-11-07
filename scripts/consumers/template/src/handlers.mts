@@ -1,0 +1,201 @@
+// The handlers every Node server consumer's controllers delegate to, framework-neutral and typed by the generated
+// operation types: one declared success per operation, as the http suite expects, unless the script a case loaded
+// answers for the operation.
+import type * as Tasks from "../generated/types/tasks/index.js";
+import type * as TasksDevices from "../generated/types/tasksDevices/index.js";
+import type * as TasksService from "../generated/types/tasksService/index.js";
+import type * as TasksServiceWrites from "../generated/types/tasksServiceWrites/index.js";
+import { DEVICE_ID } from "../test/credentials.mjs";
+import { listChannelsPage, listTasksPage } from "./paged-lists.mjs";
+import { isHeld, scriptedAnswer, waitForRelease, writeLogLine } from "./suite-control.mjs";
+
+const CREATED_AT = "2026-10-18T09:00:00.000Z";
+const NEW_TASK_ID = "20000000-0000-4000-8000-0000000000ff";
+
+const GENERAL_CHANNEL_ID = "10000000-0000-4000-8000-000000000001";
+const FIRST_VERSION = 1;
+
+// The sample task a `state` filter on listTasks answers for each state it lists, in the order it lists them.
+const SAMPLE_TASK_ID_BY_STATE: Readonly<Record<Tasks.schemas.TaskState, string>> = {
+  open: NEW_TASK_ID,
+  done: "20000000-0000-4000-8000-0000000000fe",
+  archived: "20000000-0000-4000-8000-0000000000fd",
+};
+
+// The caller a Node server hands the getChannel handler beside its input; written here, not imported from a
+// server tree, since the stub consumer generates none.
+interface ChannelCaller {
+  readonly principal: { readonly userId: unknown };
+  readonly scopes: { readonly channel: { readonly id: unknown } };
+}
+
+function task(taskId: string, title = "Write the slice test"): Tasks.schemas.Task {
+  return { taskId, title, state: "open", version: FIRST_VERSION, createdAt: CREATED_AT };
+}
+
+function updated(current: Tasks.schemas.Task): Tasks.schemas.Task {
+  return { ...current, version: current.version + 1 };
+}
+
+// Every task is at its first version, so another expected version is stale.
+const STALE_VERSION = { status: 409, code: "state.conflict" } as const;
+
+// The boundary validates the deadline header; stopping the work once it has passed is the handler's part.
+const DEADLINE_EXCEEDED = { status: 504, code: "api.deadline_exceeded" } as const;
+
+// The trace context reaches the handler as sent, never refused, so the handler can relay it on its own calls.
+function logTraceContext(traceContext: string | undefined): void {
+  if (traceContext !== undefined) writeLogLine(`trace context ${traceContext}`);
+}
+
+/**
+ * The handlers of one api, each answering what the loaded script gives its operation, as is, in place of its own
+ * result: the script tests the boundary with results the handler types do not allow. A held handler answers once
+ * released, from the script loaded then.
+ */
+export function scripted<Handlers extends object>(api: string, handlers: Handlers): Handlers {
+  return new Proxy(handlers, {
+    get(target, property, receiver) {
+      const handler: unknown = Reflect.get(target, property, receiver);
+
+      if (typeof handler !== "function" || typeof property !== "string") return handler;
+
+      const answer = (input: unknown[]): unknown => {
+        const scripted = scriptedAnswer(api, property);
+
+        if (scripted === undefined) return Reflect.apply(handler, target, input);
+
+        if ("throws" in scripted) throw new Error(scripted.throws);
+
+        return scripted;
+      };
+
+      return (...input: unknown[]) => {
+        if (!isHeld(api, property)) return answer(input);
+
+        return waitForRelease(api, property).then(() => answer(input));
+      };
+    },
+  });
+}
+
+/** The `tasks` api's handlers, by operation. */
+export const tasksHandlers = scripted("tasks", {
+  health(): Tasks.HealthOutput {
+    return { status: 200, body: { status: "ok" } };
+  },
+
+  listChannels(_input: Tasks.ListChannelsInput): Tasks.ListChannelsOutput {
+    return {
+      status: 200,
+      body: listChannelsPage([{ channelId: GENERAL_CHANNEL_ID, name: "General" }]),
+    };
+  },
+
+  getChannel(input: Tasks.GetChannelInput & ChannelCaller): Tasks.GetChannelOutput {
+    // The boundary authenticated the caller and resolved the channel from the path before the handler ran.
+    if (input.principal.userId === "" || input.scopes.channel.id !== input.path.channelId) {
+      throw new Error(
+        "the handler did not receive the caller and the channel the boundary resolved",
+      );
+    }
+
+    return { status: 200, body: { channelId: input.path.channelId, name: "General" } };
+  },
+
+  listTasks(input: Tasks.ListTasksInput): Tasks.ListTasksOutput {
+    const { state } = input.query;
+    const items =
+      state === undefined
+        ? [task(NEW_TASK_ID)]
+        : state.map((listed) => ({ ...task(SAMPLE_TASK_ID_BY_STATE[listed]), state: listed }));
+
+    return { status: 200, body: listTasksPage(items, input) };
+  },
+
+  createTask(input: Tasks.CreateTaskInput): Tasks.CreateTaskOutput {
+    return { status: 201, body: task(crypto.randomUUID(), input.body.title) };
+  },
+
+  getTasksBatch(input: Tasks.GetTasksBatchInput): Tasks.GetTasksBatchOutput {
+    return {
+      status: 200,
+      body: Object.fromEntries(input.body.ids.map((taskId) => [taskId, task(taskId)])),
+    };
+  },
+
+  searchTasks(_input: Tasks.SearchTasksInput): Tasks.SearchTasksOutput {
+    return { status: 200, body: { items: [task(NEW_TASK_ID)], total: 1 } };
+  },
+
+  getTask(input: Tasks.GetTaskInput): Tasks.GetTaskOutput {
+    return { status: 200, body: task(input.path.taskId) };
+  },
+
+  updateTask(input: Tasks.UpdateTaskInput): Tasks.UpdateTaskOutput | typeof STALE_VERSION {
+    if (input.body.expectedVersion !== FIRST_VERSION) return STALE_VERSION;
+
+    const title = input.body.title ?? task(input.path.taskId).title;
+
+    return { status: 200, body: updated(task(input.path.taskId, title)) };
+  },
+
+  archiveTask(input: Tasks.ArchiveTaskInput): Tasks.ArchiveTaskOutput | typeof STALE_VERSION {
+    if (input.body.expectedVersion !== FIRST_VERSION) return STALE_VERSION;
+
+    return { status: 200, body: { ...updated(task(input.path.taskId)), state: "archived" } };
+  },
+
+  assignTask(input: Tasks.AssignTaskInput): Tasks.AssignTaskOutput {
+    return { status: 200, body: task(input.path.taskId) };
+  },
+
+  purgeTask(_input: Tasks.PurgeTaskInput): Tasks.PurgeTaskOutput {
+    return { status: 204 };
+  },
+
+  getDraft(input: Tasks.GetDraftInput): Tasks.GetDraftOutput {
+    return { status: 200, body: { draftId: input.path.draftId, body: "Draft text" } };
+  },
+
+  deleteDraft(input: Tasks.DeleteDraftInput): Tasks.DeleteDraftOutput {
+    return { status: 200, body: { draftId: input.path.draftId, body: "Draft text" } };
+  },
+
+  getPreferences(_input: Tasks.GetPreferencesInput): Tasks.GetPreferencesOutput {
+    return { status: 200, body: { locale: "en" } };
+  },
+
+  updatePreferences(input: Tasks.UpdatePreferencesInput): Tasks.UpdatePreferencesOutput {
+    return { status: 200, body: { locale: "en", ...input.body } };
+  },
+
+  payments(_input: Tasks.PaymentsInput): Tasks.PaymentsOutput {
+    return { status: 204 };
+  },
+});
+
+/** The `tasksService` api's handlers, by operation. */
+export const tasksServiceHandlers = scripted("tasksService", {
+  getTask(input: TasksService.GetTaskInput): TasksService.GetTaskOutput | typeof DEADLINE_EXCEEDED {
+    logTraceContext(input.headers.traceparent);
+
+    if (Date.parse(input.headers["x-deadline"]) <= Date.now()) return DEADLINE_EXCEEDED;
+
+    return { status: 200, body: task(input.path.taskId) };
+  },
+});
+
+/** The `tasksServiceWrites` api's handlers, by operation. */
+export const tasksServiceWritesHandlers = scripted("tasksServiceWrites", {
+  createTask(input: TasksServiceWrites.CreateTaskInput): TasksServiceWrites.CreateTaskOutput {
+    return { status: 201, body: task(crypto.randomUUID(), input.body.title) };
+  },
+});
+
+/** The `tasksDevices` api's handlers, by operation. */
+export const tasksDevicesHandlers = scripted("tasksDevices", {
+  status(_input: TasksDevices.StatusInput): TasksDevices.StatusOutput {
+    return { status: 200, body: { deviceId: DEVICE_ID } };
+  },
+});

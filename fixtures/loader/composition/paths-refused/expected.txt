@@ -1,0 +1,4 @@
+api.yaml:4:18: error seampact/load/path-escape: path '../outside.yaml' of $include leaves the workspace root. Fix: move the file inside the workspace, or add a workspace.yaml at or above every file the contract reads.
+api.yaml:5:18: error seampact/load/path-absolute: path '/etc/hosts' of $include is absolute. Fix: write a path relative to this file, starting with ./ or ../.
+api.yaml:6:18: error seampact/load/path-backslash: path '.\\x.yaml' of $include uses a backslash. Fix: write the path with forward slashes.
+api.yaml:7:18: error seampact/load/path-case: path './Parts/task.yaml' of $include differs in case from the file on disk, 'parts/task.yaml'. Fix: write the path as 'parts/task.yaml'; compilation must not depend on the file system's case rules.

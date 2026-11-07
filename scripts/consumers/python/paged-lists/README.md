@@ -1,0 +1,1 @@
+The pages of the paged lists a Python consumer app answers, one module per contract variant: `assemble.sh` copies `reference_paged_lists.py`, or `pack_laravel_paged_lists.py` for the pack-laravel variant, into the app as `paged_lists.py`.

@@ -1,0 +1,2 @@
+api.yaml:3:4: error seampact/load/yaml-ambiguous-scalar: plain '1_000' is a number or a timestamp for YAML 1.1 and a string for YAML 1.2 (P3). Fix: quote it ('1_000').
+api.yaml:4:4: error seampact/load/yaml-ambiguous-scalar: plain '0b101' is a number or a timestamp for YAML 1.1 and a string for YAML 1.2 (P3). Fix: quote it ('0b101').

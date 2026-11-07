@@ -1,0 +1,114 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Seampact\Codegen\Tests\Support;
+
+use Seampact\Ir\Model\ContractIR;
+use Seampact\Ir\Read\IrReader;
+use Seampact\Ir\Run\FrameworkRoute;
+use Seampact\Ir\Run\Generator;
+use Seampact\Ir\Run\TargetEntry;
+
+/**
+ * The reference contract's IRs as an entry's `operations` filter keeps them, read with a PHP target's IR support, and
+ * that target's entries to generate them; shared by the PHP targets' tests through their `autoload-dev`.
+ */
+final class ReferenceContract
+{
+    public const TASKS = 'tasks.ir.json';
+    public const TASKS_SERVICE = 'tasksService.ir.json';
+    public const REFERENCE = 'reference';
+
+    // The tasks operations whose forms this release generates; the others carry paging, idempotency, cache headers or
+    // a signed route, and the tasksService api's one operation a deadline and a relay, which a later release brings.
+    public const CORE_OPERATIONS = ['health', 'getChannel', 'getDraft', 'getTask', 'getTasksBatch'];
+
+    public static function repositoryRoot(): string
+    {
+        return dirname(__DIR__, 4);
+    }
+
+    /** An IR of the reference contract, or of a variant of it under `fixtures/golden` (`pack-laravel`). */
+    public static function document(string $file, string $fixture = self::REFERENCE): \stdClass
+    {
+        $document = json_decode((string) file_get_contents(self::repositoryRoot() . "/fixtures/golden/{$fixture}/" . $file), false, 512, JSON_THROW_ON_ERROR);
+        if (!$document instanceof \stdClass) {
+            throw new \LogicException("The reference IR {$file} is not a JSON object.");
+        }
+
+        return $document;
+    }
+
+    /** @param list<string> $operationIds */
+    public static function kept(\stdClass $document, array $operationIds): \stdClass
+    {
+        $copy = json_decode(json_encode($document, JSON_THROW_ON_ERROR), false, 512, JSON_THROW_ON_ERROR);
+        if (!$copy instanceof \stdClass || !is_array($copy->operations)) {
+            throw new \LogicException('The IR copy has no operations list.');
+        }
+        $copy->operations = array_values(array_filter($copy->operations, static fn (mixed $operation): bool => $operation instanceof \stdClass && in_array($operation->id, $operationIds, true)));
+
+        return $copy;
+    }
+
+    public static function read(Generator $generator, \stdClass $document): ContractIR
+    {
+        return IrReader::readDocument($document, $generator->irSupport());
+    }
+
+    public static function core(Generator $generator): ContractIR
+    {
+        return self::read($generator, self::kept(self::document(self::TASKS), self::CORE_OPERATIONS));
+    }
+
+    /**
+     * @param array<string, mixed> $options
+     * @param array<string, mixed> $artefacts
+     * @param list<FrameworkRoute> $frameworkRoutes
+     */
+    public static function entry(string $package, string $api, string $namespace, array $options = [], array $artefacts = [], array $frameworkRoutes = [], ?string $mount = null): TargetEntry
+    {
+        return new TargetEntry('server', $package, $api, null, (object) $options, (object) $artefacts, '/app/generated', $namespace, $frameworkRoutes, $mount);
+    }
+
+    /**
+     * [$document] with members added to its GetTasksBatchInput body, each as [name, optional, nullable, type].
+     *
+     * @param list<array{string, bool, bool, array<string, mixed>}> $added
+     */
+    public static function withBatchInputMembers(\stdClass $document, array $added): \stdClass
+    {
+        $schemas = get_object_vars($document)['schemas'] ?? null;
+        $schema = $schemas instanceof \stdClass ? (get_object_vars($schemas)['GetTasksBatchInput'] ?? null) : null;
+        if (!$schema instanceof \stdClass || !is_array($schema->properties) || !$schema->properties[0] instanceof \stdClass) {
+            throw new \LogicException('The reference IR has no GetTasksBatchInput object schema.');
+        }
+
+        $template = $schema->properties[0];
+        foreach ($added as [$name, $optional, $nullable, $type]) {
+            $property = clone $template;
+            unset($property->derivedFrom);
+            $property->name = $name;
+            $property->optional = $optional;
+            $property->nullable = $nullable;
+            $property->type = json_decode(json_encode($type, JSON_THROW_ON_ERROR), false, 512, JSON_THROW_ON_ERROR);
+            $schema->properties[] = $property;
+        }
+
+        return $document;
+    }
+
+    /** The one operation `$operationId` of the reference tasks IR, which `$change` edits in place. */
+    public static function withOperation(string $operationId, \Closure $change): \stdClass
+    {
+        $document = self::kept(self::document(self::TASKS), [$operationId]);
+        $operation = is_array($document->operations) ? ($document->operations[0] ?? null) : null;
+        if (!$operation instanceof \stdClass) {
+            throw new \LogicException("The reference IR has no operation '{$operationId}'.");
+        }
+        $change($operation, $document);
+
+        return $document;
+    }
+}

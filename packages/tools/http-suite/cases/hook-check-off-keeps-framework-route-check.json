@@ -1,0 +1,11 @@
+{
+  "id": "hook-check-off-keeps-framework-route-check",
+  "title": "With the hook check switched off, the app serving an unlisted framework route still refuses to start",
+  "checks": ["CHK-147"],
+  "profiles": ["boot"],
+  "boot": {
+    "variant": "hook-check-off-unlisted-route",
+    "outcome": "refuses",
+    "diagnostic": ["cannot start", "/v1/unlisted"]
+  }
+}

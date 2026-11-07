@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/openapi/extensions/signature.schema.json",
+  "title": "x-seampact-signature",
+  "description": "How a signed request is verified.",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "verify": {
+          "const": "template"
+        },
+        "format": {
+          "type": "string",
+          "minLength": 1
+        },
+        "algorithm": {
+          "type": "string",
+          "minLength": 1
+        },
+        "payload": {
+          "type": "string",
+          "minLength": 1
+        },
+        "encoding": {
+          "type": "string",
+          "minLength": 1
+        },
+        "toleranceMs": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "key": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": ["value"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "from": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": ["from"],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "required": ["verify", "format", "algorithm", "payload", "encoding", "key"],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "verify": {
+          "const": "application"
+        },
+        "headers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "key": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": ["value"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "from": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": ["from"],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "required": ["verify", "headers"],
+      "additionalProperties": false
+    }
+  ]
+}

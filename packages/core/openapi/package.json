@@ -1,0 +1,50 @@
+{
+  "name": "@seampact/openapi",
+  "description": "Writes the OpenAPI 3.1 documents from the IR, with what OpenAPI cannot say as x-seampact-* extensions.",
+  "version": "1.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jubasse/seampact.git",
+    "directory": "packages/core/openapi"
+  },
+  "homepage": "https://jubasse.github.io/seampact/configuration/openapi-and-docs/",
+  "bugs": {
+    "url": "https://github.com/jubasse/seampact/issues"
+  },
+  "type": "module",
+  "main": "./src/index.ts",
+  "files": [
+    "dist",
+    "schemas"
+  ],
+  "exports": {
+    ".": "./src/index.ts",
+    "./schemas/extensions/*.json": "./schemas/extensions/*.json"
+  },
+  "publishConfig": {
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./schemas/extensions/*.json": "./schemas/extensions/*.json"
+    }
+  },
+  "seampact": {
+    "role": "core"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@seampact/codegen-core": "workspace:*",
+    "@seampact/spec": "workspace:*",
+    "yaml": "2.9.1"
+  },
+  "devDependencies": {
+    "@redocly/openapi-core": "2.71.1",
+    "ajv": "8.20.0"
+  }
+}

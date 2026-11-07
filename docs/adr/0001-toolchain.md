@@ -4,7 +4,7 @@ Status: accepted
 
 ## Context
 
-The monorepo needs a strict, reproducible toolchain before any package exists. Every later package should get typecheck, lint, format, tests and CI by adding a directory under `packages/`. Dependencies are pinned by exact version and CI actions by commit SHA (brief section 17.7). Nothing is published to npm until the project is complete (amendment A3).
+The monorepo needs a strict, reproducible toolchain before any package exists. Every later package should get typecheck, lint, format, tests and CI by adding a directory under `packages/`. Dependencies are pinned by exact version and CI actions by commit SHA. Nothing is published to npm until the project is complete (amendment [A3](../decisions.md#a3)).
 
 ## Decisions
 
@@ -12,7 +12,7 @@ The monorepo needs a strict, reproducible toolchain before any package exists. E
 
 Options: npm workspaces, pnpm, Yarn.
 
-Choice: pnpm 12, pinned through `packageManager`. Its strict, non-flat `node_modules` catches undeclared dependencies between packages, which matters for a monorepo whose packages must stay independent (amendment A2). The lockfile is deterministic, `--frozen-lockfile` is the CI contract, and the default `minimumReleaseAge` delays freshly published versions, which limits supply-chain exposure. `save-exact=true` keeps pins exact.
+Choice: pnpm 12, pinned through `packageManager`. Its strict, non-flat `node_modules` catches undeclared dependencies between packages, which matters for a monorepo whose packages must stay independent (amendment [A2](../decisions.md#a2)). The lockfile is deterministic, `--frozen-lockfile` is the CI contract, and the default `minimumReleaseAge` delays freshly published versions, which limits supply-chain exposure. `save-exact=true` keeps pins exact.
 
 ### Language and runtime: TypeScript 6 on Node 24
 
@@ -41,6 +41,12 @@ Choice: Changesets, with `access: restricted` and no publish workflow or npm tok
 ### CI
 
 One job named `ci` runs `pnpm install --frozen-lockfile` then `pnpm gate` on push and pull request to `main`. Actions are pinned by full commit SHA with the version in a comment. The `ci` job is the check that branch protection will require.
+
+Amended 2026-10-12: git flow, see CONTRIBUTING.md. CI now runs on push and pull request to `main` and `develop`.
+
+Amended 2026-11-03: CI is now one workflow per lane, each with its own required check, plus post-merge and nightly rows, a workflow lint, shared caches and Dependabot. See the CI and Dependencies sections of CONTRIBUTING.md.
+
+Amendment 2026-11-06: the one `ci` job above is now the first of two tiers. A pull request to `develop` runs the fast tier (`ci`, `checklist`, and the unit jobs of each lane it touches, on one version and one consumer per family); the push to `develop` after the merge runs the full tier (the queue rows, the `release` dry run and the post-merge rows). The `release` workflow runs the conformance release gate (ADR 0015): blocking in a manual release run, report-only on `develop`'s newest reports. A job skipped on a pull request passes its required check.
 
 ## Consequences
 

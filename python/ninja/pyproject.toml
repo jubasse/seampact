@@ -1,0 +1,48 @@
+[build-system]
+requires = ["hatchling==1.33.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "seampact-ninja"
+version = "1.0.0"
+description = "The Django Ninja target of seampact: its generator and the placement runtime of the generated code."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.12"
+# The matrix holds major.minor and its Ninja floor is 1.5; 1.5.3 is the first release whose metadata declares Django
+# 6.0, so an older 1.5 would not install beside Django 6. Pydantic comes through Ninja's own range.
+dependencies = [
+    "django-ninja>=1.5.3",
+    "seampact-codegen[pydantic]==1.0.0",
+    "seampact-django==1.0.0",
+    "seampact-hooks==1.0.0",
+]
+classifiers = [
+    "Framework :: Django",
+    "Framework :: Django :: 5.2",
+    "Framework :: Django :: 6.0",
+    "Framework :: Django :: 6.1",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Typing :: Typed",
+]
+
+[project.optional-dependencies]
+# What the generator needs; a production install of an app leaves it out.
+generate = ["seampact-django[generate]==1.0.0"]
+
+[project.entry-points."seampact.generators"]
+ninja = "seampact.ninja.generator:NinjaGenerator"
+
+# PEP 420: `seampact` is a namespace shared by every seampact distribution, so it has no `__init__.py`.
+[tool.hatch.build.targets.wheel]
+packages = ["src/seampact"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/seampact", "LICENSE"]
+
+[tool.uv.sources]
+seampact-codegen = { workspace = true }
+seampact-django = { workspace = true }
+seampact-hooks = { workspace = true }

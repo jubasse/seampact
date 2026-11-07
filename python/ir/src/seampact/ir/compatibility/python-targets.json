@@ -1,0 +1,71 @@
+{
+  "pythonTargets": [
+    {
+      "package": "pypi:seampact-fastapi",
+      "framework": {
+        "id": "fastapi",
+        "package": "fastapi",
+        "unit": "minor",
+        "floor": "0.162",
+        "tested": ["0.162"],
+        "incompatible": []
+      },
+      "companions": [
+        {
+          "id": "starlette",
+          "package": "starlette",
+          "unit": "major",
+          "floor": "0.46",
+          "tested": ["0", "1"],
+          "incompatible": []
+        }
+      ]
+    },
+    {
+      "package": "pypi:seampact-drf",
+      "framework": {
+        "id": "djangorestframework",
+        "package": "djangorestframework",
+        "unit": "major",
+        "floor": "3.18",
+        "tested": ["3"],
+        "testedMinors": ["3.18"],
+        "incompatible": []
+      },
+      "companions": [
+        {
+          "id": "django",
+          "package": "django",
+          "unit": "major",
+          "floor": "5.2",
+          "tested": ["5", "6"],
+          "testedMinors": ["5.2", "6.1"],
+          "incompatible": []
+        }
+      ]
+    },
+    {
+      "package": "pypi:seampact-ninja",
+      "framework": {
+        "id": "django-ninja",
+        "package": "django-ninja",
+        "unit": "major",
+        "floor": "1.5",
+        "tested": ["1"],
+        "testedMinors": ["1.5", "1.7"],
+        "incompatible": []
+      },
+      "companions": [
+        {
+          "id": "django",
+          "package": "django",
+          "unit": "major",
+          "floor": "5.2",
+          "tested": ["5", "6"],
+          "testedMinors": ["5.2", "6.1"],
+          "incompatible": []
+        }
+      ]
+    }
+  ]
+}

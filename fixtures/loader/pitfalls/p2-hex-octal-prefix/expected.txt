@@ -1,0 +1,2 @@
+api.yaml:3:4: error seampact/load/yaml-number-format: plain number '0o12' is not written in plain decimal (P2). Fix: quote it, or write the number in plain decimal.
+api.yaml:4:4: error seampact/load/yaml-number-format: plain number '0x1F' is not written in plain decimal (P2). Fix: quote it, or write the number in plain decimal.

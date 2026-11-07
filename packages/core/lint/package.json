@@ -1,0 +1,39 @@
+{
+  "name": "@seampact/lint",
+  "description": "Lint rules over the IR, and the API to write your own.",
+  "version": "1.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jubasse/seampact.git",
+    "directory": "packages/core/lint"
+  },
+  "homepage": "https://jubasse.github.io/seampact/features/lint/",
+  "bugs": {
+    "url": "https://github.com/jubasse/seampact/issues"
+  },
+  "type": "module",
+  "main": "./src/index.ts",
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "seampact": {
+    "role": "core"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@seampact/compiler": "workspace:*",
+    "@seampact/spec": "workspace:*"
+  }
+}

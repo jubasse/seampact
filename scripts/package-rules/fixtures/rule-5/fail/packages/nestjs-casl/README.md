@@ -1,0 +1,1 @@
+# @seampact/nestjs-casl

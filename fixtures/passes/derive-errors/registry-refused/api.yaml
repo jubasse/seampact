@@ -1,0 +1,31 @@
+# Refused error declarations (ADR 0006 sections 3 and 6, A35, A36, A40): codes outside conventions.errors.pattern,
+# a redefinition on a node, attachments of undeclared codes, an unknown nature, a nature named like a base, and
+# examples without params or that do not fit them.
+api: { name: shop, version: 1, kind: product }
+
+conventions:
+  errors:
+    pattern: '^[a-z]+(\.[a-z_]+)+$'
+    every: [shop.absent]
+
+natures:
+  refused: { base: refused }
+
+errors:
+  TASK_NOT_FOUND: { status: 404 }
+  E1042: { status: 500 }
+  404-gone: { status: 410 }
+  shop.locked: { status: 423 }
+  shop.odd: { status: 400, nature: weird }
+  shop.bare: { status: 400, example: { reason: none } }
+  shop.counted: { status: 400, params: { count: { type: integer } }, example: { count: many } }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: The fixture checks error declarations only. }
+    errors:
+      shop.locked: { status: 409 }
+      shop.missing: {}
+    routes:
+      ping: { method: get }

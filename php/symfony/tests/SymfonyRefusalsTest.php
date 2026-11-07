@@ -1,0 +1,330 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Seampact\Symfony\Tests;
+
+use PHPUnit\Framework\TestCase;
+use Seampact\Codegen\Tests\Support\ReferenceContract;
+use Seampact\Codegen\Tests\Support\ResponseForms;
+use Seampact\Ir\Config\ConfigProblem;
+use Seampact\Ir\Run\GenerationRefusedException;
+use Seampact\Symfony\SymfonyGenerator;
+
+/**
+ * What `generate` refuses by name: each form with the release that brings it (ADR 0024 "Refused by name or waiting"),
+ * and the PHP names two wire names would share.
+ */
+final class SymfonyRefusalsTest extends TestCase
+{
+    private const AFTER_ONE_ZERO = 'waits for a consumer after 1.0';
+
+    public function testTheGeneratorNamesTheIdentityHeadersItLeavesToTheHandler(): void
+    {
+        $generator = new SymfonyGenerator();
+        $ir = ReferenceContract::read($generator, ReferenceContract::document('tasksService.ir.json'));
+
+        $warnings = $generator->handlerWarnings($ir, ReferenceContract::entry(SymfonyGenerator::PACKAGE, 'tasksService', 'App\\Tasks'));
+
+        self::assertNotSame([], $warnings);
+        foreach ($warnings as $warning) {
+            self::assertSame('identity.headers.handler', $warning->code);
+            self::assertStringContainsString("entry 'server' api 'tasksService'", (string) $warning->where);
+        }
+    }
+
+    public function testASortKeyRestrictedByARightWaitsForAConsumer(): void
+    {
+        $document = ReferenceContract::withOperation('listTasks', static function (\stdClass $operation): void {
+            $sortKey = self::firstOf(self::object($operation->paging)->sortKeys);
+            $sortKey->right = 'tasks.seeEffort';
+        });
+
+        self::assertStringContainsString("The sort key 'createdAt' restricted by the right 'tasks.seeEffort'", self::refused($document)['paging.sortKey.right.unsupported'] ?? '');
+    }
+
+    public function testTwoParametersWithOnePhpNameAreRefusedAsACollision(): void
+    {
+        $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation): void {
+            self::object($operation->params)->query = [
+                self::param('page-size', false, ['kind' => 'scalar', 'type' => 'integer', 'refinements' => new \stdClass()]),
+                self::param('pageSize', true, ['kind' => 'scalar', 'type' => 'string', 'refinements' => new \stdClass()]),
+            ];
+        });
+
+        $refused = self::refused($document);
+
+        self::assertArrayHasKey('name.collision', $refused);
+        self::assertStringContainsString("'page-size' and 'pageSize'", $refused['name.collision']);
+    }
+
+    public function testAPlaceholderLongerThanTheRouterAcceptsKeepsAPositionalName(): void
+    {
+        $longName = 'theTaskIdentifierOfTheChannelTaskToRead';
+        $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation) use ($longName): void {
+            self::assertIsString($operation->path);
+            $operation->path = str_replace('{taskId}', "{{$longName}}", $operation->path);
+            self::assertIsArray(self::object($operation->params)->path);
+            foreach (self::object($operation->params)->path as $param) {
+                $param = self::object($param);
+                if ($param->name === 'taskId') {
+                    $param->name = $longName;
+                }
+            }
+        });
+
+        $routes = self::generatedFile($document, 'TasksRouteLoader.php');
+
+        self::assertStringContainsString("'/v1/channels/{channelId}/tasks/{p2}'", $routes);
+        self::assertStringNotContainsString($longName, $routes);
+    }
+
+    public function testFormsAbsentFromTheReferenceWaitForAConsumerAfterOneZero(): void
+    {
+        $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation): void {
+            $operation->upstream = ['billing'];
+            self::firstOf($operation->scopes)->source = (object) ['in' => 'query', 'name' => 'channel'];
+        });
+
+        $refused = self::refused($document);
+
+        self::assertStringContainsString(self::AFTER_ONE_ZERO, $refused['upstream.unsupported'] ?? '');
+        self::assertStringContainsString(self::AFTER_ONE_ZERO, $refused['scope.source.unsupported'] ?? '');
+    }
+
+    public function testTheFormsOneZeroLeavesOutAreRefusedByNameThroughTheGenerator(): void
+    {
+        $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation, \stdClass $document): void {
+            $operation->upstream = ['billing'];
+            $operation->principalRequires = [(object) ['field' => 'verified', 'origin' => (object) ['layer' => 'api', 'pointer' => '/principalRequires/0']]];
+            $operation->bindings = [(object) [
+                'from' => (object) ['in' => 'body', 'name' => 'ownerId'],
+                'to' => (object) ['in' => 'principal', 'name' => 'profileId'],
+                'origin' => (object) ['layer' => 'api', 'pointer' => '/bindings/0'],
+            ]];
+            self::firstOf($operation->scopes)->source = (object) ['in' => 'resolver'];
+            self::object(self::object($document->identities)->user)->principal = (object) ['kind' => 'variants', 'variants' => (object) ['viewer' => 'UserPrincipal']];
+            $schemes = self::object($document->schemes);
+            $schemes->bearer = (object) ['id' => 'bearer', 'kind' => 'basic', 'origin' => self::object($schemes->bearer)->origin];
+        });
+
+        $refused = self::refused($document);
+
+        foreach (['upstream', 'principalRequires', 'bindings', 'scope.source', 'principal.variants', 'scheme.basic'] as $form) {
+            self::assertArrayHasKey("{$form}.unsupported", $refused);
+        }
+    }
+
+    public function testAListResponseWaitsForAConsumerAfterOneZero(): void
+    {
+        $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation): void {
+            $response = self::firstOf($operation->responses);
+            $response->shape = 'list';
+            $response->body = (object) ['kind' => 'array', 'items' => $response->body];
+        });
+
+        $refused = self::refused($document);
+
+        self::assertArrayNotHasKey('ir.value.unknown', $refused);
+        self::assertStringContainsString(self::AFTER_ONE_ZERO, $refused['response.shape.unsupported'] ?? '');
+    }
+
+    public function testAResponseHeaderTheRouteWritesIsRefusedByName(): void
+    {
+        self::assertStringContainsString(self::AFTER_ONE_ZERO, self::refused(ResponseForms::withRouteWrittenHeader())['response.header.unsupported'] ?? '');
+    }
+
+    public function testAUnionIsRefusedByName(): void
+    {
+        self::assertArrayHasKey('schema.union.unsupported', self::refused(ResponseForms::withUnionAnswer()));
+    }
+
+    public function testARedirectResponseIsRefusedByName(): void
+    {
+        self::assertStringContainsString("'redirect' response", self::refused(ResponseForms::withRedirectAnswer())['response.shape.unsupported'] ?? '');
+    }
+
+    public function testAnInputFieldRightBelowTheTopLevelWaitsForAConsumer(): void
+    {
+        $document = ReferenceContract::withOperation('createTask', static function (\stdClass $operation): void {
+            self::firstOf($operation->fieldRights)->pointer = '/details/effort';
+        });
+        $problem = self::refusedProblem($document, 'fieldRight.nestedPointer.unsupported');
+
+        self::assertStringContainsString('An input field right below the top level', $problem->message);
+        self::assertStringContainsString('/fieldRights/0/pointer', $problem->where ?? '');
+    }
+
+    public function testADegradableOperationIsRefusedByName(): void
+    {
+        self::assertArrayHasKey('degradable.unsupported', self::refused(ResponseForms::withDegradableOperation()));
+    }
+
+    public function testARightAndAPlainRuleAreServedByTheAccessListener(): void
+    {
+        $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation): void {
+            $origin = (object) ['layer' => 'api', 'pointer' => '/surfaces/app/requires'];
+            $operation->requires = [
+                (object) ['kind' => 'right', 'origin' => $origin, 'right' => 'tasks.read', 'subject' => (object) ['defaulted' => true, 'source' => (object) ['in' => 'scope', 'name' => 'channel']]],
+                (object) ['kind' => 'rule', 'origin' => $origin, 'params' => (object) ['intent' => 'read_task'], 'rule' => 'recentAuth'],
+            ];
+        });
+
+        $files = (new SymfonyGenerator())->generate(ReferenceContract::read(new SymfonyGenerator(), $document), ReferenceContract::entry(SymfonyGenerator::PACKAGE, 'tasks', 'App\\Tasks'));
+
+        self::assertNotSame([], $files);
+    }
+
+    public function testAStaticPathSegmentThatNeedsPercentEncodingWaitsForAConsumer(): void
+    {
+        foreach (['my tasks', 'tâches', 'a\\b', 'a^b', 'a{b', 'a}b', 'a|b', 'a[b', 'a]b'] as $segment) {
+            $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation) use ($segment): void {
+                self::assertIsString($operation->path);
+                $operation->path = str_replace('/tasks/', "/{$segment}/", $operation->path);
+            });
+
+            self::assertStringContainsString("'{$segment}'", self::refused($document)['path.segment.encoded.unsupported'] ?? '', $segment);
+        }
+    }
+
+    public function testAControlCharacterInAStaticPathSegmentIsEscapedAndTheFixNamesPlainCharacters(): void
+    {
+        $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation): void {
+            self::assertIsString($operation->path);
+            $operation->path = str_replace('/tasks/', "/a\x07b/", $operation->path);
+        });
+
+        try {
+            (new SymfonyGenerator())->generate(ReferenceContract::read(new SymfonyGenerator(), $document), ReferenceContract::entry(SymfonyGenerator::PACKAGE, 'tasks', 'App\\Tasks'));
+            self::fail('The contract was generated, but a form in it should be refused.');
+        } catch (GenerationRefusedException $refused) {
+            $problem = null;
+            foreach ($refused->problems as $candidate) {
+                if ($candidate->code === 'path.segment.encoded.unsupported') {
+                    $problem = $candidate;
+                }
+            }
+
+            self::assertNotNull($problem);
+            self::assertStringContainsString("'a\\u0007b'", $problem->message);
+            self::assertStringNotContainsString("\x07", $problem->message);
+            self::assertSame("Use plain ASCII letters, digits and '-' in that path part.", $problem->fix);
+        }
+    }
+
+    public function testAnIntegerStepBeyondThePhpIntRangeIsRefusedByName(): void
+    {
+        $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation): void {
+            self::object($operation->params)->query = [
+                self::param('page', false, ['kind' => 'scalar', 'type' => 'integer', 'refinements' => ['multipleOf' => '100000000000000000000']]),
+            ];
+        });
+
+        self::assertStringContainsString('waits for a consumer after 1.0', self::refused($document)['multipleOf.wide.unsupported'] ?? '');
+    }
+
+    public function testAStepOnANumberIsRefusedAsInconsistent(): void
+    {
+        $document = ReferenceContract::withOperation('getTask', static function (\stdClass $operation): void {
+            self::object($operation->params)->query = [
+                self::param('ratio', false, ['kind' => 'scalar', 'type' => 'number', 'refinements' => ['multipleOf' => '0.5']]),
+            ];
+        });
+
+        self::assertArrayHasKey('multipleOf.invalid', self::refused($document));
+    }
+
+    public function testTheHooksAccessArtefactAndTheBootCheckSwitchesAreRead(): void
+    {
+        $files = (new SymfonyGenerator())->generate(
+            ReferenceContract::read(new SymfonyGenerator(), ReferenceContract::document(ReferenceContract::TASKS)),
+            ReferenceContract::entry(SymfonyGenerator::PACKAGE, 'tasks', 'App\\Tasks', [], ['accessHooks' => true, 'bootCheck' => (object) ['frameworkRoutes' => false, 'hooks' => true]]),
+        );
+
+        self::assertNotSame([], $files);
+    }
+
+    public function testNativeAccessWaitsForAnAppThatNeedsIt(): void
+    {
+        $refused = self::refused(ReferenceContract::document(ReferenceContract::TASKS), ['accessHooks' => false]);
+
+        self::assertSame(['artefacts.accessHooks.unsupported'], array_keys($refused));
+        self::assertStringContainsString('it waits for an app that needs it', $refused['artefacts.accessHooks.unsupported']);
+    }
+
+    private static function generatedFile(\stdClass $document, string $pathSuffix): string
+    {
+        $files = (new SymfonyGenerator())->generate(ReferenceContract::read(new SymfonyGenerator(), $document), ReferenceContract::entry(SymfonyGenerator::PACKAGE, 'tasks', 'App\\Tasks'));
+        foreach ($files as $file) {
+            if (str_ends_with($file->path, $pathSuffix)) {
+                return $file->contents;
+            }
+        }
+
+        self::fail("No generated file ends with '{$pathSuffix}'.");
+    }
+
+    /**
+     * Each refusal code and the message of its first place.
+     *
+     * @param array<string, mixed> $artefacts
+     * @return array<string, string>
+     */
+    private static function refused(\stdClass $document, array $artefacts = []): array
+    {
+        try {
+            (new SymfonyGenerator())->generate(ReferenceContract::read(new SymfonyGenerator(), $document), ReferenceContract::entry(SymfonyGenerator::PACKAGE, 'tasks', 'App\\Tasks', [], $artefacts));
+        } catch (GenerationRefusedException $refused) {
+            $messages = [];
+            foreach ($refused->problems as $problem) {
+                $messages[$problem->code] ??= $problem->message;
+            }
+
+            return $messages;
+        }
+
+        self::fail('The contract was generated, but a form in it should be refused.');
+    }
+
+    private static function refusedProblem(\stdClass $document, string $code): ConfigProblem
+    {
+        try {
+            (new SymfonyGenerator())->generate(ReferenceContract::read(new SymfonyGenerator(), $document), ReferenceContract::entry(SymfonyGenerator::PACKAGE, 'tasks', 'App\\Tasks'));
+        } catch (GenerationRefusedException $refused) {
+            foreach ($refused->problems as $problem) {
+                if ($problem->code === $code) {
+                    return $problem;
+                }
+            }
+
+            self::fail("The generation was refused, but not with '{$code}'.");
+        }
+
+        self::fail('The contract was generated, but a form in it should be refused.');
+    }
+
+    private static function object(mixed $value): \stdClass
+    {
+        self::assertInstanceOf(\stdClass::class, $value);
+
+        return $value;
+    }
+
+    private static function firstOf(mixed $list): \stdClass
+    {
+        self::assertIsArray($list);
+
+        return self::object($list[0] ?? null);
+    }
+
+    /** @param array<string, mixed> $type */
+    private static function param(string $name, bool $required, array $type): \stdClass
+    {
+        return (object) [
+            'name' => $name,
+            'origin' => (object) ['layer' => 'api', 'pointer' => '/surfaces/app/query/' . $name],
+            'required' => $required,
+            'type' => json_decode(json_encode($type, JSON_THROW_ON_ERROR), false, 512, JSON_THROW_ON_ERROR),
+        ];
+    }
+}

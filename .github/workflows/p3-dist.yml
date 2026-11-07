@@ -1,0 +1,240 @@
+name: Contract bundles
+
+# Writes the reference contract's bundle tarball on Linux, macOS and Windows, under other time zones and locales,
+# and checks the three SHA-256 values are one (ADR 0011: the same sources and compiler give the same tarball bytes
+# on every machine). The checkout keeps LF line endings on Windows, so the job measures the writer, not autocrlf.
+# A pull request to develop builds the Linux tarball, a push to develop compares it with Windows; the nightly adds
+# macOS.
+# `channel-smoke` serves a bundle of the reference contract through a loopback npm registry, a loopback HTTPS
+# server and a local bare git repository, and runs the Node CLI against each (ADR 0011 "Channel smoke tests").
+# `bundle-determinism` and `channel-smoke` are the checks to require.
+# release.yml calls it for the reference tarball the release attaches: a call runs every row, and outputs the Linux
+# tarball's artefact with the one SHA-256 every OS wrote.
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  merge_group:
+    types: [checks_requested]
+    branches: [main, develop]
+  workflow_dispatch:
+  # The nightly run holds the drift row (macOS).
+  schedule:
+    - cron: "30 0 * * *"
+  workflow_call:
+    inputs:
+      # A call is marked by this input, never inferred: on every other trigger it is absent, so it reads false.
+      release-call:
+        description: A release build. Leave it at true; only this workflow's own triggers run without it.
+        required: false
+        type: boolean
+        default: true
+    outputs:
+      reference-tarball-artifact:
+        description: The artefact holding `reference.tgz`, the reference contract's bundle tarball built on Linux.
+        value: ${{ jobs.bundle-determinism.outputs.artifact }}
+      reference-tarball-sha256:
+        description: The SHA-256 of `reference.tgz`, the one value every OS of the call wrote.
+        value: ${{ jobs.bundle-determinism.outputs.sha256 }}
+
+permissions:
+  contents: read
+
+# A call takes the caller's event and ref: its own group keeps it from cancelling, or being cancelled by, a run of
+# this workflow on the same pull request.
+concurrency:
+  group: p3-dist-${{ inputs.release-call && github.run_id || format('{0}-{1}', github.event_name, github.event_name == 'push' && github.sha || github.ref) }}
+  cancel-in-progress: ${{ !inputs.release-call && github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.detect.outputs.run }}
+      queue: ${{ steps.detect.outputs.queue }}
+      drift: ${{ steps.detect.outputs.drift }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history without file contents: the change list reads commits and trees only, and only the shared
+          # actions are checked out.
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout: .github/actions
+          persist-credentials: false
+      - name: Detect a change beyond documentation no test reads
+        id: lane
+        uses: ./.github/actions/lane-changes
+        with:
+          # The packages the reference tarball is built from and the channel smoke installs, the reference contract,
+          # the channel imports and the reference IR, the tarball, channel and release scripts and the pins.
+          watched-paths: |
+            ^packages/(core|packs)/
+            ^packages/targets/codegen-ts/
+            ^fixtures/reference/
+            ^fixtures/(bundle-channels|golden/reference)/
+            ^scripts/(golden|ir-models|dist-smoke|release)/
+            ^\.github/actions/
+            ^\.github/workflows/p3-dist\.yml$
+            ^pnpm-lock\.yaml$
+            ^pnpm-workspace\.yaml$
+            ^package\.json$
+            ^tsconfig(\.base)?\.json$
+            ^\.nvmrc$
+      # A call checks what the release attaches: every row, whatever the change.
+      - name: Run every row on a release call
+        id: detect
+        env:
+          RELEASE_CALL: ${{ inputs.release-call == true }}
+          LANE_RUN: ${{ steps.lane.outputs.run }}
+          LANE_QUEUE: ${{ steps.lane.outputs.queue }}
+          LANE_DRIFT: ${{ steps.lane.outputs.drift }}
+        run: |
+          if [ "$RELEASE_CALL" = true ]; then
+            printf 'run=true\nqueue=true\ndrift=true\n' >> "$GITHUB_OUTPUT"
+          else
+            printf 'run=%s\nqueue=%s\ndrift=%s\n' "$LANE_RUN" "$LANE_QUEUE" "$LANE_DRIFT" >> "$GITHUB_OUTPUT"
+          fi
+
+  # The PR row; the queue job below runs the same steps on Windows, the drift job on macOS.
+  tarball:
+    name: &tarball-name tarball (${{ matrix.os }}, ${{ matrix.tz }})
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, tz: UTC, lang: en_US.UTF-8 }
+    env: &tarball-env
+      TZ: ${{ matrix.tz }}
+      LANG: ${{ matrix.lang }}
+      LC_ALL: ${{ matrix.lang }}
+    steps: &tarball-steps
+      - name: Keep LF line endings on checkout
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      # No dependency cache in a release call: the attached tarball comes from the lock file alone.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: ${{ !inputs.release-call && 'pnpm' || '' }}
+          package-manager-cache: ${{ !inputs.release-call }}
+      - run: pnpm install --frozen-lockfile
+      - name: Write the reference tarball and its SHA-256
+        shell: bash
+        run: |
+          mkdir -p out
+          node --experimental-transform-types --no-warnings --import ./scripts/ir-models/register.ts \
+            packages/core/compiler/src/bundle/reference-tarball.test-support.ts out/reference.tgz \
+            | tee "out/${{ runner.os }}.sha256"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: tarball-${{ runner.os }}
+          path: out
+
+  tarball-queue:
+    name: *tarball-name
+    needs: changes
+    if: needs.changes.outputs.queue == 'true'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, tz: Pacific/Auckland, lang: en_US.UTF-8 }
+    env: *tarball-env
+    steps: *tarball-steps
+
+  tarball-drift:
+    name: *tarball-name
+    needs: changes
+    if: needs.changes.outputs.drift == 'true'
+    runs-on: ${{ matrix.os }}
+    # macOS runners queue and start slowly.
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-latest, tz: Asia/Kolkata, lang: tr_TR.UTF-8 }
+    env: *tarball-env
+    steps: *tarball-steps
+
+  bundle-determinism:
+    needs: [changes, tarball, tarball-queue, tarball-drift]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      artifact: ${{ steps.determinism.outputs.artifact }}
+      sha256: ${{ steps.determinism.outputs.sha256 }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .github/actions
+          persist-credentials: false
+      - uses: ./.github/actions/lane-aggregate
+        with:
+          needs: ${{ toJSON(needs) }}
+          should-run: ${{ needs.changes.outputs.run }}
+      # A documentation-only change built no tarball, and a pull request to develop builds the Linux one only: the
+      # comparison is a queue step, and the check passes on the verdict above.
+      - if: needs.changes.outputs.queue == 'true'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: tarball-*
+          path: tarballs
+      - name: One SHA-256 on every OS that ran
+        id: determinism
+        if: needs.changes.outputs.queue == 'true'
+        env:
+          # Linux and Windows, and macOS when the drift row ran.
+          EXPECTED_TARBALL_COUNT: ${{ needs.changes.outputs.drift == 'true' && 3 || 2 }}
+        run: |
+          test "$(ls tarballs | wc -l)" = "$EXPECTED_TARBALL_COUNT"
+          cat tarballs/*/*.sha256
+          for file in tarballs/*/reference.tgz; do sha256sum "$file"; done
+          test "$(cat tarballs/*/*.sha256 | sort -u | wc -l)" = 1
+          test "$(sha256sum tarballs/*/reference.tgz | cut -d ' ' -f 1 | sort -u | wc -l)" = 1
+          {
+            echo "artifact=tarball-Linux"
+            echo "sha256=$(sha256sum tarballs/tarball-Linux/reference.tgz | cut -d ' ' -f 1)"
+          } | tee -a "$GITHUB_OUTPUT"
+
+  # A required check that is also the job: a skipped job would pass, so it always starts and the aggregate step turns
+  # a failed change filter into a failure; a documentation-only change passes at once.
+  channel-smoke:
+    needs: changes
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/lane-aggregate
+        with:
+          needs: ${{ toJSON(needs) }}
+          should-run: ${{ needs.changes.outputs.run }}
+      - if: needs.changes.outputs.run == 'true'
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - if: needs.changes.outputs.run == 'true'
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - if: needs.changes.outputs.run == 'true'
+        run: pnpm install --frozen-lockfile
+      - name: Fetch, check and generate from each channel
+        if: needs.changes.outputs.run == 'true'
+        run: pnpm vitest run scripts/dist-smoke

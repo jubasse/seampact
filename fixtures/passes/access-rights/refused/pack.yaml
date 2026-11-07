@@ -1,0 +1,10 @@
+# A pack whose entries a route cannot take: a template over {resource} on a route of no resource, and a right
+# whose subject differs from the right the contract declares.
+pack: { name: odd, version: 1.0.0, extends: [] }
+derive:
+  - entry: reads
+    select: { access: [read] }
+    require: { right: '{resource}.read' }
+  - entry: lists
+    select: { op: [list] }
+    declareRight: { name: items.edit, subject: { collection: innermostScope } }

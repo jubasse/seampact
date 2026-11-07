@@ -1,0 +1,44 @@
+{
+  "id": "pack-laravel-media-types",
+  "title": "A success answers the laravel media type and an error its error media type",
+  "checks": ["CHK-107"],
+  "profiles": ["pack:laravel"],
+  "steps": [
+    {
+      "title": "success",
+      "request": {
+        "method": "GET",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "headers": {
+          "content-type": {
+            "contains": ["application/json"]
+          }
+        }
+      }
+    },
+    {
+      "title": "error",
+      "request": {
+        "method": "GET",
+        "path": "/v1/unknown",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 404,
+        "headers": {
+          "content-type": {
+            "contains": ["application/problem+json"]
+          }
+        }
+      }
+    }
+  ]
+}

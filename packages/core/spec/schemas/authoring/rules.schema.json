@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "seampact rules catalogue",
+  "description": "Rules: pre-handler checks that are not rights (ADR 0002 section 9). A name-keyed catalogue file.",
+  "type": "object",
+  "properties": {
+    "$include": {
+      "$ref": "common.schema.json#/$defs/include"
+    }
+  },
+  "propertyNames": {
+    "description": "a rule name (ADR 0002 section 4)",
+    "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$",
+    "not": {
+      "enum": [
+        "__proto__",
+        "constructor",
+        "prototype"
+      ]
+    }
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/entry"
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "properties": {
+        "bucket": {
+          "type": "boolean",
+          "$comment": "ADR 0002 section 9",
+          "description": "Each use names a bucket."
+        },
+        "params": {
+          "$ref": "node.schema.json#/$defs/fields",
+          "$comment": "ADR 0002 section 9"
+        },
+        "errors": {
+          "$ref": "common.schema.json#/$defs/errorCodes",
+          "$comment": "ADR 0002 section 9"
+        },
+        "proof": {
+          "type": "object",
+          "properties": {
+            "in": {
+              "enum": [
+                "body",
+                "header"
+              ],
+              "$comment": "ADR 0002 section 9"
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "$comment": "ADR 0002 section 9"
+            },
+            "schema": {
+              "$ref": "schema.schema.json#/$defs/schema",
+              "$comment": "ADR 0002 section 9"
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "additionalProperties": false,
+          "if": {
+            "properties": {
+              "$include": true
+            },
+            "required": [
+              "$include"
+            ]
+          },
+          "else": {
+            "properties": {
+              "in": true,
+              "name": true
+            },
+            "required": [
+              "in",
+              "name"
+            ]
+          },
+          "$comment": "ADR 0002 section 9"
+        },
+        "lint": {
+          "$ref": "common.schema.json#/$defs/lintAllow",
+          "$comment": "ADR 0002 section 12"
+        },
+        "summary": {
+          "$ref": "common.schema.json#/$defs/summary",
+          "$comment": "ADR 0002 section 9"
+        },
+        "description": {
+          "$ref": "common.schema.json#/$defs/description",
+          "$comment": "ADR 0002 section 9"
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "patternProperties": {
+        "^x-seampact-": {
+          "title": "reserved",
+          "description": "The extension prefix 'seampact' is reserved (ADR 0008).",
+          "not": {}
+        },
+        "^x-[a-z][a-z0-9]*-[a-z][a-z0-9]*(-[a-z0-9]+)*$": {
+          "$comment": "ADR 0002 section 12"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

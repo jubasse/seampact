@@ -1,0 +1,1 @@
+The class-validator runtime copied as is into each generated validators tree: the contract constraints the decorators lack, the strict validation options, and the Standard Schema adapter over a decorated DTO class; type-checked there by the reference output test.

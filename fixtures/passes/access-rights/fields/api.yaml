@@ -1,0 +1,117 @@
+# Field and sort-key rights (FR-23, A21, ADR 0003 section 6, SCN-065 to SCN-068): restricted fields reached from
+# inputs and outputs through arrays, a map and a union, one entry per pointer and direction; subjects from the
+# route's scope, its default member id on input, the holder's id property on output, none for a right without
+# subject; input policies from the field or the conventions; sort keys inheriting or stating a right whose subject
+# the list resolves;
+# `filteredBy`.
+api: { name: notes, version: 1 }
+
+schemes:
+  bearer: { kind: bearer }
+
+identities:
+  member:
+    schemes: { read: [bearer], write: [bearer] }
+    principal: Member
+
+schemas:
+  WorkspaceId: { type: string, format: uuid }
+  NoteId: { type: string, format: uuid }
+  Member:
+    type: object
+    required: [memberId]
+    properties: { memberId: { type: string } }
+  Note:
+    type: object
+    required: [noteId, title]
+    properties:
+      noteId: NoteId
+      title: { type: string }
+      cost: { type: integer, restrictedTo: notes.seeCost }
+      memo: { type: string, restrictedTo: { right: notes.annotate, input: strip } }
+      rating: { type: integer, restrictedTo: notes.read }
+  CreateNote:
+    type: object
+    required: [title]
+    properties:
+      title: { type: string }
+      budget: { type: integer, restrictedTo: { right: workspaceRole, params: { level: owner } } }
+      memo: { type: string, restrictedTo: { right: notes.annotate, input: strip } }
+  UpdateNote:
+    type: object
+    properties:
+      title: { type: string }
+      cost: { type: integer, restrictedTo: notes.seeCost }
+  NotesByLabel:
+    type: object
+    additionalProperties: Note
+  NoteEdited:
+    type: object
+    required: [noteId]
+    properties: { noteId: NoteId, cost: { type: integer, restrictedTo: notes.seeCost } }
+  NoteArchived:
+    type: object
+    required: [noteId]
+    properties: { noteId: NoteId }
+  Activity:
+    discriminator: kind
+    oneOf:
+      edited: NoteEdited
+      archived: NoteArchived
+  Feed:
+    type: object
+    required: [latest, pinned]
+    properties:
+      latest: Activity
+      pinned: { type: array, items: Note }
+
+conventions:
+  paging: { maxLimit: 50 }
+
+pagings:
+  cursor:
+    request:
+      cursor: { query: cursor }
+      limit: { query: limit }
+      sort: { query: sort, style: signed }
+    response:
+      body: $items
+      links: { next: $next }
+
+scopes:
+  workspace: { id: WorkspaceId }
+
+rights:
+  workspaceRole:
+    params: { level: { type: string } }
+    subject: { scope: workspace }
+  notes.read: { subject: { scope: workspace } }
+  notes.seeCost: { subject: { resource: Note, id: NoteId } }
+  notes.annotate: {}
+
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: member
+    routes:
+      workspaces:
+        kind: collection
+        id: { workspaceId: WorkspaceId }
+        member:
+          scopes: { workspace: path.workspaceId }
+          routes:
+            notes:
+              kind: collection
+              id: { noteId: NoteId }
+              item: Note
+              ops:
+                list:
+                  paging: cursor
+                  sortable: [title, rating, { key: memo, right: notes.annotate }]
+                  filteredBy: notes.read
+                create: { input: CreateNote }
+                update: { input: UpdateNote }
+              collection:
+                routes:
+                  feed: { method: get, output: Feed }
+                  byLabel: { method: get, output: NotesByLabel }

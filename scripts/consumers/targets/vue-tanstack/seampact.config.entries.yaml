@@ -1,0 +1,31 @@
+  # TanStack Query options factories and composables over the fetch client, with the opt-in `itemsOf`.
+  - id: queries
+    use: "@seampact/codegen-vue"
+    apis: [tasks, tasksService]
+    options:
+      query: tanstack
+    artefacts:
+      itemsOf: true
+    link:
+      client: client
+  # The same queries without the refresh after a write and without composables: the options factories alone.
+  - id: queriesPlain
+    use: "@seampact/codegen-vue"
+    apis: [tasks]
+    options:
+      query: tanstack
+      invalidate: "off"
+    artefacts:
+      composables: false
+    link:
+      client: client
+  # Declared errors returned as data, with the contract's freshness.
+  - id: queriesData
+    use: "@seampact/codegen-vue"
+    apis: [tasks]
+    options:
+      query: tanstack
+      errors: data
+      staleTime: contract
+    link:
+      client: client

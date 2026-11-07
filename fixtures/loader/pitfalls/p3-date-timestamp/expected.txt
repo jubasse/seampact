@@ -1,0 +1,2 @@
+api.yaml:3:10: error seampact/load/yaml-ambiguous-scalar: plain '2027-06-30' is a number or a timestamp for YAML 1.1 and a string for YAML 1.2 (P3). Fix: quote it ('2027-06-30').
+api.yaml:4:8: error seampact/load/yaml-ambiguous-scalar: plain '2027-06-30T10:00:00Z' is a number or a timestamp for YAML 1.1 and a string for YAML 1.2 (P3). Fix: quote it ('2027-06-30T10:00:00Z').

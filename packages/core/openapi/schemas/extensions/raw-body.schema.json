@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/openapi/extensions/raw-body.schema.json",
+  "title": "x-seampact-raw-body",
+  "description": "The request body is read raw, for a signature check.",
+  "const": true
+}

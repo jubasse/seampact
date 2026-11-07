@@ -1,0 +1,174 @@
+name: Generation determinism
+
+# `scripts/determinism`: every Node target generated from the reference contract twice (the second run under another
+# time zone and locale) and from the contract with mappings moved to `$include` files and examples to `$file` files,
+# the output trees compared byte for byte (CHK-103). The matrix runs it on Linux, macOS and Windows with the rows of
+# the golden IR job, and Windows converts the reference sources to CRLF first. Its own workflow, not a job of the
+# golden one: it needs the target packages and runs the CLI, so a failure here must not hide the golden verdict.
+# A pull request runs one Linux row, a push to develop one Windows row and the other two, and the nightly
+# the macOS rows.
+# `generation-determinism` is the check to require.
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  merge_group:
+    types: [checks_requested]
+    branches: [main, develop]
+  workflow_dispatch:
+  # The nightly run holds the drift rows (macOS).
+  schedule:
+    - cron: "30 0 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: determinism-${{ github.event_name }}-${{ github.event_name == 'push' && github.sha || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.detect.outputs.run }}
+      queue: ${{ steps.detect.outputs.queue }}
+      post-merge: ${{ steps.detect.outputs.post-merge }}
+      drift: ${{ steps.detect.outputs.drift }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history without file contents: the change list reads commits and trees only, and only the shared
+          # actions are checked out.
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout: .github/actions
+          persist-credentials: false
+      - name: Detect a change beyond documentation no test reads
+        id: detect
+        uses: ./.github/actions/lane-changes
+        with:
+          # The packages `scripts/determinism` generates with, the fixtures, its scripts and the pins.
+          watched-paths: |
+            ^packages/
+            ^fixtures/
+            ^scripts/determinism/
+            ^scripts/(golden|ir-models)/
+            ^\.github/actions/
+            ^\.github/workflows/p8-determinism\.yml$
+            ^pnpm-lock\.yaml$
+            ^pnpm-workspace\.yaml$
+            ^package\.json$
+            ^tsconfig(\.base)?\.json$
+            ^\.nvmrc$
+
+  # The PR row; the queue, post-merge and drift jobs below run the same steps on the other rows.
+  determinism:
+    name: &determinism-name determinism (${{ matrix.os }}, ${{ matrix.tz }}, ${{ matrix.lang }})
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, tz: Pacific/Kiritimati, lang: tr_TR.UTF-8 }
+    env: &determinism-env
+      TZ: ${{ matrix.tz }}
+      LANG: ${{ matrix.lang }}
+      LC_ALL: ${{ matrix.lang }}
+    steps: &determinism-steps
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # .gitattributes keeps the fixtures LF, so autocrlf cannot give them CRLF: convert the reference sources here.
+      - name: Convert the reference contract to CRLF on Windows
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          node --input-type=module -e '
+            import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+            import { join } from "node:path";
+            const directory = "fixtures/reference";
+            let convertedCount = 0;
+            for (const entry of readdirSync(directory, { recursive: true }).filter((name) => name.endsWith(".yaml"))) {
+              const file = join(directory, entry);
+              writeFileSync(file, readFileSync(file, "utf8").replace(/\r?\n/g, "\r\n"));
+              if (!readFileSync(file, "utf8").includes("\r\n")) throw new Error(`${file} has no CRLF after conversion`);
+              convertedCount += 1;
+            }
+            if (convertedCount === 0) throw new Error("no reference source found to convert to CRLF");
+            console.log(`converted ${convertedCount} reference sources to CRLF`);
+          '
+      - name: Check the generation of every Node target
+        run: pnpm vitest run scripts/determinism
+
+  determinism-queue:
+    name: *determinism-name
+    needs: changes
+    if: needs.changes.outputs.queue == 'true'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, tz: Pacific/Auckland, lang: tr_TR.UTF-8 }
+    env: *determinism-env
+    steps: *determinism-steps
+
+  determinism-post-merge:
+    name: *determinism-name
+    needs: changes
+    if: needs.changes.outputs.post-merge == 'true'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, tz: UTC, lang: en_US.UTF-8 }
+          - { os: windows-latest, tz: UTC, lang: en_US.UTF-8 }
+    env: *determinism-env
+    steps: *determinism-steps
+
+  determinism-drift:
+    name: *determinism-name
+    needs: changes
+    if: needs.changes.outputs.drift == 'true'
+    runs-on: ${{ matrix.os }}
+    # macOS runners queue and start slowly: a 15-minute timeout was runner time, not the check.
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-latest, tz: America/Los_Angeles, lang: en_US.UTF-8 }
+          - { os: macos-latest, tz: Asia/Kolkata, lang: tr_TR.UTF-8 }
+    env: *determinism-env
+    steps: *determinism-steps
+
+  generation-determinism:
+    needs: [changes, determinism, determinism-queue, determinism-post-merge, determinism-drift]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .github/actions
+          persist-credentials: false
+      - uses: ./.github/actions/lane-aggregate
+        with:
+          needs: ${{ toJSON(needs) }}
+          should-run: ${{ needs.changes.outputs.run }}

@@ -1,0 +1,5 @@
+schemas:
+  Task:
+    properties:
+      id: { $ref: Id }
+      owner: { $ref: Owner }

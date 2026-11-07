@@ -1,0 +1,8 @@
+# expect: seampact/validate/reason-required /surfaces/app/routes/push/input/unknownKeys
+# unknownKeys on an input use without a reason
+api: { name: tasks, version: 1 }
+surfaces:
+  app:
+    identity: user
+    routes:
+      push: { method: post, input: { $ref: GithubEvent, unknownKeys: ignore }, responses: { 204: {} } }

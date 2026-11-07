@@ -1,0 +1,1 @@
+The app and root config JSON Schemas (`seampact.config.yaml`, ADR 0011 "The app config"), written from the constants of `src/config` and checked equal by `src/config/schemas.test.ts`; the Gradle and Maven DSLs build values these schemas validate (A42).

@@ -1,0 +1,4 @@
+# expect: seampact/validate/unknown-keyword /hooks
+# SCN-047: a pack naming a code module is refused.
+pack: { name: house, version: 1.0.0 }
+hooks: { decide: ./decide.ts }

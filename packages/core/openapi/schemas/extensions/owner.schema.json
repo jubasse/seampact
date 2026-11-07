@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/openapi/extensions/owner.schema.json",
+  "title": "x-seampact-owner",
+  "description": "Who owns the resource the operation writes.",
+  "type": "string",
+  "minLength": 1
+}

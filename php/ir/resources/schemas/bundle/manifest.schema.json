@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/bundle/manifest.schema.json",
+  "title": "The contract bundle manifest, seampact-bundle.json (ADR 0011)",
+  "description": "A reader checks this schema, then the rules no JSON Schema states (README.md, 'Manifest rules'): files sorted by path in code-unit order with no duplicate, even folded to ASCII lower case, each api's file listed and named ir/<api>.json, and no key given twice in one object.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["formatVersion", "contract", "apis", "compiler", "packs", "files", "integrity"],
+  "properties": {
+    "formatVersion": {
+      "description": "The bundle format version; a reader refuses one it does not read.",
+      "const": 1
+    },
+    "contract": {
+      "description": "The contract package the bundle was made from.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "$ref": "#/$defs/label" },
+        "version": { "$ref": "#/$defs/label" }
+      }
+    },
+    "apis": {
+      "description": "Each api of the workspace, with the IR file and the IR version and revision it was written in.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "file", "irVersion", "irRevision"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[A-Za-z0-9._@+-]+$" },
+          "file": { "type": "string", "pattern": "^ir/[A-Za-z0-9._@+-]+\\.json$" },
+          "irVersion": { "type": "integer", "minimum": 1 },
+          "irRevision": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "compiler": {
+      "description": "The compiler that wrote the IR.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "$ref": "#/$defs/label" },
+        "version": { "$ref": "#/$defs/label" }
+      }
+    },
+    "packs": {
+      "description": "The packs the apis apply (each IR's packs), sorted by name then version in code-unit order, without duplicates.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "version"],
+        "properties": {
+          "name": { "$ref": "#/$defs/label" },
+          "version": { "$ref": "#/$defs/label" }
+        }
+      }
+    },
+    "files": {
+      "description": "Every file of the bundle but the manifest, sorted by path in code-unit order.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "size", "sha256"],
+        "properties": {
+          "path": { "$ref": "#/$defs/path" },
+          "size": { "type": "integer", "minimum": 0 },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+        }
+      }
+    },
+    "integrity": {
+      "description": "sha256- and the padded standard base64 of the SHA-256 of the canonical file list.",
+      "type": "string",
+      "pattern": "^sha256-[A-Za-z0-9+/]{43}=$"
+    }
+  },
+  "$defs": {
+    "label": {
+      "description": "A name or version: printable ASCII with no space, so every language orders and prints it alike.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 214,
+      "pattern": "^[!-~]+$"
+    },
+    "path": {
+      "description": "A portable path: relative to the bundle root, forward slashes, under sources/ or ir/, each segment of [A-Za-z0-9._@+-], not ending in . (so neither . nor ..), and not a Windows device name (CON, PRN, AUX, NUL, COM0-9, LPT0-9, any case) before its first . (no lookahead, so RE2-based validators read it)",
+      "type": "string",
+      "maxLength": 255,
+      "pattern": "^(?:sources|ir)(?:/[A-Za-z0-9._@+-]*[A-Za-z0-9_@+-])+$",
+      "not": {
+        "type": "string",
+        "pattern": "/(?:[Cc][Oo][Nn]|[Pp][Rr][Nn]|[Aa][Uu][Xx]|[Nn][Uu][Ll]|[Cc][Oo][Mm][0-9]|[Ll][Pp][Tt][0-9])(?:[.]|/|$)"
+      }
+    }
+  }
+}

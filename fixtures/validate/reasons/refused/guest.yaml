@@ -1,0 +1,5 @@
+# expect: seampact/validate/reason-required /rights/articles.read/guest
+# a right's guest without a reason
+rights:
+  articles.read:
+    guest: true

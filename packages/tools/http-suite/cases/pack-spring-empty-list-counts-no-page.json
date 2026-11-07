@@ -1,0 +1,44 @@
+{
+  "id": "pack-spring-empty-list-counts-no-page",
+  "title": "An empty list counts no page with the spring page names",
+  "checks": ["CHK-107"],
+  "profiles": ["pack:spring"],
+  "script": {
+    "answers": {
+      "tasks.listTasks": {
+        "status": 200,
+        "body": {
+          "items": [],
+          "total": 0
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "query": {
+          "size": 2,
+          "page": 0
+        },
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "content": [],
+          "page": {
+            "size": 2,
+            "number": 0,
+            "totalElements": 0,
+            "totalPages": 0
+          }
+        }
+      }
+    }
+  ]
+}

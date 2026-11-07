@@ -1,0 +1,52 @@
+# api.yaml: a 404 code a scope attaches beside the member 404 of a nested collection
+api: { name: notes, version: 1 }
+
+schemes:
+  bearer: { kind: bearer }
+
+identities:
+  user:
+    schemes: { read: [bearer], write: [bearer] }
+    principal: Principal
+
+schemas:
+  BookId: { type: string }
+  NoteId: { type: string }
+  Principal:
+    type: object
+    required: [userId]
+    properties: { userId: { type: string } }
+  Book:
+    type: object
+    required: [id]
+    properties: { id: BookId }
+  Note:
+    type: object
+    required: [id]
+    properties: { id: NoteId }
+
+errors:
+  books.missing: { status: 404, title: No such book. }
+
+scopes:
+  book: { id: BookId, errors: [books.missing] }
+
+surfaces:
+  app:
+    identity: user
+    routes:
+      books:
+        kind: collection
+        id: { bookId: BookId }
+        idProperty: id
+        item: Book
+        ops: [get]
+        member:
+          scopes: { book: path.bookId }
+          routes:
+            notes:
+              kind: collection
+              id: { noteId: NoteId }
+              idProperty: id
+              item: Note
+              ops: [get]

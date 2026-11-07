@@ -1,0 +1,56 @@
+# The consumer's app config for the `allow-listed-framework-route` boot case: the app config with the route it serves
+# beside the contract allow-listed.
+outDir: generated
+openapi: none
+sources:
+  contract: { path: contract }
+targets:
+  - id: tasks
+    out: tasks
+    use: pypi:seampact-ninja
+    api: tasks
+    options: { views: sync }
+    frameworkRoutes:
+      - { path: /v1/unlisted, reason: "The boot case's framework route beside the contract (ADR 0015)." }
+  - id: tasksService
+    out: tasks_service
+    use: pypi:seampact-ninja
+    api: tasksService
+    options: { views: sync }
+  - id: tasksServiceWrites
+    out: tasks_service_writes
+    use: pypi:seampact-ninja
+    api: tasksServiceWrites
+    options: { views: sync }
+  - id: tasksDevices
+    out: tasks_devices
+    use: pypi:seampact-ninja
+    api: tasksDevices
+    options: { views: sync }
+  - id: tasksOptionalAuth
+    out: tasks_optional_auth
+    use: pypi:seampact-ninja
+    api: tasksOptionalAuth
+    options: { views: sync }
+  - id: tasksAbsoluteUrls
+    out: tasks_absolute_urls
+    use: pypi:seampact-ninja
+    api: tasksAbsoluteUrls
+    options: { views: sync }
+  - id: tasksResponses
+    out: tasks_responses
+    use: pypi:seampact-ninja
+    api: tasksResponses
+    options: { views: sync }
+  - id: tasksPaging
+    out: tasks_paging
+    use: pypi:seampact-ninja
+    api: tasksPaging
+    # The changes-since feed carries the complete page fact, which this target refuses by name in 1.0.
+    operations: { exclude: [listChanges, listEvents] }
+    options: { views: sync }
+  - id: tasksSplitSort
+    out: tasks_split_sort
+    use: pypi:seampact-ninja
+    api: tasksSplitSort
+    options: { views: sync }

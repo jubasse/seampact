@@ -1,0 +1,23 @@
+{
+  "accepted": [
+    { "use": "@seampact/codegen-express", "ecosystem": "npm" },
+    { "use": "seampact-codegen-zod", "ecosystem": "npm" },
+    { "use": "io.github.jubasse:seampact-spring-boot", "ecosystem": "maven" },
+    { "use": "seampact/laravel", "ecosystem": "composer" },
+    { "use": "pypi:seampact-fastapi", "ecosystem": "pypi" },
+    { "use": "pypi:seampact2", "ecosystem": "pypi" }
+  ],
+  "refused": [
+    { "use": "pypi:", "case": "no distribution name" },
+    { "use": "PyPI:seampact-fastapi", "case": "a prefix in mixed case" },
+    { "use": "PYPI:seampact-fastapi", "case": "a prefix in upper case" },
+    { "use": "pypi:Seampact_FastAPI", "case": "a name that is not PEP 503 normalised" },
+    { "use": "pypi:seampact--fastapi", "case": "a name with a run of separators" },
+    { "use": "pypi:-seampact", "case": "a name that starts with a separator" },
+    { "use": "pypi:seampact.fastapi", "case": "a Maven coordinate of group pypi" },
+    {
+      "use": "pypi:seampact-fastapi:1.0.0",
+      "case": "a Maven coordinate of group pypi with a version"
+    }
+  ]
+}

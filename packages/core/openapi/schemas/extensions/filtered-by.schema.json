@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/openapi/extensions/filtered-by.schema.json",
+  "title": "x-seampact-filtered-by",
+  "description": "The right a list filters its items by.",
+  "type": "string",
+  "minLength": 1
+}

@@ -1,0 +1,7 @@
+# expect: seampact/validate/conflicting-keywords /derive/0/require/bucket
+# a derived right takes its params from the template; 'bucket' belongs to a rule (ADR 0002 section 2).
+pack: { name: house, version: 1.0.0 }
+derive:
+  - entry: guard
+    select: { op: [create] }
+    require: { right: '{resource}.{op}', bucket: perUser }

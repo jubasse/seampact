@@ -1,0 +1,28 @@
+{
+  "id": "undeclared-handler-error-answers-internal-error",
+  "title": "An error code the operation does not declare answers 500 api.internal",
+  "checks": ["CHK-157"],
+  "profiles": ["default"],
+  "script": {
+    "answers": {
+      "tasks.health": {
+        "status": 409,
+        "code": "state.conflict"
+      }
+    }
+  },
+  "steps": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/v1/health"
+      },
+      "expect": {
+        "status": 500,
+        "body": {
+          "code": "api.internal"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/openapi/extensions/derived-from.schema.json",
+  "title": "x-seampact-derived-from",
+  "description": "The derivation that produced an element, and the origins it was derived from as side-table keys.",
+  "type": "object",
+  "properties": {
+    "derivation": {
+      "type": "string",
+      "minLength": 1
+    },
+    "from": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  },
+  "required": ["derivation", "from"],
+  "additionalProperties": false
+}

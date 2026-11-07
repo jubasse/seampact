@@ -1,0 +1,32 @@
+  # TanStack Query options factories and hooks over the fetch client, with the opt-in `itemsOf`.
+  - id: queries
+    use: "@seampact/codegen-react"
+    apis: [tasks, tasksService]
+    options:
+      query: tanstack
+    artefacts:
+      itemsOf: true
+    link:
+      client: client
+  # The same queries without the refresh after a write and without hooks: the options factories alone.
+  - id: queriesPlain
+    use: "@seampact/codegen-react"
+    apis: [tasks]
+    options:
+      query: tanstack
+      invalidate: "off"
+    artefacts:
+      hooks: false
+    link:
+      client: client
+  # Declared errors returned as data, with the contract's freshness and no "use client" line.
+  - id: queriesData
+    use: "@seampact/codegen-react"
+    apis: [tasks]
+    options:
+      query: tanstack
+      errors: data
+      staleTime: contract
+      useClientDirective: "off"
+    link:
+      client: client

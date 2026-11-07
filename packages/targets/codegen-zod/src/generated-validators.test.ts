@@ -1,0 +1,275 @@
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { writeGeneratedFiles } from "@seampact/codegen-core";
+import { type ContractIR, isKnownVariant } from "@seampact/spec/ir";
+import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import type { z } from "zod";
+import { target } from "./index.js";
+
+const GOLDEN_IR = new URL("../../../../fixtures/golden/reference/tasks.ir.json", import.meta.url);
+const ZOD_PACKAGE = new URL("../node_modules/zod", import.meta.url).pathname;
+
+interface SafeParser {
+  safeParse(value: unknown): { success: boolean };
+}
+
+interface ObjectValidator extends SafeParser {
+  shape: Record<string, z.ZodType>;
+  pick(mask: Record<string, true>): ObjectValidator;
+  omit(mask: Record<string, true>): ObjectValidator;
+}
+
+const temporaryRoot = mkdtempSync(join(tmpdir(), "seampact-codegen-zod-run-"));
+
+let operationInputs: Record<string, SafeParser>;
+let outputSchemas: Record<string, ObjectValidator>;
+let inputSchemas: Record<string, ObjectValidator>;
+
+interface GeneratedValidators {
+  operationInputs: Record<string, SafeParser>;
+  outputSchemas: Record<string, ObjectValidator>;
+  inputSchemas: Record<string, ObjectValidator>;
+}
+
+// Generates the reference validators of one rules mode into the project, which resolves `zod` to this package's copy,
+// then imports them.
+async function generatedValidators(rules: string): Promise<GeneratedValidators> {
+  const ir: ContractIR = JSON.parse(readFileSync(GOLDEN_IR, "utf8"));
+  const outcome = await target.generate({
+    ir,
+    options: { rules },
+    links: {},
+    artefacts: new Set(["validators"]),
+  });
+
+  if (outcome.status !== "generated") throw new Error(JSON.stringify(outcome.refusals));
+
+  const outDir = join(temporaryRoot, rules);
+  const written = await writeGeneratedFiles(outDir, "@seampact/codegen-zod", outcome.files);
+
+  if (written.status !== "written") throw new Error(JSON.stringify(written.refusals));
+
+  return {
+    operationInputs: await import(join(outDir, "operations/input.ts")),
+    outputSchemas: await import(join(outDir, "schemas/output.ts")),
+    inputSchemas: await import(join(outDir, "schemas/input.ts")),
+  };
+}
+
+// The contract's own checks are under test here: `seampact-consistent` renders them.
+beforeAll(async () => {
+  mkdirSync(join(temporaryRoot, "node_modules"));
+  symlinkSync(ZOD_PACKAGE, join(temporaryRoot, "node_modules", "zod"), "dir");
+  writeFileSync(join(temporaryRoot, "package.json"), '{ "type": "module" }\n');
+
+  ({ operationInputs, outputSchemas, inputSchemas } =
+    await generatedValidators("seampact-consistent"));
+});
+
+afterAll(() => rmSync(temporaryRoot, { recursive: true, force: true }));
+
+function getChannelInput(channelId: string): unknown {
+  return { path: { channelId }, query: {}, headers: {} };
+}
+
+function inputValidator(exportName: string): SafeParser {
+  const validator = operationInputs[exportName];
+
+  if (validator === undefined) throw new Error(`no generated validator ${exportName}`);
+
+  return validator;
+}
+
+function createdAtValidator(): SafeParser {
+  const createdAt = outputSchemas.TaskSchema?.shape.createdAt;
+
+  if (createdAt === undefined) throw new Error("no generated TaskSchema.createdAt validator");
+
+  return createdAt;
+}
+
+describe("uuid: the 8-4-4-4-12 hex layout of ADR 0003, any version and variant digit", () => {
+  test.each([
+    "0f8fad5b-d9cb-469f-a165-70867728950e",
+    "12345678-1234-1234-1234-123456789abc",
+    "12345678-1234-0234-8234-123456789ABC",
+  ])("accepts %s", (channelId) => {
+    expect(
+      inputValidator("GetChannelInputSchema").safeParse(getChannelInput(channelId)).success,
+    ).toBe(true);
+  });
+
+  test.each(["12345678-1234-1234-1234-123456789ab", "1234567g-1234-1234-1234-123456789abc"])(
+    "refuses %s",
+    (channelId) => {
+      expect(
+        inputValidator("GetChannelInputSchema").safeParse(getChannelInput(channelId)).success,
+      ).toBe(false);
+    },
+  );
+});
+
+describe("date-time: RFC 3339 as ADR 0003 reads it", () => {
+  test.each([
+    "2026-06-30T23:59:59Z",
+    "2026-06-30t23:59:59z",
+    "2026-06-30T23:59:59.123456789+02:00",
+    "2024-02-29T00:00:00-05:30",
+    "0050-01-01T00:00:00Z",
+  ])("accepts %s", (value) => {
+    expect(createdAtValidator().safeParse(value).success).toBe(true);
+  });
+
+  test.each([
+    "2026-06-30T23:59:59.1234567890Z",
+    "2026-06-30T23:59:60Z",
+    "2026-06-30T23:59:59",
+    "2026-02-29T00:00:00Z",
+    "2026-06-30T24:00:00Z",
+    "2026-06-30T23:59:59.Z",
+  ])("refuses %s", (value) => {
+    expect(createdAtValidator().safeParse(value).success).toBe(false);
+  });
+});
+
+describe("query: unknown keys are refused, also on an operation without query params", () => {
+  test("accepts an empty query", () => {
+    expect(inputValidator("HealthInputSchema").safeParse({ query: {} }).success).toBe(true);
+  });
+
+  test("refuses an unknown query key", () => {
+    expect(inputValidator("HealthInputSchema").safeParse({ query: { x: "1" } }).success).toBe(
+      false,
+    );
+  });
+});
+
+describe("pattern: a sort value is one of the declared keys or its descending form", () => {
+  const listTasksInput = (sort: string[]): unknown => ({
+    path: { channelId: "0f8fad5b-d9cb-469f-a165-70867728950e" },
+    query: { sort },
+    headers: {},
+  });
+
+  test.each([[["createdAt"]], [["-createdAt"]]])("accepts %j", (sort) => {
+    expect(inputValidator("ListTasksInputSchema").safeParse(listTasksInput(sort)).success).toBe(
+      true,
+    );
+  });
+
+  test.each([[["title"]], [["createdAt2"]], [["+createdAt"]]])("refuses %j", (sort) => {
+    expect(inputValidator("ListTasksInputSchema").safeParse(listTasksInput(sort)).success).toBe(
+      false,
+    );
+  });
+});
+
+describe("the custom checks of the generated validators", () => {
+  test("every refine names its contract rule in params.rule", () => {
+    const sources = ["operations/input.ts", "schemas/output.ts"].map((file) =>
+      readFileSync(join(temporaryRoot, "seampact-consistent", file), "utf8"),
+    );
+    const refines = sources.flatMap((source) => source.match(/\.refine\([\s\S]*?\}\)/g) ?? []);
+
+    expect(refines.length).toBeGreaterThan(0);
+
+    for (const refine of refines) expect(refine).toMatch(/params: \{ rule: "\w+" \}/);
+  });
+});
+
+describe("a nullable opaque property", () => {
+  test("generates in every direction", async () => {
+    const ir: ContractIR = JSON.parse(readFileSync(GOLDEN_IR, "utf8"));
+    const paymentEvent = ir.schemas.PaymentEvent;
+    const data =
+      paymentEvent !== undefined &&
+      isKnownVariant("Schema", paymentEvent) &&
+      paymentEvent.kind === "object"
+        ? paymentEvent.properties.find((candidate) => candidate.name === "data")
+        : undefined;
+
+    if (data === undefined) throw new Error("the golden PaymentEvent lost its opaque data");
+    data.nullable = true;
+
+    const outcome = await target.generate({
+      ir,
+      options: {},
+      links: {},
+      artefacts: new Set(["validators"]),
+    });
+
+    expect(outcome.status === "generated" ? [] : outcome.refusals).toEqual([]);
+  });
+});
+
+describe("native rules", () => {
+  test("zod's own uuid check refuses a version digit the contract accepts", async () => {
+    const native = await generatedValidators("native");
+    const versionZero = getChannelInput("12345678-1234-0234-8234-123456789ABC");
+
+    expect(native.operationInputs.GetChannelInputSchema?.safeParse(versionZero).success).toBe(
+      false,
+    );
+    expect(inputValidator("GetChannelInputSchema").safeParse(versionZero).success).toBe(true);
+  });
+});
+
+describe("enums are strict on input and open on output", () => {
+  const CHANNEL_ID = "12345678-1234-1234-1234-123456789abc";
+  const searchWith = (states: string[]) => ({
+    path: { channelId: CHANNEL_ID },
+    query: {},
+    headers: {},
+    body: { text: "t", states },
+  });
+
+  test("a state outside the enum is refused in a request and read back in a response", () => {
+    const search = inputValidator("SearchTasksInputSchema");
+    const state = outputSchemas.TaskSchema?.shape.state;
+
+    expect(search.safeParse(searchWith(["open"])).success).toBe(true);
+    expect(search.safeParse(searchWith(["frozen"])).success).toBe(false);
+    expect(state?.safeParse("open").success).toBe(true);
+    expect(state?.safeParse("frozen").success).toBe(true);
+    expect(state?.safeParse(5).success).toBe(false);
+  });
+});
+
+describe("the schema generated from a compiled pick keeps the kept members and none of the others", () => {
+  function memberNames(exportName: string): string[] {
+    const schema = inputSchemas[exportName];
+
+    if (schema === undefined) throw new Error(`no generated ${exportName}`);
+
+    return Object.keys(schema.shape);
+  }
+
+  test("a picked schema has the picked members and none of the source's others", () => {
+    expect(memberNames("CreateTaskSchema")).toEqual(["title", "effort"]);
+    expect(memberNames("UpdateTaskSchema")).toEqual([
+      "title",
+      "state",
+      "effort",
+      "expectedVersion",
+    ]);
+
+    for (const name of ["CreateTaskSchema", "UpdateTaskSchema"]) {
+      for (const dropped of ["taskId", "version", "createdAt"]) {
+        expect(memberNames(name), `${name}.${dropped}`).not.toContain(dropped);
+      }
+    }
+  });
+
+  test("a picked schema keeps the refinements and the strictness of the source", () => {
+    const create = inputSchemas.CreateTaskSchema;
+
+    if (create === undefined) throw new Error("no generated CreateTaskSchema");
+
+    expect(create.safeParse({ title: "T" }).success).toBe(true);
+    expect(create.safeParse({ title: "" }).success).toBe(false);
+    expect(create.safeParse({ title: "x".repeat(201) }).success).toBe(false);
+    expect(create.safeParse({ title: "T", taskId: "t1" }).success).toBe(false);
+    expect(create.safeParse({}).success).toBe(false);
+  });
+});

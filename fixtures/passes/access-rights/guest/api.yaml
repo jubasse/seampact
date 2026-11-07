@@ -1,0 +1,62 @@
+# Requirements on public and optional-auth routes (ADR 0002 section 9, SCN-063, A40): a rule and a guest right,
+# which carries its reason, reach an anonymous caller; a right without a guest reason there is an error. A node
+# that sets `identity` again below a public one makes its routes identified, where any right may be required.
+api: { name: blog, version: 1 }
+
+schemes:
+  bearer: { kind: bearer }
+
+identities:
+  reader:
+    schemes: { read: [bearer], write: [bearer] }
+    principal: Reader
+
+schemas:
+  ArticleId: { type: string, format: uuid }
+  Article:
+    type: object
+    required: [articleId]
+    properties: { articleId: ArticleId }
+  Reader:
+    type: object
+    required: [readerId]
+    properties: { readerId: { type: string } }
+
+rights:
+  articles.read:
+    subject: { resource: Article, id: ArticleId }
+    guest: Published articles are readable without an account.
+  articles.edit:
+    subject: { resource: Article, id: ArticleId }
+
+rules:
+  throttle: { bucket: true, errors: [api.rate_limited] }
+
+buckets:
+  perAddress: { key: [address/64], limit: 30, window: 1m }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: reader
+    routes:
+      articles:
+        kind: collection
+        id: { articleId: ArticleId }
+        item: Article
+        access: { public: Published articles are public. }
+        ops:
+          get:
+            requires: [{ rule: throttle, bucket: perAddress }, { right: articles.read }]
+        member:
+          routes:
+            preview:
+              method: get
+              access: { optionalAuth: A signed-in reader also sees the drafts. }
+              requires: [{ right: articles.read }, { right: articles.edit }]
+              output: Article
+            publish:
+              method: post
+              identity: reader
+              requires: [{ right: articles.edit }]
+              output: Article

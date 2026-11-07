@@ -1,0 +1,8 @@
+# CHK-142: A stated maturity, without a reason.
+api: { name: tasks, version: 1 }
+surfaces:
+  app:
+    identity: user
+    maturity: experimental
+    routes:
+      beta: { method: get, output: Beta, maturity: { level: provisional } }

@@ -1,0 +1,4 @@
+# workspace.yaml: an api whose contract tunes a house rule
+workspace:
+  apis:
+    demo: ./api.yaml

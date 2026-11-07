@@ -1,0 +1,129 @@
+name: Front consumers
+
+# Builds and packs the seampact packages, installs them from the tarballs into the front test consumers and runs
+# their Vitest browser project on Playwright Chromium against the Hono server through a same-origin proxy
+# (ADR 0021). On a pull request or a push they run only when the change touches the packages, the consumer harness, the
+# reference contract, the toolchain pins or this workflow; `p6-react` is the one check to require.
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  merge_group:
+    types: [checks_requested]
+    branches: [main, develop]
+  workflow_dispatch:
+  # The nightly run has no base, so it runs every row whatever the change: the net under the narrowed paths.
+  schedule:
+    - cron: "30 0 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: front-consumers-${{ github.event_name }}-${{ github.event_name == 'push' && github.sha || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      front: ${{ steps.detect.outputs.run }}
+      queue: ${{ steps.detect.outputs.queue }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history without file contents: the change list reads commits and trees only, and only the shared
+          # actions are checked out.
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout: .github/actions
+          persist-credentials: false
+      - name: Detect a change the front consumers depend on
+        id: detect
+        uses: ./.github/actions/lane-changes
+        with:
+          # The packages a front consumer installs (core, packs, runtime, the TypeScript, fetch, validator, Hono and front
+          # targets), the http suite its tests read, the consumer harness and its overlays, the reference contract and the pins.
+          watched-paths: |
+            ^packages/(core|packs|runtime)/
+            ^packages/targets/codegen-(ts|fetch|zod|yup|class-validator|hono|react|vue|angular|msw)/
+            ^packages/tools/http-suite/
+            ^scripts/consumers/(cli|build-and-pack|consumer-project|install-into|ignore-vendor|packed-packages|run-step|served-app|validator-choice)\.ts$
+            ^scripts/consumers/template/
+            ^scripts/consumers/targets/(front|vite|hono|react)
+            ^scripts/golden/
+            ^fixtures/reference/
+            ^\.github/actions/
+            ^\.github/workflows/p6-react\.yml$
+            ^pnpm-lock\.yaml$
+            ^pnpm-workspace\.yaml$
+            ^package\.json$
+            ^tsconfig\.base\.json$
+            ^\.nvmrc$
+
+  consumer:
+    needs: changes
+    if: needs.changes.outputs.front == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [front-fetch]
+        validators: [zod]
+    steps: &consumer-steps
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The browser the consumer run installs, cached on the Playwright version the front overlay pins.
+      - name: Read the pinned Playwright version
+        id: playwright
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(node -p 'require("./scripts/consumers/targets/front/package.entries.json").playwright')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-headless-shell-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - name: Run the ${{ matrix.target }} consumer on ${{ matrix.validators }} from packed tarballs
+        run: node scripts/consumers/cli.ts --target "${{ matrix.target }}" --validators "${{ matrix.validators }}" --dir "$RUNNER_TEMP/test-seampact-${{ matrix.target }}-${{ matrix.validators }}"
+
+  consumer-queue:
+    needs: changes
+    if: needs.changes.outputs.queue == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [react-tanstack, react-swr, react-rtk, react-fetch]
+        validators: [zod]
+    steps: *consumer-steps
+
+  # The required check: a skipped job passes only when the change filter said skip; a failed or cancelled one fails.
+  p6-react:
+    # Every job this check stands for is listed here, or its failure would not reach the required check.
+    needs: [changes, consumer, consumer-queue]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .github/actions
+          persist-credentials: false
+      - uses: ./.github/actions/lane-aggregate
+        with:
+          needs: ${{ toJSON(needs) }}
+          should-run: ${{ needs.changes.outputs.front }}

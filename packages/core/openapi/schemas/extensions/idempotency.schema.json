@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/openapi/extensions/idempotency.schema.json",
+  "title": "x-seampact-idempotency",
+  "description": "The idempotency key of an unsafe operation, or its exemption with a reason.",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "header": {
+          "type": "string",
+          "minLength": 1
+        },
+        "replayHeader": {
+          "type": "string",
+          "minLength": 1
+        },
+        "lifetimeMs": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "enforce": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": ["header", "replayHeader", "lifetimeMs", "required", "enforce"],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "exempt": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "const": true
+            }
+          ],
+          "description": "The written reason, or true under `reasons: omit`."
+        }
+      },
+      "required": ["exempt"],
+      "additionalProperties": false
+    }
+  ]
+}

@@ -1,0 +1,175 @@
+# api.yaml: the reference-style contract with every core default overridden
+api:
+  name: ledger
+  version: 2
+  kind: product
+  maturity: provisional
+  summary: Entries kept by a bookkeeping product.
+
+schemes:
+  bearer: { kind: bearer }
+
+identities:
+  user:
+    schemes: { read: [bearer], write: [bearer] }
+    principal: UserPrincipal
+
+errors:
+  err.bad_input: { status: 400, params: { issues: Issues }, example: { issues: [{ pointer: /title, rule: minLength }] } }
+  err.unauthenticated: { status: 401 }
+  err.forbidden: { status: 403, params: { pointer?: { type: string } } }
+  err.csrf_invalid: { status: 403 }
+  err.sort_key_forbidden: { status: 403, params: { key: { type: string } }, example: { key: amount } }
+  err.missing: { status: 404 }
+  err.conflict: { status: 409 }
+  err.idempotency_running: { status: 409 }
+  err.precondition_failed: { status: 412 }
+  err.idempotency_reused: { status: 422 }
+  err.precondition_required: { status: 428 }
+  err.gone: { status: 410 }
+  err.too_large: { status: 413 }
+  err.media_type: { status: 415 }
+  err.slow_down: { status: 429 }
+  err.internal: { status: 500 }
+  err.upstream_down: { status: 502 }
+  err.unavailable: { status: 503 }
+  err.upstream_timeout: { status: 504 }
+  err.deadline: { status: 504 }
+
+formats:
+  house:
+    media: application/json
+    absent: null
+    success:
+      item: { body: { data: $payload, meta: $meta } }
+      table: { body: { data: $payload, meta: $meta } }
+      list: { body: { data: $payload, meta: $meta } }
+      page: { body: { data: $items, meta: $meta } }
+    meta:
+      servedAt: { fill: now }
+    error:
+      body: { error: { code: $code, nature: $nature, params: $params } }
+
+pagings:
+  pages:
+    request:
+      page: { query: p }
+      limit: { query: per }
+      sort: { query: order, style: pair }
+    response:
+      meta: { page: $page, lastPage: $totalPages, perPage: $limit, total: $total }
+
+conventions:
+  format: house
+  pathCase: snake
+  pathVersion: none
+  urls: absolute
+  int64: number
+  bodyLimit: 256KiB
+  restrictedInput: strip
+  outputEnums: open
+  paging: { default: pages, maxLimit: 40, defaultLimit: 20, overLimit: clamp }
+  query:
+    lists: comma
+    objects: deepObject
+    unknownKeys: { ignore: "Gateways add tracking parameters." }
+  input:
+    unknownKeys: { ignore: "Older clients send fields this version dropped." }
+  deprecation: { header: X-Deprecated, sunsetHeader: X-Sunset-On, successorRel: latest-version }
+  ops:
+    update: { method: put }
+    create: { status: 200 }
+    batch: { path: lookup }
+  operationIds: { order: nounVerb, case: snake }
+  batch: { maxIds: 25, bodyLimit: 64KiB }
+  cache:
+    sensitiveElsewhere: refuse
+    families:
+      brief: { maxAge: 30s, sharedMaxAge: 120s, staleWhileRevalidate: 15s, mustRevalidate: true }
+      pinned: { maxAge: 3600s, immutable: true }
+  errors:
+    pattern: '^err\.[a-z_]+$'
+    reach: resource
+    derived:
+      schemaInvalid:
+        code: err.bad_input
+        params: { issues: { $each: $issues, $as: { pointer: $item.pointer, rule: $item.rule } } }
+      unauthenticated: err.unauthenticated
+      forbidden: err.forbidden
+      csrfInvalid: err.csrf_invalid
+      sortKeyForbidden: err.sort_key_forbidden
+      notFound: err.missing
+      stateConflict: err.conflict
+      idempotencyInProgress: err.idempotency_running
+      preconditionFailed: err.precondition_failed
+      idempotencyKeyReused: err.idempotency_reused
+      preconditionRequired: err.precondition_required
+      gone: err.gone
+      payloadTooLarge: err.too_large
+      unsupportedMediaType: err.media_type
+      rateLimited: err.slow_down
+      undeclaredStatus: err.internal
+      upstreamUnavailable: err.upstream_down
+      serviceUnavailable: err.unavailable
+      upstreamTimeout: err.upstream_timeout
+      deadlineExceeded: err.deadline
+
+enums:
+  EntryKind: { values: [debit, credit], reason: "Entry kinds belong to this api." }
+
+schemas:
+  EntryId: { type: string, format: uuid }
+  UserPrincipal:
+    type: object
+    required: [userId]
+    properties: { userId: { type: string, format: uuid } }
+  Issues:
+    type: array
+    items:
+      type: object
+      required: [pointer, rule]
+      properties: { pointer: { type: string }, rule: { type: string } }
+  Entry:
+    type: object
+    required: [entryId, kind, amount, postedAt]
+    properties:
+      entryId: EntryId
+      kind: { enum: EntryKind }
+      amount: { type: integer, format: int64, minimum: 0 }
+      postedAt: { type: string, format: date-time }
+  EntryFilter:
+    type: object
+    properties:
+      kind: { enum: EntryKind }
+      since: { type: string, format: date-time }
+  CreateEntry:
+    pick: { from: Entry, fields: [kind, amount] }
+  ReplaceEntry:
+    pick: { from: Entry, fields: [kind, amount] }
+
+surfaces:
+  app:
+    identity: user
+    routes:
+      entries:
+        kind: collection
+        id: { entryId: EntryId }
+        item: Entry
+        ops:
+          list:
+            sortable: [postedAt, amount]
+            query:
+              filter: EntryFilter
+              kinds: { type: array, items: { enum: EntryKind }, maxItems: 2 }
+          get: { cache: { freshness: brief } }
+          create: { input: CreateEntry }
+          update: { input: ReplaceEntry }
+          delete: {}
+          batch: {}
+        member:
+          routes:
+            closing_balance:
+              method: get
+              output: Entry
+              cache: { freshness: pinned }
+              deprecated: { since: '2026-01-01', sunset: '2027-01-01', successor: entry_get }

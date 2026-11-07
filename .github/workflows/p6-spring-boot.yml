@@ -1,0 +1,389 @@
+name: Spring Boot target
+
+# The spring-boot generator (ADR 0022): its option and golden tests, then the golden tree compiled by javac against
+# Spring Boot 4 and its redaction checked, on Java 21 and 25 (A13). The consumer is then built by the Gradle plugin
+# and by the Maven plugin with Node removed from the runner, from the reference contract's bundle served over HTTPS
+# on Java 21 and 25 and from the local YAML on Java 25, and the shared http suite runs against each jar ("The consumer
+# and the proof"). A pull request to develop runs the golden tests on Java 21 and builds and suites the consumer on
+# (Gradle, Java 21) from the bundle; a push to develop adds Java 25, (Maven, Java 25) and
+# the other four rows.
+# On a pull request or a push it runs only when the change touches the JVM modules, the reference contract, the consumer, the
+# binary, the http suite or this workflow; `spring-boot` is the one check to require.
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  merge_group:
+    types: [checks_requested]
+    branches: [main, develop]
+  workflow_dispatch:
+  # The nightly and manual runs are the only ones that write the Gradle caches, from the first row of each pull request job;
+  # every other run and row reads them.
+  schedule:
+    - cron: "30 0 * * *"
+
+# Maven Resolver retries a 429 or 503 from a registry after a growing pause: the `connector` keys are read by
+# Maven 3.9 (Resolver 1.9), the `transport` keys by Maven 4 (Resolver 2). setup-java keeps this value, `-ntp` included.
+env:
+  MAVEN_ARGS: >-
+    -ntp
+    -Daether.connector.http.retryHandler.count=5 -Daether.connector.http.retryHandler.interval=5000
+    -Daether.transport.http.retryHandler.count=5 -Daether.transport.http.retryHandler.interval=5000
+
+permissions:
+  contents: read
+
+concurrency:
+  group: spring-boot-${{ github.event_name }}-${{ github.event_name == 'push' && github.sha || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      spring-boot: ${{ steps.detect.outputs.run }}
+      queue: ${{ steps.detect.outputs.queue }}
+      post-merge: ${{ steps.detect.outputs.post-merge }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history without file contents: the change list reads commits and trees only, and only the shared
+          # actions are checked out.
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout: .github/actions
+          persist-credentials: false
+      - name: Detect a change to the generator, its inputs or its pins
+        id: detect
+        uses: ./.github/actions/lane-changes
+        with:
+          # The JVM modules and their pins, the reference contract and its IRs, the consumer, the binary and the
+          # core packages it embeds, the http suite, the lockfile and this workflow.
+          watched-paths: |
+            ^jvm/
+            ^fixtures/reference/
+            ^fixtures/golden/reference/
+            ^fixtures/golden/pack-spring/
+            ^packages/packs/pack-spring/
+            ^fixtures/golden/pack-laravel/
+            ^packages/packs/pack-laravel/
+            ^scripts/consumers/targets/spring-boot/
+            ^scripts/consumers/served-app\.ts$
+            ^packages/core/
+            ^packages/tools/binary/
+            ^packages/tools/http-suite/
+            ^pnpm-lock\.yaml$
+            ^\.github/actions/
+            ^\.github/workflows/p6-spring-boot\.yml$
+
+  golden:
+    needs: changes
+    if: needs.changes.outputs.spring-boot == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        test-jdk: [21]
+    steps: &golden-steps
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Both JDKs are installed: Gradle runs on the last one, and the tests run on the matrix one, which the
+      # toolchain detection finds without a download.
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: |
+            21
+            25
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          # One writer per pull request job, its first row in the nightly or a manual run, so the cache holds one Gradle home and
+          # dependency set per job. The other rows restore that entry; the queue, post-merge and drift copies, which write
+          # none, restore the latest entry of the runner's OS.
+          cache-read-only: >-
+            ${{ (github.event_name != 'schedule' && github.event_name != 'workflow_dispatch') || strategy.job-index != 0 || endsWith(github.job, '-post-merge')
+            || endsWith(github.job, '-queue') || endsWith(github.job, '-drift') }}
+      - uses: ./.github/actions/gradle-retry
+      - name: Generate, compare and compile the golden tree on Java ${{ matrix.test-jdk }}
+        working-directory: jvm
+        run: ./gradlew :seampact-spring-runtime:check :seampact-spring-boot:check -PtestJdk=${{ matrix.test-jdk }}
+
+  golden-queue:
+    needs: changes
+    if: needs.changes.outputs.queue == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        test-jdk: [25]
+    steps: *golden-steps
+
+  binary:
+    name: binary (linux x64)
+    needs: changes
+    if: needs.changes.outputs.spring-boot == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Restore or build the compiler binary
+        uses: ./.github/actions/compiler-binary
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: spring-boot-binary-linux-x64
+          path: packages/tools/binary/dist/bin/seampact-linux-x64
+          retention-days: 3
+          if-no-files-found: error
+
+  # The consumer built by one plugin six times: as configured, with the boot variant's route allow-listed, with the
+  # framework-route check off, with the hook check off and `health` filtered out, from the
+  # contract with @seampact/pack-spring applied (the pack:spring profile) and from the contract with
+  # @seampact/pack-laravel applied, whose format wraps every success body (the pack:laravel profile). A `bundle` row fetches each contract as
+  # a release asset from a loopback HTTPS server; a `local-yaml` row compiles the `path` source.
+  # The PR row; the queue and post-merge jobs below run the same steps on the other rows, and http-suite pairs with
+  # each.
+  build:
+    name: &build-name build (${{ matrix.build-tool }}, Java ${{ matrix.jdk }}, ${{ matrix.contract }})
+    needs: [changes, binary]
+    if: needs.changes.outputs.spring-boot == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy: &consumer-pr-rows
+      fail-fast: false
+      matrix:
+        include:
+          - { build-tool: gradle, jdk: 21, contract: bundle }
+    steps: &build-steps
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Remove Node from the runner, so the JVM path is proven to need none
+        shell: bash
+        run: |
+          set -euo pipefail
+          for node in $(which -a node nodejs npm npx corepack 2>/dev/null | sort -u); do
+            sudo rm -f "$node"
+          done
+          if command -v node || command -v npm || command -v npx; then
+            echo "Node is still on the PATH."
+            exit 1
+          fi
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: spring-boot-binary-linux-x64
+          path: bin
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: |
+            21
+            25
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          # One writer per pull request job, its first row in the nightly or a manual run, so the cache holds one Gradle home and
+          # dependency set per job. The other rows restore that entry; the queue, post-merge and drift copies, which write
+          # none, restore the latest entry of the runner's OS.
+          cache-read-only: >-
+            ${{ (github.event_name != 'schedule' && github.event_name != 'workflow_dispatch') || strategy.job-index != 0 || endsWith(github.job, '-post-merge')
+            || endsWith(github.job, '-queue') || endsWith(github.job, '-drift') }}
+      - uses: ./.github/actions/gradle-retry
+      - name: Restore the Maven downloads
+        if: matrix.build-tool == 'maven'
+        uses: ./.github/actions/maven-cache
+        with:
+          step: restore
+      # The Maven build takes the plugin, seampact-hooks and seampact-spring-runtime from Maven local (ADR 0011
+      # "Unpublished installs").
+      - name: Publish the JVM modules to Maven local
+        if: matrix.build-tool == 'maven'
+        working-directory: jvm
+        run: >-
+          ./gradlew :seampact-ir:publishToMavenLocal :seampact-hooks:publishToMavenLocal
+          :seampact-spring-runtime:publishToMavenLocal :seampact-spring-boot:publishToMavenLocal :seampact-runner:publishToMavenLocal
+          :seampact-maven-plugin:publishToMavenLocal
+      - name: Serve the contract bundles over HTTPS
+        if: matrix.contract == 'bundle'
+        run: sh scripts/consumers/targets/spring-boot/bundle-over-https.sh start "$RUNNER_TEMP/https"
+      # The Maven wrapper downloads its Maven from Maven Central with no retry of its own; this step fetches it into
+      # ~/.m2/wrapper with retries and backoff, so the builds below find it there.
+      - name: Download the Maven wrapper's distribution with retries
+        if: matrix.build-tool == 'maven'
+        shell: bash
+        working-directory: scripts/consumers/targets/spring-boot/maven
+        run: |
+          set -euo pipefail
+          for delay in 10 30 90; do
+            if ./mvnw -B --version; then exit 0; fi
+            echo "Retrying the Maven download in ${delay} s."
+            sleep "$delay"
+          done
+          ./mvnw -B --version
+      - name: Build the consumer, its boot-variant jars and its pack-spring and pack-laravel variants
+        shell: bash
+        env:
+          BUILD_TOOL: ${{ matrix.build-tool }}
+          CONTRACT: ${{ matrix.contract }}
+          JDK: ${{ matrix.jdk }}
+        run: |
+          set -euo pipefail
+          binary="$GITHUB_WORKSPACE/bin/seampact-linux-x64"
+          chmod +x "$binary"
+          if [ "$CONTRACT" = "bundle" ]; then
+            export JAVA_TOOL_OPTIONS="-Djavax.net.ssl.trustStore=$RUNNER_TEMP/https/truststore.p12 -Djavax.net.ssl.trustStorePassword=changeit"
+          fi
+          # Maven runs on the row's JDK; Gradle on the last one, compiling and testing with the row's toolchain.
+          java_home_variable="JAVA_HOME_${JDK}_X64"
+          for variant in configured allow-listed route-check-off hook-check-off pack-spring pack-laravel; do
+            app="$RUNNER_TEMP/$variant"
+            sh scripts/consumers/targets/spring-boot/assemble.sh "$app" "${variant/configured/}" "$BUILD_TOOL"
+            if [ "$CONTRACT" = "bundle" ]; then
+              sh scripts/consumers/targets/spring-boot/bundle-over-https.sh use "$RUNNER_TEMP/https" "$app" "$binary" "$variant"
+            fi
+            if [ "$BUILD_TOOL" = "maven" ]; then
+              (cd "$app" && JAVA_HOME="${!java_home_variable}" ./mvnw -B package -Djava.version="$JDK" \
+                -DseampactBinary="$binary" -DseampactBinarySha256="$(sha256sum "$binary" | cut -d' ' -f1)")
+              built="$app/target/consumer.jar"
+            else
+              (cd "$app" && ./gradlew test bootJar -PjavaVersion="$JDK" -PseampactJvm="$GITHUB_WORKSPACE/jvm" \
+                -PseampactBinary="$binary")
+              built="$app/build/libs/consumer.jar"
+            fi
+            mkdir -p jars
+            cp "$built" "jars/$variant.jar"
+          done
+      - name: Save the Maven downloads
+        if: matrix.build-tool == 'maven'
+        uses: ./.github/actions/maven-cache
+        with:
+          step: save
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: spring-boot-consumer-${{ matrix.build-tool }}-jdk${{ matrix.jdk }}-${{ matrix.contract }}
+          path: jars
+          retention-days: 3
+          if-no-files-found: error
+
+  build-queue:
+    name: *build-name
+    needs: [changes, binary]
+    if: needs.changes.outputs.queue == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy: &consumer-queue-rows
+      fail-fast: false
+      matrix:
+        include:
+          - { build-tool: maven, jdk: 25, contract: bundle }
+    steps: *build-steps
+
+  build-post-merge:
+    name: *build-name
+    needs: [changes, binary]
+    if: needs.changes.outputs.post-merge == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy: &consumer-post-merge-rows
+      fail-fast: false
+      matrix:
+        include:
+          - { build-tool: gradle, jdk: 25, contract: bundle }
+          - { build-tool: maven, jdk: 21, contract: bundle }
+          - { build-tool: gradle, jdk: 25, contract: local-yaml }
+          - { build-tool: maven, jdk: 25, contract: local-yaml }
+    steps: *build-steps
+
+  http-suite:
+    name: &http-suite-name http-suite (${{ matrix.build-tool }}, Java ${{ matrix.jdk }}, ${{ matrix.contract }})
+    needs: [changes, build]
+    if: needs.changes.outputs.spring-boot == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy: *consumer-pr-rows
+    steps: &http-suite-steps
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.jdk }}
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: spring-boot-consumer-${{ matrix.build-tool }}-jdk${{ matrix.jdk }}-${{ matrix.contract }}
+          path: jars
+      - name: Run the default, hand-written, boot, pack:spring and pack:laravel profiles
+        env:
+          SEAMPACT_SPRING_JAR: ${{ github.workspace }}/jars/configured.jar
+          SEAMPACT_SPRING_ALLOW_LISTED_JAR: ${{ github.workspace }}/jars/allow-listed.jar
+          SEAMPACT_SPRING_ROUTE_CHECK_OFF_JAR: ${{ github.workspace }}/jars/route-check-off.jar
+          SEAMPACT_SPRING_HOOK_CHECK_OFF_JAR: ${{ github.workspace }}/jars/hook-check-off.jar
+          SEAMPACT_SPRING_PACK_JAR: ${{ github.workspace }}/jars/pack-spring.jar
+          SEAMPACT_SPRING_PACK_LARAVEL_JAR: ${{ github.workspace }}/jars/pack-laravel.jar
+          SEAMPACT_SPRING_REPORTS: ${{ github.workspace }}/reports
+        run: pnpm vitest run --config scripts/consumers/targets/spring-boot/suite/vitest.config.ts
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: spring-boot-http-suite-${{ matrix.build-tool }}-jdk${{ matrix.jdk }}-${{ matrix.contract }}
+          path: reports
+          retention-days: 90
+          if-no-files-found: warn
+
+  http-suite-queue:
+    name: *http-suite-name
+    needs: [changes, build-queue]
+    if: needs.changes.outputs.queue == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy: *consumer-queue-rows
+    steps: *http-suite-steps
+
+  http-suite-post-merge:
+    name: *http-suite-name
+    needs: [changes, build-post-merge]
+    if: needs.changes.outputs.post-merge == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy: *consumer-post-merge-rows
+    steps: *http-suite-steps
+
+  # The required check: a skipped job passes only when the change filter said skip; a failed or cancelled one fails.
+  spring-boot:
+    # Every job this check stands for is listed here, or its failure would not reach the required check.
+    needs:
+      - changes
+      - golden
+      - golden-queue
+      - binary
+      - build
+      - build-queue
+      - build-post-merge
+      - http-suite
+      - http-suite-queue
+      - http-suite-post-merge
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .github/actions
+          persist-credentials: false
+      - uses: ./.github/actions/lane-aggregate
+        with:
+          needs: ${{ toJSON(needs) }}
+          should-run: ${{ needs.changes.outputs.spring-boot }}

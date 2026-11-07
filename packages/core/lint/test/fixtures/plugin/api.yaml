@@ -1,0 +1,38 @@
+# api.yaml: the house rule acme/served-at at error, allowed on one route
+api: { name: demo, version: 1 }
+
+lint:
+  rules: { acme/served-at: error }
+
+schemes:
+  bearer: { kind: bearer }
+
+identities:
+  user:
+    schemes: { read: [bearer], write: [bearer] }
+    principal: Principal
+
+schemas:
+  Principal:
+    type: object
+    required: [userId]
+    properties: { userId: { type: string } }
+  Plain:
+    type: object
+    required: [id, password]
+    properties: { id: { type: string }, password: { type: string } }
+  Served:
+    type: object
+    required: [id, servedAt]
+    properties: { id: { type: string }, servedAt: { type: string, format: date-time } }
+
+surfaces:
+  app:
+    identity: user
+    routes:
+      alpha: { method: get, output: Plain }
+      beta: { method: get, output: Served }
+      gamma:
+        method: get
+        output: Plain
+        lint: { allow: { acme/served-at: "Gamma is replayed from a cache that stamps nothing." } }

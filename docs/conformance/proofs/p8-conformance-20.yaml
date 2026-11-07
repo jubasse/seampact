@@ -1,0 +1,86 @@
+# docs/conformance/proofs/p8-conformance-20.yaml
+# Body and query items deferred because 1.0 refuses their form by name, with the tests that generation refuses it;
+# and the native security layers each target ships (CHK-162).
+lane: p8-conformance-20
+proofs:
+  - id: CHK-150
+    refusals:
+      - 'fetch: packages/targets/codegen-fetch/src/body-and-query-forms-refused.test.ts#a application/x-www-form-urlencoded body is refused by name'
+      - 'nestjs: packages/targets/codegen-nestjs/src/reference-boundary.test.ts#a form body is refused by name'
+      - 'fastify: packages/targets/codegen-fastify/src/reference-boundary.test.ts#a form body is refused by name'
+      - 'express: packages/targets/codegen-express/src/reference-boundary.test.ts#a form body is refused by name'
+      - 'adonis: packages/targets/codegen-adonis/src/reference-boundary.test.ts#a form body is refused by name'
+      - 'hono: packages/targets/codegen-hono/src/reference-boundary.test.ts#a form body is refused by name'
+      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootBodyFormsRefusalsTest.kt#refusesAFormBody'
+      - 'laravel: php/laravel/tests/BodyFormsRefusalsTest.php#testAFormBodyIsRefusedByName'
+      - 'symfony: php/symfony/tests/BodyFormsRefusalsTest.php#testAFormBodyIsRefusedByName'
+      - 'fastapi: python/fastapi/fastapi_tests/test_generator.py#test_a_form_body_is_refused_by_name'
+      - 'drf: python/drf/drf_tests/test_drf_generator.py#test_a_form_or_multipart_body_is_refused_by_name'
+      - 'ninja: python/ninja/ninja_tests/test_generator.py#test_a_form_body_is_refused_by_name'
+  - id: CHK-151
+    refusals:
+      - 'fetch: packages/targets/codegen-fetch/src/body-and-query-forms-refused.test.ts#a multipart/form-data body is refused by name'
+      - 'nestjs: packages/targets/codegen-nestjs/src/reference-boundary.test.ts#a multipart body is refused by name'
+      - 'fastify: packages/targets/codegen-fastify/src/reference-boundary.test.ts#a multipart body is refused by name'
+      - 'express: packages/targets/codegen-express/src/reference-boundary.test.ts#a multipart body is refused by name'
+      - 'adonis: packages/targets/codegen-adonis/src/reference-boundary.test.ts#a multipart body is refused by name'
+      - 'hono: packages/targets/codegen-hono/src/reference-boundary.test.ts#a multipart body is refused by name'
+      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootBodyFormsRefusalsTest.kt#refusesAMultipartBody'
+      - 'laravel: php/laravel/tests/BodyFormsRefusalsTest.php#testAMultipartBodyIsRefusedByName'
+      - 'symfony: php/symfony/tests/BodyFormsRefusalsTest.php#testAMultipartBodyIsRefusedByName'
+      - 'fastapi: python/fastapi/fastapi_tests/test_generator.py#test_contract_forms_the_target_does_not_serve_are_refused_by_name'
+      - 'drf: python/drf/drf_tests/test_drf_generator.py#test_a_form_or_multipart_body_is_refused_by_name'
+      - 'ninja: python/ninja/ninja_tests/test_generator.py#test_contract_forms_the_target_does_not_serve_are_refused_by_name'
+  - id: CHK-152
+    refusals:
+      - 'fetch: packages/targets/codegen-fetch/src/body-and-query-forms-refused.test.ts#a file download is refused by name'
+      - 'nestjs: packages/targets/codegen-nestjs/src/reference-boundary.test.ts#a file download is refused by name'
+      - 'fastify: packages/targets/codegen-fastify/src/reference-boundary.test.ts#a file download is refused by name'
+      - 'express: packages/targets/codegen-express/src/reference-boundary.test.ts#a file download is refused by name'
+      - 'adonis: packages/targets/codegen-adonis/src/reference-boundary.test.ts#a file download is refused by name'
+      - 'hono: packages/targets/codegen-hono/src/reference-boundary.test.ts#a file download is refused by name'
+      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootBodyFormsRefusalsTest.kt#refusesAFileDownload'
+      - 'laravel: php/laravel/tests/BodyFormsRefusalsTest.php#testAFileDownloadIsRefusedByName'
+      - 'symfony: php/symfony/tests/BodyFormsRefusalsTest.php#testAFileDownloadIsRefusedByName'
+      - 'fastapi: python/fastapi/fastapi_tests/test_generator.py#test_a_file_download_is_refused_by_name'
+      - 'drf: python/drf/drf_tests/test_drf_generator.py#test_a_file_download_is_refused_by_name'
+      - 'ninja: python/ninja/ninja_tests/test_generator.py#test_a_file_download_is_refused_by_name'
+  - id: CHK-160
+    refusals:
+      - 'fetch: packages/targets/codegen-fetch/src/body-and-query-forms-refused.test.ts#a query list in brackets form is refused by name'
+      - 'nestjs: packages/targets/codegen-nestjs/src/reference-boundary.test.ts#a query list in brackets form is refused by name'
+      - 'fastify: packages/targets/codegen-fastify/src/reference-boundary.test.ts#a query list in brackets form is refused by name'
+      - 'express: packages/targets/codegen-express/src/reference-boundary.test.ts#a query list in brackets form is refused by name'
+      - 'adonis: packages/targets/codegen-adonis/src/reference-boundary.test.ts#a query list in brackets form is refused by name'
+      - 'hono: packages/targets/codegen-hono/src/reference-boundary.test.ts#a query list in brackets form is refused by name'
+      - 'spring-boot: jvm/seampact-spring-boot/src/test/kotlin/io/github/jubasse/seampact/springboot/SpringBootQueryListRefusalsTest.kt#refusesAQueryListInBracketsForm'
+      - 'laravel: php/laravel/tests/QueryListRefusalsTest.php#testAQueryListInBracketsFormIsRefusedByName'
+      - 'symfony: php/symfony/tests/QueryListRefusalsTest.php#testAQueryListInBracketsFormIsRefusedByName'
+      - 'fastapi: python/fastapi/fastapi_tests/test_generator.py#test_a_query_list_in_brackets_form_is_refused_by_name'
+      - 'drf: python/drf/drf_tests/test_drf_generator.py#test_a_query_list_in_brackets_form_is_refused_by_name'
+      - 'ninja: python/ninja/ninja_tests/test_generator.py#test_a_query_list_in_brackets_form_is_refused_by_name'
+  - id: CHK-162
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - 'adonis: packages/targets/codegen-adonis/src/live-boundary.test.ts#routes are named <api>.<operation>, listed by access kind'
+      - 'nestjs: packages/targets/codegen-nestjs/src/live-boundary.test.ts#a 429 HttpException after a named throttler''s Retry-After answers the rateLimited code with its delay'
+      - 'spring-boot: jvm/seampact-spring-boot/src/goldenCheck/java/com/example/optins/api/spring/SecurityMatchersTest.java#thePublicTemplateIsPermitted'
+      - 'spring-boot: jvm/seampact-spring-boot/src/goldenCheck/java/com/example/optins/api/spring/SecurityMatchersTest.java#theOptionalAuthRouteIsPermitted'
+      - 'spring-boot: jvm/seampact-spring-boot/src/goldenCheck/java/com/example/optins/api/spring/SecurityMatchersTest.java#anIdentityLiteralBesideAPublicTemplateKeepsTheAppsRules'
+      - 'laravel: php/laravel/tests/ContractRoutesTest.php#testEachRouteNameConstantNamesOneRegisteredRoute'
+      - 'laravel: php/laravel/tests/KindMiddlewareTest.php#testAListIsReadAndAMissingKindIsEmpty'
+      - 'laravel: php/laravel/tests/ExceptionRolesTest.php#testAnAbortOf401403Or429TakesTheRoleOfItsStatus'
+      - 'laravel: php/laravel/tests/ExceptionRolesTest.php#testTheResponsesRetryAfterComesBeforeTheThrottleRefusalsHeader'
+      - 'symfony: php/symfony/tests/GeneratedPlacementTest.php#testEachAccessKindHasARequestMatcherServiceThatMatchesOnlyItsOperations'
+      - 'symfony: php/symfony/tests/Runtime/ExceptionRolesTest.php#testAnHttpExceptionOf401403404429Or503TakesTheRoleOfItsStatus'
+      - 'symfony: php/symfony/tests/Runtime/ExceptionRolesTest.php#testTheRateLimitersDelayComesBeforeTheResponsesRetryAfter'
+      - 'nestjs: packages/targets/codegen-nestjs/src/live-boundary.test.ts#each contract handler carries its operation and access kind as route metadata a guard reads'
+      - 'adonis: packages/targets/codegen-adonis/src/live-boundary.test.ts#a %s refusal of server middleware is rendered by the pre-routing helper'
+      - 'spring-boot: jvm/seampact-spring-boot/src/goldenCheck/java/com/example/optins/api/spring/SecurityMatchersTest.java#theEntryPointAnswersAnAnonymousCallerWithTheOperationsUnauthenticatedCode'
+      - 'spring-boot: jvm/seampact-spring-boot/src/goldenCheck/java/com/example/optins/api/spring/SecurityMatchersTest.java#theAccessDeniedHandlerAnswersACallerWithoutTheRoleWithTheOperationsForbiddenCode'
+      - 'spring-boot: jvm/seampact-spring-boot/src/goldenCheck/java/com/example/optins/api/spring/SecurityMatchersTest.java#aRefusalOutsideTheApisRoutesKeepsSpringSecuritysDefault'
+      - 'spring-boot: jvm/seampact-spring-runtime/src/test/java/io/github/jubasse/seampact/springboot/runtime/SecurityRefusalsTest.java#aCsrfRefusalOfSpringSecurityIsTheOperationsCsrfInvalidCode'
+      - 'drf: python/drf/drf_tests/test_drf_boundary.py#test_the_classes_of_one_access_kind_never_reach_another_and_the_hook_factory_reads_drfs_user'
+      - 'drf: python/drf/drf_tests/test_drf_boundary.py#test_drfs_exceptions_on_the_operations_access_kind_answer_their_contract_role'
+      - 'ninja: python/ninja/ninja_tests/test_runtime.py#test_an_auth_or_throttle_on_a_kind_whose_operation_declares_no_401_or_429_is_refused_at_boot'
+      - 'ninja: python/ninja/ninja_tests/test_runtime.py#test_ninjas_auth_refusal_on_a_contract_route_answers_the_operations_unauthenticated_code'

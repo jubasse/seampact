@@ -1,0 +1,153 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Seampact\Laravel\Runtime;
+
+use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Http\Request;
+use Seampact\Codegen\Runtime\AccessSteps;
+use Seampact\Codegen\Runtime\BoundaryState;
+use Seampact\Codegen\Runtime\ContractRefusal;
+use Seampact\Codegen\Runtime\Ir;
+use Seampact\Codegen\Runtime\IdempotencyStep;
+use Seampact\Codegen\Runtime\PageReply;
+use Seampact\Codegen\Runtime\TypedInput;
+use Seampact\Codegen\Runtime\VersionHeader;
+
+/**
+ * The FormRequest's side of the check order: a failed validation becomes the operation's `schemaInvalid` 400 with
+ * every issue, the generated rule objects' and Laravel's own rules' mapped to contract rule names; a passed one runs
+ * step 7 (input field rights) and builds the typed input the handler reads with `contractInput()`.
+ */
+final class FormSteps
+{
+    public const MAX_RENDERED_ISSUES = 100;
+    // The order a 400 lists its issues in, by the part they are in, as the other targets list them.
+    private const ISSUE_PART_ORDER = ['path' => 0, 'query' => 1, 'header' => 2, 'body' => 3];
+
+    private function __construct()
+    {
+    }
+
+    /** @param array<string, array<string, string>> $nativeRuleNames */
+    public static function failed(Request $request, string $api, Validator $validator, array $nativeRuleNames): ContractRefusal
+    {
+        $state = BoundaryState::required($request, $api);
+        // A version header is read first, so its absence answers 428, never a schema issue.
+        VersionHeader::sent($request, $state);
+
+        $issues = [];
+        foreach (InputTree::of($request, $api)->issues() as $issue) {
+            $issues[] = ['in' => $issue->in, 'pointer' => $issue->pointer, 'rule' => $issue->rule];
+        }
+
+        $failed = $validator->failed();
+        foreach ($failed as $attribute => $rules) {
+            foreach (is_array($rules) ? array_keys($rules) : [] as $laravelRule) {
+                $contractRule = self::nativeRule($nativeRuleNames, (string) $attribute, (string) $laravelRule);
+                if ($contractRule !== null) {
+                    $issues[] = self::issueAt((string) $attribute, $contractRule);
+                }
+            }
+        }
+
+        $issues = [...$issues, ...self::cursorIssues($state, $request, $api)];
+
+        // A stable sort: within a part, the issues keep the order they were found in.
+        usort($issues, static fn (array $first, array $second): int => (self::ISSUE_PART_ORDER[$first['in']] ?? count(self::ISSUE_PART_ORDER)) <=> (self::ISSUE_PART_ORDER[$second['in']] ?? count(self::ISSUE_PART_ORDER)));
+
+        return AccessSteps::schemaInvalid($state, array_slice(self::unique($issues), 0, self::MAX_RENDERED_ISSUES));
+    }
+
+    /**
+     * Step 7, the typed input of the operation with a paged list's limit filled in, then the idempotency claim: a replayed reply is thrown, so the handler
+     * never runs. Both cursors of a Stripe-style pair, which every Laravel rule passes, are refused first.
+     *
+     * @throws ReplayedReply
+     * @throws ContractRefusal
+     */
+    public static function passed(Request $request, string $api): object
+    {
+        $state = BoundaryState::required($request, $api);
+        // A version header is read first, so its absence answers 428, never a cursor issue.
+        $version = VersionHeader::sent($request, $state);
+
+        $cursorIssues = self::cursorIssues($state, $request, $api);
+        if ($cursorIssues !== []) {
+            throw AccessSteps::schemaInvalid($state, $cursorIssues);
+        }
+
+        $parts = InputTree::of($request, $api)->parts();
+        $parts['query'] = PageReply::withFilledLimit($state, self::queryOf($parts));
+        $headers = $parts['headers'] ?? new \stdClass();
+        $parts['headers'] = VersionHeader::handedOver($state, $version, $headers instanceof \stdClass ? $headers : new \stdClass());
+        $input = TypedInput::build($state, $parts);
+
+        $replayed = IdempotencyStep::begin($state, $parts);
+        if ($replayed !== null) {
+            throw new ReplayedReply($replayed);
+        }
+
+        return $input;
+    }
+
+    /**
+     * The issue of a request sending both cursors of a Stripe-style pair, which no Laravel rule sees: listed with the
+     * failed rules' issues, or alone when every rule passed.
+     *
+     * @return list<array{in: string, pointer: string, rule: string}>
+     */
+    private static function cursorIssues(BoundaryState $state, Request $request, string $api): array
+    {
+        return PageReply::cursorIssues($state, self::queryOf(InputTree::of($request, $api)->parts()));
+    }
+
+    /** @param array<string, mixed> $parts */
+    private static function queryOf(array $parts): \stdClass
+    {
+        $query = $parts['query'] ?? null;
+
+        return $query instanceof \stdClass ? $query : new \stdClass();
+    }
+
+    /** @param array<string, array<string, string>> $nativeRuleNames */
+    private static function nativeRule(array $nativeRuleNames, string $attribute, string $laravelRule): ?string
+    {
+        foreach ($nativeRuleNames as $pattern => $rules) {
+            $regex = '/^' . str_replace('\*', '[^.]+', preg_quote($pattern, '/')) . '$/D';
+            if (preg_match($regex, $attribute) === 1 && isset($rules[$laravelRule])) {
+                return $rules[$laravelRule];
+            }
+        }
+
+        return null;
+    }
+
+    /** @return array{in: string, pointer: string, rule: string} */
+    private static function issueAt(string $attribute, string $rule): array
+    {
+        [$part, $pointer] = InputTree::placeOf($attribute);
+
+        return ['in' => $part, 'pointer' => $pointer, 'rule' => $rule];
+    }
+
+    /**
+     * @param list<array{in: string, pointer: string, rule: string}> $issues
+     * @return list<array{in: string, pointer: string, rule: string}>
+     */
+    private static function unique(array $issues): array
+    {
+        $seen = [];
+        $unique = [];
+        foreach ($issues as $issue) {
+            $key = implode("\n", $issue);
+            if (!isset($seen[$key])) {
+                $seen[$key] = true;
+                $unique[] = $issue;
+            }
+        }
+
+        return $unique;
+    }
+}

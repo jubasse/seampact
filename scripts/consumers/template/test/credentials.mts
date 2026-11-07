@@ -1,0 +1,57 @@
+// The credentials every consumer's hooks honour and the http suite run passes to its cases.
+import { STRIPE_V1_SCHEME, signRequestBody } from "@seampact/http-suite";
+
+/** A signed-in user: `Authorization: Bearer <userToken>`. */
+export const USER_TOKEN = "seampact-user-token";
+
+/** The user id the user token authenticates; the reference declares ids as UUIDs. */
+export const USER_ID = "00000000-0000-4000-8000-000000000001";
+
+/** A user whose `throttle` decision denies with `retryAfterMs`. */
+export const THROTTLED_USER_TOKEN = "seampact-throttled-user-token";
+
+/** The user id the throttled user token authenticates. */
+export const THROTTLED_USER_ID = "00000000-0000-4000-8000-000000000002";
+
+export const THROTTLE_RETRY_AFTER_MS = 1500;
+
+/** The service identity's bearer token, a JWT the service hooks accept as is (header and claims fixed). */
+export const SERVICE_JWT =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzZXJ2aWNlIjoiY2F0YWxvZyIsInVzZXJJZCI6InVzZXItMSJ9.c2VhbXBhY3QtdGVzdA";
+
+/** The service the service token stands for, the one the service api's `callerService` allows. */
+export const SERVICE_NAME = "catalog";
+
+/** The bearer token of another service, which the service api's `callerService` does not allow. */
+export const FOREIGN_SERVICE_JWT =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzZXJ2aWNlIjoidGlja2V0aW5nIiwidXNlcklkIjoidXNlci0xIn0.c2VhbXBhY3QtdGVzdA";
+
+/** The service the foreign service token stands for. */
+export const FOREIGN_SERVICE_NAME = "ticketing";
+
+/** The paired wall display's `X-Device-Token`, which the device identity's hook accepts. */
+export const DEVICE_TOKEN = "seampact-device-token";
+
+/** The device id the device token authenticates. */
+export const DEVICE_ID = "30000000-0000-4000-8000-000000000001";
+
+/** The Stripe signature scheme's key id and its one valid secret. */
+export const STRIPE_KEY_ID = "stripe";
+
+export const STRIPE_SECRET = "whsec_seampact_test_secret";
+
+export function bearer(token: string): string {
+  return `Bearer ${token}`;
+}
+
+/**
+ * The `Stripe-Signature` value for a body, signed over `JSON.stringify(body)`: the bytes the generated client
+ * sends, so the server verifies what it receives.
+ */
+export function stripeSignature(
+  body: unknown,
+  secret: string = STRIPE_SECRET,
+  nowMs: number = Date.now(),
+): string {
+  return signRequestBody(STRIPE_V1_SCHEME, secret, JSON.stringify(body), nowMs);
+}

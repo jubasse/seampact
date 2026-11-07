@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/openapi/extensions/cache-control.schema.json",
+  "title": "x-seampact-cache-control",
+  "description": "The Cache-Control value per caller kind.",
+  "type": "object",
+  "additionalProperties": {
+    "type": "string",
+    "minLength": 1
+  },
+  "minProperties": 1
+}
