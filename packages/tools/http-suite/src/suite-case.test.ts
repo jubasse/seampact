@@ -236,6 +236,42 @@ describe("parseSuiteCase", () => {
       "at '/steps/0/request': a request sends either `body` or `bodyText`, not both",
     ],
     [
+      "a compression without a body",
+      minimalCase({
+        steps: [
+          {
+            request: { method: "POST", path: "/", compress: "gzip" },
+            expect: { status: 400 },
+          },
+        ],
+      }),
+      "at '/steps/0/request/compress': `compress` needs a `body` or `bodyText` to compress",
+    ],
+    [
+      "an unknown compression",
+      minimalCase({
+        steps: [
+          {
+            request: { method: "POST", path: "/", bodyText: "{}", compress: "zstd" },
+            expect: { status: 400 },
+          },
+        ],
+      }),
+      "at '/steps/0/request/compress': the coding is one of gzip",
+    ],
+    [
+      "a cut without a compression",
+      minimalCase({
+        steps: [
+          {
+            request: { method: "POST", path: "/", bodyText: "{}", cutCompressedBytes: 8 },
+            expect: { status: 400 },
+          },
+        ],
+      }),
+      "at '/steps/0/request/cutCompressedBytes': `cutCompressedBytes` needs `compress`",
+    ],
+    [
       "a negative signature age",
       minimalCase({
         steps: [

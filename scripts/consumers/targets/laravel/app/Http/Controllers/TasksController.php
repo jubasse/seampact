@@ -143,6 +143,10 @@ final class TasksController implements TasksEndpoints
 
     public function searchTasks(SearchTasksRequest $request): SearchTasksResult
     {
-        return new SearchTasksResponse200(new TaskSearchResult([SampleData::task(SampleData::NEW_TASK_ID)], 1));
+        return ScriptedAnswers::answer(
+            'searchTasks',
+            200,
+            static fn (array $body): SearchTasksResult => new SearchTasksResponse200(SampleData::searchResultOf($body)),
+        ) ?? new SearchTasksResponse200(new TaskSearchResult([SampleData::task(SampleData::NEW_TASK_ID)], 1));
     }
 }

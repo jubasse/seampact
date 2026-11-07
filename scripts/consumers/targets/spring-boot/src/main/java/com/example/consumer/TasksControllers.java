@@ -235,7 +235,10 @@ final class TasksControllers {
         @Override
         @SearchTasks
         public SearchTasksResult searchTasks(SearchTasksInput input) {
-            return new SearchTasksResult.Status200(new TaskSearchResult(List.of(SampleData.task(SampleData.NEW_TASK_ID)), Optional.of(1L)));
+            return answers.answer(API, "searchTasks", 200, TaskSearchResult.class, SearchTasksResult.Status200::new,
+                            Map.<String, java.util.function.Supplier<SearchTasksResult>>of())
+                    .orElseGet(() -> new SearchTasksResult.Status200(
+                            new TaskSearchResult(List.of(SampleData.task(SampleData.NEW_TASK_ID)), Optional.of(1L))));
         }
     }
 }

@@ -61,7 +61,9 @@ export interface RequestSignature {
  * segment reaches the server), or, when it is one captured link alone, resolved against the URL of the request the
  * link came from; `query` is appended encoded; a `body` is sent as JSON with
  * `content-type: application/json` unless `headers` names another content type; `bodyText` is sent as written,
- * for a body that is not valid JSON, with the same default content type.
+ * for a body that is not valid JSON, with the same default content type. `compress` sends the body compressed in
+ * that coding, with `content-encoding` naming it unless `headers` names another; `cutCompressedBytes` then drops that
+ * many bytes from the end of the compressed body, a stream cut before its end.
  */
 export interface StepRequest {
   readonly method: string;
@@ -70,8 +72,15 @@ export interface StepRequest {
   readonly headers?: Readonly<Record<string, string>>;
   readonly body?: JsonValue;
   readonly bodyText?: string;
+  readonly compress?: BodyCoding;
+  readonly cutCompressedBytes?: number;
   readonly sign?: RequestSignature;
 }
+
+/** The content codings the runner compresses a request body in. */
+export const BODY_CODINGS = ["gzip"] as const;
+
+export type BodyCoding = (typeof BODY_CODINGS)[number];
 
 /**
  * What the lines the app logged while a step ran must show (ADR 0015 "Control routes"): some line `contains` each
@@ -229,7 +238,17 @@ const SCOPED_CHECK_MEMBERS = ["id", "targets"];
 const BOOT_MEMBERS = ["variant", "outcome", "diagnostic"];
 const STEP_MEMBERS = ["title", "waitForHookCall", "request", "background", "capture", "expect"];
 const SCRIPT_STEP_MEMBERS = ["title", "script"];
-const REQUEST_MEMBERS = ["method", "path", "query", "headers", "body", "bodyText", "sign"];
+const REQUEST_MEMBERS = [
+  "method",
+  "path",
+  "query",
+  "headers",
+  "body",
+  "bodyText",
+  "compress",
+  "cutCompressedBytes",
+  "sign",
+];
 const SIGN_MEMBERS = ["scheme", "header", "secret", "ageSeconds"];
 const EXPECT_MEMBERS = ["status", "headers", "body", "bodyText", "absent", "logLines"];
 const BODY_CAPTURE_MEMBERS = ["body"];
@@ -541,6 +560,14 @@ function readRequest(reader: JsonReader, value: unknown, pointer: string): StepR
     reader.fail(pointer, "a request sends either `body` or `bodyText`, not both");
   }
 
+  if (object.compress !== undefined && object.body === undefined && object.bodyText === undefined) {
+    reader.fail(`${pointer}/compress`, "`compress` needs a `body` or `bodyText` to compress");
+  }
+
+  if (object.cutCompressedBytes !== undefined && object.compress === undefined) {
+    reader.fail(`${pointer}/cutCompressedBytes`, "`cutCompressedBytes` needs `compress`");
+  }
+
   return {
     method: patternAt(reader, object.method, `${pointer}/method`, HTTP_METHOD),
     path,
@@ -554,10 +581,41 @@ function readRequest(reader: JsonReader, value: unknown, pointer: string): StepR
     ...(object.bodyText === undefined
       ? {}
       : { bodyText: stringAt(reader, object.bodyText, `${pointer}/bodyText`) }),
+    ...(object.compress === undefined
+      ? {}
+      : { compress: readBodyCoding(reader, object.compress, `${pointer}/compress`) }),
+    ...(object.cutCompressedBytes === undefined
+      ? {}
+      : {
+          cutCompressedBytes: cutBytesAt(
+            reader,
+            object.cutCompressedBytes,
+            `${pointer}/cutCompressedBytes`,
+          ),
+        }),
     ...(object.sign === undefined
       ? {}
       : { sign: readSignature(reader, object.sign, `${pointer}/sign`) }),
   };
+}
+
+function cutBytesAt(reader: JsonReader, value: unknown, pointer: string): number {
+  if (!Number.isInteger(value) || Number(value) < 1) {
+    reader.fail(pointer, "`cutCompressedBytes` is a whole number of bytes, 1 or more");
+  }
+
+  return Number(value);
+}
+
+function readBodyCoding(reader: JsonReader, value: unknown, pointer: string): BodyCoding {
+  const coding = stringAt(reader, value, pointer);
+  const known = BODY_CODINGS.find((each) => each === coding);
+
+  if (known === undefined) {
+    return reader.fail(pointer, `the coding is one of ${BODY_CODINGS.join(", ")}`);
+  }
+
+  return known;
 }
 
 function readSignature(reader: JsonReader, value: unknown, pointer: string): RequestSignature {

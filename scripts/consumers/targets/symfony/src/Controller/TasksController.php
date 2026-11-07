@@ -144,7 +144,11 @@ final class TasksController implements TasksEndpoints
     #[SeampactOperation('searchTasks')]
     public function searchTasks(SearchTasksInput $input): SearchTasksResult
     {
-        return new SearchTasksResponse200(new TaskSearchResult([SampleData::task(SampleData::NEW_TASK_ID)], 1));
+        return ScriptedAnswers::answer(
+            'searchTasks',
+            200,
+            static fn (array $body): SearchTasksResult => new SearchTasksResponse200(SampleData::searchResultOf($body)),
+        ) ?? new SearchTasksResponse200(new TaskSearchResult([SampleData::task(SampleData::NEW_TASK_ID)], 1));
     }
 
     // The route helpers build the path this request came on, as the router builds it from the route name.

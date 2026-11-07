@@ -6,7 +6,7 @@ from dataclasses import replace
 from datetime import datetime
 from typing import Final
 
-from generated.tasks.schemas import Channel, Draft, Task, TaskState
+from generated.tasks.schemas import Channel, Draft, Task, TaskSearchResult, TaskState
 from generated.tasks_absolute_urls.schemas import Note
 from generated.tasks_service import schemas as service
 from generated.tasks_service_writes import schemas as service_writes
@@ -81,6 +81,14 @@ def task_of(body: Mapping[str, object]) -> Task:
 
 def with_next_version(current: Task, title: str, state: TaskState) -> Task:
     return replace(current, title=title, state=state, version=current.version + 1)
+
+
+def scripted_search_result(body: Mapping[str, object]) -> TaskSearchResult:
+    items = body.get("items")
+    total = body.get("total")
+    scripted_tasks = [task_of(item) for item in items if isinstance(item, Mapping)] if isinstance(items, list) else []
+
+    return TaskSearchResult(items=scripted_tasks, total=total if isinstance(total, int) else None)
 
 
 def service_task(task_id: uuid.UUID) -> service.Task:

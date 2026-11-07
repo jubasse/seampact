@@ -19,6 +19,7 @@ final class DeviceHook implements DeviceAuthenticateHook
     public function authenticate(AuthenticateRequest $request): AuthenticateResult
     {
         SuiteControl::recordHookCall('authenticate:device', $request->operation()->api, $request->operation()->id);
+        SuiteControl::throwScriptedHookFailure('authenticate:device');
 
         $credentials = $request->credentials();
         $paired = $credentials instanceof DeviceCredentials && $credentials->deviceToken === Credentials::text('deviceToken');

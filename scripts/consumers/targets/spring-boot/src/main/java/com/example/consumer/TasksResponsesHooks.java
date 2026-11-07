@@ -21,6 +21,7 @@ final class TasksResponsesHooks {
         @Override
         public AuthenticateResult<UserPrincipal, Denial> authenticate(UserAuthenticateRequest request) {
             SuiteControl.recordHookCall("authenticate:user", API, request.operation().id());
+            SuiteControl.throwScriptedHookFailure("authenticate:user");
 
             String token = request.credentials().bearer().or(() -> request.credentials().sessionCookie()).orElse("");
 

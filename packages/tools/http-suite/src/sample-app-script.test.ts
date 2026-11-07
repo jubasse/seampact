@@ -13,6 +13,7 @@ describe("parseSampleAppScript", () => {
         "tasks.health": { throws: "down" },
         "tasks.getChannel": { status: 404, code: "api.not_found", params: {} },
       },
+      hookFailures: { "resolve-scope:channel": "the membership store is down" },
     });
 
     body.effort = 0;
@@ -25,6 +26,7 @@ describe("parseSampleAppScript", () => {
         "tasks.health": { throws: "down" },
         "tasks.getChannel": { status: 404, code: "api.not_found", params: {} },
       },
+      hookFailures: { "resolve-scope:channel": "the membership store is down" },
     });
     expect(parseSampleAppScript({})).toEqual({});
   });
@@ -50,6 +52,16 @@ describe("parseSampleAppScript", () => {
       "a throwing answer with a status",
       { answers: { "tasks.health": { throws: "down", status: 500 } } },
       "at '/answers/tasks.health/status': unknown member",
+    ],
+    [
+      "a hook failure of a hook no double has",
+      { hookFailures: { "relay:tasks": "down" } },
+      "at '/hookFailures/relay:tasks'",
+    ],
+    [
+      "a hook failure without its message",
+      { hookFailures: { "authenticate:user": true } },
+      "at '/hookFailures/authenticate:user'",
     ],
     [
       "a status out of range",

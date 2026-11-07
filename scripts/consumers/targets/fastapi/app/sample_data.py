@@ -3,7 +3,7 @@
 from collections.abc import Mapping
 from typing import Final
 
-from generated.tasks.schemas import Channel, Draft, Task, TaskState
+from generated.tasks.schemas import Channel, Draft, Task, TaskSearchResult, TaskState
 from generated.tasks_absolute_urls.schemas import Note
 from generated.tasks_service import schemas as service
 from generated.tasks_service_writes import schemas as service_writes
@@ -61,6 +61,19 @@ def task_of(body: Mapping[str, object]) -> Task:
         values["effort"] = effort
 
     return Task.model_validate(values)
+
+
+def scripted_search_result(body: Mapping[str, object]) -> TaskSearchResult:
+    items = body.get("items")
+    total = body.get("total")
+    values: dict[str, object] = {
+        "items": [task_of(item) for item in items if isinstance(item, Mapping)] if isinstance(items, list) else []
+    }
+
+    if isinstance(total, int):
+        values["total"] = total
+
+    return TaskSearchResult.model_validate(values)
 
 
 def service_task(task_id: str) -> service.Task:

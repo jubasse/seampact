@@ -264,3 +264,104 @@ def test_an_allowed_or_absent_input_member_keeps_the_body(tasks_contract: ApiCon
     assert kept == sent
     assert without == {"title": "Write"}
     assert len(decider.asked) == 1
+
+
+def _output(
+    contract: ApiContract, body: object, decider: _Decider, call: HookCaller, shape: str | None = None
+) -> object:
+    """`listTasks`' output filter on `body` read as a response of `shape`."""
+    responses = contract.operation("listTasks")["responses"]
+    assert isinstance(responses, list)
+    response = {**responses[0], "shape": shape}
+
+    return asyncio.run(
+        visible_output(_state(contract, "listTasks", None), _hooks("tasks.seeEffort", decider), call, response, body)
+    )
+
+
+def test_a_table_reply_filters_the_value_of_each_key(tasks_contract: ApiContract, hook_caller: HookCaller) -> None:
+    table = {"first": {"taskId": "t1", "effort": 3}, "second": {"taskId": "t2", "effort": 5}}
+
+    visible = _output(tasks_contract, table, _Decider(allowed=frozenset({"t2"})), hook_caller, shape="table")
+
+    assert visible == {"first": {"taskId": "t1"}, "second": {"taskId": "t2", "effort": 5}}
+
+
+def test_a_page_reply_filters_each_item(tasks_contract: ApiContract, hook_caller: HookCaller) -> None:
+    items = [{"taskId": "t1", "effort": 3}, {"taskId": "t2", "effort": 5}]
+
+    visible = _output(tasks_contract, items, _Decider(allowed=frozenset({"t1"})), hook_caller, shape="page")
+
+    assert visible == [{"taskId": "t1", "effort": 3}, {"taskId": "t2"}]
+
+
+def test_a_single_object_reply_is_filtered_as_one_holder(tasks_contract: ApiContract, hook_caller: HookCaller) -> None:
+    visible = _output(tasks_contract, {"taskId": "t1", "effort": 3}, _Decider(allowed=frozenset()), hook_caller)
+
+    assert visible == {"taskId": "t1"}
+
+
+def test_a_nested_array_member_is_filtered_in_every_element(
+    tasks_contract: ApiContract, hook_caller: HookCaller
+) -> None:
+    contract = _with_output_pointer(tasks_contract, "/subtasks/*/effort")
+    items = [
+        {"taskId": "t1", "subtasks": [{"taskId": "s1", "effort": 1}, {"taskId": "s2", "effort": 2}]},
+        {"taskId": "t2", "subtasks": [{"taskId": "s3", "effort": 3}]},
+    ]
+
+    visible = _output(contract, items, _Decider(allowed=frozenset({"s2"})), hook_caller, shape="list")
+
+    assert visible == [
+        {"taskId": "t1", "subtasks": [{"taskId": "s1"}, {"taskId": "s2", "effort": 2}]},
+        {"taskId": "t2", "subtasks": [{"taskId": "s3"}]},
+    ]
+
+
+def test_a_table_of_nested_arrays_filters_every_element_of_every_value(
+    tasks_contract: ApiContract, hook_caller: HookCaller
+) -> None:
+    contract = _with_output_pointer(tasks_contract, "/subtasks/*/effort")
+    table = {"a": {"subtasks": [{"taskId": "s1", "effort": 1}]}, "b": {"subtasks": [{"taskId": "s2", "effort": 2}]}}
+
+    visible = _output(contract, table, _Decider(allowed=frozenset()), hook_caller, shape="table")
+
+    assert visible == {"a": {"subtasks": [{"taskId": "s1"}]}, "b": {"subtasks": [{"taskId": "s2"}]}}
+
+
+@pytest.mark.parametrize(
+    ("shape", "body"),
+    [("table", ["not", "a", "table"]), ("list", {"not": "a list"}), ("page", "text"), ("table", None)],
+)
+def test_a_reply_not_in_the_shape_its_response_declares_has_nothing_to_filter(
+    tasks_contract: ApiContract, hook_caller: HookCaller, shape: str, body: object
+) -> None:
+    assert _output(tasks_contract, body, _Decider(allowed=frozenset()), hook_caller, shape=shape) == body
+
+
+def test_a_member_whose_right_is_always_absent_is_left_out_without_asking_the_decider(
+    tasks_contract: ApiContract, hook_caller: HookCaller
+) -> None:
+    ir_view: dict[str, IrJson] = copy.deepcopy(dict(tasks_contract.ir_view))
+    operations = ir_view["operations"]
+    assert isinstance(operations, list)
+    list_tasks = next(op for op in operations if isinstance(op, dict) and op["id"] == "listTasks")
+    assert isinstance(list_tasks, dict)
+    field_rights = list_tasks["fieldRights"]
+    assert isinstance(field_rights, list)
+
+    for field_right in field_rights:
+        if isinstance(field_right, dict) and field_right["direction"] == "output":
+            field_right["always"] = "absent"
+
+    decider = _Decider()
+    visible = _output(
+        dataclasses.replace(tasks_contract, ir_view=ir_view),
+        [{"taskId": "t1", "effort": 3}],
+        decider,
+        hook_caller,
+        shape="list",
+    )
+
+    assert visible == [{"taskId": "t1"}]
+    assert decider.asked == []

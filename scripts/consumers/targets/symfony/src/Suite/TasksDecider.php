@@ -44,6 +44,7 @@ final class TasksDecider implements Decider
     public function decide(RequirementRequest $request): Decision
     {
         SuiteControl::recordHookCall("decide:{$request->name()}", $request->operation()->api, $request->operation()->id, $request->bucket());
+        SuiteControl::throwScriptedHookFailure("decide:{$request->name()}");
 
         if ($request->kind() === RequirementKind::Right && !$this->authorization->isGranted($request->name(), new DecisionSubject($request->params(), $request->scopes()))) {
             throw new AccessDeniedException("the app's voters deny the right '{$request->name()}'");

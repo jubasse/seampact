@@ -13,6 +13,7 @@ from generated.tasks_split_sort import operations as split_sort
 from generated.tasks_split_sort import schemas as split_sort_schemas
 from hook_doubles import UNAUTHENTICATED, user_id_of
 from seampact_consumer_suite.control_state import record_hook_call
+from seampact_consumer_suite.scripted_answers import raise_scripted_hook_failure
 
 from seampact.hooks import AuthenticateRequest, AuthenticateResult, ErrorCodeWithParams, authenticate_result
 
@@ -77,6 +78,7 @@ class PagingUserHook:
 
     def authenticate(self, request: AuthenticateRequest) -> AuthenticateResult:
         record_hook_call("authenticate:user", request.operation.api, request.operation.id)
+        raise_scripted_hook_failure("authenticate:user")
         credentials = request.credentials
         token = (
             credentials.bearer or credentials.session_cookie
