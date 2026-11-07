@@ -344,7 +344,7 @@ describe("the request body", () => {
     });
 
     expect(reply.status).toBe(400);
-    expect(JSON.parse(reply.text).issues).toBeDefined();
+    expect(JSON.parse(reply.text).issues).toEqual([{ pointer: "", rule: "type" }]);
   });
 });
 
