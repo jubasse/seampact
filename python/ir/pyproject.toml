@@ -17,6 +17,12 @@ classifiers = [
     "Typing :: Typed",
 ]
 
+[project.urls]
+Homepage = "https://jubasse.github.io/seampact/concepts/packages/"
+Documentation = "https://jubasse.github.io/seampact/"
+Source = "https://github.com/jubasse/seampact"
+Issues = "https://github.com/jubasse/seampact/issues"
+
 [project.optional-dependencies]
 # The compiler binary of this platform, for a `path` source or the OpenAPI documents of an app config; a bundle-only
 # app with `openapi: none` never needs it.

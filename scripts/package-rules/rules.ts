@@ -1,5 +1,6 @@
 // Package roles, the dependency rules of ADR 0009 and the namespaces of A27, checked over
-// the manifests of a repository: npm (packages/*), Gradle (jvm/**) and Composer (php/*).
+// the manifests of a repository: npm (packages/*), Gradle (jvm/**) and Composer (php/*), and the docs-site links of
+// the published npm and Composer manifests.
 //
 // Two forms, read from the tree: with every published package at 0.0.0, the development form, where every npm
 // package is private and the changesets access restricted (A3); with all of them at one release version (a stamped
@@ -618,7 +619,28 @@ function checkComposer(root: string, out: Violation[]): void {
         rule: "namespaces",
         message: `Composer name "${String(name)}" must be ${COMPOSER_VENDOR}/<name> (A27)`,
       });
+
+    checkComposerMetadata(file, json, out);
   }
+}
+
+// Packagist shows `homepage` and `support.docs`: both point to the docs site.
+function checkComposerMetadata(
+  file: string,
+  json: Record<string, unknown>,
+  out: Violation[],
+): void {
+  const { homepage, support } = json;
+
+  if (typeof homepage !== "string" || !homepage.startsWith(DOCS_SITE_URL))
+    out.push({
+      file,
+      rule: "metadata",
+      message: `needs a \`homepage\` on the docs site, ${DOCS_SITE_URL}`,
+    });
+
+  if (!isRec(support) || support.docs !== DOCS_SITE_URL)
+    out.push({ file, rule: "metadata", message: `needs \`support.docs\` "${DOCS_SITE_URL}"` });
 }
 
 /**

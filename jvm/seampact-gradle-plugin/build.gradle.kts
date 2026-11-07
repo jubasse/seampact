@@ -43,7 +43,7 @@ dependencies {
 }
 
 gradlePlugin {
-    website = "https://jubasse.github.io/seampact/"
+    website = "https://jubasse.github.io/seampact/backend/spring-boot/"
     vcsUrl = "https://github.com/jubasse/seampact"
     plugins {
         create("seampact") {
