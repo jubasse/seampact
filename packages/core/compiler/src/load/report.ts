@@ -1,8 +1,8 @@
 import type { SourceMap } from "@seampact/spec/ir";
-import { escapePointer } from "@seampact/spec/json";
 import type { Diagnostic, DiagnosticOrigin } from "../diagnostics/diagnostic.js";
 import { diagnosticLocationKey } from "../diagnostics/print.js";
 import type { FileLayerId } from "../raw-tree.js";
+import { escapePointer } from "@seampact/spec/json";
 
 export type SiteLocation = SourceMap["locations"][string];
 

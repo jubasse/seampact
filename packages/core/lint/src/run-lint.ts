@@ -5,8 +5,8 @@ import {
   diagnosticSort,
 } from "@seampact/compiler";
 import type { ContractIR, Origin, SourceMap } from "@seampact/spec/ir";
-import { LINT_RESERVED_RULE_IDS, seampactCorePlugin } from "./core/plugin.js";
 import { describeError } from "./describe-error.js";
+import { LINT_RESERVED_RULE_IDS, seampactCorePlugin } from "./core/plugin.js";
 import {
   type LintDeclared,
   type LintFinding,

@@ -1,4 +1,3 @@
-import { escapePointer } from "@seampact/spec/json";
 import { isMap, isScalar } from "yaml";
 import type { Diagnostic } from "../diagnostics/diagnostic.js";
 import { diagnosticInert, diagnosticLocationKey, diagnosticSort } from "../diagnostics/print.js";
@@ -14,12 +13,13 @@ import {
 import { LoadBudget, loadWorkOf } from "./budget.js";
 import { mergeLayers } from "./compose.js";
 import { Expander, type LayerBuild, mapIndex, navigate } from "./expand.js";
-import { type LoadFragment, loadSortFragments } from "./fragments.js";
 import { asObject, isReservedKey, showValue } from "./json.js";
 import { LOAD_MAX_DEPTH } from "./limits.js";
-import { packLayerIdOf } from "./pack-files.js";
+import { escapePointer } from "@seampact/spec/json";
 import { isInside, joinPath, loadNormalizePath } from "./paths.js";
+import { type LoadFragment, loadSortFragments } from "./fragments.js";
 import { entryRootPosition } from "./positions.js";
+import { packLayerIdOf } from "./pack-files.js";
 import type { LoadReader } from "./reader.js";
 import { Reporter, type SiteLocation } from "./report.js";
 import { FileStore, nodeSite, type ParsedFile, type PathContext } from "./source.js";

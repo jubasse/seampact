@@ -1,9 +1,9 @@
 import type { Origin } from "@seampact/spec/ir";
-import { escapePointer } from "@seampact/spec/json";
 import type { ApiLayerId, JsonObject, JsonValue } from "../raw-tree.js";
 import { type LoadBudget, loadWorkOf } from "./budget.js";
 import type { LayerBuild } from "./expand.js";
 import { asObject, jsonObject, ownValue, setKey } from "./json.js";
+import { escapePointer } from "@seampact/spec/json";
 import type { Reporter, SiteLocation } from "./report.js";
 import { nodeSite } from "./source.js";
 
