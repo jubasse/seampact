@@ -4,7 +4,7 @@ Codes for the root config and for the `openapi` key.
 
 ## Monorepo
 
-| You see | Do |
+| Code | Cause and fix |
 |---|---|
 | `config.root.not-an-app` | The command runs on one app. Run it in the app folder, or pass the app's config with `--config`. |
 | `config.root.app-key` | The root config takes only keys the apps share. Move `targets` and `outDir` into the app's own config. |
@@ -15,7 +15,7 @@ Codes for the root config and for the `openapi` key.
 
 ## OpenAPI documents
 
-| You see | Do |
+| Code | Cause and fix |
 |---|---|
 | `config.openapi.unknown-api` | `openapi` names an api no source holds. Use a name from `workspace.yaml`. |
 | `config.openapi.ambiguous-api` | Two sources hold that api. Rename one of the apis. |

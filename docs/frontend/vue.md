@@ -1,6 +1,6 @@
 # Vue
 
-seampact writes Vue composables over the typed `fetch` client, for TanStack Query 5 (`@tanstack/vue-query`), Pinia Colada 1 (`@pinia/colada`) or with no query library. Pick one with the `query` option.
+seampact writes Vue composables over the [fetch client](fetch-client.md), for TanStack Query 5 (`@tanstack/vue-query`), Pinia Colada 1 (`@pinia/colada`) or with no query library. Pick one with the `query` option. Use it for a Vue 3 web app.
 
 ## Add the targets
 
@@ -24,24 +24,33 @@ Install `@tanstack/vue-query` 5 for `query: tanstack`, or `pinia` and `@pinia/co
 
 ## Use the composables
 
-```ts
+```vue
+<script setup lang="ts">
+import { createClient } from "./__generated__/client/notes/index.js";
+import { createNotesComposables } from "./__generated__/queries/notes/index.js";
+
 const client = createClient({ baseUrl: import.meta.env.VITE_API_URL });
 const Notes = createNotesComposables(client);
 
-// In a component's setup:
 const notes = Notes.useListNotes({});
 const create = Notes.useCreateNote();
+</script>
 ```
 
-`VITE_API_URL` holds your backend URL: see [Point the client at your backend](backend-url.md). With TanStack Query, install `VueQueryPlugin` in your app; with Pinia Colada, install Pinia, then `PiniaColada`. After a write, the composables refresh the queries of the same resource.
+In a real app, create `client` and `Notes` once in their own module and import them. `VITE_API_URL` holds your backend URL: see [Point the client at your backend](backend-url.md). After a write, the composables refresh the queries of the same resource.
+
+- TanStack Query: install `VueQueryPlugin` in your app.
+- Pinia Colada: install Pinia, then `PiniaColada`.
 
 A request can be a value, a `ref` or a getter (`() => ({ path: { id: props.id } })`): the query reads again when it changes.
 
 A list whose paging style tells the next page also gets `use<Op>Infinite`, for example `useListNotesInfinite`.
 
-A declared error is thrown as a `ContractError`. `isContractError(error)` tells it apart from a network failure.
-
 The composables only read and write through the client. They keep no store: put what your app shares in your own Pinia store.
+
+## Errors
+
+A declared error is thrown as a `ContractError`. `isContractError(error)` tells it apart from a network failure. Fields and `errorStyle`: [Fetch client](fetch-client.md#contracterror).
 
 ## Options
 
@@ -76,12 +85,15 @@ const create = Notes.useCreateNote(); // { mutate, mutateAsync, error, data, ...
 
 ## Without a query library
 
-With `query: fetch`, the composables use Vue's own `ref` and `watch`. This is not the client's `fetch` style: that one names the client, this one the composables over it.
+`query: fetch` means Vue's own `ref` and `watch`, with no query library. The client under it is still the fetch client.
 
-```ts
-const Notes = createNotesComposables(client);
+```vue
+<script setup lang="ts">
+import { createClient } from "./__generated__/client/notes/index.js";
+import { createNotesComposables } from "./__generated__/queries/notes/index.js";
 
-// In a component's setup:
+const Notes = createNotesComposables(createClient({ baseUrl: import.meta.env.VITE_API_URL }));
+
 const notes = Notes.useListNotes({}); // { data, error, isLoading, refetch }, each a ref
 const create = Notes.useCreateNote({ retry: 1 }); // { mutate, isPending, error, data }
 
@@ -90,20 +102,20 @@ const add = async () => {
 
   if (!error) notes.refetch();
 };
+</script>
 ```
 
-- Pass `null` as the request to skip a read.
-- A read starts when the component mounts, so server rendering sends none: load server data your own way, or use a query library.
-- A read stops when the component unmounts or its request changes. Outside a component, a composable reads at once and stops only when its `effectScope` stops.
-- There is no cache. A write does not refresh other composables: call `refetch`.
-- `mutate` never throws. Each call resolves to its own `{ data }` or `{ error }`, a `ContractError` for a declared error. The `data`, `error` and `isPending` refs show the latest call.
-- `retry` sends a failed write again with the same idempotency key, so the server runs it once. It takes a whole count (0 or more); another value makes the composable throw. A declared error is not retried.
-- A write is not aborted when the component unmounts.
-- There is no infinite composable: a paged list gets its plain one. Change the request to read the next page.
-- `staleTime`, `invalidate`, `infinite`, `keys.root` and the `itemsOf` artefact need a query library: `generate` refuses them with `query: fetch`.
+Behaviours (skip, cache, `mutate`, `retry`, refused options): [shared with React and Angular](fetch-client.md#shared-behaviours-with-query-fetch). On Vue:
 
-The composables need a client with `errorStyle: result`, the client's default: `generate` refuses a client with `errorStyle: throw`.
+- A read starts when the component mounts, so server rendering sends none: load server data your own way, or use a query library.
+- Outside a component, a composable reads at once and stops only when its `effectScope` stops.
 
 `artefacts: { composables: false }` keeps the options factories only. `artefacts: { itemsOf: true }` adds `itemsOf`.
 
-Errors: [Generate errors](../troubleshooting/generate.md).
+## Limits
+
+`generate` refuses a client with `errorStyle: throw` (`link.client.errorStyle.unsupported`) and the options listed above that a library does not take. See [Link errors](../troubleshooting/link.md) and the [client table](../troubleshooting/generate.md#clients).
+
+## Next
+
+[Point the client at your backend](backend-url.md), then [MSW mocks](msw.md) to test without a backend.

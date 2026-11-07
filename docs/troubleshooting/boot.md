@@ -1,20 +1,39 @@
 # Boot errors
 
-The generated server checks itself when the app starts. A problem stops the start with a message like this.
+The generated server checks itself when the app starts. A problem stops the start with a message that lists every problem, like this.
 
 ```text
 seampact: the api 'notes' cannot start:
 - operation 'getNote': handlers.NotesEndpoints has no method getNote(); fix: implement getNote() on the NotesEndpoints object.
 ```
 
-Fix every line, then start again.
+Fix every line, then start again. Each section below names the framework and when its check runs.
 
-| You see | Do |
+## Every server
+
+| You see | Cause and fix |
 |---|---|
-| `the framework route 'GET /docs' is outside the contract and not allow-listed` | List the route under `frameworkRoutes` of the server target, with a reason, then run `seampact generate`. A route with an optional parameter (`/c/:id?`, `/c{/:id}`) also serves `/c`, so `/c/*` alone does not list it: add `/c` too. A route that may take more than one segment (`/c/:rest+`, `/c/:rest{.+}`, or a brace after a param such as `/c/:id{/:page}`) needs `/c/**`. See [OpenAPI and docs](../configuration/openapi-and-docs.md). |
-| A route of yours outside the api's paths is no longer reported | That is the default: only routes that reach a path of the api are checked. Set `artefacts.bootCheck.frameworkRoutes: strict` to check every route. |
-| `... differs from the entry's mount (write the prefix as the entry's 'mount' ...)` | Remove the prefix from the framework (route group, plugin prefix, `basePath`, mount path) and set `mount` on the target entry instead. |
-| `runtime.generated-for-other-version` | The generated code was written by another seampact version than the installed runtime. Run `seampact generate` again, or install the runtime at the generator's version. On PHP, `seampact:generate` still runs under the skew. See [Generate errors](generate.md). |
+| `runtime.generated-for-other-version` | The generated code was written by another seampact version than the installed runtime. Run `seampact generate` again, or install the runtime at the generator's version. |
+
+On PHP, `seampact:generate` still runs under this skew. The `runtime.*` codes raised by `generate` are in [Generate errors](generate.md#every-server).
+
+### Allow-listing framework routes
+
+Several servers refuse a route of yours that is not in the contract (`frameworkRoutes`). List the route under `frameworkRoutes` of the target entry, with a reason, then run `seampact generate`. Two cases need more than the route itself:
+
+- A route with an optional parameter (`/c/:id?`, `/c{/:id}`, `/c/{id?}`) also serves `/c`. `/c/*` alone does not list it: add `/c` too.
+- A route that may take more than one segment (`/c/:rest+`, `/c/:rest{.+}`, `/c/:id{/:page}`) needs `/c/**`.
+
+By default only routes that reach a path of the api are checked. Set `artefacts.bootCheck.frameworkRoutes: strict` to check every route. See [OpenAPI and docs](../configuration/openapi-and-docs.md).
+
+## Node servers
+
+Express, Fastify, Hono, NestJS and AdonisJS. The check runs when the app starts and the message starts with `seampact: the api '<id>' cannot start:`.
+
+| You see | Cause and fix |
+|---|---|
+| `the framework route 'GET /docs' is outside the contract and not allow-listed` | The app has a route the contract does not declare. [Allow-list it](#allow-listing-framework-routes). |
+| `differs from the entry's mount (write the prefix as the entry's 'mount' in seampact.config.yaml instead)` | The framework adds a prefix (route group, plugin prefix, `basePath`, mount path) the contract does not know. Remove it from the framework and set `mount` on the target entry. |
 | `handlers has no 'NotesEndpoints' object` | Pass one object per generated handler interface. |
 | `handlers.NotesEndpoints has no method getNote()` | Implement the method on that object. |
 | `'bodyValidation' is turned on, but the target generated no output validators` | Set `bodyValidation: true` in the target's `options`, then run `generate`. |
@@ -23,10 +42,16 @@ Fix every line, then start again.
 | `no scope resolver for the scope '<scope>'` | Register `scopeResolvers.<scope>`. |
 | `no idempotency store for an idempotent operation` | Register `idempotencyStore`, for example `createMemoryIdempotencyStore()` of `@seampact/idempotency-memory`. |
 | `two deciders claim '<name>'` | Keep the name in one decider. |
+
+### NestJS
+
+| You see | Cause and fix |
+|---|---|
 | `the seampact guard is not the last guard of <method>()` | Do not register a guard after the contract decorator on that route. |
 | `<method>() has no input parameter, so its input is never validated` | Add `@<Op>.input() input`, or one of its parts such as `@<Op>.body() body`. |
 | `the app interceptor <name> can answer <route> from its cache` | Keep cache interceptors off contract routes. The contract's `cache` sets the reply headers. |
-| `<decorator> on <method>() writes after the boundary's reply`, `a @Res(), @Response() or @Next() parameter ...` | Remove it: return the reply instead. |
+| `<decorator> on <method>() writes after the boundary's reply` | Remove the decorator: return the reply instead. |
+| `a @Res(), @Response() or @Next() parameter on <method>() writes after the boundary's reply` | Remove the parameter: return the reply instead. |
 | `@HttpCode on <method>() sets a status the boundary never writes` | Remove `@HttpCode`. Return the status from the handler. |
 | `@Header on <method>() sets a header the boundary never writes` | Remove `@Header`. Declare the header in the contract's response. |
 | `@Controller('<path>') on <Controller> prefixes the contract route` | Use `@Controller()` with no path. The contract's paths are absolute. |
@@ -48,7 +73,7 @@ Two checks only warn, and the app still starts: global interceptors that run out
 
 ## Symfony
 
-Same start check, run by `bin/console cache:warmup` and on the first request. The message starts with `seampact: the api 'tasks' cannot start:`, or with `the api 'tasks' cannot start:` for the hook lines.
+The check runs with `bin/console cache:warmup` and on the first request. The message starts with `seampact: the api 'tasks' cannot start:`, or with `the api 'tasks' cannot start:` for the hook lines.
 
 | You see | Do |
 |---|---|
@@ -59,8 +84,10 @@ Same start check, run by `bin/console cache:warmup` and on the first request. Th
 | `no idempotency store for '<operation>'` | Alias `seampact.<api key>.idempotency_store` to a service implementing `Seampact\Hooks\IdempotencyStore`. |
 | `operation '<id>' has no handler` | Register one controller service implementing the `<Resource>Endpoints` interface. |
 | `the method <class>::<method> handles operation '<id>' but is not marked #[SeampactOperation('<id>')]` | Add the attribute. |
-| `the controller <class> carries #[IsGranted]` or `#[IsCsrfTokenValid]`, and the same with `the method <class>::<method> carries` | Remove it. For a plain role check in `#[IsGranted]`, paste the `access_control` rule the message prints; otherwise (a subject, `methods`, `statusCode`, `exceptionCode` or a custom attribute) register `VoterDecider` or write a decider. For `#[IsCsrfTokenValid]`, check the CSRF value in the authenticate hook. |
-| `the controller <class> carries #[IsSignatureValid]`, or the method form | Remove it and use nothing instead: a signed URI is not a form the contract declares. |
+| `the controller <class> carries #[IsGranted]` | Remove it. For a plain role check, paste the `access_control` rule the message prints; for anything else, write a decider. |
+| `the method <class>::<method> carries #[IsGranted]` | Same as the controller form. |
+| `the controller <class> carries #[IsCsrfTokenValid]`, `the method <class>::<method> carries #[IsCsrfTokenValid]` | Remove it, and check the CSRF value in the authenticate hook. |
+| `the controller <class> carries #[IsSignatureValid]`, `the method <class>::<method> carries #[IsSignatureValid]` | Remove it: a signed URI is not a form the contract declares. |
 | `framework.http_cache is on` | Turn it off: a reply HttpCache serves never reaches the boundary. |
 | `the input resolver service ... is not registered as a value resolver` | List the api's bundle in `config/bundles.php`. |
 | `the service <id> listens to kernel.request at priority ...`, `... kernel.response at priority ...` | Move your listener inside the boundary's priorities, as the message says. |
@@ -74,14 +101,14 @@ Same start check, run by `bin/console cache:warmup` and on the first request. Th
 | `an app route with the path ... is registered before the route of operation '<id>'` | Import the contract routes first. |
 | `the api '<other>' registered before this one answers its catch-all 404` | Set `catchAll: false` on the api whose base path prefixes the other's. |
 | `runtime.worker.unsupported` | Serve the app with php-fpm. Worker runtimes are refused. In a functional test, do not call `disableReboot()`. |
-| `the app route '<name>' (<path>) is not a contract route and the entry's frameworkRoutes does not list it` | List the route under `frameworkRoutes` of the entry, with a reason, then run `generate`. A route whose trailing placeholder has a default (`/c/{id?}`) also serves `/c`, so `/c/*` alone does not list it: add `/c` too. |
+| `the app route '<name>' (<path>) is not a contract route and the entry's frameworkRoutes does not list it` | [Allow-list it](#allow-listing-framework-routes). |
 | `operation '<id>' has no route`, `operation '<id>' has <n> routes` | Import the api's resource, type `seampact`, once in your routing configuration. |
 
 An invalid `%env()%` value of the bundle configuration does not stop the start: the api answers 500 on its routes and the log names the key.
 
 ## Laravel
 
-The message starts with `seampact: the api '<id>' cannot start:` and lists every problem. It comes at `php artisan route:cache` and at the first HTTP boot while the routes are not cached.
+The check runs at `php artisan route:cache` and at the first HTTP boot while the routes are not cached.
 
 | You see | Do |
 |---|---|
@@ -90,7 +117,7 @@ The message starts with `seampact: the api '<id>' cannot start:` and lists every
 | `no scope resolver for the scope '<scope>': tag a ScopeResolver with ...` | Tag a scope resolver with `seampact.<api>.scope-resolvers`. |
 | `no idempotency store for ...: bind 'seampact.<api>.idempotency-store' ...` | Bind your `IdempotencyStore` implementation under the provider's `IDEMPOTENCY_STORE_KEY`. |
 | `operation '<id>' has no handler: bind <Endpoints> to a controller in the container` | Bind the generated `<Resource>Endpoints` interface to your controller. |
-| `the framework route <METHOD> /<path> is outside the contract: allow-list it in the entry's frameworkRoutes, or remove it` | List the route under `frameworkRoutes` of the entry, with a reason, then run `seampact generate`. A route with an optional parameter (`/c/{id?}`) also serves `/c`, so `/c/*` alone does not list it: add `/c` too. |
+| `the framework route <METHOD> /<path> is outside the contract: allow-list it in the entry's frameworkRoutes, or remove it` | [Allow-list it](#allow-listing-framework-routes), or remove the route. |
 | `operation '<id>' has 0 contract routes: call Route::seampact('<api>') once in the app's routes` | Call `Route::seampact('<api>')` once, from `withRouting(then: ...)` in `bootstrap/app.php`. Call it outside any route group prefix. |
 | `the boundary middleware ... is not the first global middleware` | Remove the global middleware you prepended before it. Two apis whose base paths overlap: set `catch_all: false` on the broader one. |
 | `the access middleware ... is not before SubstituteBindings in the middleware priority` | Do not reorder the middleware priority; put your own entries after the contract's. |
@@ -107,7 +134,7 @@ The message starts with `seampact: the api '<id>' cannot start:` and lists every
 
 ## Django (DRF)
 
-The message starts with `seampact: the api '<id>' cannot start:` and lists every problem. It comes when the server loads the app, and `python manage.py seampact_check` prints the same list.
+The check runs when the server loads the app, and `python manage.py seampact_check` prints the same list.
 
 | You see | Do |
 |---|---|
@@ -120,7 +147,7 @@ The message starts with `seampact: the api '<id>' cannot start:` and lists every
 
 ## Django Ninja
 
-The message starts with `seampact: the api '<id>' cannot start:` and lists every problem. It comes when the server loads the app, and `python manage.py seampact_check` prints the same list. See [The boot check](../backend/ninja.md#the-boot-check).
+The check runs when the server loads the app, and `python manage.py seampact_check` prints the same list. See [The boot check](../backend/ninja.md#the-boot-check).
 
 | You see | Do |
 |---|---|
@@ -143,7 +170,7 @@ The message starts with `seampact: the api '<id>' cannot start:` and lists every
 
 ## Spring Boot
 
-The message starts with `seampact: the api '<id>' cannot start:` and lists every problem. See [The boot check](../backend/spring-boot.md#the-boot-check).
+See [The boot check](../backend/spring-boot.md#the-boot-check).
 
 | You see | Do |
 |---|---|
@@ -153,7 +180,7 @@ The message starts with `seampact: the api '<id>' cannot start:` and lists every
 
 ## FastAPI
 
-Same start check, run on startup by uvicorn (`Application startup failed. Exiting.`), or on the first request without a lifespan. The message starts with `seampact: the api '<api>' cannot start:`.
+The check runs on startup by uvicorn (`Application startup failed. Exiting.`), or on the first request without a lifespan.
 
 | You see | Do |
 |---|---|

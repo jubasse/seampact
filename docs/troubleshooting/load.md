@@ -2,7 +2,7 @@
 
 Codes that start with `seampact/load/` come from reading your YAML files. They print as `api.yaml:5:13: error seampact/load/yaml-boolean: ...`: file, line, column, code.
 
-| You see | Do |
+| Code | Cause and fix |
 |---|---|
 | `seampact/load/yaml-syntax` | Fix the YAML at that position. Look for a missing `]`, `}` or quote, or a wrong indent. |
 | `seampact/load/workspace-shape` | The file must start with `api:` or `workspace:`. Often a YAML syntax error is the real cause: fix the `yaml-syntax` line first. |

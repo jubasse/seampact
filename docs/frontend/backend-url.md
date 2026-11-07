@@ -1,8 +1,8 @@
 # Point the client at your backend
 
-The backend URL is the `baseUrl` you pass to `createClient`. seampact never writes it into the generated code: each environment gives its own.
+The backend URL is the `baseUrl` you pass to `createClient` (see the [fetch client](fetch-client.md)). seampact never writes it into the generated code: each environment gives its own.
 
-Browser code has no `process.env`. `import.meta.env.VITE_X`, `process.env.NEXT_PUBLIC_X` and `process.env.EXPO_PUBLIC_X` are text the bundler replaces when it builds (or when the dev server serves the file), so the value is fixed in the shipped files. A browser only gets a value chosen at runtime from data a server sends it: Nuxt or SvelteKit runtime config, a `config.json` fetched at start, or no URL at all behind a same-origin proxy or route handler.
+A browser build bakes in the variables it reads (`VITE_`, `NEXT_PUBLIC_`, `EXPO_PUBLIC_`). To change the URL without a rebuild, use runtime config, a `config.json`, or a same-origin proxy.
 
 Create each browser client once and reuse it. Two apis on two backends: two variables, two clients.
 
@@ -16,17 +16,19 @@ Create each browser client once and reuse it. Two apis on two backends: two vari
 | Nuxt | `useRuntimeConfig().public.apiUrl`, set by `NUXT_PUBLIC_API_URL` | server start |
 | SvelteKit 2 | `env.PUBLIC_API_URL` from `$env/dynamic/public` | server start |
 | SvelteKit 3 | a `public: true` variable of `defineEnvVars` | server start |
-| Angular | `/config.json` fetched in `provideAppInitializer` | container start |
+| Angular | `/config.json` fetched in `provideAppInitializer` (see [a config file](#a-config-file-written-at-start)); `environment.apiUrl` is fixed at build | container start |
 | Expo | `process.env.EXPO_PUBLIC_API_URL`, written exactly like this | bundle |
 | Node | `process.env.NOTES_API_URL` | process start |
 
-A build-time value stays in the image you promote from staging to production. To change it without a rebuild, see [Docker](#docker-one-image-for-every-environment).
+A build-time value stays in the image you promote from staging to production. To change it without a rebuild, see [Docker](#docker-one-image-for-every-environment) below.
 
 Docs: [Vite](https://vite.dev/guide/env-and-mode), [Next.js](https://nextjs.org/docs/app/guides/environment-variables), [Nuxt](https://nuxt.com/docs/guide/going-further/runtime-config), [SvelteKit](https://svelte.dev/docs/kit/$env-dynamic-public), [Expo](https://docs.expo.dev/guides/environment-variables/).
 
 ## Vite
 
 ```ts
+import { createClient } from "./__generated__/client/notes/index.js";
+
 const client = createClient({ baseUrl: import.meta.env.VITE_API_URL });
 ```
 
@@ -38,6 +40,8 @@ Server code reads any variable at runtime, without the `NEXT_PUBLIC_` prefix, so
 
 ```ts
 // lib/notes.ts, imported by server code only
+import { createClient } from "./__generated__/client/notes/index.js";
+
 export function notesClient() {
   const baseUrl = process.env.API_URL;
 
@@ -56,9 +60,9 @@ export async function GET() {
 }
 ```
 
-Route handlers run on each request. A server component on a prerendered page reads the variable at build: call `await connection()` first (or `io()` with Cache Components, Next.js 16.3 and later).
+Route handlers run on each request. A server component on a prerendered page reads the variable at build: call `await connection()` first.
 
-When the browser must call the backend itself, `NEXT_PUBLIC_API_URL` is fixed by `next build`. The Next.js docs say to provide runtime values from your own API; one way is to read the value in a server component and pass it down. `env` in `next.config` is a legacy build-time setting that always ships to the browser.
+When the browser must call the backend itself, `NEXT_PUBLIC_API_URL` is fixed by `next build`. To choose it at runtime, read the value in a server component and pass it down.
 
 ## Server-side rendering
 
@@ -90,8 +94,6 @@ server {
     location /api/ {
         proxy_pass ${API_UPSTREAM}/;
         proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
@@ -111,7 +113,7 @@ COPY nginx/default.conf.template /etc/nginx/templates/
 COPY dist/ /usr/share/nginx/html/
 ```
 
-Run it with `-e API_UPSTREAM=http://backend:3000`. At start, the image replaces `${API_UPSTREAM}` and keeps nginx's own `$host`. The trailing `/` of `proxy_pass` removes `/api`. The `X-Forwarded-*` headers give the backend the caller's address and scheme. `index.html` is revalidated on each visit, so a new deploy shows at once. ([nginx image docs](https://hub.docker.com/_/nginx))
+Run it with `-e API_UPSTREAM=http://backend:3000`. At start, the image replaces `${API_UPSTREAM}` and keeps nginx's own `$host`. The trailing `/` of `proxy_pass` removes `/api`. `index.html` is revalidated on each visit, so a new deploy shows at once. ([nginx image docs](https://hub.docker.com/_/nginx))
 
 The browser and the api share one origin, so there is no CORS to set up. Paging works too: the client reads only the cursor or page number from a page link, then calls its own `baseUrl`, `/api` included.
 
@@ -164,6 +166,6 @@ const client = createClient({ baseUrl: config.apiBaseUrl });
 
 Anyone can read `config.json`: put only public values in it, never a secret, and write only the keys the app needs.
 
-The template and the script write files at start. On a read-only filesystem, mount writable volumes on `/etc/nginx/conf.d` and `/usr/share/nginx/html`; to run as non-root, start from `nginxinc/nginx-unprivileged`.
+## Next
 
-Avoid replacing placeholders in the built JavaScript with `sed`: minified and hashed files and caches break it. Plugins such as `vite-envs` exist, but they are third-party.
+[React](react.md), [Vue](vue.md), [Angular](angular.md) or [Expo and React Native](mobile.md): create the client there.

@@ -4,7 +4,7 @@ A bundle is a contract packed to share. See [Sharing a contract](../features/sha
 
 ## Reading a pinned bundle (`generate`, `check`)
 
-| You see | Do |
+| Code | Cause and fix |
 |---|---|
 | `bundle.integrity-mismatch`, `bundle.pin-missing`, `bundle.pin-mismatch` | The bundle is not the one you pinned. Pin the `integrity` the publisher printed, or ask the publisher whether the release changed. |
 | `bundle.manifest-*`, `bundle.file-*`, `bundle.too-*`, `bundle.ir-*` | The bundle is damaged or was written by another seampact version. Download it again. If it still fails, rebuild it with `seampact bundle`. |
@@ -14,7 +14,7 @@ A bundle is a contract packed to share. See [Sharing a contract](../features/sha
 
 ## Downloading it
 
-| You see | Do |
+| Code | Cause and fix |
 |---|---|
 | `bundle.release-url`, `bundle.release-failed` | The `release` URL must be `https`. Check that it answers with the archive. |
 | `bundle.git-url`, `bundle.git-tag`, `bundle.git-directory`, `bundle.git-failed` | Check the `git` URL, the tag and the folder. The tag must exist. |
@@ -23,7 +23,7 @@ A bundle is a contract packed to share. See [Sharing a contract](../features/sha
 
 ## Publishing it (`seampact bundle`)
 
-| You see | Do |
+| Code | Cause and fix |
 |---|---|
 | `bundle.compile-failed` | Fix the contract errors printed above it. |
 | `bundle.contract-missing` | Name the contract with `--name` and `--version`, or add them to the contract folder's `package.json`. |

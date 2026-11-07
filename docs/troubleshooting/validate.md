@@ -2,7 +2,7 @@
 
 Codes that start with `seampact/validate/` say a key or a value is not allowed. The message gives the fix, often the list of keys you may write.
 
-| You see | Do |
+| Code | Cause and fix |
 |---|---|
 | `seampact/validate/unknown-keyword` | The key is not allowed at that place. Remove it, or fix its spelling: the message may say `Did you mean ...`. A key written one level too far left becomes a setting of the node above: check the indent. |
 | `seampact/validate/missing-keyword` | Add the key the message names. |

@@ -2,7 +2,7 @@
 
 Codes that start with `seampact/tree/` say your routes or schemas do not fit together.
 
-| You see | Do |
+| Code | Cause and fix |
 |---|---|
 | `seampact/tree/schema-unknown` | A schema name is not declared. Declare it under `schemas`, or fix the name. |
 | `seampact/tree/required-unknown` | `required` lists a property the object does not have. Declare it or remove it. |

@@ -1,6 +1,6 @@
 # React
 
-seampact writes React hooks over the typed `fetch` client, for TanStack Query 5, SWR 2 or RTK Query 2, or with no query library. Pick one with the `query` option.
+seampact writes React hooks over the [fetch client](fetch-client.md), for TanStack Query 5, SWR 2 or RTK Query 2, or with no query library. Pick one with the `query` option. Use it for a React web app; for a phone, see [Expo and React Native](mobile.md).
 
 ## Add the targets
 
@@ -25,20 +25,31 @@ Install the library you picked: `@tanstack/react-query` 5, `swr` 2, or `@reduxjs
 ## Use the hooks
 
 ```tsx
+import { createClient } from "./__generated__/client/notes/index.js";
+import { createNotesHooks } from "./__generated__/queries/notes/index.js";
+
 const client = createClient({ baseUrl: import.meta.env.VITE_API_URL });
 const Notes = createNotesHooks(client);
 
-const notes = Notes.useListNotes({});
-const create = Notes.useCreateNote();
+export function NoteList() {
+  const notes = Notes.useListNotes({});
+  const create = Notes.useCreateNote();
+
+  // ...
+}
 ```
 
-`VITE_API_URL` holds your backend URL: see [Point the client at your backend](backend-url.md). With TanStack Query, wrap your app in `QueryClientProvider`; SWR's hooks have the same names. After a write, the hooks refresh the queries of the same resource.
+`VITE_API_URL` holds your backend URL: see [Point the client at your backend](backend-url.md). After a write, the hooks refresh the queries of the same resource.
 
-With RTK Query, `createNotesApi(client)` returns an RTK api: add its `reducer` and `middleware` to your store, and use RTK's hook names (`notesApi.useListNotesQuery({})`, `notesApi.useCreateNoteMutation()`).
+- TanStack Query: wrap your app in `QueryClientProvider`.
+- SWR: the hooks have the same names, no provider needed.
+- RTK Query: `createNotesApi(client)` returns an RTK api. Add its `reducer` and `middleware` to your store, and use RTK's hook names (`notesApi.useListNotesQuery({})`, `notesApi.useCreateNoteMutation()`).
 
 A list whose paging style tells the next page also gets `use<Op>Infinite`, for example `useListNotesInfinite`. With RTK Query it is `useListNotesPagesInfiniteQuery`.
 
-A declared error is thrown as a `ContractError`. `isContractError(error)` tells it apart from a network failure.
+## Errors
+
+A declared error is thrown as a `ContractError`. `isContractError(error)` tells it apart from a network failure. Fields and `errorStyle`: [Fetch client](fetch-client.md#contracterror).
 
 ## Options
 
@@ -61,14 +72,16 @@ A declared error is thrown as a `ContractError`. `isContractError(error)` tells 
 
 ## Without a query library
 
-With `query: fetch`, the hooks use React's own state and effects. This is not the client's `fetch` style: that one names the client, this one the hooks over it.
-
-Create the hooks once, outside your components:
+`query: fetch` means React's own state and effects, with no query library. The client under it is still the fetch client.
 
 ```tsx
+import { createClient } from "./__generated__/client/notes/index.js";
+import { createNotesHooks } from "./__generated__/queries/notes/index.js";
+
+const client = createClient({ baseUrl: import.meta.env.VITE_API_URL });
 const Notes = createNotesHooks(client);
 
-function NoteList() {
+export function NoteList() {
   const notes = Notes.useListNotes({}); // { data, error, isLoading, refetch }
   const create = Notes.useCreateNote({ retry: 1 }); // { mutate, isPending, error, data }
 
@@ -77,20 +90,19 @@ function NoteList() {
 
     if (!error) notes.refetch();
   };
+
+  // ...
 }
 ```
 
-- Pass `null` as the request to skip a read.
-- A read stops when the component unmounts or its request changes.
-- There is no cache. A write does not refresh other hooks: call `refetch`.
-- `mutate` never throws. Each call resolves to its own `{ data }` or `{ error }`, a `ContractError` for a declared error. The hook's `data`, `error` and `isPending` show the latest call.
-- `retry` sends a failed write again with the same idempotency key, so the server runs it once. It takes a whole count (0 or more); another value makes the hook throw. A declared error is not retried.
-- A write is not aborted when the component unmounts.
-- There is no infinite hook: a paged list gets its plain hook, with no warning. Change the request to read the next page.
-- `staleTime`, `invalidate`, `infinite`, `keys.root` and the `itemsOf` artefact need a query library: `generate` refuses them with `query: fetch`.
-
-The hooks need a client with `errorStyle: result`, the client's default: `generate` refuses a client with `errorStyle: throw`.
+Behaviours (skip, cache, `mutate`, `retry`, refused options): [shared with Vue and Angular](fetch-client.md#shared-behaviours-with-query-fetch). On React, hooks are created outside the components, and a read stops when the component unmounts.
 
 `artefacts: { hooks: false }` keeps the options factories only. `artefacts: { itemsOf: true }` adds `itemsOf`.
 
-Errors: [Generate errors](../troubleshooting/generate.md).
+## Limits
+
+`generate` refuses a client with `errorStyle: throw` (`link.client.errorStyle.unsupported`) and the options listed above that a library does not take. See [Link errors](../troubleshooting/link.md) and the [client table](../troubleshooting/generate.md#clients).
+
+## Next
+
+[Point the client at your backend](backend-url.md), then [MSW mocks](msw.md) to test without a backend.

@@ -1,68 +1,123 @@
-# Target option errors and generate warnings
+# Generate errors
 
-| You see | Do |
+`seampact generate` refuses a target option it does not know, or a form of your contract that a target does not generate yet. Each refusal has a code. Find yours in the table of your family, then follow the fix. A warning does not stop `generate`.
+
+| Family | Section |
 |---|---|
-| `options.unknown`, `options.invalid`, `options.<key>.invalid` | Use only the options the target's page lists, with one of its values. |
-| `options.query.missing` | The React, Vue and Angular targets need `query`, for example `query: fetch`. |
-| `names.collision` | Two operations would get the same generated name, such as an action, a store member or a service member. Rename one operation in the contract, or drop `state`. |
-| `artefact.service.needed` | `state: ngrx` and `state: ngrx-signals` call the generated service. Add `service` to the target's `artefacts`, or drop `state`. |
-| `options.query.unsupported` | This release generates `tanstack` only. |
+| Fetch, React, Vue, Angular, MSW | [Clients](#clients) |
+| Express, Fastify, Hono, NestJS, AdonisJS | [Node servers](#node-servers) |
+| Spring Boot | [Spring Boot](#spring-boot) |
+| Laravel, Symfony | [PHP](#php) |
+| FastAPI, Django REST framework, Django Ninja | [Python](#python) |
+| Several servers share the code | [Every server](#every-server) |
+| Warnings | [Warnings](#warnings) |
+
+"Remove the operation from `operations`" means: list only the other operations in the target entry's `operations` filter, then run `generate` again.
+
+## Clients
+
+| Code | Cause and fix |
+|---|---|
+| `options.unknown`, `options.invalid`, `options.<key>.invalid` | The target gets an option it does not have, or a value it does not take. Use only the options on the target's page, with one of its values. |
+| `options.errorStyle.invalid` | The fetch client's `errorStyle` is neither `result` nor `throw`. Set it to one of them. |
+| `options.query.missing` | The React, Vue and Angular targets need `query`. Write `query: tanstack`, `swr`, `rtk`, `pinia-colada` or `fetch`, as the framework page lists. |
 | `options.staleTime.unsupported`, `options.keys.root.unsupported` | That option has no place with this query library. Drop it. |
-| `options.keys.invalid`, `options.keys.root.invalid` | Write `keys: { root: <name> }`. |
-| `options.errors.unsupported` | `errors: data` needs a client with `errorStyle: result`. |
-| `options.springSecurity.unavailable` (Spring Boot) | `springSecurity` is on, but Spring Security is not on the classpath. Add `spring-boot-starter-security`, or set `springSecurity: false`. |
-| `options.springSecurity.matchers.unavailable` (Spring Boot) | `springSecurity: { matchers: true }` needs `spring-security-config`. Add `spring-boot-starter-security`, or set `springSecurity: true`. |
-| `options.reply.invalid` (NestJS) | `reply` is `handler` or `interceptor`. |
-| `input.multipart.unsupported`, `input.form.unsupported`, `type.file.unsupported`, `response.shape.unsupported`, `artefacts.accessHooks.unsupported` (Symfony) | The Symfony target does not generate multipart or form bodies, file values, download or redirect responses, or `accessHooks: false` yet; it waits for an app that needs them. Remove the operation from the entry's `operations` filter, or update `seampact/symfony`. |
-| `options.handlers.unsupported`, `options.naming.unsupported`, `options.layout.unsupported` (Symfony) | `handlers` is `perResource` only; the naming options and `layout` are not options of the PHP targets. Remove them. |
-| `input.multipart.unsupported`, `input.form.unsupported`, `type.file.unsupported`, `response.shape.unsupported` for a download or a redirect (Laravel) | Form, multipart, file, download and redirect bodies wait for an app that needs them. Remove the operation from the entry's `operations` filter, or open an issue with your use case. |
-| `response.shape.unsupported` (fetch, Node servers, Spring, Laravel, Symfony), `response.binary.unsupported`, `response.redirect.unsupported` (FastAPI, DRF, Ninja) | "A 'binary' response ..." or "A 'redirect' response ...". File downloads and redirects are not generated yet. Remove the operation from the entry's `operations` filter. |
-| `wire.urls.absolute.unsupported` (fetch, MSW, Node servers) | "Absolute URLs ...". The pages and links of a list are written as absolute URLs. Set `conventions.urls` to `relative`. |
-| `param.query.structured.unsupported` (Laravel, Symfony, FastAPI, DRF, Ninja) | "A query parameter that is not a scalar, an enum or a list of them in the form style ...". An object, a list of lists, or a list in a style other than `form` (`deepObject`) is not read yet. Make the param a scalar, an enum or a list of them, or remove the operation from the entry's `operations`. |
-| `query.list.brackets.unsupported` (fetch, Node servers, Spring, Laravel, Symfony, FastAPI, DRF, Ninja) | "A list sent as 'name[]' ..." or "A query list in brackets form ...". Lists sent as `tag[]=a&tag[]=b` are not read yet. Set `conventions.query.lists` to `repeat` or `comma`. |
-| `format.success.envelope.unsupported`, `format.success.slot.unsupported`, `format.success.headers.unsupported`, `format.meta.unsupported` (Node servers, Spring, Laravel, Symfony) | The message reads "A success envelope that does not write `$payload` under named members is not generated by the <target> target yet: ...", or "The success envelope slot '$x' ...", "A success format header ...", "The meta members of the format '<id>' ...". The format pack writes an envelope, slot, success header or meta member this server cannot write. Use a format whose envelope puts `$payload` under named members, with no meta member and no success header, or another server. |
-| `paging.response.slot.unsupported` (Node servers, Spring, Laravel, Symfony, FastAPI, DRF, Ninja) | "The page slots '$x' of the paging style 'y' is not generated by the <target> target yet". The page writes a slot the server does not fill: `$resource`, `$collection`, an item's id or URL, or `$page` under an offset style. Use a paging style whose page writes only its response roles, or another server. |
-| `paging.sortKey.right.unsupported` (Spring, Laravel, Symfony, FastAPI, DRF, Ninja), `paging.sortKey.restricted.unsupported` (Node servers, NestJS included) | "The sort key 'x' restricted by the right 'y' is not generated by the ... target yet". A sort key guarded by a field right is not served. Leave the key out of `sortable` (a key of a restricted field inherits its right), or drop the operation from the entry's `operations`. |
-| `scheme.query.unsupported`, `scheme.basic.unsupported` (Node servers, Spring, Laravel, Symfony, FastAPI, DRF, Ninja) | "A 'query' credential scheme ... is not generated ... yet". The servers read a credential from a bearer token, a cookie or a header only. Use a `bearer`, `cookie` or `header` scheme, or remove the operation from the entry's `operations`. |
-| `degradable.unsupported` (Node servers, Spring, Laravel, Symfony) | "A degradable operation ... is not generated ... yet". `degradable` operations are not generated yet (after 1.0 on Spring, Laravel and Symfony). Remove the operation from the entry's `operations`. |
-| `concurrency.etag.withoutWrite.unsupported` (Node servers, Spring, Laravel, Symfony, FastAPI, DRF, Ninja) | "An ETag of a resource whose If-Match writes are not operations of this api ...". A read writes an `ETag` for a resource whose versioned writes sit in another api, so the server has no field to read the version from. Serve the read and its `If-Match` writes in one api, or remove the read from the entry's `operations`. |
-| `deprecated.successor.otherApi.unsupported` (Node servers, Spring, Laravel, Symfony, FastAPI, DRF, Ninja) | "The successor link to operation 'x' of api 'y' ...". A deprecated operation names a successor in another api, whose URL the server cannot write in its `Link` header yet. Name a successor in the same api, or drop the successor. |
-| `identity.response.header.unsupported` (Node servers, Spring, Laravel, Symfony, FastAPI, DRF, Ninja) | "The response header 'X-Rights-Version' of the identity 'service' ...". The identity uses a header the server would write on a response: a `versionToken` header, or one declared `in: response`. No server writes it yet, and a handler cannot. Remove the header from the identity's `headers`, or declare a deadline, trace or actor surface header `in: request`. |
-| `right.extensions.unsupported`, `rule.extensions.unsupported`, `scope.extensions.unsupported` (Node servers) | "An extension value of the right 'x' ... is not generated yet". The decide and resolve requests do not carry custom metadata yet. Remove the `extensions` of that right, rule or scope, or the operations that use it from the entry's `operations`. |
-| `right.extensions.unsupported`, `rule.extensions.unsupported`, `scope.extensions.unsupported` (Spring, Laravel, Symfony) | "An extension value of the right 'x' is not generated by the ... target yet". The decide and resolve requests do not carry custom metadata yet. Remove the `extensions` of that right, rule or scope, or the operations that use it from the entry's `operations`. |
-| `property.default.unsupported` (Spring, Laravel, Symfony) | "The default of property 'x' is not generated ... yet". The servers do not fill a body member's default yet, so the handler would receive it absent. Remove the `default`, or the operations that use the schema from the entry's `operations`. |
-| `artefacts.accessHooks.unsupported` (Laravel, FastAPI, DRF, Ninja) | `accessHooks: false` (native access) waits for an app that needs it. Keep the hooks, and read the framework's own auth in the authenticate hook. |
-| `nativeDocs.document.ambiguous` | The api declares several documents and the framework's document can follow only one. Set `document` on the entry, or drop `nativeDocs`. |
-| `artefacts.nativeDocs.operation-missing` (FastAPI, Ninja) | The document the entry names lacks an operation the entry generates. Set `document` to a document that holds them all, or drop `nativeDocs`. |
-| `artefacts.nativeDocs.component-clash` (FastAPI) | A contract schema is named `ValidationError` or `HTTPValidationError`, which FastAPI's own document holds. Rename the schema in the contract, or switch `nativeDocs` off for this api. |
-| `artefacts.nativeDocs.document-missing` (FastAPI, Ninja) | Your `seampact-ir` is older than the target (`seampact-fastapi` or `seampact-ninja`). Install the same release of both. |
-| `options.layout.unsupported`, `options.handlers.unsupported` (Laravel) | The target writes one PSR-4 file per class and one controller interface per resource. Remove the option. |
-| `path.segment.encoded.unsupported` | "The static path segment 'my tasks', which a client sends percent-encoded, ...". A space, a control or non-ASCII character, or one of `"` `<` `>` `^` `\` `{` `}` `\|` `[` `]` or a backtick in a fixed path part would never reach the route. Use plain ASCII letters, digits and `-` in that path part. |
-| `runtime.missing` (Node servers, Spring) | The app does not install the runtime. Install `@seampact/server-runtime` (Node) or add `seampact-spring-runtime` (Maven; the Gradle plugin adds it) at the generator's version. |
-| `runtime.version-mismatch` (Node servers, Spring) | The installed runtime has another `major.minor` or an older patch than the generator. Install the runtime at the generator's version. A later patch passes. With Gradle, the plugin adds the runtime at its own version: remove the constraint that overrides it (a BOM or a forced version). |
-| `runtime.output-directory-missing` (Node servers) | A programmatic generate request gave no `outputDirectory`. Pass the api's output directory. `seampact generate` always does. |
-| `options.unknown`, `options.naming.unsupported`, `options.layout.unsupported`, `options.handlers.unsupported`, `options.indent.unsupported` (FastAPI, DRF, Ninja) | The Python targets take `rules`, `responses`, `bodyValidation`, `frameworkEtag` and `catchAll`, and Ninja `views` too. The naming options and `layout` are not options of the Python targets. `handlers` is `perResource` and `indent` is 4. Remove the option. |
-| `artefacts.unknown` (FastAPI, DRF, Ninja) | The entry switches an artefact the target does not have. FastAPI takes `routeHelpers`, `bootCheck`, `accessHooks` and `nativeDocs`. Ninja takes the same. DRF takes the same but `nativeDocs`. Remove the key. |
-| `artefacts.bootCheck.hooks.warn.unsupported` (Laravel, Symfony, FastAPI, DRF, Ninja), `artefact.bootCheck.hooks.warn.unsupported` (Spring Boot) | Starting with a hook missing (`warn`) waits for an app that needs it. Use `error` (default) or `off`. |
-| `artefacts.bootCheck.hooks.invalid`, `artefacts.bootCheck.frameworkRoutes.invalid`, `artefacts.bootCheck.invalid`, `artefacts.<key>.invalid` (FastAPI, DRF, Ninja) | The value is not one the key takes. `hooks` takes `error` or `off`, `frameworkRoutes` takes `true`, `false` or `strict`, `bootCheck` takes a boolean or a map, and the other artefacts take a boolean. |
-| `schema.union.unsupported`, `schema.map.unsupported` (FastAPI, DRF, Ninja) | A `oneOf` or a map schema is not generated yet. Remove the operation from the entry's `operations`. |
-| `access.<kind>.unsupported` (FastAPI, Ninja), `identity.principal.unsupported`, `rule.<key>.unsupported` (DRF, a rule with no DRF check under `rules: native`; use `rules: seampact-consistent`, which checks it, or remove the rule from that use) | The access form is not generated yet, for example a signed identity on FastAPI, or a principal that is not one schema. Remove the operation from the entry's `operations`. |
-| `format.<format>.unsupported`, `type.<kind>.unsupported`, `response.<shape>.unsupported`, `deadline.header.type.unsupported` (FastAPI, DRF, Ninja) | A string format, a type, a response shape or a deadline header type the Python targets do not generate yet. Remove the operation from the entry's `operations`. |
-| `path.segment.literal.unsupported`, `path.segment.mixed.unsupported` (FastAPI, DRF, Ninja) | A fixed path segment holds `{`, `}` or `?`, or a segment mixes a parameter with text. Write the segments as whole parameters or whole text in the contract. |
-| `path.param.type.unsupported` (FastAPI, DRF, Ninja) | A path parameter is not a string, a number or an enum. Remove the operation from the entry's `operations`. |
-| `path.param.missing`, `name.segment.missing` (FastAPI, DRF, Ninja) | The IR is not one seampact wrote. Compile the contract again with the same seampact release, or update the target. |
-| `name.collision` (FastAPI, DRF, Ninja) | Two schemas, members or errors give the same Python name. Rename one in the contract, or give one a `codeName`. |
-| `input.media.unsupported`, `response.media.unsupported`, `body.kind.unsupported`, `input.fields.unsupported`, `scalar.content.unsupported`, `response.header.unsupported` (FastAPI, DRF, Ninja) | Form, multipart, file, download and redirect bodies, a body that is not an object schema, a JSON string content and a route-written response header wait for an app that needs them. Remove the operation from the entry's `operations`. |
-| `param.path.structured.unsupported`, `param.header.structured.unsupported`, `param.default.unsupported`, `member.default.unsupported` (FastAPI, DRF, Ninja) | "A path parameter that is not a scalar or an enum ..." (the same for a header), and a default value, wait for an app that needs them. Remove the operation from the entry's `operations`. |
-| `enum.open.unsupported`, `enum.narrowed.unsupported`, `unknownKeys.keep.unsupported`, `extensionKeys.unsupported`, `paging.handlerResult.unsupported` (FastAPI, DRF, Ninja) | An open or narrowed enum, kept unknown keys, typed extension values and some paging facts are not generated yet. The message says when it comes. Remove the operation from the entry's `operations`. |
-| `principal.variants.unsupported`, `principalRequires.unsupported`, `bindings.unsupported`, `scope.source.unsupported`, `fieldRight.nestedPointer.unsupported`, `bucket.key.unsupported`, `rule.proof.placement.unsupported`, `upstream.unsupported`, `features.unsupported` (FastAPI, DRF, Ninja) | The operation uses an access or relay form the Python targets do not generate yet. The message says when it comes. Remove the operation from the entry's `operations`. |
-| `signature.application.unsupported`, `signature.key.source.unsupported` (FastAPI, DRF, Ninja) | A signature that your application verifies, or a key read from the request, is not generated yet. Use a signature template with a key value, or remove the operation from the entry's `operations`. |
+| `options.keys.invalid`, `options.keys.root.invalid` | `keys` is not written as asked. Write `keys: { root: <name> }`. |
+| `options.errors.unsupported` | `errors: data` needs a client with `errorStyle: result`, and the linked client throws. Link a client with `errorStyle: result`, or drop `errors: data`. |
+| `link.client.errorStyle.unsupported` | React, Vue and Angular need a fetch client with `errorStyle: result`. Set it on the client target, or drop the link. See [Link errors](link.md). |
+| `options.validateRequests.unsupported` | MSW handlers do not check the request yet. Drop `validateRequests`. |
+| `artefact.service.needed` | `state: ngrx` and `state: ngrx-signals` call the generated service. Add `service` to the target's `artefacts`, or drop `state`. |
+| `names.collision` | Two operations would get the same generated name (an action, a store member or a service member). Rename one operation in the contract, or drop `state`. |
+| `wire.urls.absolute.unsupported` | The pages and links of a list are written as absolute URLs, which the client, the mocks and the Node servers do not read yet. Set `conventions.urls` to `relative`. |
 
-A warning does not stop `generate`.
+## Node servers
 
-| You see | Do |
+Express, Fastify, Hono, NestJS and AdonisJS.
+
+| Code | Cause and fix |
 |---|---|
-| `identity.headers.handler` (Node servers, Spring, Laravel, Symfony, FastAPI, DRF, Ninja) | The operation's identity declares request headers, such as the deadline or trace header. The boundary only checks that they are well formed. Your handler reads them, for example to stop the work when the deadline passes. Silence it with `warnings.ignore: [identity.headers.handler]` once the handler does. |
+| `options.reply.invalid` | NestJS `reply` takes `handler` or `interceptor`. Use one of them. |
+| `runtime.output-directory-missing` | A programmatic generate request gave no `outputDirectory`. Pass the api's output directory; `seampact generate` always does. |
+| `idempotency.enforce.unsupported` | The operation sets `idempotency.enforce: none`, which the Node servers do not generate. Keep `boundary`. |
+| `paging.sortKey.restricted.unsupported` | A sort key guarded by a field right is not served. Leave the key out of `sortable` (a key of a restricted field inherits its right), or remove the operation from `operations`. |
+
+## Spring Boot
+
+| Code | Cause and fix |
+|---|---|
+| `options.springSecurity.unavailable` | `springSecurity` is on, but Spring Security is not on the classpath. Add `spring-boot-starter-security`, or set `springSecurity: false`. |
+| `options.springSecurity.matchers.unavailable` | `springSecurity: { matchers: true }` needs `spring-security-config`. Add `spring-boot-starter-security`, or set `springSecurity: true`. |
+
+## PHP
+
+Laravel and Symfony.
+
+| Code | Cause and fix |
+|---|---|
+| `input.multipart.unsupported`, `input.form.unsupported`, `type.file.unsupported` | Form, multipart and file values are not generated yet. Remove the operation from `operations`, or open an issue with your use case. |
+
+## Python
+
+FastAPI, Django REST framework and Django Ninja.
+
+| Code | Cause and fix |
+|---|---|
+| `options.indent.unsupported` | The Python targets take `rules`, `responses`, `bodyValidation`, `frameworkEtag` and `catchAll` (Ninja also `views`), and `indent` is 4. Remove the option. |
+| `artefacts.unknown` | The entry switches an artefact the target does not have. FastAPI and Ninja take `routeHelpers`, `bootCheck`, `accessHooks` and `nativeDocs`; DRF takes the same but `nativeDocs`. |
+| `artefacts.bootCheck.hooks.invalid`, `artefacts.bootCheck.frameworkRoutes.invalid`, `artefacts.bootCheck.invalid`, `artefacts.<key>.invalid` | The value is not one the key takes. `hooks` takes `error` or `off`, `frameworkRoutes` takes `true`, `false` or `strict`, `bootCheck` a boolean or a map, other artefacts a boolean. |
+| `nativeDocs.document.ambiguous` | The api declares several documents and the framework's document can follow only one. Set `document` on the entry, or drop `nativeDocs`. |
+| `artefacts.nativeDocs.operation-missing` | The document the entry names lacks an operation the entry generates. Set `document` to one that holds them all, or drop `nativeDocs`. |
+| `artefacts.nativeDocs.component-clash` | FastAPI: a contract schema is named `ValidationError` or `HTTPValidationError`, which FastAPI's own document holds. Rename the schema, or switch `nativeDocs` off for this api. |
+| `artefacts.nativeDocs.document-missing` | `seampact-ir` is older than the target. Install the same release of both. |
+| `access.<kind>.unsupported`, `identity.principal.unsupported` | The access form is not generated yet, such as a signed identity on FastAPI, or a principal that is not one schema. Remove the operation from `operations`. |
+| `rule.<key>.unsupported` | DRF: a rule has no DRF check under `rules: native`. Use `rules: seampact-consistent`, which checks it, or remove the rule from that use. |
+| `format.<format>.unsupported`, `type.<kind>.unsupported`, `deadline.header.type.unsupported` | A string format, a type or a deadline header type is not generated yet. Remove the operation from `operations`. |
+| `response.binary.unsupported`, `response.redirect.unsupported`, `response.media.unsupported`, `response.header.unsupported` | Downloads, redirects, a non-JSON response and a route-written response header are not generated yet. Remove the operation from `operations`. |
+| `input.media.unsupported`, `body.kind.unsupported`, `input.fields.unsupported`, `scalar.content.unsupported` | Form, multipart and file bodies, a body that is not an object schema, and a JSON string content are not generated yet. Remove the operation from `operations`. |
+| `schema.union.unsupported`, `schema.map.unsupported` | A `oneOf` or a map schema is not generated yet. Remove the operation from `operations`. |
+| `enum.open.unsupported`, `enum.narrowed.unsupported`, `unknownKeys.keep.unsupported`, `extensionKeys.unsupported`, `paging.handlerResult.unsupported` | An open or narrowed enum, kept unknown keys, typed extension values and some paging facts are not generated yet. Remove the operation from `operations`. |
+| `param.path.structured.unsupported`, `param.header.structured.unsupported`, `param.default.unsupported`, `member.default.unsupported` | A path or header parameter that is not a scalar or an enum, and a default value, are not generated yet. Remove the operation from `operations`. |
+| `path.param.type.unsupported` | A path parameter is not a string, a number or an enum. Remove the operation from `operations`. |
+| `path.segment.literal.unsupported`, `path.segment.mixed.unsupported` | A fixed path segment holds `{`, `}` or `?`, or a segment mixes a parameter with text. Write each segment as a whole parameter or whole text. |
+| `path.param.missing`, `name.segment.missing` | The IR is not one seampact wrote. Compile the contract again with the same seampact release, or update the target. |
+| `name.collision` | Two schemas, members or errors give the same Python name. Rename one in the contract, or give one a `codeName`. |
+| `principal.variants.unsupported`, `principalRequires.unsupported`, `bindings.unsupported`, `scope.source.unsupported`, `fieldRight.nestedPointer.unsupported`, `bucket.key.unsupported`, `rule.proof.placement.unsupported`, `upstream.unsupported`, `features.unsupported` | The operation uses an access or relay form the Python targets do not generate yet. Remove the operation from `operations`. |
+| `signature.application.unsupported`, `signature.key.source.unsupported` | A signature your application verifies, or a key read from the request, is not generated yet. Use a signature template with a key value, or remove the operation from `operations`. |
+
+## Every server
+
+Codes several servers share. The cause names the servers it applies to.
+
+| Code | Cause and fix |
+|---|---|
+| `format.success.envelope.unsupported`, `format.success.slot.unsupported`, `format.success.headers.unsupported`, `format.meta.unsupported` | Node servers, Spring, Laravel and Symfony: the format pack writes an envelope, slot, success header or meta member the server cannot write. Use a format whose envelope puts `$payload` under named members, with no meta member and no success header, or another server. |
+| `paging.response.slot.unsupported` | The page writes a slot the server does not fill: `$resource`, `$collection`, an item's id or URL, or `$page` under an offset style. Use a paging style whose page writes only its response roles, or another server. |
+| `paging.sortKey.right.unsupported` | Spring, PHP and Python: a sort key guarded by a field right is not served. Leave the key out of `sortable`, or remove the operation from `operations`. |
+| `scheme.query.unsupported`, `scheme.basic.unsupported` | The servers read a credential from a bearer token, a cookie or a header only. Use a `bearer`, `cookie` or `header` scheme, or remove the operation from `operations`. |
+| `degradable.unsupported` | Node servers, Spring, Laravel and Symfony do not generate `degradable` operations yet. Remove the operation from `operations`. |
+| `concurrency.etag.withoutWrite.unsupported` | A read writes an `ETag` for a resource whose `If-Match` writes sit in another api, so the server has no field to read the version from. Serve the read and its writes in one api, or remove the read from `operations`. |
+| `deprecated.successor.otherApi.unsupported` | A deprecated operation names a successor in another api, whose URL the server cannot write in its `Link` header yet. Name a successor in the same api, or drop the successor. |
+| `identity.response.header.unsupported` | The identity declares a response header (a `versionToken`, or one declared `in: response`) that no server writes yet. Remove the header from the identity's `headers`, or declare a deadline, trace or actor header `in: request`. |
+| `right.extensions.unsupported`, `rule.extensions.unsupported`, `scope.extensions.unsupported` | Node servers, Spring, Laravel and Symfony: the decide and resolve requests do not carry custom metadata yet. Remove the `extensions` of that right, rule or scope, or the operations that use it from `operations`. |
+| `property.default.unsupported` | Spring, Laravel and Symfony do not fill a body member's default, so the handler would receive it absent. Remove the `default`, or the operations that use the schema from `operations`. |
+| `param.query.structured.unsupported` | PHP and Python: a query parameter that is not a scalar, an enum or a list of them in the `form` style (an object, a list of lists, `deepObject`) is not read yet. Make the param a scalar, an enum or a list of them, or remove the operation from `operations`. |
+| `query.list.brackets.unsupported` | The fetch client and every server: a list sent as `tag[]=a&tag[]=b` is not read yet. Set `conventions.query.lists` to `repeat` or `comma`. |
+| `response.shape.unsupported` | The fetch client, Node servers, Spring, Laravel and Symfony do not generate download or redirect responses yet. Remove the operation from `operations`. |
+| `path.segment.encoded.unsupported` | A fixed path part has a space, a control or non-ASCII character, or one of `"` `<` `>` `^` `\` `{` `}` `|` `[` `]` or a backtick, which a client would send percent-encoded. Use plain ASCII letters, digits and `-` in that part. |
+| `artefacts.accessHooks.unsupported` | Laravel, Symfony, FastAPI, DRF and Ninja: `accessHooks: false` (native access) is not generated yet. Keep the hooks, and read the framework's own auth in the authenticate hook. |
+| `artefacts.bootCheck.hooks.warn.unsupported`, `artefact.bootCheck.hooks.warn.unsupported` | PHP, Python and Spring Boot (`artefact.` there): starting with a hook missing (`warn`) is not generated yet. Use `error` (the default) or `off`. |
+| `options.handlers.unsupported`, `options.naming.unsupported`, `options.layout.unsupported` | PHP and Python: `handlers` is `perResource`, the code is laid out one class per file, and the naming options are not options of these targets. Remove the option. |
+| `runtime.missing` | Node servers and Spring: the app does not install the runtime. Install `@seampact/server-runtime` (Node) or add `seampact-spring-runtime` (Maven; the Gradle plugin adds it) at the generator's version. |
+| `runtime.version-mismatch` | Node servers and Spring: the installed runtime has another `major.minor`, or an older patch, than the generator. Install it at the generator's version; a later patch passes. With Gradle, remove the BOM or forced version that overrides the plugin's. |
+| `runtime.generated-for-other-version` | See [Boot errors](boot.md). |
+
+## Warnings
+
+| Code | Cause and fix |
+|---|---|
+| `identity.headers.handler` | The identity declares request headers (deadline, trace) and the boundary only checks they are well formed. Your handler reads them. Silence it with `warnings.ignore: [identity.headers.handler]` once it does. |
 | `paging.infinite.skipped` | The list gets no infinite query, because its paging style does not tell the next page. Use the plain query with the position parameter, or add a next-page fact to the paging style. Silence it with `warnings.ignore: [paging.infinite]`. |
 
-For `link.client.errorStyle.unsupported`, see [Link errors](link.md).
+## Next
+
+[Config errors](config.md) for the config file, or [Boot errors](boot.md) when the generated server does not start.

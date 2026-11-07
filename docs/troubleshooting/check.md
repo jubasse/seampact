@@ -2,18 +2,15 @@
 
 `seampact check` and `seampact generate` fail with these codes. See [Checks](../configuration/checks.md).
 
-| You see | Do |
+| Code | Cause and fix |
 |---|---|
-| `check.generated.drift ... differ from the committed files` | Run `seampact generate` and commit the result. Or set `checks.generated` to `warning` or `disabled`. |
-| `check.generated.drift ... was edited by hand` | Move your code out of the generated folder, delete the edited file, run `generate`. |
+| `check.generated.drift` | The generated files differ from the committed ones, or one was edited by hand. Run `seampact generate` and commit the result; for an edited file, move your code out and delete the file first. To relax it, set `checks.generated` to `warning` or `disabled`. |
 | `check.openapi.drift` | Run `seampact generate` and commit the documents. Or set `checks.openapi` to `warning` or `disabled`. |
-| `writer.file.edited` | Same as an edit by hand: `generate` will not overwrite it. Delete the file, then generate, or run `seampact generate --force` to overwrite it (a stale edited file the run no longer produces is removed). |
-| `writer.file.not-generated` | A file in the output folder is not seampact's. Move it out. |
+| `writer.file.edited` | `generate` will not overwrite a file edited by hand. Delete the file and generate, or run `seampact generate --force` to overwrite it. |
+| `writer.file.not-generated` | A file in the output folder is not seampact's, or a name changed only by letter case since the last run (`Tasks.ts` to `tasks.ts`) on a case-insensitive disk. Move the file out, or delete the old file the message names, then run `generate`. |
 | `writer.manifest.other-owner` | Two entries write to one folder. Give each its own `out`. |
 | `writer.manifest.invalid`, `writer.manifest.not-regular` | The manifest in the output folder is damaged. Delete the generated files of that entry and its manifest, then run `generate`. |
-| `file.path.invalid`, `file.extension.unsupported`, `file.php.open-tag`, `file.header.unsafe` | PHP: the target generated a file the writer refuses. Update the target package, or report it to its maintainers. |
-| `file.path.invalid` naming two paths "differs only by letter case" | Two generated files (or folders) have names that differ only by case (`Tasks.ts`, `tasks.ts`): on a case-insensitive disk the second overwrites the first. Rename one of the two names in the contract (two items named `Task` and `TASK`), or report it to the target's maintainers. |
-| `writer.file.not-generated` saying the run "renames it only by letter case" | A name changed only by case since the last run (`Tasks.ts` to `tasks.ts`) on a case-insensitive disk. Delete the old file named in the message, then run `generate` again. |
+| `file.path.invalid`, `file.extension.unsupported`, `file.php.open-tag`, `file.header.unsafe` | The target generated a file the writer refuses. For two names that differ only by case (`Tasks.ts`, `tasks.ts`; the second would overwrite the first on a case-insensitive disk), rename one in the contract. Otherwise update the target package, or report it to its maintainers. |
 | `writer.path.outside` | A symbolic link in the output folder leads out of it. Replace it with a plain folder. |
 
 You see `check: the generated files and documents match the committed ones.` when nothing drifted.

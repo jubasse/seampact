@@ -1,6 +1,6 @@
 # MSW mocks
 
-seampact writes [Mock Service Worker](https://mswjs.io) 2 handlers for each operation of your contract. Your tests and your dev server run the typed `fetch` client against them, with no backend.
+seampact writes [Mock Service Worker](https://mswjs.io) 2 handlers for each operation of your contract. Your tests and your dev server run the [fetch client](fetch-client.md) against them, with no backend.
 
 ## Add the target
 
@@ -31,13 +31,23 @@ const mocks = createMocks({ baseUrl: "http://localhost" });
 const server = setupServer(...mocks.handlers);
 ```
 
-Give `createMocks` the same `baseUrl` as your client. Two apis on one origin whose paths overlap: list the handlers of the api with the more specific paths first. In the browser, use `setupWorker` from `msw/browser` and copy the worker script once with `npx msw init public`.
+Give `createMocks` the same `baseUrl` as your client.
+
+Two apis on one origin with overlapping paths: pass the handlers of the api with the more specific paths first to `setupServer`.
+
+In the browser, use `setupWorker` from `msw/browser`, and copy the worker script once with `npx msw init public`.
 
 ## Answer in a test
 
 A handler answers the route's example from the contract. A route with no example has nothing to answer: the call gets a 500 that names the route, until your test gives a reply.
 
+Each operation of `mocks` has three methods: `reply(status, body)`, `error(code, params)` and `resolve(function)`. Give them to `server.use` in a test (here with Vitest):
+
 ```ts
+import { afterEach } from "vitest";
+
+afterEach(() => server.resetHandlers());
+
 server.use(mocks.getNote.reply(200, { id: "n1", title: "Hello" }));
 server.use(mocks.createNote.error("api.rate_limited", { retryAfterMs: 1500 }));
 server.use(
@@ -47,11 +57,17 @@ server.use(
 );
 ```
 
-The status, body, error code and params are typed from the contract. A reply is written like your server writes it: the same envelope, the same page links, and errors in your error format. Call `server.resetHandlers()` after each test.
+The status, body, error code and params are typed from the contract. A reply is written like your server writes it: the same envelope, the same page links, and errors in your error format.
 
-## Not yet
+## Limits
 
 - The handlers do not check the request. The option `validateRequests` is refused until they do.
 - The default handler answers success examples only, never an error or a request example.
-- A form the fetch client cannot read yet is refused the same way here.
-- Pages whose numbers or totals the server computes, such as the Laravel and Spring packs' pages, are refused by name.
+- A form the fetch client cannot read yet is refused the same way here (for example `wire.urls.absolute.unsupported`).
+- Pages whose numbers or totals the server computes (the Laravel and Spring paging packs) are refused by name.
+
+Codes: [Generate errors](../troubleshooting/generate.md#clients).
+
+## Next
+
+[Fetch client](fetch-client.md), the client your tests call.

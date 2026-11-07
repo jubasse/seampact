@@ -1,6 +1,6 @@
 # Expo and React Native
 
-An Expo or React Native app calls your API with the generated `fetch` client, and with the React hooks over it (TanStack Query, SWR or RTK Query). Both are written for Hermes, and need React Native 0.84 or later (earlier versions lack `URLSearchParams.get`, which reading a cursor from a `Link` header needs; `createClient` refuses to start without it when your contract has such paging).
+An Expo or React Native app calls your API with the generated [fetch client](fetch-client.md), and with the [React hooks](react.md) over it (TanStack Query, SWR or RTK Query). Both are written for Hermes and need React Native 0.84 or later.
 
 Capacitor and Ionic apps are web apps: use the React, Angular or Vue targets.
 
@@ -13,12 +13,17 @@ Add `@seampact/codegen-ts`, `@seampact/codegen-fetch` and, for hooks, `@seampact
 Read the API address from `EXPO_PUBLIC_API_URL` in `.env`. Expo inlines it at build time.
 
 ```ts
+// client.ts
 import * as NotesClient from "./__generated__/client/notes";
 
-export const client = NotesClient.createClient({
-  baseUrl: process.env.EXPO_PUBLIC_API_URL ?? "",
-});
+const baseUrl = process.env.EXPO_PUBLIC_API_URL;
+
+if (baseUrl === undefined) throw new Error("Set EXPO_PUBLIC_API_URL.");
+
+export const client = NotesClient.createClient({ baseUrl });
 ```
+
+Write `process.env.EXPO_PUBLIC_API_URL` exactly like this: Expo does not replace a destructured or bracketed read.
 
 Use a device address, not `localhost`, when you test on a phone: your machine's IP, or `10.0.2.2` on the Android emulator.
 
@@ -31,15 +36,13 @@ npx expo install expo-crypto
 ```
 
 ```ts
+// client.ts
 import { randomUUID } from "expo-crypto";
 
-export const client = NotesClient.createClient({
-  baseUrl: process.env.EXPO_PUBLIC_API_URL ?? "",
-  idempotencyKey: randomUUID,
-});
+export const client = NotesClient.createClient({ baseUrl, idempotencyKey: randomUUID });
 ```
 
-Hooks take the same function as `settings.idempotencyKey`.
+The hooks take the same function as the second argument of `createNotesHooks` (below).
 
 ## Hooks
 
@@ -47,6 +50,8 @@ The hooks work as on the web. With TanStack Query:
 
 ```tsx
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { randomUUID } from "expo-crypto";
+import { Text } from "react-native";
 import { createNotesHooks } from "./__generated__/queries/notes";
 import { client } from "./client";
 
@@ -70,19 +75,18 @@ export default function App() {
 
 SWR and RTK Query hooks are used the same way, with their own provider.
 
-## What the client needs from Hermes
+## What to know about Hermes
 
-| Web API | On Hermes | In the client |
-|---|---|---|
-| `fetch`, `Headers`, `Response`, `AbortController` | provided by React Native | used; a missing `fetch` is refused at creation, pass `fetch` |
-| `crypto.randomUUID` | missing | refused at creation, pass `idempotencyKey` |
-| `AbortSignal.timeout`, `AbortSignal.any` | missing | an `AbortController` stands in |
-| `URLSearchParams.get` | React Native 0.84 and later | needed for a cursor in a `Link` header; refused at creation otherwise |
-| `URL.canParse` | missing | not used |
-| `TextEncoder`, `FormData`, `Blob`, `structuredClone`, `ReadableStream` | not needed | not used |
+- `crypto.randomUUID` is missing: pass `idempotencyKey`, as above.
+- `createClient` refuses to start on React Native before 0.84 when your contract reads a cursor from a `Link` header, because `URLSearchParams.get` is missing there. Update, or add a `URLSearchParams` polyfill such as `react-native-url-polyfill`.
+- An injected `fetch` also works, for example `expo/fetch`: pass it as `fetch` in the client config.
 
-An injected `fetch` also works, for example `expo/fetch`.
+A unit test runs the client and the hook runtime in Node with those globals removed, the way Hermes lacks them. No Expo app runs in CI.
 
-## Tested and not tested
+## Limits
 
-A unit test runs the generated client and the hook runtime in Node with those globals removed, the way Hermes lacks them. No Expo app runs in CI: the real `URL` and `URLSearchParams` of React Native, and the hooks inside a running app, are not tested.
+The client and hooks refuse the same forms as on the web: see [Generate errors](../troubleshooting/generate.md#clients).
+
+## Next
+
+[Point the client at your backend](backend-url.md), or [React](react.md) for the options of the hooks.
