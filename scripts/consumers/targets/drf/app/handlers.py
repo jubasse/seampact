@@ -46,6 +46,14 @@ _FIRST_NOTE_TEXT: str = "The first note"
 _NOTE_SECRET: str = "note-secret"
 
 
+def _updated_preferences(locale: str | None, digest: bool | None) -> Preferences:
+    # A digest the boundary stripped, or the caller left out, stays out of the answer.
+    if digest is None:
+        return Preferences(locale=locale or _DEFAULT_LOCALE)
+
+    return Preferences(locale=locale or _DEFAULT_LOCALE, digest=digest)
+
+
 class ChannelsHandlers:
     def get_channel(self, request: tasks.GetChannelRequest) -> tasks.GetChannelResult:
         caller_id = str(request.principal.user_id)
@@ -77,7 +85,7 @@ class PreferencesHandlers:
 
     def update_preferences(self, request: tasks.UpdatePreferencesRequest) -> tasks.UpdatePreferencesResult:
         body = request.input.body
-        preferences = Preferences(locale=body.locale or _DEFAULT_LOCALE, digest=body.digest)
+        preferences = _updated_preferences(body.locale, body.digest)
 
         return tasks.UpdatePreferencesResponse200(body=preferences)
 
@@ -91,7 +99,9 @@ class TasksHandlers:
         )
 
     def get_tasks_batch(self, request: tasks.GetTasksBatchRequest) -> tasks.GetTasksBatchResult:
-        return tasks.GetTasksBatchResponse200(body={str(task_id): task(task_id) for task_id in request.input.body.ids})
+        listed = {str(task_id): task(task_id) for task_id in request.input.body.ids}
+
+        return scripted_answer("getTasksBatch", _OK, _batch_of) or tasks.GetTasksBatchResponse200(body=listed)
 
     def create_task(self, request: tasks.CreateTaskRequest) -> tasks.CreateTaskResult:
         created = task(NEW_TASK_ID)
@@ -187,6 +197,12 @@ def _task_reply_of(body: dict[str, object]) -> tasks.GetTaskResult:
 
 def _service_task_reply_of(body: dict[str, object]) -> service.GetTaskResult:
     return service.GetTaskResponse200(body=service_task_of(body))
+
+
+def _batch_of(body: dict[str, object]) -> tasks.GetTasksBatchResult:
+    return tasks.GetTasksBatchResponse200(
+        body={task_id: task_of(entry) for task_id, entry in body.items() if isinstance(entry, dict)}
+    )
 
 
 def _task_page_of(body: dict[str, object]) -> tasks.ListTasksResult:
