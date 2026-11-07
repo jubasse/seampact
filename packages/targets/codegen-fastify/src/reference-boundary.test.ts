@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { LinkSet } from "@seampact/codegen-core";
 import {
+  expectedRefusalOf,
   FORMS_REFUSED_BY_ONE_ZERO,
   GENERATE_TIMEOUT_MILLISECONDS,
   generateReferenceProject,
@@ -373,7 +374,7 @@ describe("the forms 1.0 refuses", () => {
 
     expect(outcome).toMatchObject({
       status: "refused",
-      refusals: expect.arrayContaining([expect.objectContaining({ code: form.code })]),
+      refusals: expect.arrayContaining([expect.objectContaining(expectedRefusalOf(form))]),
     });
   });
 });

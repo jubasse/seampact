@@ -3,11 +3,20 @@ import type { GenerateOutcome, GenerateRequest, Target } from "../target.js";
 import { packIr } from "./live-pages.test-support.js";
 import { readGoldenIr } from "./reference-project.test-support.js";
 
-/** A form 1.0 refuses by name: how to put it in the golden tasks api, and the code the refusal carries. */
+/**
+ * A form 1.0 refuses by name: how to put it in the golden tasks api, the code the refusal carries and, when named, the
+ * IR member it points at.
+ */
 export interface RefusedForm {
   readonly title: string;
   readonly code: string;
+  readonly member?: string;
   readonly change: (ir: ContractIR) => void;
+}
+
+/** The members a refusal of [form] carries: its code, and its pointer when the form names one. */
+export function expectedRefusalOf(form: RefusedForm): { code: string; member?: string } {
+  return form.member === undefined ? { code: form.code } : { code: form.code, member: form.member };
 }
 
 type Operation = ContractIR["operations"][number];
@@ -244,6 +253,23 @@ export const FORMS_REFUSED_BY_ONE_ZERO: readonly RefusedForm[] = [
 
       sort.style = "split";
       sort.direction = SPLIT_SORT_DIRECTION;
+    },
+  },
+  {
+    title: "idempotency enforced by none",
+    code: "idempotency.enforce.unsupported",
+    member: "/operations/2/idempotency",
+    change: (ir) => {
+      const { idempotency } = operationOf(ir, "createTask");
+
+      if (
+        idempotency === undefined ||
+        !isKnownVariant("Idempotency", idempotency) ||
+        idempotency.kind === "exempt"
+      )
+        throw new Error("the golden createTask has no enforced idempotency");
+
+      idempotency.enforce = "none";
     },
   },
 ];

@@ -1,4 +1,5 @@
 import {
+  expectedRefusalOf,
   FORMS_REFUSED_BY_ONE_ZERO,
   GENERATE_TIMEOUT_MILLISECONDS,
   generateReferenceProject,
@@ -128,7 +129,7 @@ describe("the generated reference boundary compiles", () => {
 
     expect(outcome).toMatchObject({
       status: "refused",
-      refusals: expect.arrayContaining([expect.objectContaining({ code: form.code })]),
+      refusals: expect.arrayContaining([expect.objectContaining(expectedRefusalOf(form))]),
     });
   });
 
