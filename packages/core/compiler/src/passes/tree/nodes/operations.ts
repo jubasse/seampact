@@ -13,9 +13,9 @@ import { treeNodesDegradable } from "./degradable.js";
 import {
   type TreeNodesReportOnce,
   treeNodesError,
-  treeNodesWarning,
   treeNodesNodeOrigin,
   treeNodesReportOnce,
+  treeNodesWarning,
 } from "./diagnostics.js";
 import { treeNodesExamples } from "./examples.js";
 import type { TreeNodesSite } from "./fields.js";

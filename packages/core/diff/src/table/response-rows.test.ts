@@ -1,4 +1,3 @@
-import { describe, expect, test } from "vitest";
 import {
   type ContractIR,
   isKnownVariant,
@@ -8,6 +7,7 @@ import {
   type ResponseHeader,
   type TypeUse,
 } from "@seampact/spec/ir";
+import { describe, expect, test } from "vitest";
 import { changesOf, editedIr, goldenIr, objectSchemaOf, operationOf } from "../test-support.js";
 import { type RowCase, testRowCases } from "./row-case.test-support.js";
 

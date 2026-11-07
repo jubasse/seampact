@@ -1,6 +1,6 @@
 import type { Origin } from "@seampact/spec/ir";
-import type { JsonValue, RawApi } from "../raw-tree.js";
 import { canonicalJson } from "@seampact/spec/json";
+import type { JsonValue, RawApi } from "../raw-tree.js";
 import { isJsonList, isJsonObject, jsonAt, pipelineOrigin, pointerBelow } from "./pointer.js";
 import type { PassReadonly } from "./readonly.js";
 import type { TreeNode } from "./tree.js";

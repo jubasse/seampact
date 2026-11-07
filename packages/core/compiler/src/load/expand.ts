@@ -1,3 +1,4 @@
+import { escapePointer } from "@seampact/spec/json";
 import { isAlias, isMap, isScalar, isSeq, type Node, type Pair, Scalar, type YAMLMap } from "yaml";
 import { mappingKeysHint } from "../diagnostics/mapping-keys.js";
 import { diagnosticInert } from "../diagnostics/print.js";
@@ -12,7 +13,6 @@ import { type LoadBudget, loadWorkOf } from "./budget.js";
 import type { LoadFragment } from "./fragments.js";
 import { asObject, cloneJson, isReservedKey, jsonObject, setKey } from "./json.js";
 import { LOAD_MAX_DEPTH } from "./limits.js";
-import { escapePointer } from "@seampact/spec/json";
 import { pointerSegments } from "./paths.js";
 import {
   admitsInteger,

@@ -1,3 +1,4 @@
+import { escapePointer } from "../json/pointer.js";
 import {
   type IrUnknownKind,
   type IrUnknownValue,
@@ -5,7 +6,6 @@ import {
   listIrUnknowns,
   MUST_ACT_KEYWORD,
 } from "./instance-walk.js";
-import { escapePointer } from "../json/pointer.js";
 import { isSchemaNode, walkSchema } from "./schema-walk.js";
 import {
   IR_SCHEMA_DOCUMENTS,

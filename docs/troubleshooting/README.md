@@ -10,7 +10,15 @@ A contract or config error prints the file, the line, the column, a severity, th
 api.yaml:5:13: error seampact/load/yaml-boolean: ...
 ```
 
-Search this page or the page index for the code (`seampact/load/yaml-boolean`). A message of the generated server starts with `seampact: the api '<id>' cannot start:` and has no code: see [Boot errors](boot.md). Each message ends with `Fix:`. Read it first.
+A `generate` refusal starts with the contract line when it has one, and ends with the docs section of its code:
+
+```text
+api.yaml:42: paging.sort.style.unsupported: entry 'server', api 'notes': ... Fix: Ask the user first: ... Docs: https://jubasse.github.io/seampact/troubleshooting/generate/#node-servers
+```
+
+A fix that starts with "Ask the user first:" changes the api: ask before you apply it.
+
+Search this page or the page index for the code (`seampact/load/yaml-boolean`). A message of the generated server starts with `seampact: the api '<id>' cannot start:` and has no code: see [Boot errors](boot.md). Each message has a `Fix:`. Read it first.
 
 ## Find the page
 
@@ -28,14 +36,14 @@ Search this page or the page index for the code (`seampact/load/yaml-boolean`). 
 | `seampact/<rule>` such as `seampact/unused-declaration` | linting | [Lint](../features/lint.md) |
 | `signature.` | verifying a signed webhook with a seampact helper | [Signed webhook errors](signed-webhooks.md) |
 | `cli.`, `init.`, `lint.`, `diff.`, `explain.`, `compile.`, `binary.`, `ir.`, `bundle.source.` | running a command, or the Gradle or Maven plugin | [CLI errors](cli.md) |
-| `options.`, `names.`, `paging.`, `runtime.`, `artefact.`, `artefacts.`, `nativeDocs.`, or a form named like `input.multipart.unsupported` | running `generate` | [Generate errors](generate.md) |
+| `options.`, `names.`, `paging.`, `runtime.`, `artefact.`, `artefacts.`, `nativeDocs.`, `openapi.<form>.unsupported`, or any code ending in `.unsupported` | running `generate` | [Generate errors](generate.md) |
 | `seampact: the api '...' cannot start` | starting the generated server | [Boot errors](boot.md) |
 
 If no prefix matches, search the files of `docs/troubleshooting/` for the full code.
 
 ## Generate errors by family
 
-[Generate errors](generate.md) has one table per family: [Clients](generate.md#clients), [Node servers](generate.md#node-servers), [Spring Boot](generate.md#spring-boot), [PHP](generate.md#php), [Python](generate.md#python), [Spring Boot, PHP and Python](generate.md#spring-boot-php-and-python), [Every server](generate.md#every-server) and [Warnings](generate.md#warnings).
+[Generate errors](generate.md) has one table per family: [Clients](generate.md#clients), [Node servers](generate.md#node-servers), [Spring Boot](generate.md#spring-boot), [PHP](generate.md#php), [Python](generate.md#python), [Spring Boot, PHP and Python](generate.md#spring-boot-php-and-python), [Every server](generate.md#every-server), [Every Node target](generate.md#every-node-target), [OpenAPI documents](generate.md#openapi-documents) and [Warnings](generate.md#warnings).
 
 ## Errors with no code
 
