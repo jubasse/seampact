@@ -7,6 +7,7 @@ namespace Seampact\Symfony\Tests;
 use PHPUnit\Framework\TestCase;
 use Seampact\Codegen\Tests\Support\ReferenceContract;
 use Seampact\Codegen\Tests\Support\ResponseForms;
+use Seampact\Ir\Config\ConfigProblem;
 use Seampact\Ir\Run\GenerationRefusedException;
 use Seampact\Symfony\SymfonyGenerator;
 
@@ -143,6 +144,17 @@ final class SymfonyRefusalsTest extends TestCase
         self::assertStringContainsString("'redirect' response", self::refused(ResponseForms::withRedirectAnswer())['response.shape.unsupported'] ?? '');
     }
 
+    public function testAnInputFieldRightBelowTheTopLevelWaitsForAConsumer(): void
+    {
+        $document = ReferenceContract::withOperation('createTask', static function (\stdClass $operation): void {
+            self::firstOf($operation->fieldRights)->pointer = '/details/effort';
+        });
+        $problem = self::refusedProblem($document, 'fieldRight.nestedPointer.unsupported');
+
+        self::assertStringContainsString('An input field right below the top level', $problem->message);
+        self::assertStringContainsString('/fieldRights/0/pointer', $problem->where ?? '');
+    }
+
     public function testADegradableOperationIsRefusedByName(): void
     {
         self::assertArrayHasKey('degradable.unsupported', self::refused(ResponseForms::withDegradableOperation()));
@@ -269,6 +281,23 @@ final class SymfonyRefusalsTest extends TestCase
             }
 
             return $messages;
+        }
+
+        self::fail('The contract was generated, but a form in it should be refused.');
+    }
+
+    private static function refusedProblem(\stdClass $document, string $code): ConfigProblem
+    {
+        try {
+            (new SymfonyGenerator())->generate(ReferenceContract::read(new SymfonyGenerator(), $document), ReferenceContract::entry(SymfonyGenerator::PACKAGE, 'tasks', 'App\\Tasks'));
+        } catch (GenerationRefusedException $refused) {
+            foreach ($refused->problems as $problem) {
+                if ($problem->code === $code) {
+                    return $problem;
+                }
+            }
+
+            self::fail("The generation was refused, but not with '{$code}'.");
         }
 
         self::fail('The contract was generated, but a form in it should be refused.');
