@@ -10,11 +10,18 @@ use Seampact\Ir\Run\GenerationRefusedException;
 /** Collects why the generator writes no file, each reason with its code and fix; one form is refused once per place. */
 final class Refusals
 {
+    private const CODE_ROW = " The code's row: https://jubasse.github.io/seampact/troubleshooting/generate/";
+
     /** The fix of a form an operation uses. */
-    public const OPERATION_FIX = "Ask the user first: remove the operation from the entry's `operations` filter. The code's row: https://jubasse.github.io/seampact/troubleshooting/generate/";
+    public const OPERATION_FIX = "Ask the user first: remove the operation from the entry's `operations` filter." . self::CODE_ROW;
 
     /** The fix of an artefact switch of the entry, which no operation filter clears. */
-    public const ARTEFACT_SWITCH_FIX = "Remove the switch from the entry's `artefacts`: the target then uses its default. The code's row: https://jubasse.github.io/seampact/troubleshooting/generate/";
+    public const ARTEFACT_SWITCH_FIX = "Remove the switch from the entry's `artefacts`: the target then uses its default." . self::CODE_ROW;
+
+    /** The fixes of the api-level forms, which no operation filter clears. */
+    public const EXTENSION_KEYS_FIX = "Ask the user first: remove the api's `extensions` declarations and the extension values that use them." . self::CODE_ROW;
+    public const ABSOLUTE_URLS_FIX = "Ask the user first: set `conventions.urls` to `relative`." . self::CODE_ROW;
+    public const ERROR_NO_STORE_FIX = "Ask the user first: drop `sensitive` from the values in the error's params, or remove the operations that answer the error from `operations`." . self::CODE_ROW;
 
     /** @var array<string, ConfigProblem> */
     private array $problems = [];
@@ -69,12 +76,12 @@ final class Refusals
     }
 
     /** A form this release of the target does not generate, with its arrival: `<form>.unsupported`. */
-    public function pending(string $form, string $description, IrPlace $at, FormArrival $arrival): void
+    public function pending(string $form, string $description, IrPlace $at, FormArrival $arrival, string $fix = self::OPERATION_FIX): void
     {
         if ($arrival->release !== null) {
-            $this->waitingForRelease($form, $description, $at, $arrival->release, self::OPERATION_FIX);
+            $this->waitingForRelease($form, $description, $at, $arrival->release, $fix);
         } elseif ($arrival->delivery !== null) {
-            $this->waiting($form, $description, $at, $arrival->delivery);
+            $this->waitingWithFix($form, $description, $at, $arrival->delivery, $fix);
         }
     }
 

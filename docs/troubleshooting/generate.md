@@ -125,6 +125,8 @@ Laravel and Symfony. The forms refused by Spring Boot, PHP and Python are [in th
 |---|---|
 | `options.layout.unsupported` | One file per class under the PSR-4 directory is the only layout. Remove `layout`. |
 | `schema.union.unsupported`, `schema.map.unsupported`, `type.file.unsupported` | Spring Boot and PHP: a `oneOf`, a map schema and a file value are not generated yet. Remove the operation from `operations`. |
+| `urls.absolute.unsupported` | `conventions.urls: absolute` is not generated yet. Ask the user first: set `conventions.urls` to `relative`. |
+| `error.noStore.unsupported` | An error whose params carry a sensitive value forbids caching, which is not generated yet. Ask the user first: drop `sensitive` from the values in the error's params, or remove the operations that answer the error from `operations`. |
 | `input.multipart.unsupported`, `input.form.unsupported`, `type.file.unsupported` | Form, multipart and file values are not generated yet. Remove the operation from `operations`, or open an issue with your use case. |
 
 ## Python
@@ -146,13 +148,14 @@ FastAPI, Django REST framework and Django Ninja. The forms refused by Spring Boo
 | `response.binary.unsupported`, `response.redirect.unsupported` | Downloads and redirects are not generated yet. Remove the operation from `operations`. |
 | `input.media.unsupported`, `body.kind.unsupported` | Form, multipart and file bodies, and a body that is not an object schema, are not generated yet. Remove the operation from `operations`. |
 | `schema.union.unsupported`, `schema.map.unsupported` | A `oneOf` or a map schema is not generated yet. Remove the operation from `operations`. |
-| `enum.open.unsupported`, `enum.narrowed.unsupported`, `unknownKeys.keep.unsupported`, `extensionKeys.unsupported`, `paging.handlerResult.unsupported` | An open or narrowed enum, kept unknown keys, typed extension values and some paging facts are not generated yet. Remove the operation from `operations`. |
+| `enum.open.unsupported`, `enum.narrowed.unsupported`, `unknownKeys.keep.unsupported`, `paging.handlerResult.unsupported` | An open or narrowed enum, kept unknown keys and some paging facts are not generated yet. Remove the operation from `operations`. |
 | `param.path.structured.unsupported`, `param.header.structured.unsupported`, `param.default.unsupported`, `member.default.unsupported` | A path or header parameter that is not a scalar or an enum, and a default value, are not generated yet. Remove the operation from `operations`. |
 | `path.param.type.unsupported` | A path parameter is not a string, a number or an enum. Remove the operation from `operations`. |
 | `path.segment.literal.unsupported`, `path.segment.mixed.unsupported` | A fixed path segment holds `{`, `}` or `?`, or a segment mixes a parameter with text. Write each segment as a whole parameter or whole text. |
 | `path.param.missing`, `name.segment.missing` | The IR is not one seampact wrote. Compile the contract again with the same seampact release, or update the target. |
 | `name.collision` | Two schemas, members or errors give the same Python name. Rename one in the contract, or give one a `codeName`. |
-| `principalRequires.unsupported`, `bindings.unsupported`, `upstream.unsupported`, `features.unsupported` | The operation uses an access or relay form the Python targets do not generate yet. Remove the operation from `operations`. |
+| `principalRequires.unsupported`, `bindings.unsupported`, `upstream.unsupported` | The operation uses an access or relay form the Python targets do not generate yet. Remove the operation from `operations`. |
+| `features.unsupported` | A newer seampact compiler wrote this IR. Compile the contract with the seampact release the Python targets read. |
 
 ## Spring Boot, PHP and Python
 
@@ -166,7 +169,8 @@ Spring Boot, Laravel, Symfony, FastAPI, Django REST framework and Django Ninja r
 | `fieldRight.nestedPointer.unsupported` | An input field right sits below the top level of the body. Move the right to a top-level field, or remove the operation from `operations`. |
 | `bucket.key.unsupported`, `rule.proof.placement.unsupported` | A rate-limit bucket key or a rule proof is read from a place the server does not read yet. Remove the operation from `operations`. |
 | `scalar.content.unsupported`, `response.media.unsupported`, `response.header.unsupported` | A JSON string content, a non-JSON response and a response header written by the route are not generated yet. Remove the operation from `operations`. |
-| `unknownKeys.keep.unsupported`, `extensionKeys.unsupported` | Kept unknown keys and typed extension values are not generated yet. Remove the operation from `operations`. |
+| `unknownKeys.keep.unsupported` | Kept unknown keys are not generated yet. Remove the operation from `operations`. |
+| `extensionKeys.unsupported` | The api declares typed extension keys, which are not generated yet. Removing operations does not clear it. Ask the user first: remove the api's `extensions` declarations and the extension values that use them. |
 | `options.handlers.unsupported`, `options.naming.unsupported` | `handlers` is `perResource` only, and the naming options (`suffixes`, `perOperation` and the like) are not options of these targets. Remove the option. |
 
 ## Every server
