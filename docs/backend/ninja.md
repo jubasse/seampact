@@ -235,6 +235,22 @@ Also on the entry: [`mount`](../configuration/reference.md#mount) (a path prefix
 
 `bodyValidation` (and `body_validation` in `bind_shop()`) is not served on Ninja: the boot check refuses it. Use FastAPI for it.
 
+## Paging
+
+A paged list reads its page parameters in `request.input.query`: for the `cursor` style, `request.input.query.cursor` and `request.input.query.limit`. An absent cursor is `None`. When the client sends no limit, the boundary fills in the style's `defaultLimit`; a limit above `maxLimit` is a 400 before your handler runs.
+
+Return the generated `<Operation>Page`. It holds `items`, the list of the contract's item type, and one attribute per page fact the style's response names, in snake case (`next_cursor` for the fact `nextCursor`). The boundary writes the body, the headers and the `Link` relations from them. Never build them yourself.
+
+```python
+def list_products(self, request: ListProductsRequest) -> ListProductsResult:
+    query = request.input.query
+    products, next_cursor = load_products_page(after=query.cursor, limit=query.limit)
+
+    return ListProductsResponse200(body=ListProductsPage(items=[to_contract(product) for product in products], next_cursor=next_cursor))
+```
+
+Import `ListProductsPage` from `generated.shop.operations` with the other generated names. See [Lists](../contract/05-lists.md).
+
 ## Docs
 
 Ninja's `/docs` and `/openapi.json` show your own routes only. To add the contract's routes, set `nativeDocs` on the entry:

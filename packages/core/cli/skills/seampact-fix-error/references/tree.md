@@ -1,0 +1,22 @@
+<!-- Generated from docs/troubleshooting/tree.md by `node scripts/skills/cli.ts --write`. Edit the docs, not this file. -->
+
+# Contract content errors: tree
+
+Page: https://jubasse.github.io/seampact/troubleshooting/tree/
+
+Codes that start with `seampact/tree/` say your routes or schemas do not fit together.
+
+| Code | Cause and fix |
+|---|---|
+| `seampact/tree/schema-unknown` | A schema name is not declared. Declare it under `schemas`, or fix the name. |
+| `seampact/tree/required-unknown` | `required` lists a property the object does not have. Declare the property or remove it from `required`. |
+| `seampact/tree/schema-cycle` | A schema reaches itself without an object in between. Break the cycle with a named object. |
+| `seampact/tree/paging-style` | A `list` names no paging style. Declare your page shape under `pagings` (the error shows an example) and name it in `paging`, or write `paging: none`. See [Lists](https://jubasse.github.io/seampact/contract/05-lists/). |
+| `seampact/tree/paging-unknown` | The style is not declared under `pagings`. Declare it or fix the name. |
+| `seampact/tree/path-param` | A path holds `{who}` and nothing declares it. Declare it in `pathParams`. |
+| `seampact/tree/path-segment` | A route `path` has a `/` at an end. Write relative segments with no `/` at either end. |
+| `seampact/tree/collection-singular` | A collection with no `id` has no name to derive from. Add `singular: note` for the names it derives. |
+| `seampact/tree/format-unknown` | The `format` is not a portable format. Declare it under `scalars`, or write a portable one such as `uuid`. |
+| `seampact/tree/api-version` | The api version is a label such as `v1`, but the path has `{version}`. Write an integer, or set `pathVersion: none`. |
+
+See [Types and references](https://jubasse.github.io/seampact/contract/02-types-and-refs/) and [Lists](https://jubasse.github.io/seampact/contract/05-lists/).

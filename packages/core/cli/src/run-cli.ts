@@ -4,12 +4,16 @@ import { parseArgs } from "node:util";
 import { type CliIo, EXIT_USAGE, printProblems } from "./cli-io.js";
 import type { CliProblem } from "./cli-problem.js";
 import {
+  type AgentsInstallOptions,
+  agentsInstallCommand,
   type BundleCommandOptions,
   bundleCommand,
+  CLAUDE_SKILLS_DIRECTORY,
   type ConfigLocation,
   checkCommand,
   compileCommand,
   configLocation,
+  DEFAULT_SKILLS_DIRECTORY,
   diffCommand,
   EDITOR_SCHEMAS_POLICIES,
   type EditorSchemasPolicy,
@@ -27,6 +31,10 @@ const COMMAND_USAGE: ReadonlyMap<string, string> = new Map([
   [
     "init",
     "  init [--blank] [--editor-schemas[=ignore|commit|none]] [--no-modelines] [--no-ignore-files]\n                                           Write a new project here: seampact.config.yaml and contract/api.yaml, a small example (--blank: the api header alone), with its modeline and editor schemas, git-ignored by default.\n  init --modelines [--config <path>] [--editor-schemas[=ignore|commit|none]] [--no-ignore-files]\n                                           Write or correct the modeline of every contract file of the app config's `path` sources, and their editor schemas.",
+  ],
+  [
+    "agents",
+    "  agents install [--claude] [--skills-directory <dir>]\n                                           Write the seampact block into AGENTS.md between two markers and copy the seampact skills into <dir> (.agents/skills by default; --claude also .claude/skills). A second run rewrites only the block and the seampact skill folders.",
   ],
   [
     "compile",
@@ -83,6 +91,8 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<number
   if (waitingFlag !== undefined) return notAvailable(io, `The flag '${waitingFlag}'`);
 
   if (command === "init") return runInit(rest, io);
+
+  if (command === "agents") return runAgents(rest, io);
 
   if (command === "compile") return runCompile(rest, io);
 
@@ -168,6 +178,30 @@ async function runInit(args: readonly string[], io: CliIo): Promise<number> {
     },
     io,
   );
+}
+
+const AGENTS_INSTALL_SUBCOMMAND = "install";
+
+async function runAgents(args: readonly string[], io: CliIo): Promise<number> {
+  const [subcommand, ...rest] = args;
+
+  if (subcommand !== AGENTS_INSTALL_SUBCOMMAND)
+    return usageError(io, "`agents` takes one subcommand: `agents install`.");
+
+  const parsed = parseCommandArgs(rest, {
+    claude: { type: "boolean" },
+    "skills-directory": { type: "string" },
+  });
+
+  if (parsed.status === "refused") return usageError(io, parsed.message);
+
+  const primary = stringOption(parsed.values["skills-directory"]) ?? DEFAULT_SKILLS_DIRECTORY;
+  const options: AgentsInstallOptions = {
+    skillsDirectories:
+      parsed.values.claude === true ? [primary, CLAUDE_SKILLS_DIRECTORY] : [primary],
+  };
+
+  return agentsInstallCommand(options, io);
 }
 
 async function runCompile(args: readonly string[], io: CliIo): Promise<number> {
