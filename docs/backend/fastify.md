@@ -1,27 +1,29 @@
-# Write the handlers (Fastify)
+# Fastify
 
-This page replaces the NestJS page. The generated `NotesEndpoints` interface lists one method per operation. Each method returns the status and body the contract allows; `Notes.Status` and `Notes.ErrorCode` name them. You pass your handlers to the generated Fastify plugin, which checks the access, the input and the reply around them.
+`@seampact/codegen-fastify` generates a Fastify plugin that checks access, input and replies for every route of the contract. You write the handlers and the [hooks](node-hooks.md). Fastify 5 is supported; see [Supported versions](../supported-versions.md).
 
-## Dependencies and config
+## Set up
 
-Do this in [Install](../getting-started/01-install.md), before you install seampact. In `package.json`, use these `dependencies` and keep the `devDependencies`.
+You need:
 
-```json
-{
-  "dependencies": {
-    "ajv": "8.20.0",
-    "fastify": "5.12.7"
-  }
-}
+- Node.js 24 or later;
+- a contract, as in [Your first API](../getting-started/README.md);
+- every `@seampact/*` package at the same version. Yarn Plug'n'Play is not supported.
+
+Install Fastify and seampact. The Fastify target checks bodies with Ajv validators it generates, so there is no `zod` and no validators target.
+
+```sh
+npm install fastify ajv @seampact/server-runtime @seampact/hooks
+npm install --save-dev @seampact/cli @seampact/codegen-ts @seampact/codegen-fastify
 ```
 
-Keep `@seampact/server-runtime`, which you install in `dependencies`: the generated server imports it. Keep it at the version of your other seampact packages. Yarn Plug'n'Play is not supported: the check before generating looks for `@seampact/server-runtime` in `node_modules`.
-
-In `tsconfig.json`, leave out `experimentalDecorators`: Fastify has no decorators.
-
-In [Generate](../getting-started/03-generate-and-run.md), use this `targets` list in `seampact.config.yaml`. The Fastify target checks bodies with Ajv validators it generates, so there is no `validators` entry and no `zod`.
+In `seampact.config.yaml`, add the targets.
 
 ```yaml
+outDir: src/__generated__
+sources:
+  notes:
+    path: ./contract
 targets:
   - id: types
     use: "@seampact/codegen-ts"
@@ -35,15 +37,21 @@ targets:
       types: types
 ```
 
-Then run `npx seampact generate` as in [Generate](../getting-started/03-generate-and-run.md).
+Generate, then commit the files: `seampact check` fails later if they drift from the contract.
 
-## The handlers
+```sh
+npx seampact generate
+```
 
-Create `src/notes-handlers.ts`.
+You see one line per target, and the files appear in `src/__generated__`. Types come from `types/notes`. The handlers interface and the plugin come from `server/notes`. Fastify has no decorators: leave `experimentalDecorators` out of `tsconfig.json`.
+
+## Write a handler
+
+The generated `NotesEndpoints` interface has one method per operation. Each returns a status and the body the contract allows for it. `Notes.Status` names the statuses, and `Notes.ErrorCode` the error codes: `ApiNotFound` is the built-in `api.not_found`. Create `src/notes-handlers.ts`.
 
 ```ts
 import { randomUUID } from "node:crypto";
-import * as NotesFastify from "./__generated__/server/notes/index.js";
+import type * as NotesFastify from "./__generated__/server/notes/index.js";
 import * as Notes from "./__generated__/types/notes/index.js";
 
 const notes = new Map<string, Notes.schemas.Note>();
@@ -79,24 +87,36 @@ export const notesHandlers: NotesFastify.NotesEndpoints = {
 };
 ```
 
-`listNotes` returns every note; a real app reads `input.query.cursor` to page through them.
+### Who is calling
 
-Types come from `types/notes`. The handler interface and the plugin come from `server/notes`.
+When an operation has an identity, its `input` also has `principal`: what your authenticate hook returned. When it runs in a scope, `input.scopes` has one entry per scope, as your resolver returned it (the scope's `value` is `unknown`: narrow it). Both are read-only and are left out when you spread or serialise `input`. Type the parameter with `HandlerInputs`.
 
-## The app
+```ts
+getNote(input: NotesFastify.HandlerInputs["getNote"]) {
+  const ownerId = input.principal.userId;
+  const workspaceId = input.scopes.workspace.id;
+```
 
-Create `src/main.ts`. A public api needs no hooks. `collectFrameworkRoutes` must come right after `Fastify()`: the plugin uses it at startup to find routes you add outside the contract. The not-found handler answers unknown routes in the contract's error format.
+A public operation has no `principal`, and an operation in no scope has no `scopes`.
+
+## Wire it in
+
+Create `src/main.ts`.
 
 ```ts
 import Fastify from "fastify";
 import * as NotesFastify from "./__generated__/server/notes/index.js";
 import { notesHandlers } from "./notes-handlers.js";
+import { notesHooks } from "./notes-hooks.js";
 
 const app = Fastify();
 
 NotesFastify.collectFrameworkRoutes(app);
 
-await app.register(NotesFastify.plugin, { handlers: { NotesEndpoints: notesHandlers } });
+await app.register(NotesFastify.plugin, {
+  handlers: { NotesEndpoints: notesHandlers },
+  hooks: notesHooks(),
+});
 
 app.setNotFoundHandler((request, reply) => {
   if (NotesFastify.renderPreRoutingError(request, reply)) return;
@@ -107,7 +127,12 @@ app.setNotFoundHandler((request, reply) => {
 await app.listen({ port: 3000 });
 ```
 
-Typecheck.
+- `collectFrameworkRoutes` must come right after `Fastify()`. The plugin uses it at start to find the routes you add outside the contract.
+- Register the plugin without a prefix. Another prefix is refused at boot.
+- The not-found handler answers unknown routes in the contract's error format.
+- For a public api, leave `hooks` out.
+
+Check the types.
 
 ```sh
 npx tsc -p .
@@ -115,31 +140,64 @@ npx tsc -p .
 
 You see no output.
 
-A throttler's 429 works out of the box with `@fastify/rate-limit`. When the operation's `rateLimited` code requires `retryAfterMs`, seampact fills it from the throttler's `Retry-After` (seconds or an HTTP date), read from the reply or from the exception. Without a usable `Retry-After`, the reply is a logged 500 (with an optional `retryAfterMs`, the code is answered without it) that names the fix: answer the code from the handler with its params.
+## Write the hooks
 
-## Who is calling
+Authenticate, decide, scope resolver, idempotency store and unexpected-error listener are the same on every Node server. [Hooks for Node servers](node-hooks.md) shows each one and a complete `src/notes-hooks.ts`. Pass the object as `hooks`, as in `main.ts` above.
 
-When an operation declares an identity, its handler's `input` also has `principal`: what your authenticate hook returned, typed with the identity's principal schema. A public operation has no `principal`.
+### Use Fastify's own auth
 
-When an operation runs in a scope, `input.scopes` has one entry per scope, as your resolver returned it. An operation in no scope has no `scopes`.
+Call your auth library from a decide hook and let it throw an error whose `statusCode` is 401 or 403 (`@fastify/sensible`'s `httpErrors.unauthorized()` does): seampact answers the right's first declared denial code. See [Use your framework's own auth](node-hooks.md#use-your-frameworks-own-auth).
 
-Both are read-only and are not part of the request: spreading or serialising `input` leaves them out. Type the parameter with `HandlerInputs`.
+## Options
+
+Set these in `options:` of the `server` entry.
+
+| Option | Default | What it does |
+|---|---|---|
+| `responses` | `strict` | What happens when a handler answers something the contract does not declare. `strict` replaces the reply with the api's 500. `warn` lets it through and logs it. |
+| `bodyValidation` | `false` | Check the success bodies your code writes outside the handler result. A handler result is typed already. |
+| `frameworkEtag` | `strip` | `strip` removes an ETag Fastify adds to a reply written outside the contract. `keep` leaves it. |
+| `catchAll` | `true` | Answer the api's 404 for a path under its base path that no route serves, or a method it does not serve. `false` leaves those requests to your app. |
+| `compression` | `{ thresholdBytes: 1024 }` | When `@fastify/compress` is registered, compress replies of at least this size. `off` never compresses. `{ thresholdBytes: 4096 }` moves the threshold. |
+
+Every option of this target is in the [config reference](../configuration/reference.md#codegen-fastify). Entry keys shared by the Node servers: [`mount`](../configuration/reference.md#mount), [`frameworkRoutes`](../configuration/reference.md#framework-routes) and the [boot check](../configuration/reference.md#boot-check).
+
+`register(plugin, { handlers, hooks, logger })` takes `logger: { warn, error }`. seampact then writes its messages there instead of `console`. The logger is shared by the whole generated api, so the last registration wins.
+
+## Rate limits
+
+A 429 from `@fastify/rate-limit` works as is. If the operation's `rateLimited` code requires `retryAfterMs`, seampact fills it from the `Retry-After` header (seconds or an HTTP date). Without a usable header, the client gets a logged 500: answer the code from the handler with its params instead.
+
+## Paging
+
+A list handler returns the items and the page facts your paging style names, for example `{ items, nextCursor }`. Read the client's cursor in `input.query.cursor`. See [Lists](../contract/05-lists.md).
+
+## Docs and OpenAPI
+
+To show the contract in `@fastify/swagger`, set `artefacts: { nativeDocs: true }` on the `server` entry and generate again. Register `@fastify/swagger` in OpenAPI 3.1 mode, with the generated transform. Do this before the plugin.
 
 ```ts
-getNote(input: NotesFastify.HandlerInputs["getNote"]) {
-  const ownerId = input.principal.userId;
-  const workspaceId = input.scopes.workspace.id;
+await app.register(swagger, {
+  openapi: { openapi: "3.1.0", info: { title: "Notes", version: "1" } },
+  transformObject: NotesFastify.contractSwaggerTransformObject(),
+});
 ```
 
-The scope's `value` is `unknown`: narrow it before use.
+With two apis, pass the first transform to the second: `OtherFastify.contractSwaggerTransformObject(NotesFastify.contractSwaggerTransformObject())`. If the Swagger UI adds routes such as `/docs`, list them under `frameworkRoutes`. More in [OpenAPI and docs](../configuration/openapi-and-docs.md).
 
 ## Test your routes
 
-Build the app as `main.ts` does, without `listen`, and send requests with `app.inject`. Send the credential header your authenticate hook reads.
+Build the app as `main.ts` does, without `listen`, and send requests with `app.inject`. Send the credential your authenticate hook reads.
 
 ```ts
-const reply = await app.inject({ method: "GET", url: `/v1/notes/${noteId}`, headers: { authorization: "Bearer test-user" } });
+const reply = await app.inject({
+  method: "GET",
+  url: `/v1/notes/${noteId}`,
+  headers: { authorization: "Bearer test-user" },
+});
 ```
+
+To replace the hooks in a test, pass test hooks to the plugin: `app.register(NotesFastify.plugin, { handlers, hooks: testHooks })`.
 
 To test a handler without HTTP, call it with a plain input. Add `principal` and `scopes` yourself: nothing checks them on a direct call.
 
@@ -147,44 +205,42 @@ To test a handler without HTTP, call it with a plain input. Add `principal` and 
 const reply = await notesHandlers.getNote({ path: { noteId }, principal: { userId } });
 ```
 
-To use test hooks, pass them to the plugin in the test app: `app.register(NotesFastify.plugin, { handlers, hooks: testHooks })`.
+### Debug locally
 
-With `NODE_ENV=development`, an exception your handler throws goes to Fastify's error handler, which answers its message. seampact logs the message and the file and line it came from. Outside development, under the default `responses: strict` the client gets the api's 500; under `responses: warn` the framework's reply goes out as written and the violation is logged.
+With `NODE_ENV=development`, an exception your handler throws goes to Fastify's error handler, which answers its message. seampact logs the message and the file and line it came from. Otherwise, under `responses: strict` the client gets the api's 500. Under `responses: warn` Fastify's reply goes out as written and the violation is logged.
 
-## Behind a reverse proxy and in Docker
+## Deploy
 
-Trust only your proxy's addresses, not a hop count, so `request.ip` and `request.protocol` are the caller's:
+Behind a proxy, trust only your proxy's addresses, not a hop count, so `request.ip` and `request.protocol` are the caller's. Your hooks get `request.ip` as the client address.
 
 ```ts
 const app = Fastify({ trustProxy: ["127.0.0.1", "10.0.0.0/8"] });
 ```
 
-The client address your hooks get is `request.ip`, so it follows this setting.
+The proxy forwards the contract's paths as they are (`/v1/notes`). Strip only a prefix you added in front, such as `/api`. To serve the api under a prefix, set `mount: /api` on the target entry instead, and register the plugin without a prefix.
 
-The proxy forwards the contract's paths as they are (`/v1/notes`): strip only a prefix you added in front, such as `/api`. Register the plugin without a prefix: another prefix is refused at boot. To serve the api under a prefix, set `mount: /api` on the target entry instead.
+Page links are query-only (`?page=2`), so they stay right behind a proxy that strips a prefix.
 
-Page links are query-only (`?page=2`), so they stay right behind a proxy that strips a prefix. A client resolves them against the URL it called, not the API base URL.
+In Docker, keep `.env` out of the image: add it to `.dockerignore`, and pass values with `docker run -e` or mounted secret files. Check your variables at start with `@fastify/env`; they are ready after `await app.register(...)`.
 
-Check your variables at start with `@fastify/env`; they are ready after `await app.register(...)`. Keep `.env` out of the image: add it to `.dockerignore`, and pass values with `docker run -e` or mounted secret files.
+The server also checks itself at start. Fix the lines it prints, then start again ([all messages](../troubleshooting/boot.md#node-servers)).
 
-## Wiring reference
+| Fault | Fix |
+|---|---|
+| a hook is missing (`no authenticate hook ...`, `no decider ...`) | Add it. See the [boot check of the hooks](node-hooks.md#boot-check). |
+| `the framework route 'GET /docs' is outside the contract and not allow-listed` | List the route under `frameworkRoutes` of the target entry, with a reason, then generate again. |
+| `the plugin is registered under the prefix '<prefix>', which is not one of the api's base paths` | Register the plugin without a prefix and use `mount` on the entry. |
+| `handlers.NotesEndpoints has no method getNote()` | Implement the method. |
 
-Every server target takes four options: `bodyValidation` (check the success bodies your code writes outside the handler result, off by default; a handler result is typed already), `frameworkEtag` (`strip` by default removes an ETag the framework adds to a reply your code wrote outside the contract; `keep` leaves it), `catchAll` (`true` by default answers the api's 404 for a path under its base path that no route serves, or a method it does not serve; `false` leaves those requests to your app) and `responses`, which decides what happens when your handler answers something the contract does not declare: `strict` (the default) replaces the reply with a 500 in the api's format, `warn` lets it through and logs it. When you register the api, `logger: { warn, error }` sends the messages seampact writes (such as that log) to your logger instead of `console`; the logger is shared by the whole generated api, so the last registration wins. Fastify also takes `compression`: when `@fastify/compress` is registered, replies of 1024 bytes or more are compressed; `compression: off` never compresses them, and `compression: { thresholdBytes: 4096 }` moves the threshold.
+## Limits
 
-Register the generated plugin. It keeps the raw bytes of signed routes itself.
+- A query list in the `brackets` form is refused by `generate`.
+- An identity header written on a response is refused (`identity.response.header.unsupported`).
+- A sort key or a nested input field restricted by a right is refused (`paging.sortKey.restricted.unsupported`, `fieldRight.nestedPointer.unsupported`).
 
-```ts
-await app.register(TasksFastify.plugin, { handlers: { TasksEndpoints: tasksHandlers }, hooks: tasksHooks() });
-```
+Every refusal and its fix: [Node servers](../troubleshooting/generate.md#node-servers) and [every server](../troubleshooting/generate.md#every-server). For 428 and 412 on versioned writes, see [Catch lost updates](../contract/07-advanced.md#catch-lost-updates).
 
-Next: [run it](../getting-started/03-generate-and-run.md#run-it).
+## Next
 
-## Versioned writes and query lists
-
-A write versioned with `header.If-Match` answers 428 when the header is missing or empty, before the handler runs. A weak tag (`W/"7"`) is accepted, and the handler receives the version unquoted (`7`). A stale version is a 412: the handler returns the `preconditionFailed` error. See [Catch lost updates](../contract/07-advanced.md#catch-lost-updates).
-
-A query list is read in the default `repeat` form (`tag=a&tag=b`) or as `comma`. The `brackets` form is refused by `generate`.
-
-An identity header written on a response (a `versionToken` header, or one declared `in: response`) is refused by `generate` (`identity.response.header.unsupported`): no handler can write it yet.
-
-A sort key restricted by a right (`paging.sortKey.restricted.unsupported`) and an input field right below the top level of the input (`fieldRight.nestedPointer.unsupported`) are refused by `generate`. Leave the key out of `sortable`, and put the field at the top level.
+- [Hooks for Node servers](node-hooks.md): write the hooks your contract asks for.
+- [Call it from React](../frontend/react.md): use the same contract from the browser.
