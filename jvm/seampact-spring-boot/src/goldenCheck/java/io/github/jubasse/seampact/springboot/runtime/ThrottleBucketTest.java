@@ -82,13 +82,7 @@ class ThrottleBucketTest {
     @Test
     void theThrottleDecideCallReceivesTheBucketKeyValuesLimitAndWindow() throws Exception {
         SeampactBoundary boundary = new SeampactBoundary(TasksContractTable.json(), new TasksSeampactBinding(), beans, new StandardEnvironment());
-        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/v1/channels/" + CHANNEL_ID + "/tasks");
-        request.addHeader("Authorization", "Bearer accepted");
-        request.addHeader("Idempotency-Key", UUID.randomUUID().toString());
-        request.setContentType("application/json");
-        request.setContent("{\"title\":\"Counted\"}".getBytes(StandardCharsets.UTF_8));
-
-        throughTheInterceptor(boundary, request);
+        throughTheInterceptor(boundary, createTaskRequest());
 
         ThrottleBucket bucket = decideCalls.stream().filter(call -> call.name().equals(THROTTLE_RULE)).findFirst().orElseThrow().bucket().orElseThrow();
         assertEquals(WRITE_BUCKET, bucket.id());
@@ -97,13 +91,36 @@ class ThrottleBucketTest {
         assertEquals(Optional.of(WRITE_WINDOW_MS), bucket.windowMs());
     }
 
+    @Test
+    void aBucketMissingFromTheContractTableFailsByName() throws Exception {
+        String tableWithoutTheBucket = TasksContractTable.json().replace("\"buckets\":{\"write\":", "\"buckets\":{\"renamed\":");
+        SeampactBoundary boundary = new SeampactBoundary(tableWithoutTheBucket, new TasksSeampactBinding(), beans, new StandardEnvironment());
+
+        MockHttpServletResponse response = throughTheInterceptor(boundary, createTaskRequest());
+
+        // The boundary logs the named failure and answers 500, never a decide call with an empty bucket.
+        assertEquals(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, response.getStatus());
+        assertEquals(List.of(), decideCalls.stream().filter(call -> call.name().equals(THROTTLE_RULE)).toList());
+    }
+
+    private static MockHttpServletRequest createTaskRequest() {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/v1/channels/" + CHANNEL_ID + "/tasks");
+        request.addHeader("Authorization", "Bearer accepted");
+        request.addHeader("Idempotency-Key", UUID.randomUUID().toString());
+        request.setContentType("application/json");
+        request.setContent("{\"title\":\"Counted\"}".getBytes(StandardCharsets.UTF_8));
+        return request;
+    }
+
     // The request through the boundary filter and the interceptor, where the access steps call the decide hook.
-    private void throughTheInterceptor(SeampactBoundary boundary, MockHttpServletRequest request) throws Exception {
+    private MockHttpServletResponse throughTheInterceptor(SeampactBoundary boundary, MockHttpServletRequest request) throws Exception {
         TasksHandlers controller = new TasksHandlers();
         HandlerMethod handler = new HandlerMethod(controller, TasksHandlers.class.getMethod("createTask", CreateTaskInput.class));
 
-        new BoundaryFilter(boundary).doFilter(request, new MockHttpServletResponse(),
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        new BoundaryFilter(boundary).doFilter(request, response,
                 (filtered, reply) -> new BoundaryInterceptor(boundary).preHandle((HttpServletRequest) filtered, (HttpServletResponse) reply, handler));
+        return response;
     }
 
     public static final class TasksHandlers {

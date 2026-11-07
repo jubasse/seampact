@@ -12,7 +12,7 @@ def refuse_restricted_sort_keys(operation: Operation, at: IrPlace, refusals: Ref
         if sort_key.right is not None:
             refusals.waiting(
                 "paging.sortKey.right",
-                f"The sort key '{sort_key.key}', restricted by a right",
+                f"The sort key '{sort_key.key}' restricted by the right '{sort_key.right}'",
                 at.below("paging", "sortKeys", position),
                 Delivery.CONSUMER,
             )

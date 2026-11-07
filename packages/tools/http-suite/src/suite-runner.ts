@@ -177,12 +177,11 @@ async function runCase(suiteCase: SuiteCase, context: RunContext): Promise<CaseR
   const captureTargets = new Map<string, string>();
   const failures: string[] = [];
   const reader = suiteCase.profiles.includes("default") ? context.reader : undefined;
+  // A background request runs beside the later steps; its failures are reported once every step has run.
+  const backgroundRuns: Promise<string[]>[] = [];
 
   try {
     await loadScript(context.baseUrl, suiteCase.script ?? {}, timeoutSignal(context));
-
-    // A background request runs beside the later steps; its failures are reported once every step has run.
-    const backgroundRuns: Promise<string[]>[] = [];
 
     for (const [index, step] of suiteCase.steps.entries()) {
       if (isScriptStep(step)) {
@@ -200,7 +199,8 @@ async function runCase(suiteCase: SuiteCase, context: RunContext): Promise<CaseR
       else failures.push(...(await labelled()));
     }
 
-    for (const backgroundFailures of await Promise.all(backgroundRuns)) {
+    // Taken out of the list once awaited, so a later throw does not release or report them twice.
+    for (const backgroundFailures of await Promise.all(backgroundRuns.splice(0))) {
       failures.push(...backgroundFailures);
     }
 
@@ -209,6 +209,7 @@ async function runCase(suiteCase: SuiteCase, context: RunContext): Promise<CaseR
     }
   } catch (error) {
     failures.push(error instanceof Error ? error.message : String(error));
+    failures.push(...(await releaseBackgroundRuns(backgroundRuns, context)));
   }
 
   return {
@@ -216,6 +217,30 @@ async function runCase(suiteCase: SuiteCase, context: RunContext): Promise<CaseR
     outcome: failures.length === 0 ? "passed" : "failed",
     failures,
   };
+}
+
+// A step threw before the case released what it holds: an empty script releases a held request, so none outlives its
+// case and answers from the next case's script.
+async function releaseBackgroundRuns(
+  backgroundRuns: readonly Promise<string[]>[],
+  context: RunContext,
+): Promise<string[]> {
+  if (backgroundRuns.length === 0) return [];
+
+  const failures: string[] = [];
+
+  try {
+    await loadScript(context.baseUrl, {}, timeoutSignal(context));
+  } catch (error) {
+    failures.push(
+      `releasing the background requests: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+
+  for (const backgroundFailures of await Promise.all(backgroundRuns))
+    failures.push(...backgroundFailures);
+
+  return failures;
 }
 
 function failureOf(label: string): (error: unknown) => string[] {

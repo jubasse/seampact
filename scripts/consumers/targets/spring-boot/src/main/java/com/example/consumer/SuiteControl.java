@@ -78,9 +78,11 @@ final class SuiteControl {
         return recorded;
     }
 
-    // A key value is a string, a number, a boolean or an id the generated principal types as a UUID.
+    // A key value is a string, a number, a boolean, an id the generated principal types as a UUID, or null for a source
+    // the request does not carry.
     private static JsonNode keyValueNode(Object value) {
         return switch (value) {
+            case null -> JsonNodeFactory.instance.nullNode();
             case String text -> JsonNodeFactory.instance.stringNode(text);
             case UUID id -> JsonNodeFactory.instance.stringNode(id.toString());
             case Long number -> JsonNodeFactory.instance.numberNode(number);

@@ -26,5 +26,5 @@ def test_a_sort_key_restricted_by_a_right_is_refused_by_name_at_its_place(reposi
 
     [problem] = [problem for problem in refused.value.problems if problem.code == _REFUSED_FORM]
 
-    assert "restricted by a right" in problem.message
+    assert "The sort key 'createdAt' restricted by the right 'tasks.seeEffort'" in problem.message
     assert f"/operations/{position}/paging/sortKeys/0 (operation 'listTasks')" in problem.where

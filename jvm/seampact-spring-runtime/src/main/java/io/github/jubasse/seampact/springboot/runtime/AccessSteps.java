@@ -264,6 +264,11 @@ final class AccessSteps {
         if (bucketId.isMissingNode()) return Optional.empty();
 
         JsonNode bucket = boundary.table().ir().path("buckets").path(bucketId.asString());
+        if (!bucket.isObject()) {
+            throw new IllegalStateException("seampact: the contract table has no throttle bucket '" + bucketId.asString()
+                    + "'; regenerate the Spring Boot sources");
+        }
+
         ArrayNode keyValues = JsonNodeFactory.instance.arrayNode();
         for (JsonNode source : bucket.path("key")) keyValues.add(bucketKeyValue(boundary, exchange, source));
 
