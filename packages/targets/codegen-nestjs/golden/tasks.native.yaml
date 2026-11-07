@@ -1059,6 +1059,12 @@ paths:
         level: provisional
         source: api
       x-seampact-owner: caller
+      x-seampact-restricted-to:
+        - schema: UpdatePreferences
+          pointer: /digest
+          right: preferences.digest
+          direction: input
+          input: strip
   /v1/channels/{channelId}/tasks/{taskId}:
     get:
       operationId: getTask
