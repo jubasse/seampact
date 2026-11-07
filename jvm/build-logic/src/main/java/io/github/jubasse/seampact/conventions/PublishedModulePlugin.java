@@ -80,6 +80,7 @@ public final class PublishedModulePlugin implements Plugin<Project> {
             configureTestJdk(project);
             trackTestRuntime(project);
             configureDocumentationJars(project);
+            CoverageFloors.configure(project);
         });
 
         project.getPluginManager().apply(MavenPublishPlugin.class);

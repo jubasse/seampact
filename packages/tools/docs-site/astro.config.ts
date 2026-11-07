@@ -2,9 +2,7 @@ import { readFileSync } from "node:fs";
 import starlight from "@astrojs/starlight";
 import { defineConfig } from "astro/config";
 import starlightLinksValidator from "starlight-links-validator";
-import starlightLlmsTxt from "starlight-llms-txt";
 import {
-  LLMS_EXCLUDED_DOC_IDS,
   movedPageRedirects,
   SITE_BASE,
   SITE_URL,
@@ -54,10 +52,7 @@ export default defineConfig({
         // { tag: "meta", attrs: { name: "msvalidate.01", content: "<token>" } },
       ],
       sidebar,
-      plugins: [
-        starlightLinksValidator(),
-        starlightLlmsTxt({ projectName: "seampact", exclude: LLMS_EXCLUDED_DOC_IDS }),
-      ],
+      plugins: [starlightLinksValidator()],
     }),
   ],
 });
