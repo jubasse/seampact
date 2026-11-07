@@ -37,12 +37,12 @@ const create = Notes.useCreateNote();
 </script>
 ```
 
-In a real app, create `client` and `Notes` once in their own module and import them. `VITE_API_URL` holds your backend URL: see [Point the client at your backend](backend-url.md). After a write, the composables refresh the queries of the same resource.
+In a real app, create `client` and `Notes` once in their own module and import them. `VITE_API_URL` is the Vite variable for your backend URL (other tools read it elsewhere): see [Point the client at your backend](backend-url.md). After a write, the composables refresh the queries of the same resource.
 
 - TanStack Query: install `VueQueryPlugin` in your app.
 - Pinia Colada: install Pinia, then `PiniaColada`.
 
-A request can be a value, a `ref` or a getter (`() => ({ path: { id: props.id } })`): the query reads again when it changes.
+A request can be a value, a `ref` or a getter (`() => ({ path: { noteId: props.noteId } })`): the query reads again when it changes.
 
 A list whose paging style tells the next page also gets `use<Op>Infinite`, for example `useListNotesInfinite`.
 

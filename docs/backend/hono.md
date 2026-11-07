@@ -7,7 +7,7 @@
 You need:
 
 - Node.js 24 or later;
-- a contract, as in [Your first API](../getting-started/README.md);
+- a contract, as in [Your first API](../getting-started/your-first-api.md);
 - every `@seampact/*` package at the same version. Yarn Plug'n'Play is not supported.
 
 Install Hono and seampact. You do not need `experimentalDecorators`.

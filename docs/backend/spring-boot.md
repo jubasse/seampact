@@ -43,7 +43,7 @@ targets:
     options: { package: com.example.notes.api }
 ```
 
-The plugin adds `io.github.jubasse:seampact-spring-runtime` at its own version: the generated code imports its boundary runtime from there. `./gradlew build` generates the code, then compiles it with yours.
+The plugin adds `io.github.jubasse:seampact-spring-runtime` at its own version: the generated code imports its boundary runtime from there. `./gradlew build` generates the code, then compiles it with yours. The build runs `check` too (`./gradlew seampactCheck` alone). Whether to commit the generated code: [Generated files](../configuration/config-file.md#generated-files); the other commands: [Commands per stack](../features/commands-per-stack.md).
 
 The Node CLI does not generate a Spring Boot entry: `seampact generate` refuses it with `config.target.native`.
 

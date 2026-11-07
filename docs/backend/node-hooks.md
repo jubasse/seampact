@@ -48,7 +48,7 @@ export function notesHooks(): SeampactHooks {
 
             const allowed = await userMayUpdateNote(request.principal, request.subject);
 
-            return allowed ? { allow: true } : { deny: { code: "api.forbidden", params: {} } };
+            return allowed ? { allow: true } : { deny: { code: "api.forbidden" } };
           },
         },
       },
@@ -108,7 +108,7 @@ scopeResolvers: {
 
       const workspace = await findWorkspace(request.source.id);
 
-      if (workspace === undefined) return { deny: { code: "api.not_found" } };
+      if (workspace === undefined) return { deny: { code: "api.not_found" } }; // the scope must declare this denial
 
       return { resolved: { scope: request.scope, id: request.source.id, value: workspace } };
     },

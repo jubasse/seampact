@@ -97,6 +97,10 @@ conventions:
 
 If a target refuses the form, `generate` says which and how to fix it: see [Target option errors](../troubleshooting/generate.md).
 
+## Read the page in a handler
+
+The handler reads the position and the limit the style names, and returns the items. The server writes the rest. Each server guide has a Paging section: [Express](../backend/express.md#paging), [Fastify](../backend/fastify.md#paging), [Hono](../backend/hono.md#paging), [NestJS](../backend/nestjs.md#paging), [AdonisJS](../backend/adonisjs.md#paging), [Spring Boot](../backend/spring-boot.md#paging), [Laravel](../backend/laravel.md#paging) and [Symfony](../backend/symfony.md#paging).
+
 ## Ready-made styles
 
 A convention pack brings a ready-made paging style. Add one under `packs` instead of writing your own. See [Convention packs](../features/convention-packs.md) for the packs that generate code today.

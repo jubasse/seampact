@@ -35,10 +35,13 @@ If no prefix matches, search the files of `docs/troubleshooting/` for the full c
 
 ## Generate errors by family
 
-[Generate errors](generate.md) has one table per family: [Clients](generate.md#clients), [Node servers](generate.md#node-servers), [Spring Boot](generate.md#spring-boot), [PHP](generate.md#php), [Python](generate.md#python), [Every server](generate.md#every-server) and [Warnings](generate.md#warnings).
+[Generate errors](generate.md) has one table per family: [Clients](generate.md#clients), [Node servers](generate.md#node-servers), [Spring Boot](generate.md#spring-boot), [PHP](generate.md#php), [Python](generate.md#python), [Spring Boot, PHP and Python](generate.md#spring-boot-php-and-python), [Every server](generate.md#every-server) and [Warnings](generate.md#warnings).
 
 ## Errors with no code
 
 | You see | Cause and fix |
 |---|---|
 | `ERR_PNPM_FETCH_404 @seampact/...` | The package or its version is not on the registry. Check the name and the version, and keep every `@seampact/*` package at the same version ([Install](../getting-started/01-install.md)). |
+| `Plugin [id: 'io.github.jubasse.seampact'] was not found in any of the following sources` | Gradle: the plugin repositories do not hold the version. While the Plugin Portal reviews a release, add Maven Central to `pluginManagement.repositories` ([Spring Boot](../backend/spring-boot.md#set-up)). |
+| `Could not find a matching version of package seampact/laravel` | Composer: the package or its version is not found. Check the name and the version ([Laravel](../backend/laravel.md), [Symfony](../backend/symfony.md)). |
+| `No matching distribution found for seampact-fastapi` | pip: the package or its version is not found, or Python is older than 3.12. Check the name, the version and `python --version` ([Python guides](../backend/fastapi.md)). |

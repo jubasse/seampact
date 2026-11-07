@@ -23,7 +23,7 @@ pip install "seampact-drf[generate]"
 
 A `path` source and the OpenAPI documents need the compiler. Add the extra `seampact-ir[compiler]`, which installs the `seampact-compiler` wheel for your platform. A bundle-only app with `openapi: none` does not need it.
 
-In `seampact.config.yaml`, add one entry per api:
+In `seampact.config.yaml`, add one entry per api. Replace the `git` url, the tag and `integrity` with your contract's: `integrity` is the hash `seampact bundle` printed when you published it (see [Share contracts](../features/sharing-contracts.md)). To try a contract in a local folder, use `path: ./contract` instead and install the compiler extra above.
 
 ```yaml
 outDir: generated
@@ -48,7 +48,7 @@ seampact generate
 python manage.py seampact_generate
 ```
 
-The code goes into `generated/shop/`. Commit it. `seampact check` fails CI when it drifts from the contract.
+The code goes into `generated/shop/`. Commit it ([Generated files](../configuration/config-file.md#generated-files)). `seampact check` fails CI when it drifts from the contract; [Commands per stack](../features/commands-per-stack.md) shows how to run it.
 
 ## Write a handler
 

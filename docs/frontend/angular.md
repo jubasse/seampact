@@ -29,6 +29,9 @@ targets:
 import { bootstrapApplication } from "@angular/platform-browser";
 import { provideHttpClient, withInterceptors } from "@angular/common/http";
 import { provideNotesApi } from "./__generated__/queries/notes/index.js";
+import { App } from "./app/app";
+import { authInterceptor } from "./app/auth.interceptor";
+import { environment } from "./environments/environment";
 
 bootstrapApplication(App, {
   providers: [
@@ -38,7 +41,7 @@ bootstrapApplication(App, {
 });
 ```
 
-`apiUrl` holds your backend URL: see [Point the client at your backend](backend-url.md). Note that `environment.apiUrl` is fixed at build time; for a value chosen at container start, read `/config.json` in `provideAppInitializer`.
+`App`, `authInterceptor` and `environment` are yours: your root component, an `HttpInterceptorFn` that adds the token, and your environment file. `apiUrl` holds your backend URL: see [Point the client at your backend](backend-url.md). Note that `environment.apiUrl` is fixed at build time; for a value chosen at container start, read `/config.json` in `provideAppInitializer`.
 
 Two security settings:
 

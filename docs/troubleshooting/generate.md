@@ -9,6 +9,7 @@
 | Spring Boot | [Spring Boot](#spring-boot) |
 | Laravel, Symfony | [PHP](#php) |
 | FastAPI, Django REST framework, Django Ninja | [Python](#python) |
+| Spring Boot, PHP and Python share the code | [Spring Boot, PHP and Python](#spring-boot-php-and-python) |
 | Several servers share the code | [Every server](#every-server) |
 | Warnings | [Warnings](#warnings) |
 
@@ -40,25 +41,34 @@ Express, Fastify, Hono, NestJS and AdonisJS.
 | `runtime.output-directory-missing` | A programmatic generate request gave no `outputDirectory`. Pass the api's output directory; `seampact generate` always does. |
 | `idempotency.enforce.unsupported` | The operation sets `idempotency.enforce: none`, which the Node servers do not generate. Keep `boundary`. |
 | `paging.sortKey.restricted.unsupported` | A sort key guarded by a field right is not served. Leave the key out of `sortable` (a key of a restricted field inherits its right), or remove the operation from `operations`. |
+| `fieldRight.nestedPointer.unsupported` | An input field right sits below the top level of the body. Move the right to a top-level field, or remove the operation from `operations`. |
+| `access.optional.unsupported` | The operation allows a request with or without a credential (optional auth). Make the access required or public, or remove the operation from `operations`. |
+| `paging.sort.style.unsupported` | The paging `sort` parameter uses the `split` style. Use another sort style, or remove the operation from `operations`. |
 
 ## Spring Boot
 
+The forms refused by Spring Boot, PHP and Python are [in their own table](#spring-boot-php-and-python).
+
 | Code | Cause and fix |
 |---|---|
+| `options.layout.unsupported` | One file per public type is the only layout. Remove `layout`. |
+| `schema.union.unsupported`, `schema.map.unsupported`, `type.file.unsupported` | Spring Boot and PHP: a `oneOf`, a map schema and a file value are not generated yet. Remove the operation from `operations`. |
 | `options.springSecurity.unavailable` | `springSecurity` is on, but Spring Security is not on the classpath. Add `spring-boot-starter-security`, or set `springSecurity: false`. |
 | `options.springSecurity.matchers.unavailable` | `springSecurity: { matchers: true }` needs `spring-security-config`. Add `spring-boot-starter-security`, or set `springSecurity: true`. |
 
 ## PHP
 
-Laravel and Symfony.
+Laravel and Symfony. The forms refused by Spring Boot, PHP and Python are [in their own table](#spring-boot-php-and-python).
 
 | Code | Cause and fix |
 |---|---|
+| `options.layout.unsupported` | One file per class under the PSR-4 directory is the only layout. Remove `layout`. |
+| `schema.union.unsupported`, `schema.map.unsupported`, `type.file.unsupported` | Spring Boot and PHP: a `oneOf`, a map schema and a file value are not generated yet. Remove the operation from `operations`. |
 | `input.multipart.unsupported`, `input.form.unsupported`, `type.file.unsupported` | Form, multipart and file values are not generated yet. Remove the operation from `operations`, or open an issue with your use case. |
 
 ## Python
 
-FastAPI, Django REST framework and Django Ninja.
+FastAPI, Django REST framework and Django Ninja. The forms refused by Spring Boot, PHP and Python are [in their own table](#spring-boot-php-and-python).
 
 | Code | Cause and fix |
 |---|---|
@@ -72,8 +82,8 @@ FastAPI, Django REST framework and Django Ninja.
 | `access.<kind>.unsupported`, `identity.principal.unsupported` | The access form is not generated yet, such as a signed identity on FastAPI, or a principal that is not one schema. Remove the operation from `operations`. |
 | `rule.<key>.unsupported` | DRF: a rule has no DRF check under `rules: native`. Use `rules: seampact-consistent`, which checks it, or remove the rule from that use. |
 | `format.<format>.unsupported`, `type.<kind>.unsupported`, `deadline.header.type.unsupported` | A string format, a type or a deadline header type is not generated yet. Remove the operation from `operations`. |
-| `response.binary.unsupported`, `response.redirect.unsupported`, `response.media.unsupported`, `response.header.unsupported` | Downloads, redirects, a non-JSON response and a route-written response header are not generated yet. Remove the operation from `operations`. |
-| `input.media.unsupported`, `body.kind.unsupported`, `input.fields.unsupported`, `scalar.content.unsupported` | Form, multipart and file bodies, a body that is not an object schema, and a JSON string content are not generated yet. Remove the operation from `operations`. |
+| `response.binary.unsupported`, `response.redirect.unsupported` | Downloads and redirects are not generated yet. Remove the operation from `operations`. |
+| `input.media.unsupported`, `body.kind.unsupported` | Form, multipart and file bodies, and a body that is not an object schema, are not generated yet. Remove the operation from `operations`. |
 | `schema.union.unsupported`, `schema.map.unsupported` | A `oneOf` or a map schema is not generated yet. Remove the operation from `operations`. |
 | `enum.open.unsupported`, `enum.narrowed.unsupported`, `unknownKeys.keep.unsupported`, `extensionKeys.unsupported`, `paging.handlerResult.unsupported` | An open or narrowed enum, kept unknown keys, typed extension values and some paging facts are not generated yet. Remove the operation from `operations`. |
 | `param.path.structured.unsupported`, `param.header.structured.unsupported`, `param.default.unsupported`, `member.default.unsupported` | A path or header parameter that is not a scalar or an enum, and a default value, are not generated yet. Remove the operation from `operations`. |
@@ -81,8 +91,22 @@ FastAPI, Django REST framework and Django Ninja.
 | `path.segment.literal.unsupported`, `path.segment.mixed.unsupported` | A fixed path segment holds `{`, `}` or `?`, or a segment mixes a parameter with text. Write each segment as a whole parameter or whole text. |
 | `path.param.missing`, `name.segment.missing` | The IR is not one seampact wrote. Compile the contract again with the same seampact release, or update the target. |
 | `name.collision` | Two schemas, members or errors give the same Python name. Rename one in the contract, or give one a `codeName`. |
-| `principal.variants.unsupported`, `principalRequires.unsupported`, `bindings.unsupported`, `scope.source.unsupported`, `fieldRight.nestedPointer.unsupported`, `bucket.key.unsupported`, `rule.proof.placement.unsupported`, `upstream.unsupported`, `features.unsupported` | The operation uses an access or relay form the Python targets do not generate yet. Remove the operation from `operations`. |
+| `principalRequires.unsupported`, `bindings.unsupported`, `upstream.unsupported`, `features.unsupported` | The operation uses an access or relay form the Python targets do not generate yet. Remove the operation from `operations`. |
+
+## Spring Boot, PHP and Python
+
+Spring Boot, Laravel, Symfony, FastAPI, Django REST framework and Django Ninja refuse these forms. The Spring Boot, PHP and Python pages link here.
+
+| Code | Cause and fix |
+|---|---|
+| `scope.source.unsupported` | A scope id is read from somewhere other than the path. Read it from the path, or remove the operation from `operations`. |
+| `principal.variants.unsupported` | The principal has several variants. Use one principal schema, or remove the operation from `operations`. |
 | `signature.application.unsupported`, `signature.key.source.unsupported` | A signature your application verifies, or a key read from the request, is not generated yet. Use a signature template with a key value, or remove the operation from `operations`. |
+| `fieldRight.nestedPointer.unsupported` | An input field right sits below the top level of the body. Move the right to a top-level field, or remove the operation from `operations`. |
+| `bucket.key.unsupported`, `rule.proof.placement.unsupported` | A rate-limit bucket key or a rule proof is read from a place the server does not read yet. Remove the operation from `operations`. |
+| `scalar.content.unsupported`, `response.media.unsupported`, `response.header.unsupported` | A JSON string content, a non-JSON response and a response header written by the route are not generated yet. Remove the operation from `operations`. |
+| `unknownKeys.keep.unsupported`, `extensionKeys.unsupported` | Kept unknown keys and typed extension values are not generated yet. Remove the operation from `operations`. |
+| `options.handlers.unsupported`, `options.naming.unsupported` | `handlers` is `perResource` only, and the naming options (`suffixes`, `perOperation` and the like) are not options of these targets. Remove the option. |
 
 ## Every server
 
@@ -92,7 +116,7 @@ Codes several servers share. The cause names the servers it applies to.
 |---|---|
 | `format.success.envelope.unsupported`, `format.success.slot.unsupported`, `format.success.headers.unsupported`, `format.meta.unsupported` | Node servers, Spring, Laravel and Symfony: the format pack writes an envelope, slot, success header or meta member the server cannot write. Use a format whose envelope puts `$payload` under named members, with no meta member and no success header, or another server. |
 | `paging.response.slot.unsupported` | The page writes a slot the server does not fill: `$resource`, `$collection`, an item's id or URL, or `$page` under an offset style. Use a paging style whose page writes only its response roles, or another server. |
-| `paging.sortKey.right.unsupported` | Spring, PHP and Python: a sort key guarded by a field right is not served. Leave the key out of `sortable`, or remove the operation from `operations`. |
+| `paging.sortKey.right.unsupported` | Spring Boot, PHP and Python: a sort key guarded by a field right is not served. Leave the key out of `sortable`, or remove the operation from `operations`. |
 | `scheme.query.unsupported`, `scheme.basic.unsupported` | The servers read a credential from a bearer token, a cookie or a header only. Use a `bearer`, `cookie` or `header` scheme, or remove the operation from `operations`. |
 | `degradable.unsupported` | Node servers, Spring, Laravel and Symfony do not generate `degradable` operations yet. Remove the operation from `operations`. |
 | `concurrency.etag.withoutWrite.unsupported` | A read writes an `ETag` for a resource whose `If-Match` writes sit in another api, so the server has no field to read the version from. Serve the read and its writes in one api, or remove the read from `operations`. |
@@ -106,7 +130,6 @@ Codes several servers share. The cause names the servers it applies to.
 | `path.segment.encoded.unsupported` | A fixed path part has a space, a control or non-ASCII character, or one of `"` `<` `>` `^` `\` `{` `}` `|` `[` `]` or a backtick, which a client would send percent-encoded. Use plain ASCII letters, digits and `-` in that part. |
 | `artefacts.accessHooks.unsupported` | Laravel, Symfony, FastAPI, DRF and Ninja: `accessHooks: false` (native access) is not generated yet. Keep the hooks, and read the framework's own auth in the authenticate hook. |
 | `artefacts.bootCheck.hooks.warn.unsupported`, `artefact.bootCheck.hooks.warn.unsupported` | PHP, Python and Spring Boot (`artefact.` there): starting with a hook missing (`warn`) is not generated yet. Use `error` (the default) or `off`. |
-| `options.handlers.unsupported`, `options.naming.unsupported`, `options.layout.unsupported` | PHP and Python: `handlers` is `perResource`, the code is laid out one class per file, and the naming options are not options of these targets. Remove the option. |
 | `runtime.missing` | Node servers and Spring: the app does not install the runtime. Install `@seampact/server-runtime` (Node) or add `seampact-spring-runtime` (Maven; the Gradle plugin adds it) at the generator's version. |
 | `runtime.version-mismatch` | Node servers and Spring: the installed runtime has another `major.minor`, or an older patch, than the generator. Install it at the generator's version; a later patch passes. With Gradle, remove the BOM or forced version that overrides the plugin's. |
 | `runtime.generated-for-other-version` | See [Boot errors](boot.md). |

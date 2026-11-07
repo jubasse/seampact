@@ -7,7 +7,7 @@
 You need:
 
 - Node.js 24 or later;
-- a contract in `contract/`, as in [Your first API](../getting-started/README.md);
+- a contract in `contract/`, as in [Your first API](../getting-started/your-first-api.md);
 - every `@seampact/*` package at the same version. Yarn Plug'n'Play is not supported.
 
 Create the app with the AdonisJS API starter, and answer the prompts with the defaults.

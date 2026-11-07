@@ -39,7 +39,7 @@ export function NoteList() {
 }
 ```
 
-`VITE_API_URL` holds your backend URL: see [Point the client at your backend](backend-url.md). After a write, the hooks refresh the queries of the same resource.
+`VITE_API_URL` is the Vite variable for your backend URL (other tools read it elsewhere): see [Point the client at your backend](backend-url.md). After a write, the hooks refresh the queries of the same resource.
 
 - TanStack Query: wrap your app in `QueryClientProvider`.
 - SWR: the hooks have the same names, no provider needed.

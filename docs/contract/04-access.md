@@ -46,7 +46,7 @@ surfaces:
 - `principal` is the shape of the caller your handlers receive.
 - A child route can still opt out with its own `access: { public: "<reason>" }`.
 
-seampact does not check the credential. A hook is a function you write and seampact calls. It generates one named `authenticate`: you check the token there and return the caller.
+seampact does not check the credential. A [hook](../concepts/glossary.md) is code you write and seampact calls. It generates one named `authenticate`: you check the token there and return the caller. The hook is an object in Node, an interface in Spring Boot, a class in Laravel and Symfony, and a function in Python: see the guides under Next.
 
 ## Require a right
 

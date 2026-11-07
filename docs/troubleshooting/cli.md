@@ -6,10 +6,10 @@ The commands exit with 1 when they report an error, 2 on a usage error (an unkno
 
 ## Commands
 
-| You see | Do |
+| You see | Cause and fix |
 |---|---|
-| `cli.usage: Unknown command 'frob'` | Run `seampact help` for the commands and their options. |
-| `seampact: internal error: ...` | PHP: `vendor/bin/seampact` hit an error no code names. Report it with the line it printed. |
+| `cli.usage` | An unknown command, such as `Unknown command 'frob'`. Run `seampact help` for the commands and their options. |
+| `seampact: internal error` | PHP: `vendor/bin/seampact` hit an error no code names. Report it with the line it printed. |
 | `init.file-exists` | `init` writes a new project and found `seampact.config.yaml` or `contract` already there; it wrote nothing. Run it in an empty folder, or run `seampact init --modelines` to add modelines to an existing project. |
 | `init.modelines.no-source` | `init --modelines` edits the contract files of `path` sources only. Add `{ path: ./contract }` to `sources`. |
 | `init.ignore-file-link` | `.gitignore` is a symbolic link, and `init` does not write through links. Run `seampact init --no-ignore-files`, then add `.seampact/` to the link's target yourself. |
@@ -29,7 +29,7 @@ The commands exit with 1 when they report an error, 2 on a usage error (an unkno
 
 ## Compiler binary
 
-| You see | Do |
+| You see | Cause and fix |
 |---|---|
 | `binary.generate-unavailable`, `binary.check-unavailable` | The standalone binary writes the OpenAPI documents and leaves Maven and Composer entries to their plugin, but it has no npm code generator: an entry the message names uses an npm target. Run `generate` and `check` with the npm CLI for that app. An app that mixes npm entries with Maven or Composer ones sets `openapi: none`, or is split into one app config per runner. |
 | `binary.documents-refused` | The compiler binary refused the app's OpenAPI documents (asked by the Gradle or Maven plugin, Python's `seampact` command or `vendor/bin/seampact`). Fix what the diagnostics under the message say, then run your runner's generate again: `gradle seampactGenerate`, `mvn generate-sources` or `vendor/bin/seampact generate`. A document edited by hand is not overwritten: delete it first, or on PHP run `vendor/bin/seampact generate --force`. |
@@ -50,7 +50,7 @@ The commands exit with 1 when they report an error, 2 on a usage error (an unkno
 
 ## IR
 
-| You see | Do |
+| You see | Cause and fix |
 |---|---|
 | `ir.malformed` | Python: an IR does not read. Compile or bundle the contract again with seampact, and report its source if it persists. |
 | `ir.version.unsupported`, `ir.revision.mismatch` | The Gradle or Maven plugin reads another IR version than the compiler or the bundle wrote. Use a plugin and a compiler binary of the same seampact release, or a bundle built by it. |
@@ -59,7 +59,7 @@ The commands exit with 1 when they report an error, 2 on a usage error (an unkno
 
 ## Bundle command
 
-| You see | Do |
+| You see | Cause and fix |
 |---|---|
 | `bundle.source.none`, `bundle.source.ambiguous`, `bundle.source.unknown`, `bundle.source.not-local` | `bundle` packs a `path` source. With several, name one with `--source <name>`. Bundle in the repository that holds the contract. For the other `bundle.` codes, see [Bundle errors](bundle.md). |
 

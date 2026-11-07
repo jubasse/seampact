@@ -8,7 +8,7 @@ Symfony 7.4 and 8 on PHP 8.3, 8.4 or 8.5. See [Supported versions](../supported-
 
 You need:
 
-- PHP with the extension `json`, and Symfony 7.4 or 8 (7.3 and older are refused);
+- PHP with the extensions `json` and `zlib`, and Symfony 7.4 or 8 (7.3 and older are refused);
 - `symfony/validator`, which `seampact/symfony` installs: the boundary checks every input with it;
 - php-fpm. A worker runtime (FrankenPHP worker, RoadRunner, Swoole) is refused with `runtime.worker.unsupported`.
 
@@ -43,7 +43,7 @@ vendor/bin/seampact generate
 
 `bin/console seampact:generate` does the same. To use it, list `Seampact\Symfony\SeampactCommandsBundle` in `config/bundles.php` for `dev` only. It still runs when the generated code comes from another seampact version, which every other command refuses.
 
-Commit the generated files. `seampact check` fails CI when they drift from the contract.
+Commit the generated files ([Generated files](../configuration/config-file.md#generated-files)). `seampact check` fails CI when they drift from the contract; [Commands per stack](../features/commands-per-stack.md) shows how to run it.
 
 ## Write a handler
 
@@ -226,6 +226,7 @@ Set under `options:` on the target entry.
 
 | Option | Default | What it does |
 |---|---|---|
+| `indent` | `4` | Spaces per indent in the generated code, from 1 to 8. |
 | `rules` | `native` | `native` uses Symfony Validator's own constraints. `seampact-consistent` gives the contract's exact checks, equal on every target. |
 | `responses` | `strict` | `strict` answers 500 when your reply breaks the contract. `warn` logs it and sends the reply. |
 | `bodyValidation` | `false` | Checks success bodies against the contract. |

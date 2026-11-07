@@ -48,16 +48,16 @@ import { afterEach } from "vitest";
 
 afterEach(() => server.resetHandlers());
 
-server.use(mocks.getNote.reply(200, { id: "n1", title: "Hello" }));
+server.use(mocks.getNote.reply(200, { noteId: "n1", title: "Hello", createdAt: "2026-01-01T00:00:00Z" }));
 server.use(mocks.createNote.error("api.rate_limited", { retryAfterMs: 1500 }));
 server.use(
   mocks.getNote.resolve(({ params }) =>
-    params.id === "n1" ? { status: 200, body: { id: "n1", title: "Hi" } } : { status: 404, code: "api.not_found" },
+    params.noteId === "n1" ? { status: 200, body: { noteId: "n1", title: "Hi", createdAt: "2026-01-01T00:00:00Z" } } : { status: 404, code: "api.not_found" },
   ),
 );
 ```
 
-The status, body, error code and params are typed from the contract. A reply is written like your server writes it: the same envelope, the same page links, and errors in your error format.
+With Jest, the calls are the same. The status, body, error code and params are typed from the contract. A reply is written like your server writes it: the same envelope, the same page links, and errors in your error format.
 
 ## Limits
 

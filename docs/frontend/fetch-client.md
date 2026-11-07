@@ -24,7 +24,7 @@ import { createClient } from "./__generated__/client/notes/index.js";
 
 const client = createClient({ baseUrl: "http://localhost:3000" });
 
-const reply = await client.getNote({ path: { id: "n1" } });
+const reply = await client.getNote({ path: { noteId: "n1" } });
 
 if (reply.ok) {
   console.log(reply.body.title);
@@ -48,7 +48,7 @@ One method per operation, named like the operation. The request has `path`, `que
 
 Each call takes an optional last argument with `signal` (an `AbortSignal`) and `timeoutMs`. An operation with a time budget in the contract uses it unless you pass `timeoutMs`. An operation with a deadline header and no budget needs `timeoutMs`.
 
-`createClient` throws at start when the platform lacks `fetch` or `crypto.randomUUID` and you passed no replacement. A network failure, a timeout or an abort rejects the promise.
+`createClient` throws at start when the platform has no `fetch` and you passed none. It also throws when an operation generates an idempotency key and the platform lacks `crypto.randomUUID`, unless you pass `idempotencyKey`. A network failure, a timeout or an abort rejects the promise.
 
 ## What a call returns
 
@@ -77,7 +77,7 @@ With `errorStyle: throw`, a call returns the success and throws everything else 
 import { createClient, isClientContractError } from "./__generated__/client/notes/index.js";
 
 try {
-  const note = await client.getNote({ path: { id: "n1" } });
+  const note = await client.getNote({ path: { noteId: "n1" } });
 } catch (error) {
   if (isClientContractError(error) && error.operation === "getNote") {
     console.log(error.failure.status, error.failure);

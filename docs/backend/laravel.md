@@ -40,7 +40,7 @@ php artisan seampact:generate
 
 When the generated code comes from another seampact version, every other command refuses to boot; `php artisan seampact:generate` still runs.
 
-Commit the generated files. `seampact check` fails CI when they drift from the contract.
+Commit the generated files ([Generated files](../configuration/config-file.md#generated-files)). `seampact check` fails CI when they drift from the contract; [Commands per stack](../features/commands-per-stack.md) shows how to run it.
 
 ## Write a handler
 
@@ -210,6 +210,7 @@ Set under `options:` on the target entry.
 
 | Option | Default | What it does |
 |---|---|---|
+| `indent` | `4` | Spaces per indent in the generated code, from 1 to 8. |
 | `rules` | `native` | `native` uses Laravel's own value rules (`min`, `max`, `uuid`, ...). `seampact-consistent` gives the contract's exact checks, equal on every target. |
 | `responses` | `strict` | `strict` answers 500 when your reply breaks the contract. `warn` logs it and sends the reply. |
 | `bodyValidation` | `false` | Checks success bodies against the contract. |

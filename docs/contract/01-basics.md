@@ -31,7 +31,7 @@ surfaces:
 - `surfaces` holds the routes. A surface is a group of routes under one prefix and one access rule, such as `app` for browsers and `admin` for staff.
 - Other blocks (`errors`, `pagings`, `enums`, `identities`) are top-level too. The next pages cover them.
 
-A route is a YAML entry that becomes one HTTP endpoint. An operation (`op`) is a standard route you get from `ops`, such as `list` or `get`.
+A [route](../concepts/glossary.md) is a YAML entry that becomes one HTTP endpoint. An operation (`op`) is a standard route you get from `ops`, such as `list` or `get`.
 
 ## Settings flow down the tree
 
@@ -83,7 +83,7 @@ notes:
 | `update` | `PATCH /v1/notes/{noteId}` | `200` |
 | `delete` | `DELETE /v1/notes/{noteId}` | `204` |
 
-`ops: [get, list]` is enough when no op needs options. Use the mapping form as soon as one does: `create` and `update` need an `input` schema. An op that needs nothing takes `{}`.
+`ops: [get, delete]` is enough when no op needs options. `list` always needs options: it names a paging style (see [Lists](05-lists.md)). Use the mapping form as soon as one does: `create` and `update` need an `input` schema. An op that needs nothing takes `{}`.
 
 `collection:` holds routes on the whole list. `member:` holds routes on one record.
 

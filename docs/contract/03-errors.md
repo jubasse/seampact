@@ -71,6 +71,35 @@ The handler returns the status and the code. The generated types reject any othe
 return { status: Notes.Status.NotFound, code: Notes.ErrorCode.ApiNotFound };
 ```
 
+<details>
+<summary>Spring Boot (Java)</summary>
+
+```java
+return new GetNoteErrors.ApiNotFound();
+```
+
+</details>
+
+<details>
+<summary>Laravel and Symfony (PHP)</summary>
+
+```php
+return GetNoteErrors::apiNotFound();
+```
+
+</details>
+
+<details>
+<summary>FastAPI, Django REST framework and Django Ninja (Python)</summary>
+
+```python
+return GetNoteErrors.api_not_found()
+```
+
+</details>
+
+A framework exception, such as a missing record, can map to a contract error too. The rule differs per framework: see "Write a handler" in your [server guide](../README.md#server-guides).
+
 ## Next
 
 - Next: [Access](04-access.md).

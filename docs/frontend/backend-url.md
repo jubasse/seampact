@@ -166,6 +166,24 @@ const client = createClient({ baseUrl: config.apiBaseUrl });
 
 Anyone can read `config.json`: put only public values in it, never a secret, and write only the keys the app needs.
 
+## Another origin and CORS
+
+When the browser calls another origin, the server must allow it (CORS). seampact does not write this for you: use your framework's own tool, and keep the CORS layer before the generated routes so a preflight (`OPTIONS`) reaches it.
+
+| Server | CORS tool |
+|---|---|
+| NestJS | `app.enableCors()` |
+| Express | the `cors` package |
+| Fastify | `@fastify/cors` |
+| Hono | `hono/cors` |
+| Spring Boot | `CorsConfiguration` |
+| Laravel | `config/cors.php` |
+| Symfony | NelmioCorsBundle |
+| FastAPI | `CORSMiddleware`, see [FastAPI](../backend/fastapi.md) |
+| Django REST framework, Django Ninja | `django-cors-headers`, see [Ninja](../backend/ninja.md) |
+
+A same-origin proxy, as above, needs none of it.
+
 ## Next
 
 [React](react.md), [Vue](vue.md), [Angular](angular.md) or [Expo and React Native](mobile.md): create the client there.

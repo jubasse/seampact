@@ -7,7 +7,7 @@
 You need:
 
 - Node.js 24 or later;
-- a contract, as in [Your first API](../getting-started/README.md);
+- a contract, as in [Your first API](../getting-started/your-first-api.md);
 - every `@seampact/*` package at the same version. Yarn Plug'n'Play is not supported.
 
 Install Fastify and seampact. The Fastify target checks bodies with Ajv validators it generates, so there is no `zod` and no validators target.

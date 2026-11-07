@@ -24,7 +24,7 @@ A file of another type or above `maxSize` is refused with a `400`. A body above 
 
 ## Download a file
 
-An `output` that is a file is a download. The handler returns the bytes or a stream.
+An `output` that is a file is a download. The handler returns the bytes or a stream; each [server guide](../README.md#server-guides) shows how.
 
 ```yaml
 export:
@@ -57,8 +57,8 @@ concurrency: { version: header.If-Match, field: version }
 ```
 
 - A write without the header, or with an empty one, answers `428`.
-- A stale tag answers `412`: the handler returns the `preconditionFailed` error.
-- The tag can be strong (`"7"`) or weak (`W/"7"`). The handler receives the version unquoted: `7`.
+- A stale tag answers `412`: the handler returns the `preconditionFailed` error (see "Write a handler" in your [server guide](../README.md#server-guides)).
+- The tag can be strong (`"7"`) or weak (`W/"7"`). The handler receives the version unquoted: `7`. Each server guide shows the comparison.
 
 ## Cache a read
 
