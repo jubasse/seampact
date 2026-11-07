@@ -228,6 +228,7 @@ jobs:
         if: always()
         with:
           name: laravel-http-suite-php${{ matrix.php-version }}
+          overwrite: true
           path: reports
           retention-days: 90
           if-no-files-found: warn

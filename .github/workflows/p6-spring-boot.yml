@@ -339,6 +339,7 @@ jobs:
         if: always()
         with:
           name: spring-boot-http-suite-${{ matrix.build-tool }}-jdk${{ matrix.jdk }}-${{ matrix.contract }}
+          overwrite: true
           path: reports
           retention-days: 90
           if-no-files-found: warn
