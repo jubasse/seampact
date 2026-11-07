@@ -3,6 +3,12 @@
   "description": "The Seampact Symfony target: generates the types, controller interfaces, routes, constraints and bundle of a contract for Symfony 7.4 and 8.",
   "type": "library",
   "license": "MIT",
+  "homepage": "https://jubasse.github.io/seampact/backend/symfony/",
+  "support": {
+    "docs": "https://jubasse.github.io/seampact/",
+    "issues": "https://github.com/jubasse/seampact/issues",
+    "source": "https://github.com/jubasse/seampact"
+  },
   "require": {
     "php": ">=8.3.36 <8.4 || >=8.4.27 <8.5 || >=8.5.12",
     "ext-json": "*",

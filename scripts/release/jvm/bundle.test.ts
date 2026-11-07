@@ -187,6 +187,22 @@ describe("the bundle layout check", () => {
     );
   });
 
+  it("takes a POM url on a page of the docs site and names one elsewhere", () => {
+    const repository = stagedBundle();
+    const pomFile = `seampact-hooks-${VERSION}.pom`;
+    const pomPath = `io/github/jubasse/seampact-hooks/${VERSION}/${pomFile}`;
+    const pomWithUrl = (url: string) =>
+      pom(LIBRARY).replace(`<url>${DOCS_URL}</url>`, `<url>${url}</url>`);
+
+    writeStaged(repository, LIBRARY, pomFile, pomWithUrl(`${DOCS_URL}concepts/packages/`));
+    expect(layoutProblems(repository).join("\n")).not.toContain(pomPath);
+
+    writeStaged(repository, LIBRARY, pomFile, pomWithUrl("https://example.com/"));
+    expect(layoutProblems(repository)).toContain(
+      `${pomPath} has <url> "https://example.com/", not a page of ${DOCS_URL}`,
+    );
+  });
+
   it("names a compiler binary whose hash differs from SHA256SUMS, and a missing artefact", () => {
     const repository = stagedBundle();
 

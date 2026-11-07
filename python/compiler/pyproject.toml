@@ -15,6 +15,12 @@ classifiers = [
     "Programming Language :: Python :: 3 :: Only",
 ]
 
+[project.urls]
+Homepage = "https://jubasse.github.io/seampact/concepts/packages/"
+Documentation = "https://jubasse.github.io/seampact/"
+Source = "https://github.com/jubasse/seampact"
+Issues = "https://github.com/jubasse/seampact/issues"
+
 # PEP 420: `seampact` is a namespace shared by every seampact distribution, so it has no `__init__.py`.
 # `hatch_build.py` puts one release asset under `seampact/compiler/bin/` and tags the wheel for its platform; the
 # editable install of the workspace carries no binary, and there is no sdist (pip must never build the binary).

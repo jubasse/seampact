@@ -1,5 +1,6 @@
 // Package roles, the dependency rules of ADR 0009 and the namespaces of A27, checked over
-// the manifests of a repository: npm (packages/*), Gradle (jvm/**) and Composer (php/*).
+// the manifests of a repository: npm (packages/*), Gradle (jvm/**) and Composer (php/*), and the docs-site links of
+// the published npm, Composer and Python manifests.
 //
 // Two forms, read from the tree: with every published package at 0.0.0, the development form, where every npm
 // package is private and the changesets access restricted (A3); with all of them at one release version (a stamped
@@ -618,7 +619,71 @@ function checkComposer(root: string, out: Violation[]): void {
         rule: "namespaces",
         message: `Composer name "${String(name)}" must be ${COMPOSER_VENDOR}/<name> (A27)`,
       });
+
+    checkComposerMetadata(file, json, out);
   }
+}
+
+// Packagist shows `homepage` and `support.docs`: both point to the docs site.
+function checkComposerMetadata(
+  file: string,
+  json: Record<string, unknown>,
+  out: Violation[],
+): void {
+  const { homepage, support } = json;
+
+  if (typeof homepage !== "string" || !homepage.startsWith(DOCS_SITE_URL))
+    out.push({
+      file,
+      rule: "metadata",
+      message: `needs a \`homepage\` on the docs site, ${DOCS_SITE_URL}`,
+    });
+
+  if (!isRec(support) || support.docs !== DOCS_SITE_URL)
+    out.push({ file, rule: "metadata", message: `needs \`support.docs\` "${DOCS_SITE_URL}"` });
+}
+
+// PyPI shows the `[project.urls]` table: `Homepage` is on the docs site, `Documentation` is the docs site.
+function checkPythonMetadata(root: string, out: Violation[]): void {
+  for (const d of listDirs(root, "python")) {
+    const file = `python/${d}/pyproject.toml`;
+
+    if (!existsSync(join(root, file))) continue;
+    const urls = projectUrls(readFileSync(join(root, file), "utf8"));
+
+    if (!urls.Homepage?.startsWith(DOCS_SITE_URL))
+      out.push({
+        file,
+        rule: "metadata",
+        message: `needs a \`Homepage\` in [project.urls] on the docs site, ${DOCS_SITE_URL}`,
+      });
+
+    if (urls.Documentation !== DOCS_SITE_URL)
+      out.push({
+        file,
+        rule: "metadata",
+        message: `needs \`Documentation\` "${DOCS_SITE_URL}" in [project.urls]`,
+      });
+  }
+}
+
+// The `Key = "value"` lines of the `[project.urls]` table of a pyproject.toml.
+function projectUrls(toml: string): Record<string, string> {
+  const urls: Record<string, string> = {};
+  let inTable = false;
+
+  for (const line of toml.split(/\r?\n/)) {
+    const header = /^\s*\[([^\]]+)\]\s*$/.exec(line);
+
+    if (header) inTable = header[1]?.trim() === "project.urls";
+    else if (inTable) {
+      const entry = /^\s*([A-Za-z][\w -]*?)\s*=\s*"([^"]*)"/.exec(line);
+
+      if (entry) urls[entry[1] as string] = entry[2] as string;
+    }
+  }
+
+  return urls;
 }
 
 /**
@@ -693,6 +758,7 @@ export function checkPackageRules(
   checkReleaseScripts(root, out);
   checkGradle(root, out);
   checkComposer(root, out);
+  checkPythonMetadata(root, out);
 
   return out;
 }
