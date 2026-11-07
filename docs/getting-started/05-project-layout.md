@@ -1,6 +1,6 @@
 # Project layout
 
-What the guide leaves in your app folder.
+What [Your first API](your-first-api.md) leaves in your app folder.
 
 ```text
 notes-app/
@@ -12,12 +12,11 @@ notes-app/
       types/ validators/ server/
     notes-controller.ts    your handlers
     main.ts                your app
-  vendor/                  seampact packages from your checkout, git-ignored
 ```
 
 - Edit `contract/`, `seampact.config.yaml` and your own files in `src`.
 - Commit `src/__generated__` and `openapi/`: `seampact check` compares them with the contract.
-- Add `vendor` and a `baseline` folder (from [diff](../features/diff.md)) to `.gitignore`.
+- Add the `baseline` folder (from [diff](../features/diff.md)) to `.gitignore`.
 
 ## Repository layouts
 
@@ -28,4 +27,4 @@ Layouts mix freely, and each app picks its own stack.
 - **One repository per app:** the contracts live in a contract repository that publishes bundles, and each app pins the ones it uses. See [sharing contracts](../features/sharing-contracts.md).
 - **A shared core contract:** pin it as a bundle (npm package, git tag, release URL, or Maven for the JVM plugins), or add it as a git submodule read as a `path` source. A `path` may point anywhere, inside the repository or not; it is a local source, so `allowLocal: false` refuses it.
 
-Next: [add seampact to an existing app](04-existing-project.md) or [work with an AI agent](06-ai-agents.md).
+Next: [work with an AI agent](06-ai-agents.md), or [write more of the contract](../contract/README.md).

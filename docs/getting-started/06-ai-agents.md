@@ -22,4 +22,6 @@ To show an agent one operation whole, with where each part comes from, give it `
 
 The agent writes the handlers. The compiler tells it where they no longer match the generated interfaces, so `npx tsc -p .` is a fourth check.
 
-Each message has a rule id such as `check.generated.drift`. Look it up in [troubleshooting](../troubleshooting/README.md).
+Each message starts with a code such as `check.generated.drift`. Look it up in [troubleshooting](../troubleshooting/README.md).
+
+Next: [write more of the contract](../contract/README.md), or [check it in CI](../features/check-in-ci.md).
