@@ -38,6 +38,10 @@ let server: Server;
 let baseUrl: string;
 let loadedScripts: unknown[];
 const logLines: string[] = [];
+// The double's held request: its hook call while it waits, and its release, the next script load.
+const HOLD_CALL = { hook: "hold", operation: "tasks.createTask" };
+let holdCalls: (typeof HOLD_CALL)[] = [];
+let releaseHeld: (() => void) | undefined;
 
 beforeAll(async () => {
   loadedScripts = [];
@@ -74,9 +78,20 @@ async function answer(request: IncomingMessage, response: ServerResponse): Promi
   if (url.pathname === SCRIPT_ROUTE) {
     loadedScripts.push(JSON.parse(body));
     logLines.length = 0;
+    holdCalls = [];
+    releaseHeld?.();
     response.writeHead(204).end();
   } else if (url.pathname === HOOK_CALLS_ROUTE) {
-    json(200, { calls: RECORDED_HOOK_CALLS });
+    json(200, { calls: [...RECORDED_HOOK_CALLS, ...holdCalls] });
+  } else if (url.pathname === "/held" && releaseHeld !== undefined) {
+    json(409, { code: "api.idempotency_in_progress" });
+  } else if (url.pathname === "/held") {
+    await new Promise<void>((resolve) => {
+      releaseHeld = resolve;
+      holdCalls.push(HOLD_CALL);
+    });
+    releaseHeld = undefined;
+    json(201, { text: body });
   } else if (url.pathname === LOG_LINES_ROUTE) {
     json(200, { lines: logLines });
   } else if (url.pathname === "/log") {
@@ -306,6 +321,49 @@ describe("runSuite", () => {
       {},
     ]);
     expect(report.cases.map((result) => result.outcome)).toEqual(["passed", "failed", "failed"]);
+  });
+
+  test("runs a background request beside the steps after it and checks it once they have run", async () => {
+    const report = await run([
+      suiteCase("held", {
+        steps: [
+          {
+            request: { method: "POST", path: "/held", body: { title: "first" } },
+            background: true,
+            expect: { status: 201, bodyText: '{"text":"{\\"title\\":\\"first\\"}"}' },
+          },
+          {
+            waitForHookCall: HOLD_CALL,
+            request: { method: "POST", path: "/held" },
+            capture: { refusal: { bodyText: true } },
+            expect: { status: 409, bodyText: '{"code":"api.idempotency_in_progress"}' },
+          },
+          { script: {} },
+          {
+            request: { method: "GET", path: "/missing" },
+            expect: { status: 404 },
+          },
+        ],
+      }),
+    ]);
+
+    expect(report.cases[0]?.failures).toEqual([]);
+    expect(loadedScripts.at(-1)).toEqual({});
+  });
+
+  test("refuses a background step that captures", () => {
+    expect(() =>
+      suiteCase("background-capture", {
+        steps: [
+          {
+            request: { method: "GET", path: "/missing" },
+            background: true,
+            capture: { code: { body: "/code" } },
+            expect: { status: 404 },
+          },
+        ],
+      }),
+    ).toThrow("a background step captures nothing");
   });
 
   test("checks only the lines the app logged while the step ran", async () => {

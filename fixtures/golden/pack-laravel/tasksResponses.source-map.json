@@ -50,6 +50,34 @@
       "file": "tasks-responses/api.yaml",
       "line": 34
     },
+    "api#/schemas/Memo": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 43,
+      "file": "tasks-responses/api.yaml",
+      "line": 36
+    },
+    "api#/schemas/Memo/properties/memoId": {
+      "column": 7,
+      "endColumn": 21,
+      "endLine": 40,
+      "file": "tasks-responses/api.yaml",
+      "line": 40
+    },
+    "api#/schemas/Memo/properties/text": {
+      "column": 7,
+      "endColumn": 59,
+      "endLine": 41,
+      "file": "tasks-responses/api.yaml",
+      "line": 41
+    },
+    "api#/schemas/Memo/properties/version": {
+      "column": 7,
+      "endColumn": 45,
+      "endLine": 42,
+      "file": "tasks-responses/api.yaml",
+      "line": 42
+    },
     "api#/schemas/Note": {
       "column": 3,
       "endColumn": 1,
@@ -81,177 +109,212 @@
     "api#/schemas/NoteKey": {
       "column": 3,
       "endColumn": 1,
-      "endLine": 41,
+      "endLine": 49,
       "file": "tasks-responses/api.yaml",
-      "line": 35
+      "line": 43
     },
     "api#/schemas/NoteKey/properties/noteId": {
       "column": 7,
       "endColumn": 21,
-      "endLine": 39,
+      "endLine": 47,
       "file": "tasks-responses/api.yaml",
-      "line": 39
+      "line": 47
     },
     "api#/schemas/NoteKey/properties/secret": {
       "column": 7,
       "endColumn": 48,
-      "endLine": 40,
+      "endLine": 48,
       "file": "tasks-responses/api.yaml",
-      "line": 40
+      "line": 48
     },
     "api#/surfaces/responses": {
       "column": 3,
       "endColumn": 1,
-      "endLine": 75,
+      "endLine": 91,
       "file": "tasks-responses/api.yaml",
-      "line": 43
+      "line": 51
     },
     "api#/surfaces/responses/identity": {
       "column": 5,
       "endColumn": 19,
-      "endLine": 45,
+      "endLine": 53,
       "file": "tasks-responses/api.yaml",
-      "line": 45
+      "line": 53
     },
     "api#/surfaces/responses/routes/digest": {
       "column": 7,
       "endColumn": 1,
-      "endLine": 52,
+      "endLine": 60,
       "file": "tasks-responses/api.yaml",
-      "line": 47
+      "line": 55
     },
     "api#/surfaces/responses/routes/digest/access": {
       "column": 9,
       "endColumn": 71,
-      "endLine": 49,
+      "endLine": 57,
       "file": "tasks-responses/api.yaml",
-      "line": 49
+      "line": 57
     },
     "api#/surfaces/responses/routes/digest/cache": {
       "column": 9,
       "endColumn": 64,
-      "endLine": 50,
+      "endLine": 58,
       "file": "tasks-responses/api.yaml",
-      "line": 50
+      "line": 58
     },
     "api#/surfaces/responses/routes/digest/output": {
       "column": 9,
       "endColumn": 21,
-      "endLine": 51,
+      "endLine": 59,
       "file": "tasks-responses/api.yaml",
-      "line": 51
+      "line": 59
+    },
+    "api#/surfaces/responses/routes/memos/concurrency": {
+      "column": 9,
+      "endColumn": 71,
+      "endLine": 87,
+      "file": "tasks-responses/api.yaml",
+      "line": 87
+    },
+    "api#/surfaces/responses/routes/memos/id/memoId": {
+      "column": 15,
+      "endColumn": 29,
+      "endLine": 85,
+      "file": "tasks-responses/api.yaml",
+      "line": 85
+    },
+    "api#/surfaces/responses/routes/memos/item": {
+      "column": 9,
+      "endColumn": 19,
+      "endLine": 86,
+      "file": "tasks-responses/api.yaml",
+      "line": 86
+    },
+    "api#/surfaces/responses/routes/memos/ops/delete": {
+      "column": 11,
+      "endColumn": 21,
+      "endLine": 90,
+      "file": "tasks-responses/api.yaml",
+      "line": 90
+    },
+    "api#/surfaces/responses/routes/memos/ops/get": {
+      "column": 11,
+      "endColumn": 18,
+      "endLine": 89,
+      "file": "tasks-responses/api.yaml",
+      "line": 89
     },
     "api#/surfaces/responses/routes/notes/concurrency": {
       "column": 9,
       "endColumn": 67,
-      "endLine": 56,
-      "file": "tasks-responses/api.yaml",
-      "line": 56
-    },
-    "api#/surfaces/responses/routes/notes/id/noteId": {
-      "column": 15,
-      "endColumn": 29,
-      "endLine": 54,
-      "file": "tasks-responses/api.yaml",
-      "line": 54
-    },
-    "api#/surfaces/responses/routes/notes/item": {
-      "column": 9,
-      "endColumn": 19,
-      "endLine": 55,
-      "file": "tasks-responses/api.yaml",
-      "line": 55
-    },
-    "api#/surfaces/responses/routes/notes/member/routes/key": {
-      "column": 13,
-      "endColumn": 1,
-      "endLine": 71,
-      "file": "tasks-responses/api.yaml",
-      "line": 68
-    },
-    "api#/surfaces/responses/routes/notes/member/routes/key/output": {
-      "column": 15,
-      "endColumn": 30,
-      "endLine": 70,
-      "file": "tasks-responses/api.yaml",
-      "line": 70
-    },
-    "api#/surfaces/responses/routes/notes/member/routes/legacy": {
-      "column": 13,
-      "endColumn": 1,
-      "endLine": 75,
-      "file": "tasks-responses/api.yaml",
-      "line": 71
-    },
-    "api#/surfaces/responses/routes/notes/member/routes/legacy/deprecated": {
-      "column": 15,
-      "endColumn": 92,
-      "endLine": 74,
-      "file": "tasks-responses/api.yaml",
-      "line": 74
-    },
-    "api#/surfaces/responses/routes/notes/member/routes/legacy/output": {
-      "column": 15,
-      "endColumn": 27,
-      "endLine": 73,
-      "file": "tasks-responses/api.yaml",
-      "line": 73
-    },
-    "api#/surfaces/responses/routes/notes/member/routes/save": {
-      "column": 13,
-      "endColumn": 1,
-      "endLine": 68,
-      "file": "tasks-responses/api.yaml",
-      "line": 62
-    },
-    "api#/surfaces/responses/routes/notes/member/routes/save/input": {
-      "column": 15,
-      "endColumn": 30,
       "endLine": 64,
       "file": "tasks-responses/api.yaml",
       "line": 64
     },
+    "api#/surfaces/responses/routes/notes/id/noteId": {
+      "column": 15,
+      "endColumn": 29,
+      "endLine": 62,
+      "file": "tasks-responses/api.yaml",
+      "line": 62
+    },
+    "api#/surfaces/responses/routes/notes/item": {
+      "column": 9,
+      "endColumn": 19,
+      "endLine": 63,
+      "file": "tasks-responses/api.yaml",
+      "line": 63
+    },
+    "api#/surfaces/responses/routes/notes/member/routes/key": {
+      "column": 13,
+      "endColumn": 1,
+      "endLine": 79,
+      "file": "tasks-responses/api.yaml",
+      "line": 76
+    },
+    "api#/surfaces/responses/routes/notes/member/routes/key/output": {
+      "column": 15,
+      "endColumn": 30,
+      "endLine": 78,
+      "file": "tasks-responses/api.yaml",
+      "line": 78
+    },
+    "api#/surfaces/responses/routes/notes/member/routes/legacy": {
+      "column": 13,
+      "endColumn": 1,
+      "endLine": 83,
+      "file": "tasks-responses/api.yaml",
+      "line": 79
+    },
+    "api#/surfaces/responses/routes/notes/member/routes/legacy/deprecated": {
+      "column": 15,
+      "endColumn": 92,
+      "endLine": 82,
+      "file": "tasks-responses/api.yaml",
+      "line": 82
+    },
+    "api#/surfaces/responses/routes/notes/member/routes/legacy/output": {
+      "column": 15,
+      "endColumn": 27,
+      "endLine": 81,
+      "file": "tasks-responses/api.yaml",
+      "line": 81
+    },
+    "api#/surfaces/responses/routes/notes/member/routes/save": {
+      "column": 13,
+      "endColumn": 1,
+      "endLine": 76,
+      "file": "tasks-responses/api.yaml",
+      "line": 70
+    },
+    "api#/surfaces/responses/routes/notes/member/routes/save/input": {
+      "column": 15,
+      "endColumn": 30,
+      "endLine": 72,
+      "file": "tasks-responses/api.yaml",
+      "line": 72
+    },
     "api#/surfaces/responses/routes/notes/member/routes/save/responses/200": {
       "column": 17,
       "endColumn": 36,
-      "endLine": 66,
+      "endLine": 74,
       "file": "tasks-responses/api.yaml",
-      "line": 66
+      "line": 74
     },
     "api#/surfaces/responses/routes/notes/member/routes/save/responses/201": {
       "column": 17,
       "endColumn": 36,
-      "endLine": 67,
+      "endLine": 75,
       "file": "tasks-responses/api.yaml",
-      "line": 67
+      "line": 75
     },
     "api#/surfaces/responses/routes/notes/ops/get": {
       "column": 11,
       "endColumn": 56,
-      "endLine": 58,
+      "endLine": 66,
       "file": "tasks-responses/api.yaml",
-      "line": 58
+      "line": 66
     },
     "api#/surfaces/responses/routes/notes/ops/get/cache": {
       "column": 18,
       "endColumn": 54,
-      "endLine": 58,
+      "endLine": 66,
       "file": "tasks-responses/api.yaml",
-      "line": 58
+      "line": 66
     },
     "api#/surfaces/responses/routes/notes/ops/update": {
       "column": 11,
       "endColumn": 38,
-      "endLine": 59,
+      "endLine": 67,
       "file": "tasks-responses/api.yaml",
-      "line": 59
+      "line": 67
     },
     "api#/surfaces/responses/routes/notes/ops/update/input": {
       "column": 21,
       "endColumn": 36,
-      "endLine": 59,
+      "endLine": 67,
       "file": "tasks-responses/api.yaml",
-      "line": 59
+      "line": 67
     },
     "pack:@seampact/pack-laravel#/conventions/format": {
       "column": 3,

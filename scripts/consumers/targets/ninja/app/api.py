@@ -27,6 +27,7 @@ from handler_factories import (
     notes_handlers,
     preferences_handlers,
     responses_handlers,
+    responses_memos_handlers,
     responses_notes_handlers,
     tasks_handlers,
     welcome_handlers,
@@ -145,7 +146,9 @@ def create_api() -> NinjaAPI:
     bind_tasks_responses(
         api,
         prefix="",
-        handlers=TasksResponsesHandlerFactories(responses=responses_handlers, notes=responses_notes_handlers),
+        handlers=TasksResponsesHandlerFactories(
+            responses=responses_handlers, notes=responses_notes_handlers, memos=responses_memos_handlers
+        ),
         authenticate={USER_IDENTITY: hooks.user_hook},
         idempotency_store=hooks.idempotency_store,
         on_unexpected_error=hooks.unexpected_errors,

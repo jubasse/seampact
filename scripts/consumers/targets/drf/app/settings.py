@@ -80,7 +80,9 @@ _handlers = {
     "tasks": "handlers.tasks_handlers",
 }
 _authenticate = {USER_IDENTITY: "hooks.user_hook", STRIPE_IDENTITY: "hooks.stripe_hook"}
-_deciders = {name: "hooks.tasks_decider" for name in TASKS_DECIDED} | {OVERRIDDEN_RIGHT: "hooks.overridden_right_decider"}
+_deciders = {name: "hooks.tasks_decider" for name in TASKS_DECIDED} | {
+    OVERRIDDEN_RIGHT: "hooks.overridden_right_decider"
+}
 
 if leaves_out_health_handler():
     del _handlers["app"]
@@ -135,7 +137,11 @@ SEAMPACT = {
         "access": {"identity": _SUITE_TOKEN_AUTHENTICATION},
     },
     "tasksResponses": {
-        "handlers": {"responses": "handlers.responses_handlers", "notes": "handlers.responses_notes_handlers"},
+        "handlers": {
+            "responses": "handlers.responses_handlers",
+            "notes": "handlers.responses_notes_handlers",
+            "memos": "handlers.responses_memos_handlers",
+        },
         "authenticate": {USER_IDENTITY: "hooks.user_hook"},
         "idempotency_store": "hooks.idempotency_store",
         "on_unexpected_error": "hooks.unexpected_errors",

@@ -16,7 +16,11 @@ import tools.jackson.databind.node.ObjectNode;
  * and the log lines the app writes (ADR 0015 "The shared black-box HTTP suite").
  */
 final class SuiteControl {
-    private static final Set<String> SCRIPT_MEMBERS = Set.of("decisions", "scopes", "answers");
+    private static final Set<String> SCRIPT_MEMBERS = Set.of("decisions", "scopes", "answers", "holds");
+    private static final String HOLD_HOOK = "hold";
+    // Below the suite's request timeout, so a hold the suite never releases still answers.
+    private static final long HOLD_LIMIT_MS = 5000;
+    private static final long HOLD_POLL_MS = 10;
 
     private static JsonNode script = JsonNodeFactory.instance.objectNode();
     private static boolean recording;
@@ -112,5 +116,29 @@ final class SuiteControl {
         JsonNode answer = script.path("answers").path(api + "." + operation);
 
         return answer.isMissingNode() ? Optional.empty() : Optional.of(answer);
+    }
+
+    /** Whether the script holds the operation's handler until a script that does not is loaded. */
+    static synchronized boolean isHeld(String api, String operation) {
+        for (JsonNode held : script.path("holds")) {
+            if (held.asString().equals(api + "." + operation)) return true;
+        }
+
+        return false;
+    }
+
+    /** Records the hold, then waits until the operation is released or the hold limit has passed. */
+    static void waitForRelease(String api, String operation) {
+        recordHookCall(HOLD_HOOK, api, operation);
+
+        long deadline = System.currentTimeMillis() + HOLD_LIMIT_MS;
+        while (isHeld(api, operation) && System.currentTimeMillis() < deadline) {
+            try {
+                Thread.sleep(HOLD_POLL_MS);
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException("the held handler of " + api + "." + operation + " was interrupted", interrupted);
+            }
+        }
     }
 }

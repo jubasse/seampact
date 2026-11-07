@@ -97,22 +97,43 @@ export interface StepExpectation {
 }
 
 /**
- * Where a captured value comes from: the JSON body at a JSON pointer (`""` is the whole body), or the first group
- * of a regular expression over a response header.
+ * Where a captured value comes from: the JSON body at a JSON pointer (`""` is the whole body), the body's exact
+ * text, or the first group of a regular expression over a response header.
  */
 export type CaptureSource =
   | { readonly body: string }
+  | { readonly bodyText: true }
   | { readonly header: string; readonly pattern: string };
 
 /**
  * One request and its expectation. `capture` names values of the response, read before the expectation is
- * checked, for `{{name}}` in this step and the later ones.
+ * checked, for `{{name}}` in this step and the later ones. `waitForHookCall` holds the request until the sample app
+ * has recorded that call. A `background` request is sent and the next steps run at once; its expectation is
+ * checked once every step has run, so it captures nothing.
  */
 export interface SuiteStep {
   readonly title?: string;
+  readonly waitForHookCall?: RecordedHookCall;
   readonly request: StepRequest;
+  readonly background?: true;
   readonly capture?: Readonly<Record<string, CaptureSource>>;
   readonly expect: StepExpectation;
+}
+
+/**
+ * A step that loads another script through the control routes, which empties the recorded calls and log lines,
+ * so the next steps meet the doubles' new answers.
+ */
+export interface ScriptStep {
+  readonly title?: string;
+  readonly script: SampleAppScript;
+}
+
+/** A step of a case: a request, or a script load. */
+export type CaseStep = SuiteStep | ScriptStep;
+
+export function isScriptStep(step: CaseStep): step is ScriptStep {
+  return "script" in step;
 }
 
 /**
@@ -147,7 +168,7 @@ export interface SuiteCase {
   readonly apis?: readonly string[];
   readonly targets?: readonly string[];
   readonly script?: SampleAppScript;
-  readonly steps: readonly SuiteStep[];
+  readonly steps: readonly CaseStep[];
   readonly hookCalls?: readonly RecordedHookCall[];
   readonly boot?: BootExpectation;
 }
@@ -206,11 +227,13 @@ const CASE_MEMBERS = [
 const HTTP_CASE_MEMBERS = ["apis", "script", "steps", "hookCalls"];
 const SCOPED_CHECK_MEMBERS = ["id", "targets"];
 const BOOT_MEMBERS = ["variant", "outcome", "diagnostic"];
-const STEP_MEMBERS = ["title", "request", "capture", "expect"];
+const STEP_MEMBERS = ["title", "waitForHookCall", "request", "background", "capture", "expect"];
+const SCRIPT_STEP_MEMBERS = ["title", "script"];
 const REQUEST_MEMBERS = ["method", "path", "query", "headers", "body", "bodyText", "sign"];
 const SIGN_MEMBERS = ["scheme", "header", "secret", "ageSeconds"];
 const EXPECT_MEMBERS = ["status", "headers", "body", "bodyText", "absent", "logLines"];
 const BODY_CAPTURE_MEMBERS = ["body"];
+const BODY_TEXT_CAPTURE_MEMBERS = ["bodyText"];
 const HEADER_CAPTURE_MEMBERS = ["header", "pattern"];
 const HEADER_EXPECTATION_MEMBERS = ["equals", "contains", "excludes", "absent"];
 const LOG_LINES_MEMBERS = ["contains", "excludes"];
@@ -386,18 +409,54 @@ function readHookCalls(reader: JsonReader, value: unknown): RecordedHookCall[] {
   );
 }
 
-function readStep(reader: JsonReader, value: unknown, pointer: string): SuiteStep {
+function readStep(reader: JsonReader, value: unknown, pointer: string): CaseStep {
+  const isScriptLoad = typeof value === "object" && value !== null && "script" in value;
+
+  if (isScriptLoad) return readScriptStep(reader, value, pointer);
+
   const object = objectAt(reader, value, pointer, STEP_MEMBERS);
+
+  if (object.background !== undefined && object.background !== true) {
+    reader.fail(`${pointer}/background`, "`background` is `true`; leave it out otherwise");
+  }
+
+  if (object.background === true && object.capture !== undefined) {
+    reader.fail(
+      `${pointer}/capture`,
+      "a background step captures nothing: its response comes after the later steps",
+    );
+  }
 
   return {
     ...(object.title === undefined
       ? {}
       : { title: stringAt(reader, object.title, `${pointer}/title`) }),
+    ...(object.waitForHookCall === undefined
+      ? {}
+      : {
+          waitForHookCall: readRecordedHookCall(
+            reader,
+            object.waitForHookCall,
+            `${pointer}/waitForHookCall`,
+          ),
+        }),
     request: readRequest(reader, object.request, `${pointer}/request`),
+    ...(object.background === true ? { background: true } : {}),
     ...(object.capture === undefined
       ? {}
       : { capture: readCaptures(reader, object.capture, `${pointer}/capture`) }),
     expect: readExpectation(reader, object.expect, `${pointer}/expect`),
+  };
+}
+
+function readScriptStep(reader: JsonReader, value: unknown, pointer: string): ScriptStep {
+  const object = objectAt(reader, value, pointer, SCRIPT_STEP_MEMBERS);
+
+  return {
+    ...(object.title === undefined
+      ? {}
+      : { title: stringAt(reader, object.title, `${pointer}/title`) }),
+    script: readSampleAppScript(reader, object.script, `${pointer}/script`),
   };
 }
 
@@ -420,6 +479,18 @@ function readCaptures(
 }
 
 function readCaptureSource(reader: JsonReader, value: unknown, pointer: string): CaptureSource {
+  const isBodyTextCapture = typeof value === "object" && value !== null && "bodyText" in value;
+
+  if (isBodyTextCapture) {
+    const object = objectAt(reader, value, pointer, BODY_TEXT_CAPTURE_MEMBERS);
+
+    if (object.bodyText !== true) {
+      reader.fail(`${pointer}/bodyText`, "`bodyText` is `true`, the body's exact text");
+    }
+
+    return { bodyText: true };
+  }
+
   const isBodyCapture = typeof value === "object" && value !== null && "body" in value;
   const object = objectAt(
     reader,

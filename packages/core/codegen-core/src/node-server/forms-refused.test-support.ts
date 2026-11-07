@@ -8,7 +8,10 @@ import type { GenerateOutcome, GenerateRequest, Target } from "../target.js";
 import { packIr } from "./live-pages.test-support.js";
 import { readGoldenIr } from "./reference-project.test-support.js";
 
-/** A form 1.0 refuses by name: how to put it in the golden tasks api, and the code the refusal carries. */
+/**
+ * A form 1.0 refuses by name: how to put it in the golden tasks api, the code the refusal carries and, when named, the
+ * IR member it points at.
+ */
 export interface RefusedForm {
   readonly title: string;
   readonly code: string;
@@ -283,6 +286,23 @@ export const FORMS_REFUSED_BY_ONE_ZERO: readonly RefusedForm[] = [
 
       sort.style = "split";
       sort.direction = SPLIT_SORT_DIRECTION;
+    },
+  },
+  {
+    title: "idempotency enforced by none",
+    code: "idempotency.enforce.unsupported",
+    at: { operation: "createTask", member: "/operations/2/idempotency" },
+    change: (ir) => {
+      const { idempotency } = operationOf(ir, "createTask");
+
+      if (
+        idempotency === undefined ||
+        !isKnownVariant("Idempotency", idempotency) ||
+        idempotency.kind === "exempt"
+      )
+        throw new Error("the golden createTask has no enforced idempotency");
+
+      idempotency.enforce = "none";
     },
   },
 ];

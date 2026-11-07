@@ -11,7 +11,7 @@ from seampact_consumer_suite.suite_files import suite_files
 
 from seampact.hooks import ThrottleBucket
 
-SCRIPT_MEMBERS: Final = ("decisions", "scopes", "answers")
+SCRIPT_MEMBERS: Final = ("decisions", "scopes", "answers", "holds")
 
 
 class RecordedBucket(TypedDict):

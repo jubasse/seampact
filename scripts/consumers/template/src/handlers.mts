@@ -7,7 +7,7 @@ import type * as TasksService from "../generated/types/tasksService/index.js";
 import type * as TasksServiceWrites from "../generated/types/tasksServiceWrites/index.js";
 import { DEVICE_ID } from "../test/credentials.mjs";
 import { listChannelsPage, listTasksPage } from "./paged-lists.mjs";
-import { scriptedAnswer, writeLogLine } from "./suite-control.mjs";
+import { isHeld, scriptedAnswer, waitForRelease, writeLogLine } from "./suite-control.mjs";
 
 const CREATED_AT = "2026-10-18T09:00:00.000Z";
 const NEW_TASK_ID = "20000000-0000-4000-8000-0000000000ff";
@@ -50,7 +50,8 @@ function logTraceContext(traceContext: string | undefined): void {
 
 /**
  * The handlers of one api, each answering what the loaded script gives its operation, as is, in place of its own
- * result: the script tests the boundary with results the handler types do not allow.
+ * result: the script tests the boundary with results the handler types do not allow. A held handler answers once
+ * released, from the script loaded then.
  */
 export function scripted<Handlers extends object>(api: string, handlers: Handlers): Handlers {
   return new Proxy(handlers, {
@@ -59,14 +60,20 @@ export function scripted<Handlers extends object>(api: string, handlers: Handler
 
       if (typeof handler !== "function" || typeof property !== "string") return handler;
 
+      const answer = (input: unknown[]): unknown => {
+        const scripted = scriptedAnswer(api, property);
+
+        if (scripted === undefined) return Reflect.apply(handler, target, input);
+
+        if ("throws" in scripted) throw new Error(scripted.throws);
+
+        return scripted;
+      };
+
       return (...input: unknown[]) => {
-        const answer = scriptedAnswer(api, property);
+        if (!isHeld(api, property)) return answer(input);
 
-        if (answer === undefined) return Reflect.apply(handler, target, input);
-
-        if ("throws" in answer) throw new Error(answer.throws);
-
-        return answer;
+        return waitForRelease(api, property).then(() => answer(input));
       };
     },
   });

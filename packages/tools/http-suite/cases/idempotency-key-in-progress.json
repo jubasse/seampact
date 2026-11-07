@@ -1,0 +1,70 @@
+{
+  "id": "idempotency-key-in-progress",
+  "title": "A request whose key is still running answers 409 and the first request then completes",
+  "checks": ["CHK-043"],
+  "profiles": ["default"],
+  "script": {
+    "holds": ["tasks.createTask"]
+  },
+  "steps": [
+    {
+      "title": "first, held in its handler",
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:running}}"
+        },
+        "body": {
+          "title": "Running"
+        }
+      },
+      "background": true,
+      "expect": {
+        "status": 201,
+        "headers": {
+          "idempotency-replayed": {
+            "excludes": "true"
+          }
+        },
+        "body": {
+          "title": "Running"
+        }
+      }
+    },
+    {
+      "title": "same key while the first runs",
+      "waitForHookCall": {
+        "hook": "hold",
+        "operation": "tasks.createTask"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:running}}"
+        },
+        "body": {
+          "title": "Running"
+        }
+      },
+      "expect": {
+        "status": 409,
+        "headers": {
+          "content-type": {
+            "contains": ["application/problem+json"]
+          }
+        },
+        "body": {
+          "code": "api.idempotency_in_progress"
+        }
+      }
+    },
+    {
+      "title": "release the first",
+      "script": {}
+    }
+  ]
+}

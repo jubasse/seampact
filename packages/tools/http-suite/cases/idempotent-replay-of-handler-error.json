@@ -1,0 +1,80 @@
+{
+  "id": "idempotent-replay-of-handler-error",
+  "title": "A declared error the handler answered is stored and replayed byte for byte",
+  "checks": ["CHK-149"],
+  "profiles": ["default"],
+  "script": {
+    "answers": {
+      "tasks.createTask": {
+        "status": 404,
+        "code": "api.not_found"
+      }
+    }
+  },
+  "steps": [
+    {
+      "title": "the handler answers a declared error",
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:failed}}"
+        },
+        "body": {
+          "title": "Not stored twice"
+        }
+      },
+      "capture": {
+        "storedError": {
+          "bodyText": true
+        }
+      },
+      "expect": {
+        "status": 404,
+        "body": {
+          "code": "api.not_found"
+        }
+      }
+    },
+    {
+      "title": "the handler now creates the task",
+      "script": {}
+    },
+    {
+      "title": "replay of the stored error",
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:failed}}"
+        },
+        "body": {
+          "title": "Not stored twice"
+        }
+      },
+      "expect": {
+        "status": 404,
+        "bodyText": "{{storedError}}"
+      }
+    },
+    {
+      "title": "another key reaches the handler",
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:fresh}}"
+        },
+        "body": {
+          "title": "Not stored twice"
+        }
+      },
+      "expect": {
+        "status": 201
+      }
+    }
+  ]
+}

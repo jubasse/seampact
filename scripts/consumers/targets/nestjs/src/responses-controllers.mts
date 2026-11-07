@@ -40,3 +40,16 @@ export class ResponsesNotesController implements TasksResponsesNest.NotesEndpoin
     return tasksResponsesHandlers.legacyNote(input);
   }
 }
+
+@Controller()
+export class ResponsesMemosController implements TasksResponsesNest.MemosEndpoints {
+  @TasksResponsesNest.getMemo()
+  getMemo(@TasksResponsesNest.getMemo.input() input: TasksResponses.GetMemoInput) {
+    return tasksResponsesHandlers.getMemo(input);
+  }
+
+  @TasksResponsesNest.deleteMemo()
+  deleteMemo(@TasksResponsesNest.deleteMemo.input() input: TasksResponses.DeleteMemoInput) {
+    return tasksResponsesHandlers.deleteMemo(input);
+  }
+}

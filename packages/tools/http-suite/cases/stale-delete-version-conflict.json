@@ -1,0 +1,91 @@
+{
+  "id": "stale-delete-version-conflict",
+  "title": "A delete reads the body-sourced version from its query: a stale one answers 409 state.conflict and deletes nothing",
+  "checks": ["CHK-041"],
+  "profiles": ["default"],
+  "apis": ["tasksResponses"],
+  "steps": [
+    {
+      "title": "stale",
+      "request": {
+        "method": "DELETE",
+        "path": "/responses/v1/memos/40000000-0000-4000-8000-000000000001",
+        "query": {
+          "expectedVersion": 2
+        },
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:stale}}"
+        }
+      },
+      "expect": {
+        "status": 409,
+        "headers": {
+          "content-type": {
+            "contains": ["application/problem+json"]
+          }
+        },
+        "body": {
+          "code": "state.conflict"
+        }
+      }
+    },
+    {
+      "title": "the memo is still there",
+      "request": {
+        "method": "GET",
+        "path": "/responses/v1/memos/40000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "memoId": "40000000-0000-4000-8000-000000000001",
+          "version": 1
+        }
+      }
+    },
+    {
+      "title": "missing from the query",
+      "request": {
+        "method": "DELETE",
+        "path": "/responses/v1/memos/40000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:missing}}"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "body": {
+          "code": "api.schema_invalid",
+          "issues": [
+            {
+              "pointer": "/expectedVersion",
+              "rule": "required"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "title": "current",
+      "request": {
+        "method": "DELETE",
+        "path": "/responses/v1/memos/40000000-0000-4000-8000-000000000001",
+        "query": {
+          "expectedVersion": 1
+        },
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:current}}"
+        }
+      },
+      "expect": {
+        "status": 204
+      }
+    }
+  ]
+}

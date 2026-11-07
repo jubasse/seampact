@@ -1,9 +1,12 @@
 // The sample app's side of the http suite's control routes, framework-neutral: the script a case loads, the hook
 // calls the doubles record and the log lines the app writes. Each overlay serves the three routes as framework
 // routes outside the contract, and the hooks and handlers read the script from here.
+import { setTimeout } from "node:timers/promises";
 import type { ThrottleBucket } from "@seampact/hooks";
 import {
   type DecidePurpose,
+  HOLD_HOOK_NAME,
+  HOLD_LIMIT_MS,
   operationKey,
   parseSampleAppScript,
   type SampleAppScript,
@@ -28,6 +31,7 @@ interface HookCallRecord {
 const NO_CONTENT = 204;
 const OK = 200;
 const BAD_REQUEST = 400;
+const HOLD_POLL_MS = 10;
 
 let loadedScript: SampleAppScript = {};
 // Off until the suite loads a script, so a run without the suite (the bench) keeps no growing call log.
@@ -108,4 +112,18 @@ export function scriptedScopeDenial(scope: string): ScriptedDenial | undefined {
 /** The answer the script gives an operation's handler in place of its own, if any. */
 export function scriptedAnswer(api: string, operationId: string): ScriptedAnswer | undefined {
   return loadedScript.answers?.[operationKey(api, operationId)];
+}
+
+/** Whether the script holds the operation's handler until a script that does not is loaded. */
+export function isHeld(api: string, operationId: string): boolean {
+  return loadedScript.holds?.includes(operationKey(api, operationId)) ?? false;
+}
+
+/** Records the hold, then waits until the operation is released or the hold limit has passed. */
+export async function waitForRelease(api: string, operationId: string): Promise<void> {
+  recordHookCall(HOLD_HOOK_NAME, { api, id: operationId });
+
+  const deadline = Date.now() + HOLD_LIMIT_MS;
+
+  while (isHeld(api, operationId) && Date.now() < deadline) await setTimeout(HOLD_POLL_MS);
 }

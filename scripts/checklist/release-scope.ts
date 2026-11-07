@@ -126,6 +126,15 @@ export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = indexItemsAfte
   ["CHK-133", refusedOnTheNodeServers("optional authentication; the native servers generate it")],
   ["CHK-128", refusedOnTheNodeServers("the split sort style")],
   [
+    "CHK-189",
+    {
+      targets: SERVERS_FOR_1_0,
+      refusedOn: NODE_SERVERS,
+      reason:
+        "1.0 refuses `idempotency.enforce: none` by name at generation on the Node servers; Spring Boot, Laravel, Symfony, FastAPI, DRF and Ninja generate it, not covered by the 1.0 suite",
+    },
+  ],
+  [
     "CHK-032",
     refusedForm("the complete page fact of a changes-since style", PHP_AND_PYTHON_SERVERS),
   ],

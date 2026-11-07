@@ -260,7 +260,10 @@ describe.each([HAL, API_PLATFORM])("the default cases under %s", (packageName) =
     )?.media;
 
     expect(profile.refusals).not.toHaveProperty("head-runs-get-without-body");
-    expect(head?.steps[0]?.expect.headers?.["content-type"]?.contains).toEqual([media]);
+    expect(head?.steps[0]).toHaveProperty(
+      ["expect", "headers", "content-type", "contains"],
+      [media],
+    );
   });
 });
 
@@ -379,7 +382,7 @@ describe("the pack profile", () => {
     const limitCase = profile.cases.find((suiteCase) => suiteCase.id === "limit-above-max-refused");
 
     expect(profile.profile).toBe("pack:hal");
-    expect(limitCase?.steps[0]?.request.query).toHaveProperty("size");
+    expect(limitCase?.steps[0]).toHaveProperty("request.query.size");
     expect(Object.keys(profile.refusals)).toContain("page-links-next-page");
     expect(profile.cases.map((suiteCase) => suiteCase.id)).toContain("pack-hal-page-next-link");
   });
@@ -388,7 +391,7 @@ describe("the pack profile", () => {
     const profile = packProfileOf(contractsOf("hal"), HAL);
     const limitCase = profile.cases.find((suiteCase) => suiteCase.id === "limit-above-max-refused");
 
-    expect(limitCase?.steps[0]?.expect.body).toEqual({
+    expect(limitCase?.steps[0]).toHaveProperty("expect.body", {
       code: ERROR_CODE,
       issues: [{ pointer: "/size" }],
     });
