@@ -1,7 +1,8 @@
 name: Docs site
 
 # Builds the documentation website from docs/ with Starlight: the prebuild copies the pages and rewrites their links,
-# then the build fails on any link to a missing page, file or anchor.
+# then the build fails on any link to a missing page, file or anchor. The docs-site test also checks that each page
+# excerpt still appears in the generated golden it names, so a change to those goldens runs the lane.
 
 on:
   push:
@@ -43,6 +44,10 @@ jobs:
             ^packages/tools/docs-site/
             ^pnpm-lock\.yaml$
             ^\.github/workflows/docs-site\.yml$
+            ^packages/targets/[^/]+/(rules-snapshots|types-snapshots|own-validators-snapshots)/
+            ^jvm/seampact-spring-boot/src/test/golden/
+            ^php/(laravel|symfony)/tests/golden/
+            ^python/[^/]+/[^/]+/golden/
       # The shared filter counts docs/ and the site package as documentation no lane reads; this lane reads both.
       - name: Detect a change to docs/ or the site package
         id: decide
