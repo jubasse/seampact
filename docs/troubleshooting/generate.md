@@ -37,6 +37,7 @@ Express, Fastify, Hono, NestJS and AdonisJS.
 
 | Code | Cause and fix |
 |---|---|
+| `type.nullable.unsupported` | A property or type is `nullable: true`, and the Node servers cannot generate that (only an opaque value, which is `unknown`, may be nullable). Remove `nullable`, or make the property optional instead. |
 | `options.reply.invalid` | NestJS `reply` takes `handler` or `interceptor`. Use one of them. |
 | `runtime.output-directory-missing` | A programmatic generate request gave no `outputDirectory`. Pass the api's output directory; `seampact generate` always does. |
 | `idempotency.enforce.unsupported` | The operation sets `idempotency.enforce: none`, which the Node servers do not generate. Keep `boundary`. |
