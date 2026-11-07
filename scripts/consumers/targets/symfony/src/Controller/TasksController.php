@@ -67,6 +67,11 @@ final class TasksController implements TasksEndpoints
     #[SeampactOperation('getTasksBatch')]
     public function getTasksBatch(GetTasksBatchInput $input): GetTasksBatchResult
     {
+        $scripted = static fn (array $body): GetTasksBatchResult => new GetTasksBatchResponse200(SampleData::taskTableOf($body));
+        if (($answer = ScriptedAnswers::answer('getTasksBatch', 200, $scripted)) !== null) {
+            return $answer;
+        }
+
         $tasks = [];
         foreach ($input->body->ids as $taskId) {
             $tasks[$taskId] = SampleData::task($taskId);
