@@ -47,6 +47,9 @@ else
   cp "$here/gradle/settings.gradle.kts" "$here/gradle/build.gradle.kts" "$destination/"
   cp "$repository/jvm/gradlew" "$destination/gradlew"
   cp -R "$repository/jvm/gradle/wrapper" "$destination/gradle/"
+  # The consumer is the root build, so it reads the dependency retry keys of jvm/gradle.properties only from its own.
+  grep '^systemProp\.org\.gradle\.internal\.repository\.' "$repository/jvm/gradle.properties" > "$destination/gradle.properties" ||
+    { echo "assemble: jvm/gradle.properties has no systemProp.org.gradle.internal.repository. retry key to copy" >&2; exit 1; }
 fi
 
 if [ "$variant" = "pack-spring" ]; then
