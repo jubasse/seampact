@@ -1,6 +1,6 @@
 # Angular
 
-seampact writes an Angular service per api over the typed `fetch` client. The client sends through your app's `HttpClient`, so your interceptors, XSRF settings and `withFetch()` apply. Reads are signals built on Angular's `resource()`. There is no query library. Tested with Angular 22.
+seampact writes an Angular service per api over the [fetch client](fetch-client.md). The client sends through your app's `HttpClient`, so your interceptors, XSRF settings and `withFetch()` apply. Reads are signals built on Angular's `resource()`. There is no query library. Tested with Angular 22.
 
 ## Add the targets
 
@@ -25,6 +25,14 @@ targets:
 ## Provide the service
 
 ```ts
+// main.ts
+import { bootstrapApplication } from "@angular/platform-browser";
+import { provideHttpClient, withInterceptors } from "@angular/common/http";
+import { provideNotesApi } from "./__generated__/queries/notes/index.js";
+import { App } from "./app/app";
+import { authInterceptor } from "./app/auth.interceptor";
+import { environment } from "./environments/environment";
+
 bootstrapApplication(App, {
   providers: [
     provideHttpClient(withInterceptors([authInterceptor])),
@@ -33,11 +41,20 @@ bootstrapApplication(App, {
 });
 ```
 
-`apiUrl` holds your backend URL: see [Point the client at your backend](backend-url.md). For Angular's XSRF header, keep the api on the page's origin and set `withXsrfConfiguration({ headerName })` to the CSRF header your contract declares. For cookies on a cross-origin api, set `withCredentials` in an interceptor: the config has no `fetch` option.
+`App`, `authInterceptor` and `environment` are yours: your root component, an `HttpInterceptorFn` that adds the token, and your environment file. `apiUrl` holds your backend URL: see [Point the client at your backend](backend-url.md). Note that `environment.apiUrl` is fixed at build time; for a value chosen at container start, read `/config.json` in `provideAppInitializer`.
+
+Two security settings:
+
+- XSRF: keep the api on the page's origin and call `withXsrfConfiguration({ headerName })` with the CSRF header your contract declares.
+- Cookies on a cross-origin api: set `withCredentials` in an interceptor. The client config has no `fetch` option here.
 
 ## Use it in a component
 
 ```ts
+import { Component, inject, input } from "@angular/core";
+import { NotesApi } from "./__generated__/queries/notes/index.js";
+
+@Component({ selector: "app-note-list", template: "..." })
 export class NoteList {
   readonly folderId = input.required<string>();
   readonly notes = inject(NotesApi).listNotes(() => ({ query: { folderId: this.folderId() } }));
@@ -54,15 +71,11 @@ export class NoteList {
 - A read returns `{ data, error, isLoading, refetch }`, each a signal but `refetch`.
 - The request is a function: when a signal it reads changes, the read starts again. Return `null` to skip a read.
 - Create readers in a field initializer. Elsewhere, pass `{ injector }`.
-- A read stops when the component (or the injector) is destroyed, or when its request changes.
 - No read runs during server rendering. Pass `{ transferId: "notes" }` to read on the server and hand the data to the browser. Angular's server transfer caps a body at 1 MiB, so a larger read fails there.
-- There is no cache. A write does not refresh other readers: call `refetch`.
-- `mutate` never throws. Each call resolves to its own `{ data }` or `{ error }`, a `ContractError` for a declared error. The `data`, `error` and `isPending` signals show the latest call.
-- `retry` sends a failed write again with the same idempotency key, so the server runs it once. It takes a whole count (0 or more). A declared error is not retried.
-- A write is not aborted when the component is destroyed.
-- A paged list has no infinite reader. Change the request to read the next page.
 
-`isContractError(error)` tells a declared error apart from a network failure. `inject(NotesApi).client` is the client itself, and `createNotesQueries(client)` gives the plain fetchers, for code outside Angular.
+The other behaviours (cache, `mutate`, `retry`, paging, refused options) are [shared with React and Vue](fetch-client.md#shared-behaviours-with-query-fetch). On Angular, a read stops when the component or the injector is destroyed.
+
+A declared error is thrown as a `ContractError`: `isContractError(error)` tells it apart from a network failure (fields and `errorStyle`: [Fetch client](fetch-client.md#contracterror)). `inject(NotesApi).client` is the client itself, and `createNotesQueries(client)` gives the plain fetchers, for code outside Angular.
 
 The service only reads and writes. Keep shared state in your own store or signals.
 
@@ -155,10 +168,12 @@ export class NotesPage {
 | `errors` | `throw`, `data` (the whole reply as data) | `throw` |
 | `state` | `ngrx` (actions and effects), `ngrx-signals` (Signal Store features) | none |
 
-`staleTime`, `invalidate`, `infinite` and `keys.root` need a query library: `generate` refuses them.
-
-The service needs a client with `errorStyle: result`, the client's default: `generate` refuses a client with `errorStyle: throw`.
-
 `artefacts: { service: false }` keeps the plain fetchers only.
 
-Errors: [Generate errors](../troubleshooting/generate.md).
+## Limits
+
+`generate` refuses `staleTime`, `invalidate`, `infinite` and `keys.root` (no query library) and a client with `errorStyle: throw` (`link.client.errorStyle.unsupported`). See [Link errors](../troubleshooting/link.md) and the [client table](../troubleshooting/generate.md#clients).
+
+## Next
+
+[Point the client at your backend](backend-url.md), then [MSW mocks](msw.md) to test without a backend.

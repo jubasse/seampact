@@ -1,8 +1,9 @@
-import type { Definition, Link, Nodes } from "mdast";
+import type { Definition, Link, Nodes, Root } from "mdast";
 import { visit } from "unist-util-visit";
 import { type LinkContext, resolveLinkTarget } from "./link-target.ts";
 import { parseMarkdown, sourceRange } from "./markdown-tree.ts";
-import { readPageDescription, readPageHeading } from "./page-heading.ts";
+import { type PageHeading, readPageDescription, readPageHeading } from "./page-heading.ts";
+import { placementFrontmatter } from "./page-policy.ts";
 import { REPOSITORY_BRANCH, REPOSITORY_URL } from "./site-layout.ts";
 
 /** A link of docs/ the site cannot serve, with where it is written. */
@@ -16,7 +17,15 @@ export interface BrokenLink {
 export interface TransformedPage {
   title: string;
   markdown: string;
+  description: string | undefined;
   brokenLinks: BrokenLink[];
+}
+
+/** What the prebuild knows about a page beyond its source. */
+export interface TransformOptions {
+  lastUpdated?: Date | undefined;
+  /** Descriptions earlier pages already use: a page takes another sentence rather than repeat one. */
+  takenDescriptions?: ReadonlySet<string>;
 }
 
 interface SourceEdit {
@@ -30,6 +39,7 @@ export function transformPage(
   source: string,
   docsPath: string,
   context: LinkContext,
+  options: TransformOptions = {},
 ): TransformedPage {
   const sourceName = `docs/${docsPath}`;
   const tree = parseMarkdown(source);
@@ -38,6 +48,8 @@ export function transformPage(
     { start: heading.start, end: endOfBlankLines(source, heading.end), replacement: "" },
   ];
   const brokenLinks: BrokenLink[] = [];
+
+  edits.push(...headingLevelEdits(tree, source, heading, sourceName));
 
   visit(tree, ["image", "html"], (node) => {
     const line = node.position?.start.line ?? 0;
@@ -71,26 +83,73 @@ export function transformPage(
     }
   });
 
+  const description = readPageDescription(tree, options.takenDescriptions);
   const frontmatter = frontmatterFor({
     title: heading.title,
-    description: readPageDescription(tree),
+    description,
+    ...placementFrontmatter(docsPath),
+    lastUpdated: options.lastUpdated,
     editUrl: `${REPOSITORY_URL}/edit/${REPOSITORY_BRANCH}/${sourceName}`,
   });
 
   return {
     title: heading.title,
     markdown: `${frontmatter}${applyEdits(source, edits)}`,
+    description,
     brokenLinks,
   };
 }
 
 /** The YAML frontmatter of a site page; JSON strings are valid YAML scalars. */
-export function frontmatterFor(fields: Record<string, string | boolean | undefined>): string {
+export function frontmatterFor(
+  fields: Record<string, string | boolean | Date | undefined>,
+): string {
   const lines = Object.entries(fields)
     .filter(([, value]) => value !== undefined)
-    .map(([key, value]) => `${key}: ${JSON.stringify(value)}`);
+    .map(
+      ([key, value]) =>
+        `${key}: ${value instanceof Date ? value.toISOString() : JSON.stringify(value)}`,
+    );
 
   return `---\n${lines.join("\n")}\n---\n\n`;
+}
+
+const FIRST_SECTION_DEPTH = 2;
+
+/**
+ * The page title becomes the page's h1, so the headings below it move up by as many levels as the
+ * title sat below h1: a grammar section opens with an h3 title and its h4 headings become h2.
+ */
+function headingLevelEdits(
+  tree: Root,
+  source: string,
+  title: PageHeading,
+  sourceName: string,
+): SourceEdit[] {
+  const levelsUp = title.depth - 1;
+
+  if (levelsUp === 0) return [];
+
+  const edits: SourceEdit[] = [];
+
+  visit(tree, "heading", (node) => {
+    const { start } = sourceRange(node, sourceName);
+
+    if (start === title.start) return;
+
+    if (source[start] !== "#") {
+      throw new Error(
+        `${sourceName}:${node.position?.start.line}: this heading is not written with "#", so its level cannot move up with the title. Write it with "#".`,
+      );
+    }
+
+    const markerEnd = start + node.depth;
+    const newDepth = Math.max(FIRST_SECTION_DEPTH, node.depth - levelsUp);
+
+    edits.push({ start, end: markerEnd, replacement: "#".repeat(newDepth) });
+  });
+
+  return edits;
 }
 
 const HTML_REFERENCE_PATTERN = /\b(?:href|src)\s*=\s*(?:"([^"]*)"|'([^']*)')/gi;

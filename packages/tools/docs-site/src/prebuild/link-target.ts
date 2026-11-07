@@ -1,5 +1,6 @@
 import { existsSync, statSync } from "node:fs";
 import { join, posix } from "node:path";
+import { DOCS_INDEX_SLUG, movedPageFor } from "./page-policy.ts";
 import { repositoryLink, SITE_BASE } from "./site-layout.ts";
 import type { SourcePage } from "./source-pages.ts";
 
@@ -66,6 +67,13 @@ export function resolveLinkTarget(
     return { kind: "broken", reason: `"${url}" points to ${repositoryPath}, which does not exist` };
 
   const isFolder = statSync(absolutePath).isDirectory();
+  const moved = repositoryPath.startsWith(DOCS_FOLDER_PREFIX)
+    ? movedPageFor(repositoryPath.slice(DOCS_FOLDER_PREFIX.length))
+    : undefined;
+
+  // A moved page is not served: a link to it goes straight to the page that holds the content.
+  if (moved !== undefined) return { kind: "rewritten", url: movedPageUrl(moved.target, hash) };
+
   const siteSlug = siteSlugFor(repositoryPath, isFolder, context);
 
   if (siteSlug !== undefined) return { kind: "rewritten", url: `${siteRoute(siteSlug)}${hash}` };
@@ -88,7 +96,7 @@ function siteSlugFor(
   isFolder: boolean,
   context: LinkContext,
 ): string | undefined {
-  if (repositoryPath === "docs") return "";
+  if (repositoryPath === "docs") return DOCS_INDEX_SLUG;
 
   if (!repositoryPath.startsWith(DOCS_FOLDER_PREFIX)) return undefined;
 
@@ -102,4 +110,11 @@ function siteSlugFor(
 /** The absolute route of a page under the site base: `/seampact/backend/hono/`. */
 export function siteRoute(slug: string): string {
   return slug === "" ? SITE_BASE : `${SITE_BASE}${slug}/`;
+}
+
+/** The route of a moved page's target; an anchor the link wrote wins over the target's own. */
+function movedPageUrl(target: string, linkHash: string): string {
+  const targetWithoutHash = target.replace(/#.*$/, "");
+
+  return `${SITE_BASE}${linkHash === "" ? target : `${targetWithoutHash}${linkHash}`}`;
 }

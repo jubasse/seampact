@@ -1,16 +1,19 @@
 # Switch the validator
 
-Change the validator library of the generated code.
+A validator checks the data a request carries against the contract. Node servers pick the validator library; Spring Boot, Laravel, Symfony and the Python servers use their framework's own library (Bean Validation, Laravel's validator, Symfony Validator, Pydantic or DRF fields) and take only `rules`, below.
 
-The server target reads its validators from the entry its `validators` link names. Change the package of that entry.
+Use this page to change the validator library of the generated code on a Node server, or to make every target give the contract's exact checks.
+
+The server target reads its validators from the entry its `validators` link names. In the `validators` entry of `seampact.config.yaml` (see [Generate the code](../getting-started/your-first-api.md#3-generate-the-code)), change the package.
 
 ```yaml
+# seampact.config.yaml, under targets
   - id: validators
     use: "@seampact/codegen-yup"
     apis: [notes]
 ```
 
-`@seampact/codegen-zod`, `@seampact/codegen-yup` and `@seampact/codegen-class-validator` work with the NestJS server. Install the library you pick in your app (`yup`, or `class-validator` and `class-transformer`), then run `npx seampact generate`.
+`@seampact/codegen-zod` and `@seampact/codegen-yup` work on every Node server. `@seampact/codegen-class-validator` works on NestJS only. Install the library you pick in your app (`yup`, or `class-validator` and `class-transformer`), then run `seampact generate` ([commands per stack](../features/commands-per-stack.md)).
 
 You see the `validators` folder rewritten. On NestJS, Express and Hono, a server without a `validators` link stops `generate` with `link.missing`, which names the packages to link.
 
@@ -30,9 +33,9 @@ Set `rules: seampact-consistent` to get the contract's exact checks instead. Eve
       rules: seampact-consistent
 ```
 
-The error body names the same rule in both modes: `minLength`, `format`, `pattern`, and so on.
+The error body names the same rule in both modes: `minLength`, `format`, `pattern`, and so on. The option is in [Per-target options](reference.md#codegen-zod).
 
-With the default `rules: native`, each library differs from the contract in a few places. Set `rules: seampact-consistent` to get the contract's checks on every one of them.
+With the default `rules: native`, each library differs from the contract in a few places. Use `seampact-consistent` when clients and servers must agree.
 
 ### zod
 
@@ -64,3 +67,13 @@ AdonisJS's own VineJS validators take `rules` on the server target, `@seampact/c
 - `uuid` also checks the version and variant digits. `00000000-0000-9000-8000-000000000000` is refused.
 - `date-time`, `exclusiveMinimum`, `exclusiveMaximum` and `multipleOf` have no VineJS rule: they stay the contract's checks.
 - Under the native rules, an issue's message may be VineJS's own text; the rule name is the same in both modes.
+
+### Other servers
+
+- Spring Boot validates with Bean Validation.
+- Laravel and Symfony validate with the framework's own validator, Pydantic validates on FastAPI and Django Ninja, and DRF uses its field arguments. Each guide's options table says what `rules` changes: [Laravel](../backend/laravel.md#options), [Symfony](../backend/symfony.md#options), [FastAPI](../backend/fastapi.md#options), [DRF](../backend/drf.md#options), [Ninja](../backend/ninja.md#options).
+
+## Next
+
+- Next: [OpenAPI and docs](openapi-and-docs.md).
+- Every option: [Config reference](reference.md#per-target-options).

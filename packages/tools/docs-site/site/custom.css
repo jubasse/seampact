@@ -1,0 +1,11 @@
+/* On a narrow screen a wide table scrolls: show where the hidden columns are and let long code wrap. */
+@media (max-width: 50em) {
+  .sl-markdown-content td code {
+    overflow-wrap: anywhere;
+  }
+}
+
+.sl-markdown-content table:focus-visible {
+  outline: 2px solid var(--sl-color-accent);
+  outline-offset: 2px;
+}

@@ -4,7 +4,7 @@ Codes that start with `config.` come from `seampact.config.yaml`. Each line name
 
 ## The file
 
-| You see | Do |
+| Code | Cause and fix |
 |---|---|
 | `config.file.missing` | Create `seampact.config.yaml` in the app folder, or pass its path with `--config`. |
 | `config.yaml.syntax` | Fix the YAML at the line and column the message gives. |
@@ -12,19 +12,23 @@ Codes that start with `config.` come from `seampact.config.yaml`. Each line name
 | `config.yaml.tag` | PHP: remove the tag, such as `!!binary` or `!foo`. Quote the value if it must stay text. |
 | `config.yaml.merge-key` | PHP: write the keys in place of `<<: *anchor`. |
 | `config.yaml.leading-zero`, `config.yaml.underscore-number`, `config.yaml.signed-number`, `config.yaml.keyword-case`, `config.yaml.integer-range` | PHP and Node read this value differently. Quote it to keep it as text, or write the plain number or keyword. |
-| `config.schema ... 'colour' is not a key the app config takes here` | Remove the key or fix its spelling. |
-| `config.schema ... The key 'id' is required here` | Add the key it names. |
-| `config.schema ... The key 'mount' is '/' then segments ...` | Write the prefix as `/api`: a leading `/`, no trailing `/`, no `*`, no `.` or `..` segment, no segment starting with `:`. |
-| `config.schema ... 'bootCheck.frameworkRoutes' is true, false or 'strict'` | Write `true`, `false` or `strict`. |
-| `config.schema ... A source takes one form` | Keep the keys of one form: `path`, or `package` with `version`, or `release`, or `git`. `integrity` goes with the last three only. |
+| `config.schema` | A key or value of the config does not match its schema. The message after the code says which: see the list below the table. |
 | `config.key.waits` | The key is not read yet. Remove it from the config. |
-| `config.schema ... The key 'path' of a framework route is '/' then segments ...` | Each segment is `*`, `**` or text without `?`, `{` or `}` holding at most two `*`. Write a route parameter as `*`. |
 | `config.key.unsupported` | `mount`, `frameworkRoutes` and `frameworkDocs` belong to a server target. Remove them from this entry. |
 | `config.key.conflict` | You set two keys that cancel each other, such as `frameworkRoutes` with `artefacts.bootCheck: false`. Keep one. |
 
+`config.schema` messages and their fix:
+
+- `'colour' is not a key the app config takes here`: Remove the key or fix its spelling.
+- `The key 'id' is required here`: Add the key it names.
+- `The key 'mount' is '/' then segments ...`: Write the prefix as `/api`: a leading `/`, no trailing `/`, no `*`, no `.` or `..` segment, no segment starting with `:`.
+- `'bootCheck.frameworkRoutes' is true, false or 'strict'`: Write `true`, `false` or `strict`.
+- `A source takes one form`: Keep the keys of one form: `path`, or `package` with `version`, or `release`, or `git`. `integrity` goes with the last three only.
+- `The key 'path' of a framework route is '/' then segments ...`: Each segment is `*`, `**` or text without `?`, `{` or `}` holding at most two `*`. Write a route parameter as `*`.
+
 ## Sources
 
-| You see | Do |
+| Code | Cause and fix |
 |---|---|
 | `config.source.no-workspace` | The `path` folder holds neither `workspace.yaml` nor `api.yaml`. Point it at the contract folder. |
 | `config.source.local` | Local sources are refused (`allowLocal: false` or `SEAMPACT_ALLOW_LOCAL=false`). Use a pinned `package`, `release` or `git` source. |
@@ -34,7 +38,7 @@ Codes that start with `config.` come from `seampact.config.yaml`. Each line name
 
 ## Targets and apis
 
-| You see | Do |
+| Code | Cause and fix |
 |---|---|
 | `config.target.missing` | Install the package that `use` names. The message gives the command. |
 | `config.target.not-a-target` | `use` must name a seampact target package, not another library. |
@@ -50,7 +54,7 @@ Codes that start with `config.` come from `seampact.config.yaml`. Each line name
 
 ## Output and artefacts
 
-| You see | Do |
+| Code | Cause and fix |
 |---|---|
 | `config.out.outside` | `out` must stay inside `outDir`. |
 | `config.out.overlap` | Two entries write to the same folder. Give each its own `out`. |
@@ -69,7 +73,7 @@ Codes that start with `config.` come from `seampact.config.yaml`. Each line name
 
 ## Framework versions
 
-| You see | Do |
+| Code | Cause and fix |
 |---|---|
 | `config.matrix.untested` | Your framework version is not tested. Accept it with `allowUntested: [nestjs@13]` (Spring Boot: `spring-boot@5`) on the entry, or install a tested one. With `checks.matrix: error` it fails. |
 | `config.matrix.untested-minor` | Your Django, DRF or Ninja minor is not tested, in a tested major: a warning, or an error under `checks.matrix: error`. Install a tested minor the message lists, or keep yours under the default level. |

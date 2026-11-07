@@ -2,8 +2,6 @@
 
 You install the core, then only the generators your project uses. Installing the CLI pulls no code generator.
 
-Already running end to end today: the core, `codegen-ts`, `codegen-zod`, `codegen-yup`, `codegen-class-validator`, `codegen-fetch`, `codegen-react` (TanStack Query, SWR, RTK Query, or no library), `codegen-vue`, `codegen-angular`, `codegen-msw`, `codegen-nestjs`, `codegen-express`, `codegen-fastify`, `codegen-adonis` and `codegen-hono`, with the signed-webhook and in-memory idempotency helpers.
-
 ## Core (npm)
 
 | Package | What it does |
@@ -37,15 +35,13 @@ Each app of a repository (frontend, backend, service) has its own `seampact.conf
 
 ## Java and PHP
 
-These run with no Node.js installed. The standalone compiler binary (built for linux x64 and arm64, macOS x64 and arm64, Windows x64; release downloads next) runs `compile`, `lint` (core rules), `diff`, `explain` and `bundle`. `generate` and `check` run through the npm CLI or the Gradle, Maven or Composer plugin. The Gradle and Maven plugins read `seampact.config.yaml` or the same keys in their own DSL.
+These run with no Node.js installed. The standalone compiler binary (built for linux x64 and arm64, macOS x64 and arm64, Windows x64; see [the compiler binary](../getting-started/install-other-ecosystems.md#the-compiler-binary)) runs `compile`, `lint` (core rules), `diff`, `explain` and `bundle`. `generate` and `check` run through the npm CLI or the Gradle, Maven or Composer plugin. The Gradle and Maven plugins read `seampact.config.yaml` or the same keys in their own DSL.
 
 | Framework | Install |
 |---|---|
 | Spring Boot 4 | the Gradle plugin `io.github.jubasse.seampact` or the Maven plugin `io.github.jubasse:seampact-maven-plugin`, `io.github.jubasse:seampact-spring-runtime` (the Gradle plugin adds it, Maven declares it; the app provides Spring Boot itself), and `io.github.jubasse:seampact-hooks` unless the target vendors its types |
 | Laravel | `seampact/laravel` as a dependency (not `--dev`), and `seampact/hooks` unless the target vendors its types |
 | Symfony | `seampact/symfony` as a dependency (not `--dev`), and `seampact/hooks` unless the target vendors its types |
-| API Platform | `seampact/api-platform` as a development dependency, and `seampact/hooks` unless the target vendors its types |
-
 
 ## Python
 
@@ -63,13 +59,11 @@ These are Python packages, installed from PyPI. See [FastAPI](../backend/fastapi
 | Package | Use it when |
 |---|---|
 | `@seampact/pack-crud-rights` | you want a `<resource>.<op>` right on every route the `ops` shorthand generates, `batch` included, without declaring each one |
-| `@seampact/pack-api-platform` | your API Platform api serves JSON-LD items, Hydra pages and Hydra errors |
 | `@seampact/pack-laravel` | your api serves Laravel API Resources and paginators |
 | `@seampact/pack-spring` | your api serves Spring Data `Page` bodies |
 | `@seampact/pack-jsonapi` | your api speaks JSON:API |
 | `@seampact/pack-hal` | your api serves HAL |
-| `@seampact/nestjs-casl` | your NestJS app decides rights with CASL |
-| `seampact/laravel-spatie` | your Laravel app decides rights with spatie/laravel-permission |
 | `@seampact/signed-webhooks`, and its Java and PHP equivalents | you receive Stripe-style or GitHub-style signed webhooks and want the signature checked for you; other senders (Standard Webhooks, Slack) are verified by your own hook with their own library |
 | `@seampact/http-suite` | you write your own server target and want to prove it against the shared HTTP suite |
 
+Next: [Install](../getting-started/01-install.md), or the [glossary](glossary.md).
