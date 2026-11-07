@@ -1,4 +1,12 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
@@ -130,11 +138,119 @@ test("unbalanced markers are refused before anything is written", async () => {
   expect(existsSync(join(project, ".agents"))).toBe(false);
 });
 
-test("a skills folder outside the project is refused", async () => {
-  const result = await run(makeProject(), ["agents", "install", "--skills-directory", "../x"]);
+test.each([["../x"], [""], ["."]])(
+  "the skills folder '%s', outside the project or the project itself, is refused",
+  async (directory) => {
+    const project = makeProject();
+    const result = await run(project, ["agents", "install", "--skills-directory", directory]);
+
+    expect(result.exitCode).toBe(EXIT_REFUSED);
+    expect(result.err).toContain("agents.skills.outside");
+    expect(readdirSync(project)).toEqual([]);
+  },
+);
+
+test("an AGENTS.md that is a symbolic link is refused, and its target is left alone", async () => {
+  const project = makeProject();
+  const outside = join(makeProject(), "AGENTS.md");
+
+  writeFileSync(outside, "outside\n");
+  symlinkSync(outside, join(project, "AGENTS.md"));
+
+  const result = await run(project, ["agents", "install"]);
 
   expect(result.exitCode).toBe(EXIT_REFUSED);
-  expect(result.err).toContain("agents.skills.outside");
+  expect(result.err).toContain("agents.symlink");
+  expect(readFileSync(outside, "utf8")).toBe("outside\n");
+  expect(existsSync(join(project, ".agents"))).toBe(false);
+});
+
+test.each([
+  ["a symbolic link to .agents", ".agents", ".agents/skills"],
+  ["a symbolic link to a folder on the way to --skills-directory", "link", "link/skills"],
+  ["a symbolic link to the skills folder", ".claude/skills", ".claude/skills"],
+])("%s outside the project is refused before any write", async (_case, linkPath, directory) => {
+  const project = makeProject();
+  const outside = makeProject();
+
+  mkdirSync(join(project, linkPath, ".."), { recursive: true });
+  symlinkSync(outside, join(project, linkPath));
+
+  const result = await run(project, ["agents", "install", "--skills-directory", directory]);
+
+  expect(result.exitCode).toBe(EXIT_REFUSED);
+  expect(result.err).toContain("agents.symlink");
+  expect(readdirSync(outside)).toEqual([]);
+  expect(existsSync(join(project, "AGENTS.md"))).toBe(false);
+});
+
+test("a seampact skill folder that is a symbolic link is refused, and its target is not deleted", async () => {
+  const project = makeProject();
+  const outside = makeProject();
+
+  writeFileSync(join(outside, "keep.md"), "keep");
+  mkdirSync(join(project, ".agents", "skills"), { recursive: true });
+  symlinkSync(outside, join(project, ".agents", "skills", "seampact-setup"));
+
+  const result = await run(project, ["agents", "install"]);
+
+  expect(result.exitCode).toBe(EXIT_REFUSED);
+  expect(result.err).toContain("agents.symlink");
+  expect(readdirSync(outside)).toEqual(["keep.md"]);
+});
+
+test("a failed copy leaves the skills and AGENTS.md as they were", async () => {
+  const project = makeProject();
+
+  await run(project, ["agents", "install"]);
+
+  const agentsFile = join(project, "AGENTS.md");
+  const skills = join(project, ".agents", "skills");
+  const edited = `${readFileSync(agentsFile, "utf8")}\nMine.\n`;
+
+  writeFileSync(agentsFile, edited);
+  writeFileSync(join(skills, "seampact-setup", "SKILL.md"), "edited");
+  writeFileSync(join(project, ".claude"), "a file where the folder should be");
+
+  const result = await run(project, ["agents", "install", "--claude"]);
+
+  expect(result.exitCode).toBe(EXIT_REFUSED);
+  expect(result.err).toContain("agents.install.failed");
+  expect(readFileSync(agentsFile, "utf8")).toBe(edited);
+  expect(readFileSync(join(skills, "seampact-setup", "SKILL.md"), "utf8")).toBe("edited");
+  expect(readdirSync(skills).sort()).toEqual(SKILL_NAMES);
+});
+
+test("a seampact skill no longer shipped is removed, and the block names the version it replaced", async () => {
+  const project = makeProject();
+  const skills = join(project, ".agents", "skills");
+
+  mkdirSync(join(skills, "seampact-dropped"), { recursive: true });
+  writeFileSync(
+    join(project, "AGENTS.md"),
+    "<!-- seampact:begin 0.0.1 -->\nold\n<!-- seampact:end -->\n",
+  );
+
+  const result = await run(project, ["agents", "install"]);
+
+  expect(result.exitCode).toBe(EXIT_SUCCESS);
+  expect(readdirSync(skills).sort()).toEqual(SKILL_NAMES);
+  expect(result.out).toContain("replaced the block of seampact 0.0.1 with");
+});
+
+test("markers shown in a code fence of the user's file are kept as text", async () => {
+  const project = makeProject();
+  const example =
+    "# Mine\n\n```md\n<!-- seampact:begin 1.0.0 -->\nexample\n<!-- seampact:end -->\n```\n";
+
+  writeFileSync(join(project, "AGENTS.md"), example);
+
+  const result = await run(project, ["agents", "install"]);
+  const agents = readFileSync(join(project, "AGENTS.md"), "utf8");
+
+  expect(result.exitCode).toBe(EXIT_SUCCESS);
+  expect(agents.startsWith(example)).toBe(true);
+  expect(agents).toContain("## seampact");
 });
 
 test("an unknown subcommand is a usage error", async () => {
