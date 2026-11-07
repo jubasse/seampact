@@ -25,6 +25,7 @@ final class ServiceHook implements ServiceAuthenticateHook, WritesServiceAuthent
     public function authenticate(AuthenticateRequest $request): AuthenticateResult
     {
         SuiteControl::recordHookCall('authenticate:service', $request->operation()->api, $request->operation()->id);
+        SuiteControl::throwScriptedHookFailure('authenticate:service');
 
         $credentials = $request->credentials();
         $isServiceCredentials = $credentials instanceof ServiceCredentials || $credentials instanceof WritesServiceCredentials;

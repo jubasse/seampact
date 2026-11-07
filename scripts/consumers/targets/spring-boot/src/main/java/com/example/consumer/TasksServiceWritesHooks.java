@@ -34,6 +34,7 @@ final class TasksServiceWritesHooks {
         @Override
         public AuthenticateResult<ServicePrincipal, Denial> authenticate(ServiceAuthenticateRequest request) {
             SuiteControl.recordHookCall("authenticate:service", API, request.operation().id());
+            SuiteControl.throwScriptedHookFailure("authenticate:service");
 
             Service service = SERVICES.get(request.credentials().internalToken().orElse(""));
 
@@ -54,6 +55,7 @@ final class TasksServiceWritesHooks {
         @Override
         public Decision<Denial> decide(RequirementCall request) {
             SuiteControl.recordHookCall("decide:" + request.name(), API, request.operation().id(), request.bucket());
+            SuiteControl.throwScriptedHookFailure("decide:" + request.name());
 
             Optional<String> denied = SuiteControl.scriptedDecision(request.name(), Purposes.nameOf(request.purpose()));
             if (denied.isPresent()) return new Decision.Denied<>(Denial.of(denied.get()));

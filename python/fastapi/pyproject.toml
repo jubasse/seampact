@@ -24,6 +24,12 @@ classifiers = [
     "Typing :: Typed",
 ]
 
+[project.urls]
+Homepage = "https://jubasse.github.io/seampact/backend/fastapi/"
+Documentation = "https://jubasse.github.io/seampact/"
+Source = "https://github.com/jubasse/seampact"
+Issues = "https://github.com/jubasse/seampact/issues"
+
 [project.optional-dependencies]
 # What the generator itself needs; a production install of an app leaves it out.
 generate = ["seampact-codegen[generate]==1.0.0", "seampact-ir==1.0.0"]

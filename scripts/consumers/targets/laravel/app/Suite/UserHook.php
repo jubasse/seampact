@@ -42,6 +42,7 @@ final class UserHook implements
     public function authenticate(AuthenticateRequest $request): AuthenticateResult
     {
         SuiteControl::recordHookCall('authenticate:user', $request->operation()->api, $request->operation()->id);
+        SuiteControl::throwScriptedHookFailure('authenticate:user');
 
         $credentials = $request->credentials();
         $token = self::tokenOf($credentials);

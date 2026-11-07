@@ -21,6 +21,12 @@ classifiers = [
     "Typing :: Typed",
 ]
 
+[project.urls]
+Homepage = "https://jubasse.github.io/seampact/concepts/packages/"
+Documentation = "https://jubasse.github.io/seampact/"
+Source = "https://github.com/jubasse/seampact"
+Issues = "https://github.com/jubasse/seampact/issues"
+
 [project.optional-dependencies]
 # What the emitters need; a production install of an app leaves it out.
 generate = ["seampact-codegen[generate]==1.0.0"]

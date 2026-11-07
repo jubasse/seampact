@@ -1,0 +1,6 @@
+[project]
+name = "seampact-hooks"
+
+[project.urls]
+Homepage = "https://github.com/jubasse/seampact"
+Documentation = "https://example.com/"

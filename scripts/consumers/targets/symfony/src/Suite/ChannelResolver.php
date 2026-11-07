@@ -36,6 +36,8 @@ final class ChannelResolver implements ScopeResolver
             throw new AccessDeniedException('the voter denies this channel');
         }
 
+        SuiteControl::throwScriptedHookFailure("resolve-scope:{$request->scope()}");
+
         $denied = SuiteControl::scriptedScopeDenial($request->scope());
         if ($denied !== null) {
             return new ScopeResolution\Denied(new Denial($denied));

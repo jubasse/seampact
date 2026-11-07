@@ -33,6 +33,7 @@ final class TasksHooks {
         @Override
         public AuthenticateResult<UserPrincipal, Denial> authenticate(UserAuthenticateRequest request) {
             SuiteControl.recordHookCall("authenticate:user", API, request.operation().id());
+            SuiteControl.throwScriptedHookFailure("authenticate:user");
 
             return UserTokens.userIdOf(request.credentials().bearer(), request.credentials().sessionCookie())
                     .<AuthenticateResult<UserPrincipal, Denial>>map(userId -> new AuthenticateResult.Authenticated<>(new UserPrincipal(userId)))
@@ -56,6 +57,7 @@ final class TasksHooks {
         @Override
         public Decision<Denial> decide(RequirementCall request) {
             SuiteControl.recordHookCall("decide:" + request.name(), API, request.operation().id(), request.bucket());
+            SuiteControl.throwScriptedHookFailure("decide:" + request.name());
 
             assertRolesRequestComplete(request);
 
@@ -101,6 +103,7 @@ final class TasksHooks {
         @Override
         public Decision<Denial> decide(RequirementCall request) {
             SuiteControl.recordHookCall("decide-override:" + request.name(), API, request.operation().id(), request.bucket());
+            SuiteControl.throwScriptedHookFailure("decide-override:" + request.name());
 
             return SuiteControl.scriptedDecision(request.name(), Purposes.nameOf(request.purpose()))
                     .<Decision<Denial>>map(code -> new Decision.Denied<>(Denial.of(code)))
@@ -126,6 +129,7 @@ final class TasksHooks {
                 throw new IllegalStateException("the consumer resolves declared scope ids only, not '" + request.scope() + "'");
             }
 
+            SuiteControl.throwScriptedHookFailure("resolve-scope:" + request.scope());
             Optional<String> denied = SuiteControl.scriptedScopeDenial(request.scope());
             if (denied.isPresent()) return new ScopeResolution.Denied<>(Denial.of(denied.get()));
 

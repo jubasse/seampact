@@ -1,18 +1,28 @@
 import type { IrLocation } from "./ir-location.js";
+import {
+  NOT_GENERATED_FIXES,
+  type NotGeneratedForm,
+  troubleshootingUrl,
+} from "./not-generated-fixes.js";
 import type { Refusal } from "./refusal.js";
 import { refuseUnknownValue } from "./unknown-value.js";
 
 // A form of the IR this target knows but does not generate yet (A47): the code names the form, the message the
-// member and the operation.
+// operation, `member` the IR member; the fix and the docs section are the form's own.
 export function refuseNotGeneratedYet(
-  form: string,
+  form: NotGeneratedForm,
   description: string,
   location: IrLocation,
 ): Refusal {
+  const { fix, section } = NOT_GENERATED_FIXES[form];
+  const inOperation =
+    location.operation === undefined ? "" : ` in operation '${location.operation}'`;
+
   return {
     code: `${form}.unsupported`,
-    message: `${description} ${where(location)} is not generated yet.`,
-    fix: "Remove this form from the contract, or update the target to a release that generates it.",
+    message: `${description}${inOperation} is not generated yet.`,
+    fix,
+    docs: troubleshootingUrl(section),
     ...pointAt(location),
   };
 }

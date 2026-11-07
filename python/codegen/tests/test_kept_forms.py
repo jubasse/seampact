@@ -8,7 +8,7 @@ from typing import Final
 import pytest
 
 from seampact.codegen.kept_forms import refuse_kept_forms
-from seampact.codegen.refusals import Refusals
+from seampact.codegen.refusals import EXTENSION_KEYS_FIX, Refusals
 from seampact.ir.model import ContractIR
 from seampact.ir.read import IrSupport, read_ir
 from seampact.ir.run.generator import GenerationRefusedError
@@ -281,3 +281,25 @@ def test_a_page_number_slot_under_an_offset_style_is_refused_by_name(repository_
     refused = _refused_codes(ir_json)
 
     assert "The page slots '$page' of the paging style 'laravelPages'" in refused["paging.response.slot.unsupported"]
+
+
+def test_typed_extension_keys_are_fixed_in_the_api_declarations_not_the_operations(repository_root: Path) -> None:
+    ir_json = _ir_json(repository_root, "tasks")
+    ir_json["extensionKeys"] = {
+        "acme-tier": {
+            "id": "acme-tier",
+            "prefix": "acme",
+            "key": "tier",
+            "schema": {"kind": "scalar", "type": "string", "refinements": {}},
+            "places": ["operation"],
+            "origin": {"layer": "api", "pointer": "/extensions/acme/tier"},
+        }
+    }
+    refusals = _refusals_of(read_ir(json.dumps(ir_json), _SUPPORT))
+
+    with pytest.raises(GenerationRefusedError) as refused:
+        refusals.raise_if_any()
+
+    assert {problem.code: problem.fix for problem in refused.value.problems} == {
+        "extensionKeys.unsupported": EXTENSION_KEYS_FIX
+    }

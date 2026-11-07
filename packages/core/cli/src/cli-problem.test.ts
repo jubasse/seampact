@@ -34,7 +34,7 @@ describe("a target's refusal or warning as the CLI prints it", () => {
     );
 
     expect(problem.message).toBe(
-      "The access at /operations/12/access is not enforced. (member '/operations/1')",
+      "The access at /operations/12/access is not enforced. (IR member '/operations/1')",
     );
   });
 
@@ -51,7 +51,7 @@ describe("a target's refusal or warning as the CLI prints it", () => {
     );
 
     expect(problem.message).toBe(
-      "The caller ownership is not enforced by the generated boundary. (operation 'getDraft', member '/operations/2/access')",
+      "The caller ownership is not enforced by the generated boundary. (operation 'getDraft', IR member '/operations/2/access')",
     );
   });
 });

@@ -1,6 +1,7 @@
 import type { ContractIR } from "@seampact/spec/ir";
 import { below, operationLocation } from "../ir-location.js";
 import { refuseNotGeneratedYet } from "../located-refusals.js";
+import type { NotGeneratedForm } from "../not-generated-fixes.js";
 import type { Refusal } from "../refusal.js";
 
 // The path segments a router cannot read as the contract writes them, refused by name until a form is proven (A47).
@@ -91,7 +92,7 @@ function isSentPercentEncoded(segment: string): boolean {
 function segmentRefusals(
   ir: ContractIR,
   isRefused: (segment: string) => boolean,
-  form: string,
+  form: NotGeneratedForm,
   description: string,
 ): Refusal[] {
   return ir.operations.flatMap((operation, index) =>

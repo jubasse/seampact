@@ -280,7 +280,7 @@ jobs:
     needs: [prepare, gate-workflows]
     runs-on: ubuntu-24.04
     # Above the script's own deadline, which names the runs still going.
-    timeout-minutes: 180
+    timeout-minutes: 240
     permissions:
       contents: read
       actions: write

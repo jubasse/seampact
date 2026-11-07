@@ -210,7 +210,6 @@ function pomProblems(
     ["groupId", coordinate.group],
     ["artifactId", coordinate.artifactId],
     ["version", version],
-    ["url", DOCS_URL],
   ];
 
   for (const [name, value] of identity) {
@@ -218,6 +217,11 @@ function pomProblems(
 
     if (actual !== value) problems.push(`${path} has <${name}> "${actual}", not "${value}"`);
   }
+
+  const url = block(projectFields, "url");
+
+  if (!url.startsWith(DOCS_URL))
+    problems.push(`${path} has <url> "${url}", not a page of ${DOCS_URL}`);
 
   const required: [string, string][] = [
     ["name", block(projectFields, "name")],

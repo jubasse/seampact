@@ -1,4 +1,4 @@
-"""What the loaded script tells the doubles: the denial a scope gets, and the answer a handler gives
+"""What the loaded script tells the doubles: the failure a hook double raises, the denial a scope gets, and the answer a handler gives
 in place of its own (its success built from the script's body, a declared error arm, a raised exception, or a reply the
 result type cannot hold, raised as ScriptedReply for the app to write itself). A held handler answers once released,
 from the script loaded then."""
@@ -31,6 +31,19 @@ class ScriptedReply(Exception):  # noqa: N818 - a reply the app writes, not an e
 
     def headers(self) -> dict[str, str]:
         return {} if self.error_code == "" else {"content-type": "application/problem+json"}
+
+
+class ScriptedHookFailure(Exception):  # noqa: N818 - the failure a script gives a hook double
+    """The exception a hook double raises in place of its answer when the script names it in `hookFailures`."""
+
+
+def raise_scripted_hook_failure(hook: str) -> None:
+    """Raises the failure the script gives the hook double named `hook`, if any."""
+    failures = loaded_script().get("hookFailures")
+    message = failures.get(hook) if isinstance(failures, dict) else None
+
+    if isinstance(message, str):
+        raise ScriptedHookFailure(message)
 
 
 def scripted_scope_denial(scope: str) -> str | None:

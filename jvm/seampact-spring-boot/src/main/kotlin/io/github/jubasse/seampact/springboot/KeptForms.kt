@@ -81,7 +81,7 @@ internal class KeptForms(private val ir: ContractIR, private val refusals: Refus
 
     private fun checkApiForms() {
         if (ir.extensionKeys.isNotEmpty()) {
-            refusals.waiting("extensionKeys", "Typed extension values", IrPlace.ROOT.below("extensionKeys"), Delivery.AFTER_1_0)
+            refusals.waiting("extensionKeys", "Typed extension values", IrPlace.ROOT.below("extensionKeys"), Delivery.AFTER_1_0, EXTENSION_KEYS_FIX)
         }
     }
 

@@ -19,9 +19,9 @@ final class RefusalsTest extends TestCase
         $refusals = new Refusals('server', 'symfony', 'seampact/symfony');
         $first = IrPlace::ofOperation(0, 'getTask')->below('paging');
 
-        $refusals->waitingForRelease('paging', 'Paging', $first, 'symfony-3');
-        $refusals->waitingForRelease('paging', 'Paging', $first, 'symfony-3');
-        $refusals->waitingForRelease('paging', 'Paging', IrPlace::ofOperation(1, 'listTasks')->below('paging'), 'symfony-3');
+        $refusals->waitingForRelease('paging', 'Paging', $first, 'symfony-3', Refusals::OPERATION_FIX);
+        $refusals->waitingForRelease('paging', 'Paging', $first, 'symfony-3', Refusals::OPERATION_FIX);
+        $refusals->waitingForRelease('paging', 'Paging', IrPlace::ofOperation(1, 'listTasks')->below('paging'), 'symfony-3', Refusals::OPERATION_FIX);
 
         $problems = self::problems($refusals);
         self::assertCount(2, $problems);

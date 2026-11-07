@@ -138,6 +138,11 @@ def _touch_the_database() -> None:
 
 class _Hooks:
     def authenticate(self, request: AuthenticateRequest, /) -> object:
+        answer = answers.get("authenticate")
+
+        if answer is not None:
+            return answer(request)
+
         credentials = request.credentials
 
         if isinstance(credentials, _module("operations").UserCredentials) and credentials.bearer == _TOKEN:
@@ -413,6 +418,26 @@ def test_a_scope_id_of_the_wrong_format_is_refused_before_its_resolver() -> None
 
     assert response.status_code == HTTPStatus.BAD_REQUEST
     assert _issues(response) == [{"pointer": "/channelId", "rule": "format"}]
+
+
+@pytest.mark.parametrize("hook", ["authenticate", "resolve_scope", "decide"])
+def test_a_hook_that_throws_answers_the_apis_500_and_never_lets_the_request_through(hook: str) -> None:
+    def explode(request: object) -> object:
+        raise RuntimeError("the hook broke")
+
+    answers[hook] = explode
+    answers["create_task"] = lambda _: pytest.fail("the handler ran")
+
+    response = Client().post(
+        f"/v1/channels/{_CHANNEL_ID}/tasks",
+        json.dumps({"title": "Write the guide"}),
+        content_type="application/json",
+        headers={**_bearer(), "Idempotency-Key": "k-1"},
+    )
+
+    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+    assert _code(response) == "api.internal"
+    assert [failure.operation for failure in failures] == ["createTask"]
 
 
 def test_a_scope_resolvers_denial_answers_its_declared_code() -> None:
@@ -919,6 +944,33 @@ def test_the_boot_check_refuses_the_urlconf_versions_and_async_methods_the_views
     assert any("'/v1/channels/feed' sits under the api's base path" in problem for problem in problems)
     assert any("method 'decide' is an async def" in problem for problem in problems)
     assert not any("/v1/channels/feed" in problem for problem in allow_listed)
+
+
+def test_a_single_star_never_allow_lists_a_catch_all_pattern(monkeypatch: pytest.MonkeyPatch) -> None:
+    root = ModuleType("seampact_drf_boundary_catch_all_patterns")
+    root.__dict__["urlpatterns"] = [
+        path("v1/channels/files/<path:rest>", lambda request: HttpResponse()),
+        re_path(r"^v1/channels/blobs/(?P<rest>.*)$", lambda request: HttpResponse()),
+        re_path(r"^v1/channels/feed.*$", lambda request: HttpResponse()),
+        path("", include(f"{_PACKAGE}.urls")),
+    ]
+    sys.modules[root.__name__] = root
+    boundary = _module("django").TasksBoundary
+    single_stars = ("/v1/channels/*", "/v1/channels/*/*")
+    problems_by_rules = {}
+
+    with override_settings(ROOT_URLCONF=root.__name__, SEAMPACT={"tasks": _settings()}):
+        for patterns in (single_stars, ("/v1/channels/**",)):
+            rules = tuple(FrameworkRouteRule(path=pattern, method=None, reason="files") for pattern in patterns)
+            monkeypatch.setattr(boundary, "framework_routes", rules)
+            problems_by_rules[patterns] = [problem for problem in boot_problems(boundary) if "app pattern" in problem]
+
+    assert problems_by_rules[single_stars] == [
+        f"the app pattern '{route}' sits under the api's base path '/v1' and is not a contract route; remove it, "
+        "or allow-list it in the entry's frameworkRoutes with a reason and no method."
+        for route in ("/v1/channels/files/{*}", "/v1/channels/blobs/{*}", "/v1/channels/{*}")
+    ]
+    assert problems_by_rules[("/v1/channels/**",)] == []
 
 
 def test_the_boot_check_names_the_prefixed_path_of_urls_included_off_the_mount() -> None:

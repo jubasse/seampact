@@ -10,6 +10,7 @@ from pathlib import Path
 import fastapi
 import pytest
 
+from seampact.codegen.refusals import ARTEFACT_SWITCH_FIX
 from seampact.fastapi.generator import FastApiGenerator
 from seampact.fastapi.runtime import ApiBinding, BindingError
 from seampact.ir.config.json_value import JsonValue
@@ -84,6 +85,17 @@ def test_artefacts_the_target_does_not_take_yet_are_refused_by_name(repository_r
         "artefacts.bootCheck.hooks.warn.unsupported",
         "artefacts.unknown",
     }
+
+
+def test_a_waiting_artefact_switch_is_fixed_in_the_entry_artefacts(repository_root: Path) -> None:
+    generator = FastApiGenerator()
+    ir = read_ir(json.dumps(_ir_json(repository_root)), generator.ir_support())
+    artefacts: dict[str, JsonValue] = {"accessHooks": False, "bootCheck": {"hooks": "warn"}}
+
+    with pytest.raises(GenerationRefusedError) as refused:
+        generator.generate(ir, reference_entry("tasks", None, artefacts))
+
+    assert {problem.fix for problem in refused.value.problems} == {ARTEFACT_SWITCH_FIX}
 
 
 def test_a_boot_check_value_outside_its_set_is_refused_by_name(repository_root: Path) -> None:

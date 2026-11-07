@@ -2,6 +2,7 @@
 import { request as httpRequest, type IncomingMessage } from "node:http";
 import { request as httpsRequest } from "node:https";
 import { setTimeout } from "node:timers/promises";
+import { gzipSync } from "node:zlib";
 import { BOOT_PROFILE } from "./boot-variant.js";
 import { loadScript, readHookCalls, readLogLines } from "./control-routes.js";
 import type { FormatReader } from "./format-reader.js";
@@ -59,6 +60,7 @@ const DEFAULT_REQUEST_TIMEOUT_MS = 10_000;
 const MILLISECONDS_PER_SECOND = 1000;
 const JSON_MEDIA = "application/json";
 const HOST_HEADER = "host";
+const CONTENT_ENCODING_HEADER = "content-encoding";
 // The origin a captured link is resolved under; only the resolved path and query are sent to the target.
 const RESOLUTION_ORIGIN = "http://target.invalid";
 
@@ -476,14 +478,15 @@ async function send(
   }
 
   const url = `${context.baseUrl}${target}`;
+  const sentBody = compressedBody(request, body, headers);
 
   if (headers.has(HOST_HEADER))
-    return sendWithForgedHost(url, request.method, headers, body, context);
+    return sendWithForgedHost(url, request.method, headers, sentBody, context);
 
   const answer = await fetch(url, {
     method: request.method,
     headers,
-    ...(body === undefined ? {} : { body }),
+    ...(sentBody === undefined ? {} : { body: sentBody }),
     redirect: "manual",
     signal: timeoutSignal(context),
   });
@@ -498,7 +501,7 @@ async function sendWithForgedHost(
   url: string,
   method: string,
   headers: Headers,
-  body: string | undefined,
+  body: string | Uint8Array | undefined,
   context: RunContext,
 ): Promise<ReceivedResponse> {
   const send = new URL(url).protocol === "https:" ? httpsRequest : httpRequest;
@@ -545,6 +548,21 @@ function bodyOf(request: SuiteStep["request"], scope: TemplateScope): string | u
   if (request.bodyText !== undefined) return scope.fillText(request.bodyText);
 
   return request.body === undefined ? undefined : JSON.stringify(scope.fill(request.body));
+}
+
+// The signature, when the step has one, covers the body before it is compressed, as a target verifies the decoded body.
+function compressedBody(
+  request: SuiteStep["request"],
+  body: string | undefined,
+  headers: Headers,
+): string | Uint8Array | undefined {
+  if (request.compress === undefined || body === undefined) return body;
+
+  if (!headers.has(CONTENT_ENCODING_HEADER)) headers.set(CONTENT_ENCODING_HEADER, request.compress);
+
+  const compressed = gzipSync(body);
+
+  return compressed.subarray(0, compressed.byteLength - (request.cutCompressedBytes ?? 0));
 }
 
 function queryOf(
