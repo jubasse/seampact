@@ -20,7 +20,8 @@ concurrency:
 jobs:
   ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Coverage slows the test run by about half.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -31,4 +32,15 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm gate
+      # `pnpm gate`, with the tests run under coverage.
+      - run: pnpm typecheck && pnpm lint && pnpm format:check
+      - name: Test with coverage
+        run: pnpm vitest run --coverage
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-typescript
+          path: coverage/coverage-summary.json
+          retention-days: 14
+          if-no-files-found: error
+      - name: Check the coverage floors
+        run: node scripts/coverage-floors/check.ts --format vitest --summary coverage/coverage-summary.json

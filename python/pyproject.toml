@@ -68,6 +68,8 @@ dev = [
     "httpx2==2.16.0",
     # The build hook of the seampact-compiler wheels, for mypy; the same pin as the build constraints above.
     "hatchling==1.33.0",
+    # Coverage of the test run, which CI checks against `scripts/coverage-floors/floors.json`.
+    "pytest-cov==7.1.0",
 ]
 # The servers the consumer tests run a generated app under: uvicorn for ASGI, gunicorn for WSGI (and ASGI through
 # uvicorn's worker). Installed by those tests only, never by a workspace sync.
@@ -169,3 +171,18 @@ pythonpath = ["compiler"]
 addopts = ["--import-mode=importlib", "--strict-markers", "--strict-config", "-ra"]
 xfail_strict = true
 filterwarnings = ["error"]
+
+# Read by `pytest --cov` in CI; each member's `src` is one package of `scripts/coverage-floors/floors.json`.
+[tool.coverage.run]
+branch = true
+source_dirs = [
+    "codegen/src",
+    "compiler/src",
+    "django/src",
+    "drf/src",
+    "fastapi/src",
+    "hooks/src",
+    "ir/src",
+    "ninja/src",
+    "signed-webhooks/src",
+]

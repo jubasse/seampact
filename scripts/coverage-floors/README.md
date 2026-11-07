@@ -1,0 +1,1 @@
+# Coverage floors: `floors.json`, the lowest line and branch coverage each package may fall to, and `check.ts`, which checks a vitest, coverage.py or Cobertura summary against them in CI (the JVM build checks JaCoCo itself with `-PseampactCoverage`).
