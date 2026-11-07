@@ -1,4 +1,14 @@
-import { lstat, readdir, readFile, realpath, rename, rm, writeFile } from "node:fs/promises";
+import {
+  chmod,
+  lstat,
+  readdir,
+  readFile,
+  realpath,
+  rename,
+  rm,
+  stat,
+  writeFile,
+} from "node:fs/promises";
 import { isAbsolute, join, posix, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { type CliIo, EXIT_REFUSED, EXIT_SUCCESS, printProblems } from "../cli-io.js";
@@ -9,18 +19,24 @@ import { isSymbolicLink } from "../symbolic-link.js";
 import { mergeAgentsBlock, renderAgentsBlock } from "./agents-block.js";
 import {
   discardStaged,
+  INSTALL_MARKER_FILE,
   OWNED_SKILL_PREFIX,
   ownedSkillEntries,
+  SkillsSwapError,
   type StagedSkills,
+  type SwapReport,
   stageSkills,
   swapStagedSkills,
 } from "./staged-skills.js";
 
 // `seampact agents install`: writes the seampact block into AGENTS.md between two markers and copies the skills the
 // package ships (`skills/`, one folder per skill) into the skills folders of the project. A second run rewrites the
-// block and replaces the `seampact-` skill folders, and touches nothing else. Every check comes before the first
-// write: no target may leave the project or go through a symbolic link. The skills are staged and swapped in, and
-// AGENTS.md is written last, so a failed copy leaves the project as it was.
+// block and replaces the `seampact-` skill folders it wrote (they hold a marker file), and touches nothing else.
+// Every check comes before the first write: no target may leave the project, and no link on the way may resolve
+// outside it. The skills are staged and swapped in, and AGENTS.md is written last, so a failed copy leaves the
+// project as it was. The swap is atomic per target, not across targets: a swap that fails on a later target leaves
+// the earlier ones on the new skills. A process that replaces a folder with a link between the check and the write
+// is not caught.
 
 export const AGENTS_FILE_NAME = "AGENTS.md";
 export const DEFAULT_SKILLS_DIRECTORY = ".agents/skills";
@@ -29,6 +45,7 @@ export const CLAUDE_SKILLS_DIRECTORY = ".claude/skills";
 const NODE_COMMAND = "npx seampact";
 const AGENTS_BLOCK_TEMPLATE_FILE = "agents-block.md";
 const MISSING_FOLDER_CODES = new Set<unknown>(["ENOENT", "ENOTDIR"]);
+const PERMISSION_BITS = 0o7777;
 const TEMPORARY_SUFFIX = ".seampact-tmp";
 const PACKAGE_ROOT = new URL("../../", import.meta.url);
 const SHIPPED_SKILLS = new URL("skills/", PACKAGE_ROOT);
@@ -80,7 +97,7 @@ export async function agentsInstallCommand(
   }
 
   const targets = uniqueTargets(io.cwd, options.skillsDirectories);
-  const installed = await installSkills(skillsSource, skillNames, targets);
+  const installed = await installSkills(io, skillsSource, skillNames, targets);
 
   if (installed !== undefined) {
     printProblems(io, [installed]);
@@ -93,7 +110,14 @@ export async function agentsInstallCommand(
       `Installed ${skillNames.length} skills in ${portablePath(relative(io.cwd, target))}.\n`,
     );
 
-  await replaceAgentsFile(agentsFile, merge.text);
+  try {
+    await replaceAgentsFile(agentsFile, merge.text);
+  } catch (error) {
+    printProblems(io, [agentsFileFailed(error)]);
+
+    return EXIT_REFUSED;
+  }
+
   io.stdout(`${agentsFileReport(existing, merge.previousVersion, version)}\n`);
 
   return EXIT_SUCCESS;
@@ -103,8 +127,16 @@ export async function agentsInstallCommand(
 async function replaceAgentsFile(agentsFile: string, text: string): Promise<void> {
   const temporary = `${agentsFile}${TEMPORARY_SUFFIX}`;
 
+  const mode = await stat(agentsFile).then(
+    (stats) => stats.mode & PERMISSION_BITS,
+    () => undefined,
+  );
+
   await rm(temporary, { force: true });
   await writeFile(temporary, text, { flag: "wx" });
+
+  if (mode !== undefined) await chmod(temporary, mode);
+
   await rename(temporary, agentsFile);
 }
 
@@ -122,7 +154,7 @@ function agentsFileReport(
 }
 
 // The first reason a target is unsafe: a skills folder outside the project or equal to it, or AGENTS.md, a folder on
-// the way to a skills folder, or a `seampact-` folder in it that is a symbolic link or resolves outside the project.
+// the way to a skills folder that is a link leaving the project, or a `seampact-` folder in it that is a link.
 async function unsafeTarget(
   cwd: string,
   skillsDirectories: readonly string[],
@@ -138,9 +170,9 @@ async function unsafeTarget(
     if (isAbsolute(directory) || !isStrictlyInside(resolve(cwd), target))
       return outsideProject(directory);
 
-    const linked = await linkedSegment(cwd, target);
+    const linked = await linkedSegment(cwd, projectRoot, target);
 
-    if (linked !== undefined) return symbolicLink(portablePath(relative(cwd, linked)));
+    if (linked !== undefined) return linkLeavesProject(portablePath(relative(cwd, linked)));
 
     if (!isInsideOrEqual(projectRoot, await realExistingAncestor(target)))
       return outsideProject(directory);
@@ -152,9 +184,20 @@ async function unsafeTarget(
   return undefined;
 }
 
-// The first folder from the project root down to the target that is a symbolic link, if any. The walk stops at the
+// True when the link resolves, and to a place inside the project.
+async function staysInside(projectRoot: string, link: string): Promise<boolean> {
+  const real = await realpath(link).catch(() => undefined);
+
+  return real !== undefined && isInsideOrEqual(projectRoot, real);
+}
+
+// The first folder from the project root down to the target that is a symbolic link dangling or leaving the project. The walk stops at the
 // first path that is missing or not a folder: the copy then reports it.
-async function linkedSegment(cwd: string, target: string): Promise<string | undefined> {
+async function linkedSegment(
+  cwd: string,
+  projectRoot: string,
+  target: string,
+): Promise<string | undefined> {
   let path = resolve(cwd);
 
   for (const segment of relative(cwd, target).split(sep)) {
@@ -166,7 +209,7 @@ async function linkedSegment(cwd: string, target: string): Promise<string | unde
       throw error;
     });
 
-    if (stats?.isSymbolicLink() === true) return path;
+    if (stats?.isSymbolicLink() === true && !(await staysInside(projectRoot, path))) return path;
 
     if (stats?.isDirectory() !== true) return undefined;
   }
@@ -191,6 +234,7 @@ function uniqueTargets(cwd: string, skillsDirectories: readonly string[]): strin
 
 // Stages every target before it swaps any, so an I/O failure while copying changes nothing.
 async function installSkills(
+  io: CliIo,
   skillsSource: string,
   skillNames: readonly string[],
   targets: readonly string[],
@@ -205,7 +249,7 @@ async function installSkills(
 
   for (const [index, skills] of staged.entries()) {
     try {
-      await swapStagedSkills(skills, skillNames);
+      reportSwap(io, skills.target, await swapStagedSkills(skills, skillNames));
     } catch (error) {
       await discardStaged(staged.slice(index + 1));
 
@@ -214,6 +258,23 @@ async function installSkills(
   }
 
   return undefined;
+}
+
+function reportSwap(io: CliIo, target: string, report: SwapReport): void {
+  const folder = portablePath(relative(io.cwd, target));
+
+  for (const name of report.pruned)
+    io.stdout(`Removed ${folder}/${name}: this version ships no such skill.\n`);
+
+  for (const name of report.left)
+    io.stdout(
+      `Left ${folder}/${name} alone: seampact did not write it (no ${INSTALL_MARKER_FILE} file).\n`,
+    );
+
+  if (report.leftoverStaging !== undefined)
+    io.stdout(
+      `The skills are installed, but ${portablePath(relative(io.cwd, report.leftoverStaging))} could not be deleted; remove it.\n`,
+    );
 }
 
 async function shippedSkillNames(skillsSource: string): Promise<string[]> {
@@ -276,7 +337,15 @@ function symbolicLink(path: string): CliProblem {
   return {
     code: "agents.symlink",
     message: `'${path}' is a symbolic link; the install never writes or deletes through one, so nothing was written.`,
-    fix: `Replace '${path}' with a real file or folder inside the project, or pass another \`--skills-directory\`.`,
+    fix: `Replace '${path}' with a real file or folder, or pass another \`--skills-directory\`.`,
+  };
+}
+
+function linkLeavesProject(path: string): CliProblem {
+  return {
+    code: "agents.symlink",
+    message: `'${path}' is a symbolic link that points nowhere or outside the project; the install never writes through one, so nothing was written.`,
+    fix: `Replace '${path}' with a real folder or a link to a folder inside the project, or pass another \`--skills-directory\`.`,
   };
 }
 
@@ -291,10 +360,23 @@ function installFailed(error: unknown): CliProblem {
 }
 
 function swapFailed(target: string, error: unknown): CliProblem {
+  const restored = error instanceof SkillsSwapError && error.restored;
+  const outcome = restored
+    ? "that folder was restored"
+    : "that folder may be left half replaced (the reason names where the previous folders are)";
+
   return {
     code: "agents.install.failed",
-    message: `Replacing the skills in ${target} failed and that folder was restored; the folders listed before it hold the new skills, and AGENTS.md was not changed: ${reasonOf(error)}`,
+    message: `Replacing the skills in ${target} failed and ${outcome}; the folders listed before it hold the new skills, and AGENTS.md was not changed: ${reasonOf(error)}`,
     fix: INSTALL_FAILED_FIX,
+  };
+}
+
+function agentsFileFailed(error: unknown): CliProblem {
+  return {
+    code: "agents.install.failed",
+    message: `The skills were installed, but writing ${AGENTS_FILE_NAME} failed and it was not changed: ${reasonOf(error)}`,
+    fix: `Make ${AGENTS_FILE_NAME} writable and remove any \`${AGENTS_FILE_NAME}${TEMPORARY_SUFFIX}\` left beside it, then run \`agents install\` again.`,
   };
 }
 

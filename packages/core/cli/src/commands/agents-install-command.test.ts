@@ -1,9 +1,12 @@
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
+  rmSync,
+  statSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -13,6 +16,7 @@ import { afterEach, expect, test } from "vitest";
 import { type CliIo, EXIT_REFUSED, EXIT_SUCCESS } from "../cli-io.js";
 import { runCli } from "../run-cli.js";
 import { removeTemporaryDirectories, trackTemporaryDirectory } from "./fake-app.test-support.js";
+import { INSTALL_MARKER_FILE } from "./staged-skills.js";
 
 afterEach(removeTemporaryDirectories);
 
@@ -226,6 +230,7 @@ test("a seampact skill no longer shipped is removed, and the block names the ver
   const skills = join(project, ".agents", "skills");
 
   mkdirSync(join(skills, "seampact-dropped"), { recursive: true });
+  writeFileSync(join(skills, "seampact-dropped", INSTALL_MARKER_FILE), "");
   writeFileSync(
     join(project, "AGENTS.md"),
     "<!-- seampact:begin 0.0.1 -->\nold\n<!-- seampact:end -->\n",
@@ -236,6 +241,80 @@ test("a seampact skill no longer shipped is removed, and the block names the ver
   expect(result.exitCode).toBe(EXIT_SUCCESS);
   expect(readdirSync(skills).sort()).toEqual(SKILL_NAMES);
   expect(result.out).toContain("replaced the block of seampact 0.0.1 with");
+  expect(result.out).toContain("Removed .agents/skills/seampact-dropped");
+});
+
+test("a seampact- folder the install did not write is left alone and reported", async () => {
+  const project = makeProject();
+  const skills = join(project, ".agents", "skills");
+
+  mkdirSync(join(skills, "seampact-team-rules"), { recursive: true });
+  writeFileSync(join(skills, "seampact-team-rules", "SKILL.md"), "mine");
+
+  const result = await run(project, ["agents", "install"]);
+
+  expect(result.exitCode).toBe(EXIT_SUCCESS);
+  expect(readFileSync(join(skills, "seampact-team-rules", "SKILL.md"), "utf8")).toBe("mine");
+  expect(result.out).toContain("Left .agents/skills/seampact-team-rules alone");
+});
+
+test("a user folder named like a shipped skill fails the swap, and the previous folders are put back", async () => {
+  const project = makeProject();
+  const skills = join(project, ".agents", "skills");
+
+  await run(project, ["agents", "install"]);
+  rmSync(join(skills, "seampact-setup"), { recursive: true });
+  mkdirSync(join(skills, "seampact-setup"));
+  writeFileSync(join(skills, "seampact-setup", "mine.md"), "mine");
+  writeFileSync(join(skills, "seampact-fix-error", "SKILL.md"), "edited");
+
+  const result = await run(project, ["agents", "install"]);
+
+  expect(result.exitCode).toBe(EXIT_REFUSED);
+  expect(result.err).toContain("agents.install.failed");
+  expect(result.err).toContain("was restored");
+  expect(readFileSync(join(skills, "seampact-fix-error", "SKILL.md"), "utf8")).toBe("edited");
+  expect(readFileSync(join(skills, "seampact-setup", "mine.md"), "utf8")).toBe("mine");
+  expect(readdirSync(skills).sort()).toEqual(SKILL_NAMES);
+  expect(readdirSync(join(skills, "seampact-setup"))).toEqual(["mine.md"]);
+});
+
+test("a folder at the temporary AGENTS.md path is a diagnostic, not a stack trace", async () => {
+  const project = makeProject();
+
+  mkdirSync(join(project, "AGENTS.md.seampact-tmp"));
+
+  const result = await run(project, ["agents", "install"]);
+
+  expect(result.exitCode).toBe(EXIT_REFUSED);
+  expect(result.err).toContain("agents.install.failed");
+  expect(result.err).toContain("Fix:");
+  expect(existsSync(join(project, "AGENTS.md"))).toBe(false);
+});
+
+test("a second install keeps the mode of AGENTS.md", async () => {
+  const project = makeProject();
+  const agentsFile = join(project, "AGENTS.md");
+
+  writeFileSync(agentsFile, "# Mine\n");
+  chmodSync(agentsFile, 0o600);
+  await run(project, ["agents", "install"]);
+
+  expect(statSync(agentsFile).mode & 0o777).toBe(0o600);
+});
+
+test("a link to a folder inside the project, on the way to the skills folder, is followed", async () => {
+  const project = makeProject();
+
+  mkdirSync(join(project, ".agents", "skills"), { recursive: true });
+  mkdirSync(join(project, ".claude"));
+  symlinkSync(join("..", ".agents", "skills"), join(project, ".claude", "skills"));
+
+  const result = await run(project, ["agents", "install", "--claude"]);
+
+  expect(result.exitCode).toBe(EXIT_SUCCESS);
+  expect(existsSync(join(project, ".claude", "skills", "seampact-setup", "SKILL.md"))).toBe(true);
+  expect(readdirSync(join(project, ".agents", "skills")).sort()).toEqual(SKILL_NAMES);
 });
 
 test("markers shown in a code fence of the user's file are kept as text", async () => {

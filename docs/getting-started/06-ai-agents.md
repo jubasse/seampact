@@ -15,7 +15,7 @@ This does two things:
 
 Add `--claude` to copy the skills into `.claude/skills/` too, for Claude Code. Add `--skills-directory <dir>` to choose another folder.
 
-Run it again after you upgrade seampact. It rewrites only the block and the `seampact-` skill folders, so a skill an older version shipped goes away. It refuses to write through a symbolic link.
+Run it again after you upgrade seampact. It rewrites only the block and the `seampact-` skill folders it wrote (each holds a `.seampact-installed` file), so a skill an older version shipped goes away, and it prints each folder it removes. A `seampact-` folder you made yourself stays. It refuses to write through a symbolic link, except a link to a folder inside the project.
 
 ## Install them on other stacks
 
