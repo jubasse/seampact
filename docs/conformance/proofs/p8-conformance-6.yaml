@@ -129,7 +129,7 @@ proofs:
       - 'fastapi: python/fastapi/fastapi_tests/test_restricted_sort_key_refusal.py#test_a_sort_key_restricted_by_a_right_is_refused_by_name_at_its_place'
       - 'drf: python/drf/drf_tests/test_restricted_sort_key_refusal.py#test_a_sort_key_restricted_by_a_right_is_refused_by_name_at_its_place'
       - 'ninja: python/ninja/ninja_tests/test_restricted_sort_key_refusal.py#test_a_sort_key_restricted_by_a_right_is_refused_by_name_at_its_place'
-  - id: CHK-092
+  - id: CHK-187
     refusals:
       - 'nestjs: packages/targets/codegen-nestjs/src/reference-boundary.test.ts#an input field right below the top level is refused by name'
       - 'fastify: packages/targets/codegen-fastify/src/reference-boundary.test.ts#an input field right below the top level is refused by name'

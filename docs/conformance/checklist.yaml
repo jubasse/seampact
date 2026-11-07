@@ -543,13 +543,13 @@ items:
     targets: [server]
   - id: CHK-092
     source: "A21"
-    fact: A restricted input field sent without the right answers 403 with the field pointer by default, or is stripped when the api or field says so.
+    fact: A restricted top-level input field sent without the right answers 403 with the field pointer by default, or is stripped when the api or field says so.
     frs: [FR-23]
     scenario: SCN-066
     targets: [server]
   - id: CHK-093
     source: "A23"
-    fact: Nested scopes resolve in order from declared sources (path, query, header, host or subdomain, principal field), with a declared denial for a non-member.
+    fact: A scope id read from the path, with the declared denial for a non-member.
     frs: [FR-24]
     scenario: SCN-069
     targets: [server]
@@ -882,7 +882,7 @@ items:
     targets: [server]
   - id: CHK-149
     source: "A36"
-    fact: With idempotency enforce none the key is declared, documented and passed to the handler with no replay; with boundary the stored final response of a request that reached the handler, success or handler-answered error, is replayed, and a refusal before the handler is not stored.
+    fact: With idempotency enforce boundary the stored final response of a request that reached the handler, success or handler-answered error, is replayed, and a refusal before the handler is not stored.
     frs: [FR-7]
     scenario: SCN-042
     targets: [core, server]
@@ -1100,6 +1100,24 @@ items:
     frs: [FR-21]
     scenario: SCN-027
     targets: [ninja]
+  - id: CHK-187
+    source: "A21"
+    fact: A restricted input field right on a nested pointer, below the top level of the input.
+    frs: [FR-23]
+    scenario: SCN-066
+    targets: [server]
+  - id: CHK-188
+    source: "A23"
+    fact: A scope id read from a query, header, host or subdomain, or principal-field source.
+    frs: [FR-24]
+    scenario: SCN-069
+    targets: [server]
+  - id: CHK-189
+    source: "A36"
+    fact: With idempotency enforce none the key is declared, documented and passed to the handler with no replay.
+    frs: [FR-7]
+    scenario: SCN-042
+    targets: [core, server]
 not_in_checklist:
   - source: "A4, A16"
     reason: Development process decisions (how features are framed, what research may inform); nothing to test in the product.

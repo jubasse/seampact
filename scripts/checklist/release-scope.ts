@@ -108,6 +108,7 @@ export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = indexItemsAfte
   ],
   ["CHK-019", refusedOnEveryServer("a principal requirement")],
   ["CHK-033", refusedOnEveryServer("a sort key restricted by a right")],
+  ["CHK-187", refusedOnTheNodeServers("an input field right below the top level of the input")],
   [
     "CHK-130",
     refusedOnTheNodeServers(
