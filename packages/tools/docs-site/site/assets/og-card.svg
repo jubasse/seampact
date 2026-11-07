@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+    <title>seampact: one YAML contract for typed servers, clients and OpenAPI</title>
+  <rect width="1200" height="630" fill="#0e1330"/>
+  <g transform="translate(90 205) scale(3.4)" fill="#3369ff">
+    <path d="M6 14a8 8 0 0 1 8-8h14v52H14a8 8 0 0 1-8-8z"/>
+    <path d="M36 6h14a8 8 0 0 1 8 8v36a8 8 0 0 1-8 8H36z" fill-opacity=".5"/>
+  </g>
+  <text x="360" y="300" font-family="DejaVu Sans, Arial, sans-serif" font-size="96" font-weight="700" fill="#ffffff">seampact</text>
+  <text x="360" y="370" font-family="DejaVu Sans, Arial, sans-serif" font-size="34" fill="#c3cbff">One YAML contract for typed servers,</text>
+  <text x="360" y="416" font-family="DejaVu Sans, Arial, sans-serif" font-size="34" fill="#c3cbff">clients and OpenAPI.</text>
+</svg>

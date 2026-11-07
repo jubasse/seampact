@@ -15,6 +15,8 @@ export interface SiteLayout {
   docsRoot: string;
   contentRoot: string;
   sidebarFile: string;
+  /** The site-only home page, written by hand, not taken from docs/. */
+  homePageFile: string;
 }
 
 export function siteLayoutFrom(packageRoot: string): SiteLayout {
@@ -25,6 +27,7 @@ export function siteLayoutFrom(packageRoot: string): SiteLayout {
     docsRoot: join(repositoryRoot, "docs"),
     contentRoot: join(packageRoot, "site", "content", "docs"),
     sidebarFile: join(packageRoot, "site", "generated", "sidebar.json"),
+    homePageFile: join(packageRoot, "home", "index.mdx"),
   };
 }
 
