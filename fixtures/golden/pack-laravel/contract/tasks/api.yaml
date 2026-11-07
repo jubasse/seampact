@@ -103,3 +103,7 @@ surfaces:
         input: PaymentEvent
         responses:
           204: {}
+
+rights:
+  preferences.digest:
+    summary: Lets the caller turn on the email digest.

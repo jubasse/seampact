@@ -67,7 +67,7 @@ const EXPECTED_DECLARATIONS: Record<string, Record<Catalogue, readonly string[]>
       "state.conflict",
     ],
     pagings: ["cursor"],
-    rights: ["roles", "tasks.read", "tasks.seeEffort", "tasks.update"],
+    rights: ["preferences.digest", "roles", "tasks.read", "tasks.seeEffort", "tasks.update"],
     rules: ["recentAuth", "throttle"],
     schemas: [
       "ApiEmptyBody",

@@ -22,6 +22,13 @@
       "file": "tasks/api.yaml",
       "line": 4
     },
+    "api#/rights/preferences.digest": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 111,
+      "file": "tasks/api.yaml",
+      "line": 109
+    },
     "api#/schemas/ArchiveTask": {
       "column": 1,
       "endColumn": 1,
@@ -74,23 +81,23 @@
     "api#/schemas/Draft": {
       "column": 1,
       "endColumn": 1,
-      "endLine": 40,
+      "endLine": 42,
       "file": "tasks/schemas.yaml",
-      "line": 34
+      "line": 36
     },
     "api#/schemas/Draft/properties/body": {
       "column": 5,
       "endColumn": 45,
-      "endLine": 39,
+      "endLine": 41,
       "file": "tasks/schemas.yaml",
-      "line": 39
+      "line": 41
     },
     "api#/schemas/Draft/properties/draftId": {
       "column": 5,
       "endColumn": 21,
-      "endLine": 38,
+      "endLine": 40,
       "file": "tasks/schemas.yaml",
-      "line": 38
+      "line": 40
     },
     "api#/schemas/Health": {
       "column": 1,
@@ -109,30 +116,30 @@
     "api#/schemas/PaymentEvent": {
       "column": 1,
       "endColumn": 1,
-      "endLine": 47,
+      "endLine": 49,
       "file": "tasks/schemas.yaml",
-      "line": 40
+      "line": 42
     },
     "api#/schemas/PaymentEvent/properties/data": {
       "column": 5,
       "endColumn": 87,
-      "endLine": 46,
+      "endLine": 48,
       "file": "tasks/schemas.yaml",
-      "line": 46
+      "line": 48
     },
     "api#/schemas/PaymentEvent/properties/id": {
       "column": 5,
       "endColumn": 25,
-      "endLine": 44,
+      "endLine": 46,
       "file": "tasks/schemas.yaml",
-      "line": 44
+      "line": 46
     },
     "api#/schemas/PaymentEvent/properties/type": {
       "column": 5,
       "endColumn": 27,
-      "endLine": 45,
+      "endLine": 47,
       "file": "tasks/schemas.yaml",
-      "line": 45
+      "line": 47
     },
     "api#/schemas/Preferences": {
       "column": 1,
@@ -158,51 +165,58 @@
     "api#/schemas/TaskQuery": {
       "column": 1,
       "endColumn": 1,
-      "endLine": 52,
+      "endLine": 54,
       "file": "tasks/schemas.yaml",
-      "line": 47
+      "line": 49
     },
     "api#/schemas/TaskQuery/properties/states": {
       "column": 5,
       "endColumn": 69,
-      "endLine": 51,
+      "endLine": 53,
       "file": "tasks/schemas.yaml",
-      "line": 51
+      "line": 53
     },
     "api#/schemas/TaskQuery/properties/text": {
       "column": 5,
       "endColumn": 43,
-      "endLine": 50,
+      "endLine": 52,
       "file": "tasks/schemas.yaml",
-      "line": 50
+      "line": 52
     },
     "api#/schemas/TaskSearchResult": {
       "column": 1,
       "endColumn": 1,
-      "endLine": 58,
+      "endLine": 60,
       "file": "tasks/schemas.yaml",
-      "line": 52
+      "line": 54
     },
     "api#/schemas/TaskSearchResult/properties/items": {
       "column": 5,
       "endColumn": 40,
-      "endLine": 56,
+      "endLine": 58,
       "file": "tasks/schemas.yaml",
-      "line": 56
+      "line": 58
     },
     "api#/schemas/TaskSearchResult/properties/total": {
       "column": 5,
       "endColumn": 41,
-      "endLine": 57,
+      "endLine": 59,
       "file": "tasks/schemas.yaml",
-      "line": 57
+      "line": 59
     },
     "api#/schemas/UpdatePreferences": {
       "column": 1,
       "endColumn": 1,
-      "endLine": 33,
+      "endLine": 35,
       "file": "tasks/schemas.yaml",
       "line": 30
+    },
+    "api#/schemas/UpdatePreferences/properties/digest/restrictedTo": {
+      "column": 15,
+      "endColumn": 72,
+      "endLine": 34,
+      "file": "tasks/schemas.yaml",
+      "line": 34
     },
     "api#/schemas/UpdateTask": {
       "column": 1,

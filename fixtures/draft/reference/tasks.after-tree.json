@@ -1091,6 +1091,14 @@
             "optional": true,
             "nullable": false,
             "sensitive": false,
+            "restrictedTo": {
+              "right": "preferences.digest",
+              "inputPolicy": "strip",
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/UpdatePreferences/properties/digest/restrictedTo"
+              }
+            },
             "deprecated": false,
             "docs": {},
             "extensions": {},
