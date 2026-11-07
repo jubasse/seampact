@@ -16,22 +16,22 @@ A bundle is a contract packed to share. See [Sharing a contract](../features/sha
 
 | Code | Cause and fix |
 |---|---|
-| `bundle.release-url`, `bundle.release-failed` | The `release` URL must be `https`. Check that it answers with the archive. |
+| `bundle.release-url`, `bundle.release-failed` | The `release` URL is not `https`, or does not answer with the archive. Use an `https` URL that returns the archive. |
 | `bundle.git-url`, `bundle.git-tag`, `bundle.git-directory`, `bundle.git-failed` | Check the `git` URL, the tag and the folder. The tag must exist. |
-| `bundle.source-local` | Local sources are refused. Use a remote `git` URL or a `release`. |
+| `bundle.source-local` | The source is a local path. Use a remote `git` URL or a `release`. |
 | `bundle.archive-*` | The archive is malformed or too large. Download it again from the release. |
 
 ## Publishing it (`seampact bundle`)
 
 | Code | Cause and fix |
 |---|---|
-| `bundle.compile-failed` | Fix the contract errors printed above it. |
-| `bundle.contract-missing` | Name the contract with `--name` and `--version`, or add them to the contract folder's `package.json`. |
-| `bundle.output-not-empty` | Pick an empty `--out`. |
+| `bundle.compile-failed` | The contract has errors, so it cannot be packed. Fix the errors printed above it. |
+| `bundle.contract-missing` | The bundle has no name or version. Name the contract with `--name` and `--version`, or add them to the contract folder's `package.json`. |
+| `bundle.output-not-empty` | The `--out` folder already holds files. Pick an empty one. |
 | `bundle.imports-unsupported` | The contract's imports cannot travel in a bundle. Bundle the imported contract on its own. |
-| `bundle.file-outside-root` | Move the file under the workspace root, or install it as a pack package. |
-| `bundle.path-unportable` | Rename the file and its references to letters, digits and `. _ @ + -`. |
-| `bundle.pack-unreadable` | Reinstall the pack package, so its `package.json` holds a version. |
-| `bundle.label-invalid` | Give the contract and its packs names and versions of printable ASCII, at most 214 characters. |
+| `bundle.file-outside-root` | A file sits outside the workspace root. Move it under the root, or install it as a pack package. |
+| `bundle.path-unportable` | A file name has characters that do not travel. Rename the file and its references to letters, digits and `. _ @ + -`. |
+| `bundle.pack-unreadable` | The pack package has no readable version. Reinstall it, so its `package.json` holds a version. |
+| `bundle.label-invalid` | A name or version is not printable ASCII, or is too long. Give the contract and its packs names and versions of printable ASCII, at most 214 characters. |
 
 For the `bundle.source.*` codes of the command, see [CLI errors](cli.md).

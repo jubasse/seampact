@@ -75,34 +75,34 @@ Two checks only warn, and the app still starts: global interceptors that run out
 
 The check runs with `bin/console cache:warmup` and on the first request. The message starts with `seampact: the api 'tasks' cannot start:`, or with `the api 'tasks' cannot start:` for the hook lines.
 
-| You see | Do |
+| You see | Cause and fix |
 |---|---|
-| `no authenticate hook for the identity '<id>'` | Register one service implementing the generated `<Id>AuthenticateHook`, with autoconfiguration on. At run time the same error reads `seampact: the api '<api>' has no authenticate hook for the identity '<id>'; ...`. |
-| `no decider for '<name>'` | Register a service implementing the api's `Decider` that names it, or `[Decider::EVERY_NAME]`. |
-| `no scope resolver for the scope '<scope>'` | Register a service implementing the api's `ScopeResolver`. |
-| `two deciders claim '<name>'` | Keep the name in one decider. |
-| `no idempotency store for '<operation>'` | Alias `seampact.<api key>.idempotency_store` to a service implementing `Seampact\Hooks\IdempotencyStore`. |
-| `operation '<id>' has no handler` | Register one controller service implementing the `<Resource>Endpoints` interface. |
-| `the method <class>::<method> handles operation '<id>' but is not marked #[SeampactOperation('<id>')]` | Add the attribute. |
-| `the controller <class> carries #[IsGranted]` | Remove it. For a plain role check, paste the `access_control` rule the message prints; for anything else, write a decider. |
-| `the method <class>::<method> carries #[IsGranted]` | Same as the controller form. |
-| `the controller <class> carries #[IsCsrfTokenValid]`, `the method <class>::<method> carries #[IsCsrfTokenValid]` | Remove it, and check the CSRF value in the authenticate hook. |
-| `the controller <class> carries #[IsSignatureValid]`, `the method <class>::<method> carries #[IsSignatureValid]` | Remove it: a signed URI is not a form the contract declares. |
-| `framework.http_cache is on` | Turn it off: a reply HttpCache serves never reaches the boundary. |
-| `the input resolver service ... is not registered as a value resolver` | List the api's bundle in `config/bundles.php`. |
-| `the service <id> listens to kernel.request at priority ...`, `... kernel.response at priority ...` | Move your listener inside the boundary's priorities, as the message says. |
-| `the api writes absolute URLs ... and 'seampact_<api>.public_origin' is not set` | Set `public_origin` to the origin clients call, such as `https://api.example.com`: a scheme, a host, an optional port, no path. |
-| `the api writes relative URLs ... and 'seampact_<api>.public_origin' is set` | Remove `public_origin`, or set `api.wire.urls: absolute` in the contract and generate again. |
-| `the PHP extension zlib is not loaded`, `Symfony <x> is not supported` | Enable ext-zlib. Use Symfony 7.4 or 8. |
-| `the service validator is missing` | Run `composer require symfony/validator`, and keep `framework.validation` on. |
+| `no authenticate hook for the identity '<id>'` | An identity the contract declares has no hook service. Register one service implementing the generated `<Id>AuthenticateHook`, with autoconfiguration on. At run time the same error reads `seampact: the api '<api>' has no authenticate hook for the identity '<id>'; ...`. |
+| `no decider for '<name>'` | A right or rule name has no decider. Register a service implementing the api's `Decider` that names it, or `[Decider::EVERY_NAME]`. |
+| `no scope resolver for the scope '<scope>'` | A scope has no resolver service. Register a service implementing the api's `ScopeResolver`. |
+| `two deciders claim '<name>'` | Two services answer the same name. Keep the name in one decider. |
+| `no idempotency store for '<operation>'` | An idempotent operation has no store. Alias `seampact.<api key>.idempotency_store` to a service implementing `Seampact\Hooks\IdempotencyStore`. |
+| `operation '<id>' has no handler` | No controller serves the operation. Register one controller service implementing the `<Resource>Endpoints` interface. |
+| `the method <class>::<method> handles operation '<id>' but is not marked #[SeampactOperation('<id>')]` | The method has no operation attribute. Add `#[SeampactOperation('<id>')]`. |
+| `the controller <class> carries #[IsGranted]` | `#[IsGranted]` would decide access outside the contract. Remove it. For a plain role check, paste the `access_control` rule the message prints; for anything else, write a decider. |
+| `the method <class>::<method> carries #[IsGranted]` | `#[IsGranted]` on a method has the same effect as on the controller. Same as the controller form. |
+| `the controller <class> carries #[IsCsrfTokenValid]`, `the method <class>::<method> carries #[IsCsrfTokenValid]` | The attribute checks the CSRF token outside the contract. Remove it, and check the CSRF value in the authenticate hook. |
+| `the controller <class> carries #[IsSignatureValid]`, `the method <class>::<method> carries #[IsSignatureValid]` | A signed URI is not a form the contract declares. Remove the attribute. |
+| `framework.http_cache is on` | HttpCache serves replies that never reach the boundary. Turn it off. |
+| `the input resolver service ... is not registered as a value resolver` | The bundle is not loaded, so its resolver is missing. List the api's bundle in `config/bundles.php`. |
+| `the service <id> listens to kernel.request at priority ...`, `... kernel.response at priority ...` | Your listener runs outside the boundary's priorities. Move it inside them, as the message says. |
+| `the api writes absolute URLs ... and 'seampact_<api>.public_origin' is not set` | The contract writes absolute URLs and the origin is unknown. Set `public_origin` to the origin clients call, such as `https://api.example.com`: a scheme, a host, an optional port, no path. |
+| `the api writes relative URLs ... and 'seampact_<api>.public_origin' is set` | The contract writes relative URLs, so an origin has no use. Remove `public_origin`, or set `api.wire.urls: absolute` in the contract and generate again. |
+| `the PHP extension zlib is not loaded`, `Symfony <x> is not supported` | The app runs without ext-zlib, or on an unsupported Symfony. Enable ext-zlib. Use Symfony 7.4 or 8. |
+| `the service validator is missing` | Body validation needs the Symfony validator. Run `composer require symfony/validator`, and keep `framework.validation` on. |
 | `the generated settings class ... lacks its ALIAS constant`, `the access table of api '<api>' has no route for operation '<id>'` | The generated code is stale or edited. Run `seampact generate` again, and do not edit the generated files. |
-| `The bundle configuration key seampact_<api>.<key> takes ...` | Fix the value in `config/packages/seampact_<api>.yaml`. `responses` takes `strict` or `warn`, `body_validation` takes `true` or `false`. |
-| `the route of operation '<id>' has the path ...`, `... carries a host, a scheme or a condition` | Import the api's routes with no `prefix`, `host`, `schemes` or `condition`. |
-| `an app route with the path ... is registered before the route of operation '<id>'` | Import the contract routes first. |
-| `the api '<other>' registered before this one answers its catch-all 404` | Set `catchAll: false` on the api whose base path prefixes the other's. |
-| `runtime.worker.unsupported` | Serve the app with php-fpm. Worker runtimes are refused. In a functional test, do not call `disableReboot()`. |
-| `the app route '<name>' (<path>) is not a contract route and the entry's frameworkRoutes does not list it` | [Allow-list it](#allow-listing-framework-routes). |
-| `operation '<id>' has no route`, `operation '<id>' has <n> routes` | Import the api's resource, type `seampact`, once in your routing configuration. |
+| `The bundle configuration key seampact_<api>.<key> takes ...` | A bundle option has a wrong value. Fix it in `config/packages/seampact_<api>.yaml`. `responses` takes `strict` or `warn`, `body_validation` takes `true` or `false`. |
+| `the route of operation '<id>' has the path ...`, `... carries a host, a scheme or a condition` | The route import changes the contract path. Import the api's routes with no `prefix`, `host`, `schemes` or `condition`. |
+| `an app route with the path ... is registered before the route of operation '<id>'` | An app route would answer before the contract route. Import the contract routes first. |
+| `the api '<other>' registered before this one answers its catch-all 404` | Two apis nest, and the first one's catch-all 404 hides the second. Set `catchAll: false` on the api whose base path prefixes the other's. |
+| `runtime.worker.unsupported` | A worker runtime keeps state between requests, which the boundary refuses. Serve the app with php-fpm. In a functional test, do not call `disableReboot()`. |
+| `the app route '<name>' (<path>) is not a contract route and the entry's frameworkRoutes does not list it` | The app has a route the contract does not declare. [Allow-list it](#allow-listing-framework-routes). |
+| `operation '<id>' has no route`, `operation '<id>' has <n> routes` | The routes are not imported, or imported twice. Import the api's resource, type `seampact`, once in your routing configuration. |
 
 An invalid `%env()%` value of the bundle configuration does not stop the start: the api answers 500 on its routes and the log names the key.
 
@@ -110,81 +110,81 @@ An invalid `%env()%` value of the bundle configuration does not stop the start: 
 
 The check runs at `php artisan route:cache` and at the first HTTP boot while the routes are not cached.
 
-| You see | Do |
+| You see | Cause and fix |
 |---|---|
-| `no authenticate hook for the identity 'user': bind <Interface> in the container` | Bind the generated `<Identity>AuthenticateHook` to your class in a service provider. |
-| `no decider for '<name>': tag a Decider naming it, or '*', with 'seampact.<api>.deciders'` | Tag a class implementing the generated `Decider` with that tag. |
-| `no scope resolver for the scope '<scope>': tag a ScopeResolver with ...` | Tag a scope resolver with `seampact.<api>.scope-resolvers`. |
-| `no idempotency store for ...: bind 'seampact.<api>.idempotency-store' ...` | Bind your `IdempotencyStore` implementation under the provider's `IDEMPOTENCY_STORE_KEY`. |
-| `operation '<id>' has no handler: bind <Endpoints> to a controller in the container` | Bind the generated `<Resource>Endpoints` interface to your controller. |
-| `the framework route <METHOD> /<path> is outside the contract: allow-list it in the entry's frameworkRoutes, or remove it` | [Allow-list it](#allow-listing-framework-routes), or remove the route. |
-| `operation '<id>' has 0 contract routes: call Route::seampact('<api>') once in the app's routes` | Call `Route::seampact('<api>')` once, from `withRouting(then: ...)` in `bootstrap/app.php`. Call it outside any route group prefix. |
-| `the boundary middleware ... is not the first global middleware` | Remove the global middleware you prepended before it. Two apis whose base paths overlap: set `catch_all: false` on the broader one. |
-| `the access middleware ... is not before SubstituteBindings in the middleware priority` | Do not reorder the middleware priority; put your own entries after the contract's. |
-| `operation '<id>' runs without the access middleware: remove the withoutMiddleware() call on its route` | Remove `withoutMiddleware()` from the contract route. |
-| `the exception handler ... has no 'renderable' method` | Make your handler extend Laravel's `Illuminate\Foundation\Exceptions\Handler`. |
-| `'seampact.<api>.public_origin' is not set` or `... is '<value>', which ...` | The contract writes absolute URLs. Set `public_origin` in `config/seampact/<api>.php` to a scheme, host and optional port, such as `https://api.example.com`. |
-| `the api writes relative URLs ... and 'seampact.<api>.public_origin' is set` | Unset `SEAMPACT_<API>_PUBLIC_ORIGIN` (it fills `public_origin` in `config/seampact/<api>.php`) and run `php artisan config:cache` again if the config is cached, or set `api.wire.urls: absolute` in the contract and generate again. |
-| `Laravel <version> runs here, and the generated code serves Laravel 13 only` | Run the app on Laravel 13. |
-| `ext-zlib is not loaded` | Enable the `zlib` PHP extension. |
-| `... does not return the settings array; regenerate the api '<api>'` | The published `config/seampact/<api>.php` is stale or edited. Run `seampact generate` again, and republish the config if you changed it. |
-| `runtime.octane.unsupported` | Serve the app with php-fpm, or keep this api's provider out of the Octane app. |
-| `seampact: no generated routes for the api '<api>'; list its service provider in bootstrap/providers.php.` | Add the generated `<Api>SeampactServiceProvider` to `bootstrap/providers.php`. |
-| `config('seampact.<api>.middleware.<kind>') is not a list of middleware names` | Set that key in `config/seampact/<api>.php` to a list of strings such as `['auth:sanctum']`, or to `[]`. |
+| `no authenticate hook for the identity 'user': bind <Interface> in the container` | The identity has no hook in the container. Bind the generated `<Identity>AuthenticateHook` to your class in a service provider. |
+| `no decider for '<name>': tag a Decider naming it, or '*', with 'seampact.<api>.deciders'` | A name has no decider. Tag a class implementing the generated `Decider` with `seampact.<api>.deciders`. |
+| `no scope resolver for the scope '<scope>': tag a ScopeResolver with ...` | A scope has no resolver. Tag a scope resolver with `seampact.<api>.scope-resolvers`. |
+| `no idempotency store for ...: bind 'seampact.<api>.idempotency-store' ...` | An idempotent operation has no store. Bind your `IdempotencyStore` implementation under the provider's `IDEMPOTENCY_STORE_KEY`. |
+| `operation '<id>' has no handler: bind <Endpoints> to a controller in the container` | No controller serves the operation. Bind the generated `<Resource>Endpoints` interface to your controller. |
+| `the framework route <METHOD> /<path> is outside the contract: allow-list it in the entry's frameworkRoutes, or remove it` | The app has a route the contract does not declare. [Allow-list it](#allow-listing-framework-routes), or remove the route. |
+| `operation '<id>' has 0 contract routes: call Route::seampact('<api>') once in the app's routes` | The contract routes are not registered. Call `Route::seampact('<api>')` once, from `withRouting(then: ...)` in `bootstrap/app.php`, outside any route group prefix. |
+| `the boundary middleware ... is not the first global middleware` | A global middleware runs before the boundary. Remove the one you prepended. Two apis whose base paths overlap: set `catch_all: false` on the broader one. |
+| `the access middleware ... is not before SubstituteBindings in the middleware priority` | The middleware priority was reordered. Do not reorder it; put your own entries after the contract's. |
+| `operation '<id>' runs without the access middleware: remove the withoutMiddleware() call on its route` | `withoutMiddleware()` skips the access check. Remove the call from the contract route. |
+| `the exception handler ... has no 'renderable' method` | The exception handler is not Laravel's. Make your handler extend `Illuminate\Foundation\Exceptions\Handler`. |
+| `'seampact.<api>.public_origin' is not set` or `... is '<value>', which ...` | The contract writes absolute URLs and the origin is unknown. Set `public_origin` in `config/seampact/<api>.php` to a scheme, host and optional port, such as `https://api.example.com`. |
+| `the api writes relative URLs ... and 'seampact.<api>.public_origin' is set` | The contract writes relative URLs, so an origin has no use. Unset `SEAMPACT_<API>_PUBLIC_ORIGIN` (it fills `public_origin`) and run `php artisan config:cache` again if the config is cached, or set `api.wire.urls: absolute` in the contract and generate again. |
+| `Laravel <version> runs here, and the generated code serves Laravel 13 only` | The app runs another Laravel version. Run the app on Laravel 13. |
+| `ext-zlib is not loaded` | The PHP extension is missing. Enable the `zlib` extension. |
+| `... does not return the settings array; regenerate the api '<api>'` | The published config is stale or edited. Run `seampact generate` again, and republish the config if you changed it. |
+| `runtime.octane.unsupported` | Octane keeps state between requests, which the boundary refuses. Serve the app with php-fpm, or keep this api's provider out of the Octane app. |
+| `seampact: no generated routes for the api '<api>'; list its service provider in bootstrap/providers.php.` | The provider is not registered. Add the generated `<Api>SeampactServiceProvider` to `bootstrap/providers.php`. |
+| `config('seampact.<api>.middleware.<kind>') is not a list of middleware names` | The middleware key is not a list. Set it in `config/seampact/<api>.php` to a list of strings such as `['auth:sanctum']`, or to `[]`. |
 
 ## Django (DRF)
 
 The check runs when the server loads the app, and `python manage.py seampact_check` prints the same list.
 
-| You see | Do |
+| You see | Cause and fix |
 |---|---|
-| `settings.SEAMPACT['<api>']['public_origin'] is not set` or `... is '<value>', which ...` | The contract writes absolute URLs. Set `public_origin` to a scheme, host and optional port, such as `https://api.example.com`. |
-| `the api '<api>' writes relative URLs ... and settings.SEAMPACT['<api>']['public_origin'] is set` | Remove `public_origin`, or set `api.wire.urls: absolute` in the contract and generate again. |
-| `settings.SEAMPACT['<api>']['access'] has the unknown access kind '<kind>'` | Key `access` by `public`, `optional`, `identity` or `signed`. |
-| `settings.SEAMPACT['<api>']['access'] names the access kind '<kind>', which no operation of the api has` | Remove that kind. |
-| `settings.SEAMPACT['<api>']['access']['<kind>']['<name>'] names '<path>', which ...` | Name DRF classes of the matching base by dotted path: `BaseAuthentication`, `BasePermission` or `BaseThrottle`. |
-| `operation '<id>': no URL pattern serves <path> (its pattern sits at <served path>)` | Include the api's urls at `""` and set the entry's `mount` to the prefix you removed. |
+| `settings.SEAMPACT['<api>']['public_origin'] is not set` or `... is '<value>', which ...` | The contract writes absolute URLs and the origin is unknown. Set `public_origin` to a scheme, host and optional port, such as `https://api.example.com`. |
+| `the api '<api>' writes relative URLs ... and settings.SEAMPACT['<api>']['public_origin'] is set` | The contract writes relative URLs, so an origin has no use. Remove `public_origin`, or set `api.wire.urls: absolute` in the contract and generate again. |
+| `settings.SEAMPACT['<api>']['access'] has the unknown access kind '<kind>'` | The access kind is not one the contract knows. Key `access` by `public`, `optional`, `identity` or `signed`. |
+| `settings.SEAMPACT['<api>']['access'] names the access kind '<kind>', which no operation of the api has` | No operation uses that kind. Remove it. |
+| `settings.SEAMPACT['<api>']['access']['<kind>']['<name>'] names '<path>', which ...` | The class is not of the matching DRF base. Name DRF classes by dotted path: `BaseAuthentication`, `BasePermission` or `BaseThrottle`. |
+| `operation '<id>': no URL pattern serves <path> (its pattern sits at <served path>)` | The include prefix hides the contract path. Include the api's urls at `""` and set the entry's `mount` to the prefix you removed. |
 
 ## Django Ninja
 
 The check runs when the server loads the app, and `python manage.py seampact_check` prints the same list. See [The boot check](../backend/ninja.md#the-boot-check).
 
-| You see | Do |
+| You see | Cause and fix |
 |---|---|
-| `the api '<api>' is not bound: call bind_<api>(...)` | Call `bind_<api>(api, prefix=..., handlers=...)` in the module that builds the `NinjaAPI` your root URLconf includes. |
-| `settings.SEAMPACT['<api>'] is set, and the api takes its values from bind_<api>()` | Remove that settings entry and pass its values to `bind_<api>()`. |
-| `the api '<api>' sets bodyValidation, which this release of seampact-ninja does not serve yet` | Remove `bodyValidation` from the entry and `body_validation` from `bind_<api>()`. |
-| `the api '<api>' writes absolute URLs ... and bind_<api>(public_origin=...) is not set` | Pass `public_origin="https://api.example.com"` (a scheme, a host, an optional port) to `bind_<api>()`. |
-| `the api '<api>' writes relative URLs ... and bind_<api>(public_origin=...) is set` | Drop `public_origin` from the call, or set `api.wire.urls: absolute` in the contract and generate again. |
-| `bind_<api>(access=...) has the unknown access kind '<kind>'` | Key `access` by `public`, `optional`, `identity` or `signed`. |
-| `bind_<api>(access=...) names the access kind '<kind>', which no operation of the api has` | Remove that kind. |
-| `bind_<api>(responses=...) is '<value>'; set one of strict, warn.` | Pass `"strict"`, `"warn"`, or nothing. The same holds for `operations['<id>'].responses`. |
-| `bind_<api>(operations=...)['<id>'] is a <type>; set an OperationSettings.` | Pass `OperationSettings(responses=...)` from `seampact.ninja.runtime` for each operation. |
-| `bind_<api>(body_validation=...) is '<value>'; set True or False.` | Pass a bool, or leave the argument out. |
-| `bind_<api>(access=...) gives the access kind '<kind>' an auth=, and its operation '<id>' declares no code for the role 'unauthenticated' ...` | Declare an `unauthenticated` error on that operation, or remove the `auth=` from the kind. |
-| `bind_<api>(access=...) gives the access kind '<kind>' a throttle, and its operation '<id>' declares no code for the role 'rateLimited' ...` | Declare a `rateLimited` error on that operation, or remove the throttle from the kind. |
-| `operation '<id>': no URL pattern serves <path> (its pattern sits at <served path>); include the NinjaAPI's urls at a prefix that, followed by bind_<api>(prefix=...), equals the entry's mount.` | Make the include prefix of `api.urls` plus `prefix` equal the entry's `mount`. |
-| `seampact: bind_<api>() was already called on this NinjaAPI` (a `BindingError` at import) | Call `bind_<api>()` once per `NinjaAPI`. |
-| `the NinjaAPI's on_exception was replaced after bind_<api>()` | Replace `api.on_exception` before calling `bind_<api>()`. |
-| `bind_<api>() gets ..., which builds a <Class> whose method '<name>' is an async def` | Write the method as a plain `def`, or generate with `views: async`. |
+| `the api '<api>' is not bound: call bind_<api>(...)` | No code binds the api to the `NinjaAPI`. Call `bind_<api>(api, prefix=..., handlers=...)` in the module that builds the `NinjaAPI` your root URLconf includes. |
+| `settings.SEAMPACT['<api>'] is set, and the api takes its values from bind_<api>()` | Ninja reads its values from `bind_<api>()`, not from settings. Remove that settings entry and pass its values to `bind_<api>()`. |
+| `the api '<api>' sets bodyValidation, which this release of seampact-ninja does not serve yet` | This release of seampact-ninja does not serve `bodyValidation`. Remove `bodyValidation` from the entry and `body_validation` from `bind_<api>()`. |
+| `the api '<api>' writes absolute URLs ... and bind_<api>(public_origin=...) is not set` | The contract writes absolute URLs and the origin is unknown. Pass `public_origin="https://api.example.com"` (a scheme, a host, an optional port) to `bind_<api>()`. |
+| `the api '<api>' writes relative URLs ... and bind_<api>(public_origin=...) is set` | The contract writes relative URLs, so an origin has no use. Drop `public_origin` from the call, or set `api.wire.urls: absolute` in the contract and generate again. |
+| `bind_<api>(access=...) has the unknown access kind '<kind>'` | The access kind is not one the contract knows. Key `access` by `public`, `optional`, `identity` or `signed`. |
+| `bind_<api>(access=...) names the access kind '<kind>', which no operation of the api has` | No operation uses that kind. Remove it. |
+| `bind_<api>(responses=...) is '<value>'; set one of strict, warn.` | The responses mode is not valid. Pass `"strict"`, `"warn"`, or nothing. The same holds for `operations['<id>'].responses`. |
+| `bind_<api>(operations=...)['<id>'] is a <type>; set an OperationSettings.` | The per-operation value has the wrong type. Pass `OperationSettings(responses=...)` from `seampact.ninja.runtime` for each operation. |
+| `bind_<api>(body_validation=...) is '<value>'; set True or False.` | The value is not a bool. Pass `True` or `False`, or leave the argument out. |
+| `bind_<api>(access=...) gives the access kind '<kind>' an auth=, and its operation '<id>' declares no code for the role 'unauthenticated' ...` | The operation has no error to answer a failed auth with. Declare an `unauthenticated` error on that operation, or remove the `auth=` from the kind. |
+| `bind_<api>(access=...) gives the access kind '<kind>' a throttle, and its operation '<id>' declares no code for the role 'rateLimited' ...` | The operation has no error to answer a throttled call with. Declare a `rateLimited` error on that operation, or remove the throttle from the kind. |
+| `operation '<id>': no URL pattern serves <path> (its pattern sits at <served path>); include the NinjaAPI's urls at a prefix that, followed by bind_<api>(prefix=...), equals the entry's mount.` | The URL prefixes do not add up to the contract path. Make the include prefix of `api.urls` plus `prefix` equal the entry's `mount`. |
+| `seampact: bind_<api>() was already called on this NinjaAPI` (a `BindingError` at import) | The api is bound twice (a `BindingError` at import). Call `bind_<api>()` once per `NinjaAPI`. |
+| `the NinjaAPI's on_exception was replaced after bind_<api>()` | Something replaced the error handler seampact installed. Replace `api.on_exception` before calling `bind_<api>()`. |
+| `bind_<api>() gets ..., which builds a <Class> whose method '<name>' is an async def` | The generated views are sync and the method is not. Write the method as a plain `def`, or generate with `views: async`. |
 
 ## Spring Boot
 
 See [The boot check](../backend/spring-boot.md#the-boot-check).
 
-| You see | Do |
+| You see | Cause and fix |
 |---|---|
-| `operation '<id>': no handler is bound` | Implement the operation in a `@RestController` method with its annotation. In a `@WebMvcTest` slice that loads some controllers, set `seampact.<api>.unbound-operations=warn`. |
-| `'seampact.<api>.unbound-operations' is '<value>', not 'error' or 'warn'` | Set it to `warn` in a test slice, or remove it. |
-| `operation '<id>': Spring MVC maps its handler <method> at <path>, not at the entry's mount followed by the contract path, <path>` | Remove the prefix the app adds (`addPathPrefix`, a class-level `@RequestMapping`) and set the entry's `mount` to it: the generated annotations already hold the mount. |
+| `operation '<id>': no handler is bound` | No controller method serves the operation. Implement it in a `@RestController` method with its annotation. In a `@WebMvcTest` slice that loads some controllers, set `seampact.<api>.unbound-operations=warn`. |
+| `'seampact.<api>.unbound-operations' is '<value>', not 'error' or 'warn'` | The setting has an unknown value. Set it to `warn` in a test slice, or remove it. |
+| `operation '<id>': Spring MVC maps its handler <method> at <path>, not at the entry's mount followed by the contract path, <path>` | The app adds a prefix the contract does not know. Remove it (`addPathPrefix`, a class-level `@RequestMapping`) and set the entry's `mount` to it: the generated annotations already hold the mount. |
 
 ## FastAPI
 
 The check runs on startup by uvicorn (`Application startup failed. Exiting.`), or on the first request without a lifespan.
 
-| You see | Do |
+| You see | Cause and fix |
 |---|---|
-| `` the api '<api>' writes absolute URLs ... and the `public_origin` argument of bind_<api>() is not set `` | Pass `public_origin="https://api.example.com"` (the origin clients call: a scheme, a host, an optional port, no path) to `bind_<api>()`. |
-| `` the `public_origin` argument of bind_<api>() is '<value>', which ... `` | Fix the value as the message says: a scheme (`http` or `https`), a host and an optional port. |
-| `` the api '<api>' writes relative URLs ... and the `public_origin` argument of bind_<api>() is set `` | Drop `public_origin` from the call, or set `api.wire.urls: absolute` in the contract and generate again. |
-| `operation '<id>': no route of the app takes '<method> <path>' (its route sits at '<served path>')` | Include the router passed to `bind_<api>()` with no prefix, and set the entry's `mount` to the prefix you removed. |
+| `` the api '<api>' writes absolute URLs ... and the `public_origin` argument of bind_<api>() is not set `` | The contract writes absolute URLs and the origin is unknown. Pass `public_origin="https://api.example.com"` (the origin clients call: a scheme, a host, an optional port, no path) to `bind_<api>()`. |
+| `` the `public_origin` argument of bind_<api>() is '<value>', which ... `` | The origin is malformed. Use a scheme (`http` or `https`), a host and an optional port. |
+| `` the api '<api>' writes relative URLs ... and the `public_origin` argument of bind_<api>() is set `` | The contract writes relative URLs, so an origin has no use. Drop `public_origin` from the call, or set `api.wire.urls: absolute` in the contract and generate again. |
+| `operation '<id>': no route of the app takes '<method> <path>' (its route sits at '<served path>')` | The router is included with a prefix the contract does not know. Include the router passed to `bind_<api>()` with no prefix, and set the entry's `mount` to the prefix you removed. |
