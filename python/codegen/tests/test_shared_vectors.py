@@ -15,14 +15,6 @@ from seampact.codegen.runtime.version import accepts
 # python/codegen/tests/test_shared_vectors.py: the repository root is three directories up from this one.
 _VECTORS: Final = Path(__file__).resolve().parents[3] / "fixtures" / "vectors"
 _CATCH_ALL: Final = re.compile(r"\{\*(\w+)\}")
-# Where the Python allow-list reads a pattern as a regular expression over the route's text, not segment by segment as
-# the Node, Spring Boot and PHP targets do: a known divergence, strict so the fix removes it from this list.
-_ROUTE_PATTERN_DIVERGENCES: Final = {
-    "'*' over a catch-all",
-    "'**' over zero segments",
-    "'**' between segments over zero segments",
-    "empty segments dropped on both sides",
-}
 
 
 def _vectors(file: str) -> dict[str, Any]:
@@ -46,20 +38,7 @@ def test_etag_vector(vector: dict[str, Any]) -> None:
     assert strong_etag(vector["body"].encode("utf-8")) == f'"{vector["base64Url"]}"'
 
 
-def _route_pattern_vectors() -> list[Any]:
-    return [
-        pytest.param(
-            vector,
-            id=vector["name"],
-            marks=pytest.mark.xfail(strict=True, reason="the Python allow-list diverges")
-            if vector["name"] in _ROUTE_PATTERN_DIVERGENCES
-            else (),
-        )
-        for vector in _vectors("framework-route-patterns.json")["vectors"]
-    ]
-
-
-@pytest.mark.parametrize("vector", _route_pattern_vectors())
+@pytest.mark.parametrize("vector", _named(_vectors("framework-route-patterns.json")["vectors"]))
 def test_route_pattern_vector(vector: dict[str, Any]) -> None:
     # The vectors write a catch-all `{*name}`; Starlette writes it `{name:path}`.
     route = _CATCH_ALL.sub(r"{\1:path}", vector["route"])

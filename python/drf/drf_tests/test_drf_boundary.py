@@ -138,6 +138,11 @@ def _touch_the_database() -> None:
 
 class _Hooks:
     def authenticate(self, request: AuthenticateRequest, /) -> object:
+        answer = answers.get("authenticate")
+
+        if answer is not None:
+            return answer(request)
+
         credentials = request.credentials
 
         if isinstance(credentials, _module("operations").UserCredentials) and credentials.bearer == _TOKEN:
@@ -413,6 +418,26 @@ def test_a_scope_id_of_the_wrong_format_is_refused_before_its_resolver() -> None
 
     assert response.status_code == HTTPStatus.BAD_REQUEST
     assert _issues(response) == [{"pointer": "/channelId", "rule": "format"}]
+
+
+@pytest.mark.parametrize("hook", ["authenticate", "resolve_scope", "decide"])
+def test_a_hook_that_throws_answers_the_apis_500_and_never_lets_the_request_through(hook: str) -> None:
+    def explode(request: object) -> object:
+        raise RuntimeError("the hook broke")
+
+    answers[hook] = explode
+    answers["create_task"] = lambda _: pytest.fail("the handler ran")
+
+    response = Client().post(
+        f"/v1/channels/{_CHANNEL_ID}/tasks",
+        json.dumps({"title": "Write the guide"}),
+        content_type="application/json",
+        headers={**_bearer(), "Idempotency-Key": "k-1"},
+    )
+
+    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+    assert _code(response) == "api.internal"
+    assert [failure.operation for failure in failures] == ["createTask"]
 
 
 def test_a_scope_resolvers_denial_answers_its_declared_code() -> None:

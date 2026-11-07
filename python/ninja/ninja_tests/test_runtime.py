@@ -3,11 +3,15 @@ and hooks from `bind_<api>()`, the route names reverse under the NinjaAPI's name
 marks the boundary sets, Ninja still calls the wrapped `on_exception` and its auth refusal answers the operation's
 code, Pydantic 1 is refused at boot, and the values of `bind_<api>()` the runtime cannot serve are refused by name."""
 
+import asyncio
+import dataclasses
 import importlib
 import json
 import sys
+import uuid
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
+from datetime import UTC, datetime, timedelta
 from http import HTTPStatus
 from importlib import metadata
 from types import MappingProxyType, ModuleType
@@ -25,12 +29,21 @@ from ninja.throttling import AnonRateThrottle, AuthRateThrottle
 from seampact.codegen.runtime.framework_versions import framework_version_problems
 from seampact.codegen.runtime.hook_check import hook_needs
 from seampact.django.runtime.boot_check import boot_problems
-from seampact.ninja.runtime import AccessSettings, BindingError, OperationSettings
+from seampact.hooks import (
+    ErrorCodeWithParams,
+    ResolvedScope,
+    UnexpectedFailure,
+    authenticate_result,
+    decision,
+    scope_resolution,
+)
+from seampact.ninja.runtime import AccessSettings, BindingError, OperationSettings, serve_operation_async
 from seampact.ninja.runtime import binding as binding_module
 from seampact.ninja.runtime import exceptions as exceptions_module
 from seampact.ninja.runtime.exceptions import recording_on_exception
 
-_GOLDEN = "ninja_tests.golden.reference.tasks"
+_GOLDEN_ROOT = "ninja_tests.golden.reference"
+_GOLDEN = f"{_GOLDEN_ROOT}.tasks"
 _URLCONF = "ninja_tests.seampact_bound_urls"
 _SECRET: Final = "secret-token-xyz"
 
@@ -45,15 +58,19 @@ def _served(
     api: NinjaAPI,
     include_prefix: str = "",
     handlers: Mapping[str, object] = MappingProxyType({}),
+    package: str = "tasks",
     **bind_values: object,
 ) -> Iterator[NinjaAPI]:
-    """The golden api bound on `api`, served by a root URLconf of its own that includes `api.urls` at
-    `include_prefix`; only the handler factories in `handlers` are given."""
+    """The golden api (`tasks`, or the async `tasks_service`) bound on `api`, served by a root URLconf of its own
+    that includes `api.urls` at `include_prefix`; only the handler factories in `handlers` are given."""
     monkeypatch.setattr(binding_module, "_bindings", {})
-    placement = _golden("ninja")
-    resources = ("tasks", "drafts", "channels", "preferences", "app", "hooks")
-    factories = placement.TasksHandlerFactories(**{resource: handlers.get(resource) for resource in resources})
-    bind: Callable[..., None] = placement.bind_tasks
+    golden_package = f"{_GOLDEN_ROOT}.{package}"
+    api_name = package.title().replace("_", "")
+    placement = importlib.import_module(f"{golden_package}.ninja")
+    factories_type = getattr(placement, f"{api_name}HandlerFactories")
+    resources = [field.name for field in dataclasses.fields(factories_type)]
+    factories = factories_type(**{resource: handlers.get(resource) for resource in resources})
+    bind: Callable[..., None] = getattr(placement, f"bind_{package}")
     bind(api, prefix="", handlers=factories, **bind_values)
     urlconf = ModuleType(_URLCONF)
     urlconf.urlpatterns = [path(include_prefix, api.urls)]  # type: ignore[attr-defined]
@@ -61,7 +78,7 @@ def _served(
     clear_url_caches()
 
     with override_settings(
-        ROOT_URLCONF=_URLCONF, MIDDLEWARE=[f"{_GOLDEN}.django.TasksBoundary"], ALLOWED_HOSTS=["testserver"]
+        ROOT_URLCONF=_URLCONF, MIDDLEWARE=[f"{golden_package}.django.{api_name}Boundary"], ALLOWED_HOSTS=["testserver"]
     ):
         yield api
 
@@ -308,3 +325,228 @@ def test_ninjas_auth_refusal_on_a_contract_route_answers_the_operations_unauthen
     assert refused_tokens == ["unknown"]
     assert response.status_code == HTTPStatus.UNAUTHORIZED
     assert json.loads(response.content)["code"] == "api.unauthenticated"
+
+
+_SERVICE_PACKAGE: Final = "tasks_service"
+_SERVICE_TASK_PATH: Final = (
+    "/internal/v1/channels/10000000-0000-4000-8000-000000000001/tasks/20000000-0000-4000-8000-000000000001"
+)
+_THROWN: Final = "the hook broke"
+
+
+def _service(module: str) -> ModuleType:
+    return importlib.import_module(f"{_GOLDEN_ROOT}.{_SERVICE_PACKAGE}.{module}")
+
+
+class _Service:
+    """The async api's hooks and handler: the decider and the authenticate hook admit, `get_task` answers what the
+    test sets in `answer`. One method is `async def` and the others plain `def`, as the async views run both."""
+
+    answer: Callable[[], object] = staticmethod(lambda: None)
+
+    def __init__(self, request: HttpRequest) -> None:
+        self.request = request
+
+    def authenticate(self, request: object, /) -> object:
+        schemas = _service("schemas")
+        principal = schemas.ServicePrincipal(service=next(iter(schemas.Service)), user_id=uuid.uuid4())
+
+        return authenticate_result.Authenticated(principal=principal)
+
+    async def decide(self, request: object, /) -> object:
+        return decision.Allowed()
+
+    def get_task(self, request: object, /) -> object:
+        return self.answer()
+
+
+def _an_hour_from_now() -> str:
+    return (datetime.now(UTC) + timedelta(hours=1)).isoformat().replace("+00:00", "Z")
+
+
+def _a_task_reply() -> object:
+    schemas = _service("schemas")
+    task = schemas.Task(
+        task_id=uuid.UUID(int=1), title="Served", state=schemas.TaskState.OPEN, version=1, created_at=datetime.now(UTC)
+    )
+
+    return _service("operations").GetTaskResponse200(task)
+
+
+def _serve_the_async_api(monkeypatch: pytest.MonkeyPatch, answer: Callable[[], object]) -> tuple[int, bytes]:
+    _Service.answer = staticmethod(answer)
+    monkeypatch.setattr(_service("django").TasksServiceBoundary, "boot_check", False)
+    api = NinjaAPI(urls_namespace="seampact-async-views")
+
+    with _served(
+        monkeypatch,
+        api,
+        package=_SERVICE_PACKAGE,
+        handlers={"internal": _Service},
+        authenticate={"service": _Service},
+        deciders={"callerService": _Service},
+    ):
+        response = Client(raise_request_exception=False).get(
+            _SERVICE_TASK_PATH, headers={"Authorization": "Bearer service", "X-Deadline": _an_hour_from_now()}
+        )
+
+    return response.status_code, response.content
+
+
+def test_an_async_view_serves_a_plain_hook_a_coroutine_hook_and_a_plain_handler(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    status, content = _serve_the_async_api(monkeypatch, _a_task_reply)
+
+    assert status == HTTPStatus.OK
+    assert json.loads(content)["title"] == "Served"
+
+
+def test_an_async_view_answers_the_code_of_a_declared_error_the_handler_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+    def not_found() -> object:
+        raise _service("operations").ApiNotFoundError()
+
+    status, content = _serve_the_async_api(monkeypatch, not_found)
+
+    assert status == HTTPStatus.NOT_FOUND
+    assert json.loads(content)["code"] == "api.not_found"
+
+
+def test_an_async_view_answers_a_contract_refusal_of_its_own_steps(monkeypatch: pytest.MonkeyPatch) -> None:
+    class Denying(_Service):
+        def authenticate(self, request: object, /) -> object:
+            denial = ErrorCodeWithParams(code="api.unauthenticated")
+
+            return authenticate_result.Denied(deny=denial)
+
+    monkeypatch.setattr(_Service, "authenticate", Denying.authenticate)
+
+    status, content = _serve_the_async_api(monkeypatch, pytest.fail)
+
+    assert status == HTTPStatus.UNAUTHORIZED
+    assert json.loads(content)["code"] == "api.unauthenticated"
+
+
+def test_an_async_view_answers_the_apis_500_when_a_declared_error_cannot_be_written(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    base = _service("operations").TasksServiceContractError
+    undeclared_error = type("Undeclared", (base,), {"CODE": "app.never_declared", "STATUS": HTTPStatus.CONFLICT})
+
+    def undeclared() -> object:
+        raise undeclared_error()
+
+    status, content = _serve_the_async_api(monkeypatch, undeclared)
+
+    assert status == HTTPStatus.INTERNAL_SERVER_ERROR
+    assert json.loads(content)["code"] == "api.internal"
+    assert "answering it failed" in caplog.text
+
+
+def test_an_async_view_reached_without_the_boundarys_mark_fails_closed_with_the_apis_500(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    api = NinjaAPI(urls_namespace="seampact-async-unmarked")
+    monkeypatch.setattr(_service("django").TasksServiceBoundary, "boot_check", False)
+
+    with _served(monkeypatch, api, package=_SERVICE_PACKAGE, handlers={"internal": _Service}):
+        placement = _service("ninja").PLACEMENT
+        request = RequestFactory().get(_SERVICE_TASK_PATH)
+        answered = asyncio.run(serve_operation_async(request, placement, "getTask"))
+
+    assert answered.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+
+
+def test_an_async_view_lets_an_unexpected_exception_go_on_to_the_apis_500(monkeypatch: pytest.MonkeyPatch) -> None:
+    def broken() -> object:
+        raise RuntimeError(_THROWN)
+
+    status, content = _serve_the_async_api(monkeypatch, broken)
+
+    assert status == HTTPStatus.INTERNAL_SERVER_ERROR
+    assert json.loads(content)["code"] == "api.internal"
+    assert _THROWN.encode() not in content
+
+
+class _HooksWhereOneThrows:
+    """Admits, resolves and allows everything; the hook named in `throwing` raises instead."""
+
+    throwing = ""
+
+    def __init__(self, request: HttpRequest) -> None:
+        self.request = request
+
+    def authenticate(self, request: object, /) -> object:
+        self._maybe_throw("authenticate")
+        schemas = _golden("schemas")
+
+        return authenticate_result.Authenticated(principal=schemas.UserPrincipal(user_id=uuid.uuid4()))
+
+    def resolve_scope(self, request: object, /) -> object:
+        self._maybe_throw("resolve_scope")
+        source = request.source  # type: ignore[attr-defined]
+
+        return scope_resolution.Resolved(resolved=ResolvedScope(scope=request.scope, id=source.id))  # type: ignore[attr-defined]
+
+    def decide(self, request: object, /) -> object:
+        self._maybe_throw("decide")
+
+        return decision.Allowed()
+
+    def _maybe_throw(self, hook: str) -> None:
+        if self.throwing == hook:
+            raise RuntimeError(_THROWN)
+
+
+class _HandlerThatMustNotRun:
+    def __getattr__(self, name: str) -> object:
+        raise AssertionError(f"the handler method {name} was reached")
+
+
+@pytest.mark.parametrize(
+    ("hook", "operation", "method", "path"),
+    [
+        ("authenticate", "getChannel", "get", "/v1/channels/10000000-0000-4000-8000-000000000001"),
+        ("resolve_scope", "getChannel", "get", "/v1/channels/10000000-0000-4000-8000-000000000001"),
+        ("decide", "createTask", "post", "/v1/channels/10000000-0000-4000-8000-000000000001/tasks"),
+    ],
+)
+def test_a_hook_that_throws_answers_the_apis_500_before_any_handler(
+    monkeypatch: pytest.MonkeyPatch, hook: str, operation: str, method: str, path: str
+) -> None:
+    failures: list[UnexpectedFailure] = []
+
+    class Listener:
+        def __init__(self, request: HttpRequest) -> None:
+            pass
+
+        def on_unexpected_error(self, failure: UnexpectedFailure, /) -> None:
+            failures.append(failure)
+
+    monkeypatch.setattr(_HooksWhereOneThrows, "throwing", hook)
+    monkeypatch.setattr(_golden("django").TasksBoundary, "boot_check", False)
+    needs = hook_needs(_golden("contract").CONTRACT)
+    resources = {"tasks": _HandlerThatMustNotRun, "channels": _HandlerThatMustNotRun}
+
+    with _served(
+        monkeypatch,
+        NinjaAPI(urls_namespace="seampact-throwing-hooks"),
+        handlers=resources,
+        authenticate={name: _HooksWhereOneThrows for name in needs.identities},
+        deciders={name: _HooksWhereOneThrows for name in needs.deciders},
+        scope_resolvers={name: _HooksWhereOneThrows for name in needs.scopes},
+        idempotency_store=lambda request: object(),
+        on_unexpected_error=Listener,
+    ):
+        response = Client(raise_request_exception=False).generic(
+            method.upper(),
+            path,
+            json.dumps({"title": "Write the guide"}) if method == "post" else "",
+            content_type="application/json",
+            headers={"Authorization": "Bearer user", "Idempotency-Key": "k-1"},
+        )
+
+    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+    assert json.loads(response.content)["code"] == "api.internal"
+    assert [failure.operation for failure in failures] == [operation]
+    assert [str(failure.cause) for failure in failures] == [_THROWN]
