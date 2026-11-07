@@ -11,7 +11,8 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * What a handler answers in place of its own result when the loaded script says so: its declared success with the
  * script's body bound by the app's own mapper, one of its declared error arms, a thrown exception, or, for a status
- * or code the result type cannot hold, a reply the app writes itself, which the boundary's outgoing check judges.
+ * or code the result type cannot hold, a reply the app writes itself, which the boundary's outgoing check judges. A
+ * held handler answers once released, from the script loaded then.
  */
 @Component
 final class ScriptedAnswers {
@@ -24,6 +25,8 @@ final class ScriptedAnswers {
     <Body, Result> Optional<Result> answer(
             String api, String operation, int successStatus, Class<Body> bodyType, Function<Body, Result> success,
             Map<String, Supplier<Result>> errorArms) {
+        if (SuiteControl.isHeld(api, operation)) SuiteControl.waitForRelease(api, operation);
+
         Optional<JsonNode> scripted = SuiteControl.scriptedAnswer(api, operation);
         if (scripted.isEmpty()) return Optional.empty();
 

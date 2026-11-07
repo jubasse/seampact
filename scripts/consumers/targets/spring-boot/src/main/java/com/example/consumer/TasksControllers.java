@@ -6,6 +6,7 @@ import com.example.tasks.api.ArchiveTaskResult;
 import com.example.tasks.api.AssignTaskInput;
 import com.example.tasks.api.AssignTaskResult;
 import com.example.tasks.api.ChannelsEndpoints;
+import com.example.tasks.api.CreateTaskErrors;
 import com.example.tasks.api.CreateTaskInput;
 import com.example.tasks.api.CreateTaskResult;
 import com.example.tasks.api.DeleteDraftInput;
@@ -163,7 +164,9 @@ final class TasksControllers {
         public CreateTaskResult createTask(CreateTaskInput input) {
             Task created = SampleData.task(UUID.randomUUID());
 
-            return new CreateTaskResult.Status201(new Task(created.taskId(), input.body().title(), created.state(), created.effort(), created.version(), created.createdAt()));
+            return answers.answer(API, "createTask", 201, Task.class, CreateTaskResult.Status201::new,
+                            Map.<String, java.util.function.Supplier<CreateTaskResult>>of("api.not_found", CreateTaskErrors.ApiNotFound::new))
+                    .orElseGet(() -> new CreateTaskResult.Status201(new Task(created.taskId(), input.body().title(), created.state(), created.effort(), created.version(), created.createdAt())));
         }
 
         @Override

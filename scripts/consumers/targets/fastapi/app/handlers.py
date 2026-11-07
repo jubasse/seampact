@@ -11,6 +11,7 @@ from generated.tasks.operations import (
     AssignTaskRequest,
     AssignTaskResponse200,
     AssignTaskResult,
+    CreateTaskErrors,
     CreateTaskRequest,
     CreateTaskResponse201,
     CreateTaskResult,
@@ -86,6 +87,7 @@ from sample_data import (
 from seampact_consumer_suite.scripted_answers import scripted_answer
 
 _OK: int = 200
+_CREATED: int = 201
 _DEFAULT_LOCALE: str = "en"
 _NOT_FOUND: str = "api.not_found"
 _SERVICE_API: str = "tasksService"
@@ -93,6 +95,10 @@ _SERVICE_API: str = "tasksService"
 
 def _channel_reply_of(body: dict[str, object]) -> GetChannelResult:
     return GetChannelResponse200(channel_of(body))
+
+
+def _created_task_reply_of(body: dict[str, object]) -> CreateTaskResult:
+    return CreateTaskResponse201(task_of(body))
 
 
 def _task_reply_of(body: dict[str, object]) -> GetTaskResult:
@@ -156,8 +162,11 @@ class TasksHandlers:
 
     def create_task(self, request: CreateTaskRequest) -> CreateTaskResult:
         created = task(NEW_TASK_ID).model_copy(update={"title": request.input.body.title})
+        reply = scripted_answer(
+            "createTask", _CREATED, _created_task_reply_of, {_NOT_FOUND: CreateTaskErrors.api_not_found}
+        )
 
-        return CreateTaskResponse201(created)
+        return reply or CreateTaskResponse201(created)
 
     def update_task(self, request: UpdateTaskRequest) -> UpdateTaskResult:
         body = request.input.body

@@ -36,6 +36,7 @@ from sample_data import (
 from seampact_consumer_suite.scripted_answers import scripted_answer, text_member
 
 _OK: int = 200
+_CREATED: int = 201
 _SERVICE_API: str = "tasksService"
 _DEFAULT_LOCALE: str = "en"
 _DEFAULT_DIGEST: bool = False
@@ -95,8 +96,10 @@ class TasksHandlers:
 
     def create_task(self, request: tasks.CreateTaskRequest) -> tasks.CreateTaskResult:
         created = task(NEW_TASK_ID)
+        not_found = {"api.not_found": tasks.CreateTaskErrors.api_not_found}
+        reply = scripted_answer("createTask", _CREATED, _created_task_reply_of, not_found)
 
-        return tasks.CreateTaskResponse201(body=_retitled(created, request.input.body.title))
+        return reply or tasks.CreateTaskResponse201(body=_retitled(created, request.input.body.title))
 
     def update_task(self, request: tasks.UpdateTaskRequest) -> tasks.UpdateTaskResult:
         body = request.input.body
@@ -179,6 +182,10 @@ class NotesHandlers:
 
 def _channel_reply_of(body: dict[str, object]) -> tasks.GetChannelResult:
     return tasks.GetChannelResponse200(body=channel_of(body))
+
+
+def _created_task_reply_of(body: dict[str, object]) -> tasks.CreateTaskResult:
+    return tasks.CreateTaskResponse201(body=task_of(body))
 
 
 def _task_reply_of(body: dict[str, object]) -> tasks.GetTaskResult:

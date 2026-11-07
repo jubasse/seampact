@@ -8,7 +8,7 @@ namespace Seampact\ConsumerSuite;
  * What a handler answers in place of its own result when the loaded script says so: its declared success built from
  * the script's body, one of its declared error arms, a thrown exception, or, for a status or code the result type
  * cannot hold, a reply the app writes itself (`ScriptedReply`), an exception rendering the boundary answers with the
- * api's 500.
+ * api's 500. A held handler answers once released, from the script loaded then.
  */
 final class ScriptedAnswers
 {
@@ -26,6 +26,10 @@ final class ScriptedAnswers
      */
     public static function answer(string $operation, int $successStatus, \Closure $success, array $errorArms = [], string $api = self::DEFAULT_API): ?object
     {
+        if (SuiteControl::isHeld($api, $operation)) {
+            SuiteControl::waitForRelease($api, $operation);
+        }
+
         $answer = SuiteControl::scriptedAnswer($api, $operation);
         if ($answer === null) {
             return null;
