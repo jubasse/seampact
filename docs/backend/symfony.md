@@ -1,18 +1,22 @@
-# Write the handlers (Symfony)
+# Symfony
 
-`seampact/symfony` generates the contract's PHP code. You write the controllers and the hooks; the generated boundary checks each request and each reply.
+`seampact/symfony` generates the contract's PHP code for Symfony. You write the controllers and the hooks; the generated boundary checks each request and each reply.
+
+Symfony 7.4 and 8 on PHP 8.3, 8.4 or 8.5. See [Supported versions](../supported-versions.md).
 
 ## Set up
 
-Install seampact from Packagist.
+You need:
+
+- PHP with the extensions `json` and `zlib`, and Symfony 7.4 or 8 (7.3 and older are refused);
+- `symfony/validator`, which `seampact/symfony` installs: the boundary checks every input with it;
+- php-fpm. A worker runtime (FrankenPHP worker, RoadRunner, Swoole) is refused with `runtime.worker.unsupported`.
+
+Install seampact from Packagist. `seampact/hooks` comes with it.
 
 ```sh
 composer require seampact/symfony
 ```
-
-Working from a checkout of the repository instead? See [Install](../getting-started/01-install.md#from-a-checkout).
-
-The boundary checks every input with `symfony/validator`, which `seampact/symfony` installs.
 
 In `seampact.config.yaml`, add one entry per api:
 
@@ -31,58 +35,17 @@ targets:
 
 The skeleton's `config/services.yaml` loads all of `src/`, so it loads `src/Generated` too. That works as is: the bundle registers its own services, and the classes it registers carry `#[Exclude]`. You do not need an `exclude` line.
 
-The classes the bundle wires itself (the settings, the hooks and the boundary) are not injected by type in your app: use the services they call.
+Generate:
 
-Generate, then list the api's bundle for every environment and import its routes:
-
-```bash
+```sh
 vendor/bin/seampact generate
 ```
 
-```php
-// config/bundles.php
-App\Generated\Tasks\Symfony\TasksSeampactBundle::class => ['all' => true],
-```
+`bin/console seampact:generate` does the same. To use it, list `Seampact\Symfony\SeampactCommandsBundle` in `config/bundles.php` for `dev` only. It still runs when the generated code comes from another seampact version, which every other command refuses.
 
-```yaml
-# config/routes/seampact.yaml
-seampact_tasks:
-    resource: tasks
-    type: seampact
-```
+Commit the generated files ([Generated files](../configuration/config-file.md#generated-files)). `seampact check` fails CI when they drift from the contract; [Commands per stack](../features/commands-per-stack.md) shows how to run it.
 
-The resource is the api key, the snake case of the api name (`tasks_service` for `tasksService`). Do not set a `prefix` or a `host` on the import. To serve the api under a prefix, set `mount: /api` on the target entry. Two apis are two bundles and two imports.
-
-`bin/console seampact:generate` does the same as the vendor binary. To use it, list `Seampact\Symfony\SeampactCommandsBundle` in `config/bundles.php` for `dev` only. It still runs when the generated code comes from another seampact version, which every other command refuses.
-
-## Routes
-
-The loader declares one route per operation, with the contract's method and path. Import it once per api, as in [Set up](#set-up).
-
-Each route is named `seampact.<api>.<operation>`. Its parameters take the names of the input properties, so the router builds a URL by name:
-
-```php
-// $urls is Symfony's UrlGeneratorInterface
-$urls->generate('seampact.tasks.getTask', ['taskId' => $task->id]);
-```
-
-Each api also gets `TasksRouteNames`, one constant per route name, and `TasksUrls`, one method per operation that builds its path from typed parameters. `TasksUrls` returns the contract's path, encoded as the generated clients encode it:
-
-```php
-use App\Generated\Tasks\Symfony\TasksRouteNames;
-use App\Generated\Tasks\Symfony\TasksUrls;
-
-$urls->generate(TasksRouteNames::GET_TASK, ['taskId' => $task->id]);
-TasksUrls::getTask($task->id); // '/v1/tasks/42'
-```
-
-`artefacts: { routeHelpers: false }` leaves both classes out.
-
-The boot check refuses a `prefix`, a `host`, `schemes` or a `condition` on the import, and a `#[Route]` on an endpoints method: the loader already declares that route. `generate` refuses a path segment that mixes a parameter with text (`path.segment.mixed.unsupported`), and a static segment with `{`, `}` or `?` (`path.segment.literal.unsupported`). A parameter name over 32 characters gets a positional name instead (`{p2}` for the second parameter).
-
-Your own routes stay beside the contract's. The boot check refuses one that is not in the contract unless `frameworkRoutes` allow-lists it (see [The boot check](#the-boot-check)). By default only routes that reach a path of the api are checked; `artefacts.bootCheck.frameworkRoutes: strict` checks them all.
-
-## Write a controller
+## Write a handler
 
 Each resource has a generated `<Resource>Endpoints` interface. Implement it as a service, and mark each method with `#[SeampactOperation]`. Return one arm of the operation's result: a `Response200` class and the like, or an error from `<Operation>Errors`.
 
@@ -110,6 +73,12 @@ final class TasksController implements TasksEndpoints
 
 The boundary has already checked the path, query, headers and body. You never write a status or a content type yourself.
 
+Do not put `#[IsGranted]` or `#[IsCsrfTokenValid]` on these methods, or `#[Route]`: the boot check refuses them. Use a decider or an `access_control` rule instead (see [Use SecurityBundle](#use-securitybundle)). The routes come from the generated loader.
+
+A version in a body is checked for its format only. Compare it with the stored one and return the operation's conflict error when they differ. A write versioned with `header.If-Match` answers 428 when the header is missing or empty, before the handler runs. A weak tag (`W/"7"`) is accepted, and the handler receives the version unquoted (`7`). A stale version is a 412: the handler returns the `preconditionFailed` error. See [Catch lost updates](../contract/07-advanced.md#catch-lost-updates).
+
+A deadline is a declared header, so read it from the checked input headers. Once the deadline has passed, stop the work and answer the operation's `deadlineExceeded` error. `budgetMs` is the client's timeout; the boundary does not enforce it.
+
 ### Who is calling
 
 On a route with an identity, the input's `principal()` returns the caller in the generated `<Identity>Principal` class. It is `null` for an anonymous caller on an optional-auth route. A public route has no `principal()`.
@@ -123,13 +92,60 @@ $userId = $input->principal()->userId;
 
 Neither comes from the request body or is validated with it, and each api reads its own. `$this->getUser()` and `#[CurrentUser]` are set only when the firewall authenticates.
 
-Do not put `#[IsGranted]` or `#[IsCsrfTokenValid]` on these methods: the boot check refuses them. Use a decider or an `access_control` rule instead (below). The routes come from the generated loader, not from `#[Route]`.
+### With Doctrine
 
-A version in a body is checked for its format only. Compare it with the stored one and return the operation's conflict error when they differ.
+The boundary hands you a generated class and sends back one. A Doctrine entity is not that class. Map your entity to the contract type in the controller:
 
-A deadline is a declared header, so read it from the checked input headers. Once the deadline has passed, stop the work and answer the operation's `deadlineExceeded` error. `budgetMs` is the client's timeout; the boundary does not enforce it.
+```php
+return new GetTaskResponse200(new Task(taskId: $entity->getId(), title: $entity->getTitle()));
+```
 
-## Register the hooks
+A field the contract does not declare never leaves the boundary, so an extra column on your entity is not sent.
+
+## Wire it in
+
+List the api's bundle for every environment, and import its routes:
+
+```php
+// config/bundles.php
+App\Generated\Tasks\Symfony\TasksSeampactBundle::class => ['all' => true],
+```
+
+```yaml
+# config/routes/seampact.yaml
+seampact_tasks:
+    resource: tasks
+    type: seampact
+```
+
+The resource is the api key, the snake case of the api name (`tasks_service` for `tasksService`). Two apis are two bundles and two imports.
+
+The loader declares one route per operation, with the contract's method and path. Do not set a `prefix`, a `host`, `schemes` or a `condition` on the import: the boot check refuses them. To serve the api under a prefix, set `mount: /api` on the target entry.
+
+Your own routes stay beside the contract's. The boot check refuses one that is not in the contract unless `frameworkRoutes` allow-lists it.
+
+### Route names and URLs
+
+Each route is named `seampact.<api>.<operation>`. Its parameters take the names of the input properties, so the router builds a URL by name:
+
+```php
+// $urls is Symfony's UrlGeneratorInterface
+$urls->generate('seampact.tasks.getTask', ['taskId' => $task->id]);
+```
+
+Each api also gets `TasksRouteNames`, one constant per route name, and `TasksUrls`, one method per operation that builds its path from typed parameters. `TasksUrls` returns the contract's path, encoded as the generated clients encode it:
+
+```php
+use App\Generated\Tasks\Symfony\TasksRouteNames;
+use App\Generated\Tasks\Symfony\TasksUrls;
+
+$urls->generate(TasksRouteNames::GET_TASK, ['taskId' => $task->id]);
+TasksUrls::getTask($task->id); // '/v1/tasks/42'
+```
+
+`artefacts: { routeHelpers: false }` leaves both classes out. A parameter name over 32 characters gets a positional name instead (`{p2}` for the second parameter).
+
+## Write the hooks
 
 Hooks are services. With autoconfiguration on, implementing the generated interface is enough. Write one hook per identity, one decider for your rights and rules, and one resolver per scope.
 
@@ -151,11 +167,21 @@ final class UserHook implements UserAuthenticateHook
 }
 ```
 
-A decider lists the names it answers in `names()`, or `[self::EVERY_NAME]` for all of them.
+Each api has its own interfaces in `App\Generated\<Api>\Symfony`: `Decider`, `ScopeResolver` and `UnexpectedErrorListener`. Implement the ones of the api the hook serves.
 
-Each api has its own interfaces in `App\Generated\<Api>\Symfony`: `Decider`, `ScopeResolver` and `UnexpectedErrorListener`. Implement the ones of the api the hook serves. The listener is told of each 500 the api answers.
+- A decider lists the names it answers in `names()`, or `[self::EVERY_NAME]` for all of them.
+- The listener is told of each 500 the api answers.
+- The `params` of a right or rule in a decider request are an instance of the generated class, not an array.
+- **Idempotency.** Alias the api's store id, `seampact.<api key>.idempotency_store`, to a service of yours that implements `Seampact\Hooks\IdempotencyStore`. A replayed request gets the saved reply and your handler does not run. A 5xx reply releases the key.
 
-## With SecurityBundle
+```yaml
+services:
+    seampact.tasks.idempotency_store: '@App\Idempotency\DoctrineIdempotencyStore'
+```
+
+- **Throttle.** Count the bucket in your decider, with a RateLimiter factory (`framework.rate_limiter`), keyed by `$request->bucket()->key`. `bucket()` can be null, so check it first. Return a denial with the `rateLimited` code when the limiter refuses.
+
+### Use SecurityBundle
 
 The firewall runs before the contract's access steps. So:
 
@@ -181,7 +207,7 @@ security:
 
 The generated `TasksAccess` class lists, per route, the kind, the identity, and the rights and rules it requires.
 
-### Answer rights with your voters
+#### Answer rights with your voters
 
 Instead of writing the decider above, register the runtime's `VoterDecider` with your api's deciders tag:
 
@@ -194,24 +220,22 @@ services:
 
 It calls `isGranted('<right>', $request)` for every right and rule, and a denial answers the first denial code. Your voter reads the `RequirementRequest` subject: `params()`, `subject()`, `scopes()`, `principal()`. A decider of your own that names a right wins over it.
 
-## Lists, idempotency, throttle
+## Options
 
-- **Paging.** A paged list gets its page parameters in `$input->query` and a generated `<Operation>Page` class to return.
-- **Idempotency.** Alias the api's store id, `seampact.<api key>.idempotency_store`, to a service of yours that implements `Seampact\Hooks\IdempotencyStore`:
+Set under `options:` on the target entry.
 
-```yaml
-services:
-    seampact.tasks.idempotency_store: '@App\Idempotency\DoctrineIdempotencyStore'
-```
+| Option | Default | What it does |
+|---|---|---|
+| `indent` | `4` | Spaces per indent in the generated code, from 1 to 8. |
+| `rules` | `native` | `native` uses Symfony Validator's own constraints. `seampact-consistent` gives the contract's exact checks, equal on every target. |
+| `responses` | `strict` | `strict` answers 500 when your reply breaks the contract. `warn` logs it and sends the reply. |
+| `bodyValidation` | `false` | Checks success bodies against the contract. |
+| `frameworkEtag` | `strip` | Drops an ETag or a 304 that the boundary did not write. `keep` leaves them. |
+| `catchAll` | `true` | Unknown paths under the api's base path answer the contract's 404. |
 
-  A replayed request gets the saved reply and your handler does not run. A 5xx reply releases the key.
-- **Throttle.** Count the bucket in your decider, with a RateLimiter factory (`framework.rate_limiter`), keyed by `$request->bucket()->key`. `bucket()` can be null, so check it first. Return a denial with the `rateLimited` code when the limiter refuses.
+Also on the entry: [`mount`](../configuration/reference.md#mount) (a path prefix), [`frameworkRoutes`](../configuration/reference.md#framework-routes) (see [The boot check](#the-boot-check)), `allowUntested`, and under `artefacts`: `routeHelpers` and [`bootCheck`](../configuration/reference.md#boot-check). Settings set on a group flow down to the routes below it: see [Settings flow down the tree](../contract/01-basics.md#settings-flow-down-the-tree). The full list is in the [configuration reference](../configuration/reference.md#symfony).
 
-## Signed webhooks
-
-A route signed by a provider reads the raw body. Your authenticate hook gets it with `$request->signature()` and verifies it with `seampact/signed-webhooks`. A bad signature is a `Denied` result. See [Signed webhook errors](../troubleshooting/signed-webhooks.md).
-
-## Configuration at run time
+### Change a setting without generating again
 
 The bundle reads its settings from `seampact_<api>`. Every value may be an `%env()%` placeholder.
 
@@ -227,17 +251,13 @@ seampact_tasks:
 
 An operation's value wins over the api's. A bad written value, such as `responses: stric`, stops `cache:clear` and names the key. A bad `%env()%` value is only seen at run time: it answers the api's 500 on every contract route and logs the key, never the value.
 
-When the contract writes absolute URLs, set `public_origin` to the origin your clients call, such as `https://api.example.com`: a scheme, a host and an optional port, no path.
+## Paging
 
-## Your data and the contract
+A paged list gets its page parameters in `$input->query` and a generated `<Operation>Page` class to return.
 
-The boundary hands you a generated class and sends back one. A Doctrine entity is not that class. Map your entity to the contract type in the controller:
+## Signed webhooks
 
-```php
-return new GetTaskResponse200(new Task(taskId: $entity->getId(), title: $entity->getTitle()));
-```
-
-A field the contract does not declare never leaves the boundary, so an extra column on your entity is not sent.
+A route signed by a provider reads the raw body. Your authenticate hook gets it with `$request->signature()` and verifies it with `seampact/signed-webhooks`. A bad signature is a `Denied` result. See [Signed webhook errors](../troubleshooting/signed-webhooks.md).
 
 ## Validate your own objects
 
@@ -294,44 +314,59 @@ when@dev:
 
 The profiler records the reply before the boundary checks it. When the boundary replaced it with a 500, the profiler still shows your handler's reply: read the log line for the reason.
 
-## The boot check
+## Deploy
 
-The app refuses to start, and lists every problem, when:
+- Serve the app with php-fpm.
+- Run `APP_ENV=prod bin/console cache:warmup` at deploy, with the production environment variables set. It runs the boot check.
+- To serve the api under a prefix, set `mount: /api` on the target entry. Do not set a `prefix` on the route import.
+- When the contract writes absolute URLs, set `public_origin` to the origin your clients call, such as `https://api.example.com`: a scheme, a host and an optional port, no path. The request's `Host` is never read.
+- Behind a proxy, set Symfony's `framework.trusted_proxies`. It changes Symfony's URL helpers, never the contract's URLs.
 
-- an identity has no authenticate hook, a right or rule no decider, a scope no resolver, an idempotent operation no store;
-- an operation has no handler, or a method lacks `#[SeampactOperation]`;
-- a route that is not in the contract is served and not allow-listed;
-- an app route sits before a contract route on the same path;
-- `framework.http_cache` is on;
-- a contract method or controller carries `#[IsGranted]`: for a plain `ROLE_*` or `IS_AUTHENTICATED_*` check, the message prints the `access_control` rule to paste instead; with a subject, `methods`, `statusCode` or `exceptionCode`, it points to `VoterDecider`;
-- the contract writes absolute URLs and `public_origin` is missing or is not an origin;
-- the contract writes relative URLs and `public_origin` is set, from an `%env()%` value too.
+In Docker, take a php-fpm image and put the web server (nginx) in front. The generated code is committed, so the image needs no seampact tool. Pass `APP_SECRET`, `TASKS_PUBLIC_ORIGIN` and your other settings as environment variables, never baked into the image.
 
-`bin/console cache:warmup` runs it: run it at deploy. Allow-list your own routes in the entry, with a reason:
+```dockerfile
+FROM composer:2 AS vendor
+WORKDIR /app
+COPY . .
+RUN composer install --no-dev --optimize-autoloader --no-scripts --ignore-platform-reqs
+
+FROM php:8.5-fpm
+WORKDIR /var/www/html
+COPY --from=vendor /app .
+ENV APP_ENV=prod
+```
+
+### The boot check
+
+The app refuses to start, and lists every problem. `bin/console cache:warmup` runs it. Find each message in [Boot errors](../troubleshooting/boot.md#symfony).
+
+| Fault | Fix |
+|---|---|
+| An identity has no authenticate hook, a right or rule no decider, a scope no resolver. | Add the service. |
+| An idempotent operation has no store. | Alias `seampact.<api key>.idempotency_store` to your store. |
+| An operation has no handler, or a method lacks `#[SeampactOperation]`. | Implement the endpoints interface and mark each method. |
+| A route that is not in the contract is served and not allow-listed. | Add it to `frameworkRoutes` on the entry, or remove it. |
+| An app route sits before a contract route on the same path. | Move your route after, or change its path. |
+| `framework.http_cache` is on. | Turn it off. |
+| A contract method or controller carries `#[IsGranted]`. | For a plain `ROLE_*` or `IS_AUTHENTICATED_*` check, paste the `access_control` rule the message prints. With a subject, `methods`, `statusCode` or `exceptionCode`, use `VoterDecider`. |
+| The contract writes absolute URLs and `public_origin` is missing or is not an origin. | Set `public_origin`. |
+| The contract writes relative URLs and `public_origin` is set, from an `%env()%` value too. | Unset it. |
+
+Allow-list your own routes in the entry, with a reason. By default only routes that reach a path of the api are checked; `artefacts.bootCheck.frameworkRoutes: strict` checks them all.
 
 ```yaml
     frameworkRoutes:
       - { path: "/admin/**", reason: "Back office, not part of the api." }
 ```
 
-Find each message in [Troubleshooting](../troubleshooting/boot.md).
+## Limits
 
-## What is not served yet
+- `generate` refuses some forms by name, until an app needs them. The list is in [Generate errors](../troubleshooting/generate.md#php); forms refused on every server are under [every server](../troubleshooting/generate.md#every-server).
+- A sort key restricted by a right is refused (`paging.sortKey.right.unsupported`). Leave the key out of `sortable`.
+- A query list is read in the default `repeat` form (`tag=a&tag=b`) or as `comma`.
 
-`generate` refuses these by name, until an app needs them: multipart and file values, form bodies, download and redirect responses, query lists in `brackets` form (`tag[]=a`), lists of lists and object query params, an identity header written on a response (a `versionToken` header, or one declared `in: response`), and `artefacts: { accessHooks: false }`. Remove the operation from the entry's `operations` filter to generate the rest. See [Troubleshooting](../troubleshooting/generate.md).
+## Next
 
-A sort key restricted by a right is refused too (`paging.sortKey.right.unsupported`). Leave the key out of `sortable`.
-
-Serve the app with php-fpm. A worker runtime (FrankenPHP worker, RoadRunner, Swoole) is refused with `runtime.worker.unsupported`.
-
-## Versions
-
-Symfony 7.4 and 8 are tested. The CI runs Symfony 7.4 on PHP 8.3 and 8.5, and Symfony 8 on PHP 8.5. The package accepts PHP 8.3.36, 8.4.27, 8.5.12 and later patches. Symfony 7.3 and older are refused.
-
-## Versioned writes and query lists
-
-A write versioned with `header.If-Match` answers 428 when the header is missing or empty, before the handler runs. A weak tag (`W/"7"`) is accepted, and the handler receives the version unquoted (`7`). A stale version is a 412: the handler returns the `preconditionFailed` error. See [Catch lost updates](../contract/07-advanced.md#catch-lost-updates).
-
-A query list of scalars or enums is read in the default `repeat` form (`tag=a&tag=b`) or as `comma`. The `brackets` form and a list of lists are refused by `generate`.
-
-The `params` of a right or rule in a decider request are an instance of the generated class, not an array.
+- [Call the api from React](../frontend/react.md)
+- [Call it with the fetch client](../frontend/fetch-client.md)
+- [Check the generated code in CI](../features/check-in-ci.md)

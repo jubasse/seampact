@@ -1,23 +1,27 @@
 # Editor support
 
-Your editor can check contract keys and the names you declare, and complete them as you type.
+Use editor schemas to get completion and checks on contract keys and on the names you declare, as you type in VS Code, or any editor with a YAML language server.
 
-`seampact init` sets this up in a new project. In an existing one, `npx seampact init --modelines` writes the first line below in every contract file, and the schemas.
-
-Run once after a checkout, and again after you declare a new name:
-
-```sh
-npx seampact compile --editor-schemas
-```
-
-It writes schemas to `.seampact/schemas` in the workspace root (set `workspace.editorSchemas` to change it). Add that folder to `.gitignore`.
-
-Point each file at its schema on its first line, with a path relative to the file. For `contract/api.yaml`:
+Each contract file starts with a modeline that points to its schema, with a path relative to the file. For `contract/api.yaml`:
 
 ```yaml
-# yaml-language-server: $schema=../.seampact/schemas/api.schema.json
+# yaml-language-server: $schema=.seampact/schemas/api.schema.json
 ```
 
-VS Code needs the YAML extension (Red Hat).
+`seampact init` writes this line and the schemas in a new project. In an existing one, `seampact init --modelines` writes the line in every contract file. `init` is a Node command. `compile --editor-schemas` also runs with the compiler binary: see [commands per stack](commands-per-stack.md).
+
+The schemas live in `.seampact/schemas` inside the contract folder (the folder of `workspace.yaml` or `api.yaml`). Set `workspace.editorSchemas` to change it. Add that folder to `.gitignore`.
+
+Run this once after a checkout, and again after you declare a new name:
+
+```sh
+seampact compile --editor-schemas
+```
+
+VS Code needs the YAML extension (Red Hat). Another editor reads the same modeline through any YAML language server.
 
 Errors: [CLI errors](../troubleshooting/cli.md).
+
+## Next
+
+[Lint](lint.md).
