@@ -22,7 +22,7 @@ import kotlin.test.assertFailsWith
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
-// The access forms 1.0 refuses by name (CHK-006, 019, 020, 094, 131): a contract that uses one fails at generation with
+// The access forms 1.0 refuses by name (CHK-006, 019, 020, 094, 131, 188): a contract that uses one fails at generation with
 // the form's code.
 class SpringBootAccessRefusalsTest {
     private val repositoryRoot: Path = Path.of(System.getProperty("seampact.repositoryRoot"))
@@ -73,6 +73,29 @@ class SpringBootAccessRefusalsTest {
         }
 
         assertTrue("scope.source.unsupported" in refusedCodes(ir))
+    }
+
+    @Test
+    fun refusesAScopeIdReadFromASourceOtherThanThePathAtItsSource() {
+        val sources = listOf(
+            ValueSource(ValueSourceIn.QUERY, "channelId"),
+            ValueSource(ValueSourceIn.HEADER, "X-Channel-Id"),
+            ValueSource(ValueSourceIn.HOST),
+            ValueSource(ValueSourceIn.SUBDOMAIN),
+            ValueSource(ValueSourceIn.PRINCIPAL, "userId"),
+        )
+
+        for (source in sources) {
+            val ir = getTaskIr().withGetTask { operation -> operation.copy(scopes = operation.scopes.map { it.copy(source = source) }) }
+            val entry = SpringBootEntry(id = "server", options = JsonObject(mapOf("package" to JsonPrimitive("com.acme.tasks"))))
+            val refusals = assertFailsWith<SpringBootRefusedException> { SpringBootTarget.generate(ir, entry) }.refusals
+
+            assertEquals(
+                listOf("scope.source.unsupported" to "/operations/0/scopes/0/source"),
+                refusals.filter { it.code.startsWith("scope.source") }.map { it.code to it.member },
+                "the scope source '${source.in_.value}'",
+            )
+        }
     }
 
     @Test

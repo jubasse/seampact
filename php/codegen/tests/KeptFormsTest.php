@@ -75,6 +75,42 @@ final class KeptFormsTest extends TestCase
         self::assertArrayHasKey('principal.variants.unsupported', $messages);
     }
 
+    public function testAScopeIdReadFromASourceOtherThanThePathIsRefusedByNameAtItsSource(): void
+    {
+        $sources = [
+            (object) ['in' => 'query', 'name' => 'channelId'],
+            (object) ['in' => 'header', 'name' => 'X-Channel-Id'],
+            (object) ['in' => 'host'],
+            (object) ['in' => 'subdomain'],
+            (object) ['in' => 'principal', 'name' => 'userId'],
+        ];
+
+        foreach ($sources as $source) {
+            $document = ReferenceIr::keeping(ReferenceIr::document(), ['getTask']);
+            $operation = is_array($document->operations) ? $document->operations[0] : null;
+            self::assertInstanceOf(\stdClass::class, $operation);
+            $scopes = $operation->scopes;
+            self::assertIsArray($scopes);
+            $firstScope = $scopes[0];
+            self::assertInstanceOf(\stdClass::class, $firstScope);
+            $firstScope->source = $source;
+
+            $refusals = new Refusals('server', 'test', 'seampact/test');
+            new KeptForms(ReferenceIr::read($document), $refusals, new FixedReleases(null));
+
+            try {
+                $refusals->throwIfAny();
+                self::fail("The scope source '{$source->in}' was not refused.");
+            } catch (GenerationRefusedException $refused) {
+                $scopeSourceProblems = array_values(array_filter($refused->problems, static fn ($problem): bool => str_starts_with($problem->code, 'scope.source')));
+
+                self::assertCount(1, $scopeSourceProblems, "the scope source '{$source->in}'");
+                self::assertSame('scope.source.unsupported', $scopeSourceProblems[0]->code);
+                self::assertStringContainsString('/operations/0/scopes/0/source', (string) $scopeSourceProblems[0]->where);
+            }
+        }
+    }
+
     // HAL's page names its `_embedded` member by `$collection` and links each item by `$itemSelf`, which the page reply
     // does not fill: the boundary would drop them, so the style is refused by name.
     public function testAPageBodyWritingSlotsThePageReplyDoesNotFillIsRefusedByName(): void

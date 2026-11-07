@@ -1,4 +1,9 @@
-import { type ContractIR, type IdentityAccess, isKnownVariant } from "@seampact/spec/ir";
+import {
+  type ContractIR,
+  type IdentityAccess,
+  isKnownVariant,
+  type ValueSource,
+} from "@seampact/spec/ir";
 import type { GenerateOutcome, GenerateRequest, Target } from "../target.js";
 import { packIr } from "./live-pages.test-support.js";
 import { readGoldenIr } from "./reference-project.test-support.js";
@@ -265,4 +270,77 @@ export async function generateWithRefusedForm(
     outputDirectory: where.outputDirectory,
     artefacts: new Set(["boundary", "index"]),
   });
+}
+
+/** Each scope id source other than the path, as the IR writes it: no Node server generates one yet. */
+const NON_PATH_SCOPE_SOURCES: readonly ValueSource[] = [
+  { in: "query", name: "channelId" },
+  { in: "header", name: "X-Channel-Id" },
+  { in: "host" },
+  { in: "subdomain" },
+  { in: "principal", name: "userId" },
+];
+
+const SCOPE_SOURCE_REFUSAL = "scope.source.unsupported";
+
+/** One generation of the golden tasks api with its first scope read from [source], and what it refused there. */
+export interface ScopeSourceRefusal {
+  readonly source: string;
+  readonly code: string;
+  readonly member: string | undefined;
+}
+
+/**
+ * Generates the golden tasks api once per non-path scope source, the first scoped operation's first scope read from
+ * it, and lists each `scope.source` refusal with the IR member it points at.
+ */
+export async function nonPathScopeSourceRefusals(
+  serverTarget: Target,
+  where: { readonly links: GenerateRequest["links"]; readonly outputDirectory: string },
+): Promise<ScopeSourceRefusal[]> {
+  const listed: ScopeSourceRefusal[] = [];
+
+  for (const source of NON_PATH_SCOPE_SOURCES) {
+    const ir = readGoldenIr("tasks");
+    const [scope] = scopedOperationOf(ir).scopes;
+
+    if (scope === undefined)
+      throw new Error("the golden tasks api's scoped operation has no scope");
+
+    scope.source = { ...source };
+
+    const outcome = await serverTarget.generate({
+      ir,
+      options: {},
+      links: where.links,
+      outputDirectory: where.outputDirectory,
+      artefacts: new Set(["boundary", "index"]),
+    });
+    const refusals = outcome.status === "refused" ? outcome.refusals : [];
+
+    for (const refusal of refusals.filter((candidate) => candidate.code.startsWith("scope.source")))
+      listed.push({ source: source.in, code: refusal.code, member: refusal.member });
+  }
+
+  return listed;
+}
+
+/** What [nonPathScopeSourceRefusals] lists when every source is refused once, by name, at the scope's source. */
+export function expectedNonPathScopeSourceRefusals(): ScopeSourceRefusal[] {
+  const ir = readGoldenIr("tasks");
+  const member = `/operations/${ir.operations.indexOf(scopedOperationOf(ir))}/scopes/0/source`;
+
+  return NON_PATH_SCOPE_SOURCES.map((source) => ({
+    source: source.in,
+    code: SCOPE_SOURCE_REFUSAL,
+    member,
+  }));
+}
+
+function scopedOperationOf(ir: ContractIR): Operation {
+  const operation = ir.operations.find((candidate) => candidate.scopes.length > 0);
+
+  if (operation === undefined) throw new Error("the golden tasks api has no scoped operation");
+
+  return operation;
 }
