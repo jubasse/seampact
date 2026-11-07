@@ -62,6 +62,8 @@ targets:
       types: types
 ```
 
+With no `validators` entry, the request is checked with [VineJS](https://jubasse.github.io/seampact/types-and-validation/vinejs/); [zod](https://jubasse.github.io/seampact/types-and-validation/zod/) and [yup](https://jubasse.github.io/seampact/types-and-validation/yup/) also work. The types come from [TypeScript types](https://jubasse.github.io/seampact/types-and-validation/typescript-types/): see [Types and validation](https://jubasse.github.io/seampact/types-and-validation/).
+
 Generate, then commit the files: `seampact check` fails later if they drift from the contract.
 
 ```sh

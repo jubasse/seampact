@@ -31,6 +31,8 @@ targets:
     api: tasks
 ```
 
+The request is checked by generated [Symfony constraints](https://jubasse.github.io/seampact/types-and-validation/symfony-constraints/); see [Types and validation](https://jubasse.github.io/seampact/types-and-validation/).
+
 `out` names the PHP namespace folder under `outDir`. Map `outDir` in `composer.json` (`"App\\": "src/"` covers `src/Generated`).
 
 The skeleton's `config/services.yaml` loads all of `src/`, so it loads `src/Generated` too. That works as is: the bundle registers its own services, and the classes it registers carry `#[Exclude]`. You do not need an `exclude` line.

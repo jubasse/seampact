@@ -2,6 +2,7 @@
 
 import { join, posix } from "node:path";
 import {
+  type LinkContext,
   resolveLinkTarget,
   siteRoute,
 } from "../../packages/tools/docs-site/src/prebuild/link-target.ts";
@@ -25,7 +26,12 @@ export function docsLinkRewriter(repositoryRoot: string): DocsLinkRewriter {
       .map((page) => posix.dirname(page.docsPath)),
   );
 
-  const context = { repositoryRoot, pagesByDocsPath, indexedFolders };
+  const context: LinkContext = {
+    repositoryRoot,
+    pagesByDocsPath,
+    indexedFolders,
+    linkStyle: "site",
+  };
 
   return {
     pageUrl(docsPath) {
@@ -45,6 +51,10 @@ export function docsLinkRewriter(repositoryRoot: string): DocsLinkRewriter {
         if (target.kind === "broken") throw new Error(`${sourceDocsPath}: ${target.reason}`);
 
         if (target.kind === "unchanged") return whole;
+
+        // Only the Markdown twin style drops a link; the skills use the site style.
+        if (target.kind === "textOnly")
+          throw new Error(`${sourceDocsPath}: ${url} has no site link to copy into a skill.`);
 
         return `${open}${absoluteUrl(target.url)}${close}`;
       });

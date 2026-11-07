@@ -40,6 +40,8 @@ targets:
     options: { rules: seampact-consistent }
 ```
 
+The request is checked by [DRF serializers](https://jubasse.github.io/seampact/types-and-validation/drf-serializers/); see [Types and validation](https://jubasse.github.io/seampact/types-and-validation/).
+
 Then generate:
 
 ```sh

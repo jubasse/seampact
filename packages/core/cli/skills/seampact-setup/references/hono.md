@@ -43,6 +43,8 @@ targets:
       validators: validators
 ```
 
+The request is checked with [zod](https://jubasse.github.io/seampact/types-and-validation/zod/) here, or [yup](https://jubasse.github.io/seampact/types-and-validation/yup/), and the types come from [TypeScript types](https://jubasse.github.io/seampact/types-and-validation/typescript-types/): see [Types and validation](https://jubasse.github.io/seampact/types-and-validation/).
+
 Generate, then commit the files: `seampact check` fails later if they drift from the contract.
 
 ```sh

@@ -168,7 +168,7 @@ enums:
 
 - Types are `string`, `integer`, `number`, `boolean`, `object` and `array`.
 - A property is optional unless it is in `required`. In `query`, `headers` and `id`, a name ending with `?` is optional.
-- `nullable: true` lets the value be `null`. Optional and nullable are two different things.
+- `nullable: true` lets the value be `null`. Optional and nullable are two different things. Spring Boot, Laravel, Symfony, FastAPI, Django REST Framework and Django Ninja accept it. The Node servers and the TypeScript types refuse it on anything but an opaque value, and `generate` stops with `type.nullable.unsupported` ([Generate fails](https://jubasse.github.io/seampact/troubleshooting/generate/#node-servers)).
 - A schema name starts with a capital letter. Use the name wherever a schema fits: `item: Note`, `input: CreateNote`, `noteId: NoteId`.
 - An enum needs a `reason`: one sentence a reviewer reads, such as why this api owns its list of values.
 
@@ -204,3 +204,4 @@ To share one base between several apis, use `extends`: see [Advanced](https://ju
 
 - Next: [Errors](https://jubasse.github.io/seampact/contract/03-errors/).
 - In depth: [Composition](https://jubasse.github.io/seampact/grammar/02-composition-extends-packs-include/).
+- What each stack generates from these schemas: [Types and validation](https://jubasse.github.io/seampact/types-and-validation/).

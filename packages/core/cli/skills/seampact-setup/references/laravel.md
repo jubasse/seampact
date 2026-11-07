@@ -30,6 +30,8 @@ targets:
     options: { rules: seampact-consistent }
 ```
 
+The request is checked by the [Laravel rules](https://jubasse.github.io/seampact/types-and-validation/laravel-rules/) of a generated `FormRequest`; see [Types and validation](https://jubasse.github.io/seampact/types-and-validation/).
+
 The classes go into the PSR-4 namespace that `composer.json` gives `outDir` (here `App\Generated\Notes`). Then generate:
 
 ```sh

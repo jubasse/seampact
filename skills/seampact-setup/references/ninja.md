@@ -40,6 +40,8 @@ targets:
     options: { views: sync }
 ```
 
+The request is checked by [Pydantic](https://jubasse.github.io/seampact/types-and-validation/pydantic/) models; see [Types and validation](https://jubasse.github.io/seampact/types-and-validation/).
+
 Then generate:
 
 ```sh
