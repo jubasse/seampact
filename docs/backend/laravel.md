@@ -344,6 +344,7 @@ Octane is not supported yet.
 - The web server's body limit and `post_max_size` must be at least the largest route limit of the contract.
 - Run `php artisan route:cache` and `config:cache` in production. The boot check then runs once, at build time.
 - Form, multipart, file, download and redirect bodies, query lists in `brackets` form (`tag[]=a`), lists of lists and object query params, `accessHooks: false`, and an identity header written on a response (a `versionToken` header, or one declared `in: response`: `identity.response.header.unsupported`), are refused by `generate` by name: they wait for an app that needs them. See [Target option errors](../troubleshooting/generate.md).
+- A sort key restricted by a right is refused by `generate` (`paging.sortKey.right.unsupported`). Leave the key out of `sortable`.
 - Laravel 12 and older are refused. Symfony is a separate target.
 
 ## Versioned writes and query lists
