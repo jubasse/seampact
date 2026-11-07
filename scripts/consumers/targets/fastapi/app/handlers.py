@@ -83,6 +83,7 @@ from sample_data import (
     task_of,
     with_next_version,
 )
+from seampact_consumer_suite.log_lines import log_trace_context
 from seampact_consumer_suite.scripted_answers import scripted_answer
 
 _OK: int = 200
@@ -198,6 +199,7 @@ class InternalHandlers:
     refuses one that passes while it works."""
 
     def get_task(self, request: service.GetTaskRequest) -> service.GetTaskResult:
+        log_trace_context(request.input.headers.traceparent)
         deadline = request.deadline
 
         if deadline is not None and deadline.has_passed(datetime.now(UTC)):

@@ -53,7 +53,7 @@ final class TasksServiceHooks {
 
         @Override
         public Decision<Denial> decide(RequirementCall request) {
-            SuiteControl.recordHookCall("decide:" + request.name(), API, request.operation().id());
+            SuiteControl.recordHookCall("decide:" + request.name(), API, request.operation().id(), request.bucket());
 
             Optional<String> denied = SuiteControl.scriptedDecision(request.name(), Purposes.nameOf(request.purpose()));
             if (denied.isPresent()) return new Decision.Denied<>(Denial.of(denied.get()));

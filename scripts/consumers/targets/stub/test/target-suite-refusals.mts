@@ -53,6 +53,8 @@ export const TARGET_SUITE_REFUSALS: Readonly<Record<string, string>> = {
   "several-success-statuses": STUB_REASON,
   "stale-body-version-conflict": STUB_REASON,
   "stripe-list-more-and-exclusive-cursors": STUB_REASON,
+  "throttle-bucket-reaches-decide-hook": STUB_REASON,
+  "trace-context-relayed-to-handler": STUB_REASON,
   "undeclared-handler-error-answers-internal-error": STUB_REASON,
   "undeclared-member-stripped-from-page-items": STUB_REASON,
   "undeclared-status-answers-internal-error": STUB_REASON,

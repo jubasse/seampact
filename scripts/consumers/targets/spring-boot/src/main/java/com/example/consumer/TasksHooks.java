@@ -55,7 +55,7 @@ final class TasksHooks {
 
         @Override
         public Decision<Denial> decide(RequirementCall request) {
-            SuiteControl.recordHookCall("decide:" + request.name(), API, request.operation().id());
+            SuiteControl.recordHookCall("decide:" + request.name(), API, request.operation().id(), request.bucket());
 
             assertRolesRequestComplete(request);
 
@@ -100,7 +100,7 @@ final class TasksHooks {
 
         @Override
         public Decision<Denial> decide(RequirementCall request) {
-            SuiteControl.recordHookCall("decide-override:" + request.name(), API, request.operation().id());
+            SuiteControl.recordHookCall("decide-override:" + request.name(), API, request.operation().id(), request.bucket());
 
             return SuiteControl.scriptedDecision(request.name(), Purposes.nameOf(request.purpose()))
                     .<Decision<Denial>>map(code -> new Decision.Denied<>(Denial.of(code)))

@@ -1,11 +1,11 @@
 // The sample app's side of the http suite's control routes, framework-neutral: the script a case loads, the hook
 // calls the doubles record and the log lines the app writes. Each overlay serves the three routes as framework
 // routes outside the contract, and the hooks and handlers read the script from here.
+import type { ThrottleBucket } from "@seampact/hooks";
 import {
   type DecidePurpose,
   operationKey,
   parseSampleAppScript,
-  type RecordedHookCall,
   type SampleAppScript,
   SampleAppScriptError,
   type ScriptedAnswer,
@@ -18,6 +18,13 @@ export interface ControlReply {
   readonly body?: unknown;
 }
 
+/** A recorded hook call as the hook-calls route answers it: the bucket's key digest is left out. */
+interface HookCallRecord {
+  readonly hook: string;
+  readonly operation: string;
+  readonly bucket?: Omit<ThrottleBucket, "key">;
+}
+
 const NO_CONTENT = 204;
 const OK = 200;
 const BAD_REQUEST = 400;
@@ -25,7 +32,7 @@ const BAD_REQUEST = 400;
 let loadedScript: SampleAppScript = {};
 // Off until the suite loads a script, so a run without the suite (the bench) keeps no growing call log.
 let recordingHookCalls = false;
-const hookCalls: RecordedHookCall[] = [];
+const hookCalls: HookCallRecord[] = [];
 const logLines: string[] = [];
 
 /**
@@ -58,10 +65,27 @@ export function logLinesReply(): ControlReply {
   return { status: OK, body: { lines: [...logLines] } };
 }
 
-export function recordHookCall(hook: string, operation: { api: string; id: string }): void {
+export function recordHookCall(
+  hook: string,
+  operation: { api: string; id: string },
+  bucket?: ThrottleBucket,
+): void {
   if (!recordingHookCalls) return;
 
-  hookCalls.push({ hook, operation: operationKey(operation.api, operation.id) });
+  hookCalls.push({
+    hook,
+    operation: operationKey(operation.api, operation.id),
+    ...(bucket === undefined ? {} : { bucket: recordedBucket(bucket) }),
+  });
+}
+
+function recordedBucket(bucket: ThrottleBucket): Omit<ThrottleBucket, "key"> {
+  return {
+    id: bucket.id,
+    values: [...bucket.values],
+    ...(bucket.limit === undefined ? {} : { limit: bucket.limit }),
+    ...(bucket.windowMs === undefined ? {} : { windowMs: bucket.windowMs }),
+  };
 }
 
 export function writeLogLine(line: string): void {
