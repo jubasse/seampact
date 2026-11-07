@@ -103,6 +103,7 @@ async function generateApi(
 
   if (outcome.status === "refused") {
     const where = refusalWhere(entry, plannedApi.api);
+
     return {
       status: "refused",
       problems: outcome.refusals.map((refusal) =>
