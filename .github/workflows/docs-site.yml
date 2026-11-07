@@ -95,6 +95,8 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Check the page excerpts against their goldens
+        run: pnpm vitest run packages/tools/docs-site
       - name: Build the site and check its links
         run: pnpm --filter @seampact/docs-site build
       # Only main's pushes publish the site, so it describes the released version; develop and pull requests build
