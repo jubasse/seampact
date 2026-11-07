@@ -1,6 +1,6 @@
 import type { Target } from "@seampact/codegen-core";
 import type { TargetEntry } from "@seampact/spec/config";
-import type { ContractIR } from "@seampact/spec/ir";
+import type { ContractIR, SourceMap } from "@seampact/spec/ir";
 import { type CliProblem, entryWhere } from "../cli-problem.js";
 
 // The link checks the CLI owns (ADR 0009 "The provider seam"), each naming the consumer and the provider entry,
@@ -12,6 +12,8 @@ export interface PlannedApi {
   source: string;
   ir: ContractIR;
   root: string;
+  // Where each declaration of the api is written; absent for an api taken from a bundle.
+  locations?: SourceMap["locations"];
 }
 
 export interface PlannedEntry {

@@ -2,7 +2,11 @@
 // refusal says what to change on its own. A fix that changes the api starts with "Ask the user first:"; a fix with a
 // choice that keeps the api names that choice first.
 
-const TROUBLESHOOTING_GENERATE_URL = "https://jubasse.github.io/seampact/troubleshooting/generate/";
+const TROUBLESHOOTING_URL = "https://jubasse.github.io/seampact/troubleshooting/";
+
+// The troubleshooting pages of the refusals `generate` prints.
+export const GENERATE_TROUBLESHOOTING_URL = `${TROUBLESHOOTING_URL}generate/`;
+export const LINK_TROUBLESHOOTING_URL = `${TROUBLESHOOTING_URL}link/`;
 
 // The sections of the generate troubleshooting page that hold the Node targets' refusals, by heading anchor.
 export const GENERATE_TROUBLESHOOTING_SECTIONS = {
@@ -504,5 +508,5 @@ export type NotGeneratedForm = keyof typeof NOT_GENERATED_FIXES;
 
 /** The URL of the troubleshooting section that holds the form's row. */
 export function troubleshootingUrl(section: GenerateTroubleshootingSection): string {
-  return `${TROUBLESHOOTING_GENERATE_URL}#${section}`;
+  return `${GENERATE_TROUBLESHOOTING_URL}#${section}`;
 }

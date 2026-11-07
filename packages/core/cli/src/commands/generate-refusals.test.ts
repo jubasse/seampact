@@ -286,3 +286,36 @@ test("writes the default documents with the operations the server entries serve"
     "operationId: listTasks",
   ]);
 });
+
+test("prints a target's refusal at its contract file and line, with its docs", async () => {
+  const docs = "https://jubasse.github.io/seampact/troubleshooting/generate/#node-servers";
+  const app = makeApp(
+    "sources:\n  a: { path: ./a }\ntargets:\n  - { id: server, use: fake-server, api: tasks }\n",
+    [
+      {
+        name: "fake-server",
+        refusals: [
+          {
+            code: "access.optional.unsupported",
+            message: "Optional authentication is not generated yet.",
+            fix: "Ask the user first: make the access required or public.",
+            member: "/operations/0/access",
+            docs,
+          },
+          { code: "options.unknown", message: "The option 'x' is unknown.", fix: "Remove 'x'." },
+        ],
+      },
+    ],
+  );
+  const { exitCode, output } = await generateErrors(app);
+  const [located, unlocated] = output.trimEnd().split("\n");
+
+  expect(exitCode).toBe(EXIT_REFUSED);
+  expect(located).toMatch(
+    /^\S+\.yaml:\d+: access\.optional\.unsupported: entry 'server', api 'tasks': Optional authentication is not generated yet\. \(IR member '\/operations\/0\/access'\) Fix: Ask the user first: /,
+  );
+  expect(located).toMatch(new RegExp(` Docs: ${docs.replaceAll(".", "\\.")}$`));
+  expect(unlocated).toBe(
+    "options.unknown: entry 'server', api 'tasks': The option 'x' is unknown. Fix: Remove 'x'. Docs: https://jubasse.github.io/seampact/troubleshooting/generate/",
+  );
+});

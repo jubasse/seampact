@@ -31,6 +31,8 @@ export interface FakeTarget {
   packageJson?: string;
   // What the fake's `generate` returns as `warnings`.
   warnings?: object[];
+  // When set, the fake's `generate` refuses with these refusals.
+  refusals?: object[];
   // The files the fake's `generate` returns; a `files.json` next to its `index.cjs` replaces them at call time.
   files?: { path: string; contents: string }[];
   // The artefacts the fake declares; none when absent.
@@ -39,6 +41,14 @@ export interface FakeTarget {
   frameworkDocsOffFix?: string;
   // The fake's `generate` writes the document it receives for `nativeDocs` to `native-document.json`.
   echoNativeDocsDocument?: boolean;
+}
+
+// The JavaScript expression of the outcome the fake's `generate` returns.
+function generateOutcomeSource(target: FakeTarget): string {
+  if (target.refusals !== undefined)
+    return `({ status: "refused", refusals: ${JSON.stringify(target.refusals)} })`;
+
+  return `({ status: "generated", files: ${generatedFilesSource(target)}, warnings: ${JSON.stringify(target.warnings ?? [])} })`;
 }
 
 // The JavaScript expression of the files the fake's `generate` returns.
@@ -76,7 +86,7 @@ function writeTargetPackage(appDirectory: string, target: FakeTarget): void {
     provides: ${kinds(target.provides)},
   },
   parseOptions: (raw) => ({ status: "parsed", options: raw }),
-  generate: async (request) => ({ status: "generated", files: ${generatedFilesSource(target)}, warnings: ${JSON.stringify(target.warnings ?? [])} }),
+  generate: async (request) => ${generateOutcomeSource(target)},
   describe: () => ({ status: "described", descriptors: {} }),
 };\n`,
   );

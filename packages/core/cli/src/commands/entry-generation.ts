@@ -1,8 +1,11 @@
-import type {
-  DescribeOutcome,
-  DescriptorSet,
-  GeneratedFile,
-  GenerateWarning,
+import {
+  type DescribeOutcome,
+  type DescriptorSet,
+  GENERATE_TROUBLESHOOTING_URL,
+  type GeneratedFile,
+  type GenerateWarning,
+  LINK_TROUBLESHOOTING_URL,
+  type Refusal,
 } from "@seampact/codegen-core";
 import type { CheckLevel, TargetEntry } from "@seampact/spec/config";
 import { type CliProblem, entryWhere, problemFromRefusal } from "../cli-problem.js";
@@ -100,10 +103,11 @@ async function generateApi(
 
   if (outcome.status === "refused") {
     const where = refusalWhere(entry, plannedApi.api);
-
     return {
       status: "refused",
-      problems: outcome.refusals.map((refusal) => problemFromRefusal(refusal, where(refusal.code))),
+      problems: outcome.refusals.map((refusal) =>
+        problemFromRefusal(withDocs(refusal), where(refusal.code), plannedApi),
+      ),
     };
   }
 
@@ -135,6 +139,17 @@ function entryArtefacts(
   if (found === undefined) throw new Error(`no selected artefacts for the entry ${entryId}`);
 
   return found;
+}
+
+// A refusal with no section of its own points at its troubleshooting page.
+function withDocs(refusal: Refusal): Refusal {
+  if (refusal.docs !== undefined) return refusal;
+
+  const docs = refusal.code.startsWith("link.")
+    ? LINK_TROUBLESHOOTING_URL
+    : GENERATE_TROUBLESHOOTING_URL;
+
+  return { ...refusal, docs };
 }
 
 // codegen-core's own `link.*` refusals name the kind; the CLI adds both entry ids.
@@ -171,7 +186,11 @@ function buildLinks(
     const described = describe(provider, providerApi);
 
     if (described.status === "refused") {
-      problems.push(...described.refusals.map((refusal) => problemFromRefusal(refusal, where)));
+      problems.push(
+        ...described.refusals.map((refusal) =>
+          problemFromRefusal(withDocs(refusal), where, providerApi),
+        ),
+      );
       continue;
     }
 

@@ -318,7 +318,7 @@ function planEntryApis(
   const apis: PlannedApi[] = [];
   const problems: CliProblem[] = [];
 
-  for (const { source, api, ir } of resolved.apis) {
+  for (const { source, api, ir, lintInput } of resolved.apis) {
     const filtered = filterOperations(ir, {
       ...(entry.document === undefined ? {} : { document: entry.document }),
       ...(entry.operations === undefined ? {} : { operations: entry.operations }),
@@ -334,6 +334,7 @@ function planEntryApis(
         source,
         ir: filtered.ir,
         root: entry.apis === undefined ? root : join(root, api),
+        ...(lintInput === undefined ? {} : { locations: lintInput.locations }),
       });
     }
   }
