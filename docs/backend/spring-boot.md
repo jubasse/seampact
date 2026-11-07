@@ -1,10 +1,12 @@
-# Write the handlers (Spring Boot)
+# Spring Boot
 
-The Gradle plugin generates the contract's Java code when you build. You write the controllers and the hooks; the generated boundary checks each request and each reply.
+The Gradle or Maven plugin generates the contract's Java code when you build. You write the controllers and the hooks; the generated boundary checks each request and each reply.
 
-## Set up the build
+Spring Boot 4 on Java 21 or later. See [Versions](#versions) and [Supported versions](../supported-versions.md).
 
-The runtime, the hooks and the Maven plugin are on Maven Central. The Gradle plugin is on the Gradle Plugin Portal; while the Portal reviews a new release, add Maven Central to the plugin repositories in `settings.gradle.kts`:
+## Set up
+
+The runtime, the hooks and the Maven plugin are on Maven Central under `io.github.jubasse`. The Gradle plugin is on the Gradle Plugin Portal. While the Portal reviews a new release, add Maven Central to the plugin repositories in `settings.gradle.kts`:
 
 ```kotlin
 pluginManagement {
@@ -14,6 +16,8 @@ pluginManagement {
     }
 }
 ```
+
+Then, in `build.gradle.kts`:
 
 ```kotlin
 plugins {
@@ -39,7 +43,9 @@ targets:
     options: { package: com.example.notes.api }
 ```
 
-The plugin also adds `io.github.jubasse:seampact-spring-runtime` at its own version: the generated code imports its boundary runtime from there. `./gradlew build` generates the code, then compiles it with yours. The Node CLI does not generate a Spring Boot entry: `seampact generate` refuses it with `config.target.native`.
+The plugin adds `io.github.jubasse:seampact-spring-runtime` at its own version: the generated code imports its boundary runtime from there. `./gradlew build` generates the code, then compiles it with yours.
+
+The Node CLI does not generate a Spring Boot entry: `seampact generate` refuses it with `config.target.native`.
 
 ### With Maven
 
@@ -71,9 +77,7 @@ Add the runtime and the plugin to `pom.xml`, next to `seampact-hooks`, at the sa
 
 `./mvnw verify` generates the code before it compiles, then checks it. When nothing changed since the last run, `generate` skips.
 
-Before it writes, `generate` reads the runtime on the compile classpath, with Gradle as with Maven. It fails with `runtime.missing` when there is none, and with `runtime.version-mismatch` when its version is another `major.minor` or an older patch than the plugin's. A later patch of the runtime passes.
-
-You can write the config in `<configuration>` instead of `seampact.config.yaml`, with the same keys. A list holds one child per item:
+You can write the config in `<configuration>` instead of `seampact.config.yaml`, with the same keys. A list holds one child per item. Keep one of the two: a project with both fails.
 
 ```xml
 <configuration>
@@ -89,17 +93,11 @@ You can write the config in `<configuration>` instead of `seampact.config.yaml`,
 </configuration>
 ```
 
-Keep one of the two: a project with both fails.
+### The runtime must match the plugin
 
-### Spring Boot versions
+Before it writes, `generate` reads the runtime on the compile classpath, with Gradle as with Maven. It fails with `runtime.missing` when there is none. It fails with `runtime.version-mismatch` when the runtime is another `major.minor`, or an older patch, than the plugin. A later patch passes.
 
-The plugins read the Spring Boot version of your build. Spring Boot 4 is tested. Spring Boot 3 fails with `config.matrix.incompatible`. A newer major prints `config.matrix.untested`; accept it on the entry with `allowUntested: [spring-boot@5]`, or make it fail with `checks: { matrix: error }`.
-
-### When the build fails
-
-Each error starts with a code, such as `framework.version.unresolved` or `binary.compile-failed`. Find it in [Troubleshooting](../troubleshooting/README.md).
-
-## Write a controller
+## Write a handler
 
 Each resource has a generated `<Resource>Endpoints` interface, and each operation a mapping annotation in `<package>.spring`. Return one arm of the operation's result: `Status200` and the like, or an error of `<Operation>Errors`.
 
@@ -120,20 +118,15 @@ class NotesController implements NotesEndpoints {
 
 The boundary has already checked the path, query, headers and body. You never write a status or a content type yourself.
 
-When an operation takes a version, the boundary checks its format only. Compare it with the stored version yourself, and return the operation's conflict error when they differ:
+A version in the input is checked for its format only. Compare it with the stored version, and return the operation's conflict error when they differ:
 
 ```java
 if (input.body().expectedVersion() != task.version()) return new UpdateTaskErrors.StateConflict();
 ```
 
-With `If-Match`, a missing or empty header (or `*`) answers 428 before the handler runs. A weak tag (`W/"7"`) is accepted. The handler gets the version unquoted (`7`) and returns the `preconditionFailed` error (412) on a mismatch.
+With `If-Match`, a missing or empty header (or `*`) answers 428 before the handler runs. A weak tag (`W/"7"`) is accepted. The handler gets the version unquoted (`7`) and returns the `preconditionFailed` error (412) on a mismatch. See [Catch lost updates](../contract/07-advanced.md#catch-lost-updates).
 
-With `@seampact/pack-spring`, a list in the `springPage` style gets a `Pageable` in its input and returns Spring Data's `Page`. Add `org.springframework.data:spring-data-commons`; the Spring Boot BOM gives its version.
-
-- A sort key reaches the `Pageable` as the item's Java member name: `sort=created_at,desc` sorts by `createdAt`. Name your entity's properties like the generated record's members.
-- A page number past Spring Data's range (a page index above 2147483647) gets a 400 at the page parameter.
-
-## Who is calling
+### Who is calling
 
 The input also tells you who calls and in which scopes:
 
@@ -147,7 +140,20 @@ Object channelId = input.scopes().channel().id();
 
 Neither comes from the request body: the client cannot set them.
 
-## Register the hooks
+## Wire it in
+
+The plugin generates a configuration class, `NotesSeampactConfiguration`, in `<package>.spring`. Spring finds it by component scan when `package` sits under your application's package. Otherwise import it:
+
+```java
+@SpringBootApplication
+@Import(NotesSeampactConfiguration.class)
+class NotesApplication {
+}
+```
+
+Your controller and hook beans are found as usual. Your own routes stay beside the contract's. To serve the api under a prefix inside the app, set `mount: /api` on the target entry (see [Deploy](#deploy)).
+
+## Write the hooks
 
 Hooks are beans. Write one per identity, one decider for your rights and rules, and one resolver per scope.
 
@@ -164,9 +170,15 @@ class UserHook implements UserAuthenticateHook {
 }
 ```
 
-A decider implements the api's `NotesDecider` and lists the names it answers in `names()`, or `Decider.EVERY_NAME` for all of them. A scope resolver implements `NotesScopeResolver`, the optional unexpected-error listener `NotesUnexpectedErrorListener`. With two apis, each one calls only the beans of its own interfaces.
+- A decider implements the api's `NotesDecider`. It lists the names it answers in `names()`, or `Decider.EVERY_NAME` for all of them.
+- A scope resolver implements `NotesScopeResolver`.
+- The optional unexpected-error listener implements `NotesUnexpectedErrorListener`. It hears each 500 the api answers.
+- An idempotent operation needs exactly one `IdempotencyStore` bean.
+- With two apis, each one calls only the beans of its own interfaces.
 
-## With Spring Security
+The `params` of a right or rule in a decider request are an instance of the generated record, not a map.
+
+### Use Spring Security
 
 With Spring Security on the classpath (`spring-boot-starter-security`), the plugin generates, for the `notes` api:
 
@@ -204,7 +216,32 @@ BearerTokenResolver bearerTokens(NotesSecurityMatchers routes) {
 }
 ```
 
-## springdoc
+## Options
+
+Set under `options:` on the target entry.
+
+| Option | Default | What it does |
+|---|---|---|
+| `package` | required | The Java package of the generated code, such as `com.example.notes.api`. |
+| `indent` | `4` | Spaces per indent in the generated code, from 1 to 8. |
+| `responses` | `strict` | `strict` answers 500 when your reply breaks the contract. `warn` logs it and sends the reply. |
+| `bodyValidation` | `false` | Checks success bodies against the contract. |
+| `frameworkEtag` | `strip` | Drops an ETag or a 304 that the boundary did not write. `keep` leaves them. |
+| `catchAll` | `true` | Unknown paths under the api's base path answer the contract's 404. |
+| `springSecurity` | read from the classpath | `true`, `false` or `{ matchers: true }`: the classes of [Use Spring Security](#use-spring-security). |
+
+Also on the entry: `mount` (a path prefix), `frameworkRoutes` (see [The boot check](#the-boot-check)), `frameworkDocs`, `allowUntested`, and under `artefacts`: `nativeDocs` and `bootCheck`. The full list is in the [configuration reference](../configuration/reference.md#spring-boot).
+
+`responses`, `bodyValidation`, `frameworkEtag` and `catchAll` set the defaults. You can change `responses` at run time with the property `seampact.<api>.responses`. With `warn`, the reply goes out as written and the violation is logged, a body that fails `bodyValidation` included. A result that breaks its own type (a null, a page without items or with a negative total) is still a 500.
+
+## Paging
+
+With `@seampact/pack-spring`, a list in the `springPage` style gets a `Pageable` in its input and returns Spring Data's `Page`. Add `org.springframework.data:spring-data-commons`; the Spring Boot BOM gives its version.
+
+- A sort key reaches the `Pageable` as the item's Java member name: `sort=created_at,desc` sorts by `createdAt`. Name your entity's properties like the generated record's members.
+- A page number past Spring Data's range (a page index above 2147483647) gets a 400 at the page parameter.
+
+## Docs and OpenAPI
 
 - `artefacts: { nativeDocs: true }` puts springdoc's `@Operation` on the generated interfaces. Each success shows the body the contract declares, not the handler's result type. Add `io.swagger.core.v3:swagger-annotations-jakarta` (springdoc brings it).
 - `frameworkDocs: off` writes `seampact-notes.properties`, which turns springdoc's document off. Load it in `application.properties`:
@@ -213,30 +250,7 @@ BearerTokenResolver bearerTokens(NotesSecurityMatchers routes) {
 spring.config.import=classpath:seampact-notes.properties
 ```
 
-The boot check fails when springdoc still serves its document.
-
-## The boot check
-
-The app refuses to start when the code was generated by another version than the runtime's (`runtime.generated-for-other-version`): run the generate task again, or move the runtime to the plugin's version. Then it lists every problem, when:
-
-- an identity has no authenticate hook, a right or rule no decider, a scope no resolver;
-- a bean implements `Decider`, `ScopeResolver` or `UnexpectedErrorListener` itself, not the api's own interface;
-- an operation has no handler (`seampact.<api>.unbound-operations=warn` lets a test slice start, see [Test your routes](#test-your-routes));
-- a route that is not in the contract is served and not allow-listed;
-- another handler mapping, ordered before Spring MVC's, takes a contract route;
-- the app does not run Spring MVC on Tomcat;
-- the contract writes absolute URLs and `seampact.<api>.public-origin` is missing or is not a scheme, host and port.
-
-By default the check reads only routes that reach a path of the api; `artefacts.bootCheck.frameworkRoutes: strict` checks them all. Allow-list your own routes in the entry, with a reason:
-
-```yaml
-    frameworkRoutes:
-      - { path: "/admin/**", reason: "Back office, not part of the api." }
-```
-
-## Replies that break the contract
-
-By default a reply that breaks the contract becomes the api's 500. With `seampact.<api>.responses: warn` it goes out as written and the violation is logged, a body that fails `bodyValidation` included. A result that breaks its own type (a null, a page without items or with a negative total) is still a 500.
+The boot check fails when springdoc still serves its document. More in [OpenAPI and docs](../configuration/openapi-and-docs.md).
 
 ## Format envelopes and null
 
@@ -244,13 +258,10 @@ By default a reply that breaks the contract becomes the api's 500. With `seampac
 - A `null` body answers the format's null (`null`, or the envelope with a null payload). The boundary refuses it unless the schema is nullable. A `null` list, table or page is always refused.
 - An opaque value takes `null` only when it is `nullable`.
 - A number past the range of a double inside an opaque value is a `type` issue (400).
-- A format with meta members, success headers or envelope slots the boundary cannot write is refused at generate time: see [Generate errors](../troubleshooting/generate.md).
-- An identity header written on a response (a `versionToken` header, or one declared `in: response`) is refused at generate time (`identity.response.header.unsupported`): no handler can write it yet.
-- A sort key restricted by a right is refused at generate time (`paging.sortKey.right.unsupported`). Leave the key out of `sortable`.
 
 ## Test your routes
 
-Start the app on a random port and send requests with `RestTestClient` or any HTTP client. Send the credential header your authenticate hook reads.
+Start the app on a random port and send requests with `RestTestClient` or any HTTP client. Send the credential header your authenticate hook reads. `@MockitoBean` replaces a hook bean with a mock you program in the test.
 
 ```java
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -258,8 +269,6 @@ class NotesRoutesTest {
     @MockitoBean
     UserHook userHook;
 ```
-
-`@MockitoBean` replaces a hook bean with a mock you program in the test.
 
 A test slice that loads only some controllers (`@WebMvcTest`) fails the boot check by default: every operation needs its handler. Set `unbound-operations=warn` in the slice and import the api's configuration and its hook beans:
 
@@ -278,9 +287,13 @@ To test a controller without HTTP, build the input record yourself, with the cal
 GetNoteResult result = controller.getNote(new GetNoteInput(new GetNotePath(noteId), new UserPrincipal(userId)));
 ```
 
-While Spring Boot devtools is active, an exception your controller throws goes to Spring's own error handling (Boot's error page or JSON). seampact logs its message and the file and line it came from. Without devtools, under the default `responses: strict` the client gets the api's 500; under `responses: warn` the framework's reply goes out as written and the violation is logged.
+### Debug locally
 
-## Behind a reverse proxy and in Docker
+While Spring Boot devtools is active, an exception your controller throws goes to Spring's own error handling (Boot's error page or JSON). seampact logs its message and the file and line it came from. Without devtools, under the default `responses: strict` the client gets the api's 500. Under `responses: warn` the framework's reply goes out as written and the violation is logged.
+
+## Deploy
+
+### Behind a reverse proxy
 
 Set the forwarded-headers strategy, so Spring reads the proxy's headers:
 
@@ -288,18 +301,62 @@ Set the forwarded-headers strategy, so Spring reads the proxy's headers:
 server.forward-headers-strategy=framework
 ```
 
-With `framework`, a prefix sent in `X-Forwarded-Prefix` is applied, and the contract's routes still match. The same holds for `server.servlet.context-path` and `spring.mvc.servlet.path`. To serve the api under a prefix inside the app, set `mount: /api` on the target entry. Strip any forwarded header a client sends at your edge proxy: only the proxy may set them.
+With `framework`, a prefix sent in `X-Forwarded-Prefix` is applied, and the contract's routes still match. The same holds for `server.servlet.context-path` and `spring.mvc.servlet.path`. Strip any forwarded header a client sends at your edge proxy: only the proxy may set them.
 
-The public URL of the api stays the one in the contract. Page links are query-only (`?page=2`), so they stay right behind a proxy that strips a prefix. If the contract writes absolute URLs, set the public origin; the request's `Host` is never read:
+To serve the api under a prefix inside the app, set `mount: /api` on the target entry. The context path stays outside it.
+
+The public URL of the api stays the one in the contract. Page links are query-only (`?page=2`), so they stay right behind a proxy that strips a prefix. If the contract writes absolute URLs, set the public origin. The request's `Host` is never read:
 
 ```properties
-seampact.tasks.public-origin=https://api.example.com
+seampact.notes.public-origin=https://api.example.com
 ```
 
-Pass secrets as environment variables (`SPRING_` properties or `${...}` placeholders), never baked into the image.
+### In Docker
 
-## Versioned writes and query lists
+Build the jar with `./gradlew bootJar` (or `./mvnw package`). The generated code is compiled into it, so the image needs no seampact tool.
 
-A query list is read in the default `repeat` form (`tag=a&tag=b`) or as `comma`. The `brackets` form is refused by `generate`.
+```dockerfile
+FROM eclipse-temurin:21-jre
+COPY build/libs/app.jar /app.jar
+ENTRYPOINT ["java", "-jar", "/app.jar"]
+```
 
-The `params` of a right or rule in a decider request are an instance of the generated record, not a map.
+Pass secrets and the public origin as environment variables (`SPRING_` properties or `${...}` placeholders), never baked into the image.
+
+### The boot check
+
+The app refuses to start, and lists every problem. Each message starts with its code: find it in [Boot errors](../troubleshooting/boot.md#spring-boot).
+
+| Fault | Fix |
+|---|---|
+| The code was generated by another version than the runtime's (`runtime.generated-for-other-version`). | Run the generate task again, or move the runtime to the plugin's version. |
+| An identity has no authenticate hook, a right or rule no decider, a scope no resolver. | Add the bean. |
+| A bean implements `Decider`, `ScopeResolver` or `UnexpectedErrorListener` itself, not the api's own interface. | Implement the api's generated interface. |
+| An idempotent operation has no `IdempotencyStore` bean. | Add exactly one. |
+| An operation has no handler. | Implement it. A test slice can set `seampact.<api>.unbound-operations=warn`, see [Test your routes](#test-your-routes). |
+| A route that is not in the contract is served and not allow-listed. | Add it to `frameworkRoutes` on the entry, or remove it. |
+| Another handler mapping, ordered before Spring MVC's, takes a contract route. | Reorder it, or move the route. |
+| The app does not run Spring MVC on Tomcat. | Run Spring MVC on Tomcat. |
+| The contract writes absolute URLs and `seampact.<api>.public-origin` is missing, or is not a scheme, host and port. | Set it, such as `https://api.example.com`. |
+
+By default the check reads only routes that reach a path of the api; `artefacts.bootCheck.frameworkRoutes: strict` checks them all. Allow-list your own routes in the entry, with a reason:
+
+```yaml
+    frameworkRoutes:
+      - { path: "/admin/**", reason: "Back office, not part of the api." }
+```
+
+## Versions
+
+The plugins read the Spring Boot version of your build. Spring Boot 4 is tested. Spring Boot 3 fails with `config.matrix.incompatible`. A newer major prints `config.matrix.untested`. Accept it on the entry with `allowUntested: [spring-boot@5]`, or make it fail with `checks: { matrix: error }`.
+
+## Limits
+
+- `generate` refuses some forms by name until an app needs them. The list is in [Generate errors](../troubleshooting/generate.md#spring-boot); forms refused on every server are under [every server](../troubleshooting/generate.md#every-server).
+- A query list is read in the default `repeat` form (`tag=a&tag=b`) or as `comma`.
+- A Spring Boot app must run Spring MVC on Tomcat. WebFlux fails the start.
+
+## Next
+
+- [Call the api from React](../frontend/react.md)
+- [Check the generated code in CI](../features/check-in-ci.md)
