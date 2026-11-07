@@ -177,6 +177,7 @@ export async function publishInOrder(
     }
 
     published += 1;
+
     if (firstPublish) packagesCreated += 1;
   }
 
@@ -239,6 +240,7 @@ function publish(
     console.log(
       `publish-npm: npm answered 429 Too Many Requests for ${tarball.name}@${tarball.version}`,
     );
+
     return "rate-limited";
   }
 

@@ -94,6 +94,7 @@ async function registry(
       rateLimited.delete(request.url ?? "");
       response.writeHead(HTTP_TOO_MANY_REQUESTS, { "retry-after": retryAfter });
       response.end();
+
       return;
     }
 
