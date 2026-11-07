@@ -14,7 +14,15 @@ A contract or config error prints the file, the line, the column, a severity, th
 api.yaml:5:13: error seampact/load/yaml-boolean: ...
 ```
 
-Search this page or the page index for the code (`seampact/load/yaml-boolean`). A message of the generated server starts with `seampact: the api '<id>' cannot start:` and has no code: see [Boot errors](https://jubasse.github.io/seampact/troubleshooting/boot/). Each message ends with `Fix:`. Read it first.
+A `generate` refusal starts with the contract line when it has one, and ends with the docs section of its code:
+
+```text
+api.yaml:10: paging.sort.style.unsupported: entry 'server', api 'notes': ... Fix: Ask the user first: ... Docs: https://jubasse.github.io/seampact/troubleshooting/generate/#node-servers
+```
+
+A fix that starts with "Ask the user first:" changes the api: ask before you apply it.
+
+Search this page or the page index for the code (`seampact/load/yaml-boolean`). A message of the generated server starts with `seampact: the api '<id>' cannot start:` and has no code: see [Boot errors](https://jubasse.github.io/seampact/troubleshooting/boot/). Each message has a `Fix:`. Read it first.
 
 ## Find the page
 
@@ -32,14 +40,14 @@ Search this page or the page index for the code (`seampact/load/yaml-boolean`). 
 | `seampact/<rule>` such as `seampact/unused-declaration` | linting | [Lint](https://jubasse.github.io/seampact/features/lint/) |
 | `signature.` | verifying a signed webhook with a seampact helper | [Signed webhook errors](https://jubasse.github.io/seampact/troubleshooting/signed-webhooks/) |
 | `cli.`, `init.`, `lint.`, `diff.`, `explain.`, `compile.`, `binary.`, `ir.`, `bundle.source.` | running a command, or the Gradle or Maven plugin | [CLI errors](https://jubasse.github.io/seampact/troubleshooting/cli/) |
-| `options.`, `names.`, `paging.`, `runtime.`, `artefact.`, `artefacts.`, `nativeDocs.`, or a form named like `input.multipart.unsupported` | running `generate` | [Generate errors](https://jubasse.github.io/seampact/troubleshooting/generate/) |
+| `options.`, `names.`, `paging.`, `runtime.`, `artefact.`, `artefacts.`, `nativeDocs.`, `openapi.<form>.unsupported`, or any code ending in `.unsupported` | running `generate` | [Generate errors](https://jubasse.github.io/seampact/troubleshooting/generate/) |
 | `seampact: the api '...' cannot start` | starting the generated server | [Boot errors](https://jubasse.github.io/seampact/troubleshooting/boot/) |
 
 If no prefix matches, search the files of `docs/troubleshooting/` for the full code.
 
 ## Generate errors by family
 
-[Generate errors](https://jubasse.github.io/seampact/troubleshooting/generate/) has one table per family: [Clients](https://jubasse.github.io/seampact/troubleshooting/generate/#clients), [Node servers](https://jubasse.github.io/seampact/troubleshooting/generate/#node-servers), [Spring Boot](https://jubasse.github.io/seampact/troubleshooting/generate/#spring-boot), [PHP](https://jubasse.github.io/seampact/troubleshooting/generate/#php), [Python](https://jubasse.github.io/seampact/troubleshooting/generate/#python), [Spring Boot, PHP and Python](https://jubasse.github.io/seampact/troubleshooting/generate/#spring-boot-php-and-python), [Every server](https://jubasse.github.io/seampact/troubleshooting/generate/#every-server) and [Warnings](https://jubasse.github.io/seampact/troubleshooting/generate/#warnings).
+[Generate errors](https://jubasse.github.io/seampact/troubleshooting/generate/) has one table per family: [Clients](https://jubasse.github.io/seampact/troubleshooting/generate/#clients), [Node servers](https://jubasse.github.io/seampact/troubleshooting/generate/#node-servers), [Spring Boot](https://jubasse.github.io/seampact/troubleshooting/generate/#spring-boot), [PHP](https://jubasse.github.io/seampact/troubleshooting/generate/#php), [Python](https://jubasse.github.io/seampact/troubleshooting/generate/#python), [Spring Boot, PHP and Python](https://jubasse.github.io/seampact/troubleshooting/generate/#spring-boot-php-and-python), [Every server](https://jubasse.github.io/seampact/troubleshooting/generate/#every-server), [Every Node target](https://jubasse.github.io/seampact/troubleshooting/generate/#every-node-target), [OpenAPI documents](https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents) and [Warnings](https://jubasse.github.io/seampact/troubleshooting/generate/#warnings).
 
 ## Errors with no code
 

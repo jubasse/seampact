@@ -15,6 +15,8 @@ A link tells a target which other entry it builds on. See [Targets and links](ht
 | `link.kind.mismatch` | The linked entry gives another kind of output. Link the one the message names. |
 | `link.cycle` | Two entries link to each other. Remove one link. |
 | `link.client.errorStyle.unsupported` | The React, Vue and Angular targets need a fetch client with `errorStyle: result` (the default), and the linked client has `throw`. Set `errorStyle: result` on the client target, or link another client. See [Fetch client](https://jubasse.github.io/seampact/frontend/fetch-client/#contracterror). |
+| `link.style.unsupported` | The linked entry provides a style this target does not read, as the message says. Link one of the entries the fix names. |
+| `link.types.operation.missing`, `link.types.schema.missing`, `link.validators.operation.missing`, `link.validators.principal.missing`, `link.client.operation.missing` | The linked entry describes no type, validator or client call for a member this entry needs: the IR is not one seampact wrote. Compile the contract again with the same seampact release as the targets. |
 | `link.apis.unpaired` | The linked entry does not generate an api this entry generates. Add it to the `apis` of the linked entry. |
 
 ## Next

@@ -16,5 +16,6 @@ Page: https://jubasse.github.io/seampact/troubleshooting/check/
 | `writer.manifest.invalid`, `writer.manifest.not-regular` | The manifest in the output folder is damaged. Delete the generated files of that entry and its manifest, then run `generate`. |
 | `file.path.invalid`, `file.extension.unsupported`, `file.php.open-tag`, `file.header.unsafe` | The target generated a file the writer refuses. For two names that differ only by case (`Tasks.ts`, `tasks.ts`; the second would overwrite the first on a case-insensitive disk), rename one in the contract. Otherwise update the target package, or report it to its maintainers. |
 | `writer.path.outside` | A symbolic link in the output folder leads out of it. Replace it with a plain folder. |
+| `file.format.failed` | Prettier could not format a generated file. Report it to the target's maintainers with the message. |
 
 You see `check: the generated files and documents match the committed ones.` when nothing drifted.
