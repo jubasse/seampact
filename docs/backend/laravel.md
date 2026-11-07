@@ -30,6 +30,8 @@ targets:
     options: { rules: seampact-consistent }
 ```
 
+The request is checked by the [Laravel rules](../types-and-validation/laravel-rules.md) of a generated `FormRequest`; see [Types and validation](../types-and-validation/README.md).
+
 The classes go into the PSR-4 namespace that `composer.json` gives `outDir` (here `App\Generated\Notes`). Then generate:
 
 ```sh
@@ -211,7 +213,7 @@ Set under `options:` on the target entry.
 | Option | Default | What it does |
 |---|---|---|
 | `indent` | `4` | Spaces per indent in the generated code, from 1 to 8. |
-| `rules` | `native` | `native` uses Laravel's own value rules (`min`, `max`, `uuid`, ...). `seampact-consistent` gives the contract's exact checks, equal on every target. |
+| `rules` | `native` | `native` uses Laravel's own value rules (`min`, `max`, `uuid`, ...). `seampact-consistent` gives the contract's exact checks, equal on every target. See [Laravel rules](../types-and-validation/laravel-rules.md#native-or-consistent-rules). |
 | `responses` | `strict` | `strict` answers 500 when your reply breaks the contract. `warn` logs it and sends the reply. |
 | `bodyValidation` | `false` | Checks success bodies against the contract. |
 | `frameworkEtag` | `strip` | Drops an ETag or a 304 that the boundary did not write. `keep` leaves them. |

@@ -1,6 +1,6 @@
 # Angular
 
-seampact writes an Angular service per api over the [fetch client](fetch-client.md). The client sends through your app's `HttpClient`, so your interceptors, XSRF settings and `withFetch()` apply. Reads are signals built on Angular's `resource()`. There is no query library. Tested with Angular 22.
+seampact writes an Angular service per api over the [fetch client](fetch-client.md). The client sends through your app's `HttpClient`, so your interceptors, XSRF settings and `withFetch()` apply. Reads are signals built on Angular's `resource()`. There is no query library. Tested with Angular 22. The types come from [TypeScript types](../types-and-validation/typescript-types.md).
 
 ## Add the targets
 

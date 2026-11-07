@@ -49,10 +49,17 @@ function serverGuide(docsPath: string): PageSelection[] {
   return [{ docsPath, sections: SERVER_GUIDE_SECTIONS, optionalSections: PAGING_SECTION }];
 }
 
-function nodeValidator(extraSections: string[] = []): PageSelection {
+const NODE_VALIDATOR: PageSelection = {
+  docsPath: "configuration/validators.md",
+  sections: NODE_VALIDATOR_SECTIONS,
+};
+
+/** The page of a stack's default validator library in docs/types-and-validation/. */
+function validatorLibraryPage(libraryPage: string, libraryName: string): PageSelection {
   return {
-    docsPath: "configuration/validators.md",
-    sections: [...NODE_VALIDATOR_SECTIONS, ...extraSections],
+    docsPath: `types-and-validation/${libraryPage}`,
+    sections: ["What you get", "When a check fails", "Limits"],
+    headingPrefix: libraryName,
   };
 }
 
@@ -74,8 +81,11 @@ export const STACK_FILES: readonly StackFile[] = [
     commandColumns: NODE_COLUMNS,
     title: "NestJS",
     summary: SUMMARY_NODE,
-    guide: serverGuide("backend/nestjs.md"),
-    validator: nodeValidator(["class-validator"]),
+    guide: [
+      ...serverGuide("backend/nestjs.md"),
+      validatorLibraryPage("class-validator.md", "class-validator"),
+    ],
+    validator: NODE_VALIDATOR,
     troubleshootingFamilies: NODE_FAMILIES,
   },
   {
@@ -84,7 +94,7 @@ export const STACK_FILES: readonly StackFile[] = [
     title: "Express",
     summary: SUMMARY_NODE,
     guide: serverGuide("backend/express.md"),
-    validator: nodeValidator(),
+    validator: NODE_VALIDATOR,
     troubleshootingFamilies: NODE_FAMILIES,
   },
   {
@@ -93,7 +103,7 @@ export const STACK_FILES: readonly StackFile[] = [
     title: "Fastify",
     summary: SUMMARY_NODE,
     guide: serverGuide("backend/fastify.md"),
-    validator: nodeValidator(),
+    validator: NODE_VALIDATOR,
     troubleshootingFamilies: NODE_FAMILIES,
   },
   {
@@ -102,7 +112,7 @@ export const STACK_FILES: readonly StackFile[] = [
     title: "Hono",
     summary: SUMMARY_NODE,
     guide: serverGuide("backend/hono.md"),
-    validator: nodeValidator(),
+    validator: NODE_VALIDATOR,
     troubleshootingFamilies: NODE_FAMILIES,
   },
   {
@@ -110,8 +120,8 @@ export const STACK_FILES: readonly StackFile[] = [
     commandColumns: NODE_COLUMNS,
     title: "AdonisJS",
     summary: SUMMARY_NODE,
-    guide: serverGuide("backend/adonisjs.md"),
-    validator: nodeValidator(["VineJS"]),
+    guide: [...serverGuide("backend/adonisjs.md"), validatorLibraryPage("vinejs.md", "VineJS")],
+    validator: NODE_VALIDATOR,
     troubleshootingFamilies: NODE_FAMILIES,
   },
   {

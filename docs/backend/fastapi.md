@@ -40,6 +40,8 @@ targets:
     options: { rules: seampact-consistent }
 ```
 
+The request is checked by [Pydantic](../types-and-validation/pydantic.md) models; see [Types and validation](../types-and-validation/README.md).
+
 Then generate:
 
 ```sh
@@ -187,7 +189,7 @@ Set under `options:` on the target entry.
 
 | Option | Default | What it does |
 |---|---|---|
-| `rules` | `native` | `native` uses Pydantic's own value rules. `seampact-consistent` gives the contract's exact checks, equal on every target. |
+| `rules` | `native` | `native` uses Pydantic's own value rules. `seampact-consistent` gives the contract's exact checks, equal on every target. See [Pydantic](../types-and-validation/pydantic.md#native-or-consistent-rules). |
 | `responses` | `strict` | `strict` answers 500 when your reply breaks the contract. `warn` logs it and sends the reply. |
 | `bodyValidation` | `false` | Checks success bodies against the contract. |
 | `frameworkEtag` | `strip` | Drops an ETag or a 304 that the boundary did not write. `keep` leaves them. |

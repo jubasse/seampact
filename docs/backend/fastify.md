@@ -37,6 +37,8 @@ targets:
       types: types
 ```
 
+With no `validators` entry, the request is checked with [Ajv](../types-and-validation/ajv.md); [zod](../types-and-validation/zod.md) and [yup](../types-and-validation/yup.md) also work. The types come from [TypeScript types](../types-and-validation/typescript-types.md): see [Types and validation](../types-and-validation/README.md).
+
 Generate, then commit the files: `seampact check` fails later if they drift from the contract.
 
 ```sh

@@ -34,6 +34,21 @@ The same pages, with search, are on the [documentation site](https://jubasse.git
 - [Versioning and change](contract/06-versioning.md): version, maturity, deprecation.
 - [Advanced](contract/07-advanced.md): uploads, lost updates, cache.
 
+## Types and validation
+
+- [Types and validation](types-and-validation/README.md): what each stack gets from your schemas, the 400 error body and the rules modes.
+- [TypeScript types](types-and-validation/typescript-types.md): one type per schema, request, reply and error.
+- [zod](types-and-validation/zod.md): zod schemas for the Node servers.
+- [yup](types-and-validation/yup.md): yup schemas for the Node servers.
+- [class-validator](types-and-validation/class-validator.md): decorated DTO classes for NestJS.
+- [Ajv](types-and-validation/ajv.md): Fastify's own validators, when you link none.
+- [VineJS](types-and-validation/vinejs.md): AdonisJS's own validators, when you link none.
+- [Java records](types-and-validation/java-records.md): records and a generated structural validator on Spring Boot.
+- [Laravel rules](types-and-validation/laravel-rules.md): `FormRequest` rules on Laravel.
+- [Symfony constraints](types-and-validation/symfony-constraints.md): classes and constraints on Symfony.
+- [Pydantic](types-and-validation/pydantic.md): Pydantic 2 models on FastAPI and Django Ninja.
+- [DRF serializers](types-and-validation/drf-serializers.md): dataclasses and serializers on Django REST Framework.
+
 ## Server guides
 
 - [NestJS](backend/nestjs.md): Node, decorators and a module.
@@ -73,7 +88,7 @@ The same pages, with search, are on the [documentation site](https://jubasse.git
 
 - [The config file](configuration/config-file.md): location, output folder, sources.
 - [Targets and links](configuration/targets-and-links.md): add a target, which generators combine.
-- [Validators](configuration/validators.md): switch the validator library.
+- [Switch the validator](configuration/validators.md): change the validator library, or the rules mode.
 - [OpenAPI and docs](configuration/openapi-and-docs.md): OpenAPI documents and Swagger.
 - [Checks](configuration/checks.md): what `check` fails on; the levels are set in [Check in CI](features/check-in-ci.md#set-the-levels).
 - [Monorepo](configuration/monorepo.md): one config for several apps.

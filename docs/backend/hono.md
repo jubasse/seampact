@@ -41,6 +41,8 @@ targets:
       validators: validators
 ```
 
+The request is checked with [zod](../types-and-validation/zod.md) here, or [yup](../types-and-validation/yup.md), and the types come from [TypeScript types](../types-and-validation/typescript-types.md): see [Types and validation](../types-and-validation/README.md).
+
 Generate, then commit the files: `seampact check` fails later if they drift from the contract.
 
 ```sh
