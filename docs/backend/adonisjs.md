@@ -254,6 +254,7 @@ The server also checks itself at start. Fix the lines it prints, then start agai
 - A query list in the `brackets` form is refused by `generate`.
 - An identity header written on a response is refused (`identity.response.header.unsupported`).
 - A sort key or a nested input field restricted by a right is refused (`paging.sortKey.restricted.unsupported`, `fieldRight.nestedPointer.unsupported`).
+- On AdonisJS 6, a compressed request body (gzip, deflate, br) answers 415, or 413 when it is over the route limit once inflated. Send it uncompressed, or use AdonisJS 7.
 
 Every refusal and its fix: [Node servers](../troubleshooting/generate.md#node-servers) and [every server](../troubleshooting/generate.md#every-server). For 428 and 412 on versioned writes, see [Catch lost updates](../contract/07-advanced.md#catch-lost-updates).
 
