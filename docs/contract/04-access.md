@@ -80,5 +80,5 @@ surfaces:
 ## Next
 
 - Next: [Lists](05-lists.md).
-- Write the hooks in your server guide: [NestJS](../backend/nestjs.md), [Spring Boot](../backend/spring-boot.md), [Laravel](../backend/laravel.md), [FastAPI](../backend/fastapi.md). Each has a guide for its own hooks.
+- Write the hooks: [Node servers](../backend/node-hooks.md), [Spring Boot](../backend/spring-boot.md#write-the-hooks), [Symfony](../backend/symfony.md#write-the-hooks), [Laravel](../backend/laravel.md#write-the-hooks), [FastAPI](../backend/fastapi.md#write-the-hooks), [Django REST Framework](../backend/drf.md#write-the-hooks), [Django Ninja](../backend/ninja.md#write-the-hooks).
 - In depth: [Access](../grammar/09-access-identities-rights-rules.md).

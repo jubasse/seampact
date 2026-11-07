@@ -1,6 +1,6 @@
 # Check errors
 
-`seampact check` and `seampact generate` fail with these codes. See [Checks](../configuration/checks.md).
+`seampact check` and `seampact generate` fail with these codes. See [Set the levels](../features/check-in-ci.md#set-the-levels).
 
 | Code | Cause and fix |
 |---|---|

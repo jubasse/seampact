@@ -229,7 +229,7 @@ Set under `options:` on the target entry.
 | `frameworkEtag` | `strip` | Drops an ETag or a 304 that the boundary did not write. `keep` leaves them. |
 | `catchAll` | `true` | Unknown paths under the api's base path answer the contract's 404. |
 
-Also on the entry: `mount` (a path prefix), `frameworkRoutes` (see [The boot check](#the-boot-check)), `frameworkDocs`, `allowUntested`, and under `artefacts`: `routeHelpers`, `nativeDocs` and `bootCheck`. The full list is in the [configuration reference](../configuration/reference.md#seampact-ninja).
+Also on the entry: [`mount`](../configuration/reference.md#mount) (a path prefix), [`frameworkRoutes`](../configuration/reference.md#framework-routes) (see [The boot check](#the-boot-check)), `frameworkDocs`, `allowUntested`, and under `artefacts`: `routeHelpers`, `nativeDocs` and [`bootCheck`](../configuration/reference.md#boot-check). Settings set on a group flow down to the routes below it: see [Settings flow down the tree](../contract/01-basics.md#settings-flow-down-the-tree). The full list is in the [configuration reference](../configuration/reference.md#seampact-ninja).
 
 `bodyValidation` (and `body_validation` in `bind_shop()`) is not served on Ninja: the boot check refuses it. Use FastAPI for it.
 
@@ -334,4 +334,5 @@ Django 5.2 and 6, and Django Ninja 1.5 and 1.7, are tested. An older version fai
 ## Next
 
 - [Call the api from React](../frontend/react.md)
+- [Call it with the fetch client](../frontend/fetch-client.md)
 - [Check the generated code in CI](../features/check-in-ci.md)

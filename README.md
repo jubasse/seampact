@@ -47,8 +47,6 @@ From the CLI:
 | `seampact explain tasks.updateTask` | Prints one route whole: params, rules, errors, and where each one comes from. |
 | `seampact bundle` | Packs a contract so other repositories, Node or JVM, pin and reuse it. |
 
-Next: API Platform. Form, file upload, download and redirect bodies on every server, once an app needs them.
-
 ## Example
 
 ### Contract
@@ -683,7 +681,6 @@ Every page is listed in [docs/README.md](docs/README.md).
 - [x] PHP: Symfony 7.4 and 8, with SecurityBundle and RateLimiter
 - [x] PHP: Laravel 13, with Guards, Sanctum, Gates and Policies
 - [x] Python: FastAPI 0.162 and later, Django REST Framework 3.18, and Django Ninja 1.5.3 and later
-- [ ] PHP: API Platform
 - [x] Documentation site
 - [ ] Standalone binary (built for five platforms; release downloads next), 1.0 on the registries
 - [ ] Example apps per stack pairing, and an `init` wizard that creates a workspace of services and frontends, in any repository layout, from pinned templates

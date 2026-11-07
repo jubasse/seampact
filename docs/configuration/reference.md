@@ -153,6 +153,15 @@ The shared Node server options, and:
 |---|---|---|
 | `reply` | `handler` | `handler`: the handler wrapper writes the reply. `interceptor`: your interceptors map the result first. |
 
+`SeampactModule.forRoot(hooks, options)` also takes these at startup. A wrong value stops the app at boot.
+
+| `forRoot` option | What it does |
+|---|---|
+| `logger` | An object with `warn` and `error` functions. The default writes through NestJS's `Logger`. |
+| `responses` | `strict` or `warn`. Replaces the generated mode. |
+| `bodyValidation` | `true` or `false`. Needs the validators generated with the target option `bodyValidation`. |
+| `unboundOperations` | `error` or `warn`. `warn` lets an app boot with a route that has no controller method, for tests. |
+
 Guide: [NestJS](../backend/nestjs.md).
 
 ### codegen-fastify

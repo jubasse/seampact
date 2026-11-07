@@ -230,7 +230,7 @@ Set under `options:` on the target entry.
 | `catchAll` | `true` | Unknown paths under the api's base path answer the contract's 404. |
 | `springSecurity` | read from the classpath | `true`, `false` or `{ matchers: true }`: the classes of [Use Spring Security](#use-spring-security). |
 
-Also on the entry: `mount` (a path prefix), `frameworkRoutes` (see [The boot check](#the-boot-check)), `frameworkDocs`, `allowUntested`, and under `artefacts`: `nativeDocs` and `bootCheck`. The full list is in the [configuration reference](../configuration/reference.md#spring-boot).
+Also on the entry: [`mount`](../configuration/reference.md#mount) (a path prefix), [`frameworkRoutes`](../configuration/reference.md#framework-routes) (see [The boot check](#the-boot-check)), `frameworkDocs`, `allowUntested`, and under `artefacts`: `nativeDocs` and [`bootCheck`](../configuration/reference.md#boot-check). Settings set on a group flow down to the routes below it: see [Settings flow down the tree](../contract/01-basics.md#settings-flow-down-the-tree). The full list is in the [configuration reference](../configuration/reference.md#spring-boot).
 
 `responses`, `bodyValidation`, `frameworkEtag` and `catchAll` set the defaults. You can change `responses` at run time with the property `seampact.<api>.responses`. With `warn`, the reply goes out as written and the violation is logged, a body that fails `bodyValidation` included. A result that breaks its own type (a null, a page without items or with a negative total) is still a 500.
 
@@ -359,4 +359,5 @@ The plugins read the Spring Boot version of your build. Spring Boot 4 is tested.
 ## Next
 
 - [Call the api from React](../frontend/react.md)
+- [Call it with the fetch client](../frontend/fetch-client.md)
 - [Check the generated code in CI](../features/check-in-ci.md)

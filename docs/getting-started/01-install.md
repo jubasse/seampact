@@ -41,8 +41,4 @@ You see `Created .gitignore.` among the lines. `init` writes:
 
 `npx seampact init --blank` writes the api header alone instead of the example.
 
-## From a checkout
-
-Moved to [install in other ecosystems](install-other-ecosystems.md#from-a-checkout).
-
 Next: [your first API](your-first-api.md)

@@ -1,13 +1,13 @@
 # NestJS
 
-`@seampact/codegen-nestjs` generates decorators, a module and a filter around your NestJS controllers, and checks access, input and replies for every route of the contract. You write the controller methods and the [hooks](node-hooks.md). NestJS 12 on the Express platform is supported; see [Supported versions](../supported-versions.md). The step-by-step first project is in [Your first API](../getting-started/README.md).
+`@seampact/codegen-nestjs` generates decorators, a module and a filter around your NestJS controllers, and checks access, input and replies for every route of the contract. You write the controller methods and the [hooks](node-hooks.md). NestJS 12 on the Express platform is supported; see [Supported versions](../supported-versions.md). The step-by-step first project is in [Your first API](../getting-started/your-first-api.md).
 
 ## Set up
 
 You need:
 
 - Node.js 24 or later;
-- a contract, as in [Your first API](../getting-started/README.md);
+- a contract, as in [Your first API](../getting-started/your-first-api.md);
 - `experimentalDecorators` set in `tsconfig.json`;
 - every `@seampact/*` package at the same version. Yarn Plug'n'Play is not supported.
 

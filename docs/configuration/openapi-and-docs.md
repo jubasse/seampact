@@ -16,6 +16,10 @@ openapi:
 
 `openapi: none` writes no document.
 
+## Serve Swagger on Fastify
+
+`nativeDocs` also puts the contract's routes in `@fastify/swagger`. The setup, with the generated `contractSwaggerTransformObject`, is in [Fastify](../backend/fastify.md#docs-and-openapi).
+
 ## Serve Swagger on NestJS
 
 `nativeDocs` makes the generated routes visible to `@nestjs/swagger`.

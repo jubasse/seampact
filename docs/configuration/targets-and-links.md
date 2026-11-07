@@ -43,7 +43,7 @@ Every generator handles every format and paging style your contract declares. Wh
 | `pypi:seampact-drf` | views, serializers, a boundary middleware and an exception handler around your handlers | nothing |
 | `pypi:seampact-ninja` | a bind function that adds a Ninja router, with a boundary middleware and Pydantic models, around your handlers | nothing |
 
-Guides: [React](../frontend/react.md), [Vue](../frontend/vue.md), [Angular](../frontend/angular.md), [NestJS](../backend/nestjs.md), [Spring Boot](../backend/spring-boot.md), [Laravel](../backend/laravel.md), [Symfony](../backend/symfony.md), [FastAPI](../backend/fastapi.md). Their options are in [Per-target options](reference.md#per-target-options). API Platform comes after 1.0.
+Guides: [React](../frontend/react.md), [Vue](../frontend/vue.md), [Angular](../frontend/angular.md), [NestJS](../backend/nestjs.md), [Spring Boot](../backend/spring-boot.md), [Laravel](../backend/laravel.md), [Symfony](../backend/symfony.md), [FastAPI](../backend/fastapi.md). Their options are in [Per-target options](reference.md#per-target-options).
 
 ## Python targets
 

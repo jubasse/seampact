@@ -232,7 +232,7 @@ Set under `options:` on the target entry.
 | `frameworkEtag` | `strip` | Drops an ETag or a 304 that the boundary did not write. `keep` leaves them. |
 | `catchAll` | `true` | Unknown paths under the api's base path answer the contract's 404. |
 
-Also on the entry: `mount` (a path prefix), `frameworkRoutes` (see [The boot check](#the-boot-check)), `allowUntested`, and under `artefacts`: `routeHelpers` and `bootCheck`. The full list is in the [configuration reference](../configuration/reference.md#symfony).
+Also on the entry: [`mount`](../configuration/reference.md#mount) (a path prefix), [`frameworkRoutes`](../configuration/reference.md#framework-routes) (see [The boot check](#the-boot-check)), `allowUntested`, and under `artefacts`: `routeHelpers` and [`bootCheck`](../configuration/reference.md#boot-check). Settings set on a group flow down to the routes below it: see [Settings flow down the tree](../contract/01-basics.md#settings-flow-down-the-tree). The full list is in the [configuration reference](../configuration/reference.md#symfony).
 
 ### Change a setting without generating again
 
@@ -367,4 +367,5 @@ Allow-list your own routes in the entry, with a reason. By default only routes t
 ## Next
 
 - [Call the api from React](../frontend/react.md)
+- [Call it with the fetch client](../frontend/fetch-client.md)
 - [Check the generated code in CI](../features/check-in-ci.md)
