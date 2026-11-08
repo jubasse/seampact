@@ -174,6 +174,7 @@ Run on Hono 4.13.13, `@hono/node-server` 2.1.5 and Node 24.21, and not kept. A r
 
 ## Consequences
 
+- App input rules ([ADR 0028](0028-app-input-rules.md)): Hono: step 8b runs in the shared `runInputSteps` (`handler-map.ts`), with `inputRules` in the `registerRoutes` options.
 - An app keeps its Hono instance, its middleware, its `onError` and its `notFound` handler; on contract routes the boundary's checks and reply win, and its own routes are unchanged.
 - The boundary wraps the app's `fetch`; an app that serves another function, or registers the api on a sub-app, gets a 500 with the fix on contract routes instead of unchecked replies.
 - Middleware registered before the api still wraps contract replies: its encoding and its other headers apply, the boundary's header names win, an ETag or 304 is stripped or refused, and a reply it writes before the route handler is not checked.

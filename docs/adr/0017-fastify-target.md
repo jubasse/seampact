@@ -143,6 +143,7 @@ Run on Fastify 5.12.7, `@fastify/compress` 9.2.2 and Node 24.21, and not kept. A
 
 ## Consequences
 
+- App input rules ([ADR 0028](0028-app-input-rules.md)): Fastify: step 8b runs in the shared `runInputSteps` (`handler-map.ts`), with `inputRules` in the plugin options; a linked Ajv takes an app-compiled validate function.
 - An app keeps its Fastify instance, its root hooks, its error handler and its not-found handler; on contract routes the boundary's checks and reply win, and its own routes are unchanged.
 - Boundary replies skip every `onSend` hook: `@fastify/compress` never sees them and they carry no `@fastify/etag` validator; a header an app must add to them is set before the handler, in `onRequest` or `preHandler`.
 - When the app registers `@fastify/compress` before the plugin (its `compress` reply decorator), the boundary compresses its own replies: a body of 1024 bytes or more, the plugin's default threshold, in the coding the client prefers among br, gzip and deflate, with `Vary: Accept-Encoding` and the ETag made weak, and a 304 with the ETag and `Vary` its 200 would have. The plugin's own options do not reach these replies, `global: false` included: the plugin keeps them private, so only its decorator is read.

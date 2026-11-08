@@ -261,6 +261,7 @@ The boot check runs one step first, before any other: the version the api's rout
 
 ## Consequences
 
+- App input rules ([ADR 0028](0028-app-input-rules.md)): NestJS: step 8b runs in the generated wrapper before the handler (`nestjs.ts`), with `inputRules` in `SeampactModuleOptions` and the rule classes registered as providers by `forRoot`.
 - An app keeps its `main.ts`, its global pipes, guards, interceptors and filters; on contract routes the boundary's checks and reply win, and its own routes are unchanged, Express ETags included. A cache interceptor must skip contract routes with `isContractRoute(context)`, or the app does not start. Any app interceptor on a contract route brings back NestJS's per-request interceptor path there: its CPU cost, and on NestJS 12.1.x its native-memory growth, which 12.2.0 cures; the interceptor mode puts every route of the app on that path.
 - Every reply on a contract route is written by generated code, so NestJS features that shape the reply (a global serializer interceptor) do nothing there, and the boot check refuses those that would write it again (`@Redirect`, `@Render`, `@Sse`, a developer `@Res()`) or that would be ignored (`@HttpCode`, `@Header`).
 - App filters keep working on contract routes; under `strict`, a reply of theirs outside the contract becomes a 500, and under `warn` a logged violation.
