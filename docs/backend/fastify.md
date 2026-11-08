@@ -166,6 +166,32 @@ Every option of this target is in the [config reference](../configuration/refere
 
 `register(plugin, { handlers, hooks, logger })` takes `logger: { warn, error }`. seampact then writes its messages there instead of `console`. The logger is shared by the whole generated api, so the last registration wins.
 
+## Add your own rules
+
+Some rules the contract cannot say: "the end comes after the start", or a check that reads your data. Write them in the validator library your api's validators use (zod `params.rule`, yup `.test({ name })`, or an Ajv keyword when the target writes its own Ajv validators), and pass them as `inputRules` beside `hooks`, keyed by operation id, then by part (`path`, `query`, `headers` or `body`).
+
+```ts
+import { z } from "zod";
+
+const scheduleBody = z
+  .object({ start: z.string(), end: z.string() })
+  .refine((body) => body.end > body.start, { path: ["end"], params: { rule: "endAfterStart" } });
+
+await app.register(NotesFastify.plugin, {
+  handlers: { NotesEndpoints: notesHandlers },
+  hooks: notesHooks(),
+  inputRules: { scheduleNote: { body: scheduleBody } },
+});
+```
+
+- A rule runs after every contract check, the access checks and the idempotency claim, just before the handler. A caller refused with 401 or 403 never reaches it.
+- A refusal answers the operation's `schemaInvalid` code (400 by default) with `issues: [{ pointer, rule: "app.<name>" }]`. A rule without a usable name gives `app.invalid`, and seampact logs the fix once.
+- The rule gets a copy of the part, as the handler receives it. It can only refuse: its result and its changes are not used.
+- A rule that throws answers 500 and is logged. Its message is never sent.
+- A refused request releases its idempotency key, so a corrected retry with the same key is checked again.
+- `inputRules` is typed: a misspelt operation, a wrong part or another library's schema does not compile. At boot, `the plugin` also refuses an unknown operation or a part the operation takes no input in.
+- A uniqueness check ("this email is already used") stays in the handler, as a declared 409: a check before the write races.
+
 ## Rate limits
 
 A 429 from `@fastify/rate-limit` works as is. If the operation's `rateLimited` code requires `retryAfterMs`, seampact fills it from the `Retry-After` header (seconds or an HTTP date). Without a usable header, the client gets a logged 500: answer the code from the handler with its params instead.
