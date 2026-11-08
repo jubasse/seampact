@@ -691,7 +691,7 @@ Every page is listed in [docs/README.md](docs/README.md).
 - [x] 1.0 on npm, PyPI, Maven Central, Packagist and the Gradle Plugin Portal
 - [ ] 1.1: app input rules on the Node and PHP servers, API Platform, Next.js, an axios client, example apps
 - [ ] An `init` wizard that creates a workspace of services and frontends, in any repository layout, from pinned templates
-- Later: a client conformance suite, a kit to write new targets, one shared core per language, then Bun, Deno, Workers, Kotlin, Swift, Dart, Go, .NET, Rust ([full list](docs/roadmap.md))
+- Later: a client conformance suite (1.2), a kit to write new targets, one shared core per language, then Bun, Deno, Workers, Kotlin, Swift, Dart, Go, .NET, Rust ([full list](docs/roadmap.md))
 
 ## Contributing
 
