@@ -24,6 +24,9 @@ final class RouteLoaderFile
     private const PLACEHOLDER_INSIDE = '/\{[^{}\/]*\}/';
     private const ROUTE_SYNTAX_CHARACTERS = ['{', '}', '?'];
 
+    /** @var list<array{string, Operation}>|null */
+    private ?array $orderedRoutes = null;
+
     public function __construct(
         private readonly SymfonyPlacement $placement,
         private readonly TargetOptions $options,
@@ -88,9 +91,24 @@ final class RouteLoaderFile
         return $file;
     }
 
+    /** @return array<string, string> each routable operation's Symfony path, by operation id */
+    public function pathsByOperation(): array
+    {
+        $paths = [];
+        foreach ($this->ordered() as [$path, $operation]) {
+            $paths[$operation->id] = $path;
+        }
+
+        return $paths;
+    }
+
     /** @return list<array{string, Operation}> each operation's Symfony path, literal segments first per depth */
     private function ordered(): array
     {
+        if ($this->orderedRoutes !== null) {
+            return $this->orderedRoutes;
+        }
+
         $routes = [];
         foreach ($this->placement->operations() as $position => [$index, $operation]) {
             $converted = $this->symfonyPath($operation, $index);
@@ -101,7 +119,9 @@ final class RouteLoaderFile
 
         usort($routes, static fn (array $first, array $second): int => [$first[2], $first[3]] <=> [$second[2], $second[3]]);
 
-        return array_map(static fn (array $route): array => [$route[0], $route[1]], $routes);
+        $this->orderedRoutes = array_map(static fn (array $route): array => [$route[0], $route[1]], $routes);
+
+        return $this->orderedRoutes;
     }
 
     /** @return array{string, list<int>}|null the path with named placeholders, and 1 per placeholder segment, 0 per literal */

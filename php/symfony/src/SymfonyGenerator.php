@@ -44,10 +44,14 @@ use Seampact\Ir\Write\GeneratedFile;
  */
 final class SymfonyGenerator implements Generator, HandlerWarningGenerator
 {
-    public const TARGET = 'symfony';
-    public const PACKAGE = 'seampact/symfony';
+    public const TARGET = PlainSymfony::TARGET;
+    public const PACKAGE = PlainSymfony::PACKAGE;
     private const HTTP_OPERATION = 'httpOperation';
     private const HOOK_REGISTRATION = 'register one service implementing it, with autoconfiguration on';
+
+    public function __construct(private readonly SymfonyFlavour $flavour = new PlainSymfony())
+    {
+    }
 
     public function irSupport(): IrSupport
     {
@@ -61,9 +65,9 @@ final class SymfonyGenerator implements Generator, HandlerWarningGenerator
 
     public function generate(ContractIR $ir, TargetEntry $entry): array
     {
-        $refusals = new Refusals($entry->id, self::TARGET, self::PACKAGE);
-        $options = TargetOptions::read(new OptionValues($entry->options, self::TARGET, TargetOptions::KEYS, $refusals), $entry->namespace);
-        (new ArtefactSwitches(self::TARGET, null, Delivery::Consumer))->read($entry->artefacts, $refusals);
+        $refusals = new Refusals($entry->id, $this->flavour->target(), $this->flavour->package());
+        $options = TargetOptions::read(new OptionValues($entry->options, $this->flavour->target(), TargetOptions::KEYS, $refusals), $entry->namespace);
+        (new ArtefactSwitches($this->flavour->target(), null, Delivery::Consumer))->read($entry->artefacts, $refusals);
         $kept = new KeptForms($ir, $refusals, new SymfonyReleases());
         $refusals->throwIfAny();
         if ($options === null) {
@@ -79,17 +83,19 @@ final class SymfonyGenerator implements Generator, HandlerWarningGenerator
         $constraints = new InputConstraintFiles($ir, $placement, $options->rules, $refusals);
         $mount = $entry->mount ?? '';
         $contract = new ContractClass($placement, $kept, $entry->frameworkRoutes, $mount, FrameworkRouteScope::of($entry->artefacts));
+        $routeLoader = new RouteLoaderFile($placement, $options, $refusals, $mount);
         $classFiles = [
             ...(new SchemaTypes($layout, $types, $refusals, new SchemaConstraints($options->rules)))->files($kept->enums(), $kept->objects()),
             ...(new ContractExceptions($layout, $operationTypes))->files($kept),
             ...(new EndpointsInterfaces($placement))->files(),
             $contract->file(),
             ...(new IdentityTypes($placement, $contract, $refusals, self::HOOK_REGISTRATION))->files(),
-            (new RouteLoaderFile($placement, $options, $refusals, $mount))->file(),
+            $routeLoader->file(),
             (new InputResolverFile($placement))->file(),
-            ...(new BundleFiles($placement, $options, BootCheckSwitches::of($entry->artefacts)))->files(),
+            ...(new BundleFiles($placement, $options, BootCheckSwitches::of($entry->artefacts), $this->flavour))->files(),
             ...(new ApiIdentityFiles($placement))->files(),
         ];
+        array_push($classFiles, ...$this->flavour->files($ir, $placement, $options, $refusals, $routeLoader->pathsByOperation()));
         foreach ($placement->operations() as [$index, $operation]) {
             $at = IrPlace::ofOperation($index, $operation->id);
             RestrictedSortKeys::refuse($operation, $at, $refusals);
