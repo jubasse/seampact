@@ -134,6 +134,7 @@ Run on Express 4.22.3 and 5.3.0 (`compression` 1.8.2) and Node 24.21, and not ke
 
 ## Consequences
 
+- App input rules ([ADR 0028](0028-app-input-rules.md)): Express: step 8b runs in the shared `runInputSteps` (`handler-map.ts`), with `inputRules` in the router factory options.
 - An app keeps its Express app, its middleware, its error middleware and its 404 handler outside the api's base paths; on contract routes the boundary's checks and reply win, and its own routes are unchanged, Express ETags included.
 - One generated router serves Express 4 and 5; an app moves between majors without regenerating.
 - App middleware mounted before the router is outside the boundary: its refusals are in the api's format only when the app mounts the exported error middleware or calls the helper, and a reply it writes itself is not checked. The README's setup mounts the router before such middleware where the order allows.

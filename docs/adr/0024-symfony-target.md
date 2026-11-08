@@ -474,6 +474,7 @@ Read from the sources, not run: the firewall adds its `ExceptionListener` at `ke
 
 ## Consequences
 
+- App input rules ([ADR 0028](0028-app-input-rules.md)): Symfony: step 8b runs at the handler call over the autoconfigured `<Api>InputRules` classes, validating the typed part with `validate($part, $constraints)`; the PHP reverse walker maps property paths to wire pointers.
 - An app keeps its controllers, its listeners, its error controller, its firewall, `access_control` and voters. On contract routes the boundary's checks and reply win, and its own routes are unchanged.
 - The check order holds in Symfony without app setup beyond listing the bundle and importing the routes: the router, the Serializer, `#[MapRequestPayload]` and the entity value resolvers never decide a contract input.
 - Every reply on a contract route is checked, from whichever writer, exceptions and streams included, except the writers that bypass the response and an exception thrown inside `Response::send()`.

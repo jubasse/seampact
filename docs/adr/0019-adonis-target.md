@@ -178,6 +178,7 @@ AdonisJS 6 is kept under the rule of the [support policy](../supported-versions.
 
 ## Consequences
 
+- App input rules ([ADR 0028](0028-app-input-rules.md)): AdonisJS: step 8b runs in its own call before the handler (`adonis.ts`), with `inputRules` in the route registration; a Vine app writes its part schemas itself, since the generated ones are opaque.
 - An app keeps its `start/kernel.ts`, its exception handler and its own routes; it calls `registerRoutes` from `start/routes.ts` and the pre-routing helper from its exception handler.
 - The controller is a plain class implementing the generated interface; it receives the validated input and never touches `ctx.response`, since the boundary writes every reply on contract routes.
 - App middleware that should run on contract routes go in server, router or group middleware, all of which run before the boundary. Such middleware throw rather than write: a reply they write is not checked.
