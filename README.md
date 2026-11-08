@@ -13,7 +13,7 @@ Read the documentation at **[jubasse.github.io/seampact](https://jubasse.github.
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Node >= 24](https://img.shields.io/badge/node-%3E%3D24-339933.svg)](docs/getting-started/01-install.md)
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6.svg?logo=typescript&logoColor=white)](docs/concepts/packages.md)
-![Status: pre-1.0, not on npm yet](https://img.shields.io/badge/status-pre--1.0%2C%20not%20on%20npm%20yet-orange.svg)
+[![npm](https://img.shields.io/npm/v/@seampact/cli.svg?label=npm)](https://www.npmjs.com/package/@seampact/cli)
 
 ## Why seampact
 
@@ -494,7 +494,7 @@ class GetNotePathSerializer(_drf_runtime.ContractSerializer):
 
 </details>
 
-These are the default `rules: native` output, each library's own rules. `rules: seampact-consistent` gives the contract's exact checks on every library ([validators](docs/configuration/validators.md)).
+These are the default `rules: native` output, each library's own rules. `rules: seampact-consistent` gives the contract's exact checks on every library ([switch the validator](docs/configuration/validators.md)). What each library checks, and the error it answers, is in [Types and validation](docs/types-and-validation/README.md).
 
 ---
 
@@ -650,10 +650,11 @@ When a version is supported, and when it is dropped: see [Supported versions](do
 
 ## Get started
 
-- [Getting started](docs/getting-started/README.md): a notes API on NestJS, in four steps.
+- [Getting started](docs/getting-started/README.md): a notes API on the server of your choice, in four steps.
 - [Server guides](docs/README.md#server-guides): one page per framework, from setup to tests, including [FastAPI](docs/backend/fastapi.md), [Django REST Framework](docs/backend/drf.md) and [Django Ninja](docs/backend/ninja.md).
 - [Configuration](docs/configuration/config-file.md): every key of `seampact.config.yaml`.
 - [Troubleshooting](docs/troubleshooting/README.md).
+- [Coding agents](docs/getting-started/06-ai-agents.md): an `AGENTS.md` block, four skills, and `llms.txt` with one file per stack.
 
 ## Status
 
@@ -686,7 +687,8 @@ Every page is listed in [docs/README.md](docs/README.md).
 - [x] PHP: Laravel 13, with Guards, Sanctum, Gates and Policies
 - [x] Python: FastAPI 0.162 and later, Django REST Framework 3.18, and Django Ninja 1.5.3 and later
 - [x] Documentation site
-- [ ] Standalone binary (built for five platforms; release downloads next), 1.0 on the registries
+- [x] Standalone binary for five platforms, attached to each release
+- [x] 1.0 on npm, PyPI, Maven Central, Packagist and the Gradle Plugin Portal
 - [ ] Example apps per stack pairing, and an `init` wizard that creates a workspace of services and frontends, in any repository layout, from pinned templates
 - Later: a client conformance suite, a kit to write new targets, one shared core per language, then Next.js, Bun, Deno, Workers, Kotlin, Swift, Dart, Go, .NET, Rust ([full list](docs/roadmap.md))
 
