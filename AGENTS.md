@@ -21,7 +21,7 @@ Repository conventions every agent follows. Your task prompt adds the task, the 
 
 - Local gate: the affected tests (`pnpm vitest run <paths>`) and `pnpm typecheck`; for `jvm/`, `./gradlew :<module>:test` there; for `python/`, from `python/` with `UV_PYTHON_INSTALL_BIN=0`: `uv run --locked mypy` and `uv run --locked pytest <paths>`.
 - CI is the full gate: lint, format, checklist, cartography and the target matrix run there, not locally. A CI failure on your branch comes back to you as a follow-up.
-- The pre-commit hook (installed by `pnpm install`) formats the staged files biome handles; a file that also has unstaged changes is skipped, so stage whole files.
+- The pre-commit hook (installed by `pnpm install`) refuses added lines citing `LD-<n>` or `.work/`, then formats and lints with biome the staged files it handles; a file that also has unstaged changes is skipped, so stage whole files.
 - A test failure is a flake only once that test passes alone (name it in the hand-back); otherwise it is a failure.
 - Stop on a classifier refusal and report it; never work around it.
 
