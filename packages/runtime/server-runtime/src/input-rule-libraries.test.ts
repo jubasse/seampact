@@ -2,7 +2,12 @@ import { Ajv } from "ajv";
 import { object as yupObject, string as yupString } from "yup";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
-import { INPUT_RULE_ADAPTERS, inputRuleLibraryOf, yupPathPointer } from "./input-rule-libraries.js";
+import {
+  INPUT_RULE_ADAPTERS,
+  type InputRuleSchema,
+  inputRuleLibraryOf,
+  yupPathPointer,
+} from "./input-rule-libraries.js";
 
 const WINDOW = { start: "2026-01-02", end: "2026-01-01" };
 const STORE_DOWN = new Error("the rule store is down");
@@ -58,6 +63,14 @@ describe("yup rules", () => {
     await expect(adapter.refusals(schema, WINDOW)).resolves.toEqual([
       { pointer: "/end", name: "endAfterStart" },
     ]);
+  });
+
+  test("a yup schema types the rules of an api whose generated validators are yup", () => {
+    type GeneratedYupValidator = { readonly "~standard": { readonly vendor: "yup" } };
+    const typedRule: InputRuleSchema<GeneratedYupValidator, { start: string; end: string }> =
+      schema;
+
+    expect(typedRule).toBe(schema);
   });
 
   test("every failing test is reported, not only the first", async () => {

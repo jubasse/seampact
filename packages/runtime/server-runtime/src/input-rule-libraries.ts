@@ -66,7 +66,7 @@ export interface AjvInputRule<Part> {
  */
 export type InputRuleSchema<Validator, Part> = Validator extends { readonly _zod: unknown }
   ? ZodInputRule<Part>
-  : Validator extends { readonly __isYupSchema__: unknown }
+  : Validator extends { readonly "~standard": { readonly vendor: "yup" } }
     ? YupInputRule<Part>
     : Validator extends { readonly "~standard": { readonly vendor: "ajv" } }
       ? AjvInputRule<Part>
