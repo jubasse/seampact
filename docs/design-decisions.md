@@ -33,3 +33,4 @@ The ADRs cite product decisions by id (`A<n>`); [`decisions.md`](decisions.md) s
 | [0027](adr/0027-django-targets.md) | the Django layer, the Django REST Framework and the Django Ninja server targets |
 | [0028](adr/0028-app-input-rules.md) | app input rules: the app's own rules, in its validator library, run at step 8b before the handler |
 | [0029](adr/0029-api-platform-target.md) | the API Platform server target |
+| [0030](adr/0030-nextjs-target.md) | the Next.js server target |
