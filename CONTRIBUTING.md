@@ -46,7 +46,7 @@ pnpm install --frozen-lockfile
 pnpm gate
 ```
 
-It runs typecheck, lint, the format check and the tests, and fails on any error. `pnpm format` rewrites files to the expected style. A narrower run while you work is `pnpm vitest run <paths>`, `pnpm typecheck` and `pnpm lint` (which does not check format: `pnpm exec biome check <files>` does).
+It runs typecheck, lint, the format check and the tests, and fails on any error. `pnpm format` rewrites files to the expected style. The pre-commit hook that `pnpm install` sets up formats the staged files for you; a file with unstaged changes is skipped, so stage whole files. A narrower run while you work is `pnpm vitest run <paths>`, `pnpm typecheck` and `pnpm lint` (which does not check format: `pnpm exec biome check <files>` does).
 
 Two repository checks run in the `checklist` job, and you run them before a PR: `node scripts/checklist/cli.ts check` (the conformance checklist, its proofs and the workflows' job names) and `node scripts/cartography/cli.ts --check` (the generated map `docs/agents/cartography.md`; `--write` regenerates it). `node scripts/package-rules/cli.ts` checks the package manifests and READMEs.
 
