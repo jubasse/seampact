@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "seampact-signed-webhooks"
-version = "1.0.0"
+version = "1.0.1"
 description = "Verifies a template-signed webhook (HMAC, timestamp tolerance, secret rotation) inside an authenticate hook."
 readme = "README.md"
 license = "MIT"

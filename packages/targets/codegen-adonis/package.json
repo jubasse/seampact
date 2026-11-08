@@ -1,7 +1,7 @@
 {
   "name": "@seampact/codegen-adonis",
   "description": "Generates the AdonisJS boundary around your controllers: the routes of each api with their checking middleware, the reply path, the error helpers for your exception handler and a boot check, validating with the zod or yup link you give or with VineJS validators it generates.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jubasse/seampact.git",
