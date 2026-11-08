@@ -14,6 +14,7 @@ use Seampact\Codegen\Runtime\ApiContract;
 use Seampact\Codegen\Runtime\Decider;
 use Seampact\Codegen\Runtime\FrameworkRoutes;
 use Seampact\Codegen\Runtime\HookCheck;
+use Seampact\Codegen\Runtime\InputRuleCheck;
 use Seampact\Codegen\Runtime\PublicOrigin;
 use Seampact\Hooks\IdempotencyStore;
 
@@ -68,7 +69,11 @@ final class BootCheck
             "tag a ScopeResolver with '" . Hooks::scopeResolversTag($contract->api) . "'",
         );
 
-        return [...$problems, ...HookCheck::idempotencyStoreProblems(new Hooks($app), $contract, self::idempotencyStoreFix($contract->api))];
+        return [
+            ...$problems,
+            ...HookCheck::idempotencyStoreProblems(new Hooks($app), $contract, self::idempotencyStoreFix($contract->api)),
+            ...InputRuleCheck::problems(new Hooks($app), $contract, InputRules::class, "tag a class implementing the api's InputRules with '" . Hooks::inputRulesTag($contract->api) . "'"),
+        ];
     }
 
     private static function idempotencyStoreFix(string $api): string

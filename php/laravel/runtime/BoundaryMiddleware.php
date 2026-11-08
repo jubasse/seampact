@@ -133,7 +133,7 @@ abstract class BoundaryMiddleware
         }
 
         if ($exception instanceof BoundaryFailure) {
-            return $this->unmapped($state, $response, 'a boundary step failed', $exception->getPrevious() ?? $exception);
+            return $this->unmapped($state, $response, $exception->reason, $exception->getPrevious() ?? $exception);
         }
 
         if ($exception !== null && ExceptionRoles::isNativeRefusal($exception)) {

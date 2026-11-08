@@ -10,7 +10,10 @@ namespace Seampact\Codegen\Runtime;
  */
 final class BoundaryFailure extends \RuntimeException
 {
-    public function __construct(\Throwable $cause)
+    public const DEFAULT_REASON = 'a boundary step failed';
+
+    /** @param string $reason what the boundary logs beside the operation, when the step knows more than "a step failed" */
+    public function __construct(\Throwable $cause, public readonly string $reason = self::DEFAULT_REASON)
     {
         parent::__construct('seampact: a boundary step failed (' . $cause::class . ').', 0, $cause);
     }

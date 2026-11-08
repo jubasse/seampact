@@ -171,7 +171,8 @@ final class InputTree
         return Lookup::unreachable();
     }
 
-    private static function asArrays(mixed $value): mixed
+    /** A decoded value as arrays, every wire name escaped as the validator needs it. */
+    public static function asArrays(mixed $value): mixed
     {
         if ($value instanceof \stdClass) {
             $members = [];
