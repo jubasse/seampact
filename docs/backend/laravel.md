@@ -206,6 +206,78 @@ Gate::define('notes.update', [NotePolicy::class, 'update']);
 - The arguments are the subject first, then the other scopes, then the request. A scope is the value its resolver loaded: load the model in the resolver and the Policy receives it. A scope with no loaded value arrives as its `SubjectRef` or `ResolvedScope`, never as the raw id, so a client cannot pick the Policy.
 - A denial answers the right's first denial code, as `Gate::authorize()` in a decider does. `Response::denyAsNotFound()` answers the operation's `notFound` code when the operation declares one, else the first denial code.
 
+## Add your own rules
+
+The contract checks the shape of the input. A rule that needs your data, such as "the end comes after the start", is yours to write, in Laravel's own validation syntax. It runs after the contract's checks and the idempotency claim, and before your handler.
+
+Write a rule class that names its operation and part, and lists its rules. `<Api>` is your api's `App\Generated\<Api>\Laravel\InputRules`:
+
+<!-- excerpt: scripts/consumers/targets/laravel/app/Suite/Rules/ScheduleTaskBodyRules.php -->
+```php
+final class ScheduleTaskBodyRules implements InputRules
+{
+    public function operationId(): string
+    {
+        return 'scheduleTask';
+    }
+
+    public function part(): string
+    {
+        return 'body';
+    }
+
+    public function rules(): array
+    {
+        return [
+            'end' => [new EndAfterStart()],
+            '' => [new WindowTooLong(), self::unnamedNoteRule()],
+        ];
+    }
+}
+```
+
+Tag the class, beside your deciders:
+
+```php
+$this->app->tag([ScheduleTaskBodyRules::class], NotesSeampactServiceProvider::INPUT_RULES_TAG);
+```
+
+- `part()` is `path`, `query`, `headers` or `body`. Write one class for each operation and part.
+- The keys of `rules()` are wire names inside the part (`end`, `items.*.name`). A header key is lower case. The key `''` is the part itself, for a rule across members. Such a rule is a `ValidationRule` and a `DataAwareRule` with `public bool $implicit = true`, since no member carries it.
+- A rule sees the part as your handler gets it: the typed input written back by wire name, so a field the caller may not write is already gone.
+- A rule can only refuse. It cannot change what the handler gets.
+
+A rule is written once and reused on any member or operation, as in Laravel:
+
+<!-- excerpt: scripts/consumers/targets/laravel/app/Suite/Rules/EndAfterStart.php -->
+```php
+final class EndAfterStart implements ValidationRule, DataAwareRule
+{
+    public function validate(string $attribute, mixed $value, Closure $fail): void
+    {
+        $start = $this->data['start'] ?? null;
+        if (is_string($value) && is_string($start) && $value <= $start) {
+            $fail('The end must come after the start.');
+        }
+    }
+}
+```
+
+A refusal answers the operation's `schemaInvalid` role, like the contract's own issues, with every issue of every rule together. The rule is named after its class, first letter lowered, and carries the prefix `app.`: `EndAfterStart` gives `app.endAfterStart`, Laravel's `after:start` gives `app.after`. The name never collides with a contract rule such as `minLength`.
+
+- A closure, an anonymous class and a name that is not letters, digits, `_`, `.` or `-` (64 at most) answer `app.invalid`, and the log says once how to name the rule.
+- The message of a rule never reaches the client; the name is the key a client translates.
+- A rule that throws answers the api's 500, and the log names the operation and the part.
+- A refusal releases the idempotency key, so a corrected retry with the same key is checked again. A retry of a request that succeeded replays its reply and meets no rule.
+
+Keep three things out of a rule:
+
+- A uniqueness check stays in the handler, as a declared 409.
+- A rule that reads your data on a sign-up route can let a caller find which accounts exist. Throttle the route or answer the same way.
+- The caller: a rule is not given the principal. A rule about the caller is a decider or the handler.
+
+A rule you write also lives only on the server. When a client needs the same pure check, write it in the client too. `diff` cannot see a rule that narrows the accepted input; when the contract's grammar can say it, say it there.
+
 ## Options
 
 Set under `options:` on the target entry.
@@ -337,6 +409,7 @@ The app refuses to start, and lists every problem. It runs at `php artisan route
 |---|---|
 | An identity has no authenticate hook, a right or rule no decider, a scope no resolver. | Bind the hook, tag the decider or the resolver. |
 | An idempotent operation has no store. | Bind one under `IDEMPOTENCY_STORE_KEY`. |
+| Input rules name an operation the api lacks, a part with no input, a relay operation, or two rule sets claim one part. | Fix the rule class, or remove it; tag only classes implementing the api's `InputRules`. |
 | An operation has no handler, or its route is missing or served twice. | Bind the endpoints interface; call `Route::seampact()` once. |
 | A route that is not in the contract is served and not allow-listed. | Add it to `frameworkRoutes` on the entry, or remove it. |
 | The boundary is not the first global middleware, or the access middleware is not before `SubstituteBindings`. | Do not prepend another global middleware; keep the order of `middleware.<kind>`. |

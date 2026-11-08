@@ -123,6 +123,11 @@ The check runs at `php artisan route:cache` and at the first HTTP boot while the
 | `no scope resolver for the scope '<scope>': tag a ScopeResolver with ...` | A scope has no resolver. Tag a scope resolver with `seampact.<api>.scope-resolvers`. |
 | `no idempotency store for ...: bind 'seampact.<api>.idempotency-store' ...` | An idempotent operation has no store. Bind your `IdempotencyStore` implementation under the provider's `IDEMPOTENCY_STORE_KEY`. |
 | `operation '<id>' has no handler: bind <Endpoints> to a controller in the container` | No controller serves the operation. Bind the generated `<Resource>Endpoints` interface to your controller. |
+| `<Class> has input rules for operation '<id>', which api '<api>' lacks or whose entry's operations filter drops` | The rule class names an operation that is not served. Fix the id in `operationId()`, or remove the class. |
+| `<Class> has input rules for the part '<part>' of operation '<id>', which has no ...` | The operation has no input in that part. Name a part the message lists, or remove the class. |
+| `<Class> has input rules for operation '<id>', which relays '<id>' of api '<api>'` | A relay operation takes no rules. Put them on the public operation in the gateway. |
+| `two input rule sets claim the part '<part>' of operation '<id>'` | Two classes cover one part. Merge their rules into one class. |
+| `the input rules service <Class> does not implement ...` | A class tagged `seampact.<api>.input_rules` is not the api's `InputRules`. Implement the generated `InputRules` interface, or untag it. |
 | `the framework route <METHOD> /<path> is outside the contract: allow-list it in the entry's frameworkRoutes, or remove it` | The app has a route the contract does not declare. [Allow-list it](#allow-listing-framework-routes), or remove the route. |
 | `operation '<id>' has 0 contract routes: call Route::seampact('<api>') once in the app's routes` | The contract routes are not registered. Call `Route::seampact('<api>')` once, from `withRouting(then: ...)` in `bootstrap/app.php`, outside any route group prefix. |
 | `the boundary middleware ... is not the first global middleware` | A global middleware runs before the boundary. Remove the one you prepended. Two apis whose base paths overlap: set `catch_all: false` on the broader one. |
