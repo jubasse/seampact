@@ -31,7 +31,7 @@ val runtimeDependencies: Provider<List<String>> =
         }
     }
 
-val verifyNoRuntimeDependency by tasks.registering {
+val verifyNoRuntimeDependency = tasks.register("verifyNoRuntimeDependency") {
     description = "Fails when seampact-hooks has a runtime dependency, naming its coordinates."
     group = LifecycleBasePlugin.VERIFICATION_GROUP
     // A local copy: the action must not capture the script, which the configuration cache cannot store.
