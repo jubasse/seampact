@@ -11,7 +11,7 @@ description: Install seampact, add a server or client target, add a new api, or 
 4. Add the target of your stack. Open its one reference in this skill's `references/` (`nestjs.md`, `express.md`, `fastify.md`, `hono.md`, `adonisjs.md`, `spring-boot.md`, `laravel.md`, `symfony.md`, `fastapi.md`, `drf.md` or `ninja.md`). It gives the install line, the `targets` entry and the wiring.
 5. An app that already has routes: move one route at a time, as `references/existing-project.md` shows. Keep every other route as it is, and keep the old route until `check` and your own tests pass on the new one.
 6. Run `lint`, then `generate`, then `check`, and commit the generated files with the contract. Fix errors with `seampact-fix-error`; write the handlers with `seampact-implement-handler`.
-7. Add the seampact block to AGENTS.md so the next agent finds the rules: `npx seampact agents install` on Node, or copy the block from https://jubasse.github.io/seampact/getting-started/06-ai-agents/.
+7. Add the seampact block to AGENTS.md so the next agent finds the rules: copy the block from https://jubasse.github.io/seampact/getting-started/06-ai-agents/.
 
 ## Stop and ask the user
 

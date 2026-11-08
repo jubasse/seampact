@@ -1,12 +1,6 @@
-// The commands the CLI runs, `init`, `agents`, `compile`, `generate`, `check`, `lint`, `diff`, `bundle` and `explain`, and the steps between the app config and the target
+// The commands the CLI runs, `init`, `compile`, `generate`, `check`, `lint`, `diff`, `bundle` and `explain`, and the steps between the app config and the target
 // packages: the sources compiled, the IR filtered per entry, the link checks and the link set.
 
-export {
-  type AgentsInstallOptions,
-  agentsInstallCommand,
-  CLAUDE_SKILLS_DIRECTORY,
-  DEFAULT_SKILLS_DIRECTORY,
-} from "./agents-install-command.js";
 export { NODE_CLI_PLAN_INPUTS, type PlanInputs } from "./app-plan.js";
 export { type BundleCommandOptions, bundleCommand } from "./bundle-command.js";
 export { checkCommand } from "./check-command.js";

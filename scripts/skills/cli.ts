@@ -1,11 +1,10 @@
-// Writes or checks the skills folder: the references generated from docs/, and the mirror shipped in the CLI package.
+// Writes or checks the skills folder: the references generated from docs/
 //   node scripts/skills/cli.ts (--write | --check)
 
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import {
-  CLI_SKILLS_DIRECTORY,
   expectedSkillTree,
   GENERATE_COMMAND,
   SKILLS_DIRECTORY,
@@ -29,15 +28,11 @@ const tree = expectedSkillTree(REPO_ROOT);
 
 if (values.write === true) {
   writeSkillTree(tree, REPO_ROOT);
-  console.log(
-    `skills: ${tree.size} files written in ${SKILLS_DIRECTORY}/ and ${CLI_SKILLS_DIRECTORY}/`,
-  );
+  console.log(`skills: ${tree.size} files written in ${SKILLS_DIRECTORY}/`);
   process.exit(0);
 }
 
-const problems = [SKILLS_DIRECTORY, CLI_SKILLS_DIRECTORY].flatMap((directory) =>
-  treeProblems(tree, REPO_ROOT, directory),
-);
+const problems = treeProblems(tree, REPO_ROOT, SKILLS_DIRECTORY);
 
 if (problems.length > 0) {
   console.error(`skills: out of date; run \`${GENERATE_COMMAND}\`\n  ${problems.join("\n  ")}`);
