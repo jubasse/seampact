@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,22 +10,40 @@ const COMMIT = "c".repeat(40);
 const OTHER_COMMIT = "d".repeat(40);
 const READ_ATTEMPTS = 5;
 const WORKFLOW_LIST = "p5-adonis.yml\trelease-gate\np6-jvm-core.yml\n";
+const REGISTRY_FAILURE_LOG =
+  "build\tPublish\t> Could not GET 'https://repo.maven.apache.org/x.pom'. Received status code 429 from server: Too Many Requests\n";
+const TEST_FAILURE_LOG = "build\tTest\tAssertionError: expected 200 to be 404\n";
 
 interface FakeGitHub {
   /** What a dispatch answers as the new run's id. */
   runId?: string;
   /** The reads of the run's state that fail before one answers. */
   failedReads?: number;
-  /** The status, conclusion and commit a read answers. */
+  /** The status, conclusion, commit and attempt a read answers. */
   state?: string;
+  /** What a read answers once the run's failed jobs were rerun. */
+  rerunState?: string;
+  /** The reads after the rerun that still answer [state], before the new attempt starts. */
+  staleReadsAfterRerun?: number;
+  /** The log of the run's failed jobs. */
+  failedLog?: string;
 }
 
 /**
  * A `gh` that records each dispatch, starts every workflow as run [runId] and fails the first [failedReads] reads of
- * the run's state before answering [state]; a `sleep` that only records its pause.
+ * the run's state before answering [state], or [rerunState] once a rerun was asked and [staleReadsAfterRerun] more
+ * reads answered [state]; that prints [failedLog] as the
+ * failed jobs' log and records each rerun; a `sleep` that only records its pause.
  */
 function fakeTools(directory: string, github: FakeGitHub): void {
-  const { runId = "7", failedReads = 0, state = `completed success ${COMMIT}` } = github;
+  const {
+    runId = "7",
+    failedReads = 0,
+    state = `completed success ${COMMIT} 1`,
+    rerunState = state,
+    staleReadsAfterRerun = 0,
+    failedLog = "",
+  } = github;
 
   writeFileSync(
     join(directory, "gh"),
@@ -33,11 +51,16 @@ function fakeTools(directory: string, github: FakeGitHub): void {
       "#!/usr/bin/env bash",
       'case "$*" in',
       `  *dispatches*) echo "$*" >> "${directory}/dispatches"; echo "${runId}" ;;`,
+      `  "run view ${runId} --log-failed") cat "${directory}/failed.log" ;;`,
+      `  "run rerun ${runId} --failed") echo "$*" >> "${directory}/reruns" ;;`,
       `  *actions/runs/${runId}*)`,
       `    reads=$(( $(cat "${directory}/reads" 2>/dev/null || echo 0) + 1 ))`,
       `    echo "$reads" > "${directory}/reads"`,
       `    if [ "$reads" -le ${failedReads} ]; then echo "HTTP 502: Bad Gateway" >&2; exit 1; fi`,
-      `    echo "${state}" ;;`,
+      `    if [ ! -f "${directory}/reruns" ]; then echo "${state}"; exit 0; fi`,
+      `    stale=$(( $(cat "${directory}/stale-reads" 2>/dev/null || echo 0) + 1 ))`,
+      `    echo "$stale" > "${directory}/stale-reads"`,
+      `    if [ "$stale" -le ${staleReadsAfterRerun} ]; then echo "${state}"; else echo "${rerunState}"; fi ;;`,
       '  *) echo "unexpected gh call: $*" >&2; exit 1 ;;',
       "esac",
       "",
@@ -48,6 +71,7 @@ function fakeTools(directory: string, github: FakeGitHub): void {
     `#!/usr/bin/env bash\necho "$1" >> "${directory}/pauses"\n`,
   );
   writeFileSync(join(directory, "workflows.txt"), WORKFLOW_LIST);
+  writeFileSync(join(directory, "failed.log"), failedLog);
   chmodSync(join(directory, "gh"), 0o755);
   chmodSync(join(directory, "sleep"), 0o755);
 }
@@ -91,7 +115,7 @@ describe("the wait for the gate runs", () => {
   });
 
   it("refuses a run at another commit than the release's", () => {
-    fakeTools(tools, { state: `completed success ${OTHER_COMMIT}` });
+    fakeTools(tools, { state: `completed success ${OTHER_COMMIT} 1` });
 
     const run = runScript();
 
@@ -102,7 +126,7 @@ describe("the wait for the gate runs", () => {
   });
 
   it("fails on a run that did not succeed and on a dispatch that names no run", () => {
-    fakeTools(tools, { state: `completed failure ${COMMIT}` });
+    fakeTools(tools, { state: `completed failure ${COMMIT} 1`, failedLog: TEST_FAILURE_LOG });
 
     const failedRun = runScript();
 
@@ -149,6 +173,52 @@ describe("the wait for the gate runs", () => {
       "reading run 7 failed 5 times: check the GitHub status, then start the release again",
     );
     expect(written("pauses")).toEqual(["10", "20", "40", "80"]);
+    expect(run.status).toBe(1);
+  });
+
+  it("reruns the failed jobs of a run that failed on a registry error once, then reads the new attempt", () => {
+    fakeTools(tools, {
+      state: `completed failure ${COMMIT} 1`,
+      rerunState: `completed success ${COMMIT} 2`,
+      failedLog: REGISTRY_FAILURE_LOG,
+    });
+    writeFileSync(join(tools, "workflows.txt"), "p6-spring-boot.yml\n");
+
+    const run = runScript();
+
+    expect(written("reruns")).toEqual(["run rerun 7 --failed"]);
+    expect(run.stdout).toContain(
+      "p6-spring-boot.yml run 7 failed on a registry error, its failed jobs run once more: build\tPublish\t> Could not GET",
+    );
+    expect(run.stdout).toContain(`p6-spring-boot.yml run 7 at ${COMMIT} concluded success`);
+    expect(run.status).toBe(0);
+  });
+
+  it("waits while the rerun has not started, and fails when the rerun fails again", () => {
+    fakeTools(tools, {
+      state: `completed failure ${COMMIT} 1`,
+      rerunState: `completed failure ${COMMIT} 2`,
+      staleReadsAfterRerun: 2,
+      failedLog: REGISTRY_FAILURE_LOG,
+    });
+    writeFileSync(join(tools, "workflows.txt"), "p6-spring-boot.yml\n");
+
+    const run = runScript();
+
+    expect(written("reruns")).toEqual(["run rerun 7 --failed"]);
+    expect(written("pauses")).toEqual(["60", "60", "60"]);
+    expect(run.stdout).toContain(`p6-spring-boot.yml run 7 at ${COMMIT} concluded failure`);
+    expect(run.status).toBe(1);
+  });
+
+  it("does not rerun a run whose failed jobs name no registry error", () => {
+    fakeTools(tools, { state: `completed failure ${COMMIT} 1`, failedLog: TEST_FAILURE_LOG });
+    writeFileSync(join(tools, "workflows.txt"), "p6-spring-boot.yml\n");
+
+    const run = runScript();
+
+    expect(existsSync(join(tools, "reruns"))).toBe(false);
+    expect(run.stdout).toContain(`p6-spring-boot.yml run 7 at ${COMMIT} concluded failure`);
     expect(run.status).toBe(1);
   });
 });

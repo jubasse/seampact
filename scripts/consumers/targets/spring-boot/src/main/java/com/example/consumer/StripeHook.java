@@ -34,6 +34,7 @@ final class StripeHook implements StripeAuthenticateHook {
     @Override
     public AuthenticateResult<WebhookCaller, Denial> authenticate(StripeAuthenticateRequest request) {
         SuiteControl.recordHookCall("authenticate:stripe", API, request.operation().id());
+        SuiteControl.throwScriptedHookFailure("authenticate:stripe");
 
         boolean verified = request.signature().map(StripeHook::verified).orElse(false);
 

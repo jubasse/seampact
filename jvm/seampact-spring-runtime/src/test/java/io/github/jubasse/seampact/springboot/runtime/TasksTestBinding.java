@@ -19,15 +19,57 @@ final class TasksTestBinding implements ApiBinding {
     private final Map<String, Class<?>> rightParamsTypes;
     private final Map<String, Class<?>> inputTypes;
     private final Map<Class<?>, Integer> successArms;
+    private final Map<String, Class<? extends Annotation>> annotations;
+    private final Authenticator authenticator;
+    private final Map<String, Class<?>> authenticateHooks;
+    private final Class<? extends Decider> deciderType;
+    private final Class<? extends ScopeResolver> scopeResolverType;
+
+    /** What a test's identity hook answers for the credentials the boundary read. */
+    @FunctionalInterface
+    interface Authenticator {
+        AuthenticateResult<?, Denial> authenticate(String identity, JsonNode credentials, Optional<String> csrfToken);
+    }
 
     TasksTestBinding(Map<String, Class<?>> rightParamsTypes) {
         this(rightParamsTypes, Map.of(), Map.of());
     }
 
     TasksTestBinding(Map<String, Class<?>> rightParamsTypes, Map<String, Class<?>> inputTypes, Map<Class<?>, Integer> successArms) {
+        this(rightParamsTypes, inputTypes, successArms, Map.of(), Map.of(), Decider.class, ScopeResolver.class, (identity, credentials, csrfToken) -> {
+            throw new UnsupportedOperationException("the test binding authenticates no one");
+        });
+    }
+
+    private TasksTestBinding(Map<String, Class<?>> rightParamsTypes, Map<String, Class<?>> inputTypes, Map<Class<?>, Integer> successArms,
+            Map<String, Class<? extends Annotation>> annotations, Map<String, Class<?>> authenticateHooks, Class<? extends Decider> deciderType,
+            Class<? extends ScopeResolver> scopeResolverType, Authenticator authenticator) {
         this.rightParamsTypes = Map.copyOf(rightParamsTypes);
         this.inputTypes = Map.copyOf(inputTypes);
         this.successArms = Map.copyOf(successArms);
+        this.annotations = Map.copyOf(annotations);
+        this.authenticateHooks = Map.copyOf(authenticateHooks);
+        this.deciderType = deciderType;
+        this.scopeResolverType = scopeResolverType;
+        this.authenticator = authenticator;
+    }
+
+    TasksTestBinding withAnnotations(Map<String, Class<? extends Annotation>> composed) {
+        return new TasksTestBinding(rightParamsTypes, inputTypes, successArms, composed, authenticateHooks, deciderType, scopeResolverType, authenticator);
+    }
+
+    /** The hook interface each identity's authenticate hook bean implements. */
+    TasksTestBinding withAuthenticateHooks(Map<String, Class<?>> hooks) {
+        return new TasksTestBinding(rightParamsTypes, inputTypes, successArms, annotations, hooks, deciderType, scopeResolverType, authenticator);
+    }
+
+    /** The api's own decider and scope resolver interfaces, as its generated code declares them. */
+    TasksTestBinding withHookTypes(Class<? extends Decider> decider, Class<? extends ScopeResolver> scopeResolver) {
+        return new TasksTestBinding(rightParamsTypes, inputTypes, successArms, annotations, authenticateHooks, decider, scopeResolver, authenticator);
+    }
+
+    TasksTestBinding withAuthenticator(Authenticator hook) {
+        return new TasksTestBinding(rightParamsTypes, inputTypes, successArms, annotations, authenticateHooks, deciderType, scopeResolverType, hook);
     }
 
     @Override
@@ -37,7 +79,7 @@ final class TasksTestBinding implements ApiBinding {
 
     @Override
     public Map<String, Class<? extends Annotation>> annotations() {
-        return Map.of();
+        return annotations;
     }
 
     @Override
@@ -57,7 +99,7 @@ final class TasksTestBinding implements ApiBinding {
 
     @Override
     public Map<String, Class<?>> authenticateHooks() {
-        return Map.of();
+        return authenticateHooks;
     }
 
     @Override
@@ -72,12 +114,12 @@ final class TasksTestBinding implements ApiBinding {
 
     @Override
     public Class<? extends Decider> deciderType() {
-        return Decider.class;
+        return deciderType;
     }
 
     @Override
     public Class<? extends ScopeResolver> scopeResolverType() {
-        return ScopeResolver.class;
+        return scopeResolverType;
     }
 
     @Override
@@ -98,6 +140,6 @@ final class TasksTestBinding implements ApiBinding {
     @Override
     public AuthenticateResult<?, Denial> authenticate(String identity, ListableBeanFactory beans, JsonMapper mapper, JsonNode credentials,
             Optional<String> csrfToken, Optional<SignedTemplateRequest> signature, RequestView request, OperationRef operation) {
-        throw new UnsupportedOperationException("the test binding authenticates no one");
+        return authenticator.authenticate(identity, credentials, csrfToken);
     }
 }

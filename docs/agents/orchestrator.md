@@ -6,16 +6,25 @@ For the lead session only: subagents never read this file. The lead reads it onc
 
 | Task | Type | Model, effort |
 |---|---|---|
-| lane PR, review fixes, committed docs | `seampact-implementer` | Opus medium (Sonnet for small or mechanical lanes) |
-| single review, lens review, synthesis | `seampact-reviewer` | one review per PR: Opus high for compiler and target code, Sonnet medium for docs; lens panel (Sonnet high) and synthesis (Opus high) only for an IR change |
+| lane PR, review fixes, committed docs | `seampact-implementer` | Sonnet medium; Opus medium only for shared runtime code |
+| single review, lens review, synthesis | `seampact-reviewer` | one review per PR: Sonnet medium; Opus high only for a freeze (ADR, IR, format) or shared runtime code; lens panel (Sonnet high) and synthesis (Opus high) only for an IR change |
 | listed nits, rebase plus gate, regeneration | `seampact-mechanical` | Haiku (its default) |
 | one-shot repo-wide script | `seampact-refactor` | Sonnet (its default) |
 | `.work/` brief or decision synthesis | `seampact-writer` | Opus (its default), high for design |
 
 - `general-purpose` only when a task needs a tool the types lack (WebFetch, an MCP server other than context7, the Agent tool); its prompt starts with "Read `.claude/agents/seampact-<role>.md` first"; note the case in the handoff.
-- Prefer a fresh agent over resuming one for more than a few calls.
+- Follow-ups on a branch (a CI failure, review fixes, a rebase) go to the agent that wrote it, through SendMessage; a fresh agent only once that agent is near its call cap.
 - Target PR size (A47): one deliverable, about 3,000 to 4,000 hand-written lines; seams stay small and land first. Past an agent's call cap, a fresh agent continues on the same branch from the report's resume state; the PR opens once the deliverable is done.
 - Agent count follows the remaining work, at most 10 at once, never raised back when fewer lanes are open; run them in the background; new or edited agent files load only after a session restart.
+
+## Economy
+
+- Facts before critiques: a design rests on a spike or POC run on the real targets before any review round; no opinion round on an unverified design.
+- Review stopping rule: stop after a round with no blocker whose fixes are text only; the lead checks those fixes, no new round.
+- CI is the gate: agents run the local gate of AGENTS.md "Gates" (touched tests and typecheck); reviewers skip what CI checks (format, lint, types, checklist, cartography, the matrix) and judge behaviour.
+- The lead pushes at the first green commit, so CI runs while the work or the review goes on.
+- Reports and review files: grep the section or finding needed, never read them whole.
+- Fresh session per phase: at a phase boundary, update the handoff, give the user a resume prompt, then the next phase starts in a new session.
 
 ## Prompt
 

@@ -20,6 +20,7 @@ final class TasksOptionalAuthHooks {
         @Override
         public AuthenticateResult<UserPrincipal, Denial> authenticate(UserAuthenticateRequest request) {
             SuiteControl.recordHookCall("authenticate:user", API, request.operation().id());
+            SuiteControl.throwScriptedHookFailure("authenticate:user");
 
             return UserTokens.userIdOf(request.credentials().bearer(), request.credentials().sessionCookie())
                     .<AuthenticateResult<UserPrincipal, Denial>>map(userId -> new AuthenticateResult.Authenticated<>(new UserPrincipal(userId)))

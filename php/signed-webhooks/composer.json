@@ -3,6 +3,12 @@
   "description": "Verifies template-signed webhooks for PHP (ADR 0013): HMAC over the raw body, timestamp tolerance and secret rotation.",
   "type": "library",
   "license": "MIT",
+  "homepage": "https://jubasse.github.io/seampact/concepts/packages/",
+  "support": {
+    "docs": "https://jubasse.github.io/seampact/",
+    "issues": "https://github.com/jubasse/seampact/issues",
+    "source": "https://github.com/jubasse/seampact"
+  },
   "require": {
     "php": ">=8.3.36 <8.4 || >=8.4.27 <8.5 || >=8.5.12"
   },

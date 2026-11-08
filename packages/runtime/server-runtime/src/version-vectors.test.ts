@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
@@ -14,28 +14,13 @@ interface VersionVector {
   readonly serves: boolean;
 }
 
-const VERSION_VECTORS: readonly VersionVector[] = [
-  { installed: "1.4.2", generator: "1.4.2", serves: true },
-  { installed: "1.4.3", generator: "1.4.2", serves: true },
-  { installed: "1.4.1", generator: "1.4.2", serves: false },
-  { installed: "1.5.0", generator: "1.4.2", serves: false },
-  { installed: "1.3.9", generator: "1.4.2", serves: false },
-  { installed: "2.4.2", generator: "1.4.2", serves: false },
-  { installed: "0.3.1", generator: "0.3.0", serves: true },
-  { installed: "0.4.0", generator: "0.3.0", serves: false },
-  { installed: "0.0.1", generator: "0.0.0", serves: true },
-  { installed: "0.0.0", generator: "0.0.1", serves: false },
-  { installed: "1.4.10", generator: "1.4.9", serves: true },
-  { installed: "1.4.9", generator: "1.4.10", serves: false },
-  { installed: "1.4.2-rc.1", generator: "1.4.2", serves: false },
-  { installed: "1.4.2", generator: "1.4.2-rc.1", serves: false },
-  { installed: "1.4.2-rc.1", generator: "1.4.2-rc.1", serves: true },
-  { installed: "1.4.2+build.5", generator: "1.4.2", serves: false },
-  { installed: "1.4.2", generator: "1.4.2+build.5", serves: false },
-  { installed: "01.4.2", generator: "1.4.2", serves: false },
-  { installed: " 1.4.2", generator: "1.4.2", serves: false },
-  { installed: "v1.4.2", generator: "1.4.2", serves: false },
-];
+// The shared vectors of `fixtures/vectors/`, which the Spring Boot, PHP and Python runtimes read too.
+const VERSION_VECTORS: readonly VersionVector[] = JSON.parse(
+  readFileSync(
+    new URL("../../../../fixtures/vectors/runtime-versions.json", import.meta.url),
+    "utf8",
+  ),
+).vectors;
 
 const apps: string[] = [];
 

@@ -1,0 +1,58 @@
+{
+  "id": "decide-hook-throws-answers-internal-error",
+  "title": "A decide hook that throws answers 500 api.internal, never allows and never runs the handler",
+  "checks": ["CHK-157"],
+  "profiles": ["default", "hand-written"],
+  "script": {
+    "hookFailures": {
+      "decide:roles": "the role store is down"
+    },
+    "holds": ["tasks.createTask"]
+  },
+  "steps": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:create}}"
+        },
+        "body": {
+          "title": "Not decided"
+        }
+      },
+      "expect": {
+        "status": 500,
+        "headers": {
+          "content-type": {
+            "contains": ["application/problem+json"]
+          }
+        },
+        "body": {
+          "code": "api.internal"
+        }
+      }
+    }
+  ],
+  "hookCalls": [
+    {
+      "hook": "authenticate:user",
+      "operation": "tasks.createTask"
+    },
+    {
+      "hook": "decide:throttle",
+      "operation": "tasks.createTask",
+      "bucket": {
+        "id": "write",
+        "values": ["00000000-0000-4000-8000-000000000001"],
+        "limit": 60,
+        "windowMs": 60000
+      }
+    },
+    {
+      "hook": "decide:roles",
+      "operation": "tasks.createTask"
+    }
+  ]
+}

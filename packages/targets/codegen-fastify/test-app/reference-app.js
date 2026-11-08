@@ -1,8 +1,9 @@
 // A Fastify app around the generated `tasks` plugin, for the live boundary test: the shared scenario's handler map
 // and hooks, an app root hook, an app error handler, a not-found handler and `frameworkErrors` that call the
-// exported helper, and routes of the app's own; an app with the plugin under a prefix; and an app with two apis on
-// one base path; and an app that installs the framework-route collector too late. Copied next to the compiled
-// generated tree, so it imports the generated modules by relative path.
+// exported helper, and routes of the app's own; an app with the plugin under a prefix; an app with two apis on one
+// base path; an app that registers `@fastify/compress`; and an app that installs the framework-route collector too
+// late. Copied next to the compiled generated tree, so it imports the generated modules by relative path.
+import compress from "@fastify/compress";
 import Fastify from "fastify";
 import * as TasksFastify from "../generated/server/tasks/index.js";
 import * as SecondFastify from "../generated/server/tasksService/index.js";
@@ -108,6 +109,21 @@ export async function startCompressingApp() {
   app.decorateReply("compress", () => {
     throw new Error("the boundary compresses its replies itself, never through reply.compress");
   });
+  await app.register(TasksFastify.plugin, { handlers, hooks });
+  await app.listen({ port: 0, host: "127.0.0.1" });
+
+  const { port } = app.server.address();
+
+  return { host: "127.0.0.1", port, close: () => app.close() };
+}
+
+/** The plugin on an app that registers `@fastify/compress`, which also inflates request bodies by default. */
+export async function startCompressPluginApp() {
+  resetScenario();
+
+  const app = Fastify();
+
+  await app.register(compress);
   await app.register(TasksFastify.plugin, { handlers, hooks });
   await app.listen({ port: 0, host: "127.0.0.1" });
 

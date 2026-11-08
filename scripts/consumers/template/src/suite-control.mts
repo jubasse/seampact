@@ -109,6 +109,13 @@ export function scriptedScopeDenial(scope: string): ScriptedDenial | undefined {
   return loadedScript.scopes?.[scope]?.deny;
 }
 
+/** Throws the exception the script gives the hook double named `hook`, if any, in place of its answer. */
+export function throwScriptedHookFailure(hook: string): void {
+  const message = loadedScript.hookFailures?.[hook];
+
+  if (message !== undefined) throw new Error(message);
+}
+
 /** The answer the script gives an operation's handler in place of its own, if any. */
 export function scriptedAnswer(api: string, operationId: string): ScriptedAnswer | undefined {
   return loadedScript.answers?.[operationKey(api, operationId)];

@@ -1,3 +1,7 @@
 {
-  "name": "seampact/laravel"
+  "name": "seampact/laravel",
+  "homepage": "https://jubasse.github.io/seampact/backend/laravel/",
+  "support": {
+    "docs": "https://jubasse.github.io/seampact/"
+  }
 }

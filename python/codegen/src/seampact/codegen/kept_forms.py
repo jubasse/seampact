@@ -9,7 +9,7 @@ from collections.abc import Sequence
 from typing import Final
 
 from seampact.codegen.handler_forms import refuse_identity_response_headers
-from seampact.codegen.refusals import Delivery, IrPlace, Refusals
+from seampact.codegen.refusals import EXTENSION_KEYS_FIX, Delivery, IrPlace, Refusals
 from seampact.codegen.response_header_forms import refuse_response_header_forms
 from seampact.ir.hydration import OMITTED, JsonValue
 from seampact.ir.model import (
@@ -101,7 +101,13 @@ class _KeptForms:
 
     def read(self) -> None:
         if self.ir.extension_keys:
-            self._after_v1("extensionKeys", "Typed extension values", IrPlace("/extensionKeys"))
+            self.refusals.waiting(
+                "extensionKeys",
+                "Typed extension values",
+                IrPlace("/extensionKeys"),
+                Delivery.AFTER_V1,
+                EXTENSION_KEYS_FIX,
+            )
 
         for index, operation in enumerate(self.ir.operations):
             self._operation(operation, IrPlace(f"/operations/{index}", operation.id))

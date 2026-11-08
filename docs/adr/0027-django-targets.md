@@ -433,6 +433,7 @@ The review of this ADR ran more probes on Django 6.1.2, DRF 3.18.3 and Ninja 1.7
 
 ## Consequences
 
+- App input rules ([ADR 0028](0028-app-input-rules.md)): Django REST Framework and Ninja (1.1.x): step 8b runs after `claim_idempotency` (Ninja's `_served`, DRF's admission), with `input_rules` in `bind_<api>()` (Ninja) or `settings.SEAMPACT` (DRF); a refusal calls `abandon_claim`.
 - An app keeps its middleware, URLconf, settings, DRF classes and Ninja api. On contract routes the boundary's checks and reply win.
 - The app lists one middleware first and includes one URLconf per api (DRF), or calls one function per api (Ninja).
 - The root URLconf's error handlers are wrapped at boot; the app's rendering stays on its own routes.

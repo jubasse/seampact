@@ -50,6 +50,16 @@ _PLACEHOLDER_START: Final = "{"
 # A Django pattern answers every method; an allow-list item names it with no method.
 _ANY_METHOD: Final = ""
 _ROUTE_CONVERTER: Final = re.compile(r"<[^<>]*>")
+# A `^` or `$` anchor, not a class negation (`[^/]`) or an escaped character.
+_REGEX_ANCHOR: Final = re.compile(r"(?<![\[\\])\^|(?<!\\)\$")
+_PATH_CONVERTER: Final = re.compile(r"<path:(\w+)>")
+# A `re_path` group, named or not, with no group nested in it; and a bare `.*` or `.+` outside any group.
+_REGEX_GROUP: Final = re.compile(r"\((?:\?P<\w+>)?((?:[^()\\]|\\.)*)\)")
+_BARE_WILDCARD: Final = re.compile(r"\.[*+]\??")
+# The text a catch-all route segment takes, which the allow-list admits only under `**`.
+_CATCH_ALL_SEGMENT: Final = "{*}"
+_SEGMENT_PLACEHOLDER: Final = "{}"
+_SLASHED_SAMPLES: Final = ("/", "a/b")
 # Settings keys the generated code accepts that no release serves yet: refused by name, never ignored.
 _UNSERVED_SETTINGS: Final = {"body_validation": "turns on the reply body validation"}
 _HOOK_METHODS: Final = {AUTHENTICATE_KEY: "authenticate", DECIDERS_KEY: "decide", SCOPE_RESOLVERS_KEY: "resolve_scope"}
@@ -506,8 +516,26 @@ def _served_route(route_name: str) -> str | None:
 
 
 def _route_text(route: str) -> str:
-    """A Django route as a contract path reads: a leading `/`, regex anchors dropped, each converter as `{}`."""
-    return "/" + _ROUTE_CONVERTER.sub("{}", route.replace("^", "").replace("$", ""))
+    """A Django route as a contract path reads: a leading `/`, regex anchors dropped, each converter or regex group as
+    `{}`, and as the catch-all `{*}` when it can take a `/` (a `path` converter, `.*`), so `*` never admits it."""
+    text = _REGEX_ANCHOR.sub("", route)
+    text = _REGEX_GROUP.sub(lambda group: _placeholder_of(group.group(1)), text)
+    text = _BARE_WILDCARD.sub(_CATCH_ALL_SEGMENT, text)
+    text = _ROUTE_CONVERTER.sub(_SEGMENT_PLACEHOLDER, _PATH_CONVERTER.sub(_CATCH_ALL_SEGMENT, text))
+    # A segment that holds a catch-all part (`feed.*`) takes a `/` as a whole.
+    segments = [_CATCH_ALL_SEGMENT if _CATCH_ALL_SEGMENT in segment else segment for segment in text.split("/")]
+
+    return "/" + "/".join(segments)
+
+
+def _placeholder_of(group_regex: str) -> str:
+    try:
+        takes_a_slash = any(re.fullmatch(group_regex, sample) for sample in _SLASHED_SAMPLES)
+    except re.error:
+        # A group this reading cannot compile alone (a backreference): read as a catch-all, so it fails closed.
+        takes_a_slash = True
+
+    return _CATCH_ALL_SEGMENT if takes_a_slash else _SEGMENT_PLACEHOLDER
 
 
 def _deployment_problems(boundary: type[BoundaryDeclaration]) -> list[str]:

@@ -201,6 +201,22 @@ Also on the entry: [`mount`](../configuration/reference.md#mount) (a path prefix
 
 Settings come from your code. Pass `responses`, `body_validation`, `public_origin` and `operations` (per operation, `responses`) to `bind_notes()`: they override the entry's options. seampact reads no environment variable. Read your own settings and pass them in.
 
+## Paging
+
+A paged list reads `request.input.query.cursor` (`None` when absent) and `request.input.query.limit` for the `cursor` style. The boundary fills in `defaultLimit` and answers 400 to a limit above `maxLimit` (`overLimit: clamp` serves `maxLimit`). `query.limit` stays typed `int | None`: narrow it with `assert query.limit is not None`.
+
+Return the generated `<Operation>Page`: `items`, plus one snake-case attribute per page fact (`next_cursor` for `nextCursor`). The boundary writes the body, the headers and the `Link` relations.
+
+```python
+async def list_notes(self, request: ListNotesRequest) -> ListNotesResult:
+    query = request.input.query
+    notes, next_cursor = await self.notes.page(after=query.cursor, limit=query.limit)
+
+    return ListNotesResponse200(body=ListNotesPage(items=notes, next_cursor=next_cursor))
+```
+
+Import `ListNotesPage` from `generated.notes.operations` with the other generated names. See [Lists](../contract/05-lists.md).
+
 ## Docs
 
 FastAPI's `/docs` and `/openapi.json` show your own routes only. To add the contract's routes, set `nativeDocs` on the entry:

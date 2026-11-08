@@ -198,7 +198,7 @@ function refPlan(typeUse: RefTypeUse, location: IrLocation, context: PlanContext
   if (policy === "ignore" || policy === "keep") {
     context.refusals.push(
       refuseNotGeneratedYet(
-        `unknownKeys.${policy}`,
+        policy === "ignore" ? "unknownKeys.ignore" : "unknownKeys.keep",
         `The unknown keys policy '${policy}'`,
         policyLocation,
       ),

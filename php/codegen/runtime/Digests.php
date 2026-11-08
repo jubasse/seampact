@@ -17,6 +17,8 @@ final class Digests
     // `JSON.stringify` writes an exponent from 1e21 up and below 1e-6.
     private const PLAIN_UPPER_EXPONENT = 21;
     private const PLAIN_LOWER_EXPONENT = -6;
+    // 2^53 - 1: an integer past it is written as the double JavaScript reads it as, so its decimal text would differ.
+    private const MAX_SAFE_INTEGER = 9007199254740991;
     // 2^32 - 1, the first integer that is not an array index in JavaScript.
     private const NOT_AN_INDEX = 4294967295;
     private const INDEX_NAME = '/^(?:0|[1-9][0-9]{0,9})$/D';
@@ -61,7 +63,7 @@ final class Digests
         return match (true) {
             $value === null => 'null',
             is_bool($value) => $value ? 'true' : 'false',
-            is_int($value) => (string) $value,
+            is_int($value) => abs($value) <= self::MAX_SAFE_INTEGER ? (string) $value : self::number((float) $value),
             is_float($value) => self::number($value),
             is_string($value) => json_encode($value, self::STRING_FLAGS),
             is_array($value) && array_is_list($value) => '[' . implode(',', array_map(self::canonical(...), $value)) . ']',

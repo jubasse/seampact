@@ -19,6 +19,7 @@ final class StripeHook implements StripeAuthenticateHook
     public function authenticate(AuthenticateRequest $request): AuthenticateResult
     {
         SuiteControl::recordHookCall('authenticate:stripe', $request->operation()->api, $request->operation()->id);
+        SuiteControl::throwScriptedHookFailure('authenticate:stripe');
         $signed = $request->signature();
 
         return StripeSignature::verified($signed instanceof SignedTemplateRequest ? $signed : null)

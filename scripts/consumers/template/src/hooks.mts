@@ -16,6 +16,7 @@ import {
   decideHookName,
   OVERRIDDEN_RIGHT,
   overriddenDecideHookName,
+  resolveScopeHookName,
   type ScriptedDenial,
 } from "@seampact/http-suite";
 import { createMemoryIdempotencyStore } from "@seampact/idempotency-memory";
@@ -40,6 +41,7 @@ import {
   recordHookCall,
   scriptedDecision,
   scriptedScopeDenial,
+  throwScriptedHookFailure,
   writeLogLine,
 } from "./suite-control.mjs";
 
@@ -79,6 +81,7 @@ export const userAuthenticateHook = {
     request: AuthenticateRequest<{ readonly bearer?: string; readonly sessionCookie?: string }>,
   ): AuthenticateResult<{ userId: string }, Unauthenticated> {
     recordHookCall(authenticateHookName("user"), request.operation);
+    throwScriptedHookFailure(authenticateHookName("user"));
 
     const token = request.credentials.bearer ?? request.credentials.sessionCookie ?? "";
     const userId = USER_IDS_BY_TOKEN.get(token);
@@ -93,6 +96,7 @@ export const serviceAuthenticateHook = {
     request: AuthenticateRequest<{ readonly internalToken?: string }>,
   ): AuthenticateResult<{ service: ServiceName; userId: string }, Unauthenticated> {
     recordHookCall(authenticateHookName("service"), request.operation);
+    throwScriptedHookFailure(authenticateHookName("service"));
 
     const service = SERVICES_BY_TOKEN.get(request.credentials.internalToken ?? "");
 
@@ -106,6 +110,7 @@ export const deviceAuthenticateHook = {
     request: AuthenticateRequest<{ readonly deviceToken?: string }>,
   ): AuthenticateResult<{ deviceId: string }, Unauthenticated> {
     recordHookCall(authenticateHookName("device"), request.operation);
+    throwScriptedHookFailure(authenticateHookName("device"));
 
     return request.credentials.deviceToken === DEVICE_TOKEN
       ? { principal: { deviceId: DEVICE_ID } }
@@ -119,6 +124,7 @@ export const stripeAuthenticateHook = {
     request: AuthenticateRequest<object>,
   ): Promise<AuthenticateResult<{ account: string }, Unauthenticated>> {
     recordHookCall(authenticateHookName("stripe"), request.operation);
+    throwScriptedHookFailure(authenticateHookName("stripe"));
 
     const signature = request.signature;
 
@@ -132,10 +138,11 @@ export const stripeAuthenticateHook = {
   },
 };
 
-/** The `tasks` api's decider: denies what the script denies, else the throttle rule for the throttled user. */
+/** The `tasks` api's decider: throws or denies what the script says, else the throttle rule for the throttled user. */
 export const tasksDeciderHook = {
   decide(request: RequirementRequest): Decision<TasksDenial> {
     recordHookCall(decideHookName(request.name), request.operation, request.bucket);
+    throwScriptedHookFailure(decideHookName(request.name));
 
     assertRolesRequestComplete(request);
 
@@ -160,6 +167,7 @@ export const tasksDeciderHook = {
 export const overriddenRightDeciderHook = {
   decide(request: RequirementRequest): Decision<TasksDenial> {
     recordHookCall(overriddenDecideHookName(request.name), request.operation, request.bucket);
+    throwScriptedHookFailure(overriddenDecideHookName(request.name));
 
     const scripted = scriptedDecision(request.name, request.purpose.kind);
 
@@ -171,6 +179,7 @@ export const overriddenRightDeciderHook = {
 export const serviceDeciderHook = {
   decide(request: RequirementRequest): Decision<Forbidden> {
     recordHookCall(decideHookName(request.name), request.operation, request.bucket);
+    throwScriptedHookFailure(decideHookName(request.name));
 
     const scripted = scriptedDecision(request.name, request.purpose.kind);
 
@@ -190,6 +199,8 @@ export const scopeResolverHook = {
     if (request.source.resolver !== "declared") {
       throw new Error(`the consumer resolves declared scope ids only, not '${request.scope}'`);
     }
+
+    throwScriptedHookFailure(resolveScopeHookName(request.scope));
 
     const scripted = scriptedScopeDenial(request.scope);
 

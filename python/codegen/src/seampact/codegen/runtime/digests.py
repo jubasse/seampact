@@ -12,6 +12,8 @@ from typing import Final
 # `JSON.stringify` writes an exponent from 1e21 up and below 1e-6.
 _PLAIN_UPPER_EXPONENT: Final = 21
 _PLAIN_LOWER_EXPONENT: Final = -6
+# 2^53 - 1: an integer past it is written as the double JavaScript reads it as, so `str` would differ.
+_MAX_SAFE_INTEGER: Final = 2**53 - 1
 # 2^32 - 1, the first integer that is not an array index in JavaScript.
 _NOT_AN_INDEX: Final = 4294967295
 _INDEX_NAME: Final = re.compile(r"(?:0|[1-9][0-9]{0,9})")
@@ -34,7 +36,7 @@ def canonical(value: object) -> str:
         return "true" if value else "false"
 
     if isinstance(value, int):
-        return str(value)
+        return str(value) if abs(value) <= _MAX_SAFE_INTEGER else _number(_as_double(value))
 
     if isinstance(value, float):
         return _number(value)
@@ -54,6 +56,14 @@ def canonical(value: object) -> str:
         return "[" + ",".join(canonical(item) for item in value) + "]"
 
     raise TypeError(f"seampact: a digest cannot read a {type(value).__qualname__}.")
+
+
+def _as_double(value: int) -> float:
+    """The double JavaScript reads an integer literal as, infinite past the largest double, which it writes `null`."""
+    try:
+        return float(value)
+    except OverflowError:
+        return math.inf if value > 0 else -math.inf
 
 
 def _name_order(name: str) -> tuple[int, bytes]:

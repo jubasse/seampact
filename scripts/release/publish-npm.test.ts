@@ -4,12 +4,14 @@ import { createServer, type Server } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { publishPlan } from "./publish-npm.ts";
+import { type PublishOutcome, publishInOrder, publishPlan } from "./publish-npm.ts";
+import { RateLimitWait, retryAfterMilliseconds } from "./rate-limit-wait.ts";
 import { manifestTarballs, type Tarball, tarballManifest } from "./tarball-manifest.ts";
 
 const VERSION = "1.2.3";
 const HTTP_OK = 200;
 const HTTP_NOT_FOUND = 404;
+const HTTP_TOO_MANY_REQUESTS = 429;
 const LOOPBACK = "127.0.0.1";
 
 const cleanups: (() => void)[] = [];
@@ -79,9 +81,23 @@ function tarballDirectory(names: readonly string[]): Tarball[] {
   });
 }
 
-// A registry serving the given packuments by URL path, and 404 for every other package.
-async function registry(packumentByPath: ReadonlyMap<string, unknown>): Promise<string> {
+// A registry serving the given packuments by URL path, and 404 for every other package; it first answers the
+// paths of [rateLimited] once with a 429 and their `Retry-After`.
+async function registry(
+  packumentByPath: ReadonlyMap<string, unknown>,
+  rateLimited: Map<string, string> = new Map(),
+): Promise<string> {
   const server: Server = createServer((request, response) => {
+    const retryAfter = rateLimited.get(request.url ?? "");
+
+    if (retryAfter !== undefined) {
+      rateLimited.delete(request.url ?? "");
+      response.writeHead(HTTP_TOO_MANY_REQUESTS, { "retry-after": retryAfter });
+      response.end();
+
+      return;
+    }
+
     const packument = packumentByPath.get(request.url ?? "");
 
     response.writeHead(packument === undefined ? HTTP_NOT_FOUND : HTTP_OK, {
@@ -126,10 +142,22 @@ describe("the idempotent publish to npm", () => {
     const plan = await publishPlan(url, [cli, hal, spec]);
 
     expect(plan.alreadyPublished.map((tarball) => tarball.name)).toEqual(["@seampact/cli"]);
-    expect(plan.toPublish.map((tarball) => tarball.name)).toEqual([
-      "@seampact/pack-hal",
-      "@seampact/spec",
+    expect(
+      plan.toPublish.map(({ tarball, firstPublish }) => ({ name: tarball.name, firstPublish })),
+    ).toEqual([
+      { name: "@seampact/pack-hal", firstPublish: false },
+      { name: "@seampact/spec", firstPublish: true },
     ]);
+  });
+
+  it("asks the registry again after the Retry-After of a 429", async () => {
+    const tarballs = tarballDirectory(["@seampact/spec"]);
+    const url = await registry(new Map(), new Map([["/@seampact%2fspec", "3"]]));
+    const pauses: number[] = [];
+    const plan = await publishPlan(url, tarballs, recordingWait(pauses, 10_000));
+
+    expect(pauses).toEqual([3000]);
+    expect(plan.toPublish).toHaveLength(1);
   });
 
   it("fails by name, before publishing anything, on a version held with other bytes", async () => {
@@ -243,5 +271,78 @@ describe("the tarballs a publish takes", () => {
     expect(() => tarballManifest(directory, ["nameless.tgz"])).toThrow(
       "nameless.tgz: its package/package.json has no string name and version",
     );
+  });
+});
+
+// A wait of 10 then 20 milliseconds and so on, [total] in all, that records each pause instead of sleeping.
+const recordingWait = (pauses: number[], total = 100) =>
+  new RateLimitWait(10, total, async (milliseconds) => {
+    pauses.push(milliseconds);
+  });
+
+// A publish that answers each package's outcomes in turn, then `published`, and records each call.
+function scriptedPublish(outcomesByName: Record<string, PublishOutcome[]>, calls: string[]) {
+  return (tarball: Tarball): PublishOutcome => {
+    calls.push(tarball.name);
+
+    return outcomesByName[tarball.name]?.shift() ?? "published";
+  };
+}
+
+const planOf = (names: readonly string[], firstPublish: boolean) => ({
+  toPublish: tarballDirectory(names).map((tarball) => ({ tarball, firstPublish })),
+  alreadyPublished: [],
+});
+
+describe("a publish npm refuses with 429 Too Many Requests", () => {
+  it("is retried after a doubling pause, then the run goes on", async () => {
+    const plan = planOf(["@seampact/cli", "@seampact/spec"], false);
+    const calls: string[] = [];
+    const pauses: number[] = [];
+    const publishOne = scriptedPublish(
+      { "@seampact/cli": ["rate-limited", "rate-limited"] },
+      calls,
+    );
+
+    await expect(publishInOrder(plan, publishOne, recordingWait(pauses))).resolves.toBe(2);
+    expect(pauses).toEqual([10, 20]);
+    expect(calls).toEqual(["@seampact/cli", "@seampact/cli", "@seampact/cli", "@seampact/spec"]);
+  });
+
+  it("stops at once on a first publish after new packages, naming the ones left, the published ones kept", async () => {
+    const plan = planOf(["@seampact/cli", "@seampact/pack-hal", "@seampact/spec"], true);
+    const calls: string[] = [];
+    const pauses: number[] = [];
+    const publishOne = scriptedPublish({ "@seampact/pack-hal": ["rate-limited"] }, calls);
+
+    await expect(publishInOrder(plan, publishOne, recordingWait(pauses))).rejects.toThrow(
+      "npm refused to create @seampact/pack-hal (429 Too Many Requests) after 1 new packages in this run and 0 " +
+        "minutes of waiting: npm caps the new packages an account creates in a day. 2 left to publish " +
+        "(@seampact/pack-hal, @seampact/spec); 1 published in this run stay, a rerun skips them: rerun publish-npm " +
+        "in about 24 hours",
+    );
+    expect(pauses).toEqual([]);
+    expect(calls).toEqual(["@seampact/cli", "@seampact/pack-hal"]);
+  });
+
+  it("stops by name once the total wait is spent", async () => {
+    const plan = planOf(["@seampact/spec"], false);
+    const pauses: number[] = [];
+    const publishOne = scriptedPublish({ "@seampact/spec": Array(9).fill("rate-limited") }, []);
+
+    await expect(publishInOrder(plan, publishOne, recordingWait(pauses))).rejects.toThrow(
+      `npm still refuses @seampact/spec@${VERSION} (429 Too Many Requests) after 1 minutes of waiting. 1 left to ` +
+        "publish (@seampact/spec); 0 published in this run stay, a rerun skips them: rerun publish-npm in an hour",
+    );
+    expect(pauses).toEqual([10, 20, 40, 30]);
+  });
+
+  it("reads Retry-After in seconds or as a date, and nothing else", () => {
+    const now = Date.parse("2026-11-07T07:00:00Z");
+
+    expect(retryAfterMilliseconds("120", now)).toBe(120_000);
+    expect(retryAfterMilliseconds("Sat, 07 Nov 2026 07:01:00 GMT", now)).toBe(60_000);
+    expect(retryAfterMilliseconds("soon", now)).toBeUndefined();
+    expect(retryAfterMilliseconds(null, now)).toBeUndefined();
   });
 });

@@ -25,7 +25,7 @@ from generated.tasks_service_writes.schemas import ServicePrincipal as WritesSer
 from sample_data import channel
 from seampact_consumer_suite.control_state import record_hook_call
 from seampact_consumer_suite.credentials import credential_number, credential_text
-from seampact_consumer_suite.scripted_answers import scripted_scope_denial
+from seampact_consumer_suite.scripted_answers import raise_scripted_hook_failure, scripted_scope_denial
 from seampact_consumer_suite.scripted_decisions import scripted_decision
 from seampact_consumer_suite.stripe_signature import STRIPE_ACCOUNT, stripe_signature_verified
 
@@ -95,6 +95,7 @@ class UserHook:
 
     def authenticate(self, request: AuthenticateRequest) -> AuthenticateResult:
         record_hook_call("authenticate:user", request.operation.api, request.operation.id)
+        raise_scripted_hook_failure("authenticate:user")
         credentials = request.credentials
 
         if not isinstance(credentials, _USER_CREDENTIALS):
@@ -134,6 +135,7 @@ class DeviceHook:
 
     def authenticate(self, request: AuthenticateRequest) -> AuthenticateResult:
         record_hook_call("authenticate:device", request.operation.api, request.operation.id)
+        raise_scripted_hook_failure("authenticate:device")
         credentials = request.credentials
         device_token = credentials.device_token if isinstance(credentials, DeviceCredentials) else None
 
@@ -155,6 +157,7 @@ class ChannelResolver:
         if not isinstance(source, scope_id_source.Declared):
             raise TypeError(f"the consumer resolves declared scope ids only, not those of '{request.scope}'")
 
+        raise_scripted_hook_failure(f"resolve-scope:{request.scope}")
         denied = scripted_scope_denial(request.scope)
 
         if denied is not None:
@@ -173,6 +176,7 @@ class StripeHook:
 
     def authenticate(self, request: AuthenticateRequest) -> AuthenticateResult:
         record_hook_call("authenticate:stripe", request.operation.api, request.operation.id)
+        raise_scripted_hook_failure("authenticate:stripe")
 
         if not isinstance(request.credentials, StripeCredentials) or not stripe_signature_verified(request.signature):
             return authenticate_result.Denied(deny=ErrorCodeWithParams(code=UNAUTHENTICATED))
@@ -186,6 +190,7 @@ class TasksDecider:
 
     def decide(self, request: RequirementRequest) -> Decision:
         record_hook_call(f"decide:{request.name}", request.operation.api, request.operation.id, request.bucket)
+        raise_scripted_hook_failure(f"decide:{request.name}")
         denied = scripted_decision(request.name, request.purpose)
 
         if denied is None and _spends_throttled_bucket(request):
@@ -201,6 +206,7 @@ class OverriddenRightDecider:
 
     def decide(self, request: RequirementRequest) -> Decision:
         record_hook_call(f"decide-override:{request.name}", request.operation.api, request.operation.id, request.bucket)
+        raise_scripted_hook_failure(f"decide-override:{request.name}")
         denied = scripted_decision(request.name, request.purpose)
 
         return decision.Allowed() if denied is None else decision.Denied(deny=ErrorCodeWithParams(code=denied))
@@ -212,6 +218,7 @@ class ServiceHook:
 
     def authenticate(self, request: AuthenticateRequest) -> AuthenticateResult:
         record_hook_call("authenticate:service", request.operation.api, request.operation.id)
+        raise_scripted_hook_failure("authenticate:service")
         token = self.service_token(request)
         services = {
             credential_text("serviceJwt"): credential_text("serviceName"),
@@ -244,6 +251,7 @@ class ServiceDecider:
 
     def decide(self, request: RequirementRequest) -> Decision:
         record_hook_call(f"decide:{request.name}", request.operation.api, request.operation.id, request.bucket)
+        raise_scripted_hook_failure(f"decide:{request.name}")
         denied = scripted_decision(request.name, request.purpose)
 
         if denied is not None:

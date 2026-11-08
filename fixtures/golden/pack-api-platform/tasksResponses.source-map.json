@@ -320,21 +320,21 @@
       "column": 3,
       "endColumn": 17,
       "endLine": 41,
-      "file": ".packs/@seampact/pack-api-platform@1.0.0/pack.yaml",
+      "file": ".packs/@seampact/pack-api-platform@1.0.1/pack.yaml",
       "line": 41
     },
     "pack:@seampact/pack-api-platform#/conventions/paging/default": {
       "column": 13,
       "endColumn": 27,
       "endLine": 42,
-      "file": ".packs/@seampact/pack-api-platform@1.0.0/pack.yaml",
+      "file": ".packs/@seampact/pack-api-platform@1.0.1/pack.yaml",
       "line": 42
     },
     "pack:@seampact/pack-api-platform#/formats/jsonld": {
       "column": 3,
       "endColumn": 1,
       "endLine": 24,
-      "file": ".packs/@seampact/pack-api-platform@1.0.0/pack.yaml",
+      "file": ".packs/@seampact/pack-api-platform@1.0.1/pack.yaml",
       "line": 8
     },
     "shared#/conventions/batch/bodyLimit": {

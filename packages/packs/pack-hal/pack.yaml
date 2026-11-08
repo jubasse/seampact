@@ -1,5 +1,5 @@
 # HAL items and pages with _links, _embedded and Spring HATEOAS's page object.
-pack: { name: '@seampact/pack-hal', version: 1.0.0, extends: [] }
+pack: { name: '@seampact/pack-hal', version: 1.0.1, extends: [] }
 
 formats:
   hal:

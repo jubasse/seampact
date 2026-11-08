@@ -52,7 +52,8 @@ export type ScriptedAnswer =
 
 /**
  * The script of one case. `answers` is keyed by `<api>.<operationId>`, the operation as the hooks receive it in
- * `OperationRef`. The handler of an operation `holds` names records a `hold` call (`HOLD_HOOK_NAME`) and waits, at
+ * `OperationRef`. `hookFailures` is keyed by a hook double's name (`authenticateHookName`, `decideHookName`,
+ * `resolveScopeHookName`): that double throws an exception with the given message in place of its answer. The handler of an operation `holds` names records a `hold` call (`HOLD_HOOK_NAME`) and waits, at
  * most `HOLD_LIMIT_MS`, until a script that no longer holds it is loaded, then answers from that script. Every member
  * is optional; an empty script only resets the recorded calls and log lines.
  */
@@ -61,6 +62,7 @@ export interface SampleAppScript {
   readonly scopes?: Readonly<Record<string, ScriptedScope>>;
   readonly answers?: Readonly<Record<string, ScriptedAnswer>>;
   readonly holds?: readonly string[];
+  readonly hookFailures?: Readonly<Record<string, string>>;
 }
 
 /** The hook name a held handler records when it starts waiting, so a case sends its next request then. */
@@ -85,6 +87,14 @@ export function decideHookName(requirement: string): string {
  */
 export const OVERRIDDEN_RIGHT = "tasks.update";
 
+/**
+ * The name a `hookFailures` entry gives the resolve-scope double of `scope`: `resolve-scope:<scope>`. The double
+ * records no call under it.
+ */
+export function resolveScopeHookName(scope: string): string {
+  return `resolve-scope:${scope}`;
+}
+
 /** The hook name the sample app's own decide double records: `decide-override:<right>`. */
 export function overriddenDecideHookName(right: string): string {
   return `decide-override:${right}`;
@@ -103,7 +113,7 @@ export class SampleAppScriptError extends Error {
   }
 }
 
-const SCRIPT_MEMBERS = ["decisions", "scopes", "answers", "holds"];
+const SCRIPT_MEMBERS = ["decisions", "scopes", "answers", "holds", "hookFailures"];
 const DECISION_MEMBERS = ["name", "purpose", "deny"];
 const SCOPE_MEMBERS = ["deny"];
 const DENIAL_MEMBERS = ["code", "params"];
@@ -111,6 +121,8 @@ const RESULT_ANSWER_MEMBERS = ["status", "body", "code", "params"];
 const THROWING_ANSWER_MEMBERS = ["throws"];
 const DECIDE_PURPOSES: readonly string[] = ["route", "field", "sortKey"];
 const OPERATION_KEY = /^[A-Za-z][A-Za-z0-9]*\.[A-Za-z][A-Za-z0-9]*$/;
+const FAILING_HOOK_NAME =
+  /^(?:authenticate|decide|decide-override|resolve-scope):[A-Za-z][A-Za-z0-9.]*$/;
 
 /** Reads the body of a script control route request; the sample app answers 400 with the error's message. */
 export function parseSampleAppScript(value: unknown): SampleAppScript {
@@ -154,7 +166,26 @@ export function readSampleAppScript(
             patternAt(reader, held, `${pointer}/holds/${index}`, OPERATION_KEY),
           ),
         }),
+    ...(object.hookFailures === undefined
+      ? {}
+      : { hookFailures: readHookFailures(reader, object.hookFailures, `${pointer}/hookFailures`) }),
   };
+}
+
+function readHookFailures(
+  reader: JsonReader,
+  value: unknown,
+  pointer: string,
+): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(objectAt(reader, value, pointer, undefined)).map(([hook, message]) => {
+      const failurePointer = `${pointer}/${hook}`;
+
+      patternAt(reader, hook, failurePointer, FAILING_HOOK_NAME);
+
+      return [hook, stringAt(reader, message, failurePointer)];
+    }),
+  );
 }
 
 function readDecision(reader: JsonReader, value: unknown, pointer: string): ScriptedDecision {

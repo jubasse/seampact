@@ -1,0 +1,115 @@
+{
+  "description": "The runtime version guard (ADR 0025, G3): whether a runtime at `installed` serves the code a generator at `generator` wrote. The same version serves; otherwise both are release versions of one major.minor and the runtime's patch is at or above the generator's.",
+  "vectors": [
+    {
+      "installed": "1.4.2",
+      "generator": "1.4.2",
+      "serves": true
+    },
+    {
+      "installed": "1.4.3",
+      "generator": "1.4.2",
+      "serves": true
+    },
+    {
+      "installed": "1.4.1",
+      "generator": "1.4.2",
+      "serves": false
+    },
+    {
+      "installed": "1.5.0",
+      "generator": "1.4.2",
+      "serves": false
+    },
+    {
+      "installed": "1.3.9",
+      "generator": "1.4.2",
+      "serves": false
+    },
+    {
+      "installed": "2.4.2",
+      "generator": "1.4.2",
+      "serves": false
+    },
+    {
+      "installed": "0.3.1",
+      "generator": "0.3.0",
+      "serves": true
+    },
+    {
+      "installed": "0.4.0",
+      "generator": "0.3.0",
+      "serves": false
+    },
+    {
+      "installed": "0.0.1",
+      "generator": "0.0.0",
+      "serves": true
+    },
+    {
+      "installed": "0.0.0",
+      "generator": "0.0.1",
+      "serves": false
+    },
+    {
+      "installed": "1.4.10",
+      "generator": "1.4.9",
+      "serves": true
+    },
+    {
+      "installed": "1.4.9",
+      "generator": "1.4.10",
+      "serves": false
+    },
+    {
+      "installed": "1.4.2-rc.1",
+      "generator": "1.4.2",
+      "serves": false
+    },
+    {
+      "installed": "1.4.2",
+      "generator": "1.4.2-rc.1",
+      "serves": false
+    },
+    {
+      "installed": "1.4.2-rc.1",
+      "generator": "1.4.2-rc.1",
+      "serves": true
+    },
+    {
+      "installed": "1.4.2+build.5",
+      "generator": "1.4.2",
+      "serves": false
+    },
+    {
+      "installed": "1.4.2",
+      "generator": "1.4.2+build.5",
+      "serves": false
+    },
+    {
+      "installed": "01.4.2",
+      "generator": "1.4.2",
+      "serves": false
+    },
+    {
+      "installed": " 1.4.2",
+      "generator": "1.4.2",
+      "serves": false
+    },
+    {
+      "installed": "v1.4.2",
+      "generator": "1.4.2",
+      "serves": false
+    },
+    {
+      "installed": "local-build",
+      "generator": "local-build",
+      "serves": true
+    },
+    {
+      "installed": "local-build",
+      "generator": "other-build",
+      "serves": false
+    }
+  ]
+}

@@ -2,6 +2,7 @@ import { createHmac } from "node:crypto";
 import { once } from "node:events";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
+import { gunzipSync } from "node:zlib";
 import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
 import { HOOK_CALLS_ROUTE, LOG_LINES_ROUTE, SCRIPT_ROUTE } from "./control-routes.js";
 import { parseSuiteCase, type SuiteCase, type SuiteProfile } from "./suite-case.js";
@@ -68,7 +69,8 @@ async function answer(request: IncomingMessage, response: ServerResponse): Promi
 
   for await (const chunk of request) chunks.push(Buffer.from(chunk));
 
-  const body = Buffer.concat(chunks).toString("utf8");
+  const received = Buffer.concat(chunks);
+  const body = received.toString("utf8");
   const url = new URL(request.url ?? "/", baseUrl);
   const json = (status: number, value: unknown, headers: Record<string, string> = {}) => {
     response.writeHead(status, { "content-type": "application/json", ...headers });
@@ -92,6 +94,11 @@ async function answer(request: IncomingMessage, response: ServerResponse): Promi
     });
     releaseHeld = undefined;
     json(201, { text: body });
+  } else if (url.pathname === "/gunzip") {
+    json(200, {
+      encoding: request.headers["content-encoding"],
+      text: gunzipSync(received).toString("utf8"),
+    });
   } else if (url.pathname === "/dropped") {
     request.socket.destroy();
   } else if (url.pathname === LOG_LINES_ROUTE) {
@@ -645,6 +652,21 @@ describe("runSuite", () => {
       expect(report.cases[0]).toMatchObject({ outcome: "passed", failures: [] });
     },
   );
+
+  test("sends a compressed body with its content coding", async () => {
+    const report = await run([
+      suiteCase("compressed", {
+        steps: [
+          {
+            request: { method: "POST", path: "/gunzip", body: { title: "x" }, compress: "gzip" },
+            expect: { status: 200, body: { encoding: "gzip", text: '{"title":"x"}' } },
+          },
+        ],
+      }),
+    ]);
+
+    expect(report.cases[0]?.failures).toEqual([]);
+  });
 
   test("sends a forged Host header as written", async () => {
     const forged = suiteCase("forged-host", {

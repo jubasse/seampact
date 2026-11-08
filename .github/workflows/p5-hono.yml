@@ -98,6 +98,7 @@ jobs:
         if: always()
         with:
           name: ${{ matrix.target }}-http-suite-${{ matrix.validators }}
+          overwrite: true
           path: ${{ runner.temp }}/test-seampact-${{ matrix.target }}-${{ matrix.validators }}/reports
           retention-days: 90
           if-no-files-found: warn
@@ -143,6 +144,7 @@ jobs:
         if: always()
         with:
           name: ${{ matrix.target }}-http-suite-pack-${{ matrix.pack }}
+          overwrite: true
           path: ${{ runner.temp }}/test-seampact-${{ matrix.target }}-pack-${{ matrix.pack }}/reports
           retention-days: 90
           if-no-files-found: warn

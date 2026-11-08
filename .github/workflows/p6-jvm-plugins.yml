@@ -31,8 +31,8 @@ on:
 env:
   MAVEN_ARGS: >-
     -ntp
-    -Daether.connector.http.retryHandler.count=5 -Daether.connector.http.retryHandler.interval=5000
-    -Daether.transport.http.retryHandler.count=5 -Daether.transport.http.retryHandler.interval=5000
+    -Daether.connector.http.retryHandler.count=7 -Daether.connector.http.retryHandler.interval=5000
+    -Daether.transport.http.retryHandler.count=7 -Daether.transport.http.retryHandler.interval=5000
 
 permissions:
   contents: read

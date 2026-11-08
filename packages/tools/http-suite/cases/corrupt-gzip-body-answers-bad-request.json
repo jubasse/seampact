@@ -1,0 +1,59 @@
+{
+  "id": "corrupt-gzip-body-answers-bad-request",
+  "title": "A body announced as gzip that is not a gzip stream, or a gzip stream cut before its end, answers 400 in the api's error format",
+  "checks": ["CHK-029"],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:create}}",
+          "content-encoding": "gzip"
+        },
+        "bodyText": "{\"title\":\"not compressed\"}"
+      },
+      "expect": {
+        "status": 400,
+        "headers": {
+          "content-type": {
+            "contains": ["application/problem+json"]
+          }
+        },
+        "body": {
+          "code": "api.schema_invalid"
+        }
+      },
+      "title": "not a gzip stream"
+    },
+    {
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:cut}}"
+        },
+        "body": {
+          "title": "cut before its end"
+        },
+        "compress": "gzip",
+        "cutCompressedBytes": 8
+      },
+      "expect": {
+        "status": 400,
+        "headers": {
+          "content-type": {
+            "contains": ["application/problem+json"]
+          }
+        },
+        "body": {
+          "code": "api.schema_invalid"
+        }
+      },
+      "title": "a gzip stream without its 8-byte trailer (CRC32 and size), the JSON inside intact"
+    }
+  ]
+}

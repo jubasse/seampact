@@ -1,7 +1,7 @@
 {
   "name": "@seampact/codegen-core",
   "description": "The API the code generators are written against.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jubasse/seampact.git",

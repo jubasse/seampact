@@ -12,7 +12,7 @@ final class TasksContract
     public const API = 'tasks';
 
     /** The seampact version that generated this code; the boot refuses a runtime of another minor or a lower patch. */
-    public const GENERATED_BY = '1.0.0';
+    public const GENERATED_BY = '1.0.1';
     public const ROUTES_CLASS = 'Seampact\Golden\TasksConsistent\Laravel\TasksRoutes';
 
     /** The IR of the kept operations and the declarations the boundary reads. */

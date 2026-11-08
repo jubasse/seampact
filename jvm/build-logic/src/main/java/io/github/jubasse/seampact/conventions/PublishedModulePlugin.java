@@ -21,6 +21,7 @@ import org.gradle.jvm.toolchain.JavaLauncher;
 import org.gradle.jvm.toolchain.JavaToolchainService;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * A published seampact JVM module (ADR 0011 "Unpublished installs for test consumers"): the group, the version
@@ -50,6 +51,15 @@ public final class PublishedModulePlugin implements Plugin<Project> {
     private static final String RELEASE_REPOSITORY_PROPERTY = "seampactReleaseRepository";
 
     private static final String DOCS_URL = "https://jubasse.github.io/seampact/";
+    // A module's guide page on the docs site; a module without one points at the package map.
+    private static final String SPRING_BOOT_GUIDE = "backend/spring-boot/";
+    private static final String PACKAGE_MAP_PAGE = "concepts/packages/";
+    private static final Map<String, String> DOCS_PAGE_BY_MODULE = Map.of(
+        "seampact-spring-boot", SPRING_BOOT_GUIDE,
+        "seampact-spring-runtime", SPRING_BOOT_GUIDE,
+        "seampact-runner", SPRING_BOOT_GUIDE,
+        "seampact-gradle-plugin", SPRING_BOOT_GUIDE,
+        "seampact-maven-plugin", SPRING_BOOT_GUIDE);
     private static final String REPOSITORY_URL = "https://github.com/jubasse/seampact";
     private static final String SCM_CONNECTION = "scm:git:https://github.com/jubasse/seampact.git";
     private static final String SCM_DEVELOPER_CONNECTION = "scm:git:ssh://git@github.com/jubasse/seampact.git";
@@ -70,6 +80,7 @@ public final class PublishedModulePlugin implements Plugin<Project> {
             configureTestJdk(project);
             trackTestRuntime(project);
             configureDocumentationJars(project);
+            CoverageFloors.configure(project);
         });
 
         project.getPluginManager().apply(MavenPublishPlugin.class);
@@ -153,7 +164,7 @@ public final class PublishedModulePlugin implements Plugin<Project> {
     private static void describe(Project project, MavenPom pom) {
         pom.getName().convention(project.getName());
         pom.getDescription().convention(project.provider(() -> descriptionOf(project)));
-        pom.getUrl().set(DOCS_URL);
+        pom.getUrl().set(DOCS_URL + DOCS_PAGE_BY_MODULE.getOrDefault(project.getName(), PACKAGE_MAP_PAGE));
         pom.licenses(licenses -> licenses.license(license -> {
             license.getName().set(LICENSE_NAME);
             license.getUrl().set(LICENSE_URL);

@@ -124,11 +124,11 @@ final class KeptForms
         $this->responseHeaderEntries = new ResponseHeaderEntries($ir, $refusals);
 
         if ($ir->api->wire->urls->value === UrlForm::Absolute) {
-            $this->pending(PendingForm::AbsoluteUrls, 'urls.absolute', 'Absolute URLs (`api.wire.urls: absolute`)', IrPlace::root()->below('api', 'wire', 'urls'));
+            $this->pending(PendingForm::AbsoluteUrls, 'urls.absolute', 'Absolute URLs (`api.wire.urls: absolute`)', IrPlace::root()->below('api', 'wire', 'urls'), Refusals::ABSOLUTE_URLS_FIX);
         }
 
         if ($ir->extensionKeys !== []) {
-            $this->refusals->waiting('extensionKeys', 'Typed extension values', IrPlace::root()->below('extensionKeys'), Delivery::AfterOneZero);
+            $this->refusals->waitingWithFix('extensionKeys', 'Typed extension values', IrPlace::root()->below('extensionKeys'), Delivery::AfterOneZero, Refusals::EXTENSION_KEYS_FIX);
         }
 
         foreach ($ir->operations as $index => $operation) {
@@ -196,12 +196,12 @@ final class KeptForms
         }));
     }
 
-    private function pending(PendingForm $form, string $code, string $description, IrPlace $at): void
+    private function pending(PendingForm $form, string $code, string $description, IrPlace $at, string $fix = Refusals::OPERATION_FIX): void
     {
         $arrival = $this->releases->arrivalOf($form);
 
         if ($arrival !== null) {
-            $this->refusals->pending($code, $description, $at, $arrival);
+            $this->refusals->pending($code, $description, $at, $arrival, $fix);
         }
     }
 
@@ -867,7 +867,7 @@ final class KeptForms
 
         $this->errors[$code] = $declared;
         if ($declared->noStore === true) {
-            $this->pending(PendingForm::ErrorNoStore, 'error.noStore', 'An error that forbids caching (noStore)', IrPlace::root()->below('errors', $code, 'noStore'));
+            $this->pending(PendingForm::ErrorNoStore, 'error.noStore', 'An error that forbids caching (noStore)', IrPlace::root()->below('errors', $code, 'noStore'), Refusals::ERROR_NO_STORE_FIX);
         }
         if ($declared->params !== null) {
             $this->readType(new RefTypeUse($declared->params), IrPlace::root()->below('errors', $code, 'params'));

@@ -420,6 +420,7 @@ Read from the sources, not run: `Illuminate\Routing\Pipeline::handleException` r
 
 ## Consequences
 
+- App input rules ([ADR 0028](0028-app-input-rules.md)): Laravel: step 8b runs at the handler call over the classes tagged `seampact.<api>.input_rules`, validating the part rebuilt as a wire-keyed array with `Validator::make`; `IdempotencyStep::abandon` releases the claim.
 - A body with an object key that starts with a NUL byte is the malformed 400 here, since PHP cannot hold that key as a property name; the Node and JVM targets accept it.
 - An app keeps its controllers, its exception handler, its middleware groups, its guards, Gates and Policies. On contract routes the boundary's checks and reply win, and its own routes are unchanged.
 - The check order holds in Laravel without app setup beyond listing the provider and calling the macro: route-model binding, `TrimStrings` and `$request->input()` never decide a contract input.

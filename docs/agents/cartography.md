@@ -8,7 +8,7 @@ The workspace packages, the compiler stages and one line per source directory. A
 
 | Package | Directory | Role | Description |
 |---|---|---|---|
-| `@seampact/cli` | `packages/core/cli` | core | The seampact command: init, compile, check, lint, diff, generate, bundle and explain. |
+| `@seampact/cli` | `packages/core/cli` | core | The seampact command: init, compile, check, lint, diff, generate, bundle, explain. |
 | `@seampact/codegen-core` | `packages/core/codegen-core` | core | The API the code generators are written against. |
 | `@seampact/compiler` | `packages/core/compiler` | core | Reads the YAML contract, reports errors with file, line and column, and produces the IR. |
 | `@seampact/diff` | `packages/core/diff` | core | Classifies the changes between two contract versions as additive or breaking, per direction. |

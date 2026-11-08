@@ -1,7 +1,7 @@
 {
   "name": "@seampact/signed-webhooks",
   "description": "Verifies a template-signed webhook (HMAC, timestamp tolerance, secret rotation) inside an authenticate hook.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jubasse/seampact.git",

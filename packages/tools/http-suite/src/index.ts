@@ -55,6 +55,7 @@ export {
   operationKey,
   overriddenDecideHookName,
   parseSampleAppScript,
+  resolveScopeHookName,
   type SampleAppScript,
   SampleAppScriptError,
   type ScriptedAnswer,

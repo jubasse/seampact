@@ -83,6 +83,10 @@ import {
   type PlatformFixes,
 } from "./transport-checks.js";
 
+// `@fastify/compress` inflates request bodies on every route unless a route opts out: the boundary decodes its own,
+// so a coding it does not know answers its 415 and a body over the limit once inflated its 413.
+const BOUNDARY_DECODED_BODY = { decompress: false } as const;
+
 const FASTIFY_FIXES: PlatformFixes = {
   rawBody:
     "The plugin's own JSON parser keeps it: register the plugin as generated, not wrapped with fastify-plugin.",
@@ -379,6 +383,7 @@ export function createFastifyBoundary<
       // A route at the prefix itself serves only the prefix, not the undeclared path with a trailing slash.
       prefixTrailingSlash: PREFIX_ONLY,
       ...(route.input === undefined ? {} : { bodyLimit: route.input.limitBytes }),
+      ...BOUNDARY_DECODED_BODY,
       config: { [operationConfigKey]: route.id },
       onRequest: (request, reply, done) => {
         enterRoute(route, settings, hooks, request, reply, done);

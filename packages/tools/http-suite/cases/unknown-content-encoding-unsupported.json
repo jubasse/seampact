@@ -1,0 +1,31 @@
+{
+  "id": "unknown-content-encoding-unsupported",
+  "title": "A body in a content coding the server does not know answers 415 in the api's error format",
+  "checks": ["CHK-029"],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:create}}",
+          "content-encoding": "x-seampact-unknown"
+        },
+        "bodyText": "{\"title\":\"unknown coding\"}"
+      },
+      "expect": {
+        "status": 415,
+        "headers": {
+          "content-type": {
+            "contains": ["application/problem+json"]
+          }
+        },
+        "body": {
+          "code": "api.unsupported_media_type"
+        }
+      }
+    }
+  ]
+}

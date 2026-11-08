@@ -33,6 +33,33 @@ final class KeptFormsTest extends TestCase
         self::assertStringContainsString('symfony-2 generates it', $messages['response.shape.unsupported'] ?? '');
     }
 
+    public function testAbsoluteUrlsAreFixedInTheConventionsNotTheOperations(): void
+    {
+        $document = ReferenceIr::keeping(ReferenceIr::document(), ['getTask']);
+        $api = $document->api ?? null;
+        self::assertInstanceOf(\stdClass::class, $api);
+        $wire = $api->wire ?? null;
+        self::assertInstanceOf(\stdClass::class, $wire);
+        $wire->urls = 'absolute';
+
+        $refusals = new Refusals('server', 'test', 'seampact/test');
+        new KeptForms(ReferenceIr::read($document), $refusals, new FixedReleases(FormArrival::inRelease('symfony-2')));
+
+        try {
+            $refusals->throwIfAny();
+        } catch (GenerationRefusedException $refused) {
+            $fixes = [];
+            foreach ($refused->problems as $problem) {
+                $fixes[$problem->code] = $problem->fix;
+            }
+            self::assertSame(Refusals::ABSOLUTE_URLS_FIX, $fixes['urls.absolute.unsupported'] ?? null);
+
+            return;
+        }
+
+        self::fail('Nothing was refused.');
+    }
+
     public function testAFormAbsentFromTheReferenceWaitsForAConsumerAfterOneZeroOnEveryTarget(): void
     {
         $document = ReferenceIr::keeping(ReferenceIr::document(), ['getTask']);

@@ -16,7 +16,7 @@ use Seampact\Hooks\ThrottleBucket;
  */
 final class SuiteControl
 {
-    private const SCRIPT_MEMBERS = ['decisions', 'scopes', 'answers', 'holds'];
+    private const SCRIPT_MEMBERS = ['decisions', 'scopes', 'answers', 'holds', 'hookFailures'];
     private const HOLD_HOOK = 'hold';
     // Below the suite's request timeout, so a hold the suite never releases still answers.
     private const HOLD_LIMIT_MICROSECONDS = 5_000_000;
@@ -110,6 +110,16 @@ final class SuiteControl
         }
 
         return null;
+    }
+
+    /** Throws the exception the script gives the hook double named `$hook`, if any, in place of its answer. */
+    public static function throwScriptedHookFailure(string $hook): void
+    {
+        $failures = self::read()['script']['hookFailures'] ?? [];
+        $message = is_array($failures) ? ($failures[$hook] ?? null) : null;
+        if (is_string($message)) {
+            throw new \RuntimeException($message);
+        }
     }
 
     public static function scriptedScopeDenial(string $scope): ?string
