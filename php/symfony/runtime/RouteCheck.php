@@ -28,6 +28,13 @@ final class RouteCheck implements LoaderInterface
     private const LOGOUT_NAME = '/^_logout_/';
     private const PROFILER_NAME = '/^_(wdt|profiler)/';
     private const PROFILER_CONTROLLER = 'web_profiler.controller.';
+    /** The controllers of API Platform's own routes (documentation, entrypoint, context, errors), which are framework routes. */
+    private const API_PLATFORM_CONTROLLERS = [
+        'api_platform.action.documentation',
+        'api_platform.action.entrypoint',
+        'api_platform.action.not_exposed',
+        'api_platform.jsonld.action.context',
+    ];
 
     /**
      * @param string $routingResource the resource the api's route loader answers, which the app imports
@@ -178,6 +185,10 @@ final class RouteCheck implements LoaderInterface
         }
 
         if (preg_match(self::LOGOUT_NAME, $name) === 1 && $controller === null) {
+            return true;
+        }
+
+        if (is_string($controller) && in_array($controller, self::API_PLATFORM_CONTROLLERS, true)) {
             return true;
         }
 

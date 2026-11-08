@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Seampact\ApiPlatform;
 
 use Seampact\ApiPlatform\Runtime\ApiPlatformBoundarySubscriber;
+use Seampact\ApiPlatform\Runtime\OperationMetadataCheck;
+use Seampact\Codegen\BootCheckSwitches;
 use Seampact\Codegen\PhpClassFile;
 use Seampact\Codegen\Refusals;
 use Seampact\Codegen\TargetOptions;
@@ -63,14 +65,32 @@ final class ApiPlatformFlavour implements SymfonyFlavour
         return $files;
     }
 
-    public function bundleStatements(PhpClassFile $file, SymfonyPlacement $placement): string
+    public function bundleStatements(PhpClassFile $file, SymfonyPlacement $placement, ?BootCheckSwitches $bootCheck): string
     {
+        $names = $this->namesOf($placement);
         $statements = [];
-        foreach ($this->namesOf($placement)->processorClasses() as $processor) {
+        foreach ($names->processorClasses() as $processor) {
             $statements[] = '$services->set(' . $file->name($processor) . '::class)->autowire()->tag(' . var_export(self::PROCESSOR_TAG, true) . ');';
         }
 
+        if ($bootCheck !== null) {
+            $statements[] = $this->metadataCheck($file, $names);
+        }
+
         return implode("\n", $statements);
+    }
+
+    private function metadataCheck(PhpClassFile $file, ApiPlatformPlacement $names): string
+    {
+        $resources = array_map(fn (string $endpoints): string => $file->name($names->resourceClass($endpoints)) . '::class', array_keys($names->groups()));
+        $processors = [];
+        foreach ($names->placement->operations() as [, $operation]) {
+            $processors[] = var_export($operation->id, true) . ' => ' . $file->name($names->processorClass($operation->id)) . '::class';
+        }
+
+        return '$services->set(' . var_export("seampact.{$names->placement->layout->ir->api->id}.metadata_check", true) . ', ' . $file->name(OperationMetadataCheck::class) . '::class)->autowire()->args([\'$api\' => '
+            . var_export($names->placement->layout->ir->api->id, true)
+            . ', \'$resourceClasses\' => [' . implode(', ', $resources) . '], \'$processors\' => [' . implode(', ', $processors) . ']])->tag(\'kernel.cache_warmer\');';
     }
 
     private function namesOf(SymfonyPlacement $placement): ApiPlatformPlacement

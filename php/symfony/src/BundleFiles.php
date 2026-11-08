@@ -157,7 +157,7 @@ final class BundleFiles
         if ($this->bootCheck !== null) {
             $body .= "\$services->set(self::ROUTE_CHECK_SERVICE, {$routeCheck}::class)->decorate('routing.loader')->args([service('.inner'), {$contract}::class, {$routeLoader}::RESOURCE, " . var_export($this->bootCheck->frameworkRoutes, true) . ']);';
         }
-        $flavourStatements = $this->flavour->bundleStatements($file, $this->placement);
+        $flavourStatements = $this->flavour->bundleStatements($file, $this->placement, $this->bootCheck);
         $load->setBody($flavourStatements === '' ? rtrim($body) : rtrim($body) . "\n" . $flavourStatements);
         $class->addConstant('API', $this->placement->layout->ir->api->id)->setPrivate();
 

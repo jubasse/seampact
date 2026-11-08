@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Seampact\Symfony;
 
+use Seampact\Codegen\BootCheckSwitches;
 use Seampact\Codegen\PhpClassFile;
 use Seampact\Codegen\Refusals;
 use Seampact\Codegen\TargetOptions;
@@ -31,6 +32,7 @@ interface SymfonyFlavour
      */
     public function files(ContractIR $ir, SymfonyPlacement $placement, TargetOptions $options, Refusals $refusals, array $routePaths): array;
 
-    /** The statements the bundle's `loadExtension` runs after its own services, naming each class through `$file`. */
-    public function bundleStatements(PhpClassFile $file, SymfonyPlacement $placement): string;
+    /** The statements the bundle's `loadExtension` runs after its own services, naming each class through `$file`; `$bootCheck` is
+     * the entry's boot check switches, null when the check is off. */
+    public function bundleStatements(PhpClassFile $file, SymfonyPlacement $placement, ?BootCheckSwitches $bootCheck): string;
 }

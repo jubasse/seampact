@@ -4,13 +4,18 @@ declare(strict_types=1);
 
 namespace Seampact\Golden\Tasks\Symfony;
 
+use Seampact\ApiPlatform\Runtime\OperationMetadataCheck;
 use Seampact\Codegen\Runtime\DumpRedaction;
+use Seampact\Golden\Tasks\ApiPlatform\AppResource;
 use Seampact\Golden\Tasks\ApiPlatform\ArchiveTaskProcessor;
+use Seampact\Golden\Tasks\ApiPlatform\ChannelsResource;
+use Seampact\Golden\Tasks\ApiPlatform\DraftsResource;
 use Seampact\Golden\Tasks\ApiPlatform\GetChannelProcessor;
 use Seampact\Golden\Tasks\ApiPlatform\GetDraftProcessor;
 use Seampact\Golden\Tasks\ApiPlatform\GetTaskProcessor;
 use Seampact\Golden\Tasks\ApiPlatform\GetTasksBatchProcessor;
 use Seampact\Golden\Tasks\ApiPlatform\HealthProcessor;
+use Seampact\Golden\Tasks\ApiPlatform\TasksResource;
 use Seampact\Symfony\Runtime\BootCheckPass;
 use Seampact\Symfony\Runtime\BoundarySubscriber;
 use Seampact\Symfony\Runtime\ContractSettings;
@@ -114,6 +119,7 @@ final class TasksSeampactBundle extends AbstractBundle
         $services->set(GetTaskProcessor::class)->autowire()->tag('api_platform.state_processor');
         $services->set(GetTasksBatchProcessor::class)->autowire()->tag('api_platform.state_processor');
         $services->set(HealthProcessor::class)->autowire()->tag('api_platform.state_processor');
+        $services->set('seampact.tasks.metadata_check', OperationMetadataCheck::class)->autowire()->args(['$api' => 'tasks', '$resourceClasses' => [TasksResource::class, ChannelsResource::class, DraftsResource::class, AppResource::class], '$processors' => ['archiveTask' => ArchiveTaskProcessor::class, 'getChannel' => GetChannelProcessor::class, 'getDraft' => GetDraftProcessor::class, 'getTask' => GetTaskProcessor::class, 'getTasksBatch' => GetTasksBatchProcessor::class, 'health' => HealthProcessor::class]])->tag('kernel.cache_warmer');
     }
 
     public function build(ContainerBuilder $container): void

@@ -36,6 +36,26 @@ final class RouteCheckTest extends TestCase
         self::assertStringNotContainsString('app_docs', $problems);
     }
 
+    public function testApiPlatformsOwnRoutesAreFrameworkRoutesButAnotherOfItsOperationIsNot(): void
+    {
+        $routes = new RouteCollection();
+        $routes->add('api_doc', new Route('/v1/docs.{_format}', ['_controller' => 'api_platform.action.documentation']));
+        $routes->add('api_entrypoint', new Route('/v1/{index}.{_format}', ['_controller' => 'api_platform.action.entrypoint']));
+        $routes->add('_api_/v1/widgets_get', new Route('/v1/widgets', ['_controller' => 'api_platform.action.placeholder']));
+        $check = new RouteCheck(self::loaderOf($routes), CatchAllAllowListContract::class, self::ROUTING_RESOURCE, true);
+
+        $problems = '';
+        try {
+            $check->load(self::ROUTING_RESOURCE);
+        } catch (\LogicException $failure) {
+            $problems = $failure->getMessage();
+        }
+
+        self::assertStringContainsString("the app route '_api_/v1/widgets_get'", $problems);
+        self::assertStringNotContainsString('api_doc', $problems);
+        self::assertStringNotContainsString('api_entrypoint', $problems);
+    }
+
     public function testARouteWithAnOptionalPlaceholderIsAllowListedOnlyWhenThePathWithoutItIsListedToo(): void
     {
         $routes = new RouteCollection();

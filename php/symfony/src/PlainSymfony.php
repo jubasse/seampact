@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Seampact\Symfony;
 
+use Seampact\Codegen\BootCheckSwitches;
 use Seampact\Codegen\PhpClassFile;
 use Seampact\Codegen\Refusals;
 use Seampact\Codegen\TargetOptions;
@@ -35,7 +36,7 @@ final class PlainSymfony implements SymfonyFlavour
         return [];
     }
 
-    public function bundleStatements(PhpClassFile $file, SymfonyPlacement $placement): string
+    public function bundleStatements(PhpClassFile $file, SymfonyPlacement $placement, ?BootCheckSwitches $bootCheck): string
     {
         return '';
     }
