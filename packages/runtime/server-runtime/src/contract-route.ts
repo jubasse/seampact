@@ -247,6 +247,8 @@ export interface ContractRoute {
     readonly rawBody: boolean;
   };
   readonly validator: StandardValidator;
+  /** A relay route: the public operation it relays, `<api>.<operationId>`, which takes no app input rules. */
+  readonly relays?: string;
   /** Keyed by the input pointer, `/body/title`, an array item written `*`. */
   readonly idempotency?: {
     readonly header: string;

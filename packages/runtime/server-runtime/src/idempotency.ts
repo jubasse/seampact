@@ -1,7 +1,9 @@
 // Idempotency at the boundary: the claim's fixed-size key and fingerprint, begin with its replay, running and
-// mismatch answers, and the record completed or abandoned with the reply that went out.
+// mismatch answers, the record completed or abandoned with the reply that went out, and the claim an app input rule's
+// refusal releases.
 import type { StoredResponse } from "@seampact/hooks";
 import type { AccessGrant, CheckState } from "./access-checks.js";
+import type { BoundaryContext } from "./boundary-context.js";
 import type { BoundaryHooks } from "./boundary-hooks.js";
 import {
   ContractError,
@@ -106,6 +108,31 @@ export async function settleIdempotency(
   } catch (error) {
     runtimeLog.error(
       "seampact: the idempotency store failed to record a reply; a retry with the same key may run again. Check the store's backend.",
+      error,
+    );
+  }
+}
+
+/**
+ * Releases the request's claim after an app input rule refused it (ADR 0028 step 8b) and clears its key, so the
+ * refusal is never stored for a replay and a corrected retry with the same key is checked again.
+ */
+export async function abandonIdempotencyClaim(context: BoundaryContext): Promise<void> {
+  const key = context.idempotencyKey;
+
+  if (key === undefined) return;
+
+  delete context.idempotencyKey;
+
+  const store = context.hooks.idempotencyStore;
+
+  if (store === undefined) return;
+
+  try {
+    await store.abandon(key);
+  } catch (error) {
+    runtimeLog.error(
+      "seampact: the idempotency store failed to release a key an app input rule refused; a retry with the same key answers in progress until the record expires. Check the store's backend.",
       error,
     );
   }
