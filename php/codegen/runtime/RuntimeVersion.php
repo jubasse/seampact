@@ -11,7 +11,7 @@ namespace Seampact\Codegen\Runtime;
  */
 final class RuntimeVersion
 {
-    public const VERSION = '1.0.0';
+    public const VERSION = '1.0.1';
     public const GENERATED_FOR_OTHER_VERSION = 'runtime.generated-for-other-version';
     private const PATTERN = '/^(\d+)\.(\d+)\.(\d+)(-[0-9A-Za-z.-]+)?$/';
 

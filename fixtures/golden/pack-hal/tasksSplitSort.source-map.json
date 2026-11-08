@@ -103,21 +103,21 @@
       "column": 3,
       "endColumn": 14,
       "endLine": 23,
-      "file": ".packs/@seampact/pack-hal@1.0.0/pack.yaml",
+      "file": ".packs/@seampact/pack-hal@1.0.1/pack.yaml",
       "line": 23
     },
     "pack:@seampact/pack-hal#/conventions/paging/default": {
       "column": 13,
       "endColumn": 30,
       "endLine": 24,
-      "file": ".packs/@seampact/pack-hal@1.0.0/pack.yaml",
+      "file": ".packs/@seampact/pack-hal@1.0.1/pack.yaml",
       "line": 24
     },
     "pack:@seampact/pack-hal#/formats/hal": {
       "column": 3,
       "endColumn": 1,
       "endLine": 9,
-      "file": ".packs/@seampact/pack-hal@1.0.0/pack.yaml",
+      "file": ".packs/@seampact/pack-hal@1.0.1/pack.yaml",
       "line": 5
     },
     "shared#/conventions/batch/bodyLimit": {

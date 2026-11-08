@@ -89,21 +89,21 @@
       "column": 3,
       "endColumn": 18,
       "endLine": 35,
-      "file": ".packs/@seampact/pack-laravel@1.0.0/pack.yaml",
+      "file": ".packs/@seampact/pack-laravel@1.0.1/pack.yaml",
       "line": 35
     },
     "pack:@seampact/pack-laravel#/conventions/paging/default": {
       "column": 13,
       "endColumn": 34,
       "endLine": 36,
-      "file": ".packs/@seampact/pack-laravel@1.0.0/pack.yaml",
+      "file": ".packs/@seampact/pack-laravel@1.0.1/pack.yaml",
       "line": 36
     },
     "pack:@seampact/pack-laravel#/formats/laravel": {
       "column": 3,
       "endColumn": 1,
       "endLine": 11,
-      "file": ".packs/@seampact/pack-laravel@1.0.0/pack.yaml",
+      "file": ".packs/@seampact/pack-laravel@1.0.1/pack.yaml",
       "line": 5
     },
     "shared#/conventions/batch/bodyLimit": {

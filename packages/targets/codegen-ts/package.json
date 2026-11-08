@@ -1,7 +1,7 @@
 {
   "name": "@seampact/codegen-ts",
   "description": "Generates a named TypeScript type per schema and each operation's input, output and error union.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jubasse/seampact.git",

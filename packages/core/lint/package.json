@@ -1,7 +1,7 @@
 {
   "name": "@seampact/lint",
   "description": "Lint rules over the IR, and the API to write your own.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jubasse/seampact.git",

@@ -103,14 +103,14 @@
       "column": 5,
       "endColumn": 1,
       "endLine": 10,
-      "file": ".packs/@seampact/pack-crud-rights@1.0.0/pack.yaml",
+      "file": ".packs/@seampact/pack-crud-rights@1.0.1/pack.yaml",
       "line": 7
     },
     "pack:@seampact/pack-crud-rights#/derive/0/require": {
       "column": 5,
       "endColumn": 42,
       "endLine": 10,
-      "file": ".packs/@seampact/pack-crud-rights@1.0.0/pack.yaml",
+      "file": ".packs/@seampact/pack-crud-rights@1.0.1/pack.yaml",
       "line": 10
     },
     "shared#/conventions/batch/bodyLimit": {
