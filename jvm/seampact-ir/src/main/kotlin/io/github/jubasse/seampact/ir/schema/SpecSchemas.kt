@@ -4,7 +4,9 @@ import com.networknt.schema.Error
 import com.networknt.schema.Schema
 import com.networknt.schema.SchemaLocation
 import com.networknt.schema.SchemaRegistry
-import com.networknt.schema.SpecificationVersion
+import com.networknt.schema.dialect.Dialect
+import com.networknt.schema.dialect.Dialects
+import com.networknt.schema.keyword.NonValidationKeyword
 import java.util.Locale
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -35,7 +37,7 @@ internal data class SchemaViolation(
  * remote resource. Building the set compiles the schemas, so each set is built once per process.
  */
 internal class SpecSchemas(private val idDirectory: String, textByFileName: Map<String, String>) {
-    private val registry: SchemaRegistry = SchemaRegistry.withDefaultDialect(SpecificationVersion.DRAFT_2020_12) { builder ->
+    private val registry: SchemaRegistry = SchemaRegistry.withDefaultDialect(seampactDialect()) { builder ->
         val contents = textByFileName.mapKeys { (fileName, _) -> "$idDirectory/$fileName" }
         builder.schemaLoader { loader ->
             loader.fetchRemoteResources(false)
@@ -64,6 +66,16 @@ internal class SpecSchemas(private val idDirectory: String, textByFileName: Map<
 /** The text of each of [fileNames] under [resourceDirectory] of the jar. */
 internal fun schemaResources(resourceDirectory: String, fileNames: List<String>): Map<String, String> =
     fileNames.associateWith { resourceText("$resourceDirectory/$it") }
+
+// The spec schemas' own annotations: known to the validator, so it logs no unknown-keyword warning for them.
+private val SEAMPACT_ANNOTATION_KEYWORDS = listOf("x-seampact-must-act", "x-seampact-known")
+
+private fun seampactDialect(): Dialect {
+    val builder = Dialect.builder(Dialects.getDraft202012())
+    SEAMPACT_ANNOTATION_KEYWORDS.forEach { builder.keyword(NonValidationKeyword(it)) }
+
+    return builder.build()
+}
 
 private fun resourceText(path: String): String {
     val stream = SpecSchemas::class.java.classLoader.getResourceAsStream(path)
