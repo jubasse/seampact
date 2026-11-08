@@ -119,6 +119,7 @@ The same pages, with search, are on the [documentation site](https://jubasse.git
 ## Release notes
 
 - [Release notes](release-notes/README.md): what each release ships and its known limits.
+- [1.0.1](release-notes/1.0.1.md): server fixes, clearer errors, docs and agent skills.
 - [1.0.0](release-notes/1.0.0.md): the first release.
 
 ## Design
