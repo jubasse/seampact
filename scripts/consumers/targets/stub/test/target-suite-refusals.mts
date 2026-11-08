@@ -69,6 +69,7 @@ export const TARGET_SUITE_REFUSALS: Readonly<Record<string, string>> = {
   "unlisted-framework-route-fails-boot": STUB_REASON,
   "framework-route-check-off-keeps-hook-check": STUB_REASON,
   "hook-check-off-keeps-framework-route-check": STUB_REASON,
+  "input-rules": STUB_REASON,
   "authenticate-hook-throws-answers-internal-error": STUB_REASON,
   "corrupt-gzip-body-answers-bad-request": STUB_REASON,
   "decide-hook-throws-answers-internal-error": STUB_REASON,

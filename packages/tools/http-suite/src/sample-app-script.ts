@@ -100,6 +100,14 @@ export function overriddenDecideHookName(right: string): string {
   return `decide-override:${right}`;
 }
 
+/**
+ * The hook name an app input rule's double records, and a `hookFailures` entry gives it to make the rule throw:
+ * `input-rule:<name>`, the name without the `app.` prefix.
+ */
+export function inputRuleHookName(ruleName: string): string {
+  return `input-rule:${ruleName}`;
+}
+
 /** The operation a double records and an answer is keyed by: `<api>.<operationId>`. */
 export function operationKey(api: string, operationId: string): string {
   return `${api}.${operationId}`;
@@ -122,7 +130,7 @@ const THROWING_ANSWER_MEMBERS = ["throws"];
 const DECIDE_PURPOSES: readonly string[] = ["route", "field", "sortKey"];
 const OPERATION_KEY = /^[A-Za-z][A-Za-z0-9]*\.[A-Za-z][A-Za-z0-9]*$/;
 const FAILING_HOOK_NAME =
-  /^(?:authenticate|decide|decide-override|resolve-scope):[A-Za-z][A-Za-z0-9.]*$/;
+  /^(?:authenticate|decide|decide-override|resolve-scope|input-rule):[A-Za-z][A-Za-z0-9.]*$/;
 
 /** Reads the body of a script control route request; the sample app answers 400 with the error's message. */
 export function parseSampleAppScript(value: unknown): SampleAppScript {
