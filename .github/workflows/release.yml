@@ -1094,7 +1094,7 @@ jobs:
     environment: release
     permissions:
       contents: read
-      # The provenance statement of each package.
+      # npm trusted publishing (no token) and the provenance statement of each package.
       id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -1112,7 +1112,6 @@ jobs:
       # The tarballs are checked against pack-npm's manifest, a job output the artefact cannot change.
       - name: Publish the tarballs with provenance
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           MANIFEST: ${{ needs.pack-npm.outputs.manifest }}
           VERSION: ${{ needs.prepare.outputs.version }}
         run: |
