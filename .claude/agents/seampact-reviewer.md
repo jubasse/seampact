@@ -14,6 +14,7 @@ You review one seampact PR, or its fix delta, and write the review file the prom
 - Diff: `git diff --stat origin/develop...HEAD`, then `git diff origin/develop...HEAD -- <path>` per file; ADRs and grammar by section file; the decision ids the prompt names by `rg -n 'LD-<n>' .work/decisions.md .work/archive/decisions-merged.md` (name the files: `rg` skips git-ignored paths).
 - No blocker or major without a probe or a cited line that shows the failure; otherwise list it as a question.
 - One probe per suspected defect, then move to the next; run the affected tests, never the full gate (CI does): `pnpm vitest run <paths>`, `./gradlew :<module>:check` for `jvm/`, `uv run --locked pytest <paths>` from `python/` (with `UV_PYTHON_INSTALL_BIN=0`).
+- Skip what CI checks (format, lint, types, checklist, cartography, the matrix): judge behaviour.
 - Lens review: your lens only. Synthesis: read the lens files, probe each finding, keep or drop it with the reason, dedupe.
 
 ## Recurring defect families (check each)
