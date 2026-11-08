@@ -24,7 +24,7 @@ val testGradle: String? = providers.gradleProperty("testGradle").orNull
 val repositoryRoot = rootProject.projectDir.parentFile
 
 // The jars the TestKit sample app compiles against besides Spring Boot: seampact-hooks, which is not published yet.
-val sampleAppClasspath: Configuration by configurations.creating {
+val sampleAppClasspath: Configuration = configurations.create("sampleAppClasspath") {
     isCanBeConsumed = false
 }
 

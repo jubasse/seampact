@@ -180,6 +180,15 @@ jobs:
             jvm/seampact-gradle-plugin/build/testkit/caches/modules-2/metadata-2.*
           key: ${{ steps.testkit-cache-key.outputs.key }}
           restore-keys: ${{ steps.testkit-cache-key.outputs.restore-prefix }}
+      # TestKit downloads the Gradle release of `-PtestGradle` from services.gradle.org into ~/.gradle/wrapper/dists on
+      # every run, and that download timed out: this keeps the distribution between runs.
+      - name: Restore the TestKit Gradle distribution
+        id: testkit-distribution
+        if: matrix.test-gradle != 'wrapper'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: &testkit-distribution-path ~/.gradle/wrapper/dists/gradle-${{ matrix.test-gradle }}-bin
+          key: gradle-distribution-${{ runner.os }}-${{ matrix.test-gradle }}
       - name: Check the Gradle plugin on Java ${{ matrix.test-jdk }} and Gradle ${{ matrix.test-gradle }}
         working-directory: jvm
         env:
@@ -196,6 +205,12 @@ jobs:
         with:
           path: *testkit-cache-paths
           key: ${{ steps.testkit-cache-key.outputs.key }}
+      - name: Save the TestKit Gradle distribution
+        if: matrix.test-gradle != 'wrapper' && steps.testkit-distribution.outputs.cache-hit != 'true' && github.event_name != 'pull_request' && github.event_name != 'merge_group'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: *testkit-distribution-path
+          key: gradle-distribution-${{ runner.os }}-${{ matrix.test-gradle }}
 
   gradle-plugin-queue:
     name: *gradle-plugin-name
