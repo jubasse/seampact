@@ -6,6 +6,8 @@
 import { FIRST_PARTY_PROVIDERS, SERVER_TARGETS } from "@seampact/spec/compatibility";
 
 export interface ValidatorChoice {
+  /** The matrix id: `zod`, `yup`, `class-validator`, `ajv` or `vinejs`. */
+  readonly id: string;
   // Absent for a validator the target generates itself.
   readonly package: string | undefined;
   readonly dependencies: Readonly<Record<string, string>>;
@@ -32,11 +34,15 @@ const OWN_VALIDATOR_IDS: ReadonlySet<string> = new Set(
 export const VALIDATOR_CHOICES: Readonly<Record<string, ValidatorChoice>> = Object.fromEntries([
   ...FIRST_PARTY_PROVIDERS.filter((provider) => provider.kind === "validators").map((provider) => [
     provider.id,
-    { package: provider.package, dependencies: validatorDependencies(provider.id) },
+    {
+      id: provider.id,
+      package: provider.package,
+      dependencies: validatorDependencies(provider.id),
+    },
   ]),
   ...[...OWN_VALIDATOR_IDS].map((id) => [
     id,
-    { package: undefined, dependencies: validatorDependencies(id) },
+    { id, package: undefined, dependencies: validatorDependencies(id) },
   ]),
 ]);
 

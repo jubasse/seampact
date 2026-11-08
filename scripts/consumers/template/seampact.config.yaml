@@ -1,4 +1,5 @@
-# The slice consumer: the reference contract's types and validators for the apis its servers serve, and the fetch
+# The slice consumer: the reference contract's types and validators for the apis its servers serve, the same for the
+# `input-rules` case's own contract (a second source; the servers that enable the case serve it), and the fetch
 # client for the two main apis. The harness writes the validators package of the chosen library into the placeholder;
 # an overlay appends its own entries to `targets`, which stays the last key. An untested framework major fails the run,
 # so each consumer proves the compatibility matrix row it tests.
@@ -8,13 +9,15 @@ checks:
 sources:
   reference:
     path: ./contract
+  inputRules:
+    path: ./input-rules-contract
 targets:
   - id: types
     use: "@seampact/codegen-ts"
-    apis: [tasks, tasksService, tasksServiceWrites, tasksDevices, tasksResponses, tasksPaging]
+    apis: [tasks, tasksService, tasksServiceWrites, tasksDevices, tasksResponses, tasksPaging, inputRules]
   - id: validators
     use: "{{validators}}"
-    apis: [tasks, tasksService, tasksServiceWrites, tasksDevices, tasksResponses, tasksPaging]
+    apis: [tasks, tasksService, tasksServiceWrites, tasksDevices, tasksResponses, tasksPaging, inputRules]
   - id: client
     use: "@seampact/codegen-fetch"
     apis: [tasks, tasksService]

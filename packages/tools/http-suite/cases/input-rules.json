@@ -2,13 +2,14 @@
   "id": "input-rules",
   "title": "App input rules run after the contract and the claim, answer the schema-invalid role and release the claim",
   "checks": [],
+  "apis": ["inputRules"],
   "profiles": ["default"],
   "steps": [
     {
       "title": "no credentials stops before the rule",
       "request": {
         "method": "POST",
-        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks/schedule",
+        "path": "/input-rules/v1/channels/10000000-0000-4000-8000-000000000001/tasks/schedule",
         "headers": {
           "idempotency-key": "{{uuid:anon}}"
         },
@@ -41,7 +42,7 @@
       "title": "a denied right stops before the rule",
       "request": {
         "method": "POST",
-        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks/schedule",
+        "path": "/input-rules/v1/channels/10000000-0000-4000-8000-000000000001/tasks/schedule",
         "headers": {
           "authorization": "Bearer {{userToken}}",
           "idempotency-key": "{{uuid:denied}}"
@@ -65,7 +66,7 @@
       "title": "a rule refusal names the app rule and the member",
       "request": {
         "method": "POST",
-        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks/schedule",
+        "path": "/input-rules/v1/channels/10000000-0000-4000-8000-000000000001/tasks/schedule",
         "headers": {
           "authorization": "Bearer {{userToken}}",
           "idempotency-key": "{{uuid:fix}}"
@@ -92,7 +93,7 @@
       "title": "the corrected retry with the same key is checked again and passes",
       "request": {
         "method": "POST",
-        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks/schedule",
+        "path": "/input-rules/v1/channels/10000000-0000-4000-8000-000000000001/tasks/schedule",
         "headers": {
           "authorization": "Bearer {{userToken}}",
           "idempotency-key": "{{uuid:fix}}"
@@ -110,7 +111,7 @@
       "title": "a retry after success replays the 2xx",
       "request": {
         "method": "POST",
-        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks/schedule",
+        "path": "/input-rules/v1/channels/10000000-0000-4000-8000-000000000001/tasks/schedule",
         "headers": {
           "authorization": "Bearer {{userToken}}",
           "idempotency-key": "{{uuid:fix}}"
@@ -133,7 +134,7 @@
       "title": "a cross-member rule with no path points at the whole body",
       "request": {
         "method": "POST",
-        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks/schedule",
+        "path": "/input-rules/v1/channels/10000000-0000-4000-8000-000000000001/tasks/schedule",
         "headers": {
           "authorization": "Bearer {{userToken}}",
           "idempotency-key": "{{uuid:window}}"
@@ -160,7 +161,7 @@
       "title": "a rule without a usable name renders app.invalid",
       "request": {
         "method": "POST",
-        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks/schedule",
+        "path": "/input-rules/v1/channels/10000000-0000-4000-8000-000000000001/tasks/schedule",
         "headers": {
           "authorization": "Bearer {{userToken}}",
           "idempotency-key": "{{uuid:unnamed}}"
@@ -195,7 +196,7 @@
       "title": "a rule that throws answers 500 without its message",
       "request": {
         "method": "POST",
-        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks/schedule",
+        "path": "/input-rules/v1/channels/10000000-0000-4000-8000-000000000001/tasks/schedule",
         "headers": {
           "authorization": "Bearer {{userToken}}",
           "idempotency-key": "{{uuid:throws}}"
@@ -219,7 +220,7 @@
       "title": "the app keeps serving after a throwing rule",
       "request": {
         "method": "POST",
-        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks/schedule",
+        "path": "/input-rules/v1/channels/10000000-0000-4000-8000-000000000001/tasks/schedule",
         "headers": {
           "authorization": "Bearer {{userToken}}",
           "idempotency-key": "{{uuid:after}}"
