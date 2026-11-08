@@ -666,7 +666,7 @@ composer require seampact/laravel seampact/hooks
 pip install "seampact-fastapi[generate]"
 ```
 
-Gradle, Maven and the compiler binary are in [Install in other ecosystems](docs/getting-started/install-other-ecosystems.md). The [1.0.0 release notes](docs/release-notes/1.0.0.md) list what 1.0 refuses by name. See the [roadmap](docs/roadmap.md).
+Gradle, Maven and the compiler binary are in [Install in other ecosystems](docs/getting-started/install-other-ecosystems.md). The [release notes](docs/release-notes/README.md) say what each release ships; the [1.0.0 notes](docs/release-notes/1.0.0.md) list what 1.0 refuses by name. See the [roadmap](docs/roadmap.md).
 
 ## More docs
 
@@ -689,8 +689,9 @@ Every page is listed in [docs/README.md](docs/README.md).
 - [x] Documentation site
 - [x] Standalone binary for five platforms, attached to each release
 - [x] 1.0 on npm, PyPI, Maven Central, Packagist and the Gradle Plugin Portal
-- [ ] Example apps per stack pairing, and an `init` wizard that creates a workspace of services and frontends, in any repository layout, from pinned templates
-- Later: a client conformance suite, a kit to write new targets, one shared core per language, then Next.js, Bun, Deno, Workers, Kotlin, Swift, Dart, Go, .NET, Rust ([full list](docs/roadmap.md))
+- [ ] 1.1: app input rules on the Node and PHP servers, API Platform, Next.js, an axios client, example apps
+- [ ] An `init` wizard that creates a workspace of services and frontends, in any repository layout, from pinned templates
+- Later: a client conformance suite (1.2), a kit to write new targets, one shared core per language, then Bun, Deno, Workers, Kotlin, Swift, Dart, Go, .NET, Rust ([full list](docs/roadmap.md))
 
 ## Contributing
 
