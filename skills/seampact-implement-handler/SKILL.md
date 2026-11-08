@@ -1,6 +1,6 @@
 ---
 name: seampact-implement-handler
-description: Write or fix the handler code behind a seampact-generated API: "implement this endpoint", "write the handler for listNotes", a typecheck or compile error after `generate`, "my handler does not match the generated interface". Use in any repo that holds seampact.config.yaml and a generated folder. Not for contract edits (seampact-change-contract) and not for a seampact error code (seampact-fix-error).
+description: Write or fix the handler code behind a seampact-generated API. Use for "implement this endpoint", "write the handler for listNotes", a typecheck or compile error after `generate`, "my handler does not match the generated interface". Also use in any repo that holds seampact.config.yaml and a generated folder. Not for contract edits (seampact-change-contract) and not for a seampact error code (seampact-fix-error).
 ---
 
 # Implement a handler

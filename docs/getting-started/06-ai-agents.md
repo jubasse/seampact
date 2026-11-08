@@ -1,37 +1,30 @@
 # Work with an AI agent
 
-The contract and the config are the source of truth. Give the agent two things: a short block of rules in `AGENTS.md`, and four skills it reads when it needs them. Then seampact checks its work.
+The contract and the config are the source of truth. Give the agent two things: four skills it reads when it needs them, and a short block of rules in `AGENTS.md`. Then seampact checks its work.
 
-## Install them on Node
+## Install the skills
 
 ```sh
-npx seampact agents install
+npx skills add jubasse/seampact
 ```
 
-This does two things:
+This uses the standard [skills CLI](https://github.com/vercel-labs/skills). It works for every stack and for any agent the CLI supports: it asks which agents to install for, and which skills.
 
-- It writes the block below into `AGENTS.md`, between two marker lines. The text outside the markers is never touched.
-- It copies the four skills into `.agents/skills/`.
-
-Add `--claude` to copy the skills into `.claude/skills/` too, for Claude Code. Add `--skills-directory <dir>` to choose another folder.
-
-Run it again after you upgrade seampact. It rewrites only the block and the `seampact-` skill folders it wrote (each holds a `.seampact-installed` file), so a skill an older version shipped goes away, and it prints each folder it removes. A `seampact-` folder you made yourself stays. It refuses to write through a symbolic link, except a link to a folder inside the project.
-
-## Install them on other stacks
-
-`agents install` needs the Node CLI. On Gradle, Maven, PHP and Python, do it by hand:
-
-1. Copy the block below into `AGENTS.md`.
-2. Replace `npx seampact` with the line for your stack: see [commands per stack](../features/commands-per-stack.md). The compiler binary has no `generate` or `check`; use the build command of your stack there.
-3. Copy the [skills folder](https://github.com/jubasse/seampact/tree/develop/skills) into `.agents/skills/`: Codex and Cursor read it. Claude Code reads `.claude/skills/`, so copy them there too.
+- Add `-g` to install for your user instead of the project.
+- Run `npx skills update` after you upgrade seampact.
+- `npx skills add jubasse/seampact --list` shows the four skills without installing them.
 
 Each skill has a `references/` folder. You only need the file of your own stack. Delete the others if you like.
+
+## Add the block
+
+Copy the block below into `AGENTS.md`. Replace `npx seampact` with the line for your stack: see [commands per stack](../features/commands-per-stack.md). The compiler binary has no `generate` or `check`; use the build command of your stack there.
 
 An agent that reads the web can start from [llms.txt](https://jubasse.github.io/seampact/llms.txt): it lists the docs by task and links one file per stack, such as [llms-fastapi.txt](https://jubasse.github.io/seampact/llms-fastapi.txt).
 
 ## The block
 
-```md
+```text
 ## seampact
 
 The API is declared in `contract/` and `seampact.config.yaml`. They are the source of truth.
@@ -47,11 +40,11 @@ The API is declared in `contract/` and `seampact.config.yaml`. They are the sour
 - Never hand-write a route, validator, DTO or OpenAPI entry for a contract operation.
 
 Docs by task: https://jubasse.github.io/seampact/llms.txt
-Skills in `.agents/skills/`; if your tool does not load skills, read the one that matches before you start:
-- `seampact-change-contract/SKILL.md`: add or change a route, schema, error, access rule, paging.
-- `seampact-implement-handler/SKILL.md`: write or fix handler code after `generate`.
-- `seampact-fix-error/SKILL.md`: any seampact error code or a failed `check`.
-- `seampact-setup/SKILL.md`: add a target, a framework or a new api.
+Skills, installed with `npx skills add jubasse/seampact`; if your tool does not load skills, read the one that matches before you start:
+- `seampact-change-contract`: add or change a route, schema, error, access rule, paging.
+- `seampact-implement-handler`: write or fix handler code after `generate`.
+- `seampact-fix-error`: any seampact error code or a failed `check`.
+- `seampact-setup`: add a target, a framework or a new api.
 ```
 
 ## The four skills

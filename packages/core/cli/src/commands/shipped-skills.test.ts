@@ -6,15 +6,14 @@ import { parse, stringify } from "yaml";
 import { type CliIo, EXIT_SUCCESS } from "../cli-io.js";
 import { isRecord } from "../is-record.js";
 import { runCli } from "../run-cli.js";
-import { renderAgentsBlock } from "./agents-block.js";
 import { removeTemporaryDirectories, trackTemporaryDirectory } from "./fake-app.test-support.js";
 
-// The skills and the AGENTS block the package ships must stay true: sized for a small context, naming commands and
+// The skills and the AGENTS block the docs ship must stay true: sized for a small context, naming commands and
 // error codes that exist, and YAML that the compiler accepts.
 
 afterEach(removeTemporaryDirectories);
 
-const SKILLS_ROOT = new URL("../../skills/", import.meta.url);
+const SKILLS_ROOT = new URL("../../../../../skills/", import.meta.url);
 const TROUBLESHOOTING_ROOT = new URL("../../../../../docs/troubleshooting/", import.meta.url);
 const AGENTS_PAGE = new URL("../../../../../docs/getting-started/06-ai-agents.md", import.meta.url);
 const BYTES_PER_TOKEN = 4;
@@ -28,7 +27,8 @@ const skillTexts = skillNames.map((name) => ({
   name,
   text: readFileSync(new URL(`${name}/SKILL.md`, SKILLS_ROOT), "utf8"),
 }));
-const agentsBlock = readFileSync(new URL("agents-block.md", SKILLS_ROOT), "utf8");
+const agentsBlock =
+  /## The block\n\n```text\n([\s\S]*?)```/.exec(readFileSync(AGENTS_PAGE, "utf8"))?.[1] ?? "";
 const everyShippedText = [...skillTexts.map((skill) => skill.text), agentsBlock];
 
 async function run(directory: string, args: string[]) {
@@ -50,7 +50,7 @@ function backtickedTokens(text: string): string[] {
   return [...outsideFences.matchAll(/`([^`\n]+)`/g)].flatMap((match) => match[1] ?? []);
 }
 
-test("the package ships the four skills", () => {
+test("the repository ships the four skills", () => {
   expect(skillNames.sort()).toEqual([
     "seampact-change-contract",
     "seampact-fix-error",
@@ -69,6 +69,14 @@ test.each(skillTexts)("$name has a name, a description and 500 to 900 tokens", (
   expect(tokens).toBeLessThanOrEqual(SKILL_TOKEN_RANGE.max);
 });
 
+test.each(skillTexts)("$name has a frontmatter that parses as YAML", ({ name, text }) => {
+  const frontmatter = /^---\n([\s\S]*?)\n---\n/.exec(text)?.[1] ?? "";
+  const parsed: unknown = parse(frontmatter);
+
+  expect(isRecord(parsed) ? parsed.name : undefined).toBe(name);
+  expect(isRecord(parsed) ? typeof parsed.description : undefined).toBe("string");
+});
+
 test("the AGENTS block stays under 30 lines", () => {
   expect(agentsBlock.trimEnd().split("\n").length).toBeLessThan(AGENTS_BLOCK_MAX_LINES);
 });
@@ -82,13 +90,10 @@ test("every reference a skill names exists in its folder", () => {
   }
 });
 
-test("the agent page shows the AGENTS block the install command writes on Node", () => {
-  const block = renderAgentsBlock(agentsBlock, {
-    seampact: "npx seampact",
-    skillsDirectory: ".agents/skills",
-  });
+test("the agent page holds the AGENTS block, and it names every skill", () => {
+  expect(agentsBlock).toContain("## seampact");
 
-  expect(readFileSync(AGENTS_PAGE, "utf8")).toContain(block);
+  for (const name of skillNames) expect(agentsBlock).toContain(`\`${name}\``);
 });
 
 // A command span: `npx seampact diff --against <baseline>`, or an unprefixed `diff --against x` once `diff` is known.

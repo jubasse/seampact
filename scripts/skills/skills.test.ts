@@ -4,7 +4,6 @@ import { expect, test } from "vitest";
 import { docsLinkRewriter } from "./docs-links.ts";
 import { hasSection, pageBody, sectionOf } from "./markdown-sections.ts";
 import {
-  CLI_SKILLS_DIRECTORY,
   expectedSkillTree,
   GENERATE_COMMAND,
   SKILLS_DIRECTORY,
@@ -13,14 +12,11 @@ import {
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
-test.each([SKILLS_DIRECTORY, CLI_SKILLS_DIRECTORY])(
-  "%s holds the SKILL.md files and the references generated from docs/",
-  (directory) => {
-    const problems = treeProblems(expectedSkillTree(REPO_ROOT), REPO_ROOT, directory);
+test("the skills folder holds the SKILL.md files and the references generated from docs/", () => {
+  const problems = treeProblems(expectedSkillTree(REPO_ROOT), REPO_ROOT, SKILLS_DIRECTORY);
 
-    expect(problems, `run \`${GENERATE_COMMAND}\``).toEqual([]);
-  },
-);
+  expect(problems, `run \`${GENERATE_COMMAND}\``).toEqual([]);
+});
 
 test("a section runs to the next heading of the same level and ignores headings in code fences", () => {
   const markdown =

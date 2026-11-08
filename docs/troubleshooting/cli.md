@@ -26,11 +26,6 @@ The commands exit with 1 when they report an error, 2 on a usage error (an unkno
 | `diff.api.name.differs`, `diff.api.version.differs` | The baseline is another api or another path version. Diff against a baseline of the same api and version. |
 | `explain.api.needed`, `explain.api.ambiguous`, `explain.api.unknown` | Name the operation as `<api>.<operationId>`, or `<source>/<api>.<operationId>` when two sources hold the api. |
 | `explain.operation.unknown` | Name one of the api's operation ids, as the IR and the OpenAPI document spell them. |
-| `agents.markers.unbalanced` | `agents install` found a `<!-- seampact:begin -->` line without one `<!-- seampact:end -->` line after it in `AGENTS.md`, or several. Keep one pair, each on its own line, or delete both and the lines between them. |
-| `agents.skills.outside` | `--skills-directory` names a folder outside the project, the project folder itself, or a path that resolves outside it. Pass a relative folder below the project, such as `.agents/skills`. |
-| `agents.symlink` | `AGENTS.md`, a folder on the way to the skills folder, or a `seampact-` folder in it is a symbolic link, and `agents install` never writes or deletes through one. Replace the link with a real file or folder, or pass another `--skills-directory`. A link on the way to the skills folder is fine when it points to a folder inside the project. |
-| `agents.install.failed` | Copying the skills failed, for example on a read-only folder or a file where a folder should be; `AGENTS.md` was not changed. Make the skills folders writable folders and run `agents install` again. |
-| `agents.skills.missing` | This install of `@seampact/cli` ships no `skills/` folder. Install the package from npm, or copy the skills from the repository. |
 
 ## Compiler binary
 

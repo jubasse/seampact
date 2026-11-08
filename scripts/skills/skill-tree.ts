@@ -1,5 +1,5 @@
-// The skills folder as it must be: the hand-written SKILL.md files and AGENTS block template, plus the references
-// generated from docs/, written at the repository root and mirrored into the CLI package, which ships them.
+// The skills folder as it must be: the hand-written SKILL.md files, plus the references generated from docs/,
+// written at the repository root where `npx skills add` finds them.
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
@@ -8,8 +8,6 @@ import { pageBody, pageTitle, sectionOf } from "./markdown-sections.ts";
 import { type ReferenceFile, type ReferenceSource, SKILL_REFERENCES } from "./references.ts";
 
 export const SKILLS_DIRECTORY = "skills";
-export const CLI_SKILLS_DIRECTORY = "packages/core/cli/skills";
-export const AGENTS_BLOCK_FILE = "agents-block.md";
 export const SKILL_FILE = "SKILL.md";
 export const GENERATE_COMMAND = "node scripts/skills/cli.ts --write";
 
@@ -20,8 +18,6 @@ export function expectedSkillTree(repositoryRoot: string): SkillTree {
   const tree = new Map<string, string>();
   const rewriter = docsLinkRewriter(repositoryRoot);
   const skillsRoot = join(repositoryRoot, SKILLS_DIRECTORY);
-
-  tree.set(AGENTS_BLOCK_FILE, readFileSync(join(skillsRoot, AGENTS_BLOCK_FILE), "utf8"));
 
   for (const { skill, files } of SKILL_REFERENCES) {
     tree.set(`${skill}/${SKILL_FILE}`, readFileSync(join(skillsRoot, skill, SKILL_FILE), "utf8"));
@@ -87,16 +83,14 @@ export function treeProblems(tree: SkillTree, repositoryRoot: string, directory:
   return problems;
 }
 
-/** Writes the tree at the repository root and in the CLI package, removing the files it no longer holds. */
+/** Writes the tree at the repository root, removing the files it no longer holds. */
 export function writeSkillTree(tree: SkillTree, repositoryRoot: string): void {
-  for (const directory of [SKILLS_DIRECTORY, CLI_SKILLS_DIRECTORY]) {
-    const root = join(repositoryRoot, directory);
+  const root = join(repositoryRoot, SKILLS_DIRECTORY);
 
-    for (const path of filesUnder(root)) if (!tree.has(path)) rmSync(join(root, path));
+  for (const path of filesUnder(root)) if (!tree.has(path)) rmSync(join(root, path));
 
-    for (const [path, text] of tree) {
-      mkdirSync(dirname(join(root, path)), { recursive: true });
-      writeFileSync(join(root, path), text);
-    }
+  for (const [path, text] of tree) {
+    mkdirSync(dirname(join(root, path)), { recursive: true });
+    writeFileSync(join(root, path), text);
   }
 }
