@@ -39,44 +39,49 @@ import { routeHandler } from "@/server/__generated__/next/tasks/next";
 import { hooks, tasksHandlers } from "@/server/tasks";
 
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
 
 const handler = routeHandler({ handlers: { TasksEndpoints: tasksHandlers }, hooks });
 
 export { handler as DELETE, handler as GET, handler as HEAD, handler as OPTIONS, handler as PATCH, handler as POST, handler as PUT };
 ```
 
-The route file is the app's: codegen writes only under the target entry's `out`, and the file holds the app's own segment config. The `routeHandler` options are Hono's `registerRoutes` options (ADR 0020 "Options and registration"), `inputRules` included, without the app.
+The route file is the app's: codegen writes only under the target entry's `out`, and the file holds the app's own segment config. `dynamic` is not emitted: a route handler that reads the request is dynamic since Next 15, and `dynamic = "force-dynamic"` is a build error under `cacheComponents`. Whether `next build` prerenders the catch-all's `GET` for the bare base path under `cacheComponents` is checked by nextjs-1's live test. The `routeHandler` options are Hono's `registerRoutes` options (ADR 0020 "Options and registration"), `inputRules` included, without the app. An api with several base paths calls `routeHandler` once per route file, each call checked alone; the guide builds one options object in a module of the app and passes it from every route file, so the files of one api share their handlers, hooks and stores.
 
-The app sets `skipTrailingSlashRedirect: true` in its `next.config`, so a trailing slash and the bare base path reach the boundary. A monorepo app that links the runtime from its workspace adds it to `transpilePackages`; a published install needs nothing, since the package ships JavaScript.
+Hono's `renderPreRoutingError` and `isContractRoute` have no Next counterpart yet: Next has no error hook for a refusal raised before the route, and a `proxy.ts` that denies a request on a contract path answers in its own format unless it calls `renderContractError`. A proxy counterpart waits for an app that needs it.
+
+The app sets `skipTrailingSlashRedirect: true` in its `next.config`, so a trailing slash and the bare base path reach the boundary. The setting is app-wide: the app's own pages lose their trailing-slash redirect too. Without it, Next redirects `/v1/tasks/7/` with a 308 to `/v1/tasks/7`, which is then served, so the contract's 404 for a trailing slash is lost silently; the guide lists both effects.
+
+A published install of the runtime needs no setting, since the package ships JavaScript. A workspace link with `transpilePackages` worked under webpack only, since Turbopack cannot resolve the runtime's `src/` imports; nextjs-1's live test installs the packed runtime tarball, as the consumers do, and runs under Turbopack.
 
 ### Routes
 
 The handler never reads `params`. It matches the request's method and the raw path of `new URL(request.url).pathname` against the contract templates with `matchContractRoute`, as on Hono: `/v1/%68ealth` answers the contract 404, a trailing slash and the bare base path answer the api's base-path 404. Every method is exported, so a method the path does not serve answers the path's `notFound` 404 rather than Next's 405, and `HEAD` runs the path's `GET` operation.
 
+The catch-all receives only paths under its own directory. A request whose raw path is under none of the api's mounted base paths, which a Next `basePath` that the entry's `mount` does not state gives on every request, answers the api's 500 with a log naming the fix: set `mount` to the `basePath`, or move the route file. This is the mount-mismatch refusal of ADR 0012, made at the first request as on Express.
+
 Three requests stay Next's, outside the api's format, with no hook to change them; the guide lists them:
 
 - `//` in the path, redirected with a 308 even with `skipTrailingSlashRedirect`, where Hono answers the base-path 404;
 - a malformed percent-escape (`/v1/channels/%E0%A4%A`), answered by Next with its own 500, where Hono answers the `schemaInvalid` 400;
-- a request a more specific app route file under the base path serves, which never reaches the boundary ("The boot check").
+- a request that never reaches the catch-all: a more specific app `route.*` or `page.*` file at or under a base path, route groups included, or a `next.config` `rewrites` entry or a proxy rewrite that sends it elsewhere ("The boot check").
 
 ### The Node runtime
 
-The target serves the Node runtime only. The guide's route file exports `runtime = "nodejs"`. Under the Edge runtime, which Next marks with the global `EdgeRuntime`, `createNextBoundary` throws `runtime.edge.unsupported` when the module loads, with the fix to export `runtime = "nodejs"` from the route file, so the route fails to load rather than serve.
+The target serves the Node runtime only. The guide's route file exports `runtime = "nodejs"`. Under the Edge runtime, which Next marks with the global `EdgeRuntime`, the generated `next.ts` throws `runtime.edge.unsupported` when it loads, with the fix to export `runtime = "nodejs"` from the route file, so the route fails to load rather than serve. Importing the runtime package alone never throws.
 
-One Node process serves every route module from one module instance, so a module-level idempotency store is shared across an app's route files. Several instances, a serverless deployment among them, need an external store, as on every target.
+Under webpack's `next start`, the spike saw one module instance serve a catch-all and a per-path file, so a module-level idempotency store is shared across an app's route files there; `next dev` and Turbopack were not checked, and nextjs-1's live test checks them. Several instances, a serverless deployment among them, need an external store, as on every target.
 
 ### Body, signatures and step 8b
 
 The boundary reads `request.body` with the Web profile's `readContractBody`, unchanged: a declared length over the route's limit answers 413 before reading, a chunked body is counted while reading, and a signed route verifies the raw bytes as sent. Nothing in Next reads the body before a route handler, and Next sets no body limit on route handlers.
 
-An app with a `proxy.ts` (formerly `middleware.ts`) is the exception: Next buffers the body for it and keeps only the first 10 MB (`proxyClientMaxBodySize`), with a console warning and no error. A route whose limit is above 10 MB, a signed route among them, then sees a truncated body. The runtime cannot see the app's proxy, so the guide says to raise `experimental.proxyClientMaxBodySize` above the api's largest route limit.
+An app with a `proxy.ts` (formerly `middleware.ts`) is the exception: Next buffers the body for it and keeps only the first 10 MB (`proxyClientMaxBodySize`), with a console warning and no error. A route whose limit is above 10 MB, a signed route among them, then sees a truncated body. When the request declared a `Content-Length` and the body read is shorter, the boundary answers the api's 500 with a log naming `experimental.proxyClientMaxBodySize`, failing closed as ADR 0020 does for a body read before it, rather than a `schemaInvalid` 400 or a signature 401. A truncated chunked body cannot be told apart, so the guide says to raise `experimental.proxyClientMaxBodySize` above the api's largest route limit.
 
 Step 8b runs in the shared `runInputSteps`, between the access steps and the handler call, at Hono's call site; ADR 0028's claim release reaches Next with no Next code.
 
 ### Errors and the outgoing check
 
-The handler catches every error: a generated contract exception, its own refusals, an error whose `status` is 401, 403 or 429, and any other throw. It answers each in the api's format, the last as the api's 500 after `reportContractError` calls `onUnexpectedError`, under the development log of ADR 0016 "Amendment 2026-10-28". No error reaches Next's HTML 500. `renderContractError(error)` gives an app's own route or proxy the same reply for a contract error.
+The handler catches every error: a generated contract exception, its own refusals, an error whose `status` is 401, 403 or 429, and any other throw. It answers each in the api's format, the last as the api's 500 after `reportContractError` calls `onUnexpectedError`, under the development log of ADR 0016 "Amendment 2026-10-28". No error reaches Next's HTML 500. `renderContractError(error)` gives the app's Node code, its own routes or its `proxy.ts`, the same reply for a contract error; a legacy Edge `middleware.ts` cannot import it, since the generated module refuses Edge when it loads.
 
 There is no `fetch` to wrap. Each call opens its request slot with `servedInRequestSlot(() => serve(request))`, and the `Response` it returns passes `checkOutgoingResponse` with ADR 0020's verdict rules and `responses` modes. A reply the app's proxy writes before the route runs is not checked, as an app middleware's reply before the boundary is not on Hono; headers the proxy or `next.config` adds after the route apply to the reply on its way out.
 
@@ -88,7 +93,7 @@ Every relative import of the generated tree is extensionless: the target's own m
 
 `routeHandler` runs ADR 0020's boot check when the route module loads and throws, listing every problem: the version guard of ADR 0025, the hook problems, an unbound handler, and an unknown `operations` key.
 
-There is no framework-route boot check on Next.js. On Hono it lists the app's routes from the app object and the wrapped `fetch` refuses to serve until it passed; Next keeps its routes in the file system and its build output, gives a route handler no app object and no start hook, and has no `fetch` to wrap. Nothing replaces it at run time: the catch-all still answers every request that reaches it with the contract's match, and a more specific app route file under a base path is the one way past the boundary. The guide says to keep app routes outside the api's base paths. An explicit `frameworkRoutes` on a Next.js entry is refused by name, since no check reads it.
+There is no framework-route boot check on Next.js. On Hono it lists the app's routes from the app object and the wrapped `fetch` refuses to serve until it passed; Next keeps its routes in the file system and its build output, gives a route handler no app object and no start hook, and has no `fetch` to wrap. Nothing replaces it at run time: the catch-all still answers every request that reaches it with the contract's match, and a more specific app route file under a base path is the one way past the boundary. The guide says to keep app routes and rewrites outside the api's base paths. Since no check reads them, `generate` refuses by name a `frameworkRoutes` allow-list on a Next.js entry and an explicit `artefacts.bootCheck.frameworkRoutes` other than `false`. A `generate`-time scan of the app directory waits by name: it would list the `route.*` and `page.*` files at or under a mounted base path other than the api's catch-all, with route groups `(x)` and slots `@x` removed and `_private` folders skipped, and refuse each one that `frameworkRoutes` does not allow-list; it would still miss rewrites and files added after `generate`. Until it lands, this target is the named exception to CHK-062 and CHK-063 in the conformance checklist.
 
 ### What the generated code depends on
 
@@ -96,19 +101,22 @@ At run time: `@seampact/server-runtime` (root, `/web` and `/next`) at the genera
 
 ### Refused by name or waiting
 
-`generate` refuses by name everything ADR 0020 "Refused by name or waiting" lists. On this target also:
+`generate` refuses by name everything ADR 0020 "Refused by name or waiting" lists. On this target also, by who refuses:
 
-| Waits for | What |
+| Who | What |
 |---|---|
-| refused | the Edge runtime; `frameworkRoutes` on the entry |
-| an app that needs it | one route file per contract path; an api with an empty base path, whose catch-all would sit at the app's root; two apis sharing one base path; Next.js 15 and older |
+| `generate`, by name | a `frameworkRoutes` allow-list on the entry (`frameworkRoutes.unsupported`); an explicit `artefacts.bootCheck.frameworkRoutes` other than `false` (`artefacts.bootCheck.frameworkRoutes.unsupported`); an api with an empty base path, whose catch-all would sit at the app's root (`path.base.empty.unsupported`); two apis whose base paths are equal or nested, such as `/v1` and `/v1/admin`, where Next's more specific catch-all would take the outer api's paths and answer with the inner api's 404, as ADR 0024 refuses on Symfony (`path.base.shared.unsupported`); Next.js 15 and older, through the compatibility matrix |
+| the generated module, when it loads | the Edge runtime (`runtime.edge.unsupported`) |
+| the handler, at the first request | a raw path under no mounted base path ("Routes") |
+| nobody, and harmless | one route file per contract path, which the raw match serves correctly |
+| waits for an app that needs it | the framework-route scan of the app directory ("The boot check"); a `proxy.ts` counterpart of `renderPreRoutingError` and `isContractRoute` |
 
 ### Delivery
 
 | PR | Delivers |
 |---|---|
-| nextjs-1 | the `/next` runtime export and the Web steps moved out of `hono.ts`, with the Hono tests green; a live test on a real Next.js app covering the spike's cases |
-| nextjs-2 | `@seampact/codegen-nextjs`: `next.ts`, the extensionless imports through the shared helper, the Edge and `frameworkRoutes` refusals; `docs/backend/nextjs.md`; the consumer running the http-suite and the conformance rows |
+| nextjs-1 | the `/next` runtime export and the Web steps moved out of `hono.ts`, with the Hono tests green; a live test on a real Next.js app with the packed runtime tarball, under Turbopack, covering the spike's cases, the module instance under `next dev`, and the `GET` prerender under `cacheComponents` |
+| nextjs-2 | `@seampact/codegen-nextjs`: `next.ts`, the extensionless imports through the shared helper, the Edge, `frameworkRoutes` and base-path refusals; `docs/backend/nextjs.md`; the consumer running the http-suite and the conformance rows |
 
 ## Spike
 
@@ -134,13 +142,15 @@ Run on Next.js 16.4.5, Node 24.21 and zod 4.6.7, outside the repo and not kept. 
 | a throw in a route handler | Next's HTML 500 |
 | `next dev` and `next build` with Turbopack on the generated tree | `Can't resolve '.../input.js'` |
 
-Not run: step 8b, which is not in the runtime yet; the codegen of this target; Next.js 15; a deployment platform other than `next start`.
+Not run: step 8b, which is not in the runtime yet; the codegen of this target; Next.js 15; `cacheComponents`; a Next `basePath`; Turbopack's module instances; a deployment platform other than `next start`.
 
 ## Consequences
 
 - App input rules ([ADR 0028](0028-app-input-rules.md)): Next.js: step 8b runs in the shared `runInputSteps`, with `inputRules` in the `routeHandler` options.
 - An app keeps its pages, its other route files, its proxy and its `next.config`; on contract routes the boundary's checks and reply win.
-- An app route file under an api's base path bypasses the boundary, with no check to catch it.
+- An app `route.*` or `page.*` file at or under an api's base path, a route group resolving there, and a rewrite bypass the boundary, with no check to catch them; this target is the named exception to CHK-062 and CHK-063 until the app-directory scan lands.
+- `skipTrailingSlashRedirect` is app-wide, so the app's own pages lose their trailing-slash redirect; without it, the contract's trailing-slash 404 is lost.
+- A Next `basePath` the entry's `mount` does not state answers the api's 500 on every contract request, with the fix in the log.
 - `//` in a path and a malformed percent-escape get Next's answers, outside the api's format.
 - A route limit above 10 MB needs `experimental.proxyClientMaxBodySize` raised when the app has a proxy.
 - The Hono placement and this one share their Web steps; a fix in one reaches both.
