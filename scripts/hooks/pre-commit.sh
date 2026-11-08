@@ -5,9 +5,9 @@
 
 set -u
 
-unstaged_files=$(git diff --name-only)
+unstaged_files=$(git -c core.quotepath=false diff --name-only)
 
-fully_staged_files=$(git diff --cached --name-only --diff-filter=ACMR | while IFS= read -r staged_file; do
+fully_staged_files=$(git -c core.quotepath=false diff --cached --name-only --diff-filter=ACMR | while IFS= read -r staged_file; do
   if printf '%s\n' "$unstaged_files" | grep -qxF -- "$staged_file"; then
     echo "pre-commit: $staged_file has unstaged changes, not formatted (CI checks the format)" >&2
     continue
