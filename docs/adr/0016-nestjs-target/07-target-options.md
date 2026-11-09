@@ -1,0 +1,3 @@
+### Target options
+
+`parseOptions` accepts `responses` (`strict`, the default, or `warn`), `bodyValidation` (`false`, the default, or `true`) and `reply` (`handler`, the default, or `interceptor`), and refuses any other key by name. `reply` is per api: two apis of one app may differ, each reply interceptor acting on its own api's routes; no other Node target takes it. Every Node server target also takes `frameworkEtag` (`strip`, the default, or `keep`) and `catchAll` (`true`, the default, or `false`, which leaves unserved paths under the base path to the app), and Fastify takes `compression` (`off`, or a `thresholdBytes` threshold). AdonisJS also takes `rules` (ADR 0009), which shapes its own VineJS validators only.

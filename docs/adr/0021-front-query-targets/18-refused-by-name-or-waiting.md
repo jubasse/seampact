@@ -1,0 +1,5 @@
+### Refused by name or waiting
+
+Refused by name: a missing or mismatched `client` link; an operation the client leaves out; `errors: data` with a `throw`-style client; a `throw`-style client under any `errors` (`link.client.errorStyle.unsupported`), until the client link lists each operation's error type; `staleTime: contract` with SWR or RTK; `keys.root` with RTK; `staleTime`, `invalidate`, `infinite`, `keys.root` and the `itemsOf` artefact with `query: fetch`; two exports with one name; a missing `query` and any unknown option. Warned by name: a paged operation that gets no infinite query.
+
+Waiting, each refused or absent by name until a consumer needs it: the previous page (`getPreviousPageParam`); optimistic updates; `If-None-Match` sent by the hooks, since the browser's HTTP cache already revalidates ETags; a retry policy read from the contract (no retry on a declared client error, `Retry-After` as the delay), the library's default and the app's `retry` applying meanwhile; RTK's `injectEndpoints` into an app's own api; prefetch helpers beyond the options factories; a Next.js end-to-end app.
