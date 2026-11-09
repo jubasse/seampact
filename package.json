@@ -18,7 +18,7 @@
     "prepare": "simple-git-hooks"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.6.3",
+    "@biomejs/biome": "2.6.4",
     "@changesets/cli": "3.0.3",
     "@seampact/pack-api-platform": "workspace:*",
     "@seampact/pack-crud-rights": "workspace:*",
@@ -31,7 +31,7 @@
     "@types/node": "24.19.2",
     "@vitest/coverage-v8": "5.0.5",
     "ajv": "8.20.0",
-    "eslint": "10.13.0",
+    "eslint": "10.14.0",
     "simple-git-hooks": "2.14.0",
     "typescript": "6.0.3",
     "typescript-eslint": "8.72.1",

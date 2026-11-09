@@ -43,8 +43,8 @@
     "prettier": "3.9.10"
   },
   "devDependencies": {
-    "@fastify/compress": "9.2.2",
-    "@fastify/swagger": "9.9.2",
+    "@fastify/compress": "9.3.0",
+    "@fastify/swagger": "9.9.3",
     "@seampact/codegen-core": "workspace:*",
     "@seampact/spec": "workspace:*",
     "@types/node": "24.19.2",
