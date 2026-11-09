@@ -107,3 +107,13 @@ test("an interceptor that rejects an error status rejects the call", async () =>
 
   await expect(call(instance, "missing")).rejects.toThrow("session expired");
 });
+
+test("an interceptor that returns response.data is refused by name", async () => {
+  const instance = axios.create();
+
+  instance.interceptors.response.use((response) => response.data);
+
+  await expect(call(instance, "n1")).rejects.toThrow(
+    "axios interceptors must return the axios response, not response.data",
+  );
+});

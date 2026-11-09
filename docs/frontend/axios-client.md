@@ -41,4 +41,5 @@ The settings, the results and `ContractError` are the fetch client's.
 - A network failure rejects. An abort rejects with the signal's reason, and `timeoutMs` with a `TimeoutError`.
 - Responses are read as text and parsed by the client: your `transformResponse` does not apply.
 - A response interceptor that throws on an error status rejects the call. That is your choice, and the client does not map it.
+- A response interceptor must return the axios response: one that returns `response.data` makes the call throw a `TypeError`.
 - Set `baseUrl` in `createClient`, not in the instance: the client sends full URLs.
