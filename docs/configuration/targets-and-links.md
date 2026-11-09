@@ -32,6 +32,7 @@ Every generator handles every format and paging style your contract declares. Wh
 | `codegen-express` | server boundary for Express 4 and 5 | `validators`: zod or yup |
 | `codegen-adonis` | server boundary for AdonisJS 6 and 7 | `validators`: zod or yup, or VineJS without a link |
 | `codegen-hono` | server boundary for Hono 4 on Web-standard `Request` and `Response` | `validators`: zod or yup |
+| `codegen-nextjs` | a route handler for a Next.js 16 catch-all route file | `validators`: zod |
 | `codegen-react` | React hooks: TanStack Query (`query: tanstack`), SWR (`query: swr`) or RTK Query (`query: rtk`), or no library (`query: fetch`) | `client`: fetch |
 | `codegen-vue` | plain composables, or with `query: tanstack` or `query: pinia-colada` | `client`: fetch |
 | `codegen-angular` | injectable services over `HttpClient`, and with `state: ngrx` or `state: ngrx-signals` typed actions and effects, or a Signal Store feature | nothing |
@@ -43,7 +44,7 @@ Every generator handles every format and paging style your contract declares. Wh
 | `pypi:seampact-drf` | views, serializers, a boundary middleware and an exception handler around your handlers | nothing |
 | `pypi:seampact-ninja` | a bind function that adds a Ninja router, with a boundary middleware and Pydantic models, around your handlers | nothing |
 
-Guides: [React](../frontend/react.md), [Vue](../frontend/vue.md), [Angular](../frontend/angular.md), [NestJS](../backend/nestjs.md), [Spring Boot](../backend/spring-boot.md), [Laravel](../backend/laravel.md), [Symfony](../backend/symfony.md), [FastAPI](../backend/fastapi.md), [Django REST Framework](../backend/drf.md), [Django Ninja](../backend/ninja.md). Their options are in [Per-target options](reference.md#per-target-options).
+Guides: [React](../frontend/react.md), [Vue](../frontend/vue.md), [Angular](../frontend/angular.md), [NestJS](../backend/nestjs.md), [Next.js](../backend/nextjs.md), [Spring Boot](../backend/spring-boot.md), [Laravel](../backend/laravel.md), [Symfony](../backend/symfony.md), [FastAPI](../backend/fastapi.md), [Django REST Framework](../backend/drf.md), [Django Ninja](../backend/ninja.md). Their options are in [Per-target options](reference.md#per-target-options).
 
 ## The entry of each stack
 

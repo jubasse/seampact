@@ -35,6 +35,7 @@ The workspace packages, the compiler stages and one line per source directory. A
 | `@seampact/codegen-hono` | `packages/targets/codegen-hono` | target | Generates a registerRoutes function per api that adds each contract route to a Hono 4 app with its access, validation and reply checks around your handler map, validating with zod. |
 | `@seampact/codegen-msw` | `packages/targets/codegen-msw` | target | Generates Mock Service Worker 2 handlers per operation that answer the contract's examples, or the typed success or error a test gives, in the api's wire format. |
 | `@seampact/codegen-nestjs` | `packages/targets/codegen-nestjs` | target | Generates the NestJS boundary around your controllers: a decorator per operation, the access guard, an input decorator whose pipe validates, a handler wrapper or opt-in reply interceptor that writes the checked reply, the error filter and a boot check, validating with zod. |
+| `@seampact/codegen-nextjs` | `packages/targets/codegen-nextjs` | target | Generates a routeHandler per api that serves a Next.js 16 catch-all route with the contract's access, validation and reply checks around your handler map, validating with zod. |
 | `@seampact/codegen-react` | `packages/targets/codegen-react` | target | Generates TanStack Query or SWR options and React hooks, an RTK Query api, or plain fetch hooks with no query library, over the typed fetch client, with keys, invalidation and paging read from the contract. |
 | `@seampact/codegen-ts` | `packages/targets/codegen-ts` | target | Generates a named TypeScript type per schema and each operation's input, output and error union. |
 | `@seampact/codegen-vue` | `packages/targets/codegen-vue` | target | Generates TanStack Query or Pinia Colada options and Vue composables, or plain fetch composables with no query library, over the typed fetch client, with keys, invalidation and paging read from the contract. |
@@ -202,6 +203,10 @@ In pipeline order (ADR 0006 section 1).
 ### `@seampact/codegen-nestjs`
 
 - `packages/targets/codegen-nestjs/src`: The NestJS server target: the boundary around the app's controllers for each api, placing the shared Node request checks of codegen-core in NestJS's middleware, guard, input pipe, a handler wrapper or reply interceptor and filter, validating with zod.
+
+### `@seampact/codegen-nextjs`
+
+- `packages/targets/codegen-nextjs/src`: The Next.js server target: a `routeHandler` function per api that places the shared request checks of `@seampact/server-runtime`, in their Web-standard profile, around the app's handler map in a Next.js 16 catch-all route, validating with zod.
 
 ### `@seampact/codegen-react`
 

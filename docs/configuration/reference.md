@@ -136,7 +136,7 @@ Set them under `options:` of a target entry. A key a target does not know is ref
 
 ### Node servers
 
-Every Node server target takes the four shared options below. [codegen-nestjs](#codegen-nestjs), [codegen-fastify](#codegen-fastify), [codegen-express](#codegen-express), [codegen-hono](#codegen-hono) and [codegen-adonis](#codegen-adonis) link here.
+Every Node server target takes the four shared options below. [codegen-nestjs](#codegen-nestjs), [codegen-fastify](#codegen-fastify), [codegen-express](#codegen-express), [codegen-hono](#codegen-hono), [codegen-nextjs](#codegen-nextjs) and [codegen-adonis](#codegen-adonis) link here.
 
 | Option | Default | What it does |
 |---|---|---|
@@ -181,6 +181,10 @@ The shared Node server options only. Guide: [Express](../backend/express.md).
 ### codegen-hono
 
 The shared Node server options only. Guide: [Hono](../backend/hono.md).
+
+### codegen-nextjs
+
+The shared Node server options, except `catchAll: false`: the api's catch-all route file is its only route. Guide: [Next.js](../backend/nextjs.md).
 
 ### codegen-adonis
 

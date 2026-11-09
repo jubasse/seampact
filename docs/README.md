@@ -56,7 +56,8 @@ The same pages, with search, are on the [documentation site](https://jubasse.git
 - [Fastify](backend/fastify.md): Node, Fastify 5 with route hooks.
 - [AdonisJS](backend/adonisjs.md): Node, AdonisJS 7 and 6.
 - [Hono](backend/hono.md): Hono 4 on any Web-standard runtime.
-- [Access hooks on Node](backend/node-hooks.md): authenticate, decide and resolve scope on the five Node servers.
+- [Next.js](backend/nextjs.md): Next.js 16, one route handler per api.
+- [Access hooks on Node](backend/node-hooks.md): authenticate, decide and resolve scope on the six Node servers.
 - [Spring Boot](backend/spring-boot.md): Java, the Gradle or Maven plugin, controllers and hooks.
 - [Laravel](backend/laravel.md): PHP, Composer, controllers, hooks and Laravel's own auth.
 - [Symfony](backend/symfony.md): PHP, the Composer package, bundle, controllers, hooks and SecurityBundle.

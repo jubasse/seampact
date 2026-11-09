@@ -1,6 +1,6 @@
 # Hooks for Node servers
 
-A hook is a function you write and seampact calls. The contract says who may call a route and what they may do; hooks answer those questions with your users, your roles and your database. The five Node servers ([NestJS](nestjs.md), [Express](express.md), [Fastify](fastify.md), [Hono](hono.md) and [AdonisJS](adonisjs.md)) share the same hooks. Only the place where you register them differs.
+A hook is a function you write and seampact calls. The contract says who may call a route and what they may do; hooks answer those questions with your users, your roles and your database. The six Node servers ([NestJS](nestjs.md), [Express](express.md), [Fastify](fastify.md), [Hono](hono.md), [AdonisJS](adonisjs.md) and [Next.js](nextjs.md)) share the same hooks. Only the place where you register them differs.
 
 A public api needs no hooks. Read [Access](../contract/04-access.md) first if you have not declared an identity yet.
 

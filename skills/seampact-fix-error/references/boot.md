@@ -32,12 +32,13 @@ By default only routes that reach a path of the api are checked. Set `artefacts.
 
 ## Node servers
 
-Express, Fastify, Hono, NestJS and AdonisJS. The check runs when the app starts and the message starts with `seampact: the api '<id>' cannot start:`.
+Express, Fastify, Hono, NestJS, AdonisJS and Next.js. The check runs when the app starts (on Next.js, when the route file loads) and the message starts with `seampact: the api '<id>' cannot start:`.
 
 | You see | Cause and fix |
 |---|---|
 | `the framework route 'GET /docs' is outside the contract and not allow-listed` | The app has a route the contract does not declare. [Allow-list it](https://jubasse.github.io/seampact/troubleshooting/boot/#allow-listing-framework-routes). |
 | `differs from the entry's mount (write the prefix as the entry's 'mount' in seampact.config.yaml instead)` | The framework adds a prefix (route group, plugin prefix, `basePath`, mount path) the contract does not know. Remove it from the framework and set `mount` on the target entry. |
+| `runtime.edge.unsupported: the route module loads on the Edge runtime` | Next.js: the route file runs on the Edge runtime. Export `runtime = "nodejs"` from it. |
 | `handlers has no 'NotesEndpoints' object` | Pass one object per generated handler interface. |
 | `handlers.NotesEndpoints has no method getNote()` | Implement the method on that object. |
 | `'bodyValidation' is turned on, but the target generated no output validators` | Set `bodyValidation: true` in the target's `options`, then run `generate`. |

@@ -100,6 +100,10 @@
       "lines": 93,
       "branches": 79
     },
+    "packages/targets/codegen-nextjs": {
+      "lines": 99,
+      "branches": 99
+    },
     "packages/targets/codegen-react": {
       "lines": 98,
       "branches": 64

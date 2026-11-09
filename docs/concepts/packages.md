@@ -25,6 +25,7 @@ You install the core, then only the generators your project uses. Installing the
 | React hooks (TanStack Query, SWR, RTK Query or no library) | `@seampact/codegen-react` |
 | an Angular or Vue client | `@seampact/codegen-angular` or `@seampact/codegen-vue` |
 | a Web-standard server boundary (Hono 4) | `@seampact/codegen-hono` |
+| a Next.js 16 route handler | `@seampact/codegen-nextjs`, plus `@seampact/server-runtime` as a production dependency, at the same version as the generators |
 | mock handlers for tests and local work | `@seampact/codegen-msw` |
 
 A server generator does not install a validator generator. You choose one and link the two in your app's `seampact.config.yaml`, where you also turn each generated artefact on or off. The CLI checks the combination against a published compatibility matrix and, when it does not work, names the ones that do.
