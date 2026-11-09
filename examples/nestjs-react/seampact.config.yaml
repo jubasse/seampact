@@ -1,0 +1,31 @@
+outDir: src/__generated__
+sources:
+  notes:
+    path: ./contract
+targets:
+  - id: types
+    use: "@seampact/codegen-ts"
+    apis: [notes]
+  - id: validators
+    use: "@seampact/codegen-zod"
+    apis: [notes]
+  - id: server
+    use: "@seampact/codegen-nestjs"
+    apis: [notes]
+    options:
+      bodyValidation: true
+    link:
+      types: types
+      validators: validators
+  - id: client
+    use: "@seampact/codegen-fetch"
+    apis: [notes]
+    link:
+      types: types
+  - id: queries
+    use: "@seampact/codegen-react"
+    apis: [notes]
+    options:
+      query: tanstack
+    link:
+      client: client

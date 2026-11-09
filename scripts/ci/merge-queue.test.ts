@@ -23,6 +23,7 @@ const REQUIRED_CHECKS = [
   "hooks-native",
   "binary",
   "p6-react",
+  "examples",
   "jvm-core",
   "spring-boot",
   "jvm-plugins",
