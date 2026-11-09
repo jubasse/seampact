@@ -12,6 +12,12 @@ describe("packVariantFiles", () => {
       SHARED_HEADER,
       "defaults:\n",
       "  paging: { default: cursor, maxLimit: 100 }\n",
+      "  errors:\n",
+      "    every: [api.internal]\n",
+      "    derived:\n",
+      "      schemaInvalid:\n",
+      "        code: api.schema_invalid\n",
+      "        params: { issues: { $each: $issues, $as: { pointer: $item.pointer, rule: $item.rule } } }\n",
     ].join("");
     const tasks = `# tasks\r\n${TASKS_LIST_PAGING}\r\n                  sortable: [createdAt]\r\n`;
     const files = (lineEnd: string) =>

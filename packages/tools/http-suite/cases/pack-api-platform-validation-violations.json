@@ -1,0 +1,34 @@
+{
+  "id": "pack-api-platform-validation-violations",
+  "title": "A failed validation answers 422 with the violations list of API Platform",
+  "checks": ["CHK-107"],
+  "profiles": ["pack:api-platform"],
+  "steps": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:create}}"
+        },
+        "body": {
+          "title": ""
+        }
+      },
+      "expect": {
+        "status": 422,
+        "body": {
+          "@type": "Error",
+          "code": "api.validation_failed",
+          "violations": [
+            {
+              "propertyPath": "/title",
+              "message": "minLength"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

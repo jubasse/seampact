@@ -80,7 +80,7 @@ final class PageReply
      * @param array<string, mixed> $facts the handler's page facts by name, null when not given
      * @return array{mixed, array<string, string>} the body (missing when the template writes none) and the headers
      */
-    public static function render(BoundaryState $state, string $rawQuery, string $requestPath, array $items, array $facts, int $status): array
+    public static function render(BoundaryState $state, string $rawQuery, string $requestPath, array $items, array $facts, int $status, ?string $resource = null): array
     {
         $style = self::style($state);
         $writeNulls = Ir::string($style, 'absent') === self::NULL_ABSENT;
@@ -108,6 +108,11 @@ final class PageReply
             $slots = self::tokenSlots($style, $rawQuery, $urlBase, $facts, $position, $slots);
         }
         $slots['items'] = $items;
+        if ($resource !== null) {
+            $slots[ResourceIris::RESOURCE_SLOT] = $resource;
+        }
+        $memberRoute = ResourceIris::memberRoute($state);
+        $slots[Templates::ITEM_SLOTS] = array_map(static fn (mixed $item): array => self::itemSlots($state, $memberRoute, $item), $items);
         $slots['status'] = $status;
         $slots['path'] = $requestPath;
         $meta = self::renderedMeta($style, $slots, $writeNulls);
@@ -118,6 +123,19 @@ final class PageReply
         $body = Templates::render(self::pageBody($state, $style), $slots, $writeNulls);
 
         return [$body->present ? $body->value : new \stdClass(), self::headers($state, $style, $slots)];
+    }
+
+    /**
+     * The slots one item of `$items` binds inside `$each`.
+     *
+     * @param ?array{path: string, idParam: string} $memberRoute
+     * @return array<string, mixed>
+     */
+    private static function itemSlots(BoundaryState $state, ?array $memberRoute, mixed $item): array
+    {
+        $memberUrl = ResourceIris::memberUrl($state, $memberRoute, $item);
+
+        return $memberUrl === null ? [] : [ResourceIris::ITEM_SELF_SLOT => $memberUrl];
     }
 
     /** @return array<array-key, mixed> the paging style of the operation */
