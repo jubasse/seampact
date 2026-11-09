@@ -1,3 +1,3 @@
 The Symfony 7.4 and 8 target: types, controller interfaces, routes, constraints and bundle of a contract.
 
-Part of [seampact](https://github.com/jubasse/seampact). Documentation: https://jubasse.github.io/seampact/backend/symfony
+Part of [seampact](https://github.com/jubasse/seampact). Documentation: https://jubasse.github.io/seampact/backend/symfony/
