@@ -56,7 +56,7 @@ final class SymfonyPlacement implements BoundaryNames
     /** @var array<string, array{string, string}> each operation's input constraint and its validator */
     private array $inputConstraints = [];
 
-    public function __construct(public readonly ApiLayout $layout, KeptForms $kept)
+    public function __construct(public readonly ApiLayout $layout, KeptForms $kept, public readonly SymfonyFlavour $flavour)
     {
         $this->namespace = $layout->namespace;
         $this->symfonyNamespace = "{$layout->namespace}\\Symfony";

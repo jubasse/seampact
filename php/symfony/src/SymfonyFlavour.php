@@ -26,6 +26,9 @@ interface SymfonyFlavour
     /** The runtime class the generated boundary subscriber extends. */
     public function boundaryParent(SymfonyPlacement $placement): string;
 
+    /** Whether the target refuses app input rules by name, so its placement generates no input-rules interface. */
+    public function refusesInputRules(): bool;
+
     /** @return list<string> the controllers of a framework's own routes that the boot check accepts as framework routes */
     public function frameworkRouteControllers(): array;
 

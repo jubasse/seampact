@@ -14,7 +14,8 @@ use Symfony\Component\HttpKernel\CacheWarmer\CacheWarmerInterface;
  * The metadata part of the api's boot check (ADR 0029 "The boot check"), run by `cache:warmup`: API Platform's final
  * metadata of each generated resource, as an app's metadata extension left it, must keep every switch that turns off
  * API Platform's own request handling, the generated processor and no provider, and set neither security expression
- * that needs a denormalized object. Every problem is listed at once, then thrown.
+ * that needs a denormalized object. A service tagged as app input rules is refused by name, since this target runs
+ * none yet (ADR 0029 "App input rules"). Every problem is listed at once, then thrown.
  */
 #[Exclude]
 final class OperationMetadataCheck implements CacheWarmerInterface
@@ -27,15 +28,21 @@ final class OperationMetadataCheck implements CacheWarmerInterface
         'validate' => 'canValidate',
     ];
 
+    public const INPUT_RULES_TAG_SUFFIX = '.input_rules';
+    public const INPUT_RULES_REFUSAL = 'input.rules.unsupported';
+    public const INPUT_RULES_RELEASE = '1.1.x';
+
     /**
      * @param list<class-string> $resourceClasses the api's generated resources
      * @param array<string, class-string> $processors each operation id and its generated processor
+     * @param iterable<object> $inputRules the services tagged as the api's app input rules, which this target refuses
      */
     public function __construct(
         private readonly ResourceMetadataCollectionFactoryInterface $metadata,
         private readonly string $api,
         private readonly array $resourceClasses,
         private readonly array $processors,
+        private readonly iterable $inputRules = [],
     ) {
     }
 
@@ -46,7 +53,7 @@ final class OperationMetadataCheck implements CacheWarmerInterface
 
     public function warmUp(string $cacheDir, ?string $buildDir = null): array
     {
-        $problems = [];
+        $problems = $this->inputRulesProblems();
         foreach ($this->resourceClasses as $resourceClass) {
             foreach ($this->metadata->create($resourceClass) as $resource) {
                 foreach ($resource->getOperations() ?? [] as $operation) {
@@ -60,6 +67,17 @@ final class OperationMetadataCheck implements CacheWarmerInterface
         }
 
         return [];
+    }
+
+    /** @return list<string> */
+    private function inputRulesProblems(): array
+    {
+        $problems = [];
+        foreach ($this->inputRules as $rules) {
+            $problems[] = self::INPUT_RULES_REFUSAL . ': ' . $rules::class . ' is tagged as app input rules, which the API Platform target does not run before ' . self::INPUT_RULES_RELEASE . '; untag it, or serve the api on the Symfony target';
+        }
+
+        return $problems;
     }
 
     /** @return list<string> */
