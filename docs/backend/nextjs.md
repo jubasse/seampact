@@ -139,7 +139,7 @@ export { handler as DELETE, handler as GET, handler as HEAD, handler as OPTIONS,
 ```
 
 - Export the handler under every method name. A method the contract does not serve then answers the contract's 404, not Next.js's 405.
-- `runtime = "nodejs"` is required. On the Edge runtime the route fails to load.
+- `runtime = "nodejs"` is required. On the Edge runtime the route fails to load. If your app sets `cacheComponents: true`, remove this line: Next.js refuses it there, and the route runs on Node.js.
 - An api with several base paths needs one route file per base path, each importing the same options.
 - For a public api, leave `hooks` out.
 - `clientAddress` gives your hooks the caller's address. Without it, they get none.
