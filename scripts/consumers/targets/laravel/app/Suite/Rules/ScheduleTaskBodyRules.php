@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Suite\Rules;
 
-use App\Generated\Tasks\Laravel\InputRules;
+use App\Generated\InputRules\Laravel\InputRules;
 use Closure;
 use Illuminate\Contracts\Validation\DataAwareRule;
 use Illuminate\Contracts\Validation\ValidationRule;

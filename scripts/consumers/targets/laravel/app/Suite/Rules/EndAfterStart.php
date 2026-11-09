@@ -12,13 +12,15 @@ use Seampact\ConsumerSuite\SuiteControl;
 /** The end of a window comes after its start; the class name gives the wire rule `app.endAfterStart`. */
 final class EndAfterStart implements ValidationRule, DataAwareRule
 {
+    private const HOOK = 'input-rule:endAfterStart';
+
     /** @var array<string, mixed> */
     private array $data = [];
 
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        SuiteControl::recordHookCall('input-rule:endAfterStart', 'tasks', 'scheduleTask');
-        SuiteControl::throwScriptedHookFailure('input-rule:endAfterStart');
+        SuiteControl::recordHookCall(self::HOOK, 'inputRules', 'scheduleTask');
+        SuiteControl::throwScriptedHookFailure(self::HOOK);
 
         $start = $this->data['start'] ?? null;
         if (is_string($value) && is_string($start) && $value <= $start) {
