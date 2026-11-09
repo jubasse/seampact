@@ -31,6 +31,7 @@ const FAMILIES: Readonly<Record<string, readonly string[]>> = {
     "p5-fastify-express.yml",
     "p5-nestjs.yml",
     "p5-hono.yml",
+    "nextjs.yml",
     "p5-adonis.yml",
     "validators-2.yml",
   ],

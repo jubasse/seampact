@@ -119,6 +119,10 @@ const ROWS_BY_JOB: Readonly<Record<string, Readonly<Record<string, readonly Matr
     consumer: [{ target: "hono", validators: "zod" }],
     "consumer-post-merge": [{ target: "hono", validators: "yup" }],
   },
+  "nextjs.yml": {
+    consumer: [{ target: "nextjs", validators: "zod" }],
+    "consumer-post-merge": [{ target: "nextjs", validators: "yup" }],
+  },
   "p5-nestjs.yml": {
     "nestjs-consumer": [{ target: "nestjs", validators: "zod", reply: "interceptor" }],
     "nestjs-consumer-queue": [

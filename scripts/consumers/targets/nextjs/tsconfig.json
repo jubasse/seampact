@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2024",
+    "lib": ["ES2024", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "types": ["node"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "plugins": [{ "name": "next" }]
+  },
+  "include": [
+    "generated",
+    "src",
+    "test",
+    "app",
+    "next.config.mts",
+    "next-env.d.ts",
+    ".next/types/**/*.ts"
+  ]
+}

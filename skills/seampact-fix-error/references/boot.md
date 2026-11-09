@@ -124,6 +124,18 @@ The check runs with `bin/console cache:warmup` and on the first request. The mes
 
 An invalid `%env()%` value of the bundle configuration does not stop the start: the api answers 500 on its routes and the log names the key.
 
+## API Platform
+
+The check runs with `bin/console cache:warmup`, and lists every problem at once. The [Symfony](https://jubasse.github.io/seampact/troubleshooting/boot/#symfony) rows apply too: the boundary is the same.
+
+| You see | Cause and fix |
+|---|---|
+| `input.rules.unsupported: <Class> is tagged as app input rules ...` | The API Platform target does not run app input rules before 1.1.x. Untag the service, or serve the api on Symfony. |
+| `the operation '<name>' sets <read, write, contentNegotiation, deserialize or validate>: ...` | The app changed a switch of a contract operation. The boundary reads, negotiates, deserializes and validates it. Remove the change. |
+| `the operation '<name>' does not set the extra property ...` | A change dropped a marker the generated resource sets. Remove it. |
+| `the operation '<name>' sets securityPostDenormalize` (or `securityPostValidation`) | Both need the object API Platform's deserialize would build. Use `security`, which runs before the handler. |
+| `the operation '<name>' has another processor than its generated ...`, `the operation '<name>' sets a provider` | A processor or a provider replaced the generated one. Remove it. |
+
 ## Laravel
 
 The check runs at `php artisan route:cache` and at the first HTTP boot while the routes are not cached.

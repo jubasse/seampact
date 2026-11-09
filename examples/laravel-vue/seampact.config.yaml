@@ -1,0 +1,21 @@
+# The Vue client. The Laravel app has its own config in api/, since the Composer runner generates its target.
+outDir: src/__generated__
+sources:
+  notes:
+    path: ./contract
+targets:
+  - id: types
+    use: "@seampact/codegen-ts"
+    apis: [notes]
+  - id: client
+    use: "@seampact/codegen-fetch"
+    apis: [notes]
+    link:
+      types: types
+  - id: queries
+    use: "@seampact/codegen-vue"
+    apis: [notes]
+    options:
+      query: tanstack
+    link:
+      client: client

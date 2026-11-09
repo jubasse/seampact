@@ -1,0 +1,13 @@
+  # The template's `types` entry is linked by the fetch client, which imports with `.js` specifiers; the Next.js
+  # server imports without an extension, so it links its own copy (`link.importSpecifiers.mixed` otherwise).
+  - id: types-nextjs
+    use: "@seampact/codegen-ts"
+    apis: [tasks, tasksService, tasksServiceWrites, tasksDevices, tasksResponses, tasksPaging, inputRules]
+  - id: server
+    use: "@seampact/codegen-nextjs"
+    apis: [tasks, tasksService, tasksServiceWrites, tasksDevices, tasksResponses, tasksPaging, inputRules]
+    options:
+      bodyValidation: true
+    link:
+      types: types-nextjs
+      validators: validators

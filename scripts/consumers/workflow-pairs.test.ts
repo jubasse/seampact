@@ -8,6 +8,7 @@ const CONSUMER_WORKFLOWS = [
   "p5-nestjs.yml",
   "p5-fastify-express.yml",
   "p5-hono.yml",
+  "nextjs.yml",
   "p5-adonis.yml",
   "validators-2.yml",
 ];
@@ -19,6 +20,7 @@ const LANE_FILTER_AND_CHECK_JOBS: ReadonlySet<string> = new Set([
   "nestjs",
   "express-fastify",
   "hono",
+  "nextjs",
   "adonis",
 ]);
 

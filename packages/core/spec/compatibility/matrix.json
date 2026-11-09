@@ -157,7 +157,12 @@
       "framework": {
         "id": "nextjs",
         "package": "next",
-        "tested": [],
+        "tested": [
+          {
+            "major": 16,
+            "consumer": "nextjs"
+          }
+        ],
         "incompatible": [
           {
             "major": 14,

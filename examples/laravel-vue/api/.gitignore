@@ -1,0 +1,5 @@
+/vendor/
+/app/Generated/
+/seampact.config.yaml
+/storage/notes.json
+composer.lock
