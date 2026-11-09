@@ -40,6 +40,11 @@ const ISSUES_URL = "https://github.com/jubasse/seampact/issues";
 const DOCS_SITE_URL = "https://jubasse.github.io/seampact/";
 // The two packages that are never published; every other npm package is public.
 const UNPUBLISHED_PACKAGES = ["@seampact/binary", "@seampact/docs-site"];
+// A target may not depend on another target, except these named peers: the axios client is the fetch client over
+// the app's axios instance, so it generates with the fetch target's own client and runtime sources.
+const TARGET_PEER_EXCEPTIONS: ReadonlyMap<string, readonly string[]> = new Map([
+  [`${SCOPE}codegen-axios`, [`${SCOPE}codegen-fetch`]],
+]);
 const RUNTIME_SETS = ["dependencies", "peerDependencies", "optionalDependencies"] as const;
 
 /** The development form (A3), or the stamped form of a release, with the directories of the published packages. */
@@ -224,6 +229,7 @@ function checkDependencies(pkgs: Npm[], out: Violation[]): void {
         break;
       case "target": {
         const required = [`${SCOPE}codegen-core`, `${SCOPE}spec`];
+        const allowedPeers = [...required, ...(TARGET_PEER_EXCEPTIONS.get(p.name) ?? [])];
 
         for (const dep of required)
           if (!depNames(p.json, "peerDependencies").includes(dep))
@@ -234,7 +240,7 @@ function checkDependencies(pkgs: Npm[], out: Violation[]): void {
 
         for (const set of RUNTIME_SETS)
           for (const dep of seen(set))
-            if (!(set === "peerDependencies" && required.includes(dep)))
+            if (!(set === "peerDependencies" && allowedPeers.includes(dep)))
               add(
                 "rule 2",
                 `target depends on ${dep} (${set}); only codegen-core and spec, as peers`,
@@ -272,7 +278,9 @@ function checkDependencies(pkgs: Npm[], out: Violation[]): void {
       for (const dep of ours("devDependencies")) {
         const r = roleOf.get(dep);
 
-        if (r && r !== "core" && r !== "tool")
+        const isAllowedPeer = TARGET_PEER_EXCEPTIONS.get(p.name)?.includes(dep) ?? false;
+
+        if (r && r !== "core" && r !== "tool" && !isAllowedPeer)
           add(
             "dev-dependencies",
             `devDependencies may add only core and tool packages; ${dep} is a ${r}`,

@@ -68,6 +68,10 @@
       "lines": 97,
       "branches": 67
     },
+    "packages/targets/codegen-axios": {
+      "lines": 95,
+      "branches": 70
+    },
     "packages/targets/codegen-class-validator": {
       "lines": 89,
       "branches": 78
