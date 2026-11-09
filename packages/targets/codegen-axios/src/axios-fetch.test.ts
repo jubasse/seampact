@@ -24,6 +24,7 @@ const server = setupServer(
   http.get(`${BASE}/notes/boom`, () => HttpResponse.text("oops", { status: 500 })),
   http.get(`${BASE}/notes/slow`, async () => {
     await new Promise((resolve) => setTimeout(resolve, 2000));
+
     return HttpResponse.json({ id: "slow" });
   }),
 );
@@ -78,10 +79,12 @@ test("the app's instance interceptors and defaults apply", async () => {
 
   instance.interceptors.request.use((config) => {
     config.headers.set("authorization", "Bearer t");
+
     return config;
   });
   instance.interceptors.response.use((response) => {
     seen.push(`${response.status}`);
+
     return response;
   });
   server.use(
@@ -102,6 +105,7 @@ test("an interceptor that rejects an error status rejects the call", async () =>
 
   instance.interceptors.response.use((response) => {
     if (response.status >= 400) throw new Error("session expired");
+
     return response;
   });
 
