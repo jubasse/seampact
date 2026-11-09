@@ -23,7 +23,7 @@ api.yaml:10: paging.sort.style.unsupported: entry 'server', api 'notes': The sor
 | Express, Fastify, Hono, NestJS, AdonisJS, Next.js | [Node servers](https://jubasse.github.io/seampact/troubleshooting/generate/#node-servers) |
 | TypeScript types, validators, clients and Node servers share the code | [Every Node target](https://jubasse.github.io/seampact/troubleshooting/generate/#every-node-target) |
 | Spring Boot | [Spring Boot](https://jubasse.github.io/seampact/troubleshooting/generate/#spring-boot) |
-| Laravel, Symfony | [PHP](https://jubasse.github.io/seampact/troubleshooting/generate/#php) |
+| Laravel, Symfony, API Platform | [PHP](https://jubasse.github.io/seampact/troubleshooting/generate/#php) |
 | FastAPI, Django REST framework, Django Ninja | [Python](https://jubasse.github.io/seampact/troubleshooting/generate/#python) |
 | Spring Boot, PHP and Python share the code | [Spring Boot, PHP and Python](https://jubasse.github.io/seampact/troubleshooting/generate/#spring-boot-php-and-python) |
 | Several servers share the code | [Every server](https://jubasse.github.io/seampact/troubleshooting/generate/#every-server) |
@@ -128,7 +128,7 @@ The forms refused by Spring Boot, PHP and Python are [in their own table](https:
 
 ## PHP
 
-Laravel and Symfony. The forms refused by Spring Boot, PHP and Python are [in their own table](https://jubasse.github.io/seampact/troubleshooting/generate/#spring-boot-php-and-python).
+Laravel, Symfony and API Platform. The forms refused by Spring Boot, PHP and Python are [in their own table](https://jubasse.github.io/seampact/troubleshooting/generate/#spring-boot-php-and-python).
 
 | Code | Cause and fix |
 |---|---|
