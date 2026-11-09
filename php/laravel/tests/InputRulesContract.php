@@ -43,6 +43,7 @@ final class InputRulesContract
         ],
     ];
     public const TYPES = [
+        'inputRules' => TasksInputRules::class,
         'schemas' => ['Window' => ['class' => ScheduleWindow::class, 'members' => ['start' => 'start', 'end' => 'end', 'note' => 'note']]],
         'operations' => [
             'scheduleTask' => ['input' => ScheduleInput::class, 'parts' => [

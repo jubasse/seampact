@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Suite\Rules;
 
-use App\Generated\InputRules\Laravel\InputRules;
+use App\Generated\InputRules\Laravel\InputRulesInputRules;
 use Closure;
 use Illuminate\Contracts\Validation\DataAwareRule;
 use Illuminate\Contracts\Validation\ValidationRule;
 
 /** The rules of the body of `scheduleTask`. */
-final class ScheduleTaskBodyRules implements InputRules
+final class ScheduleTaskBodyRules implements InputRulesInputRules
 {
     public const UNNAMED_NOTE = 'unnamed';
 

@@ -100,6 +100,18 @@ final class Hooks implements HookLookup, IdempotencyStoreLookup, InputRulesLooku
         return $this->container->make(ValidatorFactory::class);
     }
 
+    /** @return class-string<InputRules> the api's own `InputRules` interface, which every tagged rule set must implement */
+    public function inputRulesInterface(ApiContract $contract): string
+    {
+        $interface = Ir::string($contract->types, 'inputRules')
+            ?? throw new \LogicException("seampact: the contract of api '{$contract->api}' names no input rules interface; regenerate it.");
+        if (!is_subclass_of($interface, InputRules::class)) {
+            throw new \LogicException("seampact: the input rules interface {$interface} of api '{$contract->api}' does not exist or does not extend " . InputRules::class . '; regenerate it.');
+        }
+
+        return $interface;
+    }
+
     public function unexpectedErrorListener(ApiContract $contract): ?UnexpectedErrorListener
     {
         $interface = Ir::string($contract->types, 'unexpectedErrorListener')

@@ -59,7 +59,7 @@ final class PhpLayout implements TypeNames, BoundaryNames
         $this->boundary = $this->api->claim("{$this->laravelNamespace}\\{$this->api->apiTypeName}Boundary", "the api's boundary middleware", $apiName);
         $this->accessMiddleware = $this->api->claim("{$this->laravelNamespace}\\{$this->api->apiTypeName}AccessMiddleware", "the api's access middleware", $apiName);
         $this->unexpectedErrorListener = $this->api->claim("{$this->laravelNamespace}\\UnexpectedErrorListener", "the api's unexpected-error listener interface", $apiName);
-        $this->inputRules = $this->api->claim("{$this->laravelNamespace}\\InputRules", "the api's input rules interface", $apiName);
+        $this->inputRules = $this->api->claim("{$this->laravelNamespace}\\{$this->api->apiTypeName}InputRules", "the api's input rules interface", $apiName);
         $this->serviceProvider = $this->api->claim("{$this->laravelNamespace}\\{$this->api->apiTypeName}SeampactServiceProvider", "the api's service provider", $apiName);
 
         foreach ($kept->operations() as [$index, $operation]) {
@@ -130,6 +130,11 @@ final class PhpLayout implements TypeNames, BoundaryNames
     public function unexpectedErrorListener(): string
     {
         return $this->unexpectedErrorListener;
+    }
+
+    public function inputRules(): string
+    {
+        return $this->inputRules;
     }
 
     public function runtime(string $simpleName): string

@@ -46,6 +46,7 @@ final class BootCheck
     {
         $problems = [
             ...($switches[self::HOOKS] ? self::hooks($app, $contract) : []),
+            ...self::inputRules($app, $contract),
             ...self::middleware($app, $boundaryClass, $accessClass),
             ...self::exceptionHandler($app),
             ...self::routes($app, $contract, $accessClass, $switches),
@@ -72,8 +73,20 @@ final class BootCheck
         return [
             ...$problems,
             ...HookCheck::idempotencyStoreProblems(new Hooks($app), $contract, self::idempotencyStoreFix($contract->api)),
-            ...InputRuleCheck::problems(new Hooks($app), $contract, InputRules::class, "tag a class implementing the api's InputRules with '" . Hooks::inputRulesTag($contract->api) . "'"),
         ];
+    }
+
+    /** @return list<string> the input rules are checked at every `bootCheck.hooks` level (ADR 0028) */
+    private static function inputRules(Application $app, ApiContract $contract): array
+    {
+        $hooks = new Hooks($app);
+        if (iterator_to_array($hooks->inputRules($contract), false) === []) {
+            return [];
+        }
+
+        $interface = $hooks->inputRulesInterface($contract);
+
+        return InputRuleCheck::problems($hooks, $contract, $interface, "tag a class implementing {$interface} with '" . Hooks::inputRulesTag($contract->api) . "'");
     }
 
     private static function idempotencyStoreFix(string $api): string

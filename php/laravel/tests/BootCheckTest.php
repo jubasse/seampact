@@ -60,7 +60,60 @@ final class BootCheckTest extends TestCase
         }
 
         self::assertStringContainsString("input rules for operation 'scheduleTsk', which api 'tasks' lacks", $problems);
-        self::assertStringContainsString("the input rules service stdClass does not implement Seampact\\Laravel\\Runtime\\InputRules: implement it, or tag a class implementing the api's InputRules with 'seampact.tasks.input_rules'", $problems);
+        self::assertStringContainsString("the input rules service stdClass does not implement Seampact\\Laravel\\Tests\\TasksInputRules: implement it, or tag a class implementing Seampact\\Laravel\\Tests\\TasksInputRules with 'seampact.tasks.input_rules'", $problems);
+    }
+
+    public function testInputRulesAreCheckedWithTheHooksCheckOff(): void
+    {
+        $app = new Application(sys_get_temp_dir());
+        $app->instance('config', new Repository([]));
+        $app->singleton(Kernel::class, HttpKernel::class);
+        $app->instance(ExceptionHandler::class, self::createStub(ExceptionHandler::class));
+        $app->instance('rules.misspelt', new ScriptedInputRules('scheduleTsk', 'body', []));
+        $app->tag(['rules.misspelt'], Hooks::inputRulesTag('tasks'));
+
+        $problems = '';
+        try {
+            BootCheck::run($app, ApiContract::of(InputRulesContract::class), BoundaryMiddleware::class, AccessMiddleware::class, [...self::SWITCHES, BootCheck::HOOKS => false]);
+        } catch (BootCheckFailedException $failure) {
+            $problems = $failure->getMessage();
+        }
+
+        self::assertStringContainsString("input rules for operation 'scheduleTsk', which api 'tasks' lacks", $problems);
+    }
+
+    public function testARuleSetOfAnotherInterfaceIsRefusedNamingTheApisInterface(): void
+    {
+        $app = new Application(sys_get_temp_dir());
+        $app->instance('config', new Repository([]));
+        $app->singleton(Kernel::class, HttpKernel::class);
+        $app->instance(ExceptionHandler::class, self::createStub(ExceptionHandler::class));
+        $app->instance('rules.plain', new class implements \Seampact\Laravel\Runtime\InputRules {
+            public function operationId(): string
+            {
+                return 'scheduleTask';
+            }
+
+            public function part(): string
+            {
+                return 'body';
+            }
+
+            public function rules(): array
+            {
+                return [];
+            }
+        });
+        $app->tag(['rules.plain'], Hooks::inputRulesTag('tasks'));
+
+        $problems = '';
+        try {
+            BootCheck::run($app, ApiContract::of(InputRulesContract::class), BoundaryMiddleware::class, AccessMiddleware::class, [...self::SWITCHES, BootCheck::HOOKS => false]);
+        } catch (BootCheckFailedException $failure) {
+            $problems = $failure->getMessage();
+        }
+
+        self::assertStringContainsString('does not implement Seampact\\Laravel\\Tests\\TasksInputRules', $problems);
     }
 
     public function testARelativeApiRefusesAPublicOriginThatIsSet(): void

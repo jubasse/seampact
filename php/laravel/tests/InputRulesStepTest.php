@@ -8,6 +8,8 @@ use Closure;
 use Illuminate\Contracts\Validation\DataAwareRule;
 use Illuminate\Contracts\Validation\Factory as ValidatorFactory;
 use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Contracts\Validation\Validator as ValidatorContract;
+use Illuminate\Contracts\Validation\ValidatorAwareRule;
 use Illuminate\Foundation\Application;
 use Illuminate\Translation\ArrayLoader;
 use Illuminate\Translation\Translator;
@@ -72,6 +74,39 @@ final class InputRulesStepTest extends TestCase
         self::issues($served);
         self::assertCount(1, $served->logger->lines);
         self::assertStringContainsString('has no usable name', $served->logger->lines[0]);
+    }
+
+    public function testAMessageAddedWithErrorsAddIsARefusalNamedInvalidAndLoggedOnce(): void
+    {
+        $served = self::served([self::rules('body', ['' => [new EndAddedByErrors()]])]);
+
+        self::assertSame([['in' => 'body', 'pointer' => '/end', 'rule' => 'app.invalid']], self::issues($served));
+        self::issues($served);
+        self::assertCount(1, $served->logger->lines);
+    }
+
+    public function testAnAnonymousRuleIsLoggedWithoutItsFilePath(): void
+    {
+        $anonymous = new class implements ValidationRule {
+            public function validate(string $attribute, mixed $value, Closure $fail): void
+            {
+                $fail('refused');
+            }
+        };
+        $served = self::served([self::rules('body', ['note' => [$anonymous]])], note: 'x');
+
+        self::assertSame([['in' => 'body', 'pointer' => '/note', 'rule' => 'app.invalid']], self::issues($served));
+        self::assertStringContainsString('ValidationRule@anonymous', $served->logger->lines[0]);
+        self::assertStringNotContainsString("\0", $served->logger->lines[0]);
+        self::assertStringNotContainsString('.php', $served->logger->lines[0]);
+    }
+
+    public function testARuleSetOfAnotherApisInterfaceIsRefused(): void
+    {
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessageMatches('/not a class implementing .*TasksInputRules/');
+
+        self::runStep(self::served([new OtherApiScriptedRules()]));
     }
 
     public function testAnIssueOfEveryPartIsAnsweredTogetherInPartOrder(): void
@@ -183,7 +218,7 @@ final class InputRulesStepTest extends TestCase
     }
 
     /** @param array<string, mixed> $rules */
-    private static function rules(string $part, array $rules, string $operationId = 'scheduleTask'): InputRules
+    private static function rules(string $part, array $rules, string $operationId = 'scheduleTask'): TasksInputRules
     {
         return new ScriptedInputRules($operationId, $part, $rules);
     }
@@ -197,8 +232,18 @@ final class ServedRequest
     }
 }
 
+/** The api's generated input rules interface. */
+interface TasksInputRules extends InputRules
+{
+}
+
+/** Input rules of the api of one other generated interface: a class written for another api. */
+interface OtherApiInputRules extends InputRules
+{
+}
+
 /** Input rules of one operation and part, with the rules the test gives. */
-final class ScriptedInputRules implements InputRules
+final class ScriptedInputRules implements TasksInputRules
 {
     /** @param array<string, mixed> $rules */
     public function __construct(private readonly string $operationId, private readonly string $part, private readonly array $rules)
@@ -251,6 +296,45 @@ final class WindowTooLong implements ValidationRule
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
         $fail('the window is too long');
+    }
+}
+
+/** A rule that refuses through `errors()->add()`, which leaves no `failed()` entry. */
+final class EndAddedByErrors implements ValidationRule, ValidatorAwareRule
+{
+    public bool $implicit = true;
+
+    private ValidatorContract $validator;
+
+    public function validate(string $attribute, mixed $value, Closure $fail): void
+    {
+        $this->validator->errors()->add('end', 'the end is refused');
+    }
+
+    public function setValidator(ValidatorContract $validator): static
+    {
+        $this->validator = $validator;
+
+        return $this;
+    }
+}
+
+/** A rule set written for another api's generated interface. */
+final class OtherApiScriptedRules implements OtherApiInputRules
+{
+    public function operationId(): string
+    {
+        return 'scheduleTask';
+    }
+
+    public function part(): string
+    {
+        return 'body';
+    }
+
+    public function rules(): array
+    {
+        return [];
     }
 }
 
