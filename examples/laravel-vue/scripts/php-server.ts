@@ -58,7 +58,13 @@ export async function startPhpServer(port: number): Promise<PhpServer> {
     stdio: ["ignore", "inherit", "inherit"],
   });
 
-  await waitUntilListening(port, child);
+  try {
+    await waitUntilListening(port, child);
+  } catch (failure) {
+    child.kill();
+
+    throw failure;
+  }
 
   return { baseUrl: `http://${HOST}:${port}`, process: child };
 }

@@ -4,7 +4,7 @@
 
 Two configs, since two runners generate: `seampact.config.yaml` (the Node CLI, the Vue client) and `api/seampact.config.template.yaml` (Composer, the Laravel server).
 
-Run these in this folder, after `pnpm install` at the root of the repository. You need PHP 8.3 or later and Composer.
+Run these in this folder, after `pnpm install` at the root of the repository. You need Composer and PHP 8.3.36 or later, 8.4.27 or later, or 8.5.12 or later (the floors of `api/composer.json`).
 
 ```sh
 cp .env.example .env                  # the api URL the Vue app calls
