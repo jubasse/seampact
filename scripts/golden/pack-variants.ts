@@ -54,6 +54,17 @@ const DROP_SEARCH_EXAMPLES: TextEdit = {
   replace: "",
 };
 
+/** The shared binding of `schemaInvalid` goes, so the pack's own 422 binding applies (an api's setting wins over a pack's). */
+const DROP_SCHEMA_INVALID_BINDING: TextEdit = {
+  file: SHARED_FILE,
+  find: `    derived:
+      schemaInvalid:
+        code: api.schema_invalid
+        params: { issues: { $each: $issues, $as: { pointer: $item.pointer, rule: $item.rule } } }
+`,
+  replace: "",
+};
+
 export const PACK_VARIANTS: readonly PackVariant[] = [
   { name: "crud-rights", edits: [listPack("crud-rights")] },
   {
@@ -63,7 +74,12 @@ export const PACK_VARIANTS: readonly PackVariant[] = [
   { name: "hal", edits: [listPack("hal"), ...usePagingStyle("halPages"), DROP_SEARCH_EXAMPLES] },
   {
     name: "api-platform",
-    edits: [listPack("api-platform"), ...usePagingStyle("hydra"), DROP_SEARCH_EXAMPLES],
+    edits: [
+      listPack("api-platform"),
+      ...usePagingStyle("hydra"),
+      DROP_SEARCH_EXAMPLES,
+      DROP_SCHEMA_INVALID_BINDING,
+    ],
   },
   { name: "spring", edits: [listPack("spring"), ...usePagingStyle("springPage")] },
 ];

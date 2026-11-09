@@ -90,17 +90,17 @@
     },
     "errors.derived": {
       "origin": {
-        "layer": "shared",
+        "layer": "pack:@seampact/pack-api-platform",
         "pointer": "/conventions/errors/derived"
       },
       "value": {
         "schemaInvalid": {
-          "code": "api.schema_invalid",
+          "code": "api.validation_failed",
           "params": {
-            "issues": {
+            "violations": {
               "$as": {
-                "pointer": "$item.pointer",
-                "rule": "$item.rule"
+                "message": "$item.rule",
+                "propertyPath": "$item.pointer"
               },
               "$each": "$issues"
             }
@@ -264,29 +264,6 @@
         "pointer": "/errors/api.internal"
       }
     },
-    "api.schema_invalid": {
-      "code": "api.schema_invalid",
-      "default": "schemaInvalid",
-      "docs": {},
-      "example": {
-        "issues": [
-          {
-            "pointer": "/title",
-            "rule": "minLength"
-          }
-        ]
-      },
-      "family": "api",
-      "http": {
-        "status": 400
-      },
-      "nature": "refused",
-      "origin": {
-        "layer": "shared",
-        "pointer": "/errors/api.schema_invalid"
-      },
-      "params": "ApiSchemaInvalidParams"
-    },
     "api.unauthenticated": {
       "code": "api.unauthenticated",
       "default": "unauthenticated",
@@ -300,6 +277,29 @@
         "layer": "core",
         "pointer": "/errors/api.unauthenticated"
       }
+    },
+    "api.validation_failed": {
+      "code": "api.validation_failed",
+      "docs": {},
+      "example": {
+        "violations": [
+          {
+            "message": "minLength",
+            "propertyPath": "/title"
+          }
+        ]
+      },
+      "family": "api",
+      "http": {
+        "status": 422
+      },
+      "nature": "refused",
+      "origin": {
+        "layer": "pack:@seampact/pack-api-platform",
+        "pointer": "/errors/api.validation_failed"
+      },
+      "params": "ApiValidationFailedParams",
+      "title": "The request does not satisfy the contract."
     }
   },
   "extensionKeys": {},
@@ -673,7 +673,24 @@
       "docs": {},
       "errors": [
         {
-          "code": "api.schema_invalid",
+          "code": "api.unauthenticated",
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/notes/identity"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ]
+        },
+        {
+          "code": "api.validation_failed",
           "derivedFrom": {
             "derivation": "input.invalid",
             "from": [
@@ -686,7 +703,7 @@
                 "pointer": "/surfaces/notes/routes/capped/ops/list/paging"
               },
               {
-                "layer": "shared",
+                "layer": "pack:@seampact/pack-api-platform",
                 "pointer": "/conventions/errors/derived/schemaInvalid"
               }
             ]
@@ -699,7 +716,7 @@
                   {
                     "name": {
                       "kind": "text",
-                      "text": "issues"
+                      "text": "violations"
                     },
                     "value": {
                       "as": {
@@ -708,7 +725,7 @@
                           {
                             "name": {
                               "kind": "text",
-                              "text": "pointer"
+                              "text": "propertyPath"
                             },
                             "value": {
                               "kind": "slot",
@@ -721,7 +738,7 @@
                           {
                             "name": {
                               "kind": "text",
-                              "text": "rule"
+                              "text": "message"
                             },
                             "value": {
                               "kind": "slot",
@@ -740,23 +757,6 @@
                 ]
               },
               "role": "schemaInvalid"
-            }
-          ]
-        },
-        {
-          "code": "api.unauthenticated",
-          "derivedFrom": {
-            "derivation": "identity.authenticate",
-            "from": [
-              {
-                "layer": "api",
-                "pointer": "/surfaces/notes/identity"
-              }
-            ]
-          },
-          "roles": [
-            {
-              "role": "unauthenticated"
             }
           ]
         },
@@ -972,77 +972,6 @@
       "docs": {},
       "errors": [
         {
-          "code": "api.schema_invalid",
-          "derivedFrom": {
-            "derivation": "input.invalid",
-            "from": [
-              {
-                "layer": "api",
-                "pointer": "/surfaces/notes/routes/changes/ops/list"
-              },
-              {
-                "layer": "api",
-                "pointer": "/surfaces/notes/routes/changes/ops/list/paging"
-              },
-              {
-                "layer": "shared",
-                "pointer": "/conventions/errors/derived/schemaInvalid"
-              }
-            ]
-          },
-          "roles": [
-            {
-              "params": {
-                "kind": "object",
-                "members": [
-                  {
-                    "name": {
-                      "kind": "text",
-                      "text": "issues"
-                    },
-                    "value": {
-                      "as": {
-                        "kind": "object",
-                        "members": [
-                          {
-                            "name": {
-                              "kind": "text",
-                              "text": "pointer"
-                            },
-                            "value": {
-                              "kind": "slot",
-                              "path": [
-                                "pointer"
-                              ],
-                              "slot": "item"
-                            }
-                          },
-                          {
-                            "name": {
-                              "kind": "text",
-                              "text": "rule"
-                            },
-                            "value": {
-                              "kind": "slot",
-                              "path": [
-                                "rule"
-                              ],
-                              "slot": "item"
-                            }
-                          }
-                        ]
-                      },
-                      "kind": "each",
-                      "of": "issues"
-                    }
-                  }
-                ]
-              },
-              "role": "schemaInvalid"
-            }
-          ]
-        },
-        {
           "code": "api.unauthenticated",
           "derivedFrom": {
             "derivation": "identity.authenticate",
@@ -1073,6 +1002,77 @@
           "roles": [
             {
               "role": "gone"
+            }
+          ]
+        },
+        {
+          "code": "api.validation_failed",
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/notes/routes/changes/ops/list"
+              },
+              {
+                "layer": "api",
+                "pointer": "/surfaces/notes/routes/changes/ops/list/paging"
+              },
+              {
+                "layer": "pack:@seampact/pack-api-platform",
+                "pointer": "/conventions/errors/derived/schemaInvalid"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "violations"
+                    },
+                    "value": {
+                      "as": {
+                        "kind": "object",
+                        "members": [
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "propertyPath"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "path": [
+                                "pointer"
+                              ],
+                              "slot": "item"
+                            }
+                          },
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "message"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "path": [
+                                "rule"
+                              ],
+                              "slot": "item"
+                            }
+                          }
+                        ]
+                      },
+                      "kind": "each",
+                      "of": "issues"
+                    }
+                  }
+                ]
+              },
+              "role": "schemaInvalid"
             }
           ]
         },
@@ -1287,77 +1287,6 @@
       "docs": {},
       "errors": [
         {
-          "code": "api.schema_invalid",
-          "derivedFrom": {
-            "derivation": "input.invalid",
-            "from": [
-              {
-                "layer": "api",
-                "pointer": "/surfaces/notes/routes/events/ops/list"
-              },
-              {
-                "layer": "api",
-                "pointer": "/surfaces/notes/routes/events/ops/list/paging"
-              },
-              {
-                "layer": "shared",
-                "pointer": "/conventions/errors/derived/schemaInvalid"
-              }
-            ]
-          },
-          "roles": [
-            {
-              "params": {
-                "kind": "object",
-                "members": [
-                  {
-                    "name": {
-                      "kind": "text",
-                      "text": "issues"
-                    },
-                    "value": {
-                      "as": {
-                        "kind": "object",
-                        "members": [
-                          {
-                            "name": {
-                              "kind": "text",
-                              "text": "pointer"
-                            },
-                            "value": {
-                              "kind": "slot",
-                              "path": [
-                                "pointer"
-                              ],
-                              "slot": "item"
-                            }
-                          },
-                          {
-                            "name": {
-                              "kind": "text",
-                              "text": "rule"
-                            },
-                            "value": {
-                              "kind": "slot",
-                              "path": [
-                                "rule"
-                              ],
-                              "slot": "item"
-                            }
-                          }
-                        ]
-                      },
-                      "kind": "each",
-                      "of": "issues"
-                    }
-                  }
-                ]
-              },
-              "role": "schemaInvalid"
-            }
-          ]
-        },
-        {
           "code": "api.unauthenticated",
           "derivedFrom": {
             "derivation": "identity.authenticate",
@@ -1388,6 +1317,77 @@
           "roles": [
             {
               "role": "gone"
+            }
+          ]
+        },
+        {
+          "code": "api.validation_failed",
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/notes/routes/events/ops/list"
+              },
+              {
+                "layer": "api",
+                "pointer": "/surfaces/notes/routes/events/ops/list/paging"
+              },
+              {
+                "layer": "pack:@seampact/pack-api-platform",
+                "pointer": "/conventions/errors/derived/schemaInvalid"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "violations"
+                    },
+                    "value": {
+                      "as": {
+                        "kind": "object",
+                        "members": [
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "propertyPath"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "path": [
+                                "pointer"
+                              ],
+                              "slot": "item"
+                            }
+                          },
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "message"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "path": [
+                                "rule"
+                              ],
+                              "slot": "item"
+                            }
+                          }
+                        ]
+                      },
+                      "kind": "each",
+                      "of": "issues"
+                    }
+                  }
+                ]
+              },
+              "role": "schemaInvalid"
             }
           ]
         },
@@ -1604,7 +1604,24 @@
       "docs": {},
       "errors": [
         {
-          "code": "api.schema_invalid",
+          "code": "api.unauthenticated",
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/notes/identity"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ]
+        },
+        {
+          "code": "api.validation_failed",
           "derivedFrom": {
             "derivation": "input.invalid",
             "from": [
@@ -1617,7 +1634,7 @@
                 "pointer": "/surfaces/notes/routes/notes/ops/list/paging"
               },
               {
-                "layer": "shared",
+                "layer": "pack:@seampact/pack-api-platform",
                 "pointer": "/conventions/errors/derived/schemaInvalid"
               }
             ]
@@ -1630,7 +1647,7 @@
                   {
                     "name": {
                       "kind": "text",
-                      "text": "issues"
+                      "text": "violations"
                     },
                     "value": {
                       "as": {
@@ -1639,7 +1656,7 @@
                           {
                             "name": {
                               "kind": "text",
-                              "text": "pointer"
+                              "text": "propertyPath"
                             },
                             "value": {
                               "kind": "slot",
@@ -1652,7 +1669,7 @@
                           {
                             "name": {
                               "kind": "text",
-                              "text": "rule"
+                              "text": "message"
                             },
                             "value": {
                               "kind": "slot",
@@ -1671,23 +1688,6 @@
                 ]
               },
               "role": "schemaInvalid"
-            }
-          ]
-        },
-        {
-          "code": "api.unauthenticated",
-          "derivedFrom": {
-            "derivation": "identity.authenticate",
-            "from": [
-              {
-                "layer": "api",
-                "pointer": "/surfaces/notes/identity"
-              }
-            ]
-          },
-          "roles": [
-            {
-              "role": "unauthenticated"
             }
           ]
         },
@@ -2152,80 +2152,84 @@
   "rules": {},
   "scalars": {},
   "schemas": {
-    "ApiSchemaInvalidParams": {
+    "ApiValidationFailedParams": {
       "directions": [
         "output"
       ],
       "docs": {},
       "examples": [],
       "extensions": {},
-      "id": "ApiSchemaInvalidParams",
+      "id": "ApiValidationFailedParams",
       "kind": "object",
       "name": {
         "role": "params",
         "segments": [
           "api",
-          "schema",
-          "invalid"
+          "validation",
+          "failed"
         ]
       },
       "origin": {
-        "layer": "shared",
-        "pointer": "/errors/api.schema_invalid/params"
+        "layer": "pack:@seampact/pack-api-platform",
+        "pointer": "/errors/api.validation_failed/params"
       },
       "properties": [
         {
           "deprecated": false,
           "docs": {},
           "extensions": {},
-          "name": "issues",
+          "name": "violations",
           "nullable": false,
           "optional": false,
           "origin": {
-            "layer": "shared",
-            "pointer": "/errors/api.schema_invalid/params/issues"
+            "layer": "pack:@seampact/pack-api-platform",
+            "pointer": "/errors/api.validation_failed/params/violations"
           },
           "sensitive": false,
           "type": {
             "items": {
               "kind": "ref",
-              "schema": "IssuesItem"
+              "schema": "ApiValidationFailedParamsViolationsItem"
             },
             "kind": "array"
           }
         }
       ]
     },
-    "IssuesItem": {
+    "ApiValidationFailedParamsViolationsItem": {
       "directions": [
         "output"
       ],
       "docs": {},
       "examples": [],
       "extensions": {},
-      "id": "IssuesItem",
+      "id": "ApiValidationFailedParamsViolationsItem",
       "kind": "object",
       "name": {
         "role": "item",
         "segments": [
-          "issues"
+          "api",
+          "validation",
+          "failed",
+          "params",
+          "violations"
         ]
       },
       "origin": {
-        "layer": "shared",
-        "pointer": "/schemas/Issues/items"
+        "layer": "pack:@seampact/pack-api-platform",
+        "pointer": "/errors/api.validation_failed/params/violations/items"
       },
       "properties": [
         {
           "deprecated": false,
           "docs": {},
           "extensions": {},
-          "name": "pointer",
+          "name": "propertyPath",
           "nullable": false,
           "optional": false,
           "origin": {
-            "layer": "shared",
-            "pointer": "/schemas/Issues/items/properties/pointer"
+            "layer": "pack:@seampact/pack-api-platform",
+            "pointer": "/errors/api.validation_failed/params/violations/items/properties/propertyPath"
           },
           "sensitive": false,
           "type": {
@@ -2238,12 +2242,12 @@
           "deprecated": false,
           "docs": {},
           "extensions": {},
-          "name": "rule",
+          "name": "message",
           "nullable": false,
           "optional": false,
           "origin": {
-            "layer": "shared",
-            "pointer": "/schemas/Issues/items/properties/rule"
+            "layer": "pack:@seampact/pack-api-platform",
+            "pointer": "/errors/api.validation_failed/params/violations/items/properties/message"
           },
           "sensitive": false,
           "type": {
