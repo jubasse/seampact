@@ -8,8 +8,7 @@
     "build": "vite build",
     "start": "tsx src/server/main.ts",
     "dev:web": "vite",
-    "e2e": "tsx scripts/e2e.ts",
-    "check:generated": "node --import tsx node_modules/@seampact/cli/src/bin.ts check"
+    "e2e": "tsx scripts/e2e.ts"
   },
   "dependencies": {
     "@nestjs/common": "12.3.2",

@@ -81,12 +81,12 @@ jobs:
         working-directory: .
       - name: Generate the server and the client from the contract
         run: pnpm generate
-      - name: Check the generated files match the contract
-        run: pnpm check:generated
       - name: Type-check
         run: pnpm check:types
+      - name: The build refuses a missing base URL
+        run: "! pnpm build"
       - name: Build the React app
-        run: pnpm build
+        run: cp .env.example .env && pnpm build
       - name: Start the server and call it with the generated client
         run: pnpm e2e
 

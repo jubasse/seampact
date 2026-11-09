@@ -4,11 +4,15 @@ import { Notes } from "./notes.js";
 
 export function App(): ReactNode {
   const notes = Notes.useListNotes({ query: {} });
-  const createNote = Notes.useCreateNote({ onSuccess: () => void refresh() });
   const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
+  const createNote = Notes.useCreateNote({
+    onSuccess: () => {
+      setTitle("");
 
-  const refresh = () => queryClient.invalidateQueries();
+      return queryClient.invalidateQueries();
+    },
+  });
 
   if (notes.isPending) return <p>Loading</p>;
 
@@ -21,7 +25,6 @@ export function App(): ReactNode {
         onSubmit={(event) => {
           event.preventDefault();
           createNote.mutate({ body: { title } });
-          setTitle("");
         }}
       >
         <input value={title} onChange={(event) => setTitle(event.target.value)} />
