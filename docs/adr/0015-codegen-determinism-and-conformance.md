@@ -118,6 +118,7 @@ When a target's `nativeDocs` artefact is on, its golden tests also emit the fram
 
 ## Traceability
 
+- History: the dated amendments this ADR carried until PR #451 are folded into the sections they changed; `git show 43055be4:docs/adr/0015-codegen-determinism-and-conformance.md` holds them with their dates.
 - FRs: FR-14 (pure, deterministic generate), FR-9 and FR-38 (byte-stable IR and naming vectors), FR-15 (agreement table), FR-16 (the undeclared-status test helper is generated and golden-tested), FR-18 (report keyed by checklist id), FR-35 (the suite); amendments A13, A17, A30.
 - Checklist items enabled: CHK-144 (code style options), CHK-165 (native docs agree), CHK-171 (merged documents), CHK-156, CHK-158 and CHK-159 (validator and payload cases), CHK-060 (test helper on undeclared responses), CHK-062 and CHK-063 (boot tests and allow-list), CHK-074 (every server target and adapter passes the suite), CHK-080 (validator agreement), CHK-098 (hand-written hooks, no adapter), CHK-099 (exactly one neutral hook per concern, observed through the recorded calls); every server-category item is proven through the suite's tags.
 - Success metrics: SM-3, SM-7, SM-9.

@@ -176,6 +176,7 @@ The only difference between the majors outside the boundary was the app setup: A
 
 ## Traceability
 
+- History: the dated amendments this ADR carried until PR #451 are folded into the sections they changed; `git show 43055be4:docs/adr/0019-adonis-target.md` holds them with their dates.
 - FRs: FR-5 (the check order), FR-14 (a case refused by name), FR-35 (the shared suite this boundary will pass); amendments A15, A36, A39, A40, A42, A47.
 - ADRs: 0007 (names), 0009 (links, run-time dependencies), 0012 (placement and target obligations), 0013 (raw body and signature header), 0016 (the shared obligations).
 - Proof in the development phase: the review of this ADR, the spike above, and the slice's end-to-end gate on the AdonisJS consumer.
