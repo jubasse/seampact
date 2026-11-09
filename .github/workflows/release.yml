@@ -999,6 +999,7 @@ jobs:
         run: |
           chmod +x "$RUNNER_TEMP/assets/seampact-linux-x64"
           scripts/consumers/php/bundle.sh "$RUNNER_TEMP/assets/seampact-linux-x64" "$RUNNER_TEMP/bundles/reference"
+          scripts/consumers/php/bundle.sh "$RUNNER_TEMP/assets/seampact-linux-x64" "$RUNNER_TEMP/bundles/input-rules" packages/tools/http-suite/contracts/input-rules
           scripts/release/registry-proof/laravel.sh "$RUNNER_TEMP/bundles/reference" "$VERSION" "$RUNNER_TEMP/laravel" "$RUNNER_TEMP/mirrors"
       - run: pnpm install --frozen-lockfile
       - name: The Laravel consumer passes the http suite
