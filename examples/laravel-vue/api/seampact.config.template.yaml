@@ -1,0 +1,15 @@
+# The Laravel app's config. `pnpm generate:api` fills in the three {{...}} values and writes seampact.config.yaml.
+outDir: app/Generated
+openapi: none
+sources:
+  notes:
+    git:
+      url: "{{CONTRACT_REPOSITORY}}"
+      tag: "{{CONTRACT_TAG}}"
+      directory: bundle
+    integrity: "{{CONTRACT_INTEGRITY}}"
+targets:
+  - id: notes
+    out: Notes
+    use: seampact/laravel
+    api: notes

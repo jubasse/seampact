@@ -47,7 +47,8 @@ jobs:
           watched-paths: |
             ^examples/
             ^packages/(core|runtime)/
-            ^packages/targets/codegen-(ts|zod|fetch|nestjs|react)/
+            ^packages/targets/codegen-(ts|zod|fetch|nestjs|react|vue)/
+            ^php/
             ^\.github/actions/
             ^\.github/workflows/examples\.yml$
             ^pnpm-lock\.yaml$
@@ -90,10 +91,51 @@ jobs:
       - name: Start the server and call it with the generated client
         run: pnpm e2e
 
+  laravel-vue:
+    needs: changes
+    if: needs.changes.outputs.examples == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: examples/laravel-vue
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: "8.3"
+          tools: composer:2.10.2
+          coverage: none
+      - uses: ./.github/actions/composer-cache
+        with:
+          dependency-hash: ${{ hashFiles('php/*/composer.json', 'examples/laravel-vue/api/composer.json') }}
+      - run: pnpm install --frozen-lockfile
+        working-directory: .
+      - name: Install the Laravel app, seampact through its path repositories
+        working-directory: examples/laravel-vue/api
+        run: bash "$GITHUB_WORKSPACE/.github/actions/composer-cache/composer-with-retry.sh" update --no-interaction --no-progress --no-plugins --no-scripts
+      - name: Generate the Laravel server and the Vue client from the contract
+        run: pnpm generate
+      - name: Type-check
+        run: pnpm check:types
+      - name: The build refuses a missing base URL
+        run: pnpm build 2>&1 | grep -q "VITE_API_URL is not set"
+      - name: Build the Vue app
+        run: cp .env.example .env && pnpm build
+      - name: Start the server and call it with the generated client
+        run: pnpm e2e
+
   # The required check: a skipped job passes only when the change filter said skip; a failed or cancelled one fails.
   examples:
     # Every job this check stands for is listed here, or its failure would not reach the required check.
-    needs: [changes, nestjs-react]
+    needs: [changes, nestjs-react, laravel-vue]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
