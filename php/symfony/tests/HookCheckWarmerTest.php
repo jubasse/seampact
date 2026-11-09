@@ -11,6 +11,7 @@ use Seampact\Golden\TasksConsistent\Symfony\TasksContract;
 use Seampact\Hooks\IdempotencyStore;
 use Seampact\Symfony\Runtime\HookCheckWarmer;
 use Seampact\Symfony\Runtime\Hooks;
+use Seampact\Symfony\Runtime\WarmerChecks;
 use Seampact\Symfony\Tests\Support\DirectInputRules;
 use Seampact\Symfony\Tests\Support\InputRulesContract;
 use Symfony\Component\DependencyInjection\ServiceLocator;
@@ -33,7 +34,7 @@ final class HookCheckWarmerTest extends TestCase
     public function testAnInputRuleServiceOfNoApiInterfaceStopsTheBootEvenWithTheHookCheckOff(): void
     {
         $hooks = new Hooks(new ServiceLocator([]), [], [], null, new NullLogger(), null, false, [new DirectInputRules()]);
-        $warmer = new HookCheckWarmer($hooks, InputRulesContract::class, false);
+        $warmer = new HookCheckWarmer($hooks, InputRulesContract::class, WarmerChecks::InputRulesOnly);
 
         $this->expectException(\LogicException::class);
         $this->expectExceptionMessageMatches('/DirectInputRules does not implement .*TasksInputRules/');

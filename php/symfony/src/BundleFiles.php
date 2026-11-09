@@ -156,7 +156,8 @@ final class BundleFiles
         // The warmer also checks the input rules, which no switch of the boot check turns off.
         if ($this->bootCheck !== null && ($this->bootCheck->hooks || $inputRules !== null)) {
             $warmer = $file->name($this->placement->runtime('HookCheckWarmer'));
-            $body .= "\$services->set(self::HOOK_CHECK_WARMER_SERVICE, {$warmer}::class)->args([service(self::HOOKS_SERVICE), {$contract}::class, " . var_export($this->bootCheck->hooks, true) . "])->tag('kernel.cache_warmer');\n";
+            $checks = $file->name($this->placement->runtime('WarmerChecks')) . '::' . ($this->bootCheck->hooks ? 'HooksAndInputRules' : 'InputRulesOnly');
+            $body .= "\$services->set(self::HOOK_CHECK_WARMER_SERVICE, {$warmer}::class)->args([service(self::HOOKS_SERVICE), {$contract}::class, {$checks}])->tag('kernel.cache_warmer');\n";
         }
         if ($this->bootCheck !== null) {
             $body .= "\$services->set(self::ROUTE_CHECK_SERVICE, {$routeCheck}::class)->decorate('routing.loader')->args([service('.inner'), {$contract}::class, {$routeLoader}::RESOURCE, " . var_export($this->bootCheck->frameworkRoutes, true) . $this->frameworkControllersArgument() . ']);';

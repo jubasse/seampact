@@ -14,12 +14,13 @@ use Symfony\Component\HttpKernel\CacheWarmer\CacheWarmerInterface;
 /**
  * The hook and input rule part of the api's boot check, a cache warmer that is not optional: `cache:clear` and
  * `cache:warmup` build the container, then ask the registered hooks and input rules, and fail listing every problem, so
- * a deploy that warms its cache never serves without them. The input rules are checked at every level of the check. The boundary asks the same on the first contract request of each container instance.
+ * a deploy that warms its cache never serves without them. The input rules are checked at every level of the check.
+ * The boundary asks the same on the first contract request of each container instance.
  */
 #[Exclude]
 final class HookCheckWarmer implements CacheWarmerInterface
 {
-    public function __construct(private readonly HookLookup $hooks, private readonly string $contractClass, private readonly bool $checksHooks = true)
+    public function __construct(private readonly HookLookup $hooks, private readonly string $contractClass, private readonly WarmerChecks $checks = WarmerChecks::HooksAndInputRules)
     {
     }
 
@@ -59,7 +60,7 @@ final class HookCheckWarmer implements CacheWarmerInterface
     public function warmUp(string $cacheDir, ?string $buildDir = null): array
     {
         $contract = Regeneration::contract($this->contractClass);
-        $problems = [...($this->checksHooks ? self::problems($this->hooks, $contract) : []), ...self::inputRuleProblems($this->hooks, $contract)];
+        $problems = [...($this->checks === WarmerChecks::HooksAndInputRules ? self::problems($this->hooks, $contract) : []), ...self::inputRuleProblems($this->hooks, $contract)];
         if ($problems !== []) {
             throw new \LogicException('seampact: ' . self::report($contract, $problems));
         }

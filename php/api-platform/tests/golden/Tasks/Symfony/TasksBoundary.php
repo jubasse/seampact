@@ -52,4 +52,9 @@ final class TasksBoundary extends ApiPlatformBoundarySubscriber
     {
         return true;
     }
+
+    protected function checksInputRules(): bool
+    {
+        return false;
+    }
 }

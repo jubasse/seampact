@@ -13,6 +13,7 @@ use Seampact\Symfony\Runtime\Hooks;
 use Seampact\Symfony\Runtime\KindRequestMatcher;
 use Seampact\Symfony\Runtime\Regeneration;
 use Seampact\Symfony\Runtime\RouteCheck;
+use Seampact\Symfony\Runtime\WarmerChecks;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
@@ -102,7 +103,7 @@ final class TasksSeampactBundle extends AbstractBundle
         $builder->registerForAutoconfiguration(ScopeResolver::class)->addTag(Hooks::tag(self::API, Hooks::SCOPE_RESOLVERS_TAG_SUFFIX));
         $builder->registerForAutoconfiguration(TasksInputRules::class)->addTag(Hooks::tag(self::API, Hooks::INPUT_RULES_TAG_SUFFIX));
         $builder->registerForAutoconfiguration(UserAuthenticateHook::class)->addTag(Hooks::tag(self::API, Hooks::AUTHENTICATE_TAG_SUFFIX), [Hooks::HOOK_ATTRIBUTE => UserAuthenticateHook::class]);
-        $services->set(self::HOOK_CHECK_WARMER_SERVICE, HookCheckWarmer::class)->args([service(self::HOOKS_SERVICE), TasksContract::class, true])->tag('kernel.cache_warmer');
+        $services->set(self::HOOK_CHECK_WARMER_SERVICE, HookCheckWarmer::class)->args([service(self::HOOKS_SERVICE), TasksContract::class, WarmerChecks::HooksAndInputRules])->tag('kernel.cache_warmer');
         $services->set(self::ROUTE_CHECK_SERVICE, RouteCheck::class)->decorate('routing.loader')->args([service('.inner'), TasksContract::class, TasksRouteLoader::RESOURCE, true]);
     }
 

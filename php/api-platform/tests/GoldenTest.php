@@ -47,7 +47,7 @@ final class GoldenTest extends TestCase
 
         $unchanged = static fn (array $files): array => array_filter($files, static fn (string $path): bool => !self::isApiPlatformFile($path), ARRAY_FILTER_USE_KEY);
 
-        self::assertSame($unchanged($symfony), $unchanged($apiPlatform));
+        self::assertSame(self::withoutInputRules($unchanged($symfony)), $unchanged($apiPlatform));
     }
 
     public function testNoInputRulesInterfaceIsGeneratedAndTheFlavourRefusesThem(): void
@@ -86,6 +86,20 @@ final class GoldenTest extends TestCase
         }
 
         return $byPath;
+    }
+
+    /**
+     * The Symfony target's files as API Platform generates them: input rules are refused there, so the interface
+     * and the contract's entry naming it are the one expected difference.
+     *
+     * @param array<string, string> $files
+     * @return array<string, string>
+     */
+    private static function withoutInputRules(array $files): array
+    {
+        $kept = array_filter($files, static fn (string $path): bool => !str_ends_with($path, 'InputRules.php'), ARRAY_FILTER_USE_KEY);
+
+        return array_map(static fn (string $contents): string => preg_replace("~^\\s*'inputRules' => .*\\n~m", '', $contents) ?? $contents, $kept);
     }
 
     private static function isApiPlatformFile(string $path): bool
