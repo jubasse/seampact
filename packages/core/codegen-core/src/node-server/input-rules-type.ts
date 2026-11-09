@@ -1,6 +1,7 @@
 import type { ContractIR, Operation } from "@seampact/spec/ir";
 import type { ValidatorStyle } from "../descriptors.js";
-import { operationIdentifier } from "./server-types.js";
+import { type ImportSpecifierStyle, relativeModuleSpecifier } from "../import-specifier.js";
+import { HANDLERS_MODULE, operationIdentifier } from "./server-types.js";
 
 // The `InputRules` type of the routes module (ADR 0028 "Typed on Node"): for each operation and part with input, the
 // library schema type of the api's validators over that part as its handler receives it, without the body proof
@@ -21,6 +22,8 @@ export function inputRulesTypeSource(
   ir: ContractIR,
   runtimePackage: string,
   style: ValidatorStyle,
+  fromFile: string,
+  importStyle: ImportSpecifierStyle,
   validatorOf: (operation: Operation) => string | undefined,
 ): InputRulesTypeSource {
   const ruleType = (validator: string, part: string): string =>
@@ -46,7 +49,7 @@ export function inputRulesTypeSource(
   return {
     imports: [
       `import type { ${style === "class-validator" ? "InputRuleClass" : "InputRuleSchema"} } from "${runtimePackage}";`,
-      `import type { ${HANDLER_INPUTS_EXPORT} } from "./handlers.js";`,
+      `import type { ${HANDLER_INPUTS_EXPORT} } from "${relativeModuleSpecifier(fromFile, HANDLERS_MODULE, importStyle)}";`,
     ],
     declaration: [
       "/** The app's own rules on each operation's input parts, in the library of the api's validators (step 8b). */",

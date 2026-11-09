@@ -8,8 +8,8 @@ import {
   GENERATE_TIMEOUT_MILLISECONDS,
   generateReferenceProject,
   projectDirectory,
-  REFERENCE_COMPILER_OPTIONS,
   readGoldenIr,
+  referenceCompilerOptionsOf,
   referenceLinks,
   referenceServerOutput,
   TYPE_CHECK_TIMEOUT_MILLISECONDS,
@@ -332,7 +332,11 @@ async function generate(subject: GenerationProofSubject, project: string): Promi
     files: Object.fromEntries(
       outcome.files.map((file: GeneratedFile) => [file.path, file.contents]),
     ),
-    typeErrors: typeErrorsOf(project, [...written, ...probeFiles], REFERENCE_COMPILER_OPTIONS),
+    typeErrors: typeErrorsOf(
+      project,
+      [...written, ...probeFiles],
+      referenceCompilerOptionsOf(subject.target),
+    ),
   };
 }
 

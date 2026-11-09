@@ -47,7 +47,7 @@ export function generateValidators(
   ];
 
   const files: GeneratedFile[] = modules.flatMap(({ module, source }) => {
-    const contents = moduleContents(module, source, ZOD_IMPORT);
+    const contents = moduleContents(module, source, ZOD_IMPORT, input.importSpecifiers);
 
     return contents === undefined ? [] : [{ path: modulePath(module), contents }];
   });
@@ -56,5 +56,5 @@ export function generateValidators(
     files.push({ path: modulePath(WIRE_CHECKS_MODULE), contents: WIRE_CHECKS_SOURCE });
   }
 
-  return { status: "generated", files: [...files, ...indexFile(files)] };
+  return { status: "generated", files: [...files, ...indexFile(files, input.importSpecifiers)] };
 }

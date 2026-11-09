@@ -20,7 +20,7 @@ api.yaml:10: paging.sort.style.unsupported: entry 'server', api 'notes': The sor
 | Family | Section |
 |---|---|
 | Fetch, React, Vue, Angular, MSW | [Clients](https://jubasse.github.io/seampact/troubleshooting/generate/#clients) |
-| Express, Fastify, Hono, NestJS, AdonisJS | [Node servers](https://jubasse.github.io/seampact/troubleshooting/generate/#node-servers) |
+| Express, Fastify, Hono, NestJS, AdonisJS, Next.js | [Node servers](https://jubasse.github.io/seampact/troubleshooting/generate/#node-servers) |
 | TypeScript types, validators, clients and Node servers share the code | [Every Node target](https://jubasse.github.io/seampact/troubleshooting/generate/#every-node-target) |
 | Spring Boot | [Spring Boot](https://jubasse.github.io/seampact/troubleshooting/generate/#spring-boot) |
 | Laravel, Symfony | [PHP](https://jubasse.github.io/seampact/troubleshooting/generate/#php) |
@@ -59,7 +59,7 @@ api.yaml:10: paging.sort.style.unsupported: entry 'server', api 'notes': The sor
 
 ## Node servers
 
-Express, Fastify, Hono, NestJS and AdonisJS.
+Express, Fastify, Hono, NestJS, AdonisJS and Next.js.
 
 | Code | Cause and fix |
 |---|---|
@@ -83,6 +83,9 @@ Express, Fastify, Hono, NestJS and AdonisJS.
 | `principalRequires.unsupported`, `bindings.unsupported`, `upstream.unsupported`, `extensions.unsupported` | The operation uses a principal requirement (`principal: { requires: [...] }`), a binding, an upstream call or an extension value. Ask the user first: remove it from the operation, or remove the operation from `operations`. |
 | `features.unsupported` | A newer seampact compiler wrote this IR. Compile the contract with the seampact release this target reads. |
 | `wire.name.vinePath.unsupported` | AdonisJS: a wire name holds `.`, `[`, `]`, a quote, a backslash or a control character, which VineJS paths cannot hold. Ask the user first: rename the member to letters, digits and `_`, or remove the operations that use it from `operations`. |
+| `frameworkRoutes.unsupported`, `artefacts.bootCheck.frameworkRoutes.unsupported` | Next.js: the entry allow-lists `frameworkRoutes` or sets `artefacts.bootCheck.frameworkRoutes`, but no check reads a Next.js app's routes. Remove the key, and keep the app's own route files and rewrites outside the api's base paths. |
+| `path.base.empty.unsupported` | Next.js: the api has no base path, so its catch-all route file would take every page of the app. Give the api a base path, through its surface prefix or the entry's `mount`. |
+| `options.catchAll.unsupported` | Next.js: `catchAll: false`, but the api's catch-all route file is its only route. Remove `catchAll` or set it to `true`. |
 | `dto.listOfLists.unsupported`, `dto.memberName.unsupported` | NestJS class-validator DTOs: a list of lists, or a member name a class cannot hold. Ask the user first: wrap the inner list in an object, or rename the member, or remove the operations that use it from `operations`. |
 
 ## Every Node target
@@ -106,6 +109,7 @@ The TypeScript types, the validators (Zod, Yup, Valibot, VineJS, class-validator
 | `wire.outputEnums.open.unsupported` | `conventions.outputEnums: open` is not generated yet. Ask the user first: set it to `enum`. |
 | `wire.urls.absolute.unsupported` | The pages and links of a list are written as absolute URLs, which the client, the mocks and the Node servers do not read yet. Ask the user first: set `conventions.urls` to `relative`. |
 | `wire.name.yupPath.unsupported` | Yup: a wire name holds `[`, `]` or `"`, which Yup's issue path cannot carry. Use another validator target, such as Zod. Or ask the user first to rename the member. |
+| `link.importSpecifiers.mixed` | One types or validators entry is linked from a Next.js entry, which imports files without `.js`, and from an entry that imports them with `.js`. Give each group of entries its own types or validators entry, with its own `out`, and link each group to its own. |
 | `artefact.unknown` | The entry switches an artefact the target does not declare. Remove it from `artefacts`, or use one of the ids the message lists. |
 | `export.name.duplicate` | Two declarations give the same generated name in one module. Rename one of them in the contract. |
 | `errorCode.key.duplicate`, `status.reasonPhrase.unknown` | Two error codes give the same `ErrorCode` key, or a status is not in the IANA registry. Ask the user first: rename one code, or answer with a registered status. |
@@ -198,6 +202,7 @@ Codes several servers share. The cause names the servers it applies to.
 | `param.query.structured.unsupported` | PHP and Python: a query parameter that is not a scalar, an enum or a list of them in the `form` style (an object, a list of lists, `deepObject`) is not read yet. Make the param a scalar, an enum or a list of them, or remove the operation from `operations`. |
 | `query.list.brackets.unsupported` | The fetch client and every server: a list sent as `tag[]=a&tag[]=b` is not read yet. Ask the user first: set `conventions.query.lists` to `repeat` or `comma`. |
 | `response.shape.unsupported` | The fetch client, Node servers, Spring, Laravel and Symfony do not generate download or redirect responses yet. Ask the user first: remove the operation from `operations`. |
+| `path.base.shared.unsupported` | Next.js: two apis have equal or nested base paths, such as `/v1` and `/v1/admin`, so the more specific catch-all would take the other api's paths. Give them base paths that neither equal nor contain each other, through their prefixes or the entries' `mount`. |
 | `path.segment.encoded.unsupported` | A fixed path part has a space, a control or non-ASCII character, or one of `"` `<` `>` `^` `\` `{` `}` `|` `[` `]` or a backtick, which a client would send percent-encoded. Ask the user first: use plain ASCII letters, digits and `-` in that part. |
 | `artefacts.accessHooks.unsupported` | Laravel, Symfony, FastAPI, DRF and Ninja: `accessHooks: false` (native access) is not generated yet. Keep the hooks, and read the framework's own auth in the authenticate hook. |
 | `artefacts.bootCheck.hooks.warn.unsupported`, `artefact.bootCheck.hooks.warn.unsupported` | PHP, Python and Spring Boot (`artefact.` there): starting with a hook missing (`warn`) is not generated yet. Use `error` (the default) or `off`. |

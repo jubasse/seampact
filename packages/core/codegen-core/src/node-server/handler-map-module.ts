@@ -1,10 +1,15 @@
 import type { ContractIR } from "@seampact/spec/ir";
+import {
+  DEFAULT_IMPORT_SPECIFIER_STYLE,
+  type ImportSpecifierStyle,
+  relativeModuleSpecifier,
+} from "../import-specifier.js";
 import { operationLocation } from "../ir-location.js";
 import { ExportNames } from "../planned-names.js";
 import type { Refusal } from "../refusal.js";
 import { type NodeServerOptions, responseSettingsOf } from "./options.js";
 import { SERVER_RUNTIME_PACKAGE } from "./server-runtime-check.js";
-import { handlerInterfaceName, operationIdentifier } from "./server-types.js";
+import { HANDLERS_MODULE, handlerInterfaceName, operationIdentifier } from "./server-types.js";
 
 // The declarations a handler-map framework module (Express, Fastify, Hono) starts with: the handler objects keyed by
 // interface name, the operation names an override takes, each operation's binding, and the target options.
@@ -17,6 +22,7 @@ export function handlerMapDeclarations(
   options: NodeServerOptions,
   frameworkModule: string,
   refusals: Refusal[],
+  style: ImportSpecifierStyle = DEFAULT_IMPORT_SPECIFIER_STYLE,
 ): string[] {
   const overrideNames = new ExportNames(`${frameworkModule} operations`);
   const interfaces = new Set<string>();
@@ -35,7 +41,7 @@ export function handlerMapDeclarations(
 
   return [
     `import type { HandlerBindings, ResponseSettings } from "${SERVER_RUNTIME_PACKAGE}";`,
-    'import type * as Handlers from "./handlers.js";',
+    `import type * as Handlers from "${relativeModuleSpecifier(frameworkModule, HANDLERS_MODULE, style)}";`,
     "",
     "/** The handler objects of the api, keyed by their interface's name. */",
     "interface ContractHandlers {",

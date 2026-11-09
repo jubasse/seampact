@@ -122,7 +122,7 @@ test("a target package the matrix does not record is refused by name", () => {
   );
 });
 
-test("each server target records its framework id, its tested majors with their consumer and no incompatible major", () => {
+test("each server target records its framework id, its tested majors with their consumer and its incompatible majors", () => {
   const frameworks = SERVER_TARGETS.map((target) => ({
     target: target.package,
     id: target.framework.id,
@@ -146,6 +146,23 @@ test("each server target records its framework id, its tested majors with their 
       incompatible: [],
     },
     { target: "@seampact/codegen-hono", id: "hono", tested: ["4:hono"], incompatible: [] },
+    {
+      target: "@seampact/codegen-nextjs",
+      id: "nextjs",
+      tested: [],
+      incompatible: [
+        {
+          major: 14,
+          reason:
+            "The generated route handler is written for Next.js 16 and its Node.js runtime only.",
+        },
+        {
+          major: 15,
+          reason:
+            "The generated route handler is written for Next.js 16 and its Node.js runtime only.",
+        },
+      ],
+    },
   ]);
 });
 

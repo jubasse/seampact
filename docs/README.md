@@ -17,6 +17,7 @@ The same pages, with search, are on the [documentation site](https://jubasse.git
 - [Install](getting-started/01-install.md): install seampact from npm and start a project.
 - [Your first API](getting-started/your-first-api.md): a notes API on the server of your choice, step by step.
 - [Call it from React](getting-started/call-it-from-react.md): a typed client and hooks.
+- [Runnable example](../examples/nestjs-react/README.md): a NestJS server and a React client from one contract, kept green by CI.
 - [Check it in CI](features/check-in-ci.md): fail the build on drift.
 - [Add to an existing app](getting-started/04-existing-project.md): move routes one at a time.
 - [Project layout](getting-started/05-project-layout.md): what each file is.
@@ -56,10 +57,12 @@ The same pages, with search, are on the [documentation site](https://jubasse.git
 - [Fastify](backend/fastify.md): Node, Fastify 5 with route hooks.
 - [AdonisJS](backend/adonisjs.md): Node, AdonisJS 7 and 6.
 - [Hono](backend/hono.md): Hono 4 on any Web-standard runtime.
-- [Access hooks on Node](backend/node-hooks.md): authenticate, decide and resolve scope on the five Node servers.
+- [Next.js](backend/nextjs.md): Next.js 16, one route handler per api.
+- [Access hooks on Node](backend/node-hooks.md): authenticate, decide and resolve scope on the six Node servers.
 - [Spring Boot](backend/spring-boot.md): Java, the Gradle or Maven plugin, controllers and hooks.
 - [Laravel](backend/laravel.md): PHP, Composer, controllers, hooks and Laravel's own auth.
 - [Symfony](backend/symfony.md): PHP, the Composer package, bundle, controllers, hooks and SecurityBundle.
+- [API Platform](backend/api-platform.md): PHP, API Platform 5 on Symfony.
 - [FastAPI](backend/fastapi.md): Python, the wheels, `bind_<api>()`, handlers, hooks and FastAPI's own docs.
 - [Django REST Framework](backend/drf.md): Python, the wheels, settings, URLconf, handlers, hooks and DRF's own auth.
 - [Django Ninja](backend/ninja.md): Python, the wheels, `bind_<api>()`, handlers, hooks, Ninja's own auth and docs.
@@ -131,4 +134,5 @@ For contributors. Users do not need these pages.
 - [ADRs](adr/): design records.
 - [Product decisions](decisions.md): the log of decisions, A1 to A48.
 - [Design decisions](design-decisions.md)
+- [Maintainers](maintainers/): how a release goes out.
 - [Roadmap](roadmap.md)

@@ -3,8 +3,9 @@ import { type ContractIR, IR_REVISION, IR_VERSION } from "@seampact/spec/ir";
 import { apiIndexSource } from "../api-index.js";
 import { defineTarget } from "../define-target.js";
 import type { ValidatorStyle, ValidatorsDescriptor } from "../descriptors.js";
-import type { TunableBootCheck } from "../framework-route-check.js";
+import type { FrameworkRouteCheck, TunableBootCheck } from "../framework-route-check.js";
 import type { GenerateWarning } from "../generate-warning.js";
+import type { ImportSpecifierStyle } from "../import-specifier.js";
 import type { Link } from "../links.js";
 import type { NativeDocsDocument } from "../native-docs-document.js";
 import { type Refusal, withoutRepeats } from "../refusal.js";
@@ -21,7 +22,12 @@ import { nativeDocsRuntimeFile } from "./native-docs-runtime-file.js";
 import { type NodeServerOptions, parseNodeServerOptions } from "./options.js";
 import { routeTableSource } from "./route-table.js";
 import { type RuntimeGenerator, serverRuntimeRefusals } from "./server-runtime-check.js";
-import { type HandlerParameters, handlersSource, hookTypesSource } from "./server-types.js";
+import {
+  HANDLERS_MODULE,
+  type HandlerParameters,
+  handlersSource,
+  hookTypesSource,
+} from "./server-types.js";
 
 // The files of one api's Node server boundary: the route table, handler interfaces and hook types, the target's
 // framework module and the api index, over the shared runtime, which a target's generated code imports from
@@ -91,6 +97,19 @@ export interface NodeServerPlacement {
   ): OwnValidators | undefined;
   /** True for a placement whose own validators take the `rules` option of the validator targets. */
   readonly ownValidatorsTakeRules?: boolean;
+  /**
+   * The refusals of what the entry asks and this placement cannot serve, such as a boot check its framework gives
+   * no hook for; read before any file is written.
+   */
+  entryRefusals?(entry: PlacementEntry): Refusal[];
+}
+
+/** What a placement's `entryRefusals` reads of the entry and its api. */
+export interface PlacementEntry {
+  readonly ir: ContractIR;
+  readonly options: NodeServerOptions;
+  readonly frameworkRoutes: FrameworkRouteCheck;
+  readonly mount: string;
 }
 
 /** A Node server target package: its name and version, its Prettier and its placement. */
@@ -103,12 +122,15 @@ export interface NodeServerTargetPackage {
   readonly validatorStyles: readonly ValidatorStyle[];
   /** The fix for `frameworkDocs: off`, for a target that knows no switch for its framework's docs. */
   readonly frameworkDocsOffFix?: string;
+  /** How the generated relative imports name their modules; `js` when absent. */
+  readonly importSpecifiers?: ImportSpecifierStyle;
+  /** Set when the app routes each api by its base paths before the boundary, as `TargetMetadata` says. */
+  readonly exclusiveBasePaths?: true;
 }
 
 const OWN_VALIDATORS_DIRECTORY = "validators";
 const MODULE_EXTENSION = ".ts";
 const ROUTES_MODULE = "routes";
-const HANDLERS_MODULE = "handlers";
 const HOOKS_MODULE = "hooks";
 const INDEX_MODULE = "index";
 
@@ -156,6 +178,12 @@ export function nodeServerTarget(targetPackage: NodeServerTargetPackage): Target
       ...(targetPackage.frameworkDocsOffFix === undefined
         ? {}
         : { frameworkDocsOffFix: targetPackage.frameworkDocsOffFix }),
+      ...(targetPackage.importSpecifiers === undefined
+        ? {}
+        : { importSpecifiers: targetPackage.importSpecifiers }),
+      ...(targetPackage.exclusiveBasePaths === undefined
+        ? {}
+        : { exclusiveBasePaths: targetPackage.exclusiveBasePaths }),
       consumes: {
         types: { styles: ["typescript"] },
         validators: {
@@ -193,8 +221,8 @@ function ownValidatorsLibrary(targetPackage: NodeServerTargetPackage): string | 
 
 // Every module of one api's boundary, or every refusal at once (A47). With no `validators` link, the own
 // validators of the placement are written and read instead, when the `validators` artefact is on. A boundary is
-// refused first when the request gives no output directory, or the output directory
-// resolves no runtime that serves it.
+// refused first when the placement refuses what the entry asks, the request gives no output directory, or the
+// output directory resolves no runtime that serves it.
 export function nodeServerBoundaryFiles(
   input: GenerateInput<NodeServerOptions, NodeServerArtefact, "types" | "validators", "validators">,
   placement: NodeServerPlacement,
@@ -203,9 +231,17 @@ export function nodeServerBoundaryFiles(
   const boundaryOn = input.artefacts.has(BOUNDARY_ARTEFACT);
 
   if (boundaryOn) {
-    const runtimeRefusals = serverRuntimeRefusals(input.outputDirectory, generator);
+    const entryRefusals = [
+      ...(placement.entryRefusals?.({
+        ir: input.ir,
+        options: input.options,
+        frameworkRoutes: input.frameworkRoutes,
+        mount: input.mount,
+      }) ?? []),
+      ...serverRuntimeRefusals(input.outputDirectory, generator),
+    ];
 
-    if (runtimeRefusals.length > 0) return { status: "refused", refusals: runtimeRefusals };
+    if (entryRefusals.length > 0) return { status: "refused", refusals: entryRefusals };
   }
 
   const ownValidatorsOn = input.artefacts.has(OWN_VALIDATORS_ARTEFACT);
@@ -335,6 +371,7 @@ function boundaryFiles(
       compression: options.compression,
       frameworkEtag: options.frameworkEtag,
       catchAll: options.catchAll,
+      importSpecifiers: input.importSpecifiers,
     },
     refusals,
     warnings,
@@ -345,8 +382,15 @@ function boundaryFiles(
     moduleFile(HANDLERS_MODULE),
     placement.handlerParameters ?? "inputOnly",
     refusals,
+    input.importSpecifiers,
   );
-  const hooks = hookTypesSource(ir, links.types, moduleFile(HOOKS_MODULE), refusals);
+  const hooks = hookTypesSource(
+    ir,
+    links.types,
+    moduleFile(HOOKS_MODULE),
+    refusals,
+    input.importSpecifiers,
+  );
   const docs = input.artefacts.has(NATIVE_DOCS_ARTEFACT)
     ? nativeDocsFiles(input, placement, refusals)
     : [];
@@ -369,14 +413,17 @@ function boundaryFiles(
       ? [
           {
             path: moduleFile(INDEX_MODULE),
-            contents: apiIndexSource([
-              { module: placement.frameworkModule },
-              ...(docs.length === 0 || placement.nativeDocs === undefined
-                ? []
-                : [{ module: placement.nativeDocs.docsModule }]),
-              { module: HANDLERS_MODULE },
-              { module: HOOKS_MODULE },
-            ]),
+            contents: apiIndexSource(
+              [
+                { module: placement.frameworkModule },
+                ...(docs.length === 0 || placement.nativeDocs === undefined
+                  ? []
+                  : [{ module: placement.nativeDocs.docsModule }]),
+                { module: HANDLERS_MODULE },
+                { module: HOOKS_MODULE },
+              ],
+              input.importSpecifiers,
+            ),
           },
         ]
       : []),

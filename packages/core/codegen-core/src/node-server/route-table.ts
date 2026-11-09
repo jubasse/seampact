@@ -13,9 +13,10 @@ import {
 import type { ValidatorStyle, ValidatorsDescriptor } from "../descriptors.js";
 import type { FrameworkRouteCheck, HookBootCheck } from "../framework-route-check.js";
 import { type GenerateWarning, warnLeftToHandler } from "../generate-warning.js";
-import { importSpecifier } from "../import-specifier.js";
+import { type ImportSpecifierStyle, importSpecifier } from "../import-specifier.js";
 import { below, type IrLocation, operationLocation } from "../ir-location.js";
 import type { Link } from "../links.js";
+import { mountedBasePaths } from "../mounted-base-paths.js";
 import {
   refuseInconsistentIr,
   refuseNotGeneratedYet,
@@ -65,6 +66,8 @@ export interface RouteTableOptions {
   readonly frameworkEtag: FrameworkEtagMode;
   /** The entry's `catchAll` option: false leaves a request the contract does not serve to the app. */
   readonly catchAll: boolean;
+  /** How the module's relative imports name their modules. */
+  readonly importSpecifiers: ImportSpecifierStyle;
 }
 
 const API_LOCATION: IrLocation = { member: "" };
@@ -110,7 +113,7 @@ export function routeTableSource(
   refusals: Refusal[],
   warnings: GenerateWarning[],
 ): string {
-  const imports = new ModuleImports(validators, fromFile);
+  const imports = new ModuleImports(validators, fromFile, options.importSpecifiers);
   const format = errorFormat(ir, refusals);
 
   refusals.push(...encodedSegmentRefusals(ir));
@@ -151,11 +154,7 @@ export function routeTableSource(
     );
   }
 
-  const basePaths = [
-    ...new Set(
-      Object.values(ir.api.surfaces).map((surface) => `${options.mount}${surface.prefix}`),
-    ),
-  ];
+  const basePaths = mountedBasePaths(ir, options.mount);
   const frameworkRoutes = frameworkRoutesValue(options.frameworkRoutes, basePaths);
   const isClassValidator = validators.descriptor.style === CLASS_VALIDATOR_STYLE;
   const table: SourceValue = {
@@ -177,6 +176,8 @@ export function routeTableSource(
     ir,
     SERVER_RUNTIME_PACKAGE,
     validators.descriptor.style,
+    fromFile,
+    options.importSpecifiers,
     (operation) => {
       const ref = Object.hasOwn(validators.descriptor.operations, operation.id)
         ? validators.descriptor.operations[operation.id]?.input
@@ -227,6 +228,7 @@ class ModuleImports {
   constructor(
     private readonly link: Link<"validators">,
     private readonly fromFile: string,
+    private readonly style: ImportSpecifierStyle,
   ) {}
 
   expression(module: string, exportName: string): SourceExpression {
@@ -243,7 +245,7 @@ class ModuleImports {
   lines(): string[] {
     return [...this.aliases].map(
       ([module, alias]) =>
-        `import * as ${alias} from "${importSpecifier(this.link, { module, export: "" }, this.fromFile)}";`,
+        `import * as ${alias} from "${importSpecifier(this.link, { module, export: "" }, this.fromFile, this.style)}";`,
     );
   }
 }

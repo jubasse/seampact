@@ -71,12 +71,14 @@ export function webContractRequest(
 /**
  * Reads the body of a contract route within its limit, or throws the refusal: the 413 past the limit, the 415 for a
  * content coding or charset the boundary does not read, the 400 for a corrupt body, and a 500 naming `bodyUsedFix`
- * when app middleware read the body first.
+ * when app middleware read the body first. Given `truncatedBodyFix`, a body shorter than its declared length is a 500
+ * naming it, for a platform that may cut the body before the boundary.
  */
 export async function readContractBody(
   route: ContractRoute,
   request: Request,
   bodyUsedFix: string,
+  truncatedBodyFix?: string,
 ): Promise<ReadRequestBody> {
   const input = route.input;
 
@@ -101,7 +103,11 @@ export async function readContractBody(
     throw refusal;
   }
 
-  const bytes = await boundedBytes(route, request.body, request.headers, input.limitBytes);
+  const encoded = { bytes: 0 };
+  const bytes = await boundedBytes(route, request.body, request.headers, input.limitBytes, encoded);
+
+  if (truncatedBodyFix !== undefined)
+    refuseTruncatedBody(route, request, encoded.bytes, truncatedBodyFix);
 
   if (bytes.byteLength === 0) return NO_BODY;
 
@@ -136,15 +142,36 @@ function headerRefusal(
   return undefined;
 }
 
-// The decoded bytes, with the encoded and the decoded counts each bounded by the route's limit.
+// Fail closed: a body cut short before the boundary would read as a schema or signature refusal of the client.
+function refuseTruncatedBody(
+  route: ContractRoute,
+  request: Request,
+  encodedBytes: number,
+  truncatedBodyFix: string,
+): void {
+  const declaredLength = request.headers.get("content-length");
+
+  if (declaredLength === null || encodedBytes >= Number(declaredLength)) return;
+
+  throw unexpectedError(
+    route,
+    new Error(
+      `seampact: the body of '${route.id}' declared ${declaredLength} bytes and ${encodedBytes} reached the boundary. ${truncatedBodyFix}`,
+    ),
+  );
+}
+
+// The decoded bytes, with the encoded and the decoded counts each bounded by the route's limit; `encoded` receives
+// the encoded count.
 async function boundedBytes(
   route: ContractRoute,
   body: ByteStream,
   headers: Headers,
   limitBytes: number,
+  encoded: { bytes: number },
 ): Promise<Uint8Array> {
   const coding = contentCoding(headers.get("content-encoding"));
-  const counted = body.pipeThrough(encodedCount(limitBytes));
+  const counted = body.pipeThrough(encodedCount(limitBytes, encoded));
   const decoded =
     coding === IDENTITY_ENCODING ? counted : (decodedStream(counted, coding) ?? counted);
 
@@ -162,14 +189,15 @@ async function boundedBytes(
   throw tooLargeError(route, limitBytes);
 }
 
-function encodedCount(limitBytes: number): TransformStream<Uint8Array, Uint8Array> {
-  let encodedBytes = 0;
-
+function encodedCount(
+  limitBytes: number,
+  encoded: { bytes: number },
+): TransformStream<Uint8Array, Uint8Array> {
   return new TransformStream<Uint8Array, Uint8Array>({
     transform(chunk, controller) {
-      encodedBytes += chunk.byteLength;
+      encoded.bytes += chunk.byteLength;
 
-      if (encodedBytes > limitBytes) controller.error(new EncodedBodyOverLimit());
+      if (encoded.bytes > limitBytes) controller.error(new EncodedBodyOverLimit());
       else controller.enqueue(chunk);
     },
   });

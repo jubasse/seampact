@@ -1,5 +1,8 @@
-import { posix } from "node:path";
-import type { Refusal } from "@seampact/codegen-core";
+import {
+  type ImportSpecifierStyle,
+  type Refusal,
+  relativeModuleSpecifier,
+} from "@seampact/codegen-core";
 import type { ContractIR } from "@seampact/spec/ir";
 import { SCHEMAS_MODULE, type TypesLayout } from "./layout.js";
 import type { TypeContext } from "./type-expression.js";
@@ -14,6 +17,7 @@ export function operationModuleContext(
   ir: ContractIR,
   layout: TypesLayout,
   refusals: Refusal[],
+  style: ImportSpecifierStyle,
 ): { context: TypeContext; importLines(fromModule: string): string[] } {
   let isNamespaceUsed = false;
 
@@ -31,10 +35,9 @@ export function operationModuleContext(
   function importLines(fromModule: string): string[] {
     if (!isNamespaceUsed) return [];
 
-    const specifier = posix.relative(posix.dirname(fromModule), SCHEMAS_MODULE);
-    const dotted = specifier.startsWith("../") ? specifier : `./${specifier}`;
+    const specifier = relativeModuleSpecifier(fromModule, SCHEMAS_MODULE, style);
 
-    return [`import type * as ${SCHEMAS_NAMESPACE} from "${dotted}.js";`];
+    return [`import type * as ${SCHEMAS_NAMESPACE} from "${specifier}";`];
   }
 
   return { context, importLines };

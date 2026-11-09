@@ -8,7 +8,11 @@ import {
 } from "@seampact/spec/ir";
 import { deriveName } from "@seampact/spec/naming";
 import type { ExportRef, TypesDescriptor } from "../descriptors.js";
-import { importSpecifier } from "../import-specifier.js";
+import {
+  DEFAULT_IMPORT_SPECIFIER_STYLE,
+  type ImportSpecifierStyle,
+  importSpecifier,
+} from "../import-specifier.js";
 import { below, type IrLocation, operationLocation } from "../ir-location.js";
 import type { Link } from "../links.js";
 import { refuseInconsistentIr } from "../located-refusals.js";
@@ -25,12 +29,16 @@ const WORD = /[a-z0-9]+/g;
 const OPERATION_ACCESS_EXPORT = "OperationAccess";
 const HANDLER_INPUTS_EXPORT = "HandlerInputs";
 
+/** The module name of an api's handler interfaces. */
+export const HANDLERS_MODULE = "handlers";
+
 class TypeImports {
   private readonly aliases = new Map<string, string>();
 
   constructor(
     private readonly link: Link<"types">,
     private readonly fromFile: string,
+    private readonly style: ImportSpecifierStyle,
   ) {}
 
   reference(ref: ExportRef): string {
@@ -47,7 +55,7 @@ class TypeImports {
   lines(): string[] {
     return [...this.aliases].map(
       ([module, alias]) =>
-        `import type * as ${alias} from "${importSpecifier(this.link, { module, export: "" }, this.fromFile)}";`,
+        `import type * as ${alias} from "${importSpecifier(this.link, { module, export: "" }, this.fromFile, this.style)}";`,
     );
   }
 }
@@ -85,9 +93,10 @@ export function handlersSource(
   fromFile: string,
   parameters: HandlerParameters,
   refusals: Refusal[],
+  style: ImportSpecifierStyle = DEFAULT_IMPORT_SPECIFIER_STYLE,
 ): string {
   const trailing = parameters === "inputThenDecorated" ? ", ...decorated: unknown[]" : "";
-  const imports = new TypeImports(types, fromFile);
+  const imports = new TypeImports(types, fromFile, style);
   const groups = new Map<string, string[]>();
   const accessMembers: string[] = [];
   const inputMembers: string[] = [];
@@ -192,8 +201,9 @@ export function hookTypesSource(
   types: Link<"types">,
   fromFile: string,
   refusals: Refusal[],
+  style: ImportSpecifierStyle = DEFAULT_IMPORT_SPECIFIER_STYLE,
 ): string {
-  const imports = new TypeImports(types, fromFile);
+  const imports = new TypeImports(types, fromFile, style);
   const denialOf = denialTypes(ir, types.descriptor, imports);
   const principalOf = (identityId: string): string =>
     principalType(ir, identityId, types.descriptor, imports, refusals);
