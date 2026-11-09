@@ -1,40 +1,43 @@
 import type { GenerateRequest, LinkSet } from "@seampact/codegen-core";
 import {
   generateReferenceProject,
-  projectDirectory,
   readGoldenIr,
   referenceLinks,
 } from "@seampact/codegen-core/node-server/test-support";
 import { target } from "./index.js";
 
-// The request of a Next.js entry generating the reference `tasks` api: its types and zod links, read from the
-// reference project, which links the workspace's providers and runtime, and that project as output directory.
+// The request of a Next.js entry generating the reference `tasks` api: its types and zod links, read from a
+// reference project of the calling test file, which links the workspace's providers and runtime, and that project
+// as output directory. Each test file has its own project, since test files run in parallel.
 
 export const REFERENCE_API = "tasks";
 
 const BOUNDARY = new Set(["boundary", "index"]);
-const PROJECT = projectDirectory(import.meta.url, "next-generate-request");
+const referenceLinksByProject = new Map<string, Promise<LinkSet>>();
 
-let referenceLinksOnce: Promise<LinkSet> | undefined;
-
-/** The reference request, with `overrides` laid over it. */
+/** The reference request generated in `project`, with `overrides` laid over it. */
 export async function nextGenerateRequest(
+  project: string,
   overrides: Partial<GenerateRequest> = {},
 ): Promise<GenerateRequest> {
   return {
     ir: readGoldenIr(REFERENCE_API),
     options: {},
-    links: await linksOfReferenceProject(),
+    links: await linksOfReferenceProject(project),
     artefacts: BOUNDARY,
-    outputDirectory: PROJECT,
+    outputDirectory: project,
     ...overrides,
   };
 }
 
-function linksOfReferenceProject(): Promise<LinkSet> {
-  referenceLinksOnce ??= generateReferenceProject(PROJECT, target, {}).then(() =>
-    referenceLinks(PROJECT, REFERENCE_API),
-  );
+function linksOfReferenceProject(project: string): Promise<LinkSet> {
+  const generated =
+    referenceLinksByProject.get(project) ??
+    generateReferenceProject(project, target, {}).then(() =>
+      referenceLinks(project, REFERENCE_API),
+    );
 
-  return referenceLinksOnce;
+  referenceLinksByProject.set(project, generated);
+
+  return generated;
 }

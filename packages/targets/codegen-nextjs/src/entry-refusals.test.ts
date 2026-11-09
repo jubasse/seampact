@@ -1,12 +1,14 @@
 import type { FrameworkRouteCheck, GenerateRequest } from "@seampact/codegen-core";
-import { readGoldenIr } from "@seampact/codegen-core/node-server/test-support";
+import { projectDirectory, readGoldenIr } from "@seampact/codegen-core/node-server/test-support";
 import type { ContractIR } from "@seampact/spec/ir";
 import { describe, expect, test } from "vitest";
 import { nextGenerateRequest, REFERENCE_API } from "./generate-request.test-support.js";
 import { target } from "./index.js";
 
+const PROJECT = projectDirectory(import.meta.url, "next-entry-refusals");
+
 async function refusalCodes(overrides: Partial<GenerateRequest>): Promise<string[]> {
-  const outcome = await target.generate(await nextGenerateRequest(overrides));
+  const outcome = await target.generate(await nextGenerateRequest(PROJECT, overrides));
 
   return outcome.status === "refused" ? outcome.refusals.map((refusal) => refusal.code) : [];
 }
