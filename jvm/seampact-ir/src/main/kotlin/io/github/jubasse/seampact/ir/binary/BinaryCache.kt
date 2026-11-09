@@ -18,7 +18,7 @@ import java.nio.file.attribute.PosixFilePermissions
 import java.nio.file.attribute.UserPrincipal
 
 /**
- * The private binary cache (ADR 0010, "Amendment 2026-10-21: the JVM channels", Cache checks). The runner creates
+ * The private binary cache (ADR 0010, "The JVM channels", Cache checks). The runner creates
  * each missing directory owner-only whatever the umask, and checks the cache root by its real path only. Before each
  * start, the copy, its directory and each directory above it up to the cache root must be owned by the current user,
  * not be a link and not be writable by group or others; each directory above the cache root must be owned by the

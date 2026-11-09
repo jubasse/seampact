@@ -5,7 +5,7 @@ Every IR object of the kinds below has the members it needs from this list, with
 | Member | Meaning |
 |---|---|
 | `id` | the stable key: the catalogue name as written, or for a derived element the canonical identifier of its name (section 9, ADR 0007) |
-| `name` | `{ segments: string[], role: string, status?: number }`, the canonical name (ADR 0007 and its amendment); never a final identifier. `status`, from 200 to 399, is present if and only if `role` is `response` (section 13) |
+| `name` | `{ segments: string[], role: string, status?: number }`, the canonical name (ADR 0007 section 1); never a final identifier. `status`, from 200 to 399, is present if and only if `role` is `response` (section 13) |
 | `origin` | where it was declared (section 6) |
 | `derivedFrom` | present on, and only on, an element the compiler derived (section 6) |
 | `docs` | `{ summary?, description? }`, resolved text |

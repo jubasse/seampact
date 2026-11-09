@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Seampact\Ir\Binary;
 
 /**
- * The refusals of the compiler binary channel of a PHP build (ADR 0010, "Amendment 2026-10-26: the PHP
+ * The refusals of the compiler binary channel of a PHP build (ADR 0010, "The PHP
  * channels"), and `php.unpatched`, the runtime check that runs before any seampact work.
  */
 enum BinaryFailureCode: string

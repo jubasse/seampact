@@ -1,4 +1,4 @@
-"""The platform table of ADR 0010 "Amendment 2026-11-01: the Python channels": every OS, arch and libc row to a
+"""The platform table of ADR 0010 "The Python channels": every OS, arch and libc row to a
 release asset, or the refusal that names the detected values."""
 
 import pytest

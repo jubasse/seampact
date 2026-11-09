@@ -43,7 +43,7 @@ The sections are cited as "ADR 0004 section N" and live one per file under `docs
 | 10. Byte-stable serialisation | [ir/10-byte-stable-serialisation.md](../ir/10-byte-stable-serialisation.md) |
 | 11. The source-location side table | [ir/11-source-location-side-table.md](../ir/11-source-location-side-table.md) |
 | 12. The OpenAPI mapping | [ir/12-the-openapi-mapping.md](../ir/12-the-openapi-mapping.md) |
-| 13. Schema forms (amendment 2026-10-12, M1) | [ir/13-schema-forms.md](../ir/13-schema-forms.md) |
+| 13. Schema forms | [ir/13-schema-forms.md](../ir/13-schema-forms.md) |
 
 ## Consequences
 

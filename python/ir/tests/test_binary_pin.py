@@ -1,4 +1,4 @@
-"""The pin decides whether the binary ever starts (ADR 0010, "Amendment 2026-11-01: the Python channels"): a stub
+"""The pin decides whether the binary ever starts (ADR 0010, "The Python channels"): a stub
 with the wrong hash never starts, proved by a marker file it would have touched."""
 
 import hashlib
