@@ -29,6 +29,7 @@ use Seampact\Symfony\Tests\Support\ScriptedInputRules;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\Constraints\Callback;
+use Symfony\Component\Validator\Constraints\Sequentially;
 use Symfony\Component\Validator\ConstraintValidator;
 use Symfony\Component\Validator\Context\ExecutionContextInterface;
 use Symfony\Component\Validator\Validation;
@@ -67,6 +68,16 @@ final class InputRulesStepTest extends TestCase
         self::issues($served);
         self::assertCount(1, $served->logger->lines);
         self::assertStringContainsString('has no usable name', $served->logger->lines[0]);
+    }
+
+    public function testACompositeConstraintKeepsItsPayloadNameWhenAnInnerConstraintRaisesTheViolation(): void
+    {
+        $composite = new Sequentially([new Callback(static function (mixed $item, ExecutionContextInterface $context): void {
+            $context->buildViolation('refused')->addViolation();
+        })], payload: Rule::payload('thenRefused'));
+        $served = self::served([self::rules('body', $composite)]);
+
+        self::assertSame([['in' => 'body', 'pointer' => '', 'rule' => 'app.thenRefused']], self::issues($served));
     }
 
     public function testARuleSetOfNoApiInterfaceIsRefused(): void

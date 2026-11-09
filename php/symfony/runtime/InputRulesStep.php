@@ -10,6 +10,7 @@ use Seampact\Codegen\Runtime\BoundaryFailure;
 use Seampact\Codegen\Runtime\BoundaryState;
 use Seampact\Codegen\Runtime\ContractRefusal;
 use Seampact\Codegen\Runtime\IdempotencyStep;
+use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\ConstraintViolationInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
@@ -70,28 +71,38 @@ final class InputRulesStep
             return [];
         }
 
-        try {
-            $violations = $validator->validate($held, $rules->constraints());
-        } catch (\Throwable $failure) {
-            throw new BoundaryFailure($failure, "an input rule of the part '{$part}' threw (" . get_debug_type($rules) . ')');
-        }
-
         $issues = [];
-        foreach ($violations as $violation) {
-            $issues[] = self::issueOf($state, $part, $violation);
+        foreach (self::topLevelConstraints($rules) as $topLevel) {
+            try {
+                $violations = $validator->validate($held, $topLevel);
+            } catch (\Throwable $failure) {
+                throw new BoundaryFailure($failure, "an input rule of the part '{$part}' threw (" . get_debug_type($rules) . ')');
+            }
+
+            foreach ($violations as $violation) {
+                $issues[] = self::issueOf($state, $part, $violation, $topLevel);
+            }
         }
 
         return $issues;
     }
 
+    /** @return list<Constraint> each constraint of the rule set, run on its own so a violation names the constraint the app wrote */
+    private static function topLevelConstraints(InputRules $rules): array
+    {
+        $constraints = $rules->constraints();
+
+        return is_array($constraints) ? array_values($constraints) : [$constraints];
+    }
+
     /** @return array{in: string, pointer: string, rule: string} */
-    private static function issueOf(BoundaryState $state, string $part, ConstraintViolationInterface $violation): array
+    private static function issueOf(BoundaryState $state, string $part, ConstraintViolationInterface $violation, Constraint $topLevel): array
     {
         $path = $violation->getPropertyPath();
         $place = InputPointer::of($state->contract, $state->operationId, $part, $path);
         $constraint = $violation->getConstraint();
         $description = $constraint === null ? 'a violation without a constraint' : get_debug_type($constraint);
-        $rule = AppRuleName::rendered($state, "{$part}.{$path}: {$description}", AppConstraintName::of($violation), self::NAME_FIX);
+        $rule = AppRuleName::rendered($state, "{$part}.{$path}: {$description}", AppConstraintName::of($violation, $topLevel), self::NAME_FIX);
 
         return ['in' => $place['in'], 'pointer' => $place['pointer'], 'rule' => $rule];
     }
