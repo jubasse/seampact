@@ -6,11 +6,11 @@ Status: accepted
 
 ADR 0012 fixes what every server target generates around the developer's controller, and ADR 0016 states, for NestJS, how a Node server boundary meets those obligations: the check order, the reply path, the narrow handling of exceptions on contract routes and the outgoing response check. `@seampact/codegen-adonis` generates, for each api of the app config, the same boundary around the developer's AdonisJS controllers. In the end-to-end slice ([A47](../decisions.md#a47)) it validates with the zod link (ADR 0009 "The provider seam"); generated VineJS validators ([A15](../decisions.md#a15)) come after it.
 
-The request checks are the framework-neutral ones of `@seampact/codegen-core/node-server`, shared with the NestJS, Fastify and Express targets, and this ADR cites ADR 0016 for every obligation they meet. Only the placement is new. Four behaviours of AdonisJS shape it: route middleware run in a fixed order after the router's middleware, the bodyparser among them; an error thrown inside a route's pipeline goes straight to the app's exception handler and never back through an earlier middleware's `await next()`; the response is written lazily once the pipeline ends; and the JSON parser can rewrite string values.
+The request checks are the framework-neutral ones of `@seampact/server-runtime`, shared with the NestJS, Fastify and Express targets, and this ADR cites ADR 0016 for every obligation they meet. Only the placement is new. Four behaviours of AdonisJS shape it: route middleware run in a fixed order after the router's middleware, the bodyparser among them; an error thrown inside a route's pipeline goes straight to the app's exception handler and never back through an earlier middleware's `await next()`; the response is written lazily once the pipeline ends; and the JSON parser can rewrite string values.
 
 ## Options
 
-- AdonisJS majors: 7 only, or 6 and 7. Choice: both, since the spike below ran the same boundary code on both with the same wire results. AdonisJS 6 would be refused by name if a later change needed different generated code for it.
+- AdonisJS majors: 7 only, or 6 and 7. Choice: both, kept under the [support policy](../supported-versions.md#a-version-its-maintainers-no-longer-maintain) for versions their maintainers no longer maintain (it stays while it costs nothing; the declared range `^6.0.0 || ^7.0.0` is unchanged), since the spike below ran the same boundary code on both with the same wire results. AdonisJS 6 would be refused by name if a later change needed different generated code for it.
 - Placement of the checks: named middleware registered in the app's `start/kernel.ts`, or inline route middleware attached by the generated registration. Choice: inline middleware; the app's kernel is unchanged and the generated routes fix the order.
 - Reply path: Adonis's lazy `response.send`, or the shared writer on the Node response. Choice: the shared writer, as in ADR 0016; one writer for every Node target, and no Adonis ETag on boundary replies.
 - Exceptions on contract routes: catch them in the first route middleware around `await next()`, or where they are thrown. Choice: where they are thrown, since the spike showed that an error from the controller never reaches an earlier middleware.
@@ -47,7 +47,7 @@ The app's own middleware run before the boundary: server middleware, then router
 
 Each generated middleware and the route handler catch the errors of their own steps and write the refusal themselves, since an error leaves the route pipeline for the app's exception handler (Exceptions on contract routes, below). Hook failures follow ADR 0012 "Failures inside hooks": bouncer's `E_AUTHORIZATION_FAILURE` thrown inside a decide hook answers the requirement's first declared denial code, and any other error a hook throws or rejects is a 500 with `onUnexpectedError` called.
 
-Steps 1 to 8 and 10 run the shared request checks, copied into the generated tree with the generated header (ADR 0009 "What generated code depends on at run time"); this target adds one static placement file and its per-api module.
+Steps 1 to 8 and 10 run the shared request checks, those of `@seampact/server-runtime`, imported, not copied into the generated tree (ADR 0025); the placement file is the package's `/adonis` export, which gets the app's own `@adonisjs/core` app service and string helpers from `adonis.ts`, so one runtime serves AdonisJS 6 and 7. Each api's generated tree holds `adonis.ts`, `routes.ts`, `handlers.ts`, `hooks.ts`, `index.ts` and its own VineJS validators when it writes them, with `validators/vine-support.ts`, which belongs to the validators.
 
 ### The reply path
 
@@ -114,7 +114,7 @@ ADR 0012 "Native security layers" is met with AdonisJS's own route names. Each r
 
 ### The boot check
 
-`registerRoutes` runs it when `start/routes.ts` is preloaded, before the HTTP server listens; it lists every problem at once with the operation id, the name and the fix, and throws, so the app does not start:
+`registerRoutes` runs it when `start/routes.ts` is preloaded, before the HTTP server listens; it lists every problem at once with the operation id, the name and the fix, and throws, so the app does not start. The first step is the runtime version: the version the api's route table carries is compared with the installed runtime's, and a table written by another `major.minor` or a later patch throws `runtime.generated-for-other-version` when `adonis.ts` is imported. Each api keeps its own logger in the shared runtime, keyed by its route table.
 
 - an identity used by a bound operation without an authenticate hook, a right or rule without a decider, a scope without a resolver, an idempotent operation without an idempotency store, two deciders claiming one name;
 - a resource interface without an entry in `controllers`;
@@ -127,7 +127,7 @@ Two checks move to the request. The methods of a controller are read when its la
 
 ### What the generated code depends on
 
-At run time: `@adonisjs/core` 6 or 7 (`@adonisjs/core/http`, its `services/app` and `helpers/string`), the zod link's runtime and, for types only, `@seampact/hooks` (ADR 0009). It never imports `@adonisjs/auth`, `@adonisjs/bouncer`, `@adonisjs/limiter` or `@seampact/signed-webhooks`, uses no decorators and no `#` subpath imports, and runs on Node 24, which AdonisJS 7 requires. The generated module reads `services/app` when it is imported, so the app imports it after the app is created, as a preloaded `start/routes.ts` does; imported earlier, the service is unset and the boot check stops the app with that fix.
+At run time: `@adonisjs/core` 6 or 7 (`@adonisjs/core/http`, its `services/app` and `helpers/string`), the zod link's runtime and, for types only, `@seampact/hooks` (ADR 0009). It never imports `@adonisjs/auth`, `@adonisjs/bouncer`, `@adonisjs/limiter` or `@seampact/signed-webhooks`, uses no decorators and no `#` subpath imports, and runs on Node 24, which AdonisJS 7 requires. The generated module reads `services/app` when it is imported, so the app imports it after the app is created, as a preloaded `start/routes.ts` does; imported earlier, the service is unset and the boot check stops the app with that fix. The runtime package is a production dependency: `@seampact/server-runtime`, its root, `/node` and `/adonis` exports, at the generator's version (ADR 0025, G1). `seampact generate` refuses an app that does not install it (`runtime.missing`) or installs one of another `major.minor` or a lower patch (`runtime.version-mismatch`).
 
 ### Refused by name or waiting
 
@@ -163,18 +163,6 @@ A spike, run and not kept, booted a minimal app in process on Node 24.21 with Ad
 | Boot read of `app.config.get('bodyparser.json')` from `start/routes.ts` | `limit`, `types` and `strict` read, defaults filled |
 
 The only difference between the majors outside the boundary was the app setup: AdonisJS 7 refuses to boot without `config/encryption.ts`, a file AdonisJS 6 cannot load. The consumer therefore keeps one overlay file per major.
-
-### Amendment 2026-10-27: the runtime package
-
-ADR 0025 moves the shared request checks out of the generated tree: they are those of `@seampact/server-runtime`, imported, no longer copied into the generated tree under `node-server/`, and the placement file is the package's `/adonis` export, no longer `adonis-boundary.ts`. Each api's generated tree keeps `adonis.ts`, `routes.ts`, `handlers.ts`, `hooks.ts`, `index.ts` and its own VineJS validators when it writes them, with `validators/vine-support.ts`, which belongs to the validators. `adonis.ts` hands the app's own `@adonisjs/core` app service and string helpers to the placement, so one runtime serves AdonisJS 6 and 7.
-
-What the generated code depends on adds `@seampact/server-runtime` as a production dependency: its root, `/node` and `/adonis` exports, at the generator's version (ADR 0025, G1). `seampact generate` refuses an app that does not install it (`runtime.missing`) or installs one of another `major.minor` or a lower patch (`runtime.version-mismatch`).
-
-The boot check runs one step first, before any other: the version the api's route table carries is compared with the installed runtime's, and a table written by another `major.minor` or a later patch throws `runtime.generated-for-other-version` when `adonis.ts` is imported. Each api keeps its own logger in the shared runtime, keyed by its route table.
-
-### Amendment 2026-11-04: AdonisJS 6 support
-
-AdonisJS 6 is kept under the rule of the [support policy](../supported-versions.md#a-version-its-maintainers-no-longer-maintain) for versions their maintainers no longer maintain: it stays while it costs nothing, and the declared range `^6.0.0 || ^7.0.0` is unchanged.
 
 ## Consequences
 
