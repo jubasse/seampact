@@ -44,7 +44,7 @@ A front runtime is copied into each front target's output with the generated hea
 
 ### The generated API
 
-Per api, two modules, re-exported by the api's `index.ts` (ADR 0007 "Amendment 2026-10-19: generated modules"):
+Per api, two modules, re-exported by the api's `index.ts` (ADR 0007 section 7):
 
 - `queries.ts`, server-safe: `create<Api>Queries(client, settings?)` returns `keys` and, per `safe` operation, `<op>Options(request, options?)` (`queryOptions`), plus `<op>InfiniteOptions(request, options?)` (`infiniteQueryOptions`) for a paged one, and per other operation `<op>MutationOptions(options?)` (`mutationOptions`). It holds no `"use client"` directive and imports no React hook, so a server component prefetches with it.
 - `hooks.ts`, starting with `"use client"`: `create<Api>Hooks(client, settings?)` returns the same members plus `use<Op>(request, options?)` over `useQuery`, `use<Op>Infinite` over `useInfiniteQuery`, and `use<Op>(options?)` over `useMutation`.

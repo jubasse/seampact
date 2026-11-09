@@ -102,7 +102,7 @@ As ADR 0016 "Handler results": the method returns its `output` or its `errors`, 
 
 `parseOptions` accepts `responses` (`strict`, the default, or `warn`) and `bodyValidation` (`false`, the default, or `true`), and refuses any other key by name. The registration takes the same two keys, and the same two per operation under `operations`.
 
-The api's module is imported as a namespace (`import * as TasksAdonis from '.../tasks/adonis.js'`), with the api's `index.ts` re-exporting it (ADR 0007 "Amendment 2026-10-19: generated modules"). Its fixed exports are `registerRoutes`, `renderPreRoutingError`, `renderContractError`, `LARGEST_BODY_LIMIT` and `ROUTE_NAMES_BY_ACCESS`; they are shadowed names of ADR 0007 section 5 for the per-operation accessors, so an operation named `registerRoutes` gets `registerRoutes_`. `renderContractError` reads the api from the boundary's request context.
+The api's module is imported as a namespace (`import * as TasksAdonis from '.../tasks/adonis.js'`), with the api's `index.ts` re-exporting it (ADR 0007 section 7). Its fixed exports are `registerRoutes`, `renderPreRoutingError`, `renderContractError`, `LARGEST_BODY_LIMIT` and `ROUTE_NAMES_BY_ACCESS`; they are shadowed names of ADR 0007 section 5 for the per-operation accessors, so an operation named `registerRoutes` gets `registerRoutes_`. `renderContractError` reads the api from the boundary's request context.
 
 ### Native security layers
 
