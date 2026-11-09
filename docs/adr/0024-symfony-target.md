@@ -54,7 +54,7 @@ Each section lives in its own file under the folder named like this ADR, in the 
 
 ## Spike
 
-Run on Symfony 7.4.21 and 8.1.9 (fresh `symfony/skeleton` apps with SecurityBundle, Validator, Serializer and RateLimiter) on PHP 8.5.4 under the PHP CLI server, and not kept. Both majors gave the same result on every case. PHP 8.3, php-fpm, FrankenPHP, WebProfilerBundle and NelmioCorsBundle were not run. The results marked "CLI server" (the chunked bounded read) depend on the server; symfony-2's php-fpm suite proves them. A reduced boundary had:
+Run on Symfony 7.4.21 and 8.1.9 (fresh `symfony/skeleton` apps with SecurityBundle, Validator, Serializer and RateLimiter) on PHP 8.5.4 under the PHP CLI server, and not kept. Both majors gave the same result on every case. PHP 8.3, php-fpm, FrankenPHP, WebProfilerBundle and NelmioCorsBundle were not run. The results marked "CLI server" (the chunked bounded read) depend on the server: the consumer is served by that same built-in server, so they stay proven on it only. A reduced boundary had:
 
 - one event subscriber with the listeners and priorities of "Placement", a raw-path matcher, a bounded body read with gzip decoding, the authored-reply record and the exception mapping;
 - a value resolver at priority 150, a route loader tagged `routing.loader` whose routes name the interface, and a controller service implementing it with the attribute on each method;
@@ -111,6 +111,7 @@ Read from the sources, not run: the firewall adds its `ExceptionListener` at `ke
 
 ## Traceability
 
+- History: the dated amendments this ADR carried until PR #451 are folded into the sections they changed; `git show 43055be4:docs/adr/0024-symfony-target.md` holds them with their dates.
 - FRs: FR-5 (the check order), FR-14 (cases refused by name), FR-16 (server boundaries, controllers stay the developer's), FR-21 (PHP targets), FR-25 (framework routes and the boot check), FR-35 (the shared suite); CHK-084, CHK-158, CHK-168, CHK-174; amendments A9, A15, A25, A30, A36, A40, A41, A42, A47.
 - ADRs: 0003 (the PHP decoding and rule mapping), 0007 (PHP names), 0009 (artefacts, `rules`, matrix), 0010 (artifacts, namespaces), 0011 (app config, unpublished installs), 0012 (placement and obligations), 0013 (raw body), 0015 (runtime copies, golden tests, suite profiles), 0016 and 0023 (the shared obligations and the PHP target this one mirrors).
 - Proof in the development phase: the review of this ADR, the spike above, and the end-to-end gate on the Symfony consumer.

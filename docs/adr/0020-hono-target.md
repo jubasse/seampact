@@ -29,7 +29,7 @@ The shared runtime is split by what it imports, without changing a rule:
 - Node modules, imported by the four Node targets only: the `IncomingMessage` request view, the Express body glue, and the `ServerResponse` side of the reply and the check (`writeContractReply`, `installOutgoingCheck`, `respondWithError` and `respondNotServed` writing on `res`).
 - Web modules, imported by the Hono target and the Web-standard targets after it: the `Request` request view and bounded body read, `contractResponse(reply)` building a `Response` from the boundary's reply, and `checkOutgoingResponse(context, request, response)` returning the `Response` that goes out.
 
-`@seampact/server-runtime` exports the profiles: the root holds the neutral modules, `/node` the Node modules and `/web` the Web modules, all imported by the generated code, not copied into it (ADR 0025). The `/web` modules import no `node:` module other than `node:async_hooks`, which Bun, Deno and Next.js provide and Workers provide with the `nodejs_als` or `nodejs_compat` flag. The Web modules take a `Request` and return a `Response` and import no framework, so a Next.js route handler or a `Bun.serve` placement calls them as the Hono placement does.
+`@seampact/server-runtime` exports the profiles: the root holds the neutral modules, `/node` the Node modules and `/web` the Web modules, all imported by the generated code, not copied into it (ADR 0025). A test of `@seampact/server-runtime` keeps the `/web` modules free of any `node:` import other than `node:async_hooks`, which Bun, Deno and Next.js provide and Workers provide with the `nodejs_als` or `nodejs_compat` flag. The Web modules take a `Request` and return a `Response` and import no framework, so a Next.js route handler or a `Bun.serve` placement calls them as the Hono placement does.
 
 The Web adapter differs from the Node path in five ways:
 
@@ -180,6 +180,7 @@ Run on Hono 4.13.13, `@hono/node-server` 2.1.5 and Node 24.21, and not kept. A r
 
 ## Traceability
 
+- History: the dated amendments this ADR carried until PR #451 are folded into the sections they changed; `git show 43055be4:docs/adr/0020-hono-target.md` holds them with their dates.
 - FRs: FR-5 (the check order), FR-14 (a case refused by name), FR-15 (the typed client), FR-16 (server boundaries), FR-35 (the shared suite this boundary will pass); amendments A6, A30, A36, A39, A40, A41, A42, A47.
 - ADRs: 0007 (names, generated modules), 0009 (links, run-time dependencies), 0012 (placement and target obligations), 0013 (raw body), 0016 (the shared obligations), 0017 and 0018 (the Node placements this one mirrors).
 - Proof in the development phase: the review of this ADR, the spike above, and the slice's end-to-end gate on the Hono consumer.
