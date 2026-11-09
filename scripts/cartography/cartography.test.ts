@@ -114,7 +114,7 @@ describe("cartography", () => {
       "packages/.keep": "",
       "scripts/tool/index.ts": "// The tool. More detail.\n",
       "jvm/module/README.md": "# A JVM module\n",
-      "php/target/README.md": "A PHP target.\n",
+      "php/target/README.md": "A PHP target. It has a long paragraph after the first sentence.\n",
       ".github/actions/cache/README.md": "Caches things.\n",
       "scripts/bare/run.sh": "",
       "scripts/tool/fixtures/case/index.ts": "",
@@ -126,6 +126,7 @@ describe("cartography", () => {
     expect(markdown).toContain("- `jvm/module`: A JVM module");
     expect(markdown).toContain("- `php/target`: A PHP target.");
     expect(markdown).toContain("- `.github/actions/cache`: Caches things.");
+    expect(markdown).not.toContain("long paragraph");
     expect(markdown).not.toContain("fixtures");
     expect(problems).toEqual([
       "scripts/bare: no header; add a one-line comment at the top of scripts/bare/index.ts, or a README.md",

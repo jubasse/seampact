@@ -243,7 +243,7 @@ function readToolingRoots(root: string, problems: string[]): ToolingRoot[] {
         continue;
       }
 
-      directories.push({ path: directory, summary });
+      directories.push({ path: directory, summary: firstSentence(summary) });
     }
 
     roots.push({ path: rootPath, directories });
