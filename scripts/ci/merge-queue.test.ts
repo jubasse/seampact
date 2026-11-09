@@ -42,6 +42,7 @@ const REQUIRED_CHECKS = [
   "adonis",
   "express-fastify",
   "hono",
+  "nextjs",
   "nestjs",
   "packed-consumer",
   "docs-site",
