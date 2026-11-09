@@ -1,20 +1,14 @@
 "use client";
 
-import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { NotesHooks } from "./notes";
 
 function NotesList(): ReactNode {
   const notes = NotesHooks.useListNotes({ query: {} });
-  const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
-  const createNote = NotesHooks.useCreateNote({
-    onSuccess: () => {
-      setTitle("");
-
-      return queryClient.invalidateQueries();
-    },
-  });
+  // The generated mutation already invalidates the notes list.
+  const createNote = NotesHooks.useCreateNote({ onSuccess: () => setTitle("") });
 
   if (notes.isPending) return <p>Loading</p>;
 

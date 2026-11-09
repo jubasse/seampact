@@ -73,5 +73,10 @@ try {
   console.log("e2e ok: create, list and the titleNotBlank rule");
 } finally {
   // Stop our own server by its PID only.
-  if (server.pid !== undefined) process.kill(server.pid);
+  if (server.pid !== undefined && server.exitCode === null) {
+    const exited = new Promise((resolve) => server.once("exit", resolve));
+
+    process.kill(server.pid);
+    await exited;
+  }
 }
