@@ -3,6 +3,11 @@
 import type { ContractIR, PagingRequestRole, PagingStyle, WireFormat } from "@seampact/spec/ir";
 import { type FormatReader, FormatReaderError, formatReaderOf } from "./format-reader.js";
 import { CASES_DIRECTORY, loadSuiteCases } from "./load-cases.js";
+import {
+  type SchemaInvalidBinding,
+  schemaInvalidBindingOf,
+  withSchemaInvalidBinding,
+} from "./pack-schema-invalid.js";
 import { isJsonObject } from "./response-check.js";
 import type { SampleAppScript, ScriptedAnswer } from "./sample-app-script.js";
 import {
@@ -77,12 +82,19 @@ export function packProfileOf(
   const servedApis = new Set(contracts.map((contract) => contract.api.id));
   const refusals: Record<string, string> = {};
   const totalAskingOperations = operationsAskingTotal(contracts);
+  const schemaInvalid = schemaInvalidBindingOf(ir);
   const defaultCases = loadSuiteCases("default", directory).map((suiteCase) => {
     const refusal = refusalOf(suiteCase, paging, servedApis);
 
     if (refusal !== undefined) refusals[suiteCase.id] = refusal;
 
-    return adaptCase(suiteCase, limitParameterOf(paging), reader, totalAskingOperations);
+    return adaptCase(
+      suiteCase,
+      limitParameterOf(paging),
+      reader,
+      totalAskingOperations,
+      schemaInvalid,
+    );
   });
 
   return {
@@ -206,6 +218,7 @@ function adaptCase(
   limitParameter: string,
   reader: FormatReader,
   totalAskingOperations: ReadonlySet<string>,
+  schemaInvalid: SchemaInvalidBinding | undefined,
 ): SuiteCase {
   return {
     ...suiteCase,
@@ -215,7 +228,7 @@ function adaptCase(
     steps: suiteCase.steps.map((step) =>
       isScriptStep(step)
         ? { ...step, script: withPageTotals(step.script, totalAskingOperations) }
-        : adaptStep(step, limitParameter, reader),
+        : adaptStep(step, limitParameter, reader, schemaInvalid),
     ),
   };
 }
@@ -265,16 +278,24 @@ function withPageTotal(answer: ScriptedAnswer): ScriptedAnswer {
   return { ...answer, body: { ...answer.body, total: items.length } };
 }
 
-function adaptStep(step: SuiteStep, limitParameter: string, reader: FormatReader): SuiteStep {
+function adaptStep(
+  step: SuiteStep,
+  limitParameter: string,
+  reader: FormatReader,
+  schemaInvalid: SchemaInvalidBinding | undefined,
+): SuiteStep {
   const isError = step.expect.status >= ERROR_STATUS_FLOOR;
 
   return {
     ...step,
     request: renameLimit(step.request, limitParameter),
     expect: isError
-      ? renameLimitPointer(
-          replaceMedia(step.expect, PROBLEM_MEDIA, reader.errorMedia),
-          limitParameter,
+      ? withSchemaInvalidBinding(
+          renameLimitPointer(
+            replaceMedia(step.expect, PROBLEM_MEDIA, reader.errorMedia),
+            limitParameter,
+          ),
+          schemaInvalid,
         )
       : replaceMedia(step.expect, JSON_MEDIA, reader.media),
   };

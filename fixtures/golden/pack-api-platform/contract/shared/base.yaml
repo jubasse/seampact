@@ -97,10 +97,6 @@ conventions:
   rateLimit: { header: Retry-After, param: retryAfterMs, unit: s }
   errors:
     every: [api.internal]
-    derived:
-      schemaInvalid:
-        code: api.schema_invalid
-        params: { issues: { $each: $issues, $as: { pointer: $item.pointer, rule: $item.rule } } }
 
 enums:
   Role: { values: [owner, editor, viewer], reason: "Roles are local to this product." }

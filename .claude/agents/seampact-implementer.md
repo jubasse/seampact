@@ -10,7 +10,8 @@ You implement one lane PR, one review's fixes or committed docs on the seampact 
 
 - Read the review items or brief section you are given first (decision ids by `rg -n 'LD-<n>' .work/decisions.md .work/archive/decisions-merged.md`), then only the ranges they cite and their callers (`rg`); do not survey the whole pass.
 - Two readings or a missing decision: stop and report it under "For the lead"; never guess.
-- Every new source directory gets a header the cartography reads: a `//` comment at the top of its `index.ts` whose first sentence says what the directory holds, or a one-line `README.md` when it has no `index.ts`.
+- Before writing a helper, a script or a directory, `rg` the cartography and the target directory for an existing one; reuse or extend it.
+- Every new source or script directory gets a header the cartography reads: a `//` comment at the top of its `index.ts` whose first sentence says what the directory holds, or a one-line `README.md` when it has no `index.ts`.
 - Never edit `docs/conformance/checklist.yaml`; proofs in `docs/conformance/proofs/` wait for the testing phase (A47).
 - After a rebase on develop, run `pnpm vitest run packages/core/compiler/src/passes`, not only your lane.
 

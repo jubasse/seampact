@@ -73,15 +73,6 @@ paths:
                       - "@id"
                       - "@type"
                   - $ref: "#/components/schemas/Task"
-        "400":
-          description: api.schema_invalid
-          content:
-            application/ld+json:
-              schema:
-                $ref: "#/components/schemas/api.schema_invalid"
-          x-seampact-errors:
-            - code: api.schema_invalid
-              derivedFrom: input.invalid
         "401":
           description: api.unauthenticated
           content:
@@ -128,14 +119,20 @@ paths:
             - code: api.unsupported_media_type
               derivedFrom: body.media
         "422":
-          description: api.idempotency_key_reused
+          description: api.idempotency_key_reused, api.validation_failed
           content:
             application/ld+json:
               schema:
-                $ref: "#/components/schemas/api.idempotency_key_reused"
+                oneOf:
+                  - $ref: "#/components/schemas/api.idempotency_key_reused"
+                  - $ref: "#/components/schemas/api.validation_failed"
+                discriminator:
+                  propertyName: code
           x-seampact-errors:
             - code: api.idempotency_key_reused
               derivedFrom: idempotency.write
+            - code: api.validation_failed
+              derivedFrom: input.invalid
         "500":
           description: api.internal
           content:
@@ -188,15 +185,25 @@ components:
         limitBytes:
           type: integer
           minimum: 0
-    ApiSchemaInvalidParams:
+    ApiValidationFailedParams:
       type: object
       properties:
-        issues:
+        violations:
           type: array
           items:
-            $ref: "#/components/schemas/IssuesItem"
+            $ref: "#/components/schemas/ApiValidationFailedParamsViolationsItem"
       required:
-        - issues
+        - violations
+    ApiValidationFailedParamsViolationsItem:
+      type: object
+      properties:
+        propertyPath:
+          type: string
+        message:
+          type: string
+      required:
+        - propertyPath
+        - message
     CreateTask:
       type: object
       properties:
@@ -209,16 +216,6 @@ components:
           minimum: 0
       required:
         - title
-    IssuesItem:
-      type: object
-      properties:
-        pointer:
-          type: string
-        rule:
-          type: string
-      required:
-        - pointer
-        - rule
     Surface:
       type: string
       enum:
@@ -429,36 +426,6 @@ components:
         - $ref: "#/components/schemas/ApiPayloadTooLargeParams"
       x-seampact-nature:
         base: refused
-    api.schema_invalid:
-      allOf:
-        - type: object
-          properties:
-            "@context":
-              const: /contexts/Error
-            "@id":
-              type: string
-            "@type":
-              const: Error
-            type:
-              type: string
-            detail:
-              type: string
-            status:
-              type: integer
-              const: 400
-            code:
-              type: string
-              const: api.schema_invalid
-          required:
-            - "@context"
-            - "@id"
-            - "@type"
-            - type
-            - status
-            - code
-        - $ref: "#/components/schemas/ApiSchemaInvalidParams"
-      x-seampact-nature:
-        base: refused
     api.unauthenticated:
       type: object
       properties:
@@ -513,6 +480,39 @@ components:
         - type
         - status
         - code
+      x-seampact-nature:
+        base: refused
+    api.validation_failed:
+      allOf:
+        - type: object
+          properties:
+            "@context":
+              const: /contexts/Error
+            "@id":
+              type: string
+            "@type":
+              const: Error
+            type:
+              type: string
+            title:
+              type: string
+            detail:
+              type: string
+            status:
+              type: integer
+              const: 422
+            code:
+              type: string
+              const: api.validation_failed
+          required:
+            - "@context"
+            - "@id"
+            - "@type"
+            - type
+            - title
+            - status
+            - code
+        - $ref: "#/components/schemas/ApiValidationFailedParams"
       x-seampact-nature:
         base: refused
   securitySchemes:

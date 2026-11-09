@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Seampact\Codegen;
 
+use Seampact\Codegen\Runtime\MemberRoute;
 use Seampact\Ir\Model\AccessUnknown;
 use Seampact\Ir\Model\ArrayTypeUse;
 use Seampact\Ir\Model\BasicScheme;
@@ -60,20 +61,24 @@ final class KeptForms
     private const SUPPORTED_FORMATS = [self::FORMAT_UUID, self::FORMAT_DATE_TIME];
     private const WIDE_FORMATS = ['int64', 'decimal'];
     private const JSON_MEDIA = 'application/json';
+    // The response media the replies write: JSON, and JSON-LD, which `pack-api-platform` declares for its items and pages.
+    private const SUPPORTED_RESPONSE_MEDIA = [self::JSON_MEDIA, 'application/ld+json'];
+    public const MEMBER_ROUTE_RULE = 'format.self.member-route';
     private const PAGING_PARAMS_DERIVATION = 'paging.params';
     private const QUERY_PART = 'query';
     private const TOP_LEVEL_POINTER = '/^\/[^\/]+$/D';
     // The slots an item, table or list envelope may write that the boundary fills.
     private const PAYLOAD_SLOT = 'payload';
-    private const ENVELOPE_SLOTS = [self::PAYLOAD_SLOT, 'status', 'path', 'meta'];
+    private const ENVELOPE_SLOTS = [self::PAYLOAD_SLOT, 'status', 'path', 'meta', 'self', 'resource'];
     // The page slots that hold an object or a list, which no header can carry.
     private const STRUCTURED_PAGE_SLOTS = ['items', 'meta'];
     // The slots a page template may write that the page reply fills: the response roles, the request path and status,
-    // and the format's `$meta` (ADR 0002 section 14). `$resource`, `$collection` and the item id slots are not yet.
+    // the format's `$meta` (ADR 0002 section 14), `$resource` and `$itemSelf`. `$collection` and the other item id slots
+    // are not yet.
     private const PAGE_SLOT = 'page';
     private const RENDERED_PAGE_SLOTS = [
         'items', 'nextCursor', 'previousCursor', 'more', self::PAGE_SLOT, 'offset', 'limit', 'from', 'to', 'total', 'totalPages',
-        'self', 'first', 'previous', 'next', 'last', 'nextSince', 'complete', 'path', 'status', 'meta',
+        'self', 'first', 'previous', 'next', 'last', 'nextSince', 'complete', 'path', 'status', 'meta', 'resource', 'itemSelf',
     ];
     // The slot `$each` binds to each item inside its `$as` (ADR 0002 section 13): the renderer fills it.
     private const EACH_ITEM_SLOT = 'item';
@@ -219,6 +224,7 @@ final class KeptForms
         $this->readAccess($operation, $at);
         $this->readFormat($operation->format);
         $this->readPageTemplates($operation);
+        $this->readMemberUrlSlots($operation, $at);
         $this->readWaitingMembers($operation, $at);
         $this->readRequirements($operation, $at);
         $this->readAccessDeclarations($operation);
@@ -415,11 +421,11 @@ final class KeptForms
         $body = $shape->body->toJson();
         $payloadPath = self::slotPath($body, self::PAYLOAD_SLOT);
         if ($payloadPath === null) {
-            $this->refusals->waiting('format.success.envelope', 'A success envelope that does not write `$payload` under named members', $shapeAt->below('body'), Delivery::AfterOneZero);
+            $this->refusals->waiting('format.success.envelope', 'A success envelope that does not write `$payload` under named members or merge it', $shapeAt->below('body'), Delivery::AfterOneZero);
 
             return;
         }
-        if ($payloadPath === []) {
+        if (($body->kind ?? null) === 'slot') {
             return;
         }
 
@@ -480,7 +486,74 @@ final class KeptForms
         }
     }
 
-    /** @return list<string>|null the member names down to the slot, reached through named object members only */
+    // `$itemSelf`, and `$self` of an item envelope, are the member URL of a resource that has an id property: the
+    // boundary builds it from the resource's member route, so an operation with none is refused rather than answered
+    // without the id or with the collection's URL.
+    private function readMemberUrlSlots(Operation $operation, IrPlace $at): void
+    {
+        $idProperty = $operation->resource?->idProperty;
+        if ($idProperty === null || $this->memberRouteOf($operation) !== null) {
+            return;
+        }
+
+        $slot = $this->memberUrlSlotWritten($operation);
+        if ($slot === null) {
+            return;
+        }
+
+        $this->refusals->add(
+            self::MEMBER_ROUTE_RULE,
+            "The format writes '\${$slot}', the member URL of a '{$operation->resource->type}', but no route of that resource through its id parameter has a parent path that '{$operation->path}' starts with.",
+            "Declare a member route for '{$operation->resource->type}' beside this operation (a get through its id parameter), or write the format without '\${$slot}'.",
+            $at,
+        );
+    }
+
+    /** @return ?array{path: string, idParam: string} */
+    private function memberRouteOf(Operation $operation): ?array
+    {
+        return MemberRoute::find(
+            $operation->resource?->type,
+            $operation->path,
+            array_map(static fn (Operation $candidate): array => ['type' => $candidate->resource?->type, 'idParam' => $candidate->resource?->idParam, 'path' => $candidate->path], $this->ir->operations),
+        );
+    }
+
+    /** The member URL slot the operation's page items or item responses write, or null. */
+    private function memberUrlSlotWritten(Operation $operation): ?string
+    {
+        foreach ($this->pageBodyTemplates($operation) as $template) {
+            if (in_array('itemSelf', self::templateSlots($template), true)) {
+                return 'itemSelf';
+            }
+        }
+
+        $format = $this->ir->formats[$operation->format] ?? null;
+        $writesItem = array_filter($operation->responses, static fn (Response $response): bool => $response->shape->value === ResponseShape::Item) !== [];
+        if ($format !== null && $writesItem && in_array('self', self::templateSlots($format->success->item->body->toJson()), true)) {
+            return 'self';
+        }
+
+        return null;
+    }
+
+    /** @return list<\stdClass> the templates a page of the operation writes its items with: the style's own, or the format's */
+    private function pageBodyTemplates(Operation $operation): array
+    {
+        $style = $operation->paging === null ? null : ($this->ir->pagings[$operation->paging->style] ?? null);
+        if ($style === null) {
+            return [];
+        }
+        if ($style->response->body !== null) {
+            return [$style->response->body->toJson()];
+        }
+
+        $pageFormat = $this->ir->formats[$operation->format] ?? null;
+
+        return $pageFormat === null ? [] : [$pageFormat->success->page->body->toJson()];
+    }
+
+    /** @return list<string>|null the member names down to the slot, reached through named object members only, or the slot's `$merge` into one of them */
     private static function slotPath(mixed $template, string $slot): ?array
     {
         if (!$template instanceof \stdClass) {
@@ -491,6 +564,9 @@ final class KeptForms
         }
         if (($template->kind ?? null) !== 'object' || !is_array($template->members ?? null)) {
             return null;
+        }
+        if (($template->merge ?? null) === $slot) {
+            return [];
         }
 
         foreach ($template->members as $member) {
@@ -845,7 +921,7 @@ final class KeptForms
             return;
         }
 
-        if ($response->media !== self::JSON_MEDIA) {
+        if (!in_array($response->media, self::SUPPORTED_RESPONSE_MEDIA, true)) {
             $this->refusals->waiting('response.media', "A '" . ($response->media ?? 'missing') . "' response body", $at->below('media'), Delivery::AfterOneZero);
         }
 

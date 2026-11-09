@@ -31,15 +31,6 @@ paths:
                       - "@id"
                       - "@type"
                   - $ref: "#/components/schemas/DeviceStatus"
-        "400":
-          description: api.schema_invalid
-          content:
-            application/ld+json:
-              schema:
-                $ref: "#/components/schemas/api.schema_invalid"
-          x-seampact-errors:
-            - code: api.schema_invalid
-              derivedFrom: input.invalid
         "401":
           description: api.unauthenticated
           content:
@@ -49,6 +40,15 @@ paths:
           x-seampact-errors:
             - code: api.unauthenticated
               derivedFrom: identity.authenticate
+        "422":
+          description: api.validation_failed
+          content:
+            application/ld+json:
+              schema:
+                $ref: "#/components/schemas/api.validation_failed"
+          x-seampact-errors:
+            - code: api.validation_failed
+              derivedFrom: input.invalid
         "500":
           description: api.internal
           content:
@@ -67,15 +67,25 @@ paths:
         source: api
 components:
   schemas:
-    ApiSchemaInvalidParams:
+    ApiValidationFailedParams:
       type: object
       properties:
-        issues:
+        violations:
           type: array
           items:
-            $ref: "#/components/schemas/IssuesItem"
+            $ref: "#/components/schemas/ApiValidationFailedParamsViolationsItem"
       required:
-        - issues
+        - violations
+    ApiValidationFailedParamsViolationsItem:
+      type: object
+      properties:
+        propertyPath:
+          type: string
+        message:
+          type: string
+      required:
+        - propertyPath
+        - message
     DeviceStatus:
       type: object
       properties:
@@ -84,16 +94,6 @@ components:
           format: uuid
       required:
         - deviceId
-    IssuesItem:
-      type: object
-      properties:
-        pointer:
-          type: string
-        rule:
-          type: string
-      required:
-        - pointer
-        - rule
     api.internal:
       type: object
       properties:
@@ -122,36 +122,6 @@ components:
         - code
       x-seampact-nature:
         base: failed
-    api.schema_invalid:
-      allOf:
-        - type: object
-          properties:
-            "@context":
-              const: /contexts/Error
-            "@id":
-              type: string
-            "@type":
-              const: Error
-            type:
-              type: string
-            detail:
-              type: string
-            status:
-              type: integer
-              const: 400
-            code:
-              type: string
-              const: api.schema_invalid
-          required:
-            - "@context"
-            - "@id"
-            - "@type"
-            - type
-            - status
-            - code
-        - $ref: "#/components/schemas/ApiSchemaInvalidParams"
-      x-seampact-nature:
-        base: refused
     api.unauthenticated:
       type: object
       properties:
@@ -178,6 +148,39 @@ components:
         - type
         - status
         - code
+      x-seampact-nature:
+        base: refused
+    api.validation_failed:
+      allOf:
+        - type: object
+          properties:
+            "@context":
+              const: /contexts/Error
+            "@id":
+              type: string
+            "@type":
+              const: Error
+            type:
+              type: string
+            title:
+              type: string
+            detail:
+              type: string
+            status:
+              type: integer
+              const: 422
+            code:
+              type: string
+              const: api.validation_failed
+          required:
+            - "@context"
+            - "@id"
+            - "@type"
+            - type
+            - title
+            - status
+            - code
+        - $ref: "#/components/schemas/ApiValidationFailedParams"
       x-seampact-nature:
         base: refused
   securitySchemes:

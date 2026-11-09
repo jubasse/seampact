@@ -4,6 +4,8 @@ For the lead session only: subagents never read this file. The lead reads it onc
 
 ## Agents
 
+Spawn and message agents as the global AGENTS.md "Sub-agents" table says (Herdr or the Agent tool); the table below gives each task's type, model and effort.
+
 | Task | Type | Model, effort |
 |---|---|---|
 | lane PR, review fixes, committed docs | `seampact-implementer` | Sonnet medium; Opus medium only for shared runtime code |
@@ -13,7 +15,7 @@ For the lead session only: subagents never read this file. The lead reads it onc
 | `.work/` brief or decision synthesis | `seampact-writer` | Opus (its default), high for design |
 
 - `general-purpose` only when a task needs a tool the types lack (WebFetch, an MCP server other than context7, the Agent tool); its prompt starts with "Read `.claude/agents/seampact-<role>.md` first"; note the case in the handoff.
-- Follow-ups on a branch (a CI failure, review fixes, a rebase) go to the agent that wrote it, through SendMessage; a fresh agent only once that agent is near its call cap.
+- Follow-ups on a branch (a CI failure, review fixes, a rebase) go to the agent that wrote it (message the agent); a fresh agent only once that agent is near its call cap.
 - Target PR size (A47): one deliverable, about 3,000 to 4,000 hand-written lines; seams stay small and land first. Past an agent's call cap, a fresh agent continues on the same branch from the report's resume state; the PR opens once the deliverable is done.
 - Agent count follows the remaining work, at most 10 at once, never raised back when fewer lanes are open; run them in the background; new or edited agent files load only after a session restart.
 
