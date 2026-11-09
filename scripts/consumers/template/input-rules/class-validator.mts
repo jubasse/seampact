@@ -1,13 +1,7 @@
 // The `input-rules` case's app input rules in class-validator: a subclass of the generated body DTO whose custom
-// constraints carry the rule's name, and the unnamed one is a `registerDecorator` validator without a name. The
-// consumer harness copies this file to `src/input-rules.mts` when the validators are class-validator.
-import {
-  registerDecorator,
-  type ValidationArguments,
-  Validate,
-  ValidatorConstraint,
-  type ValidatorConstraintInterface,
-} from "class-validator";
+// constraints carry the rule's name, and the unnamed one is registered without a name. The consumer harness copies
+// this file to `src/input-rules.mts` when the validators are class-validator.
+import { registerDecorator, type ValidationArguments } from "class-validator";
 import { inputDtos } from "../generated/validators/inputRules/index.js";
 import {
   endsAfterStart,
@@ -16,28 +10,26 @@ import {
   windowWithinLimit,
 } from "./input-rules-handlers.mjs";
 
-@ValidatorConstraint({ name: "endAfterStart" })
-class EndAfterStart implements ValidatorConstraintInterface {
-  validate(_end: unknown, args: ValidationArguments): boolean {
-    return endsAfterStart(windowOf(args));
-  }
-}
+class ScheduleTaskRules extends inputDtos.ScheduleTaskDto {}
+
+registerDecorator({
+  name: "endAfterStart",
+  target: ScheduleTaskRules,
+  propertyName: "end",
+  validator: {
+    validate: (_end: unknown, args: ValidationArguments) => endsAfterStart(windowOf(args)),
+  },
+});
 
 // class-validator has no class-level constraint: a cross-member rule sits on a member and points at it.
-@ValidatorConstraint({ name: "windowTooLong" })
-class WindowTooLong implements ValidatorConstraintInterface {
-  validate(_start: unknown, args: ValidationArguments): boolean {
-    return windowWithinLimit(windowOf(args));
-  }
-}
-
-class ScheduleTaskRules extends inputDtos.ScheduleTaskDto {
-  @Validate(WindowTooLong)
-  override start!: string;
-
-  @Validate(EndAfterStart)
-  override end!: string;
-}
+registerDecorator({
+  name: "windowTooLong",
+  target: ScheduleTaskRules,
+  propertyName: "start",
+  validator: {
+    validate: (_start: unknown, args: ValidationArguments) => windowWithinLimit(windowOf(args)),
+  },
+});
 
 registerDecorator({
   target: ScheduleTaskRules,

@@ -225,23 +225,20 @@ Every option of this target is in the [config reference](../configuration/refere
 
 ## Add your own rules
 
-Some rules the contract cannot say: "the end comes after the start", or a check that reads your data. Write them with class-validator, in a subclass of the part's generated DTO, and pass the class as `inputRules` in `forRoot`, keyed by operation id, then by part (`path`, `query`, `headers` or `body`). With zod or yup validators, pass a schema of that library instead.
+Some rules the contract cannot say: "the end comes after the start", or a check that reads your data. Write them with class-validator, as named constraints on a subclass of the part's generated DTO (`registerDecorator({ name })`, or `@ValidatorConstraint({ name })` with `@Validate`), and pass the class as `inputRules` in `forRoot`, keyed by operation id, then by part (`path`, `query`, `headers` or `body`). With zod or yup validators, pass a schema of that library instead.
 
 ```ts
-import { Validate, type ValidationArguments, ValidatorConstraint } from 'class-validator'
+import { registerDecorator } from 'class-validator'
 import { inputDtos } from '../src/__generated__/validators/notes/index.js'
 
-@ValidatorConstraint({ name: 'endAfterStart' })
-class EndAfterStart {
-  validate(end: string, args: ValidationArguments) {
-    return end > (args.object as ScheduleNoteRules).start
-  }
-}
+class ScheduleNoteRules extends inputDtos.ScheduleNoteDto {}
 
-class ScheduleNoteRules extends inputDtos.ScheduleNoteDto {
-  @Validate(EndAfterStart)
-  override end!: string
-}
+registerDecorator({
+  name: 'endAfterStart',
+  target: ScheduleNoteRules,
+  propertyName: 'end',
+  validator: { validate: (end, args) => end > (args.object as ScheduleNoteRules).start },
+})
 
 NotesNest.SeampactModule.forRoot(notesHooks(), {
   inputRules: { scheduleNote: { body: ScheduleNoteRules } },
