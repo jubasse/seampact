@@ -260,5 +260,6 @@ Any other format and every paging style declare their own members, parameters an
 
 ## Traceability
 
+- History: the dated amendments this ADR carried until PR #451 are folded into the sections they changed; `git show 43055be4:docs/adr/0006-compiler-pass-pipeline.md` holds them with their dates.
 - FRs: FR-1 (located diagnostics with rule and fix), FR-6 (derivation table, roles, registry), FR-7, FR-8 (relays in link), FR-9, FR-20, FR-22 to FR-24, FR-28, FR-31 to FR-34, FR-41, FR-42 and A30 (the `bare` format), A31 (no default page), A34 (default codes), A35 (errors on tree nodes), FR-37 (field ownership protects the seam).
 - CHK items enabled: CHK-007, CHK-011, CHK-015, CHK-016, CHK-029, CHK-030 to CHK-043, CHK-044 to CHK-046, CHK-052, CHK-055, CHK-058, CHK-073, CHK-124, CHK-125, CHK-127, CHK-128, CHK-131, CHK-133, CHK-134, CHK-137 to CHK-139, CHK-149 to CHK-153, CHK-172 (codes against schema component keys), CHK-173 (rights without segments).
