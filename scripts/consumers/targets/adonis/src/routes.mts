@@ -1,7 +1,8 @@
 // The consumer's start/routes: the http suite's control routes, the framework-route boot variants' route, and each
-// api's routes with the shared hooks, each controller imported lazily.
+// api's routes with the shared hooks, each controller imported lazily, and the `inputRules` api's with its app rules.
 import type { HttpContext, Router } from "@adonisjs/core/http";
 import { HOOK_CALLS_ROUTE, LOG_LINES_ROUTE, SCRIPT_ROUTE } from "@seampact/http-suite";
+import * as InputRulesAdonis from "../generated/server/inputRules/index.js";
 import * as TasksAdonis from "../generated/server/tasks/index.js";
 import * as TasksDevicesAdonis from "../generated/server/tasksDevices/index.js";
 import * as TasksPagingAdonis from "../generated/server/tasksPaging/index.js";
@@ -18,11 +19,13 @@ import {
   withoutMissingHandler,
 } from "./boot-variant.mjs";
 import {
+  inputRulesHooks,
   tasksDevicesHooks,
   tasksHooks,
   tasksServiceHooks,
   tasksServiceWritesHooks,
 } from "./hooks.mjs";
+import { inputRules } from "./input-rules.mjs";
 import { tasksPagingHooks } from "./paging-handlers.mjs";
 import { tasksResponsesHooks } from "./responses-handlers.mjs";
 import {
@@ -35,6 +38,7 @@ import {
 const controllers = () => import("./controllers.mjs");
 const responsesControllers = () => import("./responses-controllers.mjs");
 const pagingControllers = () => import("./paging-controllers.mjs");
+const inputRulesControllers = () => import("./input-rules-controllers.mjs");
 
 export function registerContractRoutes(router: Router): void {
   router.put(SCRIPT_ROUTE, ({ request, response }) =>
@@ -95,6 +99,14 @@ export function registerContractRoutes(router: Router): void {
       CappedEndpoints: async () => ({ default: (await pagingControllers()).CappedController }),
     },
     hooks: tasksPagingHooks(),
+  });
+
+  InputRulesAdonis.registerRoutes(router, {
+    controllers: {
+      AppEndpoints: async () => ({ default: (await inputRulesControllers()).InputRulesController }),
+    },
+    hooks: inputRulesHooks(),
+    inputRules,
   });
 }
 

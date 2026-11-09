@@ -46,8 +46,9 @@ Express, Fastify, Hono, NestJS and AdonisJS. The check runs when the app starts 
 | `'inputRules' names the relay of '<api>.<id>', which takes no rules` | Register the rules on the gateway's own operation, which checks the input before it forwards. |
 | `its 'inputRules' entry names the part '<part>'` | Key the rules by part: `path`, `query`, `headers` or `body`. |
 | `its 'inputRules' entry has rules for '<part>', where the operation takes no input` | Remove those rules, or declare that input in the contract. |
-| `the api's generated validators are in no library input rules support` | Input rules are written in the validators' library: generate them with zod or yup, or the Fastify target's own Ajv validators. |
-| `an app input rule of '<id>' on its <part> reports no usable name` (a warning at run time) | The refusal answered `app.invalid`. Name the rule as the warning's fix says: zod `params: { rule }`, yup `.test({ name })`, or the Ajv keyword. |
+| `its input rules cannot run on the api's generated validators` | Input rules are written in the validators' library: generate them with zod, yup or class-validator, or with the Fastify target's own Ajv or the AdonisJS target's own VineJS validators. With class-validator, generate the api again so its route table hands the runtime the class-validator calls. |
+| `its '<part>' rules are not <kind>` | Pass a value of the api validators' library, as the problem names it. On NestJS with class-validator, pass a class with class-validator constraints. |
+| `an app input rule of '<id>' on its <part> reports no usable name` (a warning at run time) | The refusal answered `app.invalid`. Name the rule as the warning's fix says: zod `params: { rule }`, yup `.test({ name })`, the Ajv keyword, the class-validator constraint's `name`, or the name a VineJS rule reports. |
 
 ### NestJS
 

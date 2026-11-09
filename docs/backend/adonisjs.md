@@ -196,6 +196,39 @@ Every option of this target is in the [config reference](../configuration/refere
 
 `registerRoutes(router, { controllers, hooks, logger })` takes `logger: { warn, error }`. seampact then writes its messages there instead of `console`. The logger is shared by the whole generated api, so the last registration wins.
 
+## Add your own rules
+
+Some rules the contract cannot say: "the end comes after the start", or a check that reads your data. Write them with VineJS, as a rule from `vine.createRule` that reports with its name, and pass the compiled schema as `inputRules` in `registerRoutes`, keyed by operation id, then by part (`path`, `query`, `headers` or `body`). The generated VineJS validators cannot be extended, so write the part's schema yourself. With zod or yup validators, pass a schema of that library instead.
+
+```ts
+import vine from '@vinejs/vine'
+
+const endAfterStart = vine.createRule((end, _options, field) => {
+  if (typeof end === 'string' && end <= field.parent.start) {
+    field.report('The end must come after the start.', 'endAfterStart', field)
+  }
+})
+
+const scheduleBody = vine.create(
+  vine.object({ start: vine.string(), end: vine.string().use(endAfterStart()) }),
+)
+
+NotesAdonis.registerRoutes(router, {
+  controllers: { NotesEndpoints: () => import('#controllers/notes_controller') },
+  hooks: notesHooks(),
+  inputRules: { scheduleNote: { body: scheduleBody } },
+})
+```
+
+- A rule runs after every contract check, the access checks and the idempotency claim, just before the handler. A caller refused with 401 or 403 never reaches it.
+- A refusal answers the operation's `schemaInvalid` code (400 by default) with `issues: [{ pointer, rule: "app.<name>" }]`. The name is the one the rule reports. A rule that reports an empty name gives `app.invalid`, and seampact logs the fix once.
+- A rule on the whole object (`vine.object(...).use(rule())`) points at the body itself.
+- The rule gets a copy of the part, as the handler receives it. It can only refuse: its result and its changes are not used.
+- A rule that throws answers 500 and is logged. Its message is never sent.
+- A refused request releases its idempotency key, so a corrected retry with the same key is checked again.
+- `inputRules` is typed: a misspelt operation, a wrong part or another library's schema does not compile. VineJS's optional members do not compile under `exactOptionalPropertyTypes`, so turn that flag off. At boot, `registerRoutes` also refuses an unknown operation or a part the operation takes no input in.
+- A uniqueness check ("this email is already used") stays in the handler, as a declared 409: a check before the write races.
+
 ## Rate limits
 
 A 429 from `@adonisjs/limiter` works as is. If the operation's `rateLimited` code requires `retryAfterMs`, seampact fills it from the `Retry-After` header (seconds or an HTTP date). Without a usable header, the client gets a logged 500: answer the code from the controller with its params instead.

@@ -124,7 +124,7 @@ Required when an operation is idempotent. `createMemoryIdempotencyStore()` keeps
 |---|---|
 | `begin(claim)` | before the handler. Answer `{ outcome: "started" }`, `"running"` (the same key is still running: 409), `"mismatch"` (the key came with another request: 422) or `{ outcome: "replay", response }` |
 | `complete(key, response)` | after the handler, to keep the reply for replays |
-| `abandon(key)` | after a server error, so the client may retry |
+| `abandon(key)` | after a server error, or when [your own input rules](express.md#add-your-own-rules) refuse the request, so the client may retry |
 
 The claim holds `key`, `fingerprint` and `lifetimeMs`; keep the key at least that long.
 
