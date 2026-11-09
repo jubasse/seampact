@@ -41,6 +41,8 @@ test("the offered pairs are zod and yup on every server target and major, class-
     "@seampact/codegen-adonis@7+vinejs",
     "@seampact/codegen-hono@4+zod",
     "@seampact/codegen-hono@4+yup",
+    "@seampact/codegen-nextjs@16+zod",
+    "@seampact/codegen-nextjs@16+yup",
   ]);
 });
 
@@ -149,7 +151,7 @@ test("each server target records its framework id, its tested majors with their 
     {
       target: "@seampact/codegen-nextjs",
       id: "nextjs",
-      tested: [],
+      tested: ["16:nextjs"],
       incompatible: [
         {
           major: 14,
@@ -189,6 +191,7 @@ test("every pair carries the consumer overlay of its framework major", () => {
     "@seampact/codegen-adonis@6:adonis6",
     "@seampact/codegen-adonis@7:adonis",
     "@seampact/codegen-hono@4:hono",
+    "@seampact/codegen-nextjs@16:nextjs",
   ]);
 });
 
