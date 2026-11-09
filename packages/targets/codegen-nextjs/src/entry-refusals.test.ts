@@ -6,7 +6,7 @@ import { nextGenerateRequest, REFERENCE_API } from "./generate-request.test-supp
 import { target } from "./index.js";
 
 async function refusalCodes(overrides: Partial<GenerateRequest>): Promise<string[]> {
-  const outcome = await target.generate(nextGenerateRequest(overrides));
+  const outcome = await target.generate(await nextGenerateRequest(overrides));
 
   return outcome.status === "refused" ? outcome.refusals.map((refusal) => refusal.code) : [];
 }

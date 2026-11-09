@@ -44,9 +44,6 @@
   },
   "devDependencies": {
     "@seampact/codegen-core": "workspace:*",
-    "@seampact/codegen-ts": "workspace:*",
-    "@seampact/codegen-zod": "workspace:*",
-    "@seampact/server-runtime": "workspace:*",
     "@seampact/spec": "workspace:*",
     "@types/node": "24.19.2",
     "typescript": "6.0.3",

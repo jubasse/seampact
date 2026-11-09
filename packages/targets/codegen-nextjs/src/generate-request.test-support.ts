@@ -1,50 +1,40 @@
-import { fileURLToPath } from "node:url";
-import type { GenerateRequest, LinkSet, Target } from "@seampact/codegen-core";
-import { readGoldenIr } from "@seampact/codegen-core/node-server/test-support";
-import { target as typesTarget } from "@seampact/codegen-ts";
-import { target as zodTarget } from "@seampact/codegen-zod";
-import type { ContractIR } from "@seampact/spec/ir";
+import type { GenerateRequest, LinkSet } from "@seampact/codegen-core";
+import {
+  generateReferenceProject,
+  projectDirectory,
+  readGoldenIr,
+  referenceLinks,
+} from "@seampact/codegen-core/node-server/test-support";
+import { target } from "./index.js";
 
-// The request of a Next.js entry generating the reference `tasks` api: its types and zod links, and an output
-// directory under this package, which resolves the workspace's runtime.
+// The request of a Next.js entry generating the reference `tasks` api: its types and zod links, read from the
+// reference project, which links the workspace's providers and runtime, and that project as output directory.
 
 export const REFERENCE_API = "tasks";
 
 const BOUNDARY = new Set(["boundary", "index"]);
-const PACKAGE_DIRECTORY = fileURLToPath(new URL("..", import.meta.url));
+const PROJECT = projectDirectory(import.meta.url, "next-generate-request");
 
-/** The reference request, with `overrides` laid over it; the links follow the overriding IR. */
-export function nextGenerateRequest(overrides: Partial<GenerateRequest> = {}): GenerateRequest {
-  const ir = overrides.ir ?? readGoldenIr(REFERENCE_API);
+let referenceLinksOnce: Promise<LinkSet> | undefined;
 
+/** The reference request, with `overrides` laid over it. */
+export async function nextGenerateRequest(
+  overrides: Partial<GenerateRequest> = {},
+): Promise<GenerateRequest> {
   return {
-    ir,
+    ir: readGoldenIr(REFERENCE_API),
     options: {},
-    links: linksOf(ir),
+    links: await linksOfReferenceProject(),
     artefacts: BOUNDARY,
-    outputDirectory: PACKAGE_DIRECTORY,
+    outputDirectory: PROJECT,
     ...overrides,
   };
 }
 
-function linksOf(ir: ContractIR): LinkSet {
-  const types = descriptorsOf(typesTarget, ir).types;
-  const validators = descriptorsOf(zodTarget, ir).validators;
+function linksOfReferenceProject(): Promise<LinkSet> {
+  referenceLinksOnce ??= generateReferenceProject(PROJECT, target, {}).then(() =>
+    referenceLinks(PROJECT, REFERENCE_API),
+  );
 
-  if (types === undefined || validators === undefined) throw new Error("a link is missing");
-
-  return {
-    types: { descriptor: types, location: { kind: "relative", path: "../types" } },
-    validators: { descriptor: validators, location: { kind: "relative", path: "../validators" } },
-  };
-}
-
-function descriptorsOf(provider: Target, ir: ContractIR) {
-  const described = provider.describe(ir, {});
-
-  if (described.status !== "described") {
-    throw new Error(`${provider.metadata.packageName} refused to describe ${REFERENCE_API}`);
-  }
-
-  return described.descriptors;
+  return referenceLinksOnce;
 }

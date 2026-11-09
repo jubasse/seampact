@@ -677,15 +677,6 @@ importers:
       '@seampact/codegen-core':
         specifier: workspace:*
         version: link:../../core/codegen-core
-      '@seampact/codegen-ts':
-        specifier: workspace:*
-        version: link:../codegen-ts
-      '@seampact/codegen-zod':
-        specifier: workspace:*
-        version: link:../codegen-zod
-      '@seampact/server-runtime':
-        specifier: workspace:*
-        version: link:../../runtime/server-runtime
       '@seampact/spec':
         specifier: workspace:*
         version: link:../../core/spec
