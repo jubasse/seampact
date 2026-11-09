@@ -20,7 +20,7 @@ Only `pack-spring`, `pack-crud-rights` and `pack-laravel` generate code today. T
 | `@seampact/pack-laravel` | The `laravel` format, with `data` wrapping, and its two paging styles. | Yes: types, validators, the fetch client, Node servers, Laravel, Symfony, Spring Boot and the Python servers. |
 | `@seampact/pack-hal` | The `hal` format and `halPages` paging: `_links` and `_embedded`. | Planned. |
 | `@seampact/pack-jsonapi` | The `jsonapi` format and `jsonapiPages` paging: resource objects and an `errors` array. | Planned. |
-| `@seampact/pack-api-platform` | JSON-LD items, Hydra collections and the `iri-reference` format. | Planned, after 1.0. |
+| `@seampact/pack-api-platform` | JSON-LD items, Hydra collections and the `iri-reference` format. | Yes, on API Platform: `@id` on items and members, Hydra collections and the 422 violations body. Node servers refuse its `$self`, `$resource` and `$itemSelf` slots by name. |
 
 A format or paging pack sets it as the default for the api. You can still choose another on a route. The refusal a planned pack gives names the form and the fix: see [Generate errors](../troubleshooting/generate.md).
 
