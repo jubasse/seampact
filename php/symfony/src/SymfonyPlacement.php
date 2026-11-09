@@ -31,7 +31,7 @@ final class SymfonyPlacement implements BoundaryNames
     public readonly string $decider;
     public readonly string $scopeResolver;
     public readonly string $unexpectedErrorListener;
-    public readonly string $inputRules;
+    public readonly ?string $inputRules;
     public readonly string $apiKey;
     public readonly string $bundle;
     public readonly string $controllerPass;
@@ -81,7 +81,8 @@ final class SymfonyPlacement implements BoundaryNames
         $this->decider = $unprefixed('Decider', "the api's decider interface");
         $this->scopeResolver = $unprefixed('ScopeResolver', "the api's scope resolver interface");
         $this->unexpectedErrorListener = $unprefixed('UnexpectedErrorListener', "the api's unexpected-error listener interface");
-        $this->inputRules = $placed('InputRules', "the api's input rules interface");
+        // A flavour that refuses app input rules by name has no interface for the app to implement.
+        $this->inputRules = $flavour->refusesInputRules() ? null : $placed('InputRules', "the api's input rules interface");
 
         foreach ($kept->operations() as [$index, $operation]) {
             $names = $layout->operation($operation->id);
@@ -171,7 +172,7 @@ final class SymfonyPlacement implements BoundaryNames
         return $this->unexpectedErrorListener;
     }
 
-    public function inputRules(): string
+    public function inputRules(): ?string
     {
         return $this->inputRules;
     }

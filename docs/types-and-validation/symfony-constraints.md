@@ -122,6 +122,7 @@ A built-in constraint such as `NotBlank`, an anonymous class and a name that is 
 
 - A rule that throws answers the api's 500, and the log names the operation, the part and the rule class.
 - A refusal releases the idempotency key, so a corrected retry with the same key is checked again. A retry of a request that succeeded replays its reply and meets no rule.
+- API Platform apis do not take input rules yet: the api gets no `<Api>InputRules` interface, and a service tagged `seampact.<api>.input_rules` stops the boot with `input.rules.unsupported`.
 
 Keep three things out of a rule:
 

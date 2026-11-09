@@ -108,7 +108,7 @@ final class BundleFiles
         $listener = $file->name($this->placement->unexpectedErrorListener);
         $decider = $file->name($this->placement->decider);
         $scopeResolver = $file->name($this->placement->scopeResolver);
-        $inputRules = $file->name($this->placement->inputRules);
+        $inputRules = $this->placement->inputRules === null ? null : $file->name($this->placement->inputRules);
         $routeCheck = $file->name($this->placement->runtime('RouteCheck'));
         $contract = $file->name($this->placement->contract);
         $bootCheck = $file->name($this->placement->runtime('BootCheckPass'));
@@ -116,6 +116,8 @@ final class BundleFiles
         $matcher = $file->name($this->placement->runtime('KindRequestMatcher'));
         $access = $file->name($this->placement->access);
         $tag = static fn (string $suffix): string => "{$hooks}::tag(self::API, {$hooks}::{$suffix})";
+        $inputRulesArgument = $inputRules === null ? '' : "\n    tagged_iterator({$tag('INPUT_RULES_TAG_SUFFIX')}),";
+        $inputRulesAutoconfiguration = $inputRules === null ? '' : "\$builder->registerForAutoconfiguration({$inputRules}::class)->addTag({$tag('INPUT_RULES_TAG_SUFFIX')});\n";
         $body = <<<PHP
             \$refusals = {$settings}::literalRefusals(\$config, \$builder);
             if (\$refusals !== []) {
@@ -137,8 +139,7 @@ final class BundleFiles
                 service({$listener}::class)->nullOnInvalid(),
                 service('logger'),
                 service(self::IDEMPOTENCY_STORE_SERVICE)->nullOnInvalid(),
-                param('kernel.debug'),
-                tagged_iterator({$tag('INPUT_RULES_TAG_SUFFIX')}),
+                param('kernel.debug'),{$inputRulesArgument}
             ]);
             \$services->set(self::BOUNDARY_SERVICE, {$boundary}::class)->args([service(self::HOOKS_SERVICE), service(self::SETTINGS_SERVICE), service('validator')])->tag('kernel.event_subscriber')->tag({$bootCheck}::BOUNDARY_TAG, [{$bootCheck}::CONTRACT_ATTRIBUTE => {$contract}::class]);
             foreach ({$access}::KINDS as \$kind) {
@@ -146,15 +147,14 @@ final class BundleFiles
             }
             \$builder->registerForAutoconfiguration({$decider}::class)->addTag({$tag('DECIDERS_TAG_SUFFIX')});
             \$builder->registerForAutoconfiguration({$scopeResolver}::class)->addTag({$tag('SCOPE_RESOLVERS_TAG_SUFFIX')});
-            \$builder->registerForAutoconfiguration({$inputRules}::class)->addTag({$tag('INPUT_RULES_TAG_SUFFIX')});
-
+            {$inputRulesAutoconfiguration}
             PHP;
         foreach ($this->placement->identities() as $classes) {
             $hook = $file->name($classes['hook']);
             $body .= "\$builder->registerForAutoconfiguration({$hook}::class)->addTag({$tag('AUTHENTICATE_TAG_SUFFIX')}, [{$hooks}::HOOK_ATTRIBUTE => {$hook}::class]);\n";
         }
         // The warmer also checks the input rules, which no switch of the boot check turns off.
-        if ($this->bootCheck !== null) {
+        if ($this->bootCheck !== null && ($this->bootCheck->hooks || $inputRules !== null)) {
             $warmer = $file->name($this->placement->runtime('HookCheckWarmer'));
             $body .= "\$services->set(self::HOOK_CHECK_WARMER_SERVICE, {$warmer}::class)->args([service(self::HOOKS_SERVICE), {$contract}::class, " . var_export($this->bootCheck->hooks, true) . "])->tag('kernel.cache_warmer');\n";
         }
@@ -395,7 +395,7 @@ final class BundleFiles
         $class->addMethod('checksHooks')->setProtected()->setReturnType('bool')
             ->setBody('return ' . var_export($this->bootCheck !== null && $this->bootCheck->hooks, true) . ';');
         $class->addMethod('checksInputRules')->setProtected()->setReturnType('bool')
-            ->setBody('return ' . var_export($this->bootCheck !== null, true) . ';');
+            ->setBody('return ' . var_export($this->bootCheck !== null && $this->placement->inputRules !== null, true) . ';');
 
         return $file;
     }

@@ -24,7 +24,7 @@ final class ApiIdentityFiles
     {
         $api = $this->placement->apiKey;
 
-        return [
+        $files = [
             $this->operationAttribute(),
             ApiInterfaceFile::extending($this->placement->decider, $this->placement->runtime('Decider'), "A decider of api '{$api}': implement it, with autoconfiguration on."),
             ApiInterfaceFile::extending($this->placement->scopeResolver, $this->placement->runtime('ScopeResolver'), "A scope resolver of api '{$api}': implement it, with autoconfiguration on."),
@@ -33,12 +33,16 @@ final class ApiIdentityFiles
                 $this->placement->runtime('UnexpectedErrorListener'),
                 "Told of every failure api '{$api}' answers with its 500: alias this interface to your listener.",
             ),
-            ApiInterfaceFile::extending(
+        ];
+        if ($this->placement->inputRules !== null) {
+            $files[] = ApiInterfaceFile::extending(
                 $this->placement->inputRules,
                 $this->placement->runtime('InputRules'),
                 "The app's input rules of api '{$api}', one class per operation and input part: implement it, with autoconfiguration on.",
-            ),
-        ];
+            );
+        }
+
+        return $files;
     }
 
     private function operationAttribute(): PhpClassFile
