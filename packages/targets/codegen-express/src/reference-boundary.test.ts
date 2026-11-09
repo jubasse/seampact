@@ -96,16 +96,18 @@ describe("the generated reference router compiles", () => {
   });
 
   test(
-    "inputRules is typed: a zod schema compiles; a misspelt operation, a wrong part and another kind do not",
+    "inputRules is typed: a zod schema compiles; a misspelt operation, a wrong part and a yup schema do not",
     () => {
       const check = join(PROJECT, "input-rules.check.ts");
       const errorsOf = (rules: string): string[] => {
         writeFileSync(
           check,
           [
+            'import { object as yupObject } from "yup";',
             'import { z } from "zod";',
             'import * as Tasks from "./generated/server/tasks/index.js";',
             "",
+            "export const otherLibrary = yupObject;",
             'type Rules = NonNullable<Parameters<typeof Tasks.router>[0]["inputRules"]>;',
             "",
             `export const rules: Rules = ${rules};`,
@@ -119,9 +121,7 @@ describe("the generated reference router compiles", () => {
       expect(errorsOf("{ createTask: { body: z.any(), path: z.any() } }")).toEqual([]);
       expect(errorsOf("{ createTsk: { body: z.any() } }")).not.toEqual([]);
       expect(errorsOf("{ createTask: { cookies: z.any() } }")).not.toEqual([]);
-      expect(errorsOf("{ createTask: { body: (data: unknown) => data !== null } }")).not.toEqual(
-        [],
-      );
+      expect(errorsOf("{ createTask: { body: yupObject({}) } }")).not.toEqual([]);
     },
     4 * TYPE_CHECK_TIMEOUT_MILLISECONDS,
   );

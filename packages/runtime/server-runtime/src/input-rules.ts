@@ -1,5 +1,4 @@
-// App input rules on Express, Fastify and Hono (ADR 0028): the `inputRules` registration entry, its boot check, and
-// step 8b, which runs the rules of an operation's parts after the idempotency claim and before the handler.
+// App input rules on the Node servers (ADR 0028): the `inputRules` registration entry, its boot check, and step 8b, which runs the rules of an operation's parts after the idempotency claim and before the handler.
 import type { CheckState } from "./access-checks.js";
 import type { BoundaryContext } from "./boundary-context.js";
 import type { BootProblem } from "./boundary-hooks.js";
@@ -7,10 +6,9 @@ import { unexpectedError } from "./contract-error.js";
 import type { ContractApi, ContractRoute } from "./contract-route.js";
 import { abandonIdempotencyClaim } from "./idempotency.js";
 import {
-  INPUT_RULE_ADAPTERS,
+  type ApiInputRuleAdapter,
   type InputRuleAdapter,
-  type InputRuleLibrary,
-  inputRuleLibraryOf,
+  inputRuleAdapterOf,
 } from "./input-rule-libraries.js";
 import {
   ISSUE_PARTS,
@@ -33,6 +31,8 @@ const APP_RULE_PREFIX = "app.";
 const UNNAMED_RULE = "invalid";
 const RULE_NAME = /^[A-Za-z][A-Za-z0-9_.-]{0,63}$/;
 const UUID_SHAPED = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// The operation ids a fix lists for a misspelt one, so a large api keeps the message short.
+const LISTED_OPERATION_IDS = 10;
 
 // The rules already logged for a missing name, so each is logged once.
 const loggedUnnamedRules = new Set<string>();
@@ -50,7 +50,7 @@ export function inputRulesProblems(api: ContractApi, inputRules: unknown): BootP
     ];
   }
 
-  const library = libraryOf(api);
+  const adapter = inputRuleAdapterOf(api);
   const problems: BootProblem[] = [];
 
   for (const [operationId, ruleSet] of Object.entries(inputRules)) {
@@ -59,21 +59,30 @@ export function inputRulesProblems(api: ContractApi, inputRules: unknown): BootP
     if (route === undefined) {
       problems.push({
         problem: `'inputRules' names '${operationId}', which is no operation of the api or one its entry's 'operations' filter drops`,
-        fix: `use one of ${api.routes.map((each) => each.id).join(", ")}`,
+        fix: `use one of ${operationIdList(api)}`,
       });
 
       continue;
     }
 
-    problems.push(...ruleSetProblems(route, library, ruleSet));
+    problems.push(...ruleSetProblems(route, adapter, ruleSet));
   }
 
   return problems;
 }
 
+function operationIdList(api: ContractApi): string {
+  const ids = api.routes.map((each) => each.id);
+  const listed = ids.slice(0, LISTED_OPERATION_IDS).join(", ");
+
+  return ids.length > LISTED_OPERATION_IDS
+    ? `${listed}, or one of the ${ids.length - LISTED_OPERATION_IDS} others`
+    : listed;
+}
+
 function ruleSetProblems(
   route: ContractRoute,
-  library: InputRuleLibrary | undefined,
+  { adapter, unusable }: ApiInputRuleAdapter,
   ruleSet: unknown,
 ): BootProblem[] {
   if (route.relays !== undefined) {
@@ -96,17 +105,15 @@ function ruleSetProblems(
     ];
   }
 
-  if (library === undefined) {
+  if (adapter === undefined) {
     return [
       {
         operation: route.id,
-        problem: "the api's generated validators are in no library input rules support",
-        fix: "generate the validators with zod or yup, or with the Fastify target's own Ajv validators",
+        problem: "its input rules cannot run on the api's generated validators",
+        fix: unusable,
       },
     ];
   }
-
-  const adapter = INPUT_RULE_ADAPTERS[library];
 
   return Object.entries(ruleSet).flatMap(([part, rule]) =>
     partProblems(route, adapter, part, rule),
@@ -167,14 +174,13 @@ export async function runInputRules(
 
   if (!isPlainObject(ruleSet)) return;
 
-  const library = libraryOf(state.api);
+  // The registration's boot check refuses rules no adapter runs, so this guards a call without it.
+  const { adapter, unusable } = inputRuleAdapterOf(state.api);
 
-  if (library === undefined) {
+  if (adapter === undefined) {
     throw unexpectedError(
       route,
-      new Error(
-        `seampact: '${route.id}' has input rules, but its validators are in no supported library`,
-      ),
+      new Error(`seampact: '${route.id}' has input rules that cannot run. Fix: ${unusable}`),
     );
   }
 
@@ -186,7 +192,14 @@ export async function runInputRules(
     if (rule === undefined) continue;
 
     issues.push(
-      ...(await partIssues(route, library, part, rule, partValue(route, context.input, part))),
+      ...(await partIssues(
+        state.api,
+        route,
+        adapter,
+        part,
+        rule,
+        partValue(route, context.input, part),
+      )),
     );
   }
 
@@ -198,21 +211,20 @@ export async function runInputRules(
 }
 
 async function partIssues(
+  api: ContractApi,
   route: ContractRoute,
-  library: InputRuleLibrary,
+  adapter: InputRuleAdapter,
   part: RequestPart,
   rule: unknown,
   value: unknown,
 ): Promise<InputIssue[]> {
-  const adapter = INPUT_RULE_ADAPTERS[library];
-
   try {
     const refusals = await adapter.refusals(rule, structuredClone(value));
 
     return refusals.map((refusal) => ({
       in: ISSUE_PARTS[part],
       pointer: refusal.pointer,
-      rule: `${APP_RULE_PREFIX}${usableName(route, part, adapter, refusal.name)}`,
+      rule: `${APP_RULE_PREFIX}${usableName(api, route, part, adapter, refusal.name)}`,
     }));
   } catch (error) {
     throw unexpectedError(
@@ -226,6 +238,7 @@ async function partIssues(
 
 // The rule's name, or `invalid` with the fix logged once per rule when the library gave no usable one.
 function usableName(
+  api: ContractApi,
   route: ContractRoute,
   part: RequestPart,
   adapter: InputRuleAdapter,
@@ -233,7 +246,7 @@ function usableName(
 ): string {
   if (typeof name === "string" && RULE_NAME.test(name) && !UUID_SHAPED.test(name)) return name;
 
-  const ruleKey = `${route.id} ${part} ${String(name)}`;
+  const ruleKey = `${api.id} ${route.id} ${part} ${String(name)}`;
 
   if (!loggedUnnamedRules.has(ruleKey)) {
     loggedUnnamedRules.add(ruleKey);
@@ -264,11 +277,4 @@ function hasInputIn(route: ContractRoute, part: RequestPart): boolean {
 
 function isRequestPart(part: string): part is RequestPart {
   return INPUT_RULE_PARTS.some((each) => each === part);
-}
-
-// Every route shares the api's generated validators, so the first one names their library.
-function libraryOf(api: ContractApi): InputRuleLibrary | undefined {
-  const first = api.routes[0];
-
-  return first === undefined ? undefined : inputRuleLibraryOf(first.validator);
 }

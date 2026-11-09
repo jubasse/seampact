@@ -10,7 +10,7 @@ import {
   type TypeUse,
   type WireFormat,
 } from "@seampact/spec/ir";
-import type { ValidatorsDescriptor } from "../descriptors.js";
+import type { ValidatorStyle, ValidatorsDescriptor } from "../descriptors.js";
 import type { FrameworkRouteCheck, HookBootCheck } from "../framework-route-check.js";
 import { type GenerateWarning, warnLeftToHandler } from "../generate-warning.js";
 import { importSpecifier } from "../import-specifier.js";
@@ -157,6 +157,7 @@ export function routeTableSource(
     ),
   ];
   const frameworkRoutes = frameworkRoutesValue(options.frameworkRoutes, basePaths);
+  const isClassValidator = validators.descriptor.style === CLASS_VALIDATOR_STYLE;
   const table: SourceValue = {
     id: ir.api.id,
     generatorVersion: options.generatorVersion,
@@ -169,19 +170,26 @@ export function routeTableSource(
     compression: options.compression,
     frameworkEtag: options.frameworkEtag,
     catchAll: options.catchAll,
+    ...(isClassValidator ? { classValidator: new SourceExpression(CLASS_VALIDATOR_CALLS) } : {}),
   };
 
-  const inputRules = inputRulesTypeSource(ir, SERVER_RUNTIME_PACKAGE, (operation) => {
-    const ref = Object.hasOwn(validators.descriptor.operations, operation.id)
-      ? validators.descriptor.operations[operation.id]?.input
-      : undefined;
+  const inputRules = inputRulesTypeSource(
+    ir,
+    SERVER_RUNTIME_PACKAGE,
+    validators.descriptor.style,
+    (operation) => {
+      const ref = Object.hasOwn(validators.descriptor.operations, operation.id)
+        ? validators.descriptor.operations[operation.id]?.input
+        : undefined;
 
-    return ref === undefined ? undefined : imports.expression(ref.module, ref.export).text;
-  });
+      return ref === undefined ? undefined : imports.expression(ref.module, ref.export).text;
+    },
+  );
 
   return [
     `import type { ContractApi } from "${SERVER_RUNTIME_PACKAGE}";`,
     ...inputRules.imports,
+    ...(isClassValidator ? classValidatorImports(validators, fromFile) : []),
     ...imports.lines(),
     "",
     "/** Every operation of the api as the boundary checks it. */",
@@ -190,6 +198,27 @@ export function routeTableSource(
     ...inputRules.declaration,
     "",
   ].join("\n");
+}
+
+// The class-validator calls app input rules run through (ADR 0028): the app's own `class-transformer` and
+// `class-validator`, with the strict options of the class-validator target's copied runtime module.
+const CLASS_VALIDATOR_STYLE: ValidatorStyle = "class-validator";
+const CLASS_VALIDATOR_OPTIONS_MODULE = "validation-options";
+const CLASS_VALIDATOR_CALLS =
+  "{ plainToInstance, validate, getMetadataStorage, options: STRICT_VALIDATION_OPTIONS }";
+
+function classValidatorImports(validators: Link<"validators">, fromFile: string): string[] {
+  const optionsModule = importSpecifier(
+    validators,
+    { module: CLASS_VALIDATOR_OPTIONS_MODULE, export: "" },
+    fromFile,
+  );
+
+  return [
+    'import { plainToInstance } from "class-transformer";',
+    'import { getMetadataStorage, validate } from "class-validator";',
+    `import { STRICT_VALIDATION_OPTIONS } from "${optionsModule}";`,
+  ];
 }
 
 class ModuleImports {

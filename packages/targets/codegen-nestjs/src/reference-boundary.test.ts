@@ -77,7 +77,7 @@ describe("the generated reference boundary compiles", () => {
 
       expect(nestjsModule?.contents).toMatch(
         new RegExp(
-          `createNestBoundary<SeampactHooks>\\(\\s*CONTRACT_API,\\s*\\{[^}]*reply: "${reply}"`,
+          `createNestBoundary<SeampactHooks, InputRules>\\(\\s*CONTRACT_API,\\s*\\{[^}]*reply: "${reply}"`,
         ),
       );
     },
