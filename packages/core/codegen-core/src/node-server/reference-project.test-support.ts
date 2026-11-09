@@ -54,6 +54,20 @@ export const REFERENCE_COMPILER_OPTIONS: ts.CompilerOptions = {
   types: ["node"],
 };
 
+/**
+ * The consumer's compiler options for a target's generated code: the reference ones, under bundler resolution for a
+ * target whose relative imports are extensionless, as a Next.js project resolves them.
+ */
+export function referenceCompilerOptionsOf(serverTarget: Target): ts.CompilerOptions {
+  if (serverTarget.metadata.importSpecifiers !== "extensionless") return REFERENCE_COMPILER_OPTIONS;
+
+  return {
+    ...REFERENCE_COMPILER_OPTIONS,
+    module: ts.ModuleKind.ESNext,
+    moduleResolution: ts.ModuleResolutionKind.Bundler,
+  };
+}
+
 const REFERENCE_SCENARIO = new URL("../../test-app/reference-scenario.js", import.meta.url);
 const TEST_APP_DIRECTORY = "app";
 
@@ -535,7 +549,13 @@ async function generateApi(
   frameworkRoutes: FrameworkRouteCheck,
   serverRequest: ReferenceServerRequest,
 ): Promise<string[]> {
-  const providerRequest = { ir, options: {}, links: {} };
+  const importSpecifiers = serverTarget.metadata.importSpecifiers;
+  const providerRequest = {
+    ir,
+    options: {},
+    links: {},
+    ...(importSpecifiers === undefined ? {} : { importSpecifiers }),
+  };
 
   return [
     ...writeFiles(

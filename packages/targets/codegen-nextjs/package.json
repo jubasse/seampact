@@ -1,0 +1,55 @@
+{
+  "name": "@seampact/codegen-nextjs",
+  "description": "Generates a routeHandler per api that serves a Next.js 16 catch-all route with the contract's access, validation and reply checks around your handler map, validating with zod.",
+  "version": "1.0.1",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jubasse/seampact.git",
+    "directory": "packages/targets/codegen-nextjs"
+  },
+  "homepage": "https://jubasse.github.io/seampact/backend/nextjs/",
+  "bugs": {
+    "url": "https://github.com/jubasse/seampact/issues"
+  },
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "seampact": {
+    "role": "target"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "@seampact/codegen-core": "workspace:*",
+    "@seampact/spec": "workspace:*"
+  },
+  "dependencies": {
+    "prettier": "3.9.10"
+  },
+  "devDependencies": {
+    "@seampact/codegen-core": "workspace:*",
+    "@seampact/codegen-ts": "workspace:*",
+    "@seampact/codegen-zod": "workspace:*",
+    "@seampact/server-runtime": "workspace:*",
+    "@seampact/spec": "workspace:*",
+    "@types/node": "24.19.2",
+    "typescript": "6.0.3",
+    "zod": "4.6.7"
+  }
+}
