@@ -148,10 +148,11 @@ jobs:
           php-version: "8.3"
           tools: composer:2.10.2
           coverage: none
-      - name: Download the release binary and bundle the reference contract
+      - name: Download the release binary and bundle the reference and input-rules contracts
         run: |
           scripts/release/registry-proof/release-binary.sh "$VERSION" "$RUNNER_TEMP/binary"
           scripts/consumers/php/bundle.sh "$RUNNER_TEMP/binary/seampact-linux-x64" "$RUNNER_TEMP/bundles/reference"
+          scripts/consumers/php/bundle.sh "$RUNNER_TEMP/binary/seampact-linux-x64" "$RUNNER_TEMP/bundles/input-rules" packages/tools/http-suite/contracts/input-rules
       - name: The Laravel consumer installs from Packagist and generates
         run: scripts/release/registry-proof/laravel.sh "$RUNNER_TEMP/bundles/reference" "$VERSION" "$RUNNER_TEMP/laravel"
       - run: pnpm install --frozen-lockfile
