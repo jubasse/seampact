@@ -25,7 +25,7 @@
       "expect": {
         "status": 200,
         "body": {
-          "member": [{}, {}]
+          "@type": "Collection"
         }
       }
     },
