@@ -50,6 +50,7 @@ import type { InputRuleSets } from "./input-rules.js";
 import {
   checkOutgoingResponse,
   claimedWebError,
+  clientAddressProblems,
   claimFetchWrap,
   currentRequestSlot,
   errorResponse,
@@ -69,6 +70,7 @@ const HONO_FIXES: PlatformFixes = {
   rawBody: SKIP_CONTRACT_ROUTES_FIX,
   bodySize: SKIP_CONTRACT_ROUTES_FIX,
 };
+const CLIENT_ADDRESS_EXAMPLE = "(c) => getConnInfo(c).remote.address";
 const INTERNAL_SERVER_ERROR_STATUS = 500;
 const ROOT_BASE_PATH = "/";
 
@@ -114,7 +116,7 @@ export function createHonoBoundary<
     const problems = [
       ...enforcedHookBootProblems(api, hooks),
       ...registrationProblems(api, bindings, options, generated),
-      ...optionProblems(options),
+      ...clientAddressProblems(options.clientAddress, CLIENT_ADDRESS_EXAMPLE),
     ];
 
     if (registeredApps.has(app)) {
@@ -443,17 +445,6 @@ function retryAfterSet(c: Context): string[] {
   const value = c.res.headers.get(RETRY_AFTER_HEADER)?.split(",")[0];
 
   return value === undefined ? [] : [value];
-}
-
-function optionProblems(options: { readonly clientAddress?: unknown }): BootProblem[] {
-  if (options.clientAddress === undefined || typeof options.clientAddress === "function") return [];
-
-  return [
-    {
-      problem: "'clientAddress' is not a function",
-      fix: "pass a function of the request context, such as (c) => getConnInfo(c).remote.address, or leave it out",
-    },
-  ];
 }
 
 // `app.basePath()` prefixes every route the registration adds, which differs from the entry's mount.

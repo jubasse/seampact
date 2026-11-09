@@ -25,6 +25,7 @@
     "./nestjs": "./src/nestjs.ts",
     "./adonis": "./src/adonis.ts",
     "./hono": "./src/hono.ts",
+    "./next": "./src/next.ts",
     "./version": "./src/version.ts"
   },
   "publishConfig": {
@@ -109,6 +110,16 @@
         "require": {
           "types": "./dist/cjs/hono.d.ts",
           "default": "./dist/cjs/hono.js"
+        }
+      },
+      "./next": {
+        "import": {
+          "types": "./dist/esm/next.d.ts",
+          "default": "./dist/esm/next.js"
+        },
+        "require": {
+          "types": "./dist/cjs/next.d.ts",
+          "default": "./dist/cjs/next.js"
         }
       },
       "./version": {

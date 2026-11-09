@@ -4,6 +4,7 @@
 // step claims.
 import { authorizeRequest, type CheckState } from "./access-checks.js";
 import type { BoundaryContext } from "./boundary-context.js";
+import type { BootProblem } from "./boundary-hooks.js";
 import {
   ContractError,
   type ContractReply,
@@ -123,4 +124,16 @@ function webCheckState(
     isFrameworkDenial: isStatusDenial,
     fixes,
   };
+}
+
+/** The boot problem of a `clientAddress` option that is not a function; `example` shows one in the fix. */
+export function clientAddressProblems(clientAddress: unknown, example: string): BootProblem[] {
+  if (clientAddress === undefined || typeof clientAddress === "function") return [];
+
+  return [
+    {
+      problem: "'clientAddress' is not a function",
+      fix: `pass a function of the request, such as ${example}, or leave it out`,
+    },
+  ];
 }
