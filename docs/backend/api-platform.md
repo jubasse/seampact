@@ -2,7 +2,7 @@
 
 `seampact/api-platform` generates the contract's PHP code for API Platform 5 on Symfony. API Platform routes the operations and keeps its docs and security glue. The generated boundary checks each request, as on Symfony.
 
-This target is being delivered in steps. Today the boundary serves API Platform routes and answers its refusals (unknown path, missing credentials, invalid input). Handler results are not written yet: those replies, the Hydra look and the validation body arrive in the next releases.
+This target is being delivered in steps. Today the boundary checks each request and writes every reply, from your handler's result or a declared error. The Hydra look and the validation body arrive in the next releases.
 
 API Platform 5 on Symfony 7.4 and 8, PHP 8.3, 8.4 or 8.5. API Platform 4 is not supported.
 
@@ -29,7 +29,8 @@ Generate with `vendor/bin/seampact generate`.
 You get everything the [Symfony target](symfony.md) generates, plus, per api:
 
 - one `#[ApiResource]` class per resource, with one API Platform operation per contract operation;
-- one processor per operation, which calls your handler.
+- one processor per operation, which calls your handler;
+- one reply decorator, which writes the contract reply from your handler's result, so API Platform's serializer never writes a body.
 
 Write handlers as on Symfony: a service that implements the generated `<Resource>Endpoints` interface, each method marked with `#[SeampactOperation]`.
 
@@ -57,6 +58,6 @@ Do not import the Symfony route loader: API Platform registers the contract rout
 
 Each contract operation turns off API Platform's own `read`, content negotiation, `deserialize` and `validate`. The boundary reads and checks the request, so the contract alone decides an input. The boot check refuses an app that changes these switches, sets `securityPostDenormalize` or `securityPostValidation` on a contract operation, or replaces its processor.
 
-API Platform's `security` expression still runs, after the boundary and before your handler. Its `object` is `null`.
+API Platform's `security` expression still runs, after the boundary and before your handler. Its `object` is `null`. An `AccessDeniedException` it throws answers the api's `forbidden` (or `unauthenticated`) in the api's format, as on Symfony.
 
 App input rules are not available on this target yet.

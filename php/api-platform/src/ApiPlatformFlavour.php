@@ -23,6 +23,9 @@ final class ApiPlatformFlavour implements SymfonyFlavour
     public const TARGET = 'api-platform';
     public const PACKAGE = 'seampact/api-platform';
     public const PROCESSOR_TAG = 'api_platform.state_processor';
+    public const MAIN_PROCESSOR = 'api_platform.state_processor.main';
+    /** Between API Platform's write step (100) and its serialize step (200), where its object-mapper processor sits at 150. */
+    public const REPLY_DECORATION_PRIORITY = 150;
     /** The controllers of API Platform's own routes (documentation, entrypoint, errors, context), which are framework routes. */
     private const OWN_ROUTE_CONTROLLERS = [
         'api_platform.action.documentation',
@@ -64,7 +67,7 @@ final class ApiPlatformFlavour implements SymfonyFlavour
         $names = $this->namesOf($placement);
         $resources = new ResourceFile($names, $routePaths, $options->indentSpaces);
         $processors = new ProcessorFile($names);
-        $files = [];
+        $files = [(new ReplyDecoratorFile($names))->file()];
 
         foreach (array_keys($names->groups()) as $endpoints) {
             $files[] = $resources->file($endpoints);
@@ -80,9 +83,13 @@ final class ApiPlatformFlavour implements SymfonyFlavour
     public function bundleStatements(PhpClassFile $file, SymfonyPlacement $placement, ?BootCheckSwitches $bootCheck): string
     {
         $names = $this->namesOf($placement);
-        $statements = [];
-        foreach ($names->processorClasses() as $processor) {
-            $statements[] = '$services->set(' . $file->name($processor) . '::class)->autowire()->tag(' . var_export(self::PROCESSOR_TAG, true) . ');';
+        $api = $names->placement->layout->ir->api->id;
+        $statements = [$this->replyDecorator($file, $names)];
+        foreach ($names->placement->operations() as [, $operation]) {
+            $processor = $file->name($names->processorClass($operation->id));
+            // A string id, since the app's resource import may hold the class's own id; API Platform finds the processor by its key.
+            $statements[] = '$services->set(' . var_export("seampact.{$api}.processor.{$operation->id}", true) . ', ' . $processor . '::class)->autowire()->tag('
+                . var_export(self::PROCESSOR_TAG, true) . ', [\'key\' => ' . $processor . '::class]);';
         }
 
         if ($bootCheck !== null) {
@@ -90,6 +97,14 @@ final class ApiPlatformFlavour implements SymfonyFlavour
         }
 
         return implode("\n", $statements);
+    }
+
+    private function replyDecorator(PhpClassFile $file, ApiPlatformPlacement $names): string
+    {
+        $api = $names->placement->layout->ir->api->id;
+
+        return '$services->set(' . var_export("seampact.{$api}.reply_decorator", true) . ', ' . $file->name($names->replyDecoratorClass) . '::class)->decorate('
+            . var_export(self::MAIN_PROCESSOR, true) . ', null, ' . self::REPLY_DECORATION_PRIORITY . ')->args([service(' . var_export("seampact.{$api}.reply_decorator.inner", true) . ')]);';
     }
 
     private function metadataCheck(PhpClassFile $file, ApiPlatformPlacement $names): string

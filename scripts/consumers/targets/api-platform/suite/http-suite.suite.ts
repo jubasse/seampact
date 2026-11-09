@@ -15,7 +15,7 @@ import {
   testEachCase,
   writeSuiteReport,
 } from "../../../../../packages/tools/http-suite/src/index.ts";
-import { type RunningApp, startApiPlatformApp } from "./api-platform-app.ts";
+import { type RunningApp, requiredEnvironment, startApiPlatformApp } from "./api-platform-app.ts";
 import { API_PLATFORM_SUITE_REFUSALS } from "./suite-refusals.ts";
 
 const TARGET = "api-platform";
@@ -26,18 +26,6 @@ const app = requiredEnvironment("SEAMPACT_API_PLATFORM_APP");
 const reportDirectory = requiredEnvironment("SEAMPACT_API_PLATFORM_REPORTS");
 
 mkdirSync(reportDirectory, { recursive: true });
-
-function requiredEnvironment(name: string): string {
-  const value = process.env[name];
-
-  if (value === undefined || value === "") {
-    throw new Error(
-      `Set ${name}: the http suite runs against the assembled consumer (see the README).`,
-    );
-  }
-
-  return value;
-}
 
 function readCredentials(): SuiteCredentials {
   const shared = JSON.parse(

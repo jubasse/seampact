@@ -9,3 +9,13 @@ export function startApiPlatformApp(
 ): Promise<RunningApp> {
   return startPhpApp("the API Platform consumer", appDirectory, env);
 }
+
+export function requiredEnvironment(name: string): string {
+  const value = process.env[name];
+
+  if (value === undefined || value === "") {
+    throw new Error(`Set ${name}: the suites run against the assembled consumer (see the README).`);
+  }
+
+  return value;
+}

@@ -20,6 +20,8 @@ final class ApiPlatformPlacement
 {
     public readonly string $namespace;
 
+    public readonly string $replyDecoratorClass;
+
     /** @var array<string, list<Operation>> each endpoints interface and the operations it serves */
     private array $groups = [];
 
@@ -33,6 +35,11 @@ final class ApiPlatformPlacement
     {
         $this->namespace = "{$placement->namespace}\\ApiPlatform";
         $layout = $placement->layout;
+        $this->replyDecoratorClass = $layout->claim(
+            "{$this->namespace}\\{$layout->apiTypeName}ReplyDecorator",
+            "the api's reply decorator",
+            IrPlace::root()->below('api', 'name'),
+        );
 
         foreach ($placement->operations() as [$index, $operation]) {
             $names = $placement->names($operation->id);
@@ -63,12 +70,6 @@ final class ApiPlatformPlacement
     public function processorClass(string $operationId): string
     {
         return $this->processors[$operationId] ?? throw new \LogicException("The operation '{$operationId}' has no API Platform processor.");
-    }
-
-    /** @return list<string> every processor class, in operation order */
-    public function processorClasses(): array
-    {
-        return array_values($this->processors);
     }
 
     /** The API Platform short name of the resource that serves `$operations`. */

@@ -15,6 +15,7 @@ use Seampact\Golden\Tasks\ApiPlatform\GetDraftProcessor;
 use Seampact\Golden\Tasks\ApiPlatform\GetTaskProcessor;
 use Seampact\Golden\Tasks\ApiPlatform\GetTasksBatchProcessor;
 use Seampact\Golden\Tasks\ApiPlatform\HealthProcessor;
+use Seampact\Golden\Tasks\ApiPlatform\TasksReplyDecorator;
 use Seampact\Golden\Tasks\ApiPlatform\TasksResource;
 use Seampact\Symfony\Runtime\BootCheckPass;
 use Seampact\Symfony\Runtime\BoundarySubscriber;
@@ -118,12 +119,13 @@ final class TasksSeampactBundle extends AbstractBundle
           2 => 'api_platform.action.not_exposed',
           3 => 'api_platform.jsonld.action.context',
         )]);
-        $services->set(ArchiveTaskProcessor::class)->autowire()->tag('api_platform.state_processor');
-        $services->set(GetChannelProcessor::class)->autowire()->tag('api_platform.state_processor');
-        $services->set(GetDraftProcessor::class)->autowire()->tag('api_platform.state_processor');
-        $services->set(GetTaskProcessor::class)->autowire()->tag('api_platform.state_processor');
-        $services->set(GetTasksBatchProcessor::class)->autowire()->tag('api_platform.state_processor');
-        $services->set(HealthProcessor::class)->autowire()->tag('api_platform.state_processor');
+        $services->set('seampact.tasks.reply_decorator', TasksReplyDecorator::class)->decorate('api_platform.state_processor.main', null, 150)->args([service('seampact.tasks.reply_decorator.inner')]);
+        $services->set('seampact.tasks.processor.archiveTask', ArchiveTaskProcessor::class)->autowire()->tag('api_platform.state_processor', ['key' => ArchiveTaskProcessor::class]);
+        $services->set('seampact.tasks.processor.getChannel', GetChannelProcessor::class)->autowire()->tag('api_platform.state_processor', ['key' => GetChannelProcessor::class]);
+        $services->set('seampact.tasks.processor.getDraft', GetDraftProcessor::class)->autowire()->tag('api_platform.state_processor', ['key' => GetDraftProcessor::class]);
+        $services->set('seampact.tasks.processor.getTask', GetTaskProcessor::class)->autowire()->tag('api_platform.state_processor', ['key' => GetTaskProcessor::class]);
+        $services->set('seampact.tasks.processor.getTasksBatch', GetTasksBatchProcessor::class)->autowire()->tag('api_platform.state_processor', ['key' => GetTasksBatchProcessor::class]);
+        $services->set('seampact.tasks.processor.health', HealthProcessor::class)->autowire()->tag('api_platform.state_processor', ['key' => HealthProcessor::class]);
         $services->set('seampact.tasks.metadata_check', OperationMetadataCheck::class)->autowire()->args(['$api' => 'tasks', '$resourceClasses' => [TasksResource::class, ChannelsResource::class, DraftsResource::class, AppResource::class], '$processors' => ['archiveTask' => ArchiveTaskProcessor::class, 'getChannel' => GetChannelProcessor::class, 'getDraft' => GetDraftProcessor::class, 'getTask' => GetTaskProcessor::class, 'getTasksBatch' => GetTasksBatchProcessor::class, 'health' => HealthProcessor::class]])->tag('kernel.cache_warmer');
     }
 

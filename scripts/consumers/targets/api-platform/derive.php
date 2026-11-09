@@ -49,6 +49,8 @@ foreach (KERNEL_EDITS as $search => $replacement) {
 }
 file_put_contents($kernelFile, $kernel);
 
+copy(__DIR__ . '/src/SecurityProbeMetadata.php', "{$app}/src/Suite/SecurityProbeMetadata.php");
+
 $configFile = "{$app}/seampact.config.yaml";
 file_put_contents($configFile, str_replace('use: seampact/symfony', 'use: seampact/api-platform', (string) file_get_contents($configFile)));
 
