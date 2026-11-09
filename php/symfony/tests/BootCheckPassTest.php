@@ -20,6 +20,7 @@ use Seampact\Symfony\Runtime\InputRules;
 use Seampact\Symfony\Runtime\Regeneration;
 use Seampact\Symfony\Runtime\VoterDecider;
 use Seampact\Symfony\Tests\Support\DirectInputRules;
+use Seampact\Symfony\Tests\Support\NoInputRulesInterfaceContract;
 use Seampact\Symfony\Tests\Support\GrantedChannelsController;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\Compiler\ResolveClassPass;
@@ -80,6 +81,25 @@ final class BootCheckPassTest extends TestCase
         }
 
         self::assertStringContainsString(DirectInputRules::class . ' implements ' . InputRules::class . ' directly', $problems);
+    }
+
+    public function testAFlavourWithoutAnInputRulesInterfaceNamesTheRefusalNotAnInterfaceToImplement(): void
+    {
+        $container = new ContainerBuilder();
+        $container->setParameter('kernel.environment', 'test');
+        $container->setParameter('kernel.build_dir', sys_get_temp_dir());
+        $container->register('event_dispatcher', EventDispatcher::class);
+        $container->register('app.direct_rules', DirectInputRules::class);
+
+        $problems = '';
+        try {
+            (new BootCheckPass(NoInputRulesInterfaceContract::class, TasksOperation::class, SecondBundle::BOUNDARY_SERVICE, SecondBundle::INPUT_RESOLVER_SERVICE, SecondBundle::SETTINGS_SERVICE, TasksSettings::class, false))->process($container);
+        } catch (\LogicException $failure) {
+            $problems = $failure->getMessage();
+        }
+
+        self::assertStringContainsString('input.rules.unsupported', $problems);
+        self::assertStringNotContainsString('implement the generated', $problems);
     }
 
     public function testUnderAbsoluteUrlsAnEnvDrivenPublicOriginPassesAtBuild(): void

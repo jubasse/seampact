@@ -226,6 +226,8 @@ It calls `isGranted('<right>', $request)` for every right and rule, and a denial
 
 Your own rules, such as "the end comes after the start", are written as Symfony constraints: see [Add your own rules](../types-and-validation/symfony-constraints.md#add-your-own-rules).
 
+A rule can only refuse. The part it reads is readonly, so a rule that writes to it throws, and the client gets a 500.
+
 ## Options
 
 Set under `options:` on the target entry.
