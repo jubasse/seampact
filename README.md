@@ -32,7 +32,7 @@ From one YAML contract:
 |---|---|
 | Types | One TypeScript type per schema, request and reply. |
 | Validators | zod, yup, class-validator, VineJS or Ajv schemas that check every input. |
-| Server boundary | Routes for NestJS, Express, Fastify, AdonisJS, Hono, Spring Boot, Laravel, Symfony, FastAPI, Django REST Framework or Django Ninja. They validate input, call your access hooks, and check each reply against the contract before it is sent. |
+| Server boundary | Routes for NestJS, Express, Fastify, AdonisJS, Hono, Spring Boot, Laravel, Symfony, API Platform, FastAPI, Django REST Framework or Django Ninja. They validate input, call your access hooks, and check each reply against the contract before it is sent. |
 | Built-in rules | Paging, rate limits, idempotency keys, ETags, CSRF, signed requests and field rights, declared in the contract and enforced at the boundary. You plug in the stores and decisions. |
 | Errors | One error format, RFC 9457 `problem+json` by default, with typed error codes per route. |
 | Clients | A typed `fetch` client (or over your own axios instance), hooks for React (TanStack Query, SWR, RTK Query), composables for Vue (TanStack Query, Pinia Colada), an Angular service with NgRx effects as an option, and MSW mocks to test them with no backend. |
