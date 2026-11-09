@@ -4,3 +4,4 @@ export * from "./web-outgoing-check.js";
 export * from "./web-request.js";
 export * from "./web-request-slot.js";
 export * from "./web-response.js";
+export * from "./web-contract-steps.js";

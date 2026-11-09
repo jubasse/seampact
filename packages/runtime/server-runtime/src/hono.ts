@@ -8,18 +8,14 @@
 import type { Context, Env, Hono, Next, Schema } from "hono";
 import { refuseCodeOfOtherVersion } from "./generator-version-check.js";
 import {
-  authorizeRequest,
   type BootProblem,
   type BoundaryContext,
   type BoundaryHooks,
   basePathClaimsOf,
   bootProblemsMessage,
   boundaryContext,
-  type CheckState,
   type ContractApi,
-  ContractError,
   type ContractReply,
-  type ContractRequest,
   type ContractRoute,
   claimsBasePathAlone,
   enforcedHookBootProblems,
@@ -27,15 +23,12 @@ import {
   frameworkRouteProblems,
   type HandlerBindings,
   type HooksRequirement,
-  handlerResultReply,
   isBoundaryRoute,
-  isStatusDenial,
   type ListedRoute,
   leftToFrameworkInDebug,
   markBoundaryRoute,
   matchContractRoute,
   matchesContractPath,
-  mediaTypeRefusal,
   notFoundError,
   type PlatformFixes,
   RETRY_AFTER_HEADER,
@@ -48,7 +41,6 @@ import {
   renderContractReply,
   reportContractError,
   resolvedHooks,
-  runInputSteps,
   runtimeLogOf,
   settingsOf,
   unexpectedError,
@@ -57,18 +49,17 @@ import {
 import type { InputRuleSets } from "./input-rules.js";
 import {
   checkOutgoingResponse,
+  claimedWebError,
   claimFetchWrap,
   currentRequestSlot,
   errorResponse,
   notServedResponse,
-  type ReadRequestBody,
   type RequestSlot,
-  readContractBody,
   recordBoundaryResponse,
   replaceReplyHeaders,
+  runWebContractSteps,
   servedInRequestSlot,
   settledContractResponse,
-  webContractRequest,
   webReportedRequest,
 } from "./web.js";
 
@@ -80,7 +71,6 @@ const HONO_FIXES: PlatformFixes = {
 };
 const INTERNAL_SERVER_ERROR_STATUS = 500;
 const ROOT_BASE_PATH = "/";
-const NO_BODY: ReadRequestBody = { body: undefined };
 
 /** The registration options of one api on a Hono app: the shared ones and the client address of a request. */
 export interface HonoRegistrationOptions<
@@ -298,51 +288,25 @@ export function createHonoBoundary<
 
   // Steps 1 to 10 of one contract request; a refusal the api answers is its reply, anything else is kept for
   // `onUnexpectedError` and rethrown to the app's `onError`.
-  async function runSteps<E extends Env>(
+  function runSteps<E extends Env>(
     c: Context<E>,
     context: BoundaryContext,
     options: HonoRegistrationOptions<Hooks, Handlers, Operation, E, InputRules>,
     reported: ReportedRequest,
   ): Promise<Response> {
-    const route = context.route;
-    const binding = bindings[route.id];
-
-    try {
-      if (binding === undefined) {
-        throw unexpectedError(route, new Error(`seampact: '${route.id}' has no handler binding`));
-      }
-
-      const request = c.req.raw;
-      const mediaRefusal = mediaTypeRefusal(route, webContractRequest(request, NO_BODY, undefined));
-
-      if (mediaRefusal !== undefined) throw mediaRefusal;
-
-      const read = await readContractBody(route, request, SKIP_CONTRACT_ROUTES_FIX);
-      const state = checkState(
-        context,
-        webContractRequest(request, read, options.clientAddress?.(c)),
-      );
-
-      context.grant = await authorizeRequest(state);
-
-      const started = await runInputSteps(state, context, options.inputRules);
-      const reply =
-        started?.replay ?? (await handlerResultReply(state, context, options.handlers, binding));
-
-      return await answer(c, context, reply);
-    } catch (error) {
-      const claimed = claimedError(route, error, c);
-
-      if (claimed === undefined) {
-        context.unclaimedException = error;
-
-        throw error;
-      }
-
-      await reportContractError(context.hooks, api, route, claimed, reported);
-
-      return answer(c, context, renderContractReply(api, route, claimed));
-    }
+    return runWebContractSteps(context, {
+      request: c.req.raw,
+      reported,
+      clientAddress: options.clientAddress?.(c),
+      handlers: options.handlers,
+      inputRules: options.inputRules,
+      binding: bindings[context.route.id],
+      fixes: HONO_FIXES,
+      bodyUsedFix: SKIP_CONTRACT_ROUTES_FIX,
+      retryAfterValues: () => retryAfterSet(c),
+      respond: (reply) => answer(c, context, reply),
+      unclaimed: (error) => Promise.reject(error),
+    });
   }
 
   // The boundary's reply becomes `c.res`, which merges the headers middleware set before `next()` and lets them
@@ -365,18 +329,6 @@ export function createHonoBoundary<
     return c.res;
   }
 
-  function checkState(context: BoundaryContext, request: ContractRequest): CheckState {
-    return {
-      api: context.api,
-      route: context.route,
-      request,
-      pathParams: context.pathParams,
-      hooks: context.hooks,
-      isFrameworkDenial: isStatusDenial,
-      fixes: HONO_FIXES,
-    };
-  }
-
   // What Hono answers when no `onError` is set; the debug path leaves it to the app's own handler.
   function honoDefaultErrorResponse(c: Context): Response {
     return c.text("Internal Server Error", INTERNAL_SERVER_ERROR_STATUS);
@@ -389,7 +341,10 @@ export function createHonoBoundary<
     const reported = webReportedRequest(c.req.raw);
     const route = context?.route ?? matchContractRoute(api, reported.method, reported.path)?.route;
 
-    if (context !== undefined && claimedError(context.route, error, c) === undefined) {
+    if (
+      context !== undefined &&
+      claimedWebError(context.route, error, retryAfterSet(c)) === undefined
+    ) {
       context.unclaimedException = error;
 
       if (leftToFrameworkInDebug(context, reported)) return honoDefaultErrorResponse(c);
@@ -398,7 +353,7 @@ export function createHonoBoundary<
     const contractError =
       route === undefined
         ? unexpectedError(undefined, error)
-        : (claimedError(route, error, c) ?? unexpectedError(route, error));
+        : (claimedWebError(route, error, retryAfterSet(c)) ?? unexpectedError(route, error));
     const reply = renderContractReply(api, route, contractError);
 
     await reportContractError(
@@ -480,12 +435,6 @@ const MIDDLEWARE_ARITY = 2;
 // the rule `hono/dev`'s `inspectRoutes` follows.
 function isMiddlewareEntry(entry: HonoRouteEntry): boolean {
   return typeof entry.handler === "function" && entry.handler.length >= MIDDLEWARE_ARITY;
-}
-
-function claimedError(route: ContractRoute, error: unknown, c: Context): ContractError | undefined {
-  if (error instanceof ContractError) return error;
-
-  return frameworkRefusal(route, error, retryAfterSet(c));
 }
 
 // The `Retry-After` a rate-limit middleware set with `c.header()` before it raised its 429; `Headers.get` joins
