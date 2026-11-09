@@ -16,6 +16,7 @@ import { type GenerateWarning, warnLeftToHandler } from "../generate-warning.js"
 import { type ImportSpecifierStyle, importSpecifier } from "../import-specifier.js";
 import { below, type IrLocation, operationLocation } from "../ir-location.js";
 import type { Link } from "../links.js";
+import { mountedBasePaths } from "../mounted-base-paths.js";
 import {
   refuseInconsistentIr,
   refuseNotGeneratedYet,
@@ -153,11 +154,7 @@ export function routeTableSource(
     );
   }
 
-  const basePaths = [
-    ...new Set(
-      Object.values(ir.api.surfaces).map((surface) => `${options.mount}${surface.prefix}`),
-    ),
-  ];
+  const basePaths = mountedBasePaths(ir, options.mount);
   const frameworkRoutes = frameworkRoutesValue(options.frameworkRoutes, basePaths);
   const isClassValidator = validators.descriptor.style === CLASS_VALIDATOR_STYLE;
   const table: SourceValue = {

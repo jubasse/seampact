@@ -18,6 +18,7 @@ import {
 import type { AppPlan } from "./app-plan.js";
 import { DEFAULT_DRIFT_CHECK_LEVEL } from "./drift-level.js";
 import { linksOf, type PlannedApi, type PlannedEntry, pairedApi } from "./entry-links.js";
+import { exclusiveBasePathProblems } from "./exclusive-base-paths.js";
 import { frameworkRouteCheckOf } from "./framework-route-check.js";
 import { importSpecifierStyles } from "./import-specifier-styles.js";
 import { addLink, isLinkKind, type MutableLinkSet, relativeLocation } from "./link-set.js";
@@ -51,6 +52,10 @@ export async function generateEntries(
   const styles = importSpecifierStyles(planned);
 
   if (styles.status === "refused") return styles;
+
+  const basePaths = exclusiveBasePathProblems(planned);
+
+  if (basePaths.status === "refused") return basePaths;
 
   const outputs: GeneratedOutput[] = [];
   const problems: CliProblem[] = [];

@@ -15,6 +15,7 @@ export {
   nodeServerTarget,
   OWN_VALIDATORS_ARTEFACT,
   type OwnValidators,
+  type PlacementEntry,
 } from "./boundary-files.js";
 export { handlerMapDeclarations, largestBodyLimit } from "./handler-map-module.js";
 export { identityResponseHeaderRefusals } from "./identity-headers.js";

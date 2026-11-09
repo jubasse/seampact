@@ -54,6 +54,11 @@ export interface TargetMetadata<
    * modules; `js` when absent.
    */
   importSpecifiers?: ImportSpecifierStyle;
+  /**
+   * Set for a server target whose app routes each api by its base paths before the boundary runs (one route
+   * directory per base path), so two apis of one app whose mounted base paths are equal or nested are refused.
+   */
+  exclusiveBasePaths?: true;
 }
 
 // The metadata of any target, as the CLI reads it: each kind is present when the target consumes or provides it.

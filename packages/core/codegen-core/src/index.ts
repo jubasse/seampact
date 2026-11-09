@@ -42,6 +42,7 @@ export {
   type FrameworkRouteCheck,
   type FrameworkRouteScope,
   type HookBootCheck,
+  NO_MOUNT,
   type TunableBootCheck,
 } from "./framework-route-check.js";
 export {
@@ -118,6 +119,7 @@ export {
   refuseUnknownValueAt,
 } from "./located-refusals.js";
 export { type ManifestRead, readManifest } from "./manifest.js";
+export { mountedBasePaths } from "./mounted-base-paths.js";
 export type {
   NativeDocsDocument,
   NativeDocsJson,
