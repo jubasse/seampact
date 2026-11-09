@@ -62,6 +62,7 @@ The same pages, with search, are on the [documentation site](https://jubasse.git
 - [Spring Boot](backend/spring-boot.md): Java, the Gradle or Maven plugin, controllers and hooks.
 - [Laravel](backend/laravel.md): PHP, Composer, controllers, hooks and Laravel's own auth.
 - [Symfony](backend/symfony.md): PHP, the Composer package, bundle, controllers, hooks and SecurityBundle.
+- [API Platform](backend/api-platform.md): PHP, API Platform 5 on Symfony.
 - [FastAPI](backend/fastapi.md): Python, the wheels, `bind_<api>()`, handlers, hooks and FastAPI's own docs.
 - [Django REST Framework](backend/drf.md): Python, the wheels, settings, URLconf, handlers, hooks and DRF's own auth.
 - [Django Ninja](backend/ninja.md): Python, the wheels, `bind_<api>()`, handlers, hooks, Ninja's own auth and docs.
@@ -133,4 +134,5 @@ For contributors. Users do not need these pages.
 - [ADRs](adr/): design records.
 - [Product decisions](decisions.md): the log of decisions, A1 to A48.
 - [Design decisions](design-decisions.md)
+- [Maintainers](maintainers/): how a release goes out.
 - [Roadmap](roadmap.md)

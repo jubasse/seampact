@@ -79,11 +79,11 @@ describe("the PyPI publish", () => {
     );
   });
 
-  it("names each environment in CONTRIBUTING.md, where the pending publishers are listed", () => {
-    const contributing = readFileSync(join(REPO_ROOT, "CONTRIBUTING.md"), "utf8");
+  it("names each environment in docs/maintainers/release.md, where the pending publishers are listed", () => {
+    const releaseGuide = readFileSync(join(REPO_ROOT, "docs/maintainers/release.md"), "utf8");
 
     for (const environment of PYPI_ENVIRONMENTS)
-      expect(contributing).toContain(`\`${environment}\``);
+      expect(releaseGuide).toContain(`\`${environment}\``);
   });
 
   it("lets every job finish when one fails", () => {

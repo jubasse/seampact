@@ -1,7 +1,7 @@
 import { SITE_BASE } from "./site-layout.ts";
 
 /** Pages for people who work on seampact, not for the people who use it. */
-const CONTRIBUTOR_FOLDERS = ["adr", "ir"] as const;
+const CONTRIBUTOR_FOLDERS = ["adr", "ir", "maintainers"] as const;
 const CONTRIBUTOR_FILES = ["decisions.md", "design-decisions.md", "roadmap.md"] as const;
 const RELEASE_NOTES_FOLDER = "release-notes";
 
