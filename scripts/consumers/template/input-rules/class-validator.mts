@@ -21,7 +21,8 @@ registerDecorator({
   },
 });
 
-// class-validator has no class-level constraint: a cross-member rule sits on a member and points at it.
+// class-validator has no class-level constraint: a cross-member rule sits on a member and points at it, as the
+// NestJS overlay states for the case.
 registerDecorator({
   name: "windowTooLong",
   target: ScheduleTaskRules,
