@@ -23,6 +23,8 @@ export type FrameworkRouteCheck =
       readonly status: "on";
       readonly allowed: readonly FrameworkRouteAllowance[];
       readonly scope: FrameworkRouteScope;
+      /** Set when the entry writes `artefacts.bootCheck.frameworkRoutes` itself, rather than leaving the default. */
+      readonly written?: true;
     }
   | { readonly status: "off" };
 

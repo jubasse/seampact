@@ -1,14 +1,14 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
 
-// The root and `/web` exports serve the Web-standard runtimes (Bun, Deno, Next.js, Workers): every module they reach
+// The root, `/web` and `/next` exports serve the Web-standard runtimes (Bun, Deno, Next.js, Workers): every module they reach
 // imports no `node:` module but the one those runtimes provide, and no `node-` transport module.
 
 const NODE_IMPORT = /(?:\bfrom|\bimport\s*\(?)\s*"(node:[^"]+)"/g;
 const RELATIVE_IMPORT = /from "\.\/([^"]+)\.js"/g;
 // The one Node module the Web-standard runtimes provide (Workers with `nodejs_als`).
 const WEB_ALLOWED_NODE_IMPORTS = ["node:async_hooks"];
-const WEB_ENTRY_MODULES = ["index", "web"];
+const WEB_ENTRY_MODULES = ["index", "web", "next"];
 
 function moduleSource(module: string): string {
   return readFileSync(new URL(`./${module}.ts`, import.meta.url), "utf8");

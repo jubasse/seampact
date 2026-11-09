@@ -151,6 +151,26 @@
       },
       "validatorStyles": ["standard-schema"],
       "ownValidators": []
+    },
+    {
+      "package": "@seampact/codegen-nextjs",
+      "framework": {
+        "id": "nextjs",
+        "package": "next",
+        "tested": [],
+        "incompatible": [
+          {
+            "major": 14,
+            "reason": "The generated route handler is written for Next.js 16 and its Node.js runtime only."
+          },
+          {
+            "major": 15,
+            "reason": "The generated route handler is written for Next.js 16 and its Node.js runtime only."
+          }
+        ]
+      },
+      "validatorStyles": ["standard-schema"],
+      "ownValidators": []
     }
   ],
   "clientTargets": [

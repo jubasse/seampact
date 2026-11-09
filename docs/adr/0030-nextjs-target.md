@@ -81,7 +81,7 @@ Step 8b runs in the shared `runInputSteps`, between the access steps and the han
 
 ### Errors and the outgoing check
 
-The handler catches every error: a generated contract exception, its own refusals, an error whose `status` is 401, 403 or 429, and any other throw. It answers each in the api's format, the last as the api's 500 after `reportContractError` calls `onUnexpectedError`, under the development log of ADR 0016 "Amendment 2026-10-28". No error reaches Next's HTML 500. `renderContractError(error)` gives the app's Node code, its own routes or its `proxy.ts`, the same reply for a contract error; a legacy Edge `middleware.ts` cannot import it, since the generated module refuses Edge when it loads.
+The handler catches every error: a generated contract exception, its own refusals, an error whose `status` is 401, 403 or 429, and any other throw. It answers each in the api's format, the last as the api's 500 after `reportContractError` calls `onUnexpectedError`, under the development log of ADR 0016 "Amendment 2026-10-28". No error reaches Next's HTML 500. `renderContractError(request, error)` gives the app's Node code, its own routes or its `proxy.ts`, the same reply for a contract error; a legacy Edge `middleware.ts` cannot import it, since the generated module refuses Edge when it loads.
 
 There is no `fetch` to wrap. Each call opens its request slot with `servedInRequestSlot(() => serve(request))`, and the `Response` it returns passes `checkOutgoingResponse` with ADR 0020's verdict rules and `responses` modes. A reply the app's proxy writes before the route runs is not checked, as an app middleware's reply before the boundary is not on Hono; headers the proxy or `next.config` adds after the route apply to the reply on its way out.
 
@@ -101,11 +101,11 @@ At run time: `@seampact/server-runtime` (root, `/web` and `/next`) at the genera
 
 ### Refused by name or waiting
 
-`generate` refuses by name everything ADR 0020 "Refused by name or waiting" lists. On this target also, by who refuses:
+`generate` refuses by name everything ADR 0020 "Refused by name or waiting" lists. Its path segments Hono's router cannot read are refused here too, though the raw match reads them and Next never routes inside the catch-all: they stay refused until the Next consumer proves them. On this target also, by who refuses:
 
 | Who | What |
 |---|---|
-| `generate`, by name | a `frameworkRoutes` allow-list on the entry (`frameworkRoutes.unsupported`); an explicit `artefacts.bootCheck.frameworkRoutes` other than `false` (`artefacts.bootCheck.frameworkRoutes.unsupported`); an api with an empty base path, whose catch-all would sit at the app's root (`path.base.empty.unsupported`); two apis whose base paths are equal or nested, such as `/v1` and `/v1/admin`, where Next's more specific catch-all would take the outer api's paths and answer with the inner api's 404, as ADR 0024 refuses on Symfony (`path.base.shared.unsupported`); Next.js 15 and older, through the compatibility matrix |
+| `generate`, by name | a `frameworkRoutes` allow-list on the entry (`frameworkRoutes.unsupported`); an explicit `artefacts.bootCheck.frameworkRoutes` other than `false` (`artefacts.bootCheck.frameworkRoutes.unsupported`); an api with an empty base path, whose catch-all would sit at the app's root (`path.base.empty.unsupported`); `catchAll: false` on the entry, since the catch-all route file is the api's only route and answers every path under its base path (`options.catchAll.unsupported`); two apis whose base paths are equal or nested, such as `/v1` and `/v1/admin`, where Next's more specific catch-all would take the outer api's paths and answer with the inner api's 404, as ADR 0024 refuses on Symfony (`path.base.shared.unsupported`); Next.js 15 and older, through the compatibility matrix |
 | the generated module, when it loads | the Edge runtime (`runtime.edge.unsupported`) |
 | the handler, at the first request | a raw path under no mounted base path ("Routes") |
 | nobody, and harmless | one route file per contract path, which the raw match serves correctly |

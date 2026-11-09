@@ -75,7 +75,7 @@ interface ReferenceAppModule {
   resetScenario(): void;
   bootWith(registration: object, basePath?: string): void;
   bootTwice(registration: object): void;
-  requestThroughApp(path: string, init?: RequestInit): Promise<Response>;
+  requestThroughApp(path: string, init?: RequestInit, extraOptions?: object): Promise<Response>;
   requestThroughSubApp(path: string, init?: RequestInit): Promise<Response>;
   startReferenceApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
   startTwoApiApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
@@ -371,6 +371,25 @@ describe("the request body", () => {
 
     expect(reply.status).toBe(415);
     expect(app.calls.handled).toEqual([]);
+  });
+
+  test("a body that is not JSON answers the 415 before the client address is read", async () => {
+    const throwingClientAddress = () => {
+      throw new Error("client address read");
+    };
+
+    const reply = await app.requestThroughApp(
+      `/v1/channels/${CHANNEL}/tasks`,
+      {
+        method: "POST",
+        headers: { ...writeHeaders(), "content-type": "text/plain", "content-length": "5" },
+        body: "title",
+      },
+      { clientAddress: throwingClientAddress },
+    );
+
+    expect(reply.status).toBe(415);
+    expect(app.calls.loggedErrors).toEqual([]);
   });
 
   test("a gzip request body is inflated before it is parsed", async () => {

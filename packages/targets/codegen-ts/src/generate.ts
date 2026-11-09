@@ -4,6 +4,7 @@ import {
   type GeneratedFile,
   type GenerateInput,
   type GenerateOutcome,
+  type ImportSpecifierStyle,
   type IndexedModule,
   type IrLocation,
   type NoOptions,
@@ -67,13 +68,15 @@ export function generateTypes(
 
   const files = [
     ...schemasFile(ir, planned.layout, refusals),
-    ...(ir.operations.length === 0 ? [] : operationFiles(ir, planned.layout, refusals)),
+    ...(ir.operations.length === 0
+      ? []
+      : operationFiles(ir, planned.layout, refusals, input.importSpecifiers)),
     ...apiConstantsFile(ir, refusals),
   ];
 
   if (refusals.length > 0) return { status: "refused", refusals };
 
-  return { status: "generated", files: [...files, ...indexFile(files)] };
+  return { status: "generated", files: [...files, ...indexFile(files, input.importSpecifiers)] };
 }
 
 function refuseApiForms(ir: ContractIR, refusals: Refusal[]): void {
@@ -102,7 +105,7 @@ function schemasFile(ir: ContractIR, layout: TypesLayout, refusals: Refusal[]): 
 
 // The api index: the schemas under `schemas`, the operation modules and the constants flat, so `import * as
 // Tasks from "<out>/index.js"` reaches every name.
-function indexFile(files: readonly GeneratedFile[]): GeneratedFile[] {
+function indexFile(files: readonly GeneratedFile[], style: ImportSpecifierStyle): GeneratedFile[] {
   if (files.length === 0) return [];
 
   const modules = files.map((file): IndexedModule => {
@@ -111,12 +114,17 @@ function indexFile(files: readonly GeneratedFile[]): GeneratedFile[] {
     return module === SCHEMAS_MODULE ? { module, namespace: SCHEMAS_NAMESPACE } : { module };
   });
 
-  return [{ path: `${INDEX_MODULE}${MODULE_EXTENSION}`, contents: apiIndexSource(modules) }];
+  return [{ path: `${INDEX_MODULE}${MODULE_EXTENSION}`, contents: apiIndexSource(modules, style) }];
 }
 
-function operationFiles(ir: ContractIR, layout: TypesLayout, refusals: Refusal[]): GeneratedFile[] {
+function operationFiles(
+  ir: ContractIR,
+  layout: TypesLayout,
+  refusals: Refusal[],
+  style: ImportSpecifierStyle,
+): GeneratedFile[] {
   return OPERATION_MODULES.map(({ module, declaration }) => {
-    const { context, importLines } = operationModuleContext(ir, layout, refusals);
+    const { context, importLines } = operationModuleContext(ir, layout, refusals, style);
     const declarations = ir.operations.map((operation, index) =>
       declaration(operation, operationLocation(index, operation.id), context),
     );

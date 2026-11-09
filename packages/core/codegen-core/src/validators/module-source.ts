@@ -1,4 +1,8 @@
-import { relativeModuleSpecifier } from "../import-specifier.js";
+import {
+  DEFAULT_IMPORT_SPECIFIER_STYLE,
+  type ImportSpecifierStyle,
+  relativeModuleSpecifier,
+} from "../import-specifier.js";
 import { MODULE_EXTENSION, WIRE_CHECKS_MODULE } from "./layout.js";
 import type { WireCheck } from "./wire-checks.js";
 
@@ -14,6 +18,7 @@ export function moduleContents(
   module: string,
   source: ModuleSource,
   libraryImport: string,
+  style: ImportSpecifierStyle = DEFAULT_IMPORT_SPECIFIER_STYLE,
 ): string | undefined {
   if (source.declarations.length === 0) return undefined;
 
@@ -21,13 +26,13 @@ export function moduleContents(
 
   if (source.wireChecks.size > 0) {
     imports.push(
-      `import { ${[...source.wireChecks].sort().join(", ")} } from "${relativeModuleSpecifier(module, WIRE_CHECKS_MODULE)}";`,
+      `import { ${[...source.wireChecks].sort().join(", ")} } from "${relativeModuleSpecifier(module, WIRE_CHECKS_MODULE, style)}";`,
     );
   }
 
   for (const namespace of source.namespaces) {
     imports.push(
-      `import * as ${namespace.name} from "${relativeModuleSpecifier(module, namespace.module)}";`,
+      `import * as ${namespace.name} from "${relativeModuleSpecifier(module, namespace.module, style)}";`,
     );
   }
 
