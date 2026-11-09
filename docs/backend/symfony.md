@@ -222,6 +222,10 @@ services:
 
 It calls `isGranted('<right>', $request)` for every right and rule, and a denial answers the first denial code. Your voter reads the `RequirementRequest` subject: `params()`, `subject()`, `scopes()`, `principal()`. A decider of your own that names a right wins over it.
 
+## Add your own rules
+
+Your own rules, such as "the end comes after the start", are written as Symfony constraints: see [Add your own rules](../types-and-validation/symfony-constraints.md#add-your-own-rules).
+
 ## Options
 
 Set under `options:` on the target entry.
@@ -340,6 +344,7 @@ The app refuses to start, and lists every problem. `bin/console cache:warmup` ru
 |---|---|
 | An identity has no authenticate hook, a right or rule no decider, a scope no resolver. | Add the service. |
 | An idempotent operation has no store. | Alias `seampact.<api key>.idempotency_store` to your store. |
+| Input rules name an operation the api lacks, a part with no input, a relay operation, or two rule sets claim one part. | Fix the rule class, or remove it; tag only classes implementing the api's `<Api>InputRules`. |
 | An operation has no handler, or a method lacks `#[SeampactOperation]`. | Implement the endpoints interface and mark each method. |
 | A route that is not in the contract is served and not allow-listed. | Add it to `frameworkRoutes` on the entry, or remove it. |
 | An app route sits before a contract route on the same path. | Move your route after, or change its path. |

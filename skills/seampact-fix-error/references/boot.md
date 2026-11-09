@@ -94,6 +94,12 @@ The check runs with `bin/console cache:warmup` and on the first request. The mes
 | `two deciders claim '<name>'` | Two services answer the same name. Keep the name in one decider. |
 | `no idempotency store for '<operation>'` | An idempotent operation has no store. Alias `seampact.<api key>.idempotency_store` to a service implementing `Seampact\Hooks\IdempotencyStore`. |
 | `operation '<id>' has no handler` | No controller serves the operation. Register one controller service implementing the `<Resource>Endpoints` interface. |
+| `<Class> has input rules for operation '<id>', which api '<api>' lacks or whose entry's operations filter drops` | The rule class names an operation that is not served. Fix the id in `operationId()`, or remove the class. |
+| `<Class> has input rules for the part '<part>' of operation '<id>', which has no ...` | The operation has no input in that part. Name a part the message lists, or remove the class. |
+| `<Class> has input rules for operation '<id>', which relays '<id>' of api '<api>'` | A relay operation takes no rules. Put them on the public operation in the gateway. |
+| `two input rule sets claim the part '<part>' of operation '<id>'` | Two classes cover one part. Merge their constraints into one class. |
+| `the input rules service <Class> does not implement ...` | A service tagged `seampact.<api>.input_rules` does not implement the api's `<Api>InputRules`. Implement the generated interface, or untag it. |
+| `the service <Class> implements Seampact\Symfony\Runtime\InputRules directly, so no api runs it` | No api tags a class that implements the runtime interface itself. Implement the generated `<Api>InputRules` of the api it serves. |
 | `the method <class>::<method> handles operation '<id>' but is not marked #[SeampactOperation('<id>')]` | The method has no operation attribute. Add `#[SeampactOperation('<id>')]`. |
 | `the controller <class> carries #[IsGranted]` | `#[IsGranted]` would decide access outside the contract. Remove it. For a plain role check, paste the `access_control` rule the message prints; for anything else, write a decider. |
 | `the method <class>::<method> carries #[IsGranted]` | `#[IsGranted]` on a method has the same effect as on the controller. Same as the controller form. |
