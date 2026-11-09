@@ -1,0 +1,41 @@
+{
+  "name": "seampact-example-nestjs-react",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "node --import tsx node_modules/@seampact/cli/src/bin.ts generate",
+    "check:types": "tsc --noEmit",
+    "build": "vite build",
+    "start": "tsx src/server/main.ts",
+    "dev:web": "vite",
+    "e2e": "tsx scripts/e2e.ts",
+    "check:generated": "node --import tsx node_modules/@seampact/cli/src/bin.ts check"
+  },
+  "dependencies": {
+    "@nestjs/common": "12.3.2",
+    "@nestjs/core": "12.3.2",
+    "@nestjs/platform-express": "12.3.2",
+    "@seampact/hooks": "workspace:*",
+    "@seampact/server-runtime": "workspace:*",
+    "@tanstack/react-query": "5.104.4",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@seampact/cli": "workspace:*",
+    "@seampact/codegen-fetch": "workspace:*",
+    "@seampact/codegen-nestjs": "workspace:*",
+    "@seampact/codegen-react": "workspace:*",
+    "@seampact/codegen-ts": "workspace:*",
+    "@seampact/codegen-zod": "workspace:*",
+    "@types/node": "24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "vite": "8.3.4"
+  }
+}

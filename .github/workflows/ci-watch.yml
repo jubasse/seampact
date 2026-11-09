@@ -35,6 +35,7 @@ on:
       - Symfony target
       - API Platform target
       - Front consumers
+      - Examples
       - Spring Boot target
       - Vue consumers
       - Own validators consumer

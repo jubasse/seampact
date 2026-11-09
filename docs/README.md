@@ -17,6 +17,7 @@ The same pages, with search, are on the [documentation site](https://jubasse.git
 - [Install](getting-started/01-install.md): install seampact from npm and start a project.
 - [Your first API](getting-started/your-first-api.md): a notes API on the server of your choice, step by step.
 - [Call it from React](getting-started/call-it-from-react.md): a typed client and hooks.
+- [Runnable example](../examples/nestjs-react/README.md): a NestJS server and a React client from one contract, kept green by CI.
 - [Check it in CI](features/check-in-ci.md): fail the build on drift.
 - [Add to an existing app](getting-started/04-existing-project.md): move routes one at a time.
 - [Project layout](getting-started/05-project-layout.md): what each file is.
