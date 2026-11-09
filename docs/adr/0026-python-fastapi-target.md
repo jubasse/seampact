@@ -31,36 +31,36 @@ Seven FastAPI and Starlette behaviours shape the placement (spike):
 
 Each section lives in its own file under the folder named like this ADR, in the order of the table.
 
-| Section | File |
-|---|---|
-| Python core | [0026-python-fastapi-target/01-python-core.md](0026-python-fastapi-target/01-python-core.md) |
-| Placement | [0026-python-fastapi-target/02-placement.md](0026-python-fastapi-target/02-placement.md) |
-| Routes | [0026-python-fastapi-target/03-routes.md](0026-python-fastapi-target/03-routes.md) |
-| The reply path | [0026-python-fastapi-target/04-the-reply-path.md](0026-python-fastapi-target/04-the-reply-path.md) |
-| Exceptions on contract routes | [0026-python-fastapi-target/05-exceptions-on-contract-routes.md](0026-python-fastapi-target/05-exceptions-on-contract-routes.md) |
-| The outgoing response check | [0026-python-fastapi-target/06-the-outgoing-response-check.md](0026-python-fastapi-target/06-the-outgoing-response-check.md) |
-| Errors raised before the boundary | [0026-python-fastapi-target/07-errors-raised-before-the-boundary.md](0026-python-fastapi-target/07-errors-raised-before-the-boundary.md) |
-| Types and validation | [0026-python-fastapi-target/08-types-and-validation.md](0026-python-fastapi-target/08-types-and-validation.md) |
-| Query and bounded values | [0026-python-fastapi-target/09-query-and-bounded-values.md](0026-python-fastapi-target/09-query-and-bounded-values.md) |
-| Redaction | [0026-python-fastapi-target/10-redaction.md](0026-python-fastapi-target/10-redaction.md) |
-| Options and registration | [0026-python-fastapi-target/11-options-and-registration.md](0026-python-fastapi-target/11-options-and-registration.md) |
-| The boot check | [0026-python-fastapi-target/12-the-boot-check.md](0026-python-fastapi-target/12-the-boot-check.md) |
-| Native security layers | [0026-python-fastapi-target/13-native-security-layers.md](0026-python-fastapi-target/13-native-security-layers.md) |
-| Native access instead of hooks | [0026-python-fastapi-target/14-native-access-instead-of-hooks.md](0026-python-fastapi-target/14-native-access-instead-of-hooks.md) |
-| What the shape-imposing features turn off with | [0026-python-fastapi-target/15-what-the-shape-imposing-features.md](0026-python-fastapi-target/15-what-the-shape-imposing-features.md) |
-| Native docs | [0026-python-fastapi-target/16-native-docs.md](0026-python-fastapi-target/16-native-docs.md) |
-| Links and the client | [0026-python-fastapi-target/17-links-and-the-client.md](0026-python-fastapi-target/17-links-and-the-client.md) |
-| What the generated code depends on | [0026-python-fastapi-target/18-what-the-generated-code-depends.md](0026-python-fastapi-target/18-what-the-generated-code-depends.md) |
-| Refused by name or waiting | [0026-python-fastapi-target/19-refused-by-name-or-waiting.md](0026-python-fastapi-target/19-refused-by-name-or-waiting.md) |
-| The consumer and the proof | [0026-python-fastapi-target/20-the-consumer-and-the-proof.md](0026-python-fastapi-target/20-the-consumer-and-the-proof.md) |
-| Delivery | [0026-python-fastapi-target/21-delivery.md](0026-python-fastapi-target/21-delivery.md) |
+| Section | File | Contains |
+|---|---|---|
+| Python core | [0026-python-fastapi-target/01-python-core.md](0026-python-fastapi-target/01-python-core.md) | Distributions; The binary and the root project; Versions; Sync and async; Hook protocols; Naming; From the PHP core |
+| Placement | [0026-python-fastapi-target/02-placement.md](0026-python-fastapi-target/02-placement.md) |  |
+| Routes | [0026-python-fastapi-target/03-routes.md](0026-python-fastapi-target/03-routes.md) |  |
+| The reply path | [0026-python-fastapi-target/04-the-reply-path.md](0026-python-fastapi-target/04-the-reply-path.md) |  |
+| Exceptions on contract routes | [0026-python-fastapi-target/05-exceptions-on-contract-routes.md](0026-python-fastapi-target/05-exceptions-on-contract-routes.md) |  |
+| The outgoing response check | [0026-python-fastapi-target/06-the-outgoing-response-check.md](0026-python-fastapi-target/06-the-outgoing-response-check.md) |  |
+| Errors raised before the boundary | [0026-python-fastapi-target/07-errors-raised-before-the-boundary.md](0026-python-fastapi-target/07-errors-raised-before-the-boundary.md) |  |
+| Types and validation | [0026-python-fastapi-target/08-types-and-validation.md](0026-python-fastapi-target/08-types-and-validation.md) |  |
+| Query and bounded values | [0026-python-fastapi-target/09-query-and-bounded-values.md](0026-python-fastapi-target/09-query-and-bounded-values.md) |  |
+| Redaction | [0026-python-fastapi-target/10-redaction.md](0026-python-fastapi-target/10-redaction.md) |  |
+| Options and registration | [0026-python-fastapi-target/11-options-and-registration.md](0026-python-fastapi-target/11-options-and-registration.md) |  |
+| The boot check | [0026-python-fastapi-target/12-the-boot-check.md](0026-python-fastapi-target/12-the-boot-check.md) |  |
+| Native security layers | [0026-python-fastapi-target/13-native-security-layers.md](0026-python-fastapi-target/13-native-security-layers.md) |  |
+| Native access instead of hooks | [0026-python-fastapi-target/14-native-access-instead-of-hooks.md](0026-python-fastapi-target/14-native-access-instead-of-hooks.md) |  |
+| What the shape-imposing features turn off with | [0026-python-fastapi-target/15-what-the-shape-imposing-features.md](0026-python-fastapi-target/15-what-the-shape-imposing-features.md) |  |
+| Native docs | [0026-python-fastapi-target/16-native-docs.md](0026-python-fastapi-target/16-native-docs.md) |  |
+| Links and the client | [0026-python-fastapi-target/17-links-and-the-client.md](0026-python-fastapi-target/17-links-and-the-client.md) |  |
+| What the generated code depends on | [0026-python-fastapi-target/18-what-the-generated-code-depends.md](0026-python-fastapi-target/18-what-the-generated-code-depends.md) |  |
+| Refused by name or waiting | [0026-python-fastapi-target/19-refused-by-name-or-waiting.md](0026-python-fastapi-target/19-refused-by-name-or-waiting.md) |  |
+| The consumer and the proof | [0026-python-fastapi-target/20-the-consumer-and-the-proof.md](0026-python-fastapi-target/20-the-consumer-and-the-proof.md) |  |
+| Delivery | [0026-python-fastapi-target/21-delivery.md](0026-python-fastapi-target/21-delivery.md) |  |
 
 ## Spike
 
 Run on CPython 3.12.16 with uvicorn 0.54.0, hypercorn 0.18.0 and httpx 0.28.1, in two environments, and not kept: FastAPI 0.162.0 with its floor Starlette 0.46.0 and Pydantic 2.9.0 (pydantic-core 2.23.2), and FastAPI 0.162.0 with Starlette 1.10.0 and Pydantic 2.14.2 (pydantic-core 2.50.2). Every row gave the same result in both. A reduced placement had a pure ASGI boundary added last, a router with a route dependency and an endpoint-parameter dependency, a `def` handler factory depending on `get_db`, and a streamed route. Requests went through `TestClient`, and through raw sockets to uvicorn and hypercorn.
 
 | Case | Result |
-|---|---|
+|---|---|---|
 | dependency order | app global, router, route `dependencies`, then endpoint parameters in signature order, then the endpoint |
 | `HTTPException(401)` from an app global dependency | rendered inside by `ExceptionMiddleware`; the boundary saw a 401 reply and no exception. With the app's handler wrapped before the stack was built, the boundary read `HTTPException 401` from the request scope |
 | an exception from a handler | crossed the boundary, which answered its 500 |
@@ -87,7 +87,7 @@ Run on CPython 3.12.16 with uvicorn 0.54.0, hypercorn 0.18.0 and httpx 0.28.1, i
 The review of this ADR ran more probes on the same two environments, with the same result on both:
 
 | Case | Result |
-|---|---|
+|---|---|---|
 | an app handler for `fastapi.HTTPException`, or for `401`, then Starlette's `HTTPException` handler wrapped; a dependency raises `fastapi.HTTPException(401)` | the app's handler answered; the wrapper was never called |
 | a `/{full_path:path}` route or `app.mount("/v1", ...)` before the contract router; `GET /v1/tasks/7` | the catch-all or the mount answered 200 |
 | the first `Match.FULL` over `app.routes` for a scope `GET /v1/tasks/x` | the catch-all, the `Mount`, or the entry holding the contract route when none of them exists |

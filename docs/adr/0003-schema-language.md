@@ -24,21 +24,21 @@ Option 1 is what experience with validator-shaped contracts warns against: valid
 
 Each section lives in its own file under the folder named like this ADR, in the order of the table.
 
-| Section | File |
-|---|---|
-| 1. Keywords of JSON Schema 2020-12 | [0003-schema-language/01-keywords-of-json-schema-2020.md](0003-schema-language/01-keywords-of-json-schema-2020.md) |
-| 2. Shapes | [0003-schema-language/02-shapes.md](0003-schema-language/02-shapes.md) |
-| 3. Tagged unions | [0003-schema-language/03-tagged-unions.md](0003-schema-language/03-tagged-unions.md) |
-| 4. Direction | [0003-schema-language/04-direction.md](0003-schema-language/04-direction.md) |
-| 5. Optional and nullable | [0003-schema-language/05-optional-and-nullable.md](0003-schema-language/05-optional-and-nullable.md) |
-| 6. Marks and other additions | [0003-schema-language/06-marks-and-other-additions.md](0003-schema-language/06-marks-and-other-additions.md) |
-| 7. Enums at a use | [0003-schema-language/07-enums-at-a-use.md](0003-schema-language/07-enums-at-a-use.md) |
-| 8. Formats | [0003-schema-language/08-formats.md](0003-schema-language/08-formats.md) |
-| 9. Portable regular expressions | [0003-schema-language/09-portable-regular-expressions.md](0003-schema-language/09-portable-regular-expressions.md) |
-| 10. Defaults | [0003-schema-language/10-defaults.md](0003-schema-language/10-defaults.md) |
-| 11. Examples | [0003-schema-language/11-examples.md](0003-schema-language/11-examples.md) |
-| 12. Names | [0003-schema-language/12-names.md](0003-schema-language/12-names.md) |
-| 13. What a schema never holds | [0003-schema-language/13-what-a-schema-never-holds.md](0003-schema-language/13-what-a-schema-never-holds.md) |
+| Section | File | Contains |
+|---|---|---|
+| 1. Keywords of JSON Schema 2020-12 | [0003-schema-language/01-keywords-of-json-schema-2020.md](0003-schema-language/01-keywords-of-json-schema-2020.md) | Core vocabulary; Applicator vocabulary; Unevaluated vocabulary; Validation vocabulary; Format annotation, content and meta-data vocabularies |
+| 2. Shapes | [0003-schema-language/02-shapes.md](0003-schema-language/02-shapes.md) | Opaque values; Derived objects: `pick` and `omit` |
+| 3. Tagged unions | [0003-schema-language/03-tagged-unions.md](0003-schema-language/03-tagged-unions.md) |  |
+| 4. Direction | [0003-schema-language/04-direction.md](0003-schema-language/04-direction.md) |  |
+| 5. Optional and nullable | [0003-schema-language/05-optional-and-nullable.md](0003-schema-language/05-optional-and-nullable.md) |  |
+| 6. Marks and other additions | [0003-schema-language/06-marks-and-other-additions.md](0003-schema-language/06-marks-and-other-additions.md) |  |
+| 7. Enums at a use | [0003-schema-language/07-enums-at-a-use.md](0003-schema-language/07-enums-at-a-use.md) |  |
+| 8. Formats | [0003-schema-language/08-formats.md](0003-schema-language/08-formats.md) |  |
+| 9. Portable regular expressions | [0003-schema-language/09-portable-regular-expressions.md](0003-schema-language/09-portable-regular-expressions.md) |  |
+| 10. Defaults | [0003-schema-language/10-defaults.md](0003-schema-language/10-defaults.md) |  |
+| 11. Examples | [0003-schema-language/11-examples.md](0003-schema-language/11-examples.md) |  |
+| 12. Names | [0003-schema-language/12-names.md](0003-schema-language/12-names.md) |  |
+| 13. What a schema never holds | [0003-schema-language/13-what-a-schema-never-holds.md](0003-schema-language/13-what-a-schema-never-holds.md) |  |
 
 ## Consequences
 

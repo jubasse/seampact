@@ -36,26 +36,26 @@ Nine Django, DRF and Ninja behaviours shape the placement (spike):
 
 Each section lives in its own file under the folder named like this ADR, in the order of the table.
 
-| Section | File |
-|---|---|
-| The shared Django layer | [0027-django-targets/01-the-shared-django-layer.md](0027-django-targets/01-the-shared-django-layer.md) |
-| DRF | [0027-django-targets/02-drf.md](0027-django-targets/02-drf.md) |
-| Ninja | [0027-django-targets/03-ninja.md](0027-django-targets/03-ninja.md) |
-| Redaction | [0027-django-targets/04-redaction.md](0027-django-targets/04-redaction.md) |
-| Options and registration | [0027-django-targets/05-options-and-registration.md](0027-django-targets/05-options-and-registration.md) |
-| What the shape-imposing features turn off with | [0027-django-targets/06-what-the-shape-imposing-features.md](0027-django-targets/06-what-the-shape-imposing-features.md) |
-| Links and the client | [0027-django-targets/07-links-and-the-client.md](0027-django-targets/07-links-and-the-client.md) |
-| What the generated code depends on | [0027-django-targets/08-what-the-generated-code-depends.md](0027-django-targets/08-what-the-generated-code-depends.md) |
-| Refused by name or waiting | [0027-django-targets/09-refused-by-name-or-waiting.md](0027-django-targets/09-refused-by-name-or-waiting.md) |
-| The consumer and the proof | [0027-django-targets/10-the-consumer-and-the-proof.md](0027-django-targets/10-the-consumer-and-the-proof.md) |
-| Delivery | [0027-django-targets/11-delivery.md](0027-django-targets/11-delivery.md) |
+| Section | File | Contains |
+|---|---|---|
+| The shared Django layer | [0027-django-targets/01-the-shared-django-layer.md](0027-django-targets/01-the-shared-django-layer.md) | Distributions; Versions; Sync and async; Settings; The boundary middleware; Generated modules; Routes; The reply path; Exceptions on contract routes; The outgoing response check; Errors raised before the boundary; Test doubles; The system check and the boot check |
+| DRF | [0027-django-targets/02-drf.md](0027-django-targets/02-drf.md) | Placement; Exceptions; Types and validation; Native docs |
+| Ninja | [0027-django-targets/03-ninja.md](0027-django-targets/03-ninja.md) | Placement; Exceptions; The boot check; Native docs |
+| Redaction | [0027-django-targets/04-redaction.md](0027-django-targets/04-redaction.md) |  |
+| Options and registration | [0027-django-targets/05-options-and-registration.md](0027-django-targets/05-options-and-registration.md) |  |
+| What the shape-imposing features turn off with | [0027-django-targets/06-what-the-shape-imposing-features.md](0027-django-targets/06-what-the-shape-imposing-features.md) |  |
+| Links and the client | [0027-django-targets/07-links-and-the-client.md](0027-django-targets/07-links-and-the-client.md) |  |
+| What the generated code depends on | [0027-django-targets/08-what-the-generated-code-depends.md](0027-django-targets/08-what-the-generated-code-depends.md) |  |
+| Refused by name or waiting | [0027-django-targets/09-refused-by-name-or-waiting.md](0027-django-targets/09-refused-by-name-or-waiting.md) |  |
+| The consumer and the proof | [0027-django-targets/10-the-consumer-and-the-proof.md](0027-django-targets/10-the-consumer-and-the-proof.md) |  |
+| Delivery | [0027-django-targets/11-delivery.md](0027-django-targets/11-delivery.md) |  |
 
 ## Spike
 
 Run on CPython 3.12.16 with gunicorn 26.2.0 and uvicorn 0.54.0, and not kept, in three environments: Django 5.2.18 with DRF 3.18.0 and Ninja 1.4.0; Django 6.1.2 with DRF 3.18.3 and Ninja 1.7.3; Django 6.1.2 with DRF 3.18.0 and Ninja 1.4.0, then 1.4.5, 1.5.0 and 1.5.3. Pydantic 2.14.2 throughout. A reduced app had a recording boundary first in `MIDDLEWARE`, Django's usual middleware, an inner middleware that raised on demand, recording root URLconf handlers, DRF views with recording authentication, permission and throttle classes, and a Ninja api. Requests went through the test `Client`, and through raw sockets to gunicorn, uvicorn and `runserver`. Every row gave the same result in every environment, except the Ninja 1.4.0 row.
 
 | Case | Result |
-|---|---|
+|---|---|---|
 | `ImproperlyConfigured` in the boundary's `__init__` | gunicorn: "Worker failed to boot.", the master stops; uvicorn: exit 1 while importing the app; `runserver`: stops; test `Client`: raises at the first request; `manage.py check`: passes |
 | an inner middleware raises `Http404`, `PermissionDenied`, `SuspiciousOperation`, `RequestDataTooBig`, `BadRequest`, `DisallowedHost`, `ValueError` | 404 through `handler404`, 403 through `handler403`, 400 through `handler400` four times, each with the exception; 500 after `got_request_exception` with the exception in `sys.exc_info()`. The boundary saw replies only |
 | the same under `DEBUG` | technical pages and no handler for `Http404`, `SuspiciousOperation` and `BadRequest`; `handler403` still called |
@@ -81,7 +81,7 @@ Run on CPython 3.12.16 with gunicorn 26.2.0 and uvicorn 0.54.0, and not kept, in
 The review of this ADR ran more probes on Django 6.1.2, DRF 3.18.3 and Ninja 1.7.3 under gunicorn 26.2.0, `runserver` and the test `Client`:
 
 | Case | Result |
-|---|---|
+|---|---|---|
 | a DRF `APIView` returning a plain `HttpResponse`, the app's default renderers | the reply carried `Allow: GET, HEAD, OPTIONS` and `Vary: Accept` |
 | an inner middleware sets `request.user`; the view returns no authenticator | the view read DRF's `UNAUTHENTICATED_USER` |
 | a Ninja view taking only the request on a path with a placeholder | a `UserWarning` at URLconf import |
