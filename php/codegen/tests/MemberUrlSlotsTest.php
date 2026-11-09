@@ -37,7 +37,7 @@ final class MemberUrlSlotsTest extends TestCase
 
         self::assertCount(1, $problems);
         self::assertStringContainsString("'\$self'", $problems[0]['message']);
-        self::assertStringContainsString("(operation 'createTask')", $problems[0]['where']);
+        self::assertStringContainsString("(operation 'createTask')", $problems[0]['where'] ?? '');
     }
 
     public function testAListBesideItsMemberRouteIsNotRefused(): void
@@ -53,7 +53,7 @@ final class MemberUrlSlotsTest extends TestCase
         });
 
         self::assertCount(1, $problems);
-        self::assertStringContainsString("(operation 'listTasks')", $problems[0]['where']);
+        self::assertStringContainsString("(operation 'listTasks')", $problems[0]['where'] ?? '');
     }
 
     public function testAListWhosePathParamIsNamedOtherwiseThanTheMembersIsRefused(): void
@@ -74,13 +74,18 @@ final class MemberUrlSlotsTest extends TestCase
     /**
      * @param list<string> $kept
      * @param callable(array<string, \stdClass>): void $edit
-     * @return list<array{message: string, where: string}>
+     * @return list<array{message: string, where: ?string}>
      */
     private static function memberRouteProblems(array $kept, callable $edit): array
     {
         $document = ReferenceIr::keeping(ReferenceContract::document('tasks.ir.json', 'pack-api-platform'), $kept);
+        self::assertIsArray($document->operations);
+
+        /** @var array<string, \stdClass> $operations */
         $operations = [];
         foreach ($document->operations as $operation) {
+            self::assertInstanceOf(\stdClass::class, $operation);
+            self::assertIsString($operation->id);
             $operations[$operation->id] = $operation;
         }
         $edit($operations);
