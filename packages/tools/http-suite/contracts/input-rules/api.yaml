@@ -1,0 +1,93 @@
+# input-rules/api.yaml: one operation whose body the app's own input rules check after the contract (ADR 0028). It
+# keeps the reference contract's user identity, channel scope, roles right, idempotency key and issue shape, so the
+# case reads the same as the reference cases.
+api:
+  name: inputRules
+  version: 1
+  kind: product
+  maturity: provisional
+  summary: Tasks scheduled inside channels, whose dates the app's own rules check.
+
+schemes:
+  bearer: { kind: bearer }
+
+identities:
+  user:
+    schemes: { read: [bearer], write: [bearer] }
+    principal: UserPrincipal
+
+scopes:
+  channel: { id: ChannelId, errors: [api.not_found] }
+
+rights:
+  roles:
+    params: { allowed: { type: array, items: { enum: Role }, minItems: 1 } }
+    subject: { scope: channel }
+
+errors:
+  api.schema_invalid:
+    status: 400
+    nature: refused
+    params: { issues: Issues }
+    example: { issues: [{ pointer: /end, rule: app.endAfterStart }] }
+
+conventions:
+  idempotency: { header: Idempotency-Key, replayHeader: Idempotency-Replayed, lifetime: 24h }
+  errors:
+    every: [api.internal]
+    derived:
+      schemaInvalid:
+        code: api.schema_invalid
+        params: { issues: { $each: $issues, $as: { pointer: $item.pointer, rule: $item.rule } } }
+
+enums:
+  Role: { values: [owner, editor, viewer], reason: "Roles are local to this product." }
+
+schemas:
+  ChannelId: { type: string, format: uuid }
+  TaskId: { type: string, format: uuid }
+  UserId: { type: string, format: uuid }
+  # A calendar date as `2026-01-31`; the rules compare two of them.
+  CalendarDate: { type: string, minLength: 10, maxLength: 10 }
+  UserPrincipal:
+    type: object
+    required: [userId]
+    properties: { userId: UserId }
+  Issues:
+    type: array
+    items:
+      type: object
+      required: [pointer, rule]
+      properties: { pointer: { type: string }, rule: { type: string } }
+  ScheduleTask:
+    type: object
+    required: [start, end]
+    properties:
+      start: CalendarDate
+      end: CalendarDate
+      note: { type: string, maxLength: 200 }
+  ScheduledTask:
+    type: object
+    required: [taskId, start, end]
+    properties:
+      taskId: TaskId
+      start: CalendarDate
+      end: CalendarDate
+
+surfaces:
+  app:
+    prefix: /input-rules/v{version}
+    identity: user
+    routes:
+      schedule:
+        method: post
+        path: "channels/{channelId}/tasks/schedule"
+        pathParams: { channelId: ChannelId }
+        scopes: { channel: path.channelId }
+        operationId: scheduleTask
+        summary: Schedule a task between two dates; the app's rules check the window.
+        requires:
+          - { right: roles, params: { allowed: [owner, editor] } }
+        input: ScheduleTask
+        responses:
+          201: { body: ScheduledTask }

@@ -1,10 +1,11 @@
 import type { IdempotencyBegin, IdempotencyClaim, IdempotencyStore } from "@seampact/hooks";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import type { CheckState } from "./access-checks.js";
+import type { BoundaryContext } from "./boundary-context.js";
 import { type BoundaryHooks, resolvedHooks } from "./boundary-hooks.js";
 import { ContractError, type ContractReply } from "./contract-error.js";
 import type { ContractApi, ContractRoute } from "./contract-route.js";
-import { beginIdempotency, settleIdempotency } from "./idempotency.js";
+import { abandonIdempotencyClaim, beginIdempotency, settleIdempotency } from "./idempotency.js";
 
 const KEY_HEADER = "idempotency-key";
 const REPLAY_HEADER = "idempotency-replayed";
@@ -323,5 +324,53 @@ describe("settleIdempotency", () => {
   test("does nothing without a registered store", async () => {
     await expect(settleIdempotency(hooksWith(undefined), "k", reply(200))).resolves.toBeUndefined();
     await expect(settleIdempotency(undefined, "k", reply(200))).resolves.toBeUndefined();
+  });
+});
+
+describe("abandonIdempotencyClaim", () => {
+  function claimedContext(store: IdempotencyStore, idempotencyKey?: string): BoundaryContext {
+    const state = stateWith(store);
+
+    return {
+      api: state.api,
+      route: state.route,
+      pathParams: {},
+      hooks: state.hooks,
+      bodyValidation: false,
+      mode: "strict",
+      boundaryWriting: false,
+      ...(idempotencyKey === undefined ? {} : { idempotencyKey }),
+    };
+  }
+
+  test("releases the claim and clears the key, so the refusal is never stored", async () => {
+    const store = recordingStore();
+    const context = claimedContext(store, "k");
+
+    await abandonIdempotencyClaim(context);
+
+    expect(store.abandoned).toEqual(["k"]);
+    expect(context.idempotencyKey).toBeUndefined();
+  });
+
+  test("does nothing without a claim", async () => {
+    const store = recordingStore();
+
+    await abandonIdempotencyClaim(claimedContext(store));
+
+    expect(store.abandoned).toEqual([]);
+  });
+
+  test("a store that rejects on abandon is logged, and the key is still cleared", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const context = claimedContext(
+      recordingStore({ abandon: () => Promise.reject(STORE_DOWN) }),
+      "k",
+    );
+
+    await expect(abandonIdempotencyClaim(context)).resolves.toBeUndefined();
+
+    expect(context.idempotencyKey).toBeUndefined();
+    expect(logged).toHaveBeenCalledOnce();
   });
 });
