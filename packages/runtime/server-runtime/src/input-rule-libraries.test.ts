@@ -1,6 +1,6 @@
 import { Ajv } from "ajv";
-import { object as yupObject, string as yupString } from "yup";
 import { describe, expect, test } from "vitest";
+import { object as yupObject, string as yupString } from "yup";
 import { z } from "zod";
 import {
   INPUT_RULE_ADAPTERS,

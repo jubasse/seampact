@@ -4,7 +4,7 @@
 // paths and base paths; the boot check; the framework-route check the app calls before serving, without which every
 // contract request answers 500; and the exported helpers for the app's `onError` and middleware. Each api's
 // generated module calls `createHonoBoundary` once with its route table.
-import type { InputRuleSets } from "./input-rules.js";
+
 import type { Context, Env, Hono, Next, Schema } from "hono";
 import { refuseCodeOfOtherVersion } from "./generator-version-check.js";
 import {
@@ -54,6 +54,7 @@ import {
   unexpectedError,
   useRuntimeLogger,
 } from "./index.js";
+import type { InputRuleSets } from "./input-rules.js";
 import {
   checkOutgoingResponse,
   claimFetchWrap,

@@ -6,16 +6,16 @@ import { unexpectedError } from "./contract-error.js";
 import type { ContractApi, ContractRoute } from "./contract-route.js";
 import { abandonIdempotencyClaim } from "./idempotency.js";
 import {
+  type InputIssue,
+  ISSUE_PARTS,
+  type RequestPart,
+  schemaInvalidError,
+} from "./input-issues.js";
+import {
   type ApiInputRuleAdapter,
   type InputRuleAdapter,
   inputRuleAdapterOf,
 } from "./input-rule-libraries.js";
-import {
-  ISSUE_PARTS,
-  type InputIssue,
-  type RequestPart,
-  schemaInvalidError,
-} from "./input-issues.js";
 import { isPlainObject } from "./plain-object.js";
 import { runtimeLog } from "./runtime-logger.js";
 

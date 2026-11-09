@@ -73,6 +73,7 @@ import {
   type RegisteredHooks,
   resolvedHooks,
 } from "./boundary-hooks.js";
+import { inputRuleConstraintClasses } from "./class-validator-rules.js";
 import { ContractError, renderContractReply, unexpectedError } from "./contract-error.js";
 import {
   type ContractApi,
@@ -97,7 +98,6 @@ import { frameworkRouteProblems } from "./framework-routes.js";
 import { refuseCodeOfOtherVersion } from "./generator-version-check.js";
 import { type HandlerAccess, handlerAccess, inputWithAccess } from "./handler-access.js";
 import { handlerReply } from "./handler-reply.js";
-import { inputRuleConstraintClasses } from "./class-validator-rules.js";
 import { beginIdempotency } from "./idempotency.js";
 import { checkRestrictedInput, validateRequestInput } from "./input-checks.js";
 import { type InputRuleSets, inputRulesProblems, runInputRules } from "./input-rules.js";
