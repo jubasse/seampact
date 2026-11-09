@@ -53,7 +53,7 @@ final class InputPointer
     {
         preg_match_all(self::PATH_TOKEN, $propertyPath, $matches, PREG_SET_ORDER);
 
-        return array_map(static fn (array $match): string => $match[2] ?? $match[1], $matches);
+        return array_map(static fn (array $match): string => $match[2] ?? $match[1] ?? '', $matches);
     }
 
     /** @param list<string> $tokens */

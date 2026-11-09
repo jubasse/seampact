@@ -39,8 +39,8 @@ final class InputRulesStep
         }
 
         $issues = [];
-        $interface = $hooks->inputRulesInterface($state->contract);
         foreach ($hooks->inputRules($state->contract) as $rules) {
+            $interface = $hooks->inputRulesInterface($state->contract);
             if (!$rules instanceof InputRules || !$rules instanceof $interface) {
                 throw new \LogicException('seampact: the service tagged \'' . Hooks::tag($state->contract->api, Hooks::INPUT_RULES_TAG_SUFFIX) . '\' is ' . get_debug_type($rules) . ", not a class implementing {$interface}; tag only the input rules of this api.");
             }

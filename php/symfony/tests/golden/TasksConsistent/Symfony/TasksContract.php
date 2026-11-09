@@ -4709,6 +4709,7 @@ final class TasksContract
       ],
     ],
     'unexpectedErrorListener' => 'Seampact\Golden\TasksConsistent\Symfony\UnexpectedErrorListener',
+    'inputRules' => 'Seampact\Golden\TasksConsistent\Symfony\TasksInputRules',
   ];
 
   /** The app routes the entry's `frameworkRoutes` lets through the boot check. */
