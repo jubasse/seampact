@@ -33,6 +33,7 @@ const REQUIRED_CHECKS = [
   "own-validators",
   "laravel",
   "symfony",
+  "api-platform",
   "python-core",
   "fastapi",
   "drf",

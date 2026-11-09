@@ -385,6 +385,26 @@
           }
         ]
       }
+    },
+    {
+      "package": "seampact/api-platform",
+      "framework": {
+        "id": "api-platform",
+        "package": "api-platform/symfony",
+        "floor": "5.0",
+        "tested": [
+          {
+            "major": 5,
+            "consumer": "api-platform"
+          }
+        ],
+        "incompatible": [
+          {
+            "major": 4,
+            "reason": "The generated resources and operations are written and tested for API Platform 5 only."
+          }
+        ]
+      }
     }
   ]
 }

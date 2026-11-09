@@ -188,16 +188,27 @@ abstract class BoundarySubscriber implements EventSubscriberInterface
         }
     }
 
+    /**
+     * The operation the resolved controller is marked with, or null when it carries no mark. The Symfony target reads
+     * the api's attribute from the handler method; a target whose controller is never the handler reads the mark from
+     * the contract route instead, given as `$routeOperation` when the route is the contract's.
+     */
+    protected function markedOperation(ControllerEvent $event, ?string $routeOperation): ?string
+    {
+        $attribute = $event->getAttributes($this->operationAttribute())[0] ?? null;
+
+        return $attribute instanceof OperationMark ? $attribute->operationId : null;
+    }
+
     /** The fail-closed checks, then steps 2 to 8; on every request, sub-requests included. */
     public function onController(ControllerEvent $event): void
     {
         $request = $event->getRequest();
         $contract = $this->contract();
-        $attribute = $event->getAttributes($this->operationAttribute())[0] ?? null;
-        $attributeOperation = $attribute instanceof OperationMark ? $attribute->operationId : null;
         $routeName = $request->attributes->get(self::ROUTE_ATTRIBUTE);
         $routeOperation = $request->attributes->get(self::OPERATION_DEFAULT);
         $contractRoute = is_string($routeName) && is_string($routeOperation) && $routeName === $contract->routeName($routeOperation);
+        $attributeOperation = $this->markedOperation($event, $contractRoute ? $routeOperation : null);
         if ($attributeOperation === null && !$contractRoute) {
             return;
         }
