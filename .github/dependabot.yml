@@ -4,7 +4,8 @@
 # after publication never lands. Gradle is not listed: each update needs `jvm/gradle/verification-metadata.xml`
 # regenerated, which Dependabot cannot do.
 # Version updates target develop (git flow); security updates always target the default branch, main, and are
-# retargeted to develop by hand.
+# retargeted to develop by hand. With target-branch set, the groups, ignore and cooldown options below apply to
+# version updates only.
 
 version: 2
 
