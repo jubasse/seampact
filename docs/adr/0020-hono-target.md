@@ -111,6 +111,7 @@ The target options are ADR 0016's: `responses` (`strict`, the default, or `warn`
 
 `registerRoutes` runs it when called and throws, so the module that builds the app fails and the app never serves; it lists every problem at once with the operation id, the name and the fix:
 
+- the runtime version, checked before any other step: the version the api's route table carries is compared with the installed runtime's, and a table written by another `major.minor` or a later patch throws `runtime.generated-for-other-version` when `hono.ts` is imported; each api keeps its own logger in the shared runtime, keyed by its route table;
 - the hook problems of ADR 0016's list (a missing authenticate hook, decider, scope resolver or idempotency store; two deciders claiming one name);
 - a contract operation without a bound handler: `handlers` lacks the interface's object or the object lacks the method;
 - a key of `operations` that names no operation of the api;
