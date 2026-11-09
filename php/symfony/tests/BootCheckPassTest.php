@@ -16,8 +16,10 @@ use Seampact\Golden\TasksConsistent\Symfony\TasksSeampactBundle as SecondBundle;
 use Seampact\Golden\TasksConsistent\Symfony\TasksSettings;
 use Seampact\Codegen\Runtime\RuntimeVersion;
 use Seampact\Symfony\Runtime\BootCheckPass;
+use Seampact\Symfony\Runtime\InputRules;
 use Seampact\Symfony\Runtime\Regeneration;
 use Seampact\Symfony\Runtime\VoterDecider;
+use Seampact\Symfony\Tests\Support\DirectInputRules;
 use Seampact\Symfony\Tests\Support\GrantedChannelsController;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\Compiler\ResolveClassPass;
@@ -60,6 +62,24 @@ final class BootCheckPassTest extends TestCase
         self::assertStringContainsString("the api 'tasks' registered before this one answers its catch-all 404 under /v1", $problems);
         // The second golden api writes absolute URLs and its configuration sets no public_origin.
         self::assertStringContainsString("'seampact_tasks.public_origin' is not set", $problems);
+    }
+
+    public function testAServiceImplementingTheRuntimeInputRulesDirectlyIsRefused(): void
+    {
+        $container = new ContainerBuilder();
+        $container->setParameter('kernel.environment', 'test');
+        $container->setParameter('kernel.build_dir', sys_get_temp_dir());
+        $container->register('event_dispatcher', EventDispatcher::class);
+        $container->register('app.direct_rules', DirectInputRules::class);
+
+        $problems = '';
+        try {
+            self::bootCheck()->process($container);
+        } catch (\LogicException $failure) {
+            $problems = $failure->getMessage();
+        }
+
+        self::assertStringContainsString(DirectInputRules::class . ' implements ' . InputRules::class . ' directly', $problems);
     }
 
     public function testUnderAbsoluteUrlsAnEnvDrivenPublicOriginPassesAtBuild(): void
