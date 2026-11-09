@@ -138,7 +138,7 @@ jobs:
           java-version: |
             21
             25
-      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
           # One writer per pull request job, its first row in the nightly or a manual run, so the cache holds one Gradle home and
           # dependency set per job. The other rows restore that entry; the queue, post-merge and drift copies, which write
@@ -250,7 +250,7 @@ jobs:
           java-version: |
             21
             25
-      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
           # One writer per pull request job, its first row in the nightly or a manual run, so the cache holds one Gradle home and
           # dependency set per job. The other rows restore that entry; the queue, post-merge and drift copies, which write
@@ -316,7 +316,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 25
-      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
           # One writer per pull request job, its first row in the nightly or a manual run, so the cache holds one Gradle home and
           # dependency set per job. The other rows restore that entry; the queue, post-merge and drift copies, which write
