@@ -124,6 +124,9 @@
       "lines": 90,
       "branches": 81
     },
+    "php/api-platform": {
+      "lines": 70
+    },
     "php/codegen": {
       "lines": 61
     },

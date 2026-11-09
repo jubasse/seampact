@@ -240,6 +240,7 @@ test("the laravel PHP target is tested on Laravel 13 and refuses Laravel 11 and 
   expect(PHP_TARGETS.map((target) => target.package)).toEqual([
     "seampact/laravel",
     "seampact/symfony",
+    "seampact/api-platform",
   ]);
   expect(PHP_TARGETS[0]?.framework.tested.map((tested) => tested.major)).toEqual([13]);
   expect(PHP_TARGETS[0]?.framework.incompatible.map((incompatible) => incompatible.major)).toEqual([
