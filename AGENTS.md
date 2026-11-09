@@ -53,8 +53,8 @@ Repository conventions every agent follows. Your task prompt adds the task, the 
 ## Development phase (A47)
 
 - Reach the version's end-to-end slice first; do not add `docs/conformance/proofs/` entries or per-branch fixtures.
-- Proofs come in the version's testing phase, before its release: point to an existing unit test, http suite case or CI job first; write a new one only when none covers the behaviour.
-- Unit tests for bricks that will not move (IR format, YAML reader, naming); other code is covered by the slice's end-to-end test; a bug fix still gets a test that failed before.
+- Proofs come in the version's testing phase, before its release: point to an existing unit test, http suite case or CI job first (`rg` the checklist id); write a new one only when none covers the behaviour.
+- Unit tests for bricks that will not move (IR format, YAML reader, naming); other code is covered by the end-to-end slice; a bug fix still gets a test that failed before.
 - A case no consumer needs yet is refused by name with a diagnostic, never modelled.
 - One deliverable per PR (about 3,000 to 4,000 hand-written lines); at the call cap, relay on the same branch; a seam others wait on stays small and lands first.
 
