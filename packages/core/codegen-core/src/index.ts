@@ -104,7 +104,12 @@ export {
 } from "./front-queries/index.js";
 export { type GenerateWarning, warnLeftToHandler } from "./generate-warning.js";
 export { caseFolded } from "./generated-paths.js";
-export { importSpecifier, relativeModuleSpecifier } from "./import-specifier.js";
+export {
+  DEFAULT_IMPORT_SPECIFIER_STYLE,
+  type ImportSpecifierStyle,
+  importSpecifier,
+  relativeModuleSpecifier,
+} from "./import-specifier.js";
 export { below, type IrLocation, operationLocation, schemaLocation } from "./ir-location.js";
 export type { Link, LinkLocation, LinkNeeds, LinkOffers, LinkSet, Links } from "./links.js";
 export {

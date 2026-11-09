@@ -1,4 +1,5 @@
 import { apiIndexSource, type IndexedModule } from "../api-index.js";
+import { DEFAULT_IMPORT_SPECIFIER_STYLE, type ImportSpecifierStyle } from "../import-specifier.js";
 import type { GeneratedFile } from "../target.js";
 import {
   INDEX_MODULE,
@@ -10,7 +11,10 @@ import { modulePath } from "./module-source.js";
 
 // The api index: each schema module under its direction's namespace, the operation input validators flat, so
 // `import * as Tasks from "<out>/index.js"` reaches every name; `wire-checks` stays internal.
-export function indexFile(files: readonly GeneratedFile[]): GeneratedFile[] {
+export function indexFile(
+  files: readonly GeneratedFile[],
+  style: ImportSpecifierStyle = DEFAULT_IMPORT_SPECIFIER_STYLE,
+): GeneratedFile[] {
   const written = new Set(files.map((file) => file.path));
   const schemaModules = (["input", "output"] as const).flatMap((direction) =>
     written.has(modulePath(SCHEMA_MODULES[direction]))
@@ -24,5 +28,5 @@ export function indexFile(files: readonly GeneratedFile[]): GeneratedFile[] {
 
   if (modules.length === 0) return [];
 
-  return [{ path: modulePath(INDEX_MODULE), contents: apiIndexSource(modules) }];
+  return [{ path: modulePath(INDEX_MODULE), contents: apiIndexSource(modules, style) }];
 }

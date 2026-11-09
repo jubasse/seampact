@@ -4,6 +4,7 @@ import {
   GENERATE_TROUBLESHOOTING_URL,
   type GeneratedFile,
   type GenerateWarning,
+  type ImportSpecifierStyle,
   LINK_TROUBLESHOOTING_URL,
   type Refusal,
 } from "@seampact/codegen-core";
@@ -18,6 +19,7 @@ import type { AppPlan } from "./app-plan.js";
 import { DEFAULT_DRIFT_CHECK_LEVEL } from "./drift-level.js";
 import { linksOf, type PlannedApi, type PlannedEntry, pairedApi } from "./entry-links.js";
 import { frameworkRouteCheckOf } from "./framework-route-check.js";
+import { importSpecifierStyles } from "./import-specifier-styles.js";
 import { addLink, isLinkKind, type MutableLinkSet, relativeLocation } from "./link-set.js";
 import { nativeDocsDocumentOf } from "./native-docs-document.js";
 import type { Step } from "./step.js";
@@ -46,6 +48,10 @@ export async function generateEntries(
   const level = plan.config.checks?.generated ?? DEFAULT_DRIFT_CHECK_LEVEL;
   const byId = new Map(planned.map((each) => [each.entry.id, each]));
   const describe = memoizedDescribe();
+  const styles = importSpecifierStyles(planned);
+
+  if (styles.status === "refused") return styles;
+
   const outputs: GeneratedOutput[] = [];
   const problems: CliProblem[] = [];
 
@@ -59,6 +65,7 @@ export async function generateEntries(
         entryArtefacts(artefacts, consumer.entry.id),
         appDocuments,
         plan.config.warnings?.ignore ?? [],
+        styles.value.get(consumer.entry.id),
       );
 
       if (generated.status === "refused") problems.push(...generated.problems);
@@ -77,6 +84,7 @@ async function generateApi(
   artefacts: ReadonlySet<string>,
   appDocuments: readonly PlannedAppDocument[],
   ignoredWarningForms: readonly string[],
+  importSpecifiers: ImportSpecifierStyle | undefined,
 ): Promise<Step<GeneratedApi>> {
   const { entry, target } = consumer;
   const links = buildLinks(consumer, plannedApi, byId, describe);
@@ -97,6 +105,7 @@ async function generateApi(
     frameworkRoutes: frameworkRouteCheckOf(entry),
     hookCheck: hookCheckLevelOf(entry.artefacts),
     ...(entry.mount === undefined ? {} : { mount: entry.mount }),
+    ...(importSpecifiers === undefined ? {} : { importSpecifiers }),
     ...(nativeDocs === undefined ? {} : { nativeDocsDocument: nativeDocs.value }),
     outputDirectory: plannedApi.root,
   });

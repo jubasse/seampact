@@ -1,21 +1,30 @@
+import {
+  DEFAULT_IMPORT_SPECIFIER_STYLE,
+  type ImportSpecifierStyle,
+  relativeModuleSpecifier,
+} from "./import-specifier.js";
+
 // A module the api index re-exports: all of it flat, all of it under a namespace, or a listed set of names.
 export type IndexedModule =
   | { module: string; namespace?: string }
   | { module: string; typeNames: readonly string[]; valueNames: readonly string[] };
 
-const MODULE_SUFFIX = ".js";
+const INDEX_FILE = "index.ts";
 
 // The source of an api's `index.ts`. `module` is a path without extension relative to the index. A role whose names
 // repeat another module's goes under a namespace named by its role; a module with internals lists its public names,
 // an empty list writing no line.
-export function apiIndexSource(modules: readonly IndexedModule[]): string {
-  const lines = modules.map(indexLine);
+export function apiIndexSource(
+  modules: readonly IndexedModule[],
+  style: ImportSpecifierStyle = DEFAULT_IMPORT_SPECIFIER_STYLE,
+): string {
+  const lines = modules.map((indexed) => indexLine(indexed, style));
 
   return `${lines.join("\n")}\n`;
 }
 
-function indexLine(indexed: IndexedModule): string {
-  const specifier = `./${indexed.module}${MODULE_SUFFIX}`;
+function indexLine(indexed: IndexedModule, style: ImportSpecifierStyle): string {
+  const specifier = relativeModuleSpecifier(INDEX_FILE, indexed.module, style);
 
   if ("typeNames" in indexed) {
     const lines = [

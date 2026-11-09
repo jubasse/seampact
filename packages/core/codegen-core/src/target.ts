@@ -1,4 +1,5 @@
 import type { ContractIR, IrSupport } from "@seampact/spec/ir";
+import type { ImportSpecifierStyle } from "./import-specifier.js";
 import type { DescriptorSet, LinkKind, ProvidedDescriptors } from "./descriptors.js";
 import type {
   FrameworkRouteCheck,
@@ -48,6 +49,11 @@ export interface TargetMetadata<
    * framework's own docs; absent when the target has no such docs or a switch the CLI can write.
    */
   frameworkDocsOffFix?: string;
+  /**
+   * How the relative imports of the target's files, and of the files its linked providers write for it, name their
+   * modules; `js` when absent.
+   */
+  importSpecifiers?: ImportSpecifierStyle;
 }
 
 // The metadata of any target, as the CLI reads it: each kind is present when the target consumes or provides it.
@@ -70,6 +76,8 @@ export interface GenerateInput<
   hookCheck: HookBootCheck;
   /** The entry's `mount`, the path prefix every contract route is served under; empty when the entry writes none. */
   mount: string;
+  /** How the relative imports of the generated files name their modules. */
+  importSpecifiers: ImportSpecifierStyle;
   /** The api's document the framework's docs follow; present exactly when the `nativeDocs` artefact is on. */
   nativeDocsDocument?: NativeDocsDocument;
   /**
@@ -150,6 +158,11 @@ export interface GenerateRequest {
   hookCheck?: HookBootCheck;
   /** The entry's `mount`; no prefix when absent. */
   mount?: string;
+  /**
+   * How the generated relative imports name their modules: for a provider, the style of the consumers it is linked
+   * to; the target's own `importSpecifiers`, else `js`, when absent.
+   */
+  importSpecifiers?: ImportSpecifierStyle;
   /** The parsed seampact document the `nativeDocs` artefact follows; the target refuses `nativeDocs` without it. */
   nativeDocsDocument?: NativeDocsDocument;
   /**

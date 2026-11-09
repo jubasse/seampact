@@ -21,7 +21,12 @@ import { nativeDocsRuntimeFile } from "./native-docs-runtime-file.js";
 import { type NodeServerOptions, parseNodeServerOptions } from "./options.js";
 import { routeTableSource } from "./route-table.js";
 import { type RuntimeGenerator, serverRuntimeRefusals } from "./server-runtime-check.js";
-import { type HandlerParameters, handlersSource, hookTypesSource } from "./server-types.js";
+import {
+  HANDLERS_MODULE,
+  type HandlerParameters,
+  handlersSource,
+  hookTypesSource,
+} from "./server-types.js";
 
 // The files of one api's Node server boundary: the route table, handler interfaces and hook types, the target's
 // framework module and the api index, over the shared runtime, which a target's generated code imports from
@@ -108,7 +113,6 @@ export interface NodeServerTargetPackage {
 const OWN_VALIDATORS_DIRECTORY = "validators";
 const MODULE_EXTENSION = ".ts";
 const ROUTES_MODULE = "routes";
-const HANDLERS_MODULE = "handlers";
 const HOOKS_MODULE = "hooks";
 const INDEX_MODULE = "index";
 
@@ -335,6 +339,7 @@ function boundaryFiles(
       compression: options.compression,
       frameworkEtag: options.frameworkEtag,
       catchAll: options.catchAll,
+      importSpecifiers: input.importSpecifiers,
     },
     refusals,
     warnings,
@@ -345,8 +350,15 @@ function boundaryFiles(
     moduleFile(HANDLERS_MODULE),
     placement.handlerParameters ?? "inputOnly",
     refusals,
+    input.importSpecifiers,
   );
-  const hooks = hookTypesSource(ir, links.types, moduleFile(HOOKS_MODULE), refusals);
+  const hooks = hookTypesSource(
+    ir,
+    links.types,
+    moduleFile(HOOKS_MODULE),
+    refusals,
+    input.importSpecifiers,
+  );
   const docs = input.artefacts.has(NATIVE_DOCS_ARTEFACT)
     ? nativeDocsFiles(input, placement, refusals)
     : [];
@@ -369,14 +381,17 @@ function boundaryFiles(
       ? [
           {
             path: moduleFile(INDEX_MODULE),
-            contents: apiIndexSource([
-              { module: placement.frameworkModule },
-              ...(docs.length === 0 || placement.nativeDocs === undefined
-                ? []
-                : [{ module: placement.nativeDocs.docsModule }]),
-              { module: HANDLERS_MODULE },
-              { module: HOOKS_MODULE },
-            ]),
+            contents: apiIndexSource(
+              [
+                { module: placement.frameworkModule },
+                ...(docs.length === 0 || placement.nativeDocs === undefined
+                  ? []
+                  : [{ module: placement.nativeDocs.docsModule }]),
+                { module: HANDLERS_MODULE },
+                { module: HOOKS_MODULE },
+              ],
+              input.importSpecifiers,
+            ),
           },
         ]
       : []),
