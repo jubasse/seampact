@@ -1,5 +1,8 @@
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
+import type { CheckState } from "./access-checks.js";
+import type { BoundaryContext } from "./boundary-context.js";
+import { resolvedHooks } from "./boundary-hooks.js";
 import {
   type ClassValidatorCalls,
   classValidatorAdapter,
@@ -7,7 +10,7 @@ import {
 } from "./class-validator-rules.js";
 import type { ContractApi, ContractRoute, StandardValidator } from "./contract-route.js";
 import { INPUT_RULE_ADAPTERS, vinePathPointer } from "./input-rule-libraries.js";
-import { inputRulesProblems } from "./input-rules.js";
+import { inputRulesProblems, runInputRules } from "./input-rules.js";
 
 const ZOD_VALIDATOR: StandardValidator = z.object({});
 const BODY_RULE = z.object({ end: z.string() });
@@ -181,6 +184,95 @@ describe("class-validator rules", () => {
     expect(adapter.accepts(ScheduleTaskRules)).toBe(true);
     expect(adapter.accepts(Unconstrained)).toBe(false);
     expect(adapter.accepts(BODY_RULE)).toBe(false);
+  });
+});
+
+describe("class-validator rules on the app's own class", () => {
+  class ScheduleWindowRules {}
+
+  const DECORATED_MEMBERS = new Set(["end"]);
+
+  // class-validator's `validate` as the options drive it: under `forbidNonWhitelisted`, a member the class does not
+  // decorate is refused as `whitelistValidation`.
+  const whitelistAwareCalls: ClassValidatorCalls = {
+    plainToInstance: (_rule, plain) =>
+      typeof plain === "object" && plain !== null ? { ...plain } : {},
+    validate: async (instance, options) => {
+      const forbidsUndecorated =
+        Reflect.get(options, "whitelist") === true &&
+        Reflect.get(options, "forbidNonWhitelisted") === true;
+
+      if (!forbidsUndecorated) return [];
+
+      return Object.keys(instance)
+        .filter((member) => !DECORATED_MEMBERS.has(member))
+        .map((member) => ({ property: member, constraints: { whitelistValidation: "" } }));
+    },
+    getMetadataStorage: () => ({ getTargetValidationMetadatas: () => [{}] }),
+    options: {
+      input: { whitelist: true, forbidNonWhitelisted: true, forbidUnknownValues: false },
+      transform: {},
+    },
+  };
+
+  test("a member the class does not decorate is not refused", async () => {
+    await expect(
+      classValidatorAdapter(whitelistAwareCalls).refusals(ScheduleWindowRules, {
+        start: "2026-01-01",
+        end: "2026-01-02",
+        note: "weekly",
+      }),
+    ).resolves.toEqual([]);
+  });
+});
+
+describe("the run of the input rules (step 8b)", () => {
+  const scheduleTask = route("scheduleTask");
+  const api = apiOf([scheduleTask]);
+
+  function stateOf(): CheckState {
+    return {
+      api,
+      route: scheduleTask,
+      request: {
+        method: "POST",
+        path: "/v1/scheduleTask",
+        rawQuery: "",
+        headers: {},
+        body: undefined,
+      },
+      pathParams: {},
+      hooks: resolvedHooks({}),
+      isFrameworkDenial: () => false,
+      fixes: { rawBody: "", bodySize: "" },
+    };
+  }
+
+  function contextWithBody(body: unknown): BoundaryContext {
+    return {
+      api,
+      route: scheduleTask,
+      pathParams: {},
+      hooks: resolvedHooks({}),
+      bodyValidation: false,
+      mode: "strict",
+      boundaryWriting: false,
+      input: { body },
+    };
+  }
+
+  test("a part the copy cannot hold is seampact's failure, not the rule's", async () => {
+    const uncopyableBody = { end: "2026-01-01", onDone: () => undefined };
+
+    const failure = await runInputRules(stateOf(), contextWithBody(uncopyableBody), {
+      scheduleTask: { body: BODY_RULE },
+    }).catch((error: unknown) => error);
+
+    expect(failure).toMatchObject({
+      unexpectedCause: expect.objectContaining({
+        message: "seampact: the body of 'scheduleTask' could not be copied for its input rules",
+      }),
+    });
   });
 });
 

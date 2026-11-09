@@ -251,7 +251,8 @@ NotesNest.SeampactModule.forRoot(notesHooks(), {
 - The rule gets a new instance of your class, built from the part as the handler receives it. It can only refuse: its result and its changes are not used.
 - A rule that throws answers 500 and is logged. Its message is never sent.
 - A refused request releases its idempotency key, so a corrected retry with the same key is checked again.
-- A constraint that injects a provider needs class-validator's container: call `useContainer(app.select(AppModule), { fallbackOnErrors: true })` once in `main.ts`. `forRoot` registers the constraint classes as providers.
+- The rules run without class-validator's whitelist, since the contract checks already refused unknown members: your own class decorates only the members its rules read.
+- A constraint that injects a provider is a provider of your own module: list it in your module's `providers`, then call `useContainer(app.select(AppModule), { fallbackOnErrors: true })` once in `main.ts`.
 - `inputRules` is typed on the members of the part. At boot, the module also refuses an unknown operation, a part the operation takes no input in, or a class without class-validator constraints.
 - A uniqueness check ("this email is already used") stays in the handler, as a declared 409: a check before the write races.
 

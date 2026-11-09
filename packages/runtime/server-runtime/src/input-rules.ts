@@ -218,8 +218,10 @@ async function partIssues(
   rule: unknown,
   value: unknown,
 ): Promise<InputIssue[]> {
+  const copy = partCopy(route, part, value);
+
   try {
-    const refusals = await adapter.refusals(rule, structuredClone(value));
+    const refusals = await adapter.refusals(rule, copy);
 
     return refusals.map((refusal) => ({
       in: ISSUE_PARTS[part],
@@ -230,6 +232,20 @@ async function partIssues(
     throw unexpectedError(
       route,
       new Error(`seampact: an app input rule of '${route.id}' on its ${part} threw`, {
+        cause: error,
+      }),
+    );
+  }
+}
+
+// The copy a rule receives; a part the copy cannot hold is seampact's failure, never blamed on the app's rule.
+function partCopy(route: ContractRoute, part: RequestPart, value: unknown): unknown {
+  try {
+    return structuredClone(value);
+  } catch (error) {
+    throw unexpectedError(
+      route,
+      new Error(`seampact: the ${part} of '${route.id}' could not be copied for its input rules`, {
         cause: error,
       }),
     );

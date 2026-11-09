@@ -225,6 +225,7 @@ NotesAdonis.registerRoutes(router, {
 - A rule on the whole object (`vine.object(...).use(rule())`) points at the body itself.
 - The rule gets a copy of the part, as the handler receives it. It can only refuse: its result and its changes are not used.
 - A rule that throws answers 500 and is logged. Its message is never sent.
+- The schema runs without meta, so a validator built with `vine.withMetaData` gets none.
 - A refused request releases its idempotency key, so a corrected retry with the same key is checked again.
 - `inputRules` is typed: a misspelt operation, a wrong part or another library's schema does not compile. VineJS's optional members do not compile under `exactOptionalPropertyTypes`, so turn that flag off. At boot, `registerRoutes` also refuses an unknown operation or a part the operation takes no input in.
 - A uniqueness check ("this email is already used") stays in the handler, as a declared 409: a check before the write races.

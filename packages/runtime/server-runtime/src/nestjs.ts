@@ -73,7 +73,6 @@ import {
   type RegisteredHooks,
   resolvedHooks,
 } from "./boundary-hooks.js";
-import { inputRuleConstraintClasses } from "./class-validator-rules.js";
 import { ContractError, renderContractReply, unexpectedError } from "./contract-error.js";
 import {
   type ContractApi,
@@ -156,8 +155,8 @@ export interface SeampactModuleOptions<InputRules = InputRuleSets> {
   /** Where the boundary writes its warnings and unexpected failures; NestJS's `Logger` when absent. */
   readonly logger?: RuntimeLogger;
   /**
-   * The app's own rules on an operation's input parts, run after the contract's checks (step 8b); `forRoot` registers
-   * the class-validator constraint classes they use as providers, for a constraint that injects one.
+   * The app's own rules on an operation's input parts, run after the contract's checks (step 8b). A class-validator
+   * constraint that injects a provider is listed in the app's own module, with class-validator's `useContainer`.
    */
   readonly inputRules?: InputRules;
   /** The `responses` mode of the api's routes, the generated target option when absent; `responses()` on a route wins. */
@@ -1405,7 +1404,6 @@ export function createNestBoundary<Hooks extends RegisteredHooks, InputRules = I
           inject: [SEAMPACT_HOOKS],
         },
         { provide: MODULE_OPTIONS, useValue: moduleOptions },
-        ...inputRuleConstraintClasses(api, moduleOptions.inputRules).filter(isConstructor),
         ...(options.reply === INTERCEPTOR_REPLY
           ? [{ provide: APP_INTERCEPTOR, useValue: replyInterceptor }]
           : []),
