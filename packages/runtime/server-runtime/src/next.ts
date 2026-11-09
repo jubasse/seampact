@@ -45,13 +45,15 @@ import {
   settledContractResponse,
   webReportedRequest,
 } from "./web.js";
+import { decodePathParam } from "./wire-decoding.js";
 
 const BODY_READ_FIX =
   "Do not read the body of a contract route before the boundary, in a proxy.ts or a wrapper around the route handler: the boundary reads it itself.";
 const NEXT_FIXES = { rawBody: BODY_READ_FIX, bodySize: BODY_READ_FIX };
 const TRUNCATED_BODY_FIX =
   "A proxy.ts makes Next.js keep only the first 10 MB of a body: raise experimental.proxyClientMaxBodySize in next.config above the api's largest route limit.";
-const CLIENT_ADDRESS_EXAMPLE = "(request) => request.headers.get('x-forwarded-for')?.split(',')[0]";
+const CLIENT_ADDRESS_EXAMPLE =
+  "(request) => request.headers.get('x-forwarded-for')?.split(',').at(-1)?.trim()";
 const EDGE_RUNTIME_GLOBAL = "EdgeRuntime";
 // A route handler under Next.js receives no `Retry-After` set by a framework middleware before it.
 const NO_RETRY_AFTER: readonly string[] = [];
@@ -63,7 +65,7 @@ export interface NextRouteOptions<
   Operation extends string,
   InputRules = InputRuleSets,
 > extends RegistrationOptions<Hooks, Handlers, Operation, InputRules> {
-  /** The client's address, which a `Request` does not carry, such as the first `x-forwarded-for` your proxy sets. */
+  /** The client's address, which a `Request` does not carry, such as the last `x-forwarded-for` entry, which your proxy sets. */
   readonly clientAddress?: (request: Request) => string | undefined;
 }
 
@@ -112,7 +114,14 @@ export function createNextBoundary<
   ): Promise<Response> {
     const reported = webReportedRequest(request);
 
-    if (!isUnderBasePath(api, reported.path)) return mountMismatchResponse(hooks, reported);
+    if (!isUnderBasePath(api, reported.path)) {
+      // Next.js routes on the decoded path, so a client can reach the catch-all with an encoded base path.
+      if (isUnderBasePath(api, decodePathParam(reported.path))) {
+        return notServedResponse(hooks, api, reported);
+      }
+
+      return mountMismatchResponse(hooks, reported);
+    }
 
     const matched = matchContractRoute(api, reported.method, reported.path);
 
@@ -145,7 +154,7 @@ export function createNextBoundary<
       runWebContractSteps(context, {
         request,
         reported,
-        clientAddress: options.clientAddress?.(request),
+        clientAddress: () => options.clientAddress?.(request),
         handlers: options.handlers,
         inputRules: options.inputRules,
         binding: bindings[route.id],

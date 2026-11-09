@@ -28,7 +28,8 @@ const NO_BODY: ReadRequestBody = { body: undefined };
 export interface WebContractSteps {
   readonly request: Request;
   readonly reported: ReportedRequest;
-  readonly clientAddress: string | undefined;
+  /** The client's address, read after the media type and body checks so a throw is claimed like any step's. */
+  clientAddress(): string | undefined;
   /** The app's handler map and input rules, as registered. */
   readonly handlers: unknown;
   readonly inputRules: unknown;
@@ -73,7 +74,7 @@ export async function runWebContractSteps(
     );
     const state = webCheckState(
       context,
-      webContractRequest(steps.request, read, steps.clientAddress),
+      webContractRequest(steps.request, read, steps.clientAddress()),
       steps.fixes,
     );
 

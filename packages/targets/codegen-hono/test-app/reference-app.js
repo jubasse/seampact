@@ -168,9 +168,9 @@ export function bootTwice(registrationOptions) {
   TasksHono.registerRoutes(app, registrationOptions);
 }
 
-/** A request through `app.request()` of an app registered as the served one. */
-export function requestThroughApp(path, init) {
-  return referenceApp({ handlers, hooks }).request(path, init);
+/** A request through `app.request()` of an app registered as the served one, with `extraOptions` when given. */
+export function requestThroughApp(path, init, extraOptions = {}) {
+  return referenceApp({ handlers, hooks, ...extraOptions }).request(path, init);
 }
 
 /** A request to a root app serving the api from a sub-app mounted with `app.route()`. */

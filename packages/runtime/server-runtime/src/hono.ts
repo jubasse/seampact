@@ -299,7 +299,7 @@ export function createHonoBoundary<
     return runWebContractSteps(context, {
       request: c.req.raw,
       reported,
-      clientAddress: options.clientAddress?.(c),
+      clientAddress: () => options.clientAddress?.(c),
       handlers: options.handlers,
       inputRules: options.inputRules,
       binding: bindings[context.route.id],

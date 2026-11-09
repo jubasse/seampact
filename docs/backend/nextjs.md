@@ -121,7 +121,8 @@ import { notesHooks } from "./notes-hooks";
 export const notesRouteOptions = {
   handlers: { NotesEndpoints: notesEndpoints },
   hooks: notesHooks(),
-  clientAddress: (request: Request) => request.headers.get("x-forwarded-for")?.split(",")[0],
+  clientAddress: (request: Request) =>
+    request.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim(),
 };
 ```
 
@@ -142,7 +143,7 @@ export { handler as DELETE, handler as GET, handler as HEAD, handler as OPTIONS,
 - `runtime = "nodejs"` is required. On the Edge runtime the route fails to load. If your app sets `cacheComponents: true`, remove this line: Next.js refuses it there, and the route runs on Node.js.
 - An api with several base paths needs one route file per base path, each importing the same options.
 - For a public api, leave `hooks` out.
-- `clientAddress` gives your hooks the caller's address. Without it, they get none.
+- `clientAddress` gives your hooks the caller's address. Without it, they get none. A `Request` does not carry it: behind a proxy, read the last `X-Forwarded-For` entry, as above, and only when the request comes from your proxy. The client writes the earlier entries.
 
 Check the types.
 
