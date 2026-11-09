@@ -84,7 +84,7 @@ jobs:
       - name: Type-check
         run: pnpm check:types
       - name: The build refuses a missing base URL
-        run: "! pnpm build"
+        run: pnpm build 2>&1 | grep -q "VITE_API_URL is not set"
       - name: Build the React app
         run: cp .env.example .env && pnpm build
       - name: Start the server and call it with the generated client
