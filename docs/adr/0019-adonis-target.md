@@ -62,7 +62,7 @@ AdonisJS runs a route's middleware and handler in one pipeline whose error handl
 
 An app exception handler renders a contract error with the exported `renderContractError(ctx, error)`, which writes it in the api's format through the boundary's reply path and returns true. It maps any error carrying a 401, 403 or 429 status by the shared rule of the other Node servers, not only the three named refusals. Without the boundary's request context (an error raised before the boundary, which `renderPreRoutingError` answers) it writes nothing and returns false. Non-contract routes are never touched: an app's own route on a path a contract template also matches (`PUT /v1/channels/{channelId}` where the contract serves only `GET`) keeps its own errors, since `renderPreRoutingError` leaves every request the router matched to a route other than the api's.
 
-Under `NODE_ENV=development` the reply the app's exception handler writes for an exception the route handler does not map goes out as written, whatever the `responses` mode, after a log line naming the exception's message and where it was thrown and the usual `onUnexpectedError` call (ADR 0016 "Amendment 2026-10-28"); an app handler's non-contract reply skips the violation check in debug.
+Under `NODE_ENV=development` the reply the app's exception handler writes for an exception the route handler does not map goes out as written, whatever the `responses` mode, after a log line naming the exception's message and where it was thrown and the usual `onUnexpectedError` call (ADR 0016 "The outgoing response check"); an app handler's non-contract reply skips the violation check in debug.
 
 ### The outgoing response check
 

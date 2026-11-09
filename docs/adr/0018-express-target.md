@@ -57,7 +57,7 @@ Every reply of a contract route the boundary writes goes through the shared `wri
 
 The router's final error middleware answers, in the api's format, only the generated contract exceptions, every client error (4xx) of the route's own body parser by its status (a corrupt compressed body, a length mismatch or an aborted request is a 400, not a 500), and an error whose `status` or `statusCode` is 401, 403 or 429, each mapped to the role of its status as ADR 0016 maps NestJS's classes. Any other error is passed on with `next(error)` to the app's error middleware, untouched. A refusal whose status the operation does not declare is a 500. An app error middleware renders a contract error with `renderContractError(res, error)`, which writes it through the reply path above.
 
-Under `NODE_ENV=development` the reply Express's default error handler writes for an exception the router does not map goes out as written, whatever the `responses` mode, after a log line naming the exception's message and where it was thrown and the usual `onUnexpectedError` call (ADR 0016 "Amendment 2026-10-28"); an app error handler's non-contract reply skips the violation check in debug.
+Under `NODE_ENV=development` the reply Express's default error handler writes for an exception the router does not map goes out as written, whatever the `responses` mode, after a log line naming the exception's message and where it was thrown and the usual `onUnexpectedError` call (ADR 0016 "The outgoing response check"); an app error handler's non-contract reply skips the violation check in debug.
 
 ### The outgoing response check
 

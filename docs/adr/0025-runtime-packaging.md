@@ -26,7 +26,7 @@ Adonis also copies `runtime/vine-support.ts` of its package as `validators/vine-
 
 The runtime is already contract-neutral: the Node targets copy it unchanged, Spring rewrites the `package` line, and PHP rewrites the namespace line, drops the shared runtime's `use` lines and refuses any other seampact reference. Three behaviours depend on per-api copies:
 
-- a NestJS `ContractException` of one api, thrown on a route of another, matches neither api's filter (ADR 0016 "Amendment 2026-10-27: NestJS idioms on the boundary");
+- a NestJS `ContractException` of one api, thrown on a route of another, matches neither api's filter (ADR 0016 "Exceptions on contract routes");
 - the Symfony operation attribute is a class of each api;
 - the unexpected-error listener is looked up by its runtime class: Laravel resolves the container key `UnexpectedErrorListener::class`, Symfony the service of that class, and Spring every bean of that type. Each api's copy is another class, so each api finds its own listener.
 

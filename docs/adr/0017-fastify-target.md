@@ -54,7 +54,7 @@ The plugin's `setErrorHandler` answers, in the api's format, only the generated 
 
 An app's root-level hooks run before the route's `onRequest`. An error thrown there reaches the plugin's error handler without a request context; the handler finds the operation from the route's config and answers as above (spike). Before it rethrows an error outside that set, it installs the outgoing response check on `reply.raw` when it is absent, with the operation from the route's config, so the app error handler's reply is checked as on any contract request. A reply an app root hook writes itself is not checked, since the check is not installed yet; such a hook throws instead, or skips contract routes with `isContractRoute(request)`.
 
-Under `NODE_ENV=development` the error handler's reply to an exception the plugin does not map goes out as Fastify wrote it, whatever the `responses` mode, after a log line naming the exception's message and where it was thrown and the usual `onUnexpectedError` call (ADR 0016 "Amendment 2026-10-28"), and the violation check is skipped for it.
+Under `NODE_ENV=development` the error handler's reply to an exception the plugin does not map goes out as Fastify wrote it, whatever the `responses` mode, after a log line naming the exception's message and where it was thrown and the usual `onUnexpectedError` call (ADR 0016 "The outgoing response check"), and the violation check is skipped for it.
 
 ### The outgoing response check
 
