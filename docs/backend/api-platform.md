@@ -60,4 +60,4 @@ Each contract operation turns off API Platform's own `read`, content negotiation
 
 API Platform's `security` expression still runs, after the boundary and before your handler. Its `object` is `null`. An `AccessDeniedException` it throws answers the api's `forbidden` (or `unauthenticated`) in the api's format, as on Symfony.
 
-App input rules are not available on this target yet.
+App input rules are not available on this target yet. A service tagged `seampact.<api>.input_rules` stops `cache:warmup` with `input.rules.unsupported`.

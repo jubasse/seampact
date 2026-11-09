@@ -52,6 +52,14 @@ final class OperationMetadataCheckTest extends TestCase
         self::check(self::operation(['processor' => 'App\\Other']))->warmUp('/tmp');
     }
 
+    public function testATaggedInputRulesServiceIsRefusedByName(): void
+    {
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('input.rules.unsupported: ' . \ArrayObject::class . ' is tagged as app input rules');
+
+        self::check(self::operation([]), [new \ArrayObject()])->warmUp('/tmp');
+    }
+
     /** @param array{read?: bool, write?: bool, deserialize?: bool, validate?: bool, contentNegotiation?: bool, securityPostDenormalize?: string, securityPostValidation?: string, extraProperties?: array<string, bool>, provider?: string, processor?: string} $changes */
     private static function operation(array $changes): Get
     {
@@ -71,7 +79,8 @@ final class OperationMetadataCheckTest extends TestCase
         );
     }
 
-    private static function check(Get $operation): OperationMetadataCheck
+    /** @param list<object> $inputRules */
+    private static function check(Get $operation, array $inputRules = []): OperationMetadataCheck
     {
         $factory = new class ($operation) implements ResourceMetadataCollectionFactoryInterface {
             public function __construct(private readonly Get $operation)
@@ -86,6 +95,6 @@ final class OperationMetadataCheckTest extends TestCase
             }
         };
 
-        return new OperationMetadataCheck($factory, 'tasks', [\stdClass::class], ['getTask' => self::PROCESSOR]);
+        return new OperationMetadataCheck($factory, 'tasks', [\stdClass::class], ['getTask' => self::PROCESSOR], $inputRules);
     }
 }

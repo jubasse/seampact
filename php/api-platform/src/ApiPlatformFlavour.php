@@ -11,8 +11,10 @@ use Seampact\Codegen\PhpClassFile;
 use Seampact\Codegen\Refusals;
 use Seampact\Codegen\TargetOptions;
 use Seampact\Ir\Model\ContractIR;
+use Seampact\Symfony\Runtime\Hooks;
 use Seampact\Symfony\SymfonyFlavour;
 use Seampact\Symfony\SymfonyPlacement;
+use Symfony\Component\DependencyInjection\Argument\TaggedIteratorArgument;
 
 /**
  * The API Platform flavour of the Symfony placement (ADR 0029 "Placement"): the boundary subscriber reads the operation
@@ -117,7 +119,7 @@ final class ApiPlatformFlavour implements SymfonyFlavour
 
         return '$services->set(' . var_export("seampact.{$names->placement->layout->ir->api->id}.metadata_check", true) . ', ' . $file->name(OperationMetadataCheck::class) . '::class)->autowire()->args([\'$api\' => '
             . var_export($names->placement->layout->ir->api->id, true)
-            . ', \'$resourceClasses\' => [' . implode(', ', $resources) . '], \'$processors\' => [' . implode(', ', $processors) . ']])->tag(\'kernel.cache_warmer\');';
+            . ', \'$resourceClasses\' => [' . implode(', ', $resources) . '], \'$processors\' => [' . implode(', ', $processors) . '], \'$inputRules\' => new ' . $file->name(TaggedIteratorArgument::class) . '(' . var_export(Hooks::tag($names->placement->layout->ir->api->id, OperationMetadataCheck::INPUT_RULES_TAG_SUFFIX), true) . ')])->tag(\'kernel.cache_warmer\');';
     }
 
     private function namesOf(SymfonyPlacement $placement): ApiPlatformPlacement

@@ -27,6 +27,7 @@ use Seampact\Symfony\Runtime\Regeneration;
 use Seampact\Symfony\Runtime\RouteCheck;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
+use Symfony\Component\DependencyInjection\Argument\TaggedIteratorArgument;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
@@ -126,7 +127,7 @@ final class TasksSeampactBundle extends AbstractBundle
         $services->set('seampact.tasks.processor.getTask', GetTaskProcessor::class)->autowire()->tag('api_platform.state_processor', ['key' => GetTaskProcessor::class]);
         $services->set('seampact.tasks.processor.getTasksBatch', GetTasksBatchProcessor::class)->autowire()->tag('api_platform.state_processor', ['key' => GetTasksBatchProcessor::class]);
         $services->set('seampact.tasks.processor.health', HealthProcessor::class)->autowire()->tag('api_platform.state_processor', ['key' => HealthProcessor::class]);
-        $services->set('seampact.tasks.metadata_check', OperationMetadataCheck::class)->autowire()->args(['$api' => 'tasks', '$resourceClasses' => [TasksResource::class, ChannelsResource::class, DraftsResource::class, AppResource::class], '$processors' => ['archiveTask' => ArchiveTaskProcessor::class, 'getChannel' => GetChannelProcessor::class, 'getDraft' => GetDraftProcessor::class, 'getTask' => GetTaskProcessor::class, 'getTasksBatch' => GetTasksBatchProcessor::class, 'health' => HealthProcessor::class]])->tag('kernel.cache_warmer');
+        $services->set('seampact.tasks.metadata_check', OperationMetadataCheck::class)->autowire()->args(['$api' => 'tasks', '$resourceClasses' => [TasksResource::class, ChannelsResource::class, DraftsResource::class, AppResource::class], '$processors' => ['archiveTask' => ArchiveTaskProcessor::class, 'getChannel' => GetChannelProcessor::class, 'getDraft' => GetDraftProcessor::class, 'getTask' => GetTaskProcessor::class, 'getTasksBatch' => GetTasksBatchProcessor::class, 'health' => HealthProcessor::class], '$inputRules' => new TaggedIteratorArgument('seampact.tasks.input_rules')])->tag('kernel.cache_warmer');
     }
 
     public function build(ContainerBuilder $container): void
