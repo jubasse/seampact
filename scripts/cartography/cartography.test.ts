@@ -109,6 +109,29 @@ describe("cartography", () => {
     ]);
   });
 
+  it("maps each subdirectory of the tooling roots and reports one without a header", () => {
+    const root = repositoryWith({
+      "packages/.keep": "",
+      "scripts/tool/index.ts": "// The tool. More detail.\n",
+      "jvm/module/README.md": "# A JVM module\n",
+      "php/target/README.md": "A PHP target.\n",
+      ".github/actions/cache/README.md": "Caches things.\n",
+      "scripts/bare/run.sh": "",
+      "scripts/tool/fixtures/case/index.ts": "",
+    });
+
+    const { markdown, problems } = buildCartography({ root, stages: NO_STAGES });
+
+    expect(markdown).toContain("- `scripts/tool`: The tool.");
+    expect(markdown).toContain("- `jvm/module`: A JVM module");
+    expect(markdown).toContain("- `php/target`: A PHP target.");
+    expect(markdown).toContain("- `.github/actions/cache`: Caches things.");
+    expect(markdown).not.toContain("fixtures");
+    expect(problems).toEqual([
+      "scripts/bare: no header; add a one-line comment at the top of scripts/bare/index.ts, or a README.md",
+    ]);
+  });
+
   it("orders packages and directories by code unit and writes no timestamp", () => {
     const root = repositoryWith({
       "packages/b/package.json": manifest("@x/b", "B.", "core"),
