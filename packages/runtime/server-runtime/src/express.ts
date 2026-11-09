@@ -4,7 +4,7 @@
 // check; the framework-route check, which the app calls before listening or the router runs on the first request;
 // and the exported helpers for errors raised before the router. The same code serves Express 4 and 5. Each api's
 // generated module calls `createExpressBoundary` once with the app's `express` and its route table.
-import type { InputRuleSets } from "./input-rules.js";
+
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type express from "express";
 import type {
@@ -60,6 +60,7 @@ import {
   unexpectedError,
   useRuntimeLogger,
 } from "./index.js";
+import type { InputRuleSets } from "./input-rules.js";
 import {
   bodyParserRefusal,
   clearEmptyBody,

@@ -1,10 +1,11 @@
 import type { ContractIR, Operation } from "@seampact/spec/ir";
+import type { ValidatorStyle } from "../descriptors.js";
 import { operationIdentifier } from "./server-types.js";
 
 // The `InputRules` type of the routes module (ADR 0028 "Typed on Node"): for each operation and part with input, the
 // library schema type of the api's validators over that part as its handler receives it, without the body proof
 // fields. The registration's `inputRules` takes it, so a misspelt operation, a wrong part, a missing member or
-// another library's schema does not compile.
+// another library's schema does not compile. class-validator registers a class, checked on its members only.
 
 const INPUT_RULES_EXPORT = "InputRules";
 const HANDLER_INPUTS_EXPORT = "HandlerInputs";
@@ -19,8 +20,14 @@ export interface InputRulesTypeSource {
 export function inputRulesTypeSource(
   ir: ContractIR,
   runtimePackage: string,
+  style: ValidatorStyle,
   validatorOf: (operation: Operation) => string | undefined,
 ): InputRulesTypeSource {
+  const ruleType = (validator: string, part: string): string =>
+    style === "class-validator"
+      ? `InputRuleClass<${part}>`
+      : `InputRuleSchema<typeof ${validator}, ${part}>`;
+
   const members = ir.operations.flatMap((operation) => {
     const validator = validatorOf(operation);
     const parts = partsWithInput(operation);
@@ -30,7 +37,7 @@ export function inputRulesTypeSource(
     const handlerInput = `${HANDLER_INPUTS_EXPORT}[${JSON.stringify(operationIdentifier(operation))}]`;
     const partMembers = parts.map(
       (part) =>
-        `    readonly ${part}?: InputRuleSchema<typeof ${validator}, ${partType(operation, handlerInput, part)}>;`,
+        `    readonly ${part}?: ${ruleType(validator, partType(operation, handlerInput, part))};`,
     );
 
     return [`  readonly ${JSON.stringify(operation.id)}?: {`, ...partMembers, "  };"];
@@ -38,7 +45,7 @@ export function inputRulesTypeSource(
 
   return {
     imports: [
-      `import type { InputRuleSchema } from "${runtimePackage}";`,
+      `import type { ${style === "class-validator" ? "InputRuleClass" : "InputRuleSchema"} } from "${runtimePackage}";`,
       `import type { ${HANDLER_INPUTS_EXPORT} } from "./handlers.js";`,
     ],
     declaration: [

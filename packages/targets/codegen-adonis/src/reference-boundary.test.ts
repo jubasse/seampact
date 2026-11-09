@@ -164,6 +164,41 @@ describe("with no validators link the target writes its own VineJS validators", 
     COMPILE_TIMEOUT_MILLISECONDS,
   );
 
+  test(
+    "inputRules is typed for VineJS: a Vine validator compiles; a misspelt operation and a zod schema do not",
+    async () => {
+      const written = await writeOwnValidators("generated/own-rules/tasks", readGoldenIr("tasks"));
+      const types = indexFiles.filter((file) => file.includes("/types/"));
+      const check = join(INDEX_PROJECT, "input-rules.check.ts");
+      // VineJS does not compile its own optional members under `exactOptionalPropertyTypes` (ADR 0028).
+      const vineCompilerOptions = {
+        ...REFERENCE_COMPILER_OPTIONS,
+        exactOptionalPropertyTypes: false,
+      };
+      const errorsOf = (rules: string): string[] => {
+        writeFileSync(
+          check,
+          [
+            'import vine from "@vinejs/vine";',
+            'import { z } from "zod";',
+            'import type { InputRules } from "./generated/own-rules/tasks/routes.js";',
+            "",
+            "export const otherLibrary = z;",
+            `export const rules: InputRules = ${rules};`,
+            "",
+          ].join("\n"),
+        );
+
+        return typeErrorsOf(INDEX_PROJECT, [...written, ...types, check], vineCompilerOptions);
+      };
+
+      expect(errorsOf("{ createTask: { body: vine.create(vine.any()) } }")).toEqual([]);
+      expect(errorsOf("{ createTsk: { body: vine.create(vine.any()) } }")).not.toEqual([]);
+      expect(errorsOf("{ createTask: { body: z.any() } }")).not.toEqual([]);
+    },
+    4 * COMPILE_TIMEOUT_MILLISECONDS,
+  );
+
   // The golden IR's CreateTask members: `title`, a required string, then `effort`, an optional integer.
   function createTaskProperties(ir: ContractIR): Property[] {
     const schema = ir.schemas.CreateTask;

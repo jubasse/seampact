@@ -1,6 +1,7 @@
-// The consumer's NestJS module: each api's generated module with the shared hooks, the controllers and the http
-// suite's control routes.
+// The consumer's NestJS module: each api's generated module with the shared hooks, the `inputRules` api's with its
+// app input rules, the controllers and the http suite's control routes.
 import { Module } from "@nestjs/common";
+import * as InputRulesNest from "../generated/server/inputRules/index.js";
 import * as TasksNest from "../generated/server/tasks/index.js";
 import * as TasksDevicesNest from "../generated/server/tasksDevices/index.js";
 import * as TasksPagingNest from "../generated/server/tasksPaging/index.js";
@@ -23,11 +24,14 @@ import {
   TasksController,
 } from "./controllers.mjs";
 import {
+  inputRulesHooks,
   tasksDevicesHooks,
   tasksHooks,
   tasksServiceHooks,
   tasksServiceWritesHooks,
 } from "./hooks.mjs";
+import { inputRules } from "./input-rules.mjs";
+import { InputRulesController } from "./input-rules-controller.mjs";
 import {
   CappedController,
   ChangesController,
@@ -61,6 +65,7 @@ const healthControllers = leavesOutHealthHandler()
     TasksDevicesNest.SeampactModule.forRoot(tasksDevicesHooks()),
     TasksResponsesNest.SeampactModule.forRoot(tasksResponsesHooks()),
     TasksPagingNest.SeampactModule.forRoot(tasksPagingHooks()),
+    InputRulesNest.SeampactModule.forRoot(inputRulesHooks(), { inputRules }),
   ],
   controllers: [
     ...healthControllers,
@@ -79,6 +84,7 @@ const healthControllers = leavesOutHealthHandler()
     ChangesController,
     CappedController,
     EventsController,
+    InputRulesController,
     SuiteControlController,
     // The framework-route boot variants serve a route outside the contract.
     ...(servesUnlistedRoute() ? [UnlistedRouteController] : []),

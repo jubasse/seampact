@@ -230,6 +230,29 @@ describe("runSuite", () => {
     expect(report.cases[0]).toMatchObject({ outcome: "passed", failures: [] });
   });
 
+  test("the input-rule pointers are the body root unless the run states its library's", async () => {
+    const pointerCase = suiteCase("input-rule-pointers", {
+      steps: [
+        {
+          request: { method: "POST", path: "/echo", body: { pointer: "/start" } },
+          expect: { status: 201, body: { body: { pointer: "{{inputRulesCrossMemberPointer}}" } } },
+        },
+      ],
+    });
+    const atRoot = await run([pointerCase]);
+    const atMember = await runSuite({
+      baseUrl,
+      target: TARGET,
+      profile: "default",
+      credentials: CREDENTIALS,
+      cases: [pointerCase],
+      inputRulePointers: { crossMember: "/start", unnamed: "/note" },
+    });
+
+    expect(atRoot.cases[0]?.outcome).toBe("failed");
+    expect(atMember.cases[0]).toMatchObject({ outcome: "passed", failures: [] });
+  });
+
   test("signs the body it sends", async () => {
     const report = await run([
       suiteCase("signed", {

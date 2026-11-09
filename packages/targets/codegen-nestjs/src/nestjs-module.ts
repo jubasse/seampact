@@ -43,6 +43,7 @@ const LOCAL_NAMES = [
   "boundary",
   "createNestBoundary",
   "CONTRACT_API",
+  "InputRules",
   "SeampactHooks",
   "Handlers",
   "ErrorsOf",
@@ -156,7 +157,7 @@ export function nestjsModuleSource(
     `import { ContractException as BoundaryContractException, createNestBoundary, type ErrorsOf } from "${SERVER_RUNTIME_PACKAGE}/nestjs";`,
     'import type * as Handlers from "./handlers.js";',
     'import type { SeampactHooks } from "./hooks.js";',
-    'import { CONTRACT_API } from "./routes.js";',
+    'import { CONTRACT_API, type InputRules } from "./routes.js";',
     ...(docsModule === undefined
       ? []
       : [`import { documentedOperation } from "./${docsModule}.js";`]),
@@ -169,9 +170,9 @@ export function nestjsModuleSource(
     "/** A declared error a handler or a service throws: `new ContractException(code, params)`. */",
     "export class ContractException extends BoundaryContractException<ContractErrors> {}",
     "",
-    `const boundary = createNestBoundary<SeampactHooks>(CONTRACT_API, ${JSON.stringify({ ...responseSettingsOf(options), reply: options.reply })}, { contractException: ContractException, moduleClassName: ${JSON.stringify(moduleClassName(ir))} });`,
+    `const boundary = createNestBoundary<SeampactHooks, InputRules>(CONTRACT_API, ${JSON.stringify({ ...responseSettingsOf(options), reply: options.reply })}, { contractException: ContractException, moduleClassName: ${JSON.stringify(moduleClassName(ir))} });`,
     "",
-    "/** The api's dynamic module: `SeampactModule.forRoot(hooks, { logger, responses, bodyValidation })` or `forRootAsync({ imports, inject, useFactory }, options)`. */",
+    "/** The api's dynamic module: `SeampactModule.forRoot(hooks, { logger, responses, bodyValidation, inputRules })` or `forRootAsync({ imports, inject, useFactory }, options)`. */",
     "export const SeampactModule = boundary.SeampactModule;",
     "/** The injection token of the api's hooks, for a test's `overrideProvider`. */",
     "export const SEAMPACT_HOOKS = boundary.SEAMPACT_HOOKS;",

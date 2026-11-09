@@ -4,7 +4,7 @@
 // the framework-route check at ready over the routes the app's collector saw; and the exported helpers for the
 // requests the plugin never sees. Each api's generated module calls `createFastifyBoundary` once with its route
 // table.
-import type { InputRuleSets } from "./input-rules.js";
+
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { PassThrough, type Readable } from "node:stream";
 import { createBrotliDecompress, createGunzip, createInflate } from "node:zlib";
@@ -65,6 +65,7 @@ import {
   settingsOf,
 } from "./handler-map.js";
 import { validateRequestInput } from "./input-checks.js";
+import type { InputRuleSets } from "./input-rules.js";
 import { installOutgoingCheck } from "./node-outgoing-check.js";
 import {
   encodeBoundaryReplies,

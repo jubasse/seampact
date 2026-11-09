@@ -216,11 +216,45 @@ Set these in `options:` of the `server` entry.
 
 Every option of this target is in the [config reference](../configuration/reference.md#codegen-nestjs). Entry keys shared by the Node servers: [`mount`](../configuration/reference.md#mount), [`frameworkRoutes`](../configuration/reference.md#framework-routes) and the [boot check](../configuration/reference.md#boot-check).
 
-`forRoot(hooks, { logger, responses, bodyValidation, unboundOperations })` changes some of these at startup, for example `forRoot(notesHooks(), { bodyValidation: process.env.NODE_ENV !== "production" })`. A `responses()` decorator on a controller or a method still wins. A wrong value stops the app at boot.
+`forRoot(hooks, { logger, responses, bodyValidation, unboundOperations, inputRules })` changes some of these at startup, for example `forRoot(notesHooks(), { bodyValidation: process.env.NODE_ENV !== "production" })`. A `responses()` decorator on a controller or a method still wins. A wrong value stops the app at boot.
 
 - `logger` takes `warn` and `error` functions. By default seampact writes through NestJS's `Logger` under the context `Seampact:<api>`, so `app.useLogger(...)` applies.
 - `bodyValidation: true` needs the validators generated with the target option `bodyValidation: true`.
 - `unboundOperations: "warn"` is for tests (below).
+- `inputRules` takes your own rules (below).
+
+## Add your own rules
+
+Some rules the contract cannot say: "the end comes after the start", or a check that reads your data. Write them with class-validator, as named constraints on a subclass of the part's generated DTO (`registerDecorator({ name })`, or `@ValidatorConstraint({ name })` with `@Validate`), and pass the class as `inputRules` in `forRoot`, keyed by operation id, then by part (`path`, `query`, `headers` or `body`). With zod or yup validators, pass a schema of that library instead.
+
+```ts
+import { registerDecorator } from 'class-validator'
+import { inputDtos } from '../src/__generated__/validators/notes/index.js'
+
+class ScheduleNoteRules extends inputDtos.ScheduleNoteDto {}
+
+registerDecorator({
+  name: 'endAfterStart',
+  target: ScheduleNoteRules,
+  propertyName: 'end',
+  validator: { validate: (end, args) => end > (args.object as ScheduleNoteRules).start },
+})
+
+NotesNest.SeampactModule.forRoot(notesHooks(), {
+  inputRules: { scheduleNote: { body: ScheduleNoteRules } },
+})
+```
+
+- A rule runs after every contract check, the access checks and the idempotency claim, just before the handler. A caller refused with 401 or 403 never reaches it.
+- A refusal answers the operation's `schemaInvalid` code (400 by default) with `issues: [{ pointer, rule: "app.<name>" }]`. The name is the constraint's. A constraint registered without a name gives `app.invalid`, and seampact logs the fix once.
+- class-validator has no rule on the whole object: a rule across members sits on one member and points at it.
+- The rule gets a new instance of your class, built from the part as the handler receives it. It can only refuse: its result and its changes are not used.
+- A rule that throws answers 500 and is logged. Its message is never sent.
+- A refused request releases its idempotency key, so a corrected retry with the same key is checked again.
+- The rules run without class-validator's whitelist, since the contract checks already refused unknown members: your own class decorates only the members its rules read.
+- A constraint that injects a provider is a provider of your own module: list it in your module's `providers`, then call `useContainer(app.select(AppModule), { fallbackOnErrors: true })` once in `main.ts`.
+- `inputRules` is typed on the members of the part. At boot, the module also refuses an unknown operation, a part the operation takes no input in, or a class without class-validator constraints.
+- A uniqueness check ("this email is already used") stays in the handler, as a declared 409: a check before the write races.
 
 ## Rate limits
 

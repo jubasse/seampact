@@ -47,6 +47,7 @@ import { inputWithAccess } from "./handler-access.js";
 import { handlerReply } from "./handler-reply.js";
 import { beginIdempotency } from "./idempotency.js";
 import { checkRestrictedInput, validateRequestInput } from "./input-checks.js";
+import { type InputRuleSets, inputRulesProblems, runInputRules } from "./input-rules.js";
 import { installOutgoingCheck } from "./node-outgoing-check.js";
 import { respondNotServed, respondWithError, writeContractReply } from "./node-reply.js";
 import { announcesBody, DEFAULT_METHOD, requestTarget } from "./node-request.js";
@@ -107,9 +108,12 @@ export interface RouteRegistration<
   Hooks extends RegisteredHooks,
   Controllers extends object,
   Operation extends string,
+  InputRules = InputRuleSets,
 > {
   readonly controllers: Controllers;
   readonly hooks?: Hooks;
+  /** The app's own rules on an operation's input parts, by operation id, run after the contract's checks (step 8b). */
+  readonly inputRules?: InputRules;
   readonly responses?: ResponsesMode;
   readonly bodyValidation?: boolean;
   /** Where the boundary writes its warnings and unexpected failures; the console when absent. */
@@ -336,6 +340,7 @@ export function createAdonisBoundary<
   Hooks extends RegisteredHooks,
   Controllers extends object,
   Operation extends string,
+  InputRules = InputRuleSets,
 >(
   api: ContractApi,
   options: AdonisBoundaryOptions,
@@ -546,8 +551,8 @@ export function createAdonisBoundary<
     };
   }
 
-  // Steps 6 to 8 and the idempotency claim (middleware 3).
-  function validate(route: ContractRoute) {
+  // Steps 6 to 8, the idempotency claim and the app input rules, step 8b (middleware 3).
+  function validate(route: ContractRoute, inputRules: unknown) {
     return async (ctx: HttpContext, next: NextFunction): Promise<void> => {
       const context = requireContext(route);
       let replay: Awaited<ReturnType<typeof beginIdempotency>>;
@@ -564,6 +569,10 @@ export function createAdonisBoundary<
         context.input = input;
         inputs.set(ctx, { id: route.id, input: inputWithAccess(route, grant, input) });
         replay = await beginIdempotency(state, grant, input);
+
+        if (replay?.outcome === "started") context.idempotencyKey = replay.key;
+
+        if (replay?.outcome !== "replay") await runInputRules(state, context, inputRules);
       } catch (error) {
         await answerStepError(ctx, context, error);
 
@@ -575,8 +584,6 @@ export function createAdonisBoundary<
 
         return;
       }
-
-      if (replay?.outcome === "started") context.idempotencyKey = replay.key;
 
       await next();
     };
@@ -628,7 +635,8 @@ export function createAdonisBoundary<
   /** Adds the api's routes and runs the boot check (ADR 0019 "The boot check"). */
   function registerRoutes(
     router: Router,
-    registration: RouteRegistration<Hooks, Controllers, Operation> & HooksRequirement<Hooks>,
+    registration: RouteRegistration<Hooks, Controllers, Operation, InputRules> &
+      HooksRequirement<Hooks>,
   ): void {
     useRuntimeLogger(registration.logger, api);
 
@@ -642,6 +650,7 @@ export function createAdonisBoundary<
       ...bodyparserProblems(api, services),
       ...repeatedRegistrationProblems(router),
       ...loggerProblems(registration.logger),
+      ...inputRulesProblems(api, registration.inputRules),
     ];
 
     if (problems.length > 0) throw new Error(bootProblemsMessage(api, problems));
@@ -667,7 +676,11 @@ export function createAdonisBoundary<
       router
         .route(adonisPath(route.path), adonisMethods(route), handler)
         .as(routeNameOf(route))
-        .use([openContext(route, replyOptions), authorize(route), validate(route)]);
+        .use([
+          openContext(route, replyOptions),
+          authorize(route),
+          validate(route, registration.inputRules),
+        ]);
     }
   }
 
@@ -691,7 +704,7 @@ export function createAdonisBoundary<
 
   // Operation, then registration, then target option.
   function replyOptionsOf(
-    registration: RouteRegistration<Hooks, Controllers, Operation>,
+    registration: RouteRegistration<Hooks, Controllers, Operation, InputRules>,
     hooks: BoundaryHooks,
   ): ReplyOptionsOf {
     return {
@@ -709,7 +722,7 @@ export function createAdonisBoundary<
   }
 
   function operationOptions(
-    registration: RouteRegistration<Hooks, Controllers, Operation>,
+    registration: RouteRegistration<Hooks, Controllers, Operation, InputRules>,
     operation: string,
   ): OperationReplyOptions | undefined {
     const overrides: unknown = registration.operations;
@@ -746,7 +759,7 @@ export function createAdonisBoundary<
 
   // An override for an operation the api does not have would be dropped silently.
   function unknownOperationProblems(
-    registration: RouteRegistration<Hooks, Controllers, Operation>,
+    registration: RouteRegistration<Hooks, Controllers, Operation, InputRules>,
   ): BootProblem[] {
     const overrides: unknown = registration.operations;
     const known = entries.map((entry) => entry.operation);
@@ -761,7 +774,7 @@ export function createAdonisBoundary<
 
   // The item validators exist only when the target was generated with `bodyValidation: true`.
   function bodyValidationProblems(
-    registration: RouteRegistration<Hooks, Controllers, Operation>,
+    registration: RouteRegistration<Hooks, Controllers, Operation, InputRules>,
     hooks: BoundaryHooks,
   ): BootProblem[] {
     if (options.bodyValidation) return [];

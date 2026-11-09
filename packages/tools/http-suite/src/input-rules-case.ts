@@ -14,3 +14,23 @@ export function inputRulesNotYetRefusal(
     [INPUT_RULES_CASE_ID]: `${target} does not implement app input rules before ${release}`,
   };
 }
+
+/**
+ * Where the case's cross-member rule and unnamed rule point: the body root, or, on a library without a rule on the
+ * whole object (class-validator), the member that carries each rule (ADR 0028 section 4).
+ */
+export interface InputRulePointers {
+  readonly crossMember: string;
+  readonly unnamed: string;
+}
+
+/** The body root, where a library with object rules points both. */
+export const ROOT_INPUT_RULE_POINTERS: InputRulePointers = { crossMember: "", unnamed: "" };
+
+/** The case's `{{inputRulesCrossMemberPointer}}` and `{{inputRulesUnnamedPointer}}` variables. */
+export function inputRulePointerVariables(pointers: InputRulePointers): Record<string, string> {
+  return {
+    inputRulesCrossMemberPointer: pointers.crossMember,
+    inputRulesUnnamedPointer: pointers.unnamed,
+  };
+}

@@ -22,6 +22,11 @@ import {
   type SuiteProfile,
   type SuiteStep,
 } from "./suite-case.js";
+import {
+  type InputRulePointers,
+  inputRulePointerVariables,
+  ROOT_INPUT_RULE_POINTERS,
+} from "./input-rules-case.js";
 import { type CaseResult, type SuiteReport, suiteReportOf } from "./suite-report.js";
 import { TemplateError, TemplateScope, WHOLE_PLACEHOLDER } from "./template.js";
 
@@ -53,6 +58,8 @@ export interface SuiteRunOptions {
   readonly reader?: FormatReader;
   /** Cases the sample app does not run, by case id, with the reason the report names. */
   readonly refusals?: Readonly<Record<string, string>>;
+  /** Where the `input-rules` case's cross-member and unnamed rules point; the body root when absent. */
+  readonly inputRulePointers?: InputRulePointers;
   readonly requestTimeoutMs?: number;
 }
 
@@ -88,7 +95,10 @@ export async function runSuite(options: SuiteRunOptions): Promise<SuiteReport> {
   const context: RunContext = {
     target: options.target,
     baseUrl: options.baseUrl.replace(/\/+$/, ""),
-    variables: variablesOf(options.credentials),
+    variables: {
+      ...variablesOf(options.credentials),
+      ...inputRulePointerVariables(options.inputRulePointers ?? ROOT_INPUT_RULE_POINTERS),
+    },
     requestTimeoutMs: options.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS,
     reader: options.reader,
   };

@@ -99,6 +99,7 @@ import { type HandlerAccess, handlerAccess, inputWithAccess } from "./handler-ac
 import { handlerReply } from "./handler-reply.js";
 import { beginIdempotency } from "./idempotency.js";
 import { checkRestrictedInput, validateRequestInput } from "./input-checks.js";
+import { type InputRuleSets, inputRulesProblems, runInputRules } from "./input-rules.js";
 import { nestRuntimeLogger } from "./nestjs-logger.js";
 import { everyRouteHandler, expressRouteListing, routeEntries } from "./node-express-routes.js";
 import { installOutgoingCheck } from "./node-outgoing-check.js";
@@ -149,10 +150,15 @@ export interface NestApiIdentity {
   readonly moduleClassName: string;
 }
 
-/** The options of `SeampactModule.forRoot(hooks, options)`. */
-export interface SeampactModuleOptions {
+/** The options of `SeampactModule.forRoot(hooks, options)`; the generated module narrows `InputRules`. */
+export interface SeampactModuleOptions<InputRules = InputRuleSets> {
   /** Where the boundary writes its warnings and unexpected failures; NestJS's `Logger` when absent. */
   readonly logger?: RuntimeLogger;
+  /**
+   * The app's own rules on an operation's input parts, run after the contract's checks (step 8b). A class-validator
+   * constraint that injects a provider is listed in the app's own module, with class-validator's `useContainer`.
+   */
+  readonly inputRules?: InputRules;
   /** The `responses` mode of the api's routes, the generated target option when absent; `responses()` on a route wins. */
   readonly responses?: ResponsesMode;
   /** Whether the success bodies written outside the handler result are validated, the generated target option when absent. */
@@ -244,20 +250,20 @@ export class ContractException<
 }
 
 /** The api's dynamic module class, as the generated module exports it. */
-export interface SeampactModuleClass<Hooks> {
+export interface SeampactModuleClass<Hooks, InputRules = InputRuleSets> {
   new (): object;
-  forRoot(...[hooks, moduleOptions]: ModuleArguments<Hooks>): DynamicModule;
+  forRoot(...[hooks, moduleOptions]: ModuleArguments<Hooks, InputRules>): DynamicModule;
   /** The module with hooks a factory builds from injected providers. */
   forRootAsync(
     asyncHooks: SeampactModuleAsyncHooks<Hooks>,
-    moduleOptions?: SeampactModuleOptions,
+    moduleOptions?: SeampactModuleOptions<InputRules>,
   ): DynamicModule;
 }
 
-type ModuleArguments<Hooks> =
+type ModuleArguments<Hooks, InputRules> =
   Partial<Hooks> extends Hooks
-    ? [hooks?: Hooks, options?: SeampactModuleOptions]
-    : [hooks: Hooks, options?: SeampactModuleOptions];
+    ? [hooks?: Hooks, options?: SeampactModuleOptions<InputRules>]
+    : [hooks: Hooks, options?: SeampactModuleOptions<InputRules>];
 
 // A route `setGlobalPrefix`'s `exclude` option keeps unprefixed, as `ApplicationConfig` holds it.
 type ExcludedRoute = NonNullable<
@@ -317,11 +323,13 @@ const BODY_VALIDATION_OPTION = "bodyValidation";
 const RESPONSES_VALUES: readonly unknown[] = ["strict", "warn"] satisfies ResponsesMode[];
 const JSON_MEDIA = "application/json";
 const UNBOUND_OPERATIONS_OPTION = "unboundOperations";
+const INPUT_RULES_OPTION = "inputRules";
 const MODULE_OPTION_NAMES: readonly string[] = [
   LOGGER_OPTION,
   RESPONSES_OPTION,
   BODY_VALIDATION_OPTION,
   UNBOUND_OPERATIONS_OPTION,
+  INPUT_RULES_OPTION,
 ];
 const UNBOUND_OPERATIONS_VALUES: readonly unknown[] = [
   "error",
@@ -467,7 +475,7 @@ function requireContext(): BoundaryContext {
 }
 
 /** The NestJS boundary of one api. */
-export function createNestBoundary<Hooks extends RegisteredHooks>(
+export function createNestBoundary<Hooks extends RegisteredHooks, InputRules = InputRuleSets>(
   api: ContractApi,
   options: NestBoundaryOptions,
   identity: NestApiIdentity,
@@ -482,7 +490,8 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
   const bodyGlue = expressBodyGlue(api);
   const reflector = new Reflector();
   // Set when the module starts: what the exported pre-routing filter and helper reach outside a request context.
-  const platform: { adapterHost?: HttpAdapterHost; hooks?: BoundaryHooks } = {};
+  const platform: { adapterHost?: HttpAdapterHost; hooks?: BoundaryHooks; inputRules?: unknown } =
+    {};
   // The HTTP adapters of the apps the module was bootstrapped in.
   const bootstrappedAdapters = new WeakSet<object>();
   // The operations each app's module left unbound under `unboundOperations: 'warn'`, keyed by its Express app.
@@ -792,6 +801,8 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
     }
 
     if (started?.outcome === "started") context.idempotencyKey = started.key;
+
+    await runInputRules(state, context, platform.inputRules);
 
     const result: unknown = await methodResult(context, callMethod);
 
@@ -1378,7 +1389,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
   function moduleOf(
     hooksProvider: Provider,
     imports: NonNullable<ModuleMetadata["imports"]>,
-    moduleOptions: SeampactModuleOptions,
+    moduleOptions: SeampactModuleOptions<InputRules>,
   ): DynamicModule {
     useRuntimeLogger(moduleOptions.logger ?? nestRuntimeLogger(api.id), api);
 
@@ -1410,14 +1421,16 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
     @Inject(MODULE_OPTIONS) private readonly moduleOptions!: SeampactModuleOptions;
     @Inject(ModulesContainer) private readonly modulesContainer!: ModulesContainer;
 
-    static forRoot(...[hooks, moduleOptions = {}]: ModuleArguments<Hooks>): DynamicModule {
+    static forRoot(
+      ...[hooks, moduleOptions = {}]: ModuleArguments<Hooks, InputRules>
+    ): DynamicModule {
       return moduleOf({ provide: SEAMPACT_HOOKS, useValue: hooks ?? {} }, [], moduleOptions);
     }
 
     /** The module with hooks a factory builds from injected providers. */
     static forRootAsync(
       asyncHooks: SeampactModuleAsyncHooks<Hooks>,
-      moduleOptions: SeampactModuleOptions = {},
+      moduleOptions: SeampactModuleOptions<InputRules> = {},
     ): DynamicModule {
       return moduleOf(
         {
@@ -1433,6 +1446,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
     configure(consumer: MiddlewareConsumer): void {
       platform.adapterHost = this.adapterHost;
       platform.hooks = this.hooks;
+      platform.inputRules = moduleOptionOf(this.moduleOptions, INPUT_RULES_OPTION);
 
       const contractMethods = discoveredContractMethods(this.discovery);
 
@@ -1465,6 +1479,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
       const problems = [
         ...enforcedHookBootProblems(api, this.hooks),
         ...moduleOptionsProblems(this.moduleOptions),
+        ...inputRulesProblems(api, moduleOptionOf(this.moduleOptions, INPUT_RULES_OPTION)),
         ...missingValidatorProblems(this.moduleOptions),
         ...this.handlerProblems(contractMethods),
         ...this.unboundOperationProblems(contractMethods),
@@ -1633,7 +1648,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
   Object.defineProperty(SeampactModule, "name", { value: identity.moduleClassName });
 
   // The module's injected members stay private to the class; the exported type names its static side.
-  const apiModule: SeampactModuleClass<Hooks> = SeampactModule;
+  const apiModule: SeampactModuleClass<Hooks, InputRules> = SeampactModule;
 
   // NestJS decorators and parameters that write after the boundary's reply.
   function writerProblems(
@@ -1963,6 +1978,11 @@ function probeRequest(route: ContractRoute): object {
     query: {},
     params: {},
   };
+}
+
+// One option of `forRoot`, undefined when the options are no object, which the boot check reports.
+function moduleOptionOf(moduleOptions: unknown, name: string): unknown {
+  return isPlainObject(moduleOptions) ? moduleOptions[name] : undefined;
 }
 
 function moduleOptionsProblems(moduleOptions: unknown): BootProblem[] {
