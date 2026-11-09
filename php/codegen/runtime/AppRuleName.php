@@ -24,7 +24,13 @@ final class AppRuleName
 
     public static function isUsable(string $name): bool
     {
-        return preg_match(self::USABLE_NAME, $name) === 1 && preg_match(self::UUID_SHAPE, $name) !== 1;
+        return preg_match(self::USABLE_NAME, $name) === 1 && !self::isUuidShaped($name);
+    }
+
+    /** Symfony's built-in constraints set a UUID as their violation code; it is no name an app gave. */
+    public static function isUuidShaped(string $name): bool
+    {
+        return preg_match(self::UUID_SHAPE, $name) === 1;
     }
 
     /**

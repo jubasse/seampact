@@ -33,6 +33,11 @@ final class ApiIdentityFiles
                 $this->placement->runtime('UnexpectedErrorListener'),
                 "Told of every failure api '{$api}' answers with its 500: alias this interface to your listener.",
             ),
+            ApiInterfaceFile::extending(
+                $this->placement->inputRules,
+                $this->placement->runtime('InputRules'),
+                "The app's input rules of api '{$api}', one class per operation and input part: implement it, with autoconfiguration on.",
+            ),
         ];
     }
 

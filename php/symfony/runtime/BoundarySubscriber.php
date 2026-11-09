@@ -101,6 +101,9 @@ abstract class BoundarySubscriber implements EventSubscriberInterface
     /** Whether the boot check's hook problems are read, on the first contract request of each container instance. */
     abstract protected function checksHooks(): bool;
 
+    /** Whether the boot check's input rule problems are read, whatever the hooks switch says. */
+    abstract protected function checksInputRules(): bool;
+
     /**
      * The bundle's `boot()` guard: a worker runtime that declares itself (`APP_RUNTIME_MODE` with `worker=1`, as
      * FrankenPHP's worker runner sets it) never finishes booting the kernel.
@@ -246,7 +249,11 @@ abstract class BoundarySubscriber implements EventSubscriberInterface
             [$input, $parts] = $this->checkedInput($request, $state);
             $request->attributes->set($this->inputAttribute(), $input);
             $replayed = IdempotencyStep::begin($state, $parts);
-        } catch (ContractRefusal $refusal) {
+            // Step 8b: a replayed write never meets a rule.
+            if ($replayed === null) {
+                InputRulesStep::run($state, $input, $this->validator);
+            }
+        } catch (ContractRefusal | BoundaryFailure $refusal) {
             throw $refusal;
         } catch (\Throwable $failure) {
             throw new BoundaryFailure($failure);
@@ -301,7 +308,7 @@ abstract class BoundarySubscriber implements EventSubscriberInterface
 
         if ($exception instanceof BoundaryFailure || $exception instanceof ContractBypassedException) {
             $cause = $exception instanceof BoundaryFailure ? ($exception->getPrevious() ?? $exception) : $exception;
-            $this->unmapped($event, $state, 'a boundary step failed', $cause);
+            $this->unmapped($event, $state, $exception instanceof BoundaryFailure ? $exception->reason : BoundaryFailure::DEFAULT_REASON, $cause);
         }
     }
 
@@ -508,7 +515,7 @@ abstract class BoundarySubscriber implements EventSubscriberInterface
         }
         $issues = [...$issues, ...PageReply::cursorIssues($state, $tree->query)];
         if ($issues !== []) {
-            throw AccessSteps::schemaInvalid($state, array_slice(array_values(array_unique($issues, SORT_REGULAR)), 0, self::MAX_RENDERED_ISSUES));
+            throw AccessSteps::schemaInvalid($state, self::renderedIssues($issues));
         }
 
         $parts = ['path' => $tree->path, 'query' => PageReply::withFilledLimit($state, $tree->query), 'headers' => VersionHeader::handedOver($state, $version, $tree->header)];
@@ -518,6 +525,17 @@ abstract class BoundarySubscriber implements EventSubscriberInterface
         }
 
         return [$input, $parts];
+    }
+
+    /**
+     * The issues a 400 answers: without repeats, capped.
+     *
+     * @param list<array{in: string, pointer: string, rule: string}> $issues
+     * @return list<array{in: string, pointer: string, rule: string}>
+     */
+    public static function renderedIssues(array $issues): array
+    {
+        return array_slice(array_values(array_unique($issues, SORT_REGULAR)), 0, self::MAX_RENDERED_ISSUES);
     }
 
     /** @return array{in: string, pointer: string, rule: string} */
@@ -545,7 +563,10 @@ abstract class BoundarySubscriber implements EventSubscriberInterface
             return self::WORKER_REFUSAL . ': this container instance serves a second main request, as a worker runtime does; serve the app with php-fpm, or keep this api\'s bundle out of the worker app';
         }
 
-        $this->hookProblems ??= $this->checksHooks() ? HookCheckWarmer::problems($this->hooks, $contract) : [];
+        $this->hookProblems ??= [
+            ...($this->checksHooks() ? HookCheckWarmer::problems($this->hooks, $contract) : []),
+            ...($this->checksInputRules() ? HookCheckWarmer::inputRuleProblems($this->hooks, $contract) : []),
+        ];
 
         return $this->hookProblems === [] ? null : HookCheckWarmer::report($contract, $this->hookProblems);
     }

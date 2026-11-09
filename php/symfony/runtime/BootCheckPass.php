@@ -69,6 +69,7 @@ final class BootCheckPass implements CompilerPassInterface
         $contract = Regeneration::contract($this->contractClass);
         $problems = [
             ...($this->checksHandlers ? $this->handlers($container, $contract) : []),
+            ...self::inputRules($container),
             ...$this->listeners($container),
             ...$this->shadowingBoundaries($container, $contract),
             ...$this->platform($container),
@@ -134,6 +135,25 @@ final class BootCheckPass implements CompilerPassInterface
         }
 
         throw new \LogicException("seampact: the generated settings class {$this->settingsClass} takes no " . ContractSettings::PUBLIC_ORIGIN_ARGUMENT . ' argument; regenerate the code.');
+    }
+
+    /**
+     * A class implementing the runtime's `InputRules` and no api's generated interface is never tagged, so its rules
+     * would never run: refused here, at every level of the check (ADR 0028 "The boot check").
+     *
+     * @return list<string>
+     */
+    private static function inputRules(ContainerBuilder $container): array
+    {
+        $problems = [];
+        foreach (self::implementing($container, InputRules::class) as $class) {
+            $generated = array_filter($class->getInterfaceNames(), static fn (string $interface): bool => is_subclass_of($interface, InputRules::class));
+            if ($generated === []) {
+                $problems[] = "the service {$class->name} implements " . InputRules::class . ' directly, so no api runs it; implement the generated <Api>InputRules interface of the api it serves';
+            }
+        }
+
+        return $problems;
     }
 
     /** @return list<string> */
