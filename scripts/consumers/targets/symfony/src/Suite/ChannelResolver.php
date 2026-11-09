@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Suite;
 
+use App\Generated\InputRules\Symfony\ScopeResolver as InputRulesScopeResolver;
 use App\Generated\Tasks\Symfony\ScopeResolver;
 use Seampact\Codegen\Runtime\Denial;
 use Seampact\ConsumerSuite\SampleData;
@@ -15,7 +16,7 @@ use Seampact\Hooks\ScopeResolution;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
 /** Resolves a declared channel id to itself and loads its sample channel, the sample user a member of every channel but one, unless the script denies the scope. */
-final class ChannelResolver implements ScopeResolver
+final class ChannelResolver implements ScopeResolver, InputRulesScopeResolver
 {
     /** The channel whose resolution throws Symfony's `AccessDeniedException`, as a voter called by a resolver would. */
     public const ACCESS_DENIED_CHANNEL = '10000000-0000-4000-8000-0000000000ad';

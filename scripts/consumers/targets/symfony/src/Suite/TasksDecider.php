@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Suite;
 
+use App\Generated\InputRules\Symfony\Decider as InputRulesDecider;
 use App\Generated\Tasks\Schemas\ApiRateLimitedParams;
 use App\Generated\Tasks\Symfony\Decider;
 use App\Generated\Tasks\Symfony\UserPrincipal;
@@ -20,12 +21,12 @@ use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
 /**
- * The `tasks` api's decide double for every right and rule: a right is first asked of the app's voters through
+ * The `tasks` and `inputRules` apis' decide double for every right and rule: a right is first asked of the app's voters through
  * `isGranted`, with a subject carrying its params and scopes, and a refusal throws `AccessDeniedException` as
  * `denyAccessUnlessGranted()` does; the throttle rule counts the throttled user's bucket in the app's `suite_throttle`
  * rate limiter, keyed by the boundary's bucket key; then it denies what the script denies and allows the rest.
  */
-final class TasksDecider implements Decider
+final class TasksDecider implements Decider, InputRulesDecider
 {
     private const THROTTLE_RULE = 'throttle';
     private const RATE_LIMITED = 'api.rate_limited';
