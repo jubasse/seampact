@@ -45,9 +45,10 @@ final class GoldenTest extends TestCase
         $apiPlatform = self::byPath(self::apiPlatformFiles());
         $symfony = self::byPath((new SymfonyGenerator())->generate(self::ir(new SymfonyGenerator()), ReferenceContract::entry(SymfonyGenerator::PACKAGE, 'tasks', self::NAMESPACE)));
 
-        $unchanged = static fn (array $files): array => array_filter($files, static fn (string $path): bool => !self::isApiPlatformFile($path), ARRAY_FILTER_USE_KEY);
+        $symfonyUnchanged = array_filter($symfony, static fn (string $path): bool => !self::isApiPlatformFile($path), ARRAY_FILTER_USE_KEY);
+        $apiPlatformUnchanged = array_filter($apiPlatform, static fn (string $path): bool => !self::isApiPlatformFile($path), ARRAY_FILTER_USE_KEY);
 
-        self::assertSame(self::withoutInputRules($unchanged($symfony)), $unchanged($apiPlatform));
+        self::assertSame(self::withoutInputRules($symfonyUnchanged), $apiPlatformUnchanged);
     }
 
     public function testNoInputRulesInterfaceIsGeneratedAndTheFlavourRefusesThem(): void
