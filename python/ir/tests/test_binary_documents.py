@@ -1,5 +1,5 @@
 """The binary's `generate` and `check` on an app config's OpenAPI documents, run through a stub that records its
-arguments (ADR 0010, "Amendment 2026-11-01: the Python channels", Documents)."""
+arguments (ADR 0010, "The Python channels", Documents)."""
 
 import hashlib
 import sys

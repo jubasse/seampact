@@ -1,4 +1,4 @@
-"""The refusals of the compiler binary channel of a Python build (ADR 0010, "Amendment 2026-11-01: the Python
+"""The refusals of the compiler binary channel of a Python build (ADR 0010, "The Python
 channels"): the codes are those of the PHP and JVM channels."""
 
 from dataclasses import dataclass
