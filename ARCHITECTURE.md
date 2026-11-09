@@ -36,7 +36,7 @@ Rule (ADR 0009, section "Repository layout"): npm packages live at `packages/<gr
 | Path | What it holds |
 |---|---|
 | `packages/core/*` | Exists today: `cli`, `codegen-core`, `compiler`, `diff`, `lint`, `openapi`, `spec`. Role `core` in the package manifest. |
-| `packages/targets/` | One generator per framework or language: `codegen-ts`, `-fetch`, `-zod`, `-yup`, `-class-validator`, `-msw`, `-express`, `-fastify`, `-hono`, `-nestjs`, `-adonis`, `-react`, `-vue` and `-angular`; for example `targets/codegen-zod` for `@seampact/codegen-zod`. |
+| `packages/targets/` | One generator per framework or language: `codegen-ts`, `-fetch`, `-axios`, `-zod`, `-yup`, `-class-validator`, `-msw`, `-express`, `-fastify`, `-hono`, `-nestjs`, `-adonis`, `-react`, `-vue` and `-angular`; for example `targets/codegen-zod` for `@seampact/codegen-zod`. |
 | `packages/packs/` | Data-only convention packs (ADR 0008): `pack-hal`, `pack-jsonapi`, `pack-crud-rights`, `pack-api-platform`, `pack-laravel` and `pack-spring`. |
 | `packages/runtime/` | The hooks, helper (`server-runtime` among them) and adapter packages that generated code depends on at run time (ADR 0009, section "Package roles"). |
 | `packages/tools/` | Repository-side tools: `binary` (the standalone compiler, ADR 0010), `http-suite` (the shared http conformance suite) and `docs-site` (the documentation website, private). |

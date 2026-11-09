@@ -29,6 +29,12 @@
       "package": "@seampact/codegen-fetch",
       "kind": "client",
       "style": "fetch"
+    },
+    {
+      "id": "axios",
+      "package": "@seampact/codegen-axios",
+      "kind": "client",
+      "style": "fetch"
     }
   ],
   "serverTargets": [

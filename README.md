@@ -35,7 +35,7 @@ From one YAML contract:
 | Server boundary | Routes for NestJS, Express, Fastify, AdonisJS, Hono, Spring Boot, Laravel, Symfony, FastAPI, Django REST Framework or Django Ninja. They validate input, call your access hooks, and check each reply against the contract before it is sent. |
 | Built-in rules | Paging, rate limits, idempotency keys, ETags, CSRF, signed requests and field rights, declared in the contract and enforced at the boundary. You plug in the stores and decisions. |
 | Errors | One error format, RFC 9457 `problem+json` by default, with typed error codes per route. |
-| Clients | A typed `fetch` client, hooks for React (TanStack Query, SWR, RTK Query), composables for Vue (TanStack Query, Pinia Colada), an Angular service with NgRx effects as an option, and MSW mocks to test them with no backend. |
+| Clients | A typed `fetch` client (or over your own axios instance), hooks for React (TanStack Query, SWR, RTK Query), composables for Vue (TanStack Query, Pinia Colada), an Angular service with NgRx effects as an option, and MSW mocks to test them with no backend. |
 | Docs | OpenAPI 3.1 documents, and on NestJS, Fastify and FastAPI your framework's own Swagger kept in line with the contract. |
 | Editor support | Schemas that complete and check the contract's names as you type. |
 
@@ -641,6 +641,7 @@ Spring Boot 4 is generated at build time by the Gradle plugin `io.github.jubasse
 | Framework | Versions | Query tools |
 |---|---|---|
 | Typed `fetch` client | any framework or none | none |
+| Axios client | axios 1.7 or later, over the `fetch` client | none |
 | React | 19 | TanStack Query 5, SWR 2, RTK Query 2, or none |
 | Vue | 3 | TanStack Query 5, Pinia Colada 1, or none |
 | Angular | 22 | none: a service over `HttpClient`, with NgRx 22 actions and effects or NgRx Signals 22 store features as an option |

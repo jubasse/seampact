@@ -131,5 +131,7 @@ test("a missing client link is refused, naming the fetch client provider", async
 
   expect(
     outcome.status === "refused" ? outcome.refusals.map((refusal) => refusal.fix) : [],
-  ).toEqual(["Link `@seampact/codegen-fetch` in the target's `link` entry."]);
+  ).toEqual([
+    "Link `@seampact/codegen-fetch` or `@seampact/codegen-axios` in the target's `link` entry.",
+  ]);
 });

@@ -67,6 +67,7 @@ The same pages, with search, are on the [documentation site](https://jubasse.git
 ## Client guides
 
 - [Fetch client](frontend/fetch-client.md): the typed `fetch` client every other client builds on.
+- [Axios client](frontend/axios-client.md): the same client, sent through your own axios instance.
 - [React](frontend/react.md): TanStack Query, SWR or RTK Query hooks over the fetch client.
 - [Vue](frontend/vue.md): TanStack Query, Pinia Colada or plain `fetch` composables.
 - [Angular](frontend/angular.md): an `HttpClient` service with signals, NgRx optional.
