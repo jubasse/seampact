@@ -1,0 +1,48 @@
+{
+  "id": "pack-api-platform-item-iri",
+  "title": "An item and a collection member carry the IRI of their resource",
+  "checks": ["CHK-107"],
+  "profiles": ["pack:api-platform"],
+  "steps": [
+    {
+      "title": "item",
+      "request": {
+        "method": "GET",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks/20000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "@context": "/contexts/Task",
+          "@id": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks/20000000-0000-4000-8000-000000000001",
+          "@type": "Task"
+        }
+      }
+    },
+    {
+      "title": "collection member",
+      "request": {
+        "method": "GET",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "@type": "Collection",
+          "member": [
+            {
+              "@id": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks/20000000-0000-4000-8000-0000000000ff",
+              "@type": "Task"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

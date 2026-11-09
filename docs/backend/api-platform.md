@@ -2,7 +2,7 @@
 
 `seampact/api-platform` generates the contract's PHP code for API Platform 5 on Symfony. API Platform routes the operations and keeps its docs and security glue. The generated boundary checks each request, as on Symfony.
 
-This target is being delivered in steps. Today the boundary checks each request and writes every reply, from your handler's result or a declared error. The Hydra look and the validation body arrive in the next releases.
+The boundary checks each request and writes every reply, from your handler's result or a declared error. For the API Platform look, apply `@seampact/pack-api-platform`: items and collection members carry their `@id`, `@type` and `@context`, collections are Hydra pages, and a failed validation answers 422 with a `violations` list (`propertyPath`, `message`). Here `propertyPath` is the JSON pointer of the field, not a PHP property path.
 
 API Platform 5 on Symfony 7.4 and 8, PHP 8.3, 8.4 or 8.5. API Platform 4 is not supported.
 
