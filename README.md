@@ -32,7 +32,7 @@ From one YAML contract:
 |---|---|
 | Types | One TypeScript type per schema, request and reply. |
 | Validators | zod, yup, class-validator, VineJS or Ajv schemas that check every input. |
-| Server boundary | Routes for NestJS, Express, Fastify, AdonisJS, Hono, Spring Boot, Laravel, Symfony, API Platform, FastAPI, Django REST Framework or Django Ninja. They validate input, call your access hooks, and check each reply against the contract before it is sent. |
+| Server boundary | Routes for NestJS, Express, Fastify, AdonisJS, Hono, Next.js, Spring Boot, Laravel, Symfony, API Platform, FastAPI, Django REST Framework or Django Ninja. They validate input, call your access hooks, and check each reply against the contract before it is sent. |
 | Built-in rules | Paging, rate limits, idempotency keys, ETags, CSRF, signed requests and field rights, declared in the contract and enforced at the boundary. You plug in the stores and decisions. |
 | Errors | One error format, RFC 9457 `problem+json` by default, with typed error codes per route. |
 | Clients | A typed `fetch` client (or over your own axios instance), hooks for React (TanStack Query, SWR, RTK Query), composables for Vue (TanStack Query, Pinia Colada), an Angular service with NgRx effects as an option, and MSW mocks to test them with no backend. |
@@ -173,6 +173,33 @@ export const notesEndpoints: NotesHono.NotesEndpoints = {
 
 </details>
 
+<details><summary>Next.js</summary>
+
+```ts
+export const notesEndpoints: NotesNext.NotesEndpoints = {
+  getNote(input) {
+    const note = notes.get(input.path.noteId);
+
+    if (note === undefined)
+      return { status: Notes.Status.NotFound, code: Notes.ErrorCode.ApiNotFound };
+
+    return { status: Notes.Status.Ok, body: note };
+  },
+};
+```
+
+One catch-all route file serves the api, `src/app/v1/[[...path]]/route.ts`:
+
+```ts
+export const runtime = "nodejs";
+
+const handler = routeHandler({ handlers: { NotesEndpoints: notesEndpoints } });
+
+export { handler as DELETE, handler as GET, handler as HEAD, handler as OPTIONS, handler as PATCH, handler as POST, handler as PUT };
+```
+
+</details>
+
 <details><summary>Spring Boot</summary>
 
 ```java
@@ -225,6 +252,34 @@ final class NotesController implements NotesEndpoints
             : new GetNoteResponse200($note);
     }
 }
+```
+
+</details>
+
+<details><summary>API Platform</summary>
+
+The same handler as on Symfony. API Platform reads the generated resources:
+
+```php
+final class NotesController implements NotesEndpoints
+{
+    #[SeampactOperation('getNote')]
+    public function getNote(GetNoteInput $input): GetNoteResult
+    {
+        $note = $this->notes->find($input->path->noteId);
+
+        return $note === null
+            ? GetNoteErrors::apiNotFound()
+            : new GetNoteResponse200($note);
+    }
+}
+```
+
+```yaml
+# config/packages/api_platform.yaml
+api_platform:
+    mapping:
+        paths: ['%kernel.project_dir%/src/Generated']
 ```
 
 </details>
@@ -513,6 +568,19 @@ if (reply.ok) console.log(reply.body.title);
 
 </details>
 
+<details><summary>axios</summary>
+
+The same client over your own axios instance, with its interceptors:
+
+```ts
+const client = createClient({
+  baseUrl: import.meta.env.VITE_API_URL,
+  fetch: fetchOfAxios(axios.create({ headers: { authorization: "Bearer my-token" } })),
+});
+```
+
+</details>
+
 ---
 
 ### Query
@@ -627,6 +695,7 @@ The full walk-through is in [Get started](docs/getting-started/README.md).
 | [Fastify](docs/backend/fastify.md) | 5 | zod, yup, Ajv |
 | [AdonisJS](docs/backend/adonisjs.md) | 7 (6 still works but is no longer maintained, see [Supported versions](docs/supported-versions.md)) | zod, yup, VineJS |
 | [Hono](docs/backend/hono.md) | 4 | zod, yup |
+| [Next.js](docs/backend/nextjs.md) | 16 (Node.js runtime) | zod, yup |
 | [Spring Boot](docs/backend/spring-boot.md) | 4 | generated checks, Jakarta constraints on the records |
 | [Symfony](docs/backend/symfony.md) | 7.4, 8 | generated checks, Symfony Validator constraints on the inputs |
 | [API Platform](docs/backend/api-platform.md) | 5, on Symfony 7.4 and 8 (PHP 8.3 to 8.5) | generated checks |
@@ -674,6 +743,8 @@ Gradle, Maven and the compiler binary are in [Install in other ecosystems](docs/
 
 Every page is listed in [docs/README.md](docs/README.md).
 
+Runnable example apps, each from one contract and kept green by CI: [NestJS with React](examples/nestjs-react/), [Laravel with Vue](examples/laravel-vue/) and [Next.js full stack](examples/nextjs/).
+
 ## Roadmap
 
 - [x] Node servers: NestJS, Express, Fastify, AdonisJS, Hono
@@ -693,7 +764,8 @@ Every page is listed in [docs/README.md](docs/README.md).
 - [x] 1.0 on npm, PyPI, Maven Central, Packagist and the Gradle Plugin Portal
 - [ ] 1.1: app input rules on the Node and PHP servers, API Platform, Next.js, an axios client, example apps
 - [ ] An `init` wizard that creates a workspace of services and frontends, in any repository layout, from pinned templates
-- Later: a client conformance suite (1.2), a kit to write new targets, one shared core per language, then Bun, Deno, Workers, Kotlin, Swift, Dart, Go, .NET, Rust ([full list](docs/roadmap.md))
+- [ ] 1.2: app input rules on Spring Boot, Python and API Platform, API Platform on Laravel, a client conformance suite
+- Later: a kit to write new targets, one shared core per language, then Bun, Deno, Workers, Kotlin, Swift, Dart, Go, .NET, Rust ([full list](docs/roadmap.md))
 
 ## Contributing
 

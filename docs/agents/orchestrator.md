@@ -15,6 +15,7 @@ Spawn and message agents as the global AGENTS.md "Sub-agents" table says (Herdr 
 | `.work/` brief or decision synthesis | `seampact-writer` | Opus (its default), high for design |
 
 - `general-purpose` only when a task needs a tool the types lack (WebFetch, an MCP server other than context7, the Agent tool); its prompt starts with "Read `.claude/agents/seampact-<role>.md` first"; note the case in the handoff.
+- The `seampact-writer` type has no shell: an audit or brief that must read develop runs as `seampact-reviewer` in a worktree detached at `origin/develop` (the main worktree stays where it is).
 - Follow-ups on a branch (a CI failure, review fixes, a rebase) go to the agent that wrote it (message the agent); a fresh agent only once that agent is near its call cap.
 - Target PR size (A47): one deliverable, about 3,000 to 4,000 hand-written lines; seams stay small and land first. Past an agent's call cap, a fresh agent continues on the same branch from the report's resume state; the PR opens once the deliverable is done.
 - Agent count follows the remaining work, at most 10 at once, never raised back when fewer lanes are open; run them in the background; new or edited agent files load only after a session restart.
@@ -31,6 +32,8 @@ Spawn and message agents as the global AGENTS.md "Sub-agents" table says (Herdr 
 ## Prompt
 
 One line each, in this order: task and PR or lane; worktree, branch and tip, lane id, report or review output path (absolute, review files named `pr<n>.iter<k>[.<lens>].md`); inputs (review file or brief section, decision ids to grep, ADR or grammar section files) with "read only the cited ranges"; owned paths and lead grants; call cap (60, 100, 140); first step (rebase, known gate failure); trailer `Co-Authored-By: Claude <Model> 5.5 <noreply@anthropic.com>`; the gates to end with; the return (max lines: tip, gate result, per-finding status, items for the lead). Never repeat AGENTS.md or the role file.
+
+A docs prompt also states the audience (AI agents and mid-to-advanced developers: light on jargon, code that speaks for itself, short sentences) and that no information is lost: move or rewrite, never drop, and a moved fact leaves a link at its old place.
 
 ## Reviews
 
@@ -53,6 +56,7 @@ One line each, in this order: task and PR or lane; worktree, branch and tip, lan
 - `gh` often hits TLS timeouts: check the state before retrying.
 - develop requires a branch up to date with it (strict required checks; GitHub offers no merge queue on a user-owned repository): a lone PR merges with `.work/tools/merge-seq.sh <pr>...` (update the branch, wait for the fast tier, check no check-run is pending, squash-merge, stop at the first failure). Ready PRs land together as an integration batch: one integration branch from develop, one commit per PR ("<title> (#n)"), CI once, a merge commit, the batched PRs closed with a pointer; run at least one consumer per family before the push. The full tier runs on each push to develop; a failure there is fixed forward (`ci-watch` opens an issue). Chain cleanup (worktree remove, branch delete, required checks) after it with `&&` only, never `;`.
 - A job that fails on a registry refusal (Maven Central 429, 403 or a missing artifact that exists) is rerun once with `gh run rerun <run> --failed` before it is read as a failure.
+- GitHub sometimes abandons jobs or fails a workflow at startup with no job, which then shows nowhere on the pull request: rerun once, and before merging check each required context by name (`gh api .../required_status_checks` against `gh pr checks`).
 - Dependabot: merge a green grouped PR; a security PR on a floor requirement file is merged only while the new version stays inside the floor the compatibility matrix declares, otherwise closed and its alert dismissed as test-only by the user.
 - Actions cache (10 GB repository limit): pull requests only restore; pushes, the nightly and a manual run save. Check the split with `gh api repos/jubasse/seampact/actions/cache/usage` and the caches listing after a CI change.
 
