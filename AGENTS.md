@@ -4,7 +4,7 @@ Repository conventions every agent follows. Your task prompt adds the task, the 
 
 ## Before you start
 
-- Read `docs/agents/cartography.md` before exploring: packages, roles, compiler stages and one line per source directory.
+- `docs/agents/cartography.md` maps packages, roles, compiler stages and one line per directory, so work is not duplicated: an implementer or refactor agent reads it whole before writing; other roles `rg` it for the directory or topic they need.
 - Product decisions are in `docs/decisions.md` (cited as `A<n>`), design in `docs/adr/`.
 - Read a decision by grepping its anchor (`rg -n 'id="a44"' docs/decisions.md`), then the lines after it; never read `docs/decisions.md` whole.
 - Read the grammar and the IR by section file: `docs/grammar/` (ADR 0002, one `<NN>-<slug>.md` per section NN, plus `example.md`) and `docs/ir/` (ADR 0004, same naming). The ADR keeps the summary and a section-to-file table.
@@ -59,12 +59,4 @@ Repository conventions every agent follows. Your task prompt adds the task, the 
 
 ## Code style
 
-- Airy code, blank lines between steps; max 3-4 nesting levels: early return, else extract a function.
-- Long precise names (`pendingInvoiceTotal`, not `data`); function names make comments unnecessary.
-- Comments: short, plain, only for non-obvious logic or reasons. No emoji or symbols.
-- Match surrounding style; minimal diffs; no speculative abstraction, dead or commented-out code.
-- One concept per file: its types, interfaces, enums, classes and functions together; one shared helper, never a copy.
-- No swallowed errors (empty catch, silent fallback): say what failed and the fix.
-- No `any` or forced casts; named constants, no magic values or boolean flag params.
-- Bug fix = test failing before; test behaviour, not implementation.
-- When you modify a file, apply these conventions to the code you touch.
+- The global AGENTS.md "Code style" rules; when you modify a file, apply them to the code you touch.
