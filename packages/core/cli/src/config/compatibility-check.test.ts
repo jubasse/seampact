@@ -39,6 +39,7 @@ interface CheckCase {
   allowUntested?: string[];
   level?: MatrixCheckLevel;
   use?: string;
+  matrix?: readonly TargetCompatibility[];
 }
 
 function check({
@@ -47,6 +48,7 @@ function check({
   allowUntested,
   level = "warning",
   use = SERVER_PACKAGE,
+  matrix = MATRIX,
 }: CheckCase): CompatibilityOutcome {
   const entry: TargetEntry = {
     id: "server",
@@ -63,7 +65,7 @@ function check({
     entries: [entry],
     targets,
     installedVersions,
-    matrix: MATRIX,
+    matrix,
     level,
   });
 }
@@ -82,6 +84,25 @@ test("passes a tested major", () => {
 
 test("warns on an untested major, naming the tested ones (CHK-141)", () => {
   expect(check({ installedMajor: 6 })).toEqual({ problems: [], warnings: [UNTESTED] });
+});
+
+test("says a target tested on no major yet is tested on none, not on an empty list", () => {
+  const [record] = MATRIX;
+
+  if (record === undefined) throw new Error("the test matrix has no row");
+
+  const untestedTarget: TargetCompatibility = {
+    ...record,
+    framework: { ...record.framework, tested: [] },
+  };
+
+  expect(check({ installedMajor: 6, matrix: [untestedTarget] }).warnings).toEqual([
+    {
+      ...UNTESTED,
+      message:
+        "web-framework 6.1.0 is installed, and the target '@acme/codegen-server' is tested on no web major yet.",
+    },
+  ]);
 });
 
 test("refuses an untested major under checks.matrix: error", () => {
