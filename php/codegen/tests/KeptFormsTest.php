@@ -148,7 +148,7 @@ final class KeptFormsTest extends TestCase
 
         $messages = self::refused($document, null);
 
-        self::assertStringContainsString("The page slots '\$collection', '\$itemSelf' of the paging style 'cursor'", $messages['paging.response.slot.unsupported'] ?? '');
+        self::assertStringContainsString("The page slots '\$collection' of the paging style 'cursor'", $messages['paging.response.slot.unsupported'] ?? '');
     }
 
     // The page reply fills `$page` for a page-number style only: an offset style's page number has no declared base.

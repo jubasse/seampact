@@ -37,6 +37,18 @@ final class RepliesTest extends TestCase
         self::assertEquals((object) ['data' => ['id' => 't']], Replies::successBody($enveloped, 'item', ['id' => 't'], 200, '/v1/tasks/t'));
     }
 
+    public function testAnEnvelopeMergesThePayloadAndWritesTheSelfAndResourceSlots(): void
+    {
+        $jsonLd = ['absent' => 'omit', 'success' => ['item' => ['body' => ['kind' => 'object', 'merge' => 'payload', 'members' => [
+            ['name' => ['kind' => 'text', 'text' => '@id'], 'value' => ['kind' => 'slot', 'slot' => 'self', 'path' => []]],
+            ['name' => ['kind' => 'text', 'text' => '@type'], 'value' => ['kind' => 'slot', 'slot' => 'resource', 'path' => []]],
+        ]], 'headers' => []]]];
+
+        $body = Replies::successBody($jsonLd, 'item', (object) ['id' => 't'], 200, '/v1/tasks/t', ['self' => '/v1/tasks/t', 'resource' => 'Task']);
+
+        self::assertEquals((object) ['id' => 't', '@id' => '/v1/tasks/t', '@type' => 'Task'], $body);
+    }
+
     public function testAnErrorWithoutTheseDeclarationsWritesNeither(): void
     {
         $reply = Replies::error(ApiContract::of(ThrottledContract::class), 'createTask', 'api.not_found');

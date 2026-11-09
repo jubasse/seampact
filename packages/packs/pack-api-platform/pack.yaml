@@ -4,6 +4,22 @@ pack: { name: '@seampact/pack-api-platform', version: 1.0.1, extends: [] }
 scalars:
   iri-reference: { type: string, description: "An IRI reference, such as the '@id' of a JSON-LD node." }
 
+errors:
+  api.validation_failed:
+    status: 422
+    nature: refused
+    title: The request does not satisfy the contract.
+    params:
+      violations:
+        type: array
+        items:
+          type: object
+          properties:
+            propertyPath: { type: string }
+            message: { type: string }
+          required: [propertyPath, message]
+    example: { violations: [{ propertyPath: /title, message: minLength }] }
+
 formats:
   jsonld:
     media: application/ld+json
@@ -39,4 +55,9 @@ pagings:
 
 conventions:
   format: jsonld
+  errors:
+    derived:
+      schemaInvalid:
+        code: api.validation_failed
+        params: { violations: { $each: $issues, $as: { propertyPath: $item.pointer, message: $item.rule } } }
   paging: { default: hydra }

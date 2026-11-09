@@ -125,7 +125,7 @@ final class Replies
 
         $encoded = WireCodec::encodeBody($contract, $declared, self::member($result, 'body'));
         $entityTag = ResponseHeaders::entityTag($state, $status, $encoded);
-        $body = self::enveloped($request, $state, Ir::string($declared, 'shape') ?? '', FieldRights::output($state, $declared, $encoded), $status);
+        $body = self::enveloped($request, $state, $declared, FieldRights::output($state, $declared, $encoded), $status);
 
         $reply = new Response(json_encode($body, self::JSON_FLAGS), $status, ['Content-Type' => $media]);
         if ($entityTag !== null) {
@@ -141,9 +141,12 @@ final class Replies
         return $reply->getStatusCode() === CacheHeaders::NOT_MODIFIED ? $reply : ResponseHeaders::writeSuccessHeaders($state, $status, $reply);
     }
 
-    private static function enveloped(Request $request, BoundaryState $state, string $shape, mixed $payload, int $status): mixed
+    /** @param array<array-key, mixed> $declared */
+    private static function enveloped(Request $request, BoundaryState $state, array $declared, mixed $payload, int $status): mixed
     {
-        return self::successBody($state->contract->format($state->operationId), $shape, $payload, $status, RawTarget::path($request));
+        $shape = Ir::string($declared, 'shape') ?? '';
+
+        return self::successBody($state->contract->format($state->operationId), $shape, $payload, $status, RawTarget::path($request), ResourceIris::successSlots($request, $state, $declared, $shape, $payload));
     }
 
     /**
@@ -152,15 +155,16 @@ final class Replies
      * `$payload` under named members, so an object template always renders.
      *
      * @param array<array-key, mixed> $format
+     * @param array<string, mixed> $resourceSlots `$self` and `$resource`, which the payload alone does not give
      */
-    public static function successBody(array $format, string $shape, mixed $payload, int $status, string $path): mixed
+    public static function successBody(array $format, string $shape, mixed $payload, int $status, string $path, array $resourceSlots = []): mixed
     {
         $template = Ir::map(Ir::map($format, 'success'), $shape)['body'] ?? null;
         if ($template === null || self::isBarePayload($template)) {
             return $payload;
         }
 
-        $slots = [self::PAYLOAD_SLOT => $payload, 'status' => $status, 'path' => $path];
+        $slots = [...$resourceSlots, self::PAYLOAD_SLOT => $payload, 'status' => $status, 'path' => $path];
         $rendered = Templates::render($template, $slots, Ir::string($format, 'absent') === self::NULL_ABSENT);
         if (!$rendered->present) {
             throw new \LogicException("seampact: the format's '{$shape}' success envelope rendered nothing; regenerate the api, whose generation refuses an envelope that does not write \$payload under named members.");
@@ -193,7 +197,7 @@ final class Replies
             }
         }
         $items = FieldRights::output($state, $declared, WireCodec::encodeBody($state->contract, $declared, $facts['items'] ?? []));
-        [$body, $headers] = PageReply::render($state, RawTarget::query($request), RawTarget::path($request), is_array($items) ? array_values($items) : [], $facts, $status);
+        [$body, $headers] = PageReply::render($state, RawTarget::query($request), RawTarget::path($request), is_array($items) ? array_values($items) : [], $facts, $status, ResourceIris::resourceName($state->contract, $declared));
 
         return new Response(json_encode($body, self::JSON_FLAGS), $status, ['Content-Type' => $media, ...$headers]);
     }
