@@ -3,11 +3,15 @@
 # decision, taken by hand with its matrix rows. A release is proposed only after a week, so a version pulled soon
 # after publication never lands. Gradle is not listed: each update needs `jvm/gradle/verification-metadata.xml`
 # regenerated, which Dependabot cannot do.
+# Version updates target develop (git flow); security updates always target the default branch, main, and are
+# retargeted to develop by hand. With target-branch set, the groups, ignore and cooldown options below apply to
+# version updates only.
 
 version: 2
 
 updates:
   - package-ecosystem: github-actions
+    target-branch: develop
     directories:
       - "/"
       - "/.github/actions/*"
@@ -27,6 +31,7 @@ updates:
 
   # Every manifest pins an exact version, which `increase` moves; peer dependency ranges are not updated.
   - package-ecosystem: npm
+    target-branch: develop
     directory: "/"
     versioning-strategy: increase
     schedule:
@@ -48,6 +53,7 @@ updates:
 
   # Framework requirements are the supported ranges and stay as they are; exact pins (build and dev tools) move.
   - package-ecosystem: uv
+    target-branch: develop
     directory: "/python"
     versioning-strategy: increase-if-necessary
     exclude-paths:
@@ -70,6 +76,7 @@ updates:
 
   # The composer.json constraints are the supported ranges; only the lock files move.
   - package-ecosystem: composer
+    target-branch: develop
     directories:
       - "/php/codegen"
       - "/php/hooks"
