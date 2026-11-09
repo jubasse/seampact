@@ -152,6 +152,12 @@ describe("package rules", () => {
       "packages/codegen-fetch/package.json",
       "@seampact/codegen-core as a peer",
     );
+    proves(
+      "rule-2-axios",
+      "rule 2",
+      "packages/codegen-msw/package.json",
+      "depends on @seampact/codegen-fetch (peerDependencies)",
+    );
   });
 
   it("dependency rule 3", () => {

@@ -103,7 +103,10 @@ test("the packages of a style keep the matrix order", () => {
     "@seampact/codegen-class-validator",
   ]);
   expect(firstPartyPackagesOfStyle("typescript")).toEqual(["@seampact/codegen-ts"]);
-  expect(firstPartyPackagesOfStyle("fetch")).toEqual(["@seampact/codegen-fetch"]);
+  expect(firstPartyPackagesOfStyle("fetch")).toEqual([
+    "@seampact/codegen-fetch",
+    "@seampact/codegen-axios",
+  ]);
 });
 
 test("provider ids are unique, so a tool can select a provider by id", () => {
@@ -210,7 +213,10 @@ test("the react client row names its fetch link style, React 19 and each query l
   expect(
     react.libraries?.map((library) => `${library.package}@${library.testedMajors.join()}`),
   ).toEqual(["@tanstack/react-query@5", "swr@2", "@reduxjs/toolkit@2", "react-redux@9"]);
-  expect(firstPartyPackagesOfStyle("fetch")).toEqual(["@seampact/codegen-fetch"]);
+  expect(firstPartyPackagesOfStyle("fetch")).toEqual([
+    "@seampact/codegen-fetch",
+    "@seampact/codegen-axios",
+  ]);
 });
 
 test("a client target is not a server target and offers no validator pair", () => {
