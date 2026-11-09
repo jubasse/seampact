@@ -46,7 +46,7 @@ Amended 2026-10-12: git flow, see CONTRIBUTING.md. CI now runs on push and pull 
 
 Amended 2026-11-03: CI is now one workflow per lane, each with its own required check, plus post-merge and nightly rows, a workflow lint, shared caches and Dependabot. See the CI and Dependencies sections of CONTRIBUTING.md.
 
-Amendment 2026-11-06: the one `ci` job above is now the first of two tiers. A pull request to `develop` runs the fast tier (`ci`, `checklist`, and the unit jobs of each lane it touches, on one version and one consumer per family); the push to `develop` after the merge runs the full tier (the queue rows, the `release` dry run and the post-merge rows). The `release` workflow runs the conformance release gate (ADR 0015): blocking in a manual release run, report-only on `develop`'s newest reports. A job skipped on a pull request passes its required check.
+The one `ci` job above is the first of two tiers. A pull request to `develop` runs the fast tier (`ci`, `checklist`, and the unit jobs of each lane it touches, on one version and one consumer per family); the push to `develop` after the merge runs the full tier (the queue rows, the `release` dry run and the post-merge rows). The `release` workflow runs the conformance release gate (ADR 0015): blocking in a manual release run, report-only on `develop`'s newest reports. A job skipped on a pull request passes its required check.
 
 ## Consequences
 
