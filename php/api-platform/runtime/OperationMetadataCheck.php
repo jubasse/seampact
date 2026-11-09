@@ -7,7 +7,6 @@ namespace Seampact\ApiPlatform\Runtime;
 use ApiPlatform\Metadata\HttpOperation;
 use ApiPlatform\Metadata\Resource\Factory\ResourceMetadataCollectionFactoryInterface;
 use Seampact\ApiPlatform\OperationSwitches;
-use Seampact\Symfony\Runtime\Hooks;
 use Symfony\Component\DependencyInjection\Attribute\Exclude;
 use Symfony\Component\HttpKernel\CacheWarmer\CacheWarmerInterface;
 
@@ -15,7 +14,8 @@ use Symfony\Component\HttpKernel\CacheWarmer\CacheWarmerInterface;
  * The metadata part of the api's boot check (ADR 0029 "The boot check"), run by `cache:warmup`: API Platform's final
  * metadata of each generated resource, as an app's metadata extension left it, must keep every switch that turns off
  * API Platform's own request handling, the generated processor and no provider, and set neither security expression
- * that needs a denormalized object. A service tagged as app input rules is refused by name, since this target runs none yet (ADR 0029 "App input rules"). Every problem is listed at once, then thrown.
+ * that needs a denormalized object. A service tagged as app input rules is refused by name, since this target runs
+ * none yet (ADR 0029 "App input rules"). Every problem is listed at once, then thrown.
  */
 #[Exclude]
 final class OperationMetadataCheck implements CacheWarmerInterface
