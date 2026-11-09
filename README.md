@@ -53,6 +53,8 @@ From the CLI:
 
 ## Example
 
+### Contract
+
 One YAML file describes the API:
 
 ```yaml
@@ -78,7 +80,32 @@ surfaces:
         ops: { get: {} }
 ```
 
-The handler you write, typed by the contract. Express here; every server works the same way:
+---
+
+### Backend
+
+The handler you write, typed by the contract, in your framework:
+
+<details open><summary>NestJS</summary>
+
+```ts
+@Controller()
+export class NotesController implements NotesNest.NotesEndpoints {
+  @NotesNest.getNote()
+  getNote(@NotesNest.getNote.input() input: Notes.GetNoteInput) {
+    const note = notes.get(input.path.noteId);
+
+    if (note === undefined)
+      return { status: Notes.Status.NotFound, code: Notes.ErrorCode.ApiNotFound };
+
+    return { status: Notes.Status.Ok, body: note };
+  }
+}
+```
+
+</details>
+
+<details><summary>Express</summary>
 
 ```ts
 export const notesHandlers: NotesExpress.NotesEndpoints = {
@@ -93,7 +120,499 @@ export const notesHandlers: NotesExpress.NotesEndpoints = {
 };
 ```
 
-Each server and client has a guide, with its handler, its checks and its tests: see [Supported stacks](#supported-stacks).
+</details>
+
+<details><summary>Fastify</summary>
+
+```ts
+export const notesHandlers: NotesFastify.NotesEndpoints = {
+  getNote(input) {
+    const note = notes.get(input.path.noteId);
+
+    if (note === undefined)
+      return { status: Notes.Status.NotFound, code: Notes.ErrorCode.ApiNotFound };
+
+    return { status: Notes.Status.Ok, body: note };
+  },
+};
+```
+
+</details>
+
+<details><summary>AdonisJS</summary>
+
+```ts
+export default class NotesController implements NotesAdonis.NotesEndpoints {
+  getNote(input: Notes.GetNoteInput) {
+    const note = notes.get(input.path.noteId)
+
+    if (note === undefined)
+      return { status: Notes.Status.NotFound, code: Notes.ErrorCode.ApiNotFound }
+
+    return { status: Notes.Status.Ok, body: note }
+  }
+}
+```
+
+</details>
+
+<details><summary>Hono</summary>
+
+```ts
+export const notesEndpoints: NotesHono.NotesEndpoints = {
+  getNote(input) {
+    const note = notes.get(input.path.noteId);
+
+    if (note === undefined)
+      return { status: Notes.Status.NotFound, code: Notes.ErrorCode.ApiNotFound };
+
+    return { status: Notes.Status.Ok, body: note };
+  },
+};
+```
+
+</details>
+
+<details><summary>Spring Boot</summary>
+
+```java
+@RestController
+class NotesController implements NotesEndpoints {
+    @Override
+    @GetNote
+    public GetNoteResult getNote(GetNoteInput input) {
+        Note note = notes.get(input.path().noteId());
+
+        return note == null
+                ? new GetNoteErrors.ApiNotFound()
+                : new GetNoteResult.Status200(note);
+    }
+}
+```
+
+</details>
+
+<details><summary>Laravel</summary>
+
+```php
+final class NotesController implements NotesEndpoints
+{
+    public function getNote(GetNoteRequest $request): GetNoteResult
+    {
+        $note = $this->notes->get($request->contractInput()->path->noteId);
+
+        return $note === null
+            ? GetNoteErrors::apiNotFound()
+            : new GetNoteResponse200($note);
+    }
+}
+```
+
+</details>
+
+<details><summary>Symfony</summary>
+
+```php
+final class NotesController implements NotesEndpoints
+{
+    #[SeampactOperation('getNote')]
+    public function getNote(GetNoteInput $input): GetNoteResult
+    {
+        $note = $this->notes->find($input->path->noteId);
+
+        return $note === null
+            ? GetNoteErrors::apiNotFound()
+            : new GetNoteResponse200($note);
+    }
+}
+```
+
+</details>
+
+<details><summary>FastAPI</summary>
+
+```python
+class NotesHandlers:
+    def __init__(self, notes: NoteRepository) -> None:
+        self.notes = notes
+
+    def get_note(self, request: GetNoteRequest) -> GetNoteResult:
+        note = self.notes.get(request.input.path.note_id)
+
+        return GetNoteErrors.api_not_found() if note is None else GetNoteResponse200(note)
+
+
+bind_notes(app, handlers=NotesHandlerFactories(notes=notes_handlers))
+```
+
+</details>
+
+<details><summary>Django REST Framework</summary>
+
+```python
+class NotesHandlers:
+    def __init__(self, request: HttpRequest) -> None:
+        self.request = request
+
+    def get_note(self, request: GetNoteRequest) -> GetNoteResult:
+        note = notes.get(request.input.path.note_id)
+
+        return GetNoteErrors.api_not_found() if note is None else GetNoteResponse200(body=note)
+
+
+# settings.py
+SEAMPACT = {"notes": {"handlers": {"notes": "app.handlers.notes_handlers"}}}
+```
+
+</details>
+
+<details><summary>Django Ninja</summary>
+
+```python
+class NotesHandlers:
+    def __init__(self, request: HttpRequest) -> None:
+        self.request = request
+
+    def get_note(self, request: GetNoteRequest) -> GetNoteResult:
+        note = notes.get(request.input.path.note_id)
+
+        return GetNoteErrors.api_not_found() if note is None else GetNoteResponse200(note)
+
+
+bind_notes(api, prefix="", handlers=NotesHandlerFactories(notes=notes_handlers))
+```
+
+</details>
+
+---
+
+### Schemas
+
+The validators generated from the same `Note` schema. Pick one per app.
+
+<details open><summary>zod</summary>
+
+```ts
+export const NoteSchema = z.object({
+  // …
+  title: z
+    .string()
+    .min(1, { error: "Expected at least 1 character." })
+    .max(100, { error: "Expected at most 100 characters." }),
+  // …
+});
+```
+
+</details>
+
+<details><summary>yup</summary>
+
+```ts
+export const NoteSchema = yup
+  .object({
+    // …
+    title: yup
+      .string()
+      .strict()
+      .min(1, "Expected at least 1 character.")
+      .max(100, "Expected at most 100 characters.")
+      .defined(),
+    // …
+  })
+  .noUnknown()
+  .default(undefined);
+```
+
+</details>
+
+<details><summary>class-validator (NestJS)</summary>
+
+```ts
+export class NoteDto {
+  // …
+  @IsString()
+  @MinLength(1, { message: "Expected at least 1 character." })
+  @MaxLength(100, { message: "Expected at most 100 characters." })
+  title!: string;
+  // …
+}
+```
+
+</details>
+
+<details><summary>VineJS (AdonisJS)</summary>
+
+A data tree the target reads at runtime to build the VineJS schema.
+
+```ts
+export const NoteSchema = vineStandardSchema({
+  kind: "object",
+  unknownKeys: "strip",
+  fields: [
+    // …
+    {
+      key: "title",
+      optional: false,
+      type: {
+        kind: "scalar",
+        base: "string",
+        checks: [
+          { rule: "minLength", limit: 1, message: "Expected at least 1 character.", native: true },
+          { rule: "maxLength", limit: 100, message: "Expected at most 100 characters.", native: true },
+        ],
+      },
+    },
+    // …
+  ],
+});
+```
+
+</details>
+
+<details><summary>Ajv JSON Schema (Fastify)</summary>
+
+A plain JSON Schema; `seampactMessages` is the keyword that carries the contract's messages.
+
+```ts
+export const NoteSchema = ajvStandardSchema({
+  type: "object",
+  properties: {
+    // …
+    title: {
+      type: "string",
+      minLength: 1,
+      maxLength: 100,
+      seampactMessages: {
+        minLength: "Expected at least 1 character.",
+        maxLength: "Expected at most 100 characters.",
+      },
+    },
+    // …
+  },
+  required: ["noteId", "title", "createdAt"],
+});
+```
+
+</details>
+
+<details><summary>Spring Boot (Java record)</summary>
+
+A plain record with standard Jakarta constraints, for your own `@Valid`. The boundary checks the contract's rules (the title's length, the formats) before your controller runs.
+
+```java
+@JsonInclude(JsonInclude.Include.NON_ABSENT)
+public record Note(@NotNull UUID noteId, @NotNull String title, @NotNull OffsetDateTime createdAt) {
+}
+```
+
+</details>
+
+<details><summary>Laravel (PHP class and rules)</summary>
+
+A readonly class for the schema, and Laravel rules on each request in a generated `FormRequest`. The boundary runs them before your controller.
+
+```php
+final readonly class Note
+{
+    public function __construct(
+        public string $noteId,
+        public string $title,
+        public DateTimeImmutable $createdAt,
+    ) {
+    }
+}
+
+// In GetNoteRequest::contractRules()
+'path.noteId' => [
+    'bail',
+    new TypeRule($input, Position::Member, TypeRule::STRING, Presence::Required, Nullability::NotNull),
+    'uuid',
+    new FormatRule($input, Position::Member, FormatRule::UUID, BlankStrings::BlankOnly),
+],
+```
+
+</details>
+
+<details><summary>Symfony (PHP class)</summary>
+
+A readonly class with Symfony Validator attributes, for your own `$validator->validate()`. The boundary checks the contract's rules on the raw JSON with a generated constraint before your controller runs.
+
+```php
+final readonly class Note
+{
+    public function __construct(
+        #[Assert\NotNull]
+        public string $noteId,
+        #[Assert\NotNull, Assert\Length(min: 1, max: 100)]
+        public string $title,
+        #[Assert\NotNull]
+        public DateTimeImmutable $createdAt,
+    ) {
+    }
+}
+
+// In GetNoteInputConstraintValidator::shape()
+'noteId' => new Member(
+    JsonType::String,
+    checks: new Checks(format: Format::Uuid),
+),
+```
+
+</details>
+
+<details><summary>Pydantic (FastAPI, Django Ninja)</summary>
+
+A frozen, strict Pydantic model. The boundary validates the input with it before your handler runs.
+
+```python
+class Note(_pydantic.BaseModel):
+    model_config = _MODEL_CONFIG  # strict, frozen, extra="forbid"
+
+    note_id: _seampact.WireUuid
+    title: _typing.Annotated[str, _pydantic.Field(min_length=1, max_length=100)]
+    created_at: _seampact.WireDateTime
+```
+
+</details>
+
+<details><summary>Django REST Framework</summary>
+
+A frozen dataclass for your code, and a generated serializer that checks the input before your handler runs.
+
+```python
+@_dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class Note:
+    note_id: _uuid.UUID
+    title: str
+    created_at: _datetime.datetime
+
+
+class GetNotePathSerializer(_drf_runtime.ContractSerializer):
+    def get_fields(self) -> _drf_runtime.SerializerFields:
+        return {"note_id": _drf_runtime.TypedValueField(_uuid.UUID)}
+```
+
+</details>
+
+These are the default `rules: native` output, each library's own rules. `rules: seampact-consistent` gives the contract's exact checks on every library ([switch the validator](docs/configuration/validators.md)). What each library checks, and the error it answers, is in [Types and validation](docs/types-and-validation/README.md).
+
+---
+
+### Frontend
+
+The typed client, for any framework or none:
+
+<details open><summary>fetch</summary>
+
+```ts
+const client = createClient({ baseUrl: import.meta.env.VITE_API_URL });
+const reply = await client.getNote({ path: { noteId } });
+
+if (reply.ok) console.log(reply.body.title);
+```
+
+</details>
+
+---
+
+### Query
+
+Hooks, composables and services over that client, for React, Vue and Angular. SWR, RTK Query, Pinia Colada, NgRx, NgRx Signals and a library-free mode work the same way: see [React](docs/frontend/react.md), [Vue](docs/frontend/vue.md) and [Angular](docs/frontend/angular.md).
+
+<details open><summary>TanStack Query (React)</summary>
+
+```tsx
+const client = createClient({ baseUrl: import.meta.env.VITE_API_URL });
+const Notes = createNotesHooks(client);
+
+function NoteTitle(props: { noteId: string }) {
+  const note = Notes.useGetNote({ path: { noteId: props.noteId } });
+
+  if (note.isPending) return <p>Loading</p>;
+  if (note.isError) return <p>{note.error.message}</p>;
+
+  return <h1>{note.data.body.title}</h1>;
+}
+```
+
+</details>
+
+<details><summary>TanStack Query (Vue)</summary>
+
+```vue
+<script setup lang="ts">
+// api.ts builds them once: createNotesComposables(createClient({ baseUrl }))
+import { Notes } from "./api";
+
+const props = defineProps<{ noteId: string }>();
+
+const note = Notes.useGetNote(() => ({ path: { noteId: props.noteId } }));
+</script>
+
+<template>
+  <p v-if="note.isPending.value">Loading</p>
+  <p v-else-if="note.isError.value">{{ note.error.value?.message }}</p>
+  <h1 v-else>{{ note.data.value?.body.title }}</h1>
+</template>
+```
+
+</details>
+
+<details><summary>Angular</summary>
+
+```ts
+@Component({
+  selector: "note-title",
+  template: `
+    @if (note.isLoading()) {
+      <p>Loading</p>
+    } @else if (note.error()) {
+      <p>{{ note.error()?.message }}</p>
+    } @else {
+      <h1>{{ note.data()?.body.title }}</h1>
+    }
+  `,
+})
+export class NoteTitle {
+  readonly noteId = input.required<string>();
+  readonly note = inject(NotesApi).getNote(() => ({ path: { noteId: this.noteId() } }));
+}
+```
+
+</details>
+
+<details><summary>NgRx (Angular)</summary>
+
+```ts
+store.dispatch(NotesActions.getNote({ request: { path: { noteId } } }));
+
+export const noteReducer = createReducer(
+  initialNote,
+  on(NotesActions.getNoteSuccess, (state, { data }) => ({ ...state, title: data.body.title })),
+  on(NotesActions.getNoteFailure, (state, { error }) => ({ ...state, error: error.message })),
+);
+```
+
+Actions and effects are generated; the reducer and state stay yours.
+
+</details>
+
+<details><summary>NgRx Signals (Angular)</summary>
+
+```ts
+export const NoteStore = signalStore(withGetNote());
+
+export class NoteTitle {
+  readonly store = inject(NoteStore);
+  readonly title = computed(() => this.store.getNote().data?.body.title);
+
+  constructor() {
+    void this.store.sendGetNote({ path: { noteId: "n1" } });
+  }
+}
+```
+
+</details>
 
 The full walk-through is in [Get started](docs/getting-started/README.md).
 
