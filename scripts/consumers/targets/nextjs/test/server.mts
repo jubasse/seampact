@@ -12,7 +12,7 @@ export interface RunningServer {
 }
 
 const HOST = "127.0.0.1";
-const CONSUMER_ROOT = join(import.meta.dirname, "..");
+export const CONSUMER_ROOT = join(import.meta.dirname, "..");
 const NEXT_BIN = join(CONSUMER_ROOT, "node_modules", "next", "dist", "bin", "next");
 const BUILD_ID_FILE = join(CONSUMER_ROOT, ".next", "BUILD_ID");
 const READY_TIMEOUT_MS = 60_000;
@@ -47,17 +47,16 @@ export async function startServer(): Promise<RunningServer> {
   return { baseUrl, close: () => stopped(child) };
 }
 
-function runNext(args: readonly string[]): Promise<void> {
+/** Runs `next <args>` in [cwd] and fails with the end of its output unless it exits 0. */
+export function runNext(args: readonly string[], cwd = CONSUMER_ROOT): Promise<void> {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [NEXT_BIN, ...args], {
-      cwd: CONSUMER_ROOT,
+      cwd,
       stdio: ["ignore", "pipe", "pipe"],
       env: { ...process.env, NEXT_TELEMETRY_DISABLED: "1" },
     });
-    const output: string[] = [];
+    const output = collectedOutput(child);
 
-    child.stdout.on("data", (chunk: Buffer) => output.push(chunk.toString("utf8")));
-    child.stderr.on("data", (chunk: Buffer) => output.push(chunk.toString("utf8")));
     child.once("error", reject);
     child.once("exit", (code) => {
       if (code === 0) return resolve();
@@ -65,6 +64,15 @@ function runNext(args: readonly string[]): Promise<void> {
       reject(new Error(`next ${args.join(" ")} exited with ${code}:\n${quoted(output)}`));
     });
   });
+}
+
+function collectedOutput(child: ChildProcess): string[] {
+  const output: string[] = [];
+
+  child.stdout?.on("data", (chunk: Buffer) => output.push(chunk.toString("utf8")));
+  child.stderr?.on("data", (chunk: Buffer) => output.push(chunk.toString("utf8")));
+
+  return output;
 }
 
 function quoted(output: readonly string[]): string {
