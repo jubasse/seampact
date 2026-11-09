@@ -1,6 +1,6 @@
 // The handler-map registration the Express and Fastify placements share (ADR 0017 and 0018 "Options and
 // registration"): the registration options, their boot check, the `responses` and `bodyValidation` settings of one
-// operation, and steps 6 to 9 around the bound handler method.
+// operation, and steps 6 to 9 around the bound handler method, with the app input rules of step 8b.
 import type { AccessGrant, CheckState } from "./access-checks.js";
 import type { BoundaryContext } from "./boundary-context.js";
 import type { BootProblem } from "./boundary-hooks.js";
@@ -10,6 +10,7 @@ import { inputWithAccess } from "./handler-access.js";
 import { handlerReply } from "./handler-reply.js";
 import { beginIdempotency } from "./idempotency.js";
 import { checkRestrictedInput, validateRequestInput } from "./input-checks.js";
+import { type InputRuleSets, inputRulesProblems, runInputRules } from "./input-rules.js";
 import { isPlainObject } from "./plain-object.js";
 import { loggerProblems, type RuntimeLogger } from "./runtime-logger.js";
 
@@ -37,9 +38,16 @@ export interface HandlerBinding {
 export type HandlerBindings = Readonly<Record<string, HandlerBinding>>;
 
 /** The registration options of one api: the generated module narrows each type parameter. */
-export interface RegistrationOptions<Hooks, Handlers, Operation extends string = string> {
+export interface RegistrationOptions<
+  Hooks,
+  Handlers,
+  Operation extends string = string,
+  InputRules = InputRuleSets,
+> {
   readonly handlers: Handlers;
   readonly hooks?: Hooks;
+  /** The app's own rules on an operation's input parts, run after the contract's checks (step 8b). */
+  readonly inputRules?: InputRules;
   readonly responses?: ResponsesMode;
   readonly bodyValidation?: boolean;
   /** Where the boundary writes its warnings and unexpected failures; the console when absent. */
@@ -51,13 +59,14 @@ export interface RegistrationOptions<Hooks, Handlers, Operation extends string =
 export function registrationProblems(
   api: ContractApi,
   bindings: HandlerBindings,
-  options: RegistrationOptions<unknown, unknown>,
+  options: RegistrationOptions<unknown, unknown, string, unknown>,
   generated: ResponseSettings,
 ): BootProblem[] {
   const problems: BootProblem[] = [
     ...settingsProblems(options, "the registration"),
     ...handlerProblems(api, bindings, options.handlers),
     ...loggerProblems(options.logger),
+    ...inputRulesProblems(api, options.inputRules),
   ];
   const overrideKeys = new Set(Object.values(bindings).map((binding) => binding.method));
   const operations: unknown = options.operations ?? {};
@@ -101,7 +110,7 @@ export function registrationProblems(
 export function settingsOf(
   route: ContractRoute,
   bindings: HandlerBindings,
-  options: RegistrationOptions<unknown, unknown>,
+  options: RegistrationOptions<unknown, unknown, string, unknown>,
   generated: ResponseSettings,
 ): ResponseSettings {
   const key = bindings[route.id]?.method;
@@ -203,12 +212,13 @@ function handlerProblems(
 }
 
 /**
- * Steps 6 to 8 and the idempotency claim: stores the validated input on the context, and answers the stored
- * reply of a replay, undefined when the handler runs.
+ * Steps 6 to 8, the idempotency claim and the app input rules (8b): stores the validated input on the context, and
+ * answers the stored reply of a replay, undefined when the handler runs.
  */
 export async function runInputSteps(
   state: CheckState,
   context: BoundaryContext,
+  inputRules: unknown,
 ): Promise<{ readonly replay: ContractReply } | undefined> {
   const grant = requireGrant(context);
   const validated = await validateRequestInput(state, grant);
@@ -221,6 +231,8 @@ export async function runInputSteps(
   if (started?.outcome === "replay") return { replay: started.reply };
 
   if (started?.outcome === "started") context.idempotencyKey = started.key;
+
+  await runInputRules(state, context, inputRules);
 
   return undefined;
 }

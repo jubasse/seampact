@@ -4,6 +4,7 @@
 // the framework-route check at ready over the routes the app's collector saw; and the exported helpers for the
 // requests the plugin never sees. Each api's generated module calls `createFastifyBoundary` once with its route
 // table.
+import type { InputRuleSets } from "./input-rules.js";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { PassThrough, type Readable } from "node:stream";
 import { createBrotliDecompress, createGunzip, createInflate } from "node:zlib";
@@ -124,6 +125,7 @@ export function createFastifyBoundary<
   Hooks extends RegisteredHooks,
   Handlers,
   Operation extends string,
+  InputRules = InputRuleSets,
 >(api: ContractApi, generated: ResponseSettings, bindings: HandlerBindings) {
   refuseCodeOfOtherVersion(api);
 
@@ -140,7 +142,8 @@ export function createFastifyBoundary<
   // compresses its own replies there.
   const compressingServers = new WeakSet<object>();
 
-  type PluginOptions = RegistrationOptions<Hooks, Handlers, Operation> & HooksRequirement<Hooks>;
+  type PluginOptions = RegistrationOptions<Hooks, Handlers, Operation, InputRules> &
+    HooksRequirement<Hooks>;
 
   const plugin: FastifyPluginAsync<PluginOptions> = async (
     fastify,
@@ -358,7 +361,7 @@ export function createFastifyBoundary<
   function registerRoute(
     fastify: FastifyInstance,
     route: ContractRoute,
-    options: RegistrationOptions<Hooks, Handlers, string>,
+    options: RegistrationOptions<Hooks, Handlers, string, InputRules>,
     hooks: BoundaryHooks,
   ): void {
     const settings = settingsOf(route, bindings, options, generated);
@@ -405,7 +408,7 @@ export function createFastifyBoundary<
       preHandler: async (request, reply) => {
         const context = requireContext(request, route);
         const started = await boundaryContext.run(context, () =>
-          runInputSteps(checkState(context, request), context),
+          runInputSteps(checkState(context, request), context, options.inputRules),
         );
 
         if (started !== undefined) await sendContractReply(reply, context, started.replay);
@@ -550,7 +553,7 @@ export function createFastifyBoundary<
   // A contract error, a refusal of the route's body read, or a 401, 403 or 429 is answered; anything else is
   // rethrown to the app's error handler, with the outgoing check installed so its reply is checked.
   function contractErrorHandler(
-    options: RegistrationOptions<Hooks, Handlers, string>,
+    options: RegistrationOptions<Hooks, Handlers, string, InputRules>,
     hooks: BoundaryHooks,
   ) {
     return async (error: FastifyError, request: FastifyRequest, reply: FastifyReply) => {

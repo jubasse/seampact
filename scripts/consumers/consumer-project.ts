@@ -44,6 +44,16 @@ const CONFIG_FILE = "seampact.config.yaml";
 const PACKAGE_FILE = "package.json";
 const CONTRACT_DIRECTORY = "contract";
 
+// The `input-rules` case's contract, beside the case in the http suite, which the template config compiles as its
+// second source from this directory.
+const INPUT_RULES_CONTRACT = "packages/tools/http-suite/contracts/input-rules";
+const INPUT_RULES_SOURCE_DIRECTORY = "input-rules-contract";
+
+// The app input rules of the `input-rules` case, one file per validator library under the template's `input-rules`
+// directory: the chosen library's file becomes `src/input-rules.mts`, and a library with none adds no rules.
+const INPUT_RULES_TEMPLATE_DIRECTORY = "input-rules";
+const INPUT_RULES_FILE = "src/input-rules.mts";
+
 // A pack consumer: the overlay copied after the target's, the golden IRs its suite profile reads and the template's
 // profile tests it runs in place of (they read the reference contract's own wire format).
 const PACK_OVERLAY_DIRECTORY = "pack";
@@ -151,6 +161,7 @@ export function assembleConsumer(options: {
 
   cpSync(join(consumersRoot, "template"), directory, { recursive: true });
   useValidators(options.validators, directory);
+  useInputRules(options.validators, options.repositoryRoot, directory);
 
   const linkedEntries =
     options.validators.package === undefined ? withoutValidatorsLinks : keepAsWritten;
@@ -251,6 +262,23 @@ function useValidators(choice: ValidatorChoice, directory: string): void {
       : config.replace(VALIDATORS_PLACEHOLDER, choice.package),
   );
   addDependencies(join(directory, PACKAGE_FILE), choice.dependencies);
+}
+
+// The `input-rules` case's contract and the rules written in the chosen library, which the overlays that enable the
+// case register; the other library files leave with the template's directory.
+function useInputRules(choice: ValidatorChoice, repositoryRoot: string, directory: string): void {
+  cpSync(
+    join(repositoryRoot, INPUT_RULES_CONTRACT),
+    join(directory, INPUT_RULES_SOURCE_DIRECTORY),
+    { recursive: true },
+  );
+
+  const rulesDirectory = join(directory, INPUT_RULES_TEMPLATE_DIRECTORY);
+  const chosenRules = join(rulesDirectory, `${choice.id}.mts`);
+
+  if (existsSync(chosenRules)) cpSync(chosenRules, join(directory, INPUT_RULES_FILE));
+
+  rmSync(rulesDirectory, { recursive: true, force: true });
 }
 
 // The config without the `validators` entry: its lines up to the next entry.

@@ -42,6 +42,12 @@ Express, Fastify, Hono, NestJS and AdonisJS. The check runs when the app starts 
 | `no scope resolver for the scope '<scope>'` | Register `scopeResolvers.<scope>`. |
 | `no idempotency store for an idempotent operation` | Register `idempotencyStore`, for example `createMemoryIdempotencyStore()` of `@seampact/idempotency-memory`. |
 | `two deciders claim '<name>'` | Keep the name in one decider. |
+| `'inputRules' names '<id>', which is no operation of the api` | Key [your input rules](../backend/express.md#add-your-own-rules) by an operation id the fix lists. An operation the entry's `operations` filter drops takes no rules. |
+| `'inputRules' names the relay of '<api>.<id>', which takes no rules` | Register the rules on the gateway's own operation, which checks the input before it forwards. |
+| `its 'inputRules' entry names the part '<part>'` | Key the rules by part: `path`, `query`, `headers` or `body`. |
+| `its 'inputRules' entry has rules for '<part>', where the operation takes no input` | Remove those rules, or declare that input in the contract. |
+| `the api's generated validators are in no library input rules support` | Input rules are written in the validators' library: generate them with zod or yup, or the Fastify target's own Ajv validators. |
+| `an app input rule of '<id>' on its <part> reports no usable name` (a warning at run time) | The refusal answered `app.invalid`. Name the rule as the warning's fix says: zod `params: { rule }`, yup `.test({ name })`, or the Ajv keyword. |
 
 ### NestJS
 

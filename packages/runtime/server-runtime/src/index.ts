@@ -1,4 +1,4 @@
-// The shared runtime of the generated Node and Web-standard server boundaries (ADR 0025): the 30 framework-neutral
+// The shared runtime of the generated Node and Web-standard server boundaries (ADR 0025): the 32 framework-neutral
 // modules at this root export, the transport modules at `/node` and `/web`, and one placement per framework at
 // `/express`, `/fastify`, `/nestjs`, `/adonis` and `/hono`. Every api of an app shares it; what must tell two apis
 // apart is keyed by the api's route table or generated per api.
@@ -20,6 +20,8 @@ export * from "./idempotency.js";
 export * from "./idempotency-fingerprint.js";
 export * from "./input-checks.js";
 export * from "./input-issues.js";
+export * from "./input-rule-libraries.js";
+export * from "./input-rules.js";
 export * from "./outgoing-verdict.js";
 export * from "./page-reply.js";
 export * from "./plain-object.js";
