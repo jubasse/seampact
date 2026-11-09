@@ -31,6 +31,11 @@ final class PlainSymfony implements SymfonyFlavour
         return $placement->runtime('BoundarySubscriber');
     }
 
+    public function refusesInputRules(): bool
+    {
+        return false;
+    }
+
     public function frameworkRouteControllers(): array
     {
         return [];

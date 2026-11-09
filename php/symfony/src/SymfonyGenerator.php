@@ -75,7 +75,7 @@ final class SymfonyGenerator implements Generator, HandlerWarningGenerator
         }
 
         $layout = new ApiLayout($ir, $options->namespace, $kept, $refusals);
-        $placement = new SymfonyPlacement($layout, $kept);
+        $placement = new SymfonyPlacement($layout, $kept, $this->flavour);
         $refusals->throwIfAny();
 
         $types = new PhpTypes($layout);

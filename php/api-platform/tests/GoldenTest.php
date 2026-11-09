@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Seampact\ApiPlatform\Tests;
 
 use PHPUnit\Framework\TestCase;
+use Seampact\ApiPlatform\ApiPlatformFlavour;
 use Seampact\ApiPlatform\ApiPlatformGenerator;
 use Seampact\Codegen\GoldenTree;
 use Seampact\Codegen\Tests\Support\PhpLint;
@@ -47,6 +48,12 @@ final class GoldenTest extends TestCase
         $unchanged = static fn (array $files): array => array_filter($files, static fn (string $path): bool => !self::isApiPlatformFile($path), ARRAY_FILTER_USE_KEY);
 
         self::assertSame($unchanged($symfony), $unchanged($apiPlatform));
+    }
+
+    public function testNoInputRulesInterfaceIsGeneratedAndTheFlavourRefusesThem(): void
+    {
+        self::assertTrue((new ApiPlatformFlavour())->refusesInputRules());
+        self::assertSame([], array_filter(array_keys(self::byPath(self::apiPlatformFiles())), static fn (string $path): bool => str_contains($path, 'InputRules')));
     }
 
     public function testTheGeneratedTreeIsParsablePhp(): void
