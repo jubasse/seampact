@@ -134,6 +134,16 @@ For contributors. Users do not need these pages.
 
 - [IR](ir/): the compiled form of a contract.
 - [ADRs](adr/): design records.
+- [ADR 0003 sections](adr/0003-schema-language/): the schema language, one file per decision.
+- [ADR 0010 sections](adr/0010-native-generators/): native generators, one file per decision.
+- [ADR 0012 sections](adr/0012-access-hooks/): access hooks, one file per decision.
+- [ADR 0016 sections](adr/0016-nestjs-target/): the NestJS target, one file per decision.
+- [ADR 0021 sections](adr/0021-front-query-targets/): the front query targets, one file per decision.
+- [ADR 0022 sections](adr/0022-spring-boot-target/): the Spring Boot target, one file per decision.
+- [ADR 0023 sections](adr/0023-laravel-target/): the Laravel target, one file per decision.
+- [ADR 0024 sections](adr/0024-symfony-target/): the Symfony target, one file per decision.
+- [ADR 0026 sections](adr/0026-python-fastapi-target/): the Python core and the FastAPI target, one file per decision.
+- [ADR 0027 sections](adr/0027-django-targets/): the Django targets, one file per decision.
 - [Product decisions](decisions.md): the log of decisions, A1 to A48.
 - [Design decisions](design-decisions.md)
 - [Maintainers](maintainers/): how a release goes out.

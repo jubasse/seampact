@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
 import { parse } from "yaml";
 import type { AuthoringFile } from "./schemas.js";
@@ -28,15 +28,24 @@ const ADRS = [
 const GRAMMAR_ADR = "0002-grammar.md";
 const DOCS = new URL("../../../../../docs/", import.meta.url);
 
-// ADR 0002 lives as one file per section in docs/grammar; name order is the ADR's order.
-function adrText(adr: string): string {
-  if (adr !== GRAMMAR_ADR) return readFileSync(new URL(`adr/${adr}`, DOCS), "utf8");
-
-  return readdirSync(new URL("grammar/", DOCS))
+function sectionFilesText(folder: string): string[] {
+  return readdirSync(new URL(folder, DOCS))
     .filter((name) => name.endsWith(".md"))
     .sort()
-    .map((name) => readFileSync(new URL(`grammar/${name}`, DOCS), "utf8"))
-    .join("\n");
+    .map((name) => readFileSync(new URL(`${folder}${name}`, DOCS), "utf8"));
+}
+
+// ADR 0002 lives as one file per section in docs/grammar; ADR 0003 keeps its summary in the ADR
+// and its sections in a folder named like it. Name order is the ADR's order.
+function adrText(adr: string): string {
+  if (adr === GRAMMAR_ADR) return sectionFilesText("grammar/").join("\n");
+
+  const adrFile = readFileSync(new URL(`adr/${adr}`, DOCS), "utf8");
+  const sectionsFolder = `adr/${adr.replace(/\.md$/, "")}/`;
+
+  if (!existsSync(new URL(sectionsFolder, DOCS))) return adrFile;
+
+  return [adrFile, ...sectionFilesText(sectionsFolder)].join("\n");
 }
 
 function examples(): Example[] {

@@ -1,0 +1,3 @@
+### Open tenancy
+
+A route runs in zero, one or several nested scopes (A23). Each scope id comes from a declared source or from a custom resolver; no resolution scheme, tenant model or storage is imposed. The resolved scopes reach every later hook and the handler through a request context built on the framework's own facility: `AsyncLocalStorage` in the Node targets, request attributes in Spring, Symfony and Laravel. On the Node targets the handler reads them on its input as read-only `principal` and `scopes` members, outside the wire input (NestJS also through `@<operation>.principal()` and `@<operation>.scopes()`); a public operation has no `principal` and an operation in no scope no `scopes`.
