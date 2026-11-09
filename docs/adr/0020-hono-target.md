@@ -4,7 +4,7 @@ Status: accepted
 
 ## Context
 
-ADR 0016 fixes, for the first Node server target, the obligations every Node server target meets with the shared request checks of `@seampact/codegen-core/node-server`: the check order of ADR 0012, a reply written by the boundary, exceptions handled narrowly, the outgoing response check and its `responses` modes, the raw-body check, the body limit, query decoding and the bounded values. `@seampact/codegen-hono` generates, per api of the app config, a registration that places those checks around a developer handler map on a Hono 4 app. This ADR states what Hono changes, and the one new piece it needs: an adapter of the shared checks to the Web-standard `Request` and `Response` that Hono runs on. What it does not restate holds as ADR 0016 says.
+ADR 0016 fixes, for the first Node server target, the obligations every Node server target meets with the shared request checks of `@seampact/server-runtime`: the check order of ADR 0012, a reply written by the boundary, exceptions handled narrowly, the outgoing response check and its `responses` modes, the raw-body check, the body limit, query decoding and the bounded values. `@seampact/codegen-hono` generates, per api of the app config, a registration that places those checks around a developer handler map on a Hono 4 app. This ADR states what Hono changes, and the one new piece it needs: an adapter of the shared checks to the Web-standard `Request` and `Response` that Hono runs on. What it does not restate holds as ADR 0016 says.
 
 The four Node targets meet the boundary on Node's `IncomingMessage` and `ServerResponse`: a framework's parser reads the body, and the outgoing response check wraps `res.writeHead`, `res.write` and `res.end`, which every reply passes through. Hono has neither. A handler receives a `Request` and returns a `Response`; the app's `fetch(request)` returns the final `Response`, which the platform adapter (`@hono/node-server` on Node, the runtime itself on Bun, Deno and Cloudflare Workers) then writes. The same shape serves Next.js route handlers, so an adapter written against `Request` and `Response` alone serves the Web-standard targets planned after 1.0 as well.
 
@@ -29,7 +29,7 @@ The shared runtime is split by what it imports, without changing a rule:
 - Node modules, imported by the four Node targets only: the `IncomingMessage` request view, the Express body glue, and the `ServerResponse` side of the reply and the check (`writeContractReply`, `installOutgoingCheck`, `respondWithError` and `respondNotServed` writing on `res`).
 - Web modules, imported by the Hono target and the Web-standard targets after it: the `Request` request view and bounded body read, `contractResponse(reply)` building a `Response` from the boundary's reply, and `checkOutgoingResponse(context, request, response)` returning the `Response` that goes out.
 
-`nodeServerRuntimeFiles()` takes a profile: `node` copies the neutral and Node modules into `node-server/`, as today; `web` copies the neutral and Web modules into `web-server/`. A test of codegen-core keeps the `web` profile free of any `node:` import other than `node:async_hooks`, which Bun, Deno and Next.js provide and Workers provide with the `nodejs_als` or `nodejs_compat` flag. The Web modules take a `Request` and return a `Response` and import no framework, so a Next.js route handler or a `Bun.serve` placement calls them as the Hono placement does.
+`@seampact/server-runtime` exports the profiles: the root holds the neutral modules, `/node` the Node modules and `/web` the Web modules, all imported by the generated code, not copied into it (ADR 0025). The `/web` modules import no `node:` module other than `node:async_hooks`, which Bun, Deno and Next.js provide and Workers provide with the `nodejs_als` or `nodejs_compat` flag. The Web modules take a `Request` and return a `Response` and import no framework, so a Next.js route handler or a `Bun.serve` placement calls them as the Hono placement does.
 
 The Web adapter differs from the Node path in five ways:
 
@@ -62,7 +62,7 @@ serve({ fetch: app.fetch, port: 3000 });
 
 A request whose route handler finds no slot was served by a `fetch` that is not the wrapped one: `app.fetch` read before `registerRoutes` ran, or a sub-app the api was registered on and then mounted with `app.route`. It answers 500 in the api's format, with a log naming the fix (register on the app that serves, before reading its `fetch`), fail closed, since its reply would go out unchecked.
 
-The registration is generated into the target's module of the api, `hono.ts`, re-exported by the api's `index.ts` (ADR 0007 section 7). Its fixed exports are `registerRoutes`, `checkFrameworkRoutes`, `renderContractError`, `renderPreRoutingError`, `isContractRoute`, `MAX_CHECKED_ERROR_BODY_BYTES` and `MAX_RENDERED_ISSUES`; no export is named by an operation, so none takes the reserved-name suffix. Next to it, the generated tree holds the shared `routes.ts`, `handlers.ts` and `hooks.ts` modules and the `web` profile of the shared runtime under `web-server/`, copied with the generated header (ADR 0009 "What generated code depends on at run time"); this target adds one placement file that imports them.
+The registration is generated into the target's module of the api, `hono.ts`, re-exported by the api's `index.ts` (ADR 0007 section 7). Its fixed exports are `registerRoutes`, `checkFrameworkRoutes`, `renderContractError`, `renderPreRoutingError`, `isContractRoute`, `MAX_CHECKED_ERROR_BODY_BYTES` and `MAX_RENDERED_ISSUES`; no export is named by an operation, so none takes the reserved-name suffix. Next to it, the api's generated tree holds `routes.ts`, `handlers.ts`, `hooks.ts` and `index.ts`; the placement file is the package's `/hono` export.
 
 ### Routes
 
@@ -127,7 +127,7 @@ The target links a `validators` provider of style `standard-schema` (`codegen-zo
 
 ### What the generated code depends on
 
-At run time: `hono` 4 as a peer dependency, for its types and `Hono` instance methods only, the zod link's runtime and, for types only, `@seampact/hooks` (ADR 0009). It imports no Hono middleware, not `@hono/zod-validator`, and not `@hono/node-server`, which the app chooses.
+At run time: `hono` 4 as a peer dependency, for its types and `Hono` instance methods only, the zod link's runtime and, for types only, `@seampact/hooks` (ADR 0009). It imports no Hono middleware, not `@hono/zod-validator`, and not `@hono/node-server`, which the app chooses. The runtime package is a production dependency: `@seampact/server-runtime`, its root, `/web` and `/hono` exports, at the generator's version (ADR 0025, G1). `seampact generate` refuses an app that does not install it (`runtime.missing`) or installs one of another `major.minor` or a lower patch (`runtime.version-mismatch`).
 
 ### The consumer
 
@@ -136,14 +136,6 @@ The slice consumer is a Hono 4 app served by `@hono/node-server` 2 around the ge
 ### Refused by name or waiting
 
 `generate` refuses by name, with the case's code and its fix, everything ADR 0016 "Refused by name or waiting" lists for the slice apart from its NestJS platform and `class-validator` items, and the path segments of "Routes". The Web-standard runtimes other than Node, and Next.js route handlers, wait for their own targets after 1.0; this target runs on any runtime Hono serves, but the slice proves it on `@hono/node-server` only.
-
-### Amendment 2026-10-27: the runtime package
-
-ADR 0025 moves the shared runtime out of the generated tree: the `web` profile of `nodeServerRuntimeFiles()` becomes the `/web` export of `@seampact/server-runtime`, imported, no longer copied under `web-server/`, and the placement file is the package's `/hono` export, no longer `hono-boundary.ts`. Each api's generated tree keeps `hono.ts`, `routes.ts`, `handlers.ts`, `hooks.ts` and `index.ts`. The `/web` modules still import no `node:` module other than `node:async_hooks`.
-
-What the generated code depends on adds `@seampact/server-runtime` as a production dependency: its root, `/web` and `/hono` exports, at the generator's version (ADR 0025, G1). `seampact generate` refuses an app that does not install it (`runtime.missing`) or installs one of another `major.minor` or a lower patch (`runtime.version-mismatch`).
-
-The boot check runs one step first, before any other: the version the api's route table carries is compared with the installed runtime's, and a table written by another `major.minor` or a later patch throws `runtime.generated-for-other-version` when `hono.ts` is imported. Each api keeps its own logger in the shared runtime, keyed by its route table.
 
 ## Spike
 
