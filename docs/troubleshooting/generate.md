@@ -19,7 +19,7 @@ api.yaml:10: paging.sort.style.unsupported: entry 'server', api 'notes': The sor
 | Express, Fastify, Hono, NestJS, AdonisJS, Next.js | [Node servers](#node-servers) |
 | TypeScript types, validators, clients and Node servers share the code | [Every Node target](#every-node-target) |
 | Spring Boot | [Spring Boot](#spring-boot) |
-| Laravel, Symfony | [PHP](#php) |
+| Laravel, Symfony, API Platform | [PHP](#php) |
 | FastAPI, Django REST framework, Django Ninja | [Python](#python) |
 | Spring Boot, PHP and Python share the code | [Spring Boot, PHP and Python](#spring-boot-php-and-python) |
 | Several servers share the code | [Every server](#every-server) |
@@ -124,7 +124,7 @@ The forms refused by Spring Boot, PHP and Python are [in their own table](#sprin
 
 ## PHP
 
-Laravel and Symfony. The forms refused by Spring Boot, PHP and Python are [in their own table](#spring-boot-php-and-python).
+Laravel, Symfony and API Platform. The forms refused by Spring Boot, PHP and Python are [in their own table](#spring-boot-php-and-python).
 
 | Code | Cause and fix |
 |---|---|
