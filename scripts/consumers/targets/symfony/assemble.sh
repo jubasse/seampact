@@ -51,7 +51,14 @@ if [ ! -d "$contract_repo" ]; then
   git -C "$contract_repo" tag v1.0.0
 fi
 
-if [ ! -d "$input_rules_repo" ]; then
+# The API Platform lane builds no input-rules bundle (its derived app serves no input-rules api), so the bundle is
+# committed only when `bundle.sh` wrote it; a Symfony config that lists the source without it fails at generation.
+has_input_rules_bundle=false
+if [ -d "$input_rules_bundled/bundle" ]; then
+  has_input_rules_bundle=true
+fi
+
+if [ "$has_input_rules_bundle" = true ] && [ ! -d "$input_rules_repo" ]; then
   mkdir -p "$input_rules_repo"
   cp -R "$input_rules_bundled/bundle" "$input_rules_repo/bundle"
   git -C "$input_rules_repo" init -q
@@ -80,7 +87,7 @@ integrity=$(cat "$bundled/integrity")
   "  contract:\n    git: { url: \"$contract_repo\", tag: v1.0.0, directory: bundle }\n    integrity: \"$integrity\""
 
 # The case's contract is read from its bundle too, in the configs that serve its api.
-if grep -qxF "$input_rules_source" "$app/seampact.config.yaml"; then
+if [ "$has_input_rules_bundle" = true ] && grep -qxF "$input_rules_source" "$app/seampact.config.yaml"; then
   input_rules_integrity=$(cat "$input_rules_bundled/integrity")
   input_rules_lines="  inputRules:\n    git: { url: \"$input_rules_repo\", tag: v1.0.0, directory: bundle }\n    integrity: \"$input_rules_integrity\""
   awk -v marker="$input_rules_source" -v lines="$input_rules_lines" '$0 == marker { print lines; next } { print }' "$app/seampact.config.yaml" > "$app/seampact.config.yaml.new"
