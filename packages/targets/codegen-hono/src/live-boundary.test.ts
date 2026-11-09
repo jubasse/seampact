@@ -377,6 +377,7 @@ describe("the request body", () => {
     const throwingClientAddress = () => {
       throw new Error("client address read");
     };
+
     const reply = await app.requestThroughApp(
       `/v1/channels/${CHANNEL}/tasks`,
       {
