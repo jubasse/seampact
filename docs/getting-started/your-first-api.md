@@ -574,6 +574,122 @@ Next: [the Hono guide](../backend/hono.md) (access hooks, tests, Docker).
 </details>
 
 <details>
+<summary>Node: Next.js</summary>
+
+Install seampact in your Next.js 16 app (App Router, Node.js 24 or later).
+
+```sh
+npm install zod @seampact/server-runtime @seampact/hooks
+npm install --save-dev @seampact/cli @seampact/codegen-ts @seampact/codegen-zod @seampact/codegen-nextjs
+```
+
+Add the targets to `seampact.config.yaml`, then generate. The files appear in `src/__generated__`.
+
+```yaml
+outDir: src/__generated__
+sources:
+  notes:
+    path: ./contract
+targets:
+  - id: types
+    use: "@seampact/codegen-ts"
+    apis: [notes]
+  - id: validators
+    use: "@seampact/codegen-zod"
+    apis: [notes]
+  - id: server
+    use: "@seampact/codegen-nextjs"
+    apis: [notes]
+    options:
+      bodyValidation: true
+    link:
+      types: types
+      validators: validators
+```
+
+```sh
+npx seampact generate
+```
+
+In `next.config.ts`, turn off the trailing-slash redirect, so the contract answers those paths itself.
+
+```ts
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  skipTrailingSlashRedirect: true,
+};
+
+export default nextConfig;
+```
+
+Write the handlers in `src/notes-handlers.ts`. A real app reads `input.query.cursor` to page.
+
+```ts
+import { randomUUID } from "node:crypto";
+import type * as NotesNext from "./__generated__/server/notes";
+import * as Notes from "./__generated__/types/notes";
+
+const notes = new Map<string, Notes.schemas.Note>();
+
+export const notesEndpoints: NotesNext.NotesEndpoints = {
+  listNotes() {
+    return { status: Notes.Status.Ok, body: { items: [...notes.values()] } };
+  },
+
+  getNote(input) {
+    const note = notes.get(input.path.noteId);
+
+    if (note === undefined)
+      return { status: Notes.Status.NotFound, code: Notes.ErrorCode.ApiNotFound };
+
+    return { status: Notes.Status.Ok, body: note };
+  },
+
+  createNote(input) {
+    const note = { noteId: randomUUID(), createdAt: new Date().toISOString(), ...input.body };
+
+    notes.set(note.noteId, note);
+
+    return { status: Notes.Status.Created, body: note };
+  },
+
+  deleteNote(input) {
+    if (!notes.delete(input.path.noteId))
+      return { status: Notes.Status.NotFound, code: Notes.ErrorCode.ApiNotFound };
+
+    return { status: Notes.Status.NoContent };
+  },
+};
+```
+
+Wire them in one catch-all route file under the api's base path, `src/app/v1/[[...path]]/route.ts`. A public api needs no hooks.
+
+```ts
+import { routeHandler } from "@/__generated__/server/notes";
+import { notesEndpoints } from "@/notes-handlers";
+
+export const runtime = "nodejs";
+
+const handler = routeHandler({
+  handlers: { NotesEndpoints: notesEndpoints },
+  clientAddress: (request: Request) => request.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim(),
+});
+
+export { handler as DELETE, handler as GET, handler as HEAD, handler as OPTIONS, handler as PATCH, handler as POST, handler as PUT };
+```
+
+Start the app. It listens on port 3000.
+
+```sh
+npx next dev
+```
+
+Next: [the Next.js guide](../backend/nextjs.md) (access hooks, tests, deploy).
+
+</details>
+
+<details>
 <summary>Node: AdonisJS</summary>
 
 Create the app with the AdonisJS API starter, and answer the prompts with the defaults.
@@ -956,6 +1072,89 @@ php -S 127.0.0.1:8000 -t public
 ```
 
 Next: [the Symfony guide](../backend/symfony.md) (hooks, tests, Doctrine).
+
+</details>
+
+<details>
+<summary>PHP: API Platform</summary>
+
+Install seampact from Packagist, with API Platform 5 on Symfony 7.4 or 8.
+
+```sh
+composer require seampact/api-platform api-platform/symfony
+```
+
+Add the entry to `seampact.config.yaml`. Map `outDir` in `composer.json` (`"App\\": "src/"` covers `src/Generated`). Then generate.
+
+```yaml
+outDir: src/Generated
+sources:
+  contract: { path: contract }
+targets:
+  - id: notes
+    out: Notes
+    use: seampact/api-platform
+    api: notes
+```
+
+```sh
+vendor/bin/seampact generate
+```
+
+Write the handler as on Symfony: a service that implements the generated interface, each method marked with `#[SeampactOperation]`. Do not add `#[ApiResource]`, `#[Route]` or a processor: the generated ones run.
+
+```php
+use App\Generated\Notes\GetNoteErrors;
+use App\Generated\Notes\GetNoteInput;
+use App\Generated\Notes\GetNoteResponse200;
+use App\Generated\Notes\GetNoteResult;
+use App\Generated\Notes\NotesEndpoints;
+use App\Generated\Notes\Symfony\SeampactOperation;
+
+final class NotesController implements NotesEndpoints
+{
+    #[SeampactOperation('getNote')]
+    public function getNote(GetNoteInput $input): GetNoteResult
+    {
+        $note = $this->notes->find($input->path->noteId);
+
+        return $note === null
+            ? GetNoteErrors::apiNotFound()
+            : new GetNoteResponse200($note);
+    }
+}
+```
+
+List the api's bundle, and let API Platform read the generated resources.
+
+```php
+// config/bundles.php
+App\Generated\Notes\Symfony\NotesSeampactBundle::class => ['all' => true],
+```
+
+```yaml
+# config/packages/api_platform.yaml
+api_platform:
+    mapping:
+        paths: ['%kernel.project_dir%/src/Generated']
+```
+
+```yaml
+# config/routes/api_platform.yaml
+api_platform:
+    resource: .
+    type: api_platform
+```
+
+Do not import the Symfony route loader: API Platform registers the contract routes.
+
+Start it. The app listens on port 8000.
+
+```sh
+php -S 127.0.0.1:8000 -t public
+```
+
+Next: [the API Platform guide](../backend/api-platform.md) (what the boundary keeps, security, the Hydra pack).
 
 </details>
 

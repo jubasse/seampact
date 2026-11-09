@@ -191,6 +191,17 @@ Generate, then commit the files. Implement the generated interface in your exist
 </details>
 
 <details>
+<summary>Node: Next.js</summary>
+
+Follow [Set up](../backend/nextjs.md#set-up) of the Next.js guide to install it, then add to `seampact.config.yaml`: `@seampact/codegen-ts`, `@seampact/codegen-zod` and `@seampact/codegen-nextjs` with `apis: [shop]`. Turn off the trailing-slash redirect in `next.config.ts`, as that section shows.
+
+Generate, then commit the files. Implement the generated interface for the products routes: [Write a handler](../backend/nextjs.md#write-a-handler). Put the catch-all route file under the api's base path ([Wire it in](../backend/nextjs.md#wire-it-in)).
+
+Your own pages and route files stay as they are: keep them outside the api's base path. Next.js has no boot check of routes, so `frameworkRoutes` is refused on this target.
+
+</details>
+
+<details>
 <summary>Node: AdonisJS</summary>
 
 Follow [Set up](../backend/adonisjs.md#set-up) of the AdonisJS guide to install it, then add to `seampact.config.yaml`: `@seampact/codegen-ts` and `@seampact/codegen-adonis` with `apis: [shop]`.
@@ -229,6 +240,17 @@ The app refuses to boot, and the message lists every problem. The boot check lis
 Follow [Set up](../backend/symfony.md#set-up) of the Symfony guide to install it, then add to `seampact.config.yaml`: `composer require seampact/symfony` and one entry with `use: seampact/symfony` and `api: shop`.
 
 Generate, then commit the files. Implement the generated interface in your existing controller for the products routes, and delete the DTO or request classes it replaces: [Write a handler](../backend/symfony.md#write-a-handler). List the api's bundle and import its routes ([Wire it in](../backend/symfony.md#wire-it-in)).
+
+The app refuses to boot, and the message lists every problem. The boot check lists your other routes: allow-list them as in "Keep your other routes" below.
+
+</details>
+
+<details>
+<summary>PHP: API Platform</summary>
+
+Follow [Set up](../backend/api-platform.md#set-up) of the API Platform guide to install it, then add to `seampact.config.yaml`: `composer require seampact/api-platform api-platform/symfony` and one entry with `use: seampact/api-platform` and `api: shop`.
+
+Generate, then commit the files. Implement the generated interface in your existing controller for the products routes, and delete the DTO or request classes it replaces: [Write a handler](../backend/api-platform.md#write-a-handler). List the api's bundle and let API Platform read the generated resources ([Wire it in](../backend/api-platform.md#wire-it-in)).
 
 The app refuses to boot, and the message lists every problem. The boot check lists your other routes: allow-list them as in "Keep your other routes" below.
 
