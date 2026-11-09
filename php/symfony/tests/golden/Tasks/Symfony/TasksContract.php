@@ -2366,6 +2366,7 @@ final class TasksContract
             ],
         ],
         'unexpectedErrorListener' => 'Seampact\Golden\Tasks\Symfony\UnexpectedErrorListener',
+        'inputRules' => 'Seampact\Golden\Tasks\Symfony\TasksInputRules',
     ];
 
     /** The app routes the entry's `frameworkRoutes` lets through the boot check. */

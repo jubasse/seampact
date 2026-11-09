@@ -99,6 +99,11 @@ final class VersionHeaderStepTest extends TestCase
             {
                 return false;
             }
+
+            protected function checksInputRules(): bool
+            {
+                return false;
+            }
         };
         $handler = new class () {
             #[SeampactOperation('updateNote')]

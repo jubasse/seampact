@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Suite;
 
+use App\Generated\InputRules\Symfony\UserAuthenticateHook as InputRulesUserAuthenticateHook;
+use App\Generated\InputRules\Symfony\UserCredentials as InputRulesUserCredentials;
+use App\Generated\InputRules\Symfony\UserPrincipal as InputRulesUserPrincipal;
 use App\Generated\Tasks\Symfony\UserAuthenticateHook;
 use App\Generated\Tasks\Symfony\UserCredentials;
 use App\Generated\Tasks\Symfony\UserPrincipal;
@@ -28,7 +31,8 @@ use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
 
 /**
- * The `user` identity's hook double of the `tasks`, `tasksOptionalAuth`, `tasksAbsoluteUrls` and `tasksResponses` apis:
+ * The `user` identity's hook double of the `tasks`, `tasksOptionalAuth`, `tasksAbsoluteUrls`, `tasksResponses` and
+ * `inputRules` apis:
  * a bearer token of the credentials, or the same token as the session cookie. The token `GATE_DENIED_TOKEN` throws
  * Symfony's `AccessDeniedException`, as a `denyAccessUnlessGranted()` in a hook would, and `GUARD_DENIED_TOKEN` its
  * `AuthenticationException`, as an authenticator would. The token `FIREWALL_USER_TOKEN` reads the user the firewall
@@ -38,7 +42,8 @@ final class UserHook implements
     UserAuthenticateHook,
     OptionalAuthUserAuthenticateHook,
     AbsoluteUrlsUserAuthenticateHook,
-    ResponsesUserAuthenticateHook
+    ResponsesUserAuthenticateHook,
+    InputRulesUserAuthenticateHook
 {
     public const FIREWALL_USER_TOKEN = 'seampact-firewall-user';
     public const GATE_DENIED_TOKEN = 'seampact-gate-denied';
@@ -80,7 +85,8 @@ final class UserHook implements
         $isUserCredentials = $credentials instanceof UserCredentials
             || $credentials instanceof OptionalAuthUserCredentials
             || $credentials instanceof AbsoluteUrlsUserCredentials
-            || $credentials instanceof ResponsesUserCredentials;
+            || $credentials instanceof ResponsesUserCredentials
+            || $credentials instanceof InputRulesUserCredentials;
 
         return $isUserCredentials ? ($credentials->bearer ?? $credentials->sessionCookie) : null;
     }
@@ -92,6 +98,7 @@ final class UserHook implements
             $credentials instanceof OptionalAuthUserCredentials => new OptionalAuthUserPrincipal($userId),
             $credentials instanceof AbsoluteUrlsUserCredentials => new AbsoluteUrlsUserPrincipal($userId),
             $credentials instanceof ResponsesUserCredentials => new ResponsesUserPrincipal($userId),
+            $credentials instanceof InputRulesUserCredentials => new InputRulesUserPrincipal($userId),
             default => new UserPrincipal($userId),
         };
     }

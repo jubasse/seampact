@@ -19,7 +19,7 @@ use Seampact\Ir\Model\Operation;
 /**
  * The names of one api's Symfony placement (ADR 0024 "Placement"), claimed beside the shared names of `ApiLayout`:
  * its classes under `<namespace>\Symfony`, prefixed with the api's type name, the per-api attribute and hook
- * interfaces the app implements there, the runtime classes the code imports from `seampact/symfony` and
+ * interfaces the app implements there (the input rules one is prefixed, the others are not), the runtime classes the code imports from `seampact/symfony` and
  * `seampact/codegen`, its routes (`seampact.<api id>.<operationId>`), and the api key that names its routing
  * resource and its bundle configuration (`seampact_<api key>`).
  */
@@ -31,6 +31,7 @@ final class SymfonyPlacement implements BoundaryNames
     public readonly string $decider;
     public readonly string $scopeResolver;
     public readonly string $unexpectedErrorListener;
+    public readonly ?string $inputRules;
     public readonly string $apiKey;
     public readonly string $bundle;
     public readonly string $controllerPass;
@@ -80,6 +81,8 @@ final class SymfonyPlacement implements BoundaryNames
         $this->decider = $unprefixed('Decider', "the api's decider interface");
         $this->scopeResolver = $unprefixed('ScopeResolver', "the api's scope resolver interface");
         $this->unexpectedErrorListener = $unprefixed('UnexpectedErrorListener', "the api's unexpected-error listener interface");
+        // A flavour that refuses app input rules by name has no interface for the app to implement.
+        $this->inputRules = $flavour->refusesInputRules() ? null : $placed('InputRules', "the api's input rules interface");
 
         foreach ($kept->operations() as [$index, $operation]) {
             $names = $layout->operation($operation->id);
@@ -169,10 +172,9 @@ final class SymfonyPlacement implements BoundaryNames
         return $this->unexpectedErrorListener;
     }
 
-    /** The Symfony target runs no input rules yet. */
     public function inputRules(): ?string
     {
-        return null;
+        return $this->inputRules;
     }
 
     public function runtime(string $simpleName): string

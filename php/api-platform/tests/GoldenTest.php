@@ -45,9 +45,10 @@ final class GoldenTest extends TestCase
         $apiPlatform = self::byPath(self::apiPlatformFiles());
         $symfony = self::byPath((new SymfonyGenerator())->generate(self::ir(new SymfonyGenerator()), ReferenceContract::entry(SymfonyGenerator::PACKAGE, 'tasks', self::NAMESPACE)));
 
-        $unchanged = static fn (array $files): array => array_filter($files, static fn (string $path): bool => !self::isApiPlatformFile($path), ARRAY_FILTER_USE_KEY);
+        $symfonyUnchanged = array_filter($symfony, static fn (string $path): bool => !self::isApiPlatformFile($path), ARRAY_FILTER_USE_KEY);
+        $apiPlatformUnchanged = array_filter($apiPlatform, static fn (string $path): bool => !self::isApiPlatformFile($path), ARRAY_FILTER_USE_KEY);
 
-        self::assertSame($unchanged($symfony), $unchanged($apiPlatform));
+        self::assertSame(self::withoutInputRules($symfonyUnchanged), $apiPlatformUnchanged);
     }
 
     public function testNoInputRulesInterfaceIsGeneratedAndTheFlavourRefusesThem(): void
@@ -86,6 +87,20 @@ final class GoldenTest extends TestCase
         }
 
         return $byPath;
+    }
+
+    /**
+     * The Symfony target's files as API Platform generates them: input rules are refused there, so the interface
+     * and the contract's entry naming it are the one expected difference.
+     *
+     * @param array<string, string> $files
+     * @return array<string, string>
+     */
+    private static function withoutInputRules(array $files): array
+    {
+        $kept = array_filter($files, static fn (string $path): bool => !str_ends_with($path, 'InputRules.php'), ARRAY_FILTER_USE_KEY);
+
+        return array_map(static fn (string $contents): string => preg_replace("~^\\s*'inputRules' => .*\\n~m", '', $contents) ?? $contents, $kept);
     }
 
     private static function isApiPlatformFile(string $path): bool

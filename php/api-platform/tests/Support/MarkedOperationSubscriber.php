@@ -45,4 +45,9 @@ final class MarkedOperationSubscriber extends ApiPlatformBoundarySubscriber
     {
         return false;
     }
+
+    protected function checksInputRules(): bool
+    {
+        return false;
+    }
 }
