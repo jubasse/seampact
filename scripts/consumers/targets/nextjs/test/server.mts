@@ -12,6 +12,7 @@ export interface RunningServer {
 }
 
 const HOST = "127.0.0.1";
+
 export const CONSUMER_ROOT = join(import.meta.dirname, "..");
 const NEXT_BIN = join(CONSUMER_ROOT, "node_modules", "next", "dist", "bin", "next");
 const BUILD_ID_FILE = join(CONSUMER_ROOT, ".next", "BUILD_ID");
