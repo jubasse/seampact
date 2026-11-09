@@ -1,4 +1,4 @@
-# Refused role bindings (ADR 0002 section 11 "Error roles", ADR 0006 section 6): a binding to an unregistered code in
+# Refused role bindings (ADR 0002 section 11, Errors and natures, ADR 0006 section 6): a binding to an unregistered code in
 # the conventions and on a node, a bound code without the role's required datum, and a default code redeclared with
 # params that drop the delay conventions.rateLimit names.
 api: { name: shop, version: 1, kind: product }

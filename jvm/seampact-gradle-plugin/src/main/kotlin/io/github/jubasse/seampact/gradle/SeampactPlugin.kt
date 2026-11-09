@@ -42,7 +42,7 @@ public class SeampactPlugin : Plugin<Project> {
             .orElse(listOf(userHomeCache))
 
         // Created when the first task is configured, after the build file set the DSL, and only for what the
-        // layout needs: a bundle-only app never resolves the binary (ADR 0010 "Lazy").
+        // layout needs: a bundle-only app never resolves the binary (ADR 0010 section 8, The JVM channels).
         val binaryArtefact by lazy { if (layout.get().needsBinary) binaryConfiguration(project, extension) else emptyList() }
         val mavenBundles by lazy { layout.get().mavenSources.let { if (it.isEmpty()) emptyList() else bundleConfiguration(project, it) } }
         // A lenient view for the origin input: a resolution failure is reported by the task, with its source.
@@ -142,7 +142,7 @@ public class SeampactPlugin : Plugin<Project> {
         listOf(detached(project, coordinates.map(::bundleArtefactNotation)))
 
     // A detached configuration resolves through the build's own repositories (settings or project), so mirrors,
-    // proxies and offline mode apply (ADR 0010 "Resolution").
+    // proxies and offline mode apply (ADR 0010 section 8, The JVM channels).
     private fun detached(project: Project, notations: List<String>): Configuration =
         project.configurations.detachedConfiguration(*notations.map(project.dependencies::create).toTypedArray()).apply {
             isTransitive = false

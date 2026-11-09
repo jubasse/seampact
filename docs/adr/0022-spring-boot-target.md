@@ -91,7 +91,7 @@ One run's first request to a non-contract streamed route failed inside Tomcat (a
 
 ## Consequences
 
-- App input rules ([ADR 0028](0028-app-input-rules.md)): Spring Boot (1.1.x): step 8b runs in `BoundaryInterceptor.preHandle` right after `IdempotencyStep.begin`, over one generated `<Operation>InputRules` bean per operation; the runtime builds the code-name to wire-pointer map.
+- App input rules ([ADR 0028](0028-app-input-rules.md)): Spring Boot (1.2.0): step 8b runs in `BoundaryInterceptor.preHandle` right after `IdempotencyStep.begin`, over one generated `<Operation>InputRules` bean per operation; the runtime builds the code-name to wire-pointer map.
 - An app keeps its controllers, its Jackson mapper, its validator, its advice and its Spring Security chain. On contract routes the boundary's checks and reply win, and its own routes are unchanged.
 - The check order holds in Spring without app setup: Spring's binding and `@Valid` never decide a contract input.
 - Every reply on a contract route is checked, from whichever writer, streams and asynchronous dispatches included. A Spring Security refusal that the app did not wire to the generated handlers, by `sendError` or by an empty `setStatus` (the resource server's defaults), still answers in the api's format for 401 and 403.

@@ -20,6 +20,7 @@ export interface SkillReferences {
 
 const BACKEND_STACKS = [
   "adonisjs",
+  "api-platform",
   "drf",
   "express",
   "fastapi",
@@ -27,6 +28,7 @@ const BACKEND_STACKS = [
   "hono",
   "laravel",
   "nestjs",
+  "nextjs",
   "ninja",
   "spring-boot",
   "symfony",

@@ -5,5 +5,5 @@ import { nativePagingRefusals } from "../../../paging-refusals.ts";
 
 export const FASTAPI_SUITE_REFUSALS: Readonly<Record<string, string>> = {
   ...nativePagingRefusals("fastapi"),
-  ...inputRulesNotYetRefusal("fastapi", "1.1.x"),
+  ...inputRulesNotYetRefusal("fastapi", "1.2.0"),
 };

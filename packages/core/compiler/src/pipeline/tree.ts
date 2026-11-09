@@ -19,7 +19,7 @@ export interface TreeNode {
   /**
    * The JSON Pointer of the node in the merged raw tree. A scope not written points where it would be
    * (`.../tasks/member`); an op points at its entry, `.../ops/get` in a mapping and `.../ops/1` in a list, which is
-   * also its origin, while its parent is its scope (ADR 0002 section 6, "Collections and singles").
+   * also its origin, while its parent is its scope (ADR 0002 section 6, Surfaces and the tree).
    */
   readonly pointer: string;
   readonly parent?: TreeNode;

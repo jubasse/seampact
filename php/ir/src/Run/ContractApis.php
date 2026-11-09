@@ -200,7 +200,7 @@ final class ContractApis
         return [$directories, $problems];
     }
 
-    // The binary is installed once, on the first `path` source or the documents, and only then (ADR 0010 "Lazy").
+    // The binary is installed once, on the first `path` source or the documents, and only then (ADR 0010 section 9, The PHP channels).
     public function binary(): InstalledBinary|BinaryFailure
     {
         if ($this->binary === null) {

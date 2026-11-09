@@ -26,7 +26,7 @@ import {
   deriveErrorsObjectOfUse,
 } from "./role-param-fit.js";
 
-// The params of a role binding (ADR 0002 section 11 "Error roles", docs/ir/07): an authored `params` template read by
+// The params of a role binding (ADR 0002 section 11, Errors and natures, docs/ir/07): an authored `params` template read by
 // the shared template reader with the role's data as its slots, or the by-name template when none is written. The
 // rendered params must validate against the code's params schema whatever the data, which `role-param-types.ts`
 // checks. Role data are flat, so an `each` inside another `each`'s `as` is refused.

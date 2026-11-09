@@ -1,4 +1,4 @@
-"""Where the compiler binary is downloaded from, and how (ADR 0010, "Fetch"): a release asset of the seampact GitHub
+"""Where the compiler binary is downloaded from, and how (ADR 0010 section 9, The PHP channels): a release asset of the seampact GitHub
 releases, or a mirror base URL to which `/<asset>` is appended, so a base with a query or a fragment is refused. The
 download is `HttpsDownload`'s, with the system's certificate authorities and no proxy, as the bundle channel's, a
 deadline sized for a binary of about 100 MB on a slow link, and a cap well above any release asset."""

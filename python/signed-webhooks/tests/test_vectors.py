@@ -71,7 +71,7 @@ def _cases() -> list[tuple[dict[str, Any], dict[str, Any]]]:
     return [(case, vectors["schemes"][case["scheme"]]) for case in vectors["cases"]]
 
 
-# The header parsing the generated boundary does (ADR 0013 "Header parsing is fixed by the format"), enough for the
+# The header parsing the generated boundary does (ADR 0013, A signed identity kind with a declared scheme), enough for the
 # two formats of the vectors.
 def _parse_signature_header(header_format: str, header: str) -> tuple[str | None, tuple[str, ...]]:
     if _PAIR_FORMAT.fullmatch(header_format) is None:

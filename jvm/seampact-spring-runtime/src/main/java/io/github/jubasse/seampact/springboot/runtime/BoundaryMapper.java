@@ -13,7 +13,7 @@ import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.module.SimpleModule;
 
 /**
- * The boundary's own Jackson 3 mapper, never the app's bean (ADR 0012 "Each target places the steps"): a date-time
+ * The boundary's own Jackson 3 mapper, never the app's bean (ADR 0012 section 5, The check order): a date-time
  * keeps the offset it was sent with and is written with its seconds (RFC 3339), a number never binds to a string, and
  * an optional nullable member keeps its three states ({@link FieldMembers}).
  */

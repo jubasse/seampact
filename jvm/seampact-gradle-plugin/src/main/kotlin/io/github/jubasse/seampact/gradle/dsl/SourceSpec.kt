@@ -8,7 +8,7 @@ import javax.inject.Inject
 
 /**
  * One entry of the app config's `sources`: a `path`, or a bundle with its `integrity` (ADR 0011 "Channels",
- * ADR 0010 "The contract bundle as a Maven artefact"). `packageName` is the config's `package`, a Kotlin keyword.
+ * ADR 0010 section 8, The JVM channels). `packageName` is the config's `package`, a Kotlin keyword.
  */
 public abstract class SourceSpec @Inject constructor(private val objects: ObjectFactory) {
     public abstract val path: Property<String>

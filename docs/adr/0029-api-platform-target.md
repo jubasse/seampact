@@ -17,13 +17,13 @@ Five API Platform behaviours, seen in the spike below, shape the placement:
 ## Options
 
 - API Platform lines: 4 and 5, or 5 only. Choice: 5 only. Composer resolves 5 for a new app (the spike got 5.0.6), and each supported line is a matrix of its own. API Platform 4 comes only on demand; until then the compatibility matrix records it as unsupported and `generate` refuses it by name (ADR 0009 "Artefacts and the compatibility matrix").
-- Flavours: Symfony and Laravel together, or Symfony first. Choice: Symfony in 1.1.0, Laravel in a 1.1.x release. The Laravel flavour has the same shape but its own routes, middleware and error handler, about 0.6 of the Symfony work ("The Laravel flavour" below).
+- Flavours: Symfony and Laravel together, or Symfony first. Choice: Symfony in 1.1.0, Laravel in a 1.2.0 release. The Laravel flavour has the same shape but its own routes, middleware and error handler, about 0.6 of the Symfony work ("The Laravel flavour" below).
 - Who writes the wire: API Platform's serializer, `IriConverter` and error normalizers, or the boundary. Choice: the boundary, as on every other target. API Platform rendering would need resources that carry every identifier for their IRIs, and would make the wire depend on the framework's normalizers, where the contract guarantees one wire whatever the target. The native look is a pack concern ("The native look"), never a per-target switch of the reply check.
 - Routes: a route loader as on Symfony, or API Platform's resource metadata. Choice: the metadata. It gives the exact path, name and defaults with no loader, and API Platform's documentation, context routes and security glue keep working on the same operations.
 - Steps 2 to 8: in decorators of API Platform's providers (ADR 0012's api-platform row), or in the Symfony target's `kernel.controller` listener. Choice: the listener. It runs before the whole provider chain, so before API Platform's `security`, read and deserialize, with no API Platform change.
 - The operation marker: the method attribute the Symfony listener reads, the route default, or the operation's extra properties. Choice: the route default. The resolved controller is always `MainController`, so no method carries the attribute, and the route default is set by the same metadata that names the route.
 - The reply path: `kernel.view` as on Symfony, or a processor. Choice: a generated decorator of API Platform's main processor, since `kernel.view` never fires.
-- App input rules ([ADR 0028](0028-app-input-rules.md)): in 1.1.0, or with Python and Spring Boot in 1.1.x. Choice: 1.1.x, refused by name until then, which keeps ADR 0028 §9's scope.
+- App input rules ([ADR 0028](0028-app-input-rules.md)): in 1.1.0, or with Python and Spring Boot in 1.2.0. Choice: 1.2.0, refused by name until then, which keeps ADR 0028 §9's scope.
 
 ## Decisions
 
@@ -136,11 +136,11 @@ The Symfony target's boot check runs. Its container part is ADR 0024's less the 
 
 ### App input rules
 
-Step 8b is refused by name on this target in 1.1.0: the generator emits no `<Api>InputRules` interfaces for an API Platform api, and the boot check refuses a rules service tagged for one, naming the 1.1.x release that brings them. The http-suite's input-rules case stays skipped by name on the API Platform consumer. When rules come, they run as on Symfony, at `kernel.controller` right after `IdempotencyStep::begin`, with the same `abandon` on a refusal: the spike found that place already before API Platform's deserialize, so no decorator is needed.
+Step 8b is refused by name on this target in 1.1.0: the generator emits no `<Api>InputRules` interfaces for an API Platform api, and the boot check refuses a rules service tagged for one, naming the 1.2.0 release that brings them. The http-suite's input-rules case stays skipped by name on the API Platform consumer. When rules come, they run as on Symfony, at `kernel.controller` right after `IdempotencyStep::begin`, with the same `abandon` on a refusal: the spike found that place already before API Platform's deserialize, so no decorator is needed.
 
 ### The Laravel flavour
 
-API Platform's Laravel flavour waits for a 1.1.x release. It has the same shape: routes registered per operation from `uriTemplate` and `name`, wrapped in `ApiPlatformMiddleware`; `ApiPlatformController` runs the same provider and processor chains, so the decorators port. It differs in its security, a Gate `policy` checked after the data is provided, in its errors, through an `ErrorHandler` decorating Laravel's, and in its Eloquent-centred metadata. The Laravel target's boundary is middleware, which runs before the controller, so the access steps stay in front there too. Laravel's native 422 body is a `pack-laravel` concern of the same release.
+API Platform's Laravel flavour waits for a 1.2.0 release. It has the same shape: routes registered per operation from `uriTemplate` and `name`, wrapped in `ApiPlatformMiddleware`; `ApiPlatformController` runs the same provider and processor chains, so the decorators port. It differs in its security, a Gate `policy` checked after the data is provided, in its errors, through an `ErrorHandler` decorating Laravel's, and in its Eloquent-centred metadata. The Laravel target's boundary is middleware, which runs before the controller, so the access steps stay in front there too. Laravel's native 422 body is a `pack-laravel` concern of the same release.
 
 ### Refused by name or waiting
 
@@ -149,7 +149,7 @@ API Platform's Laravel flavour waits for a 1.1.x release. It has the same shape:
 | Waits for | What |
 |---|---|
 | on demand | API Platform 4 (refused by the compatibility matrix) |
-| 1.1.x | the Laravel flavour; app input rules |
+| 1.2.0 | the Laravel flavour; app input rules |
 | an app that needs it | `nativeDocs`; API Platform's `securityPostDenormalize` and `securityPostValidation` on contract operations; API Platform's own read, content negotiation, deserialize, validate, paginator and serializer on contract operations |
 
 Worker runtimes are refused as on Symfony, by the same two guards.
@@ -195,13 +195,13 @@ Run on Symfony 7.4.23 and `api-platform/symfony` 5.0.6 on PHP 8.5.4, with in-pro
 
 ## Consequences
 
-- App input rules ([ADR 0028](0028-app-input-rules.md)): API Platform: refused by name in 1.1.0; in 1.1.x step 8b runs at `kernel.controller` after the idempotency claim, as on Symfony.
+- App input rules ([ADR 0028](0028-app-input-rules.md)): API Platform: refused by name in 1.1.0; in 1.2.0 step 8b runs at `kernel.controller` after the idempotency claim, as on Symfony.
 - An app moves its handlers between the Symfony and API Platform targets unchanged; API Platform gives it its routing, its document and its security glue.
 - The wire on an API Platform api is the contract's, through the api's format; the JSON-LD and Hydra look needs the pack, and a client written against API Platform reads the same bodies once the pack's two gaps are closed.
 - API Platform's read, content negotiation, deserialize, validation, `securityPostDenormalize`, `securityPostValidation`, paginator and serializer cannot be used on a contract operation; its `security` runs before the handler with `object` null.
 - The shared `php/symfony` runtime gains an overridable marker read; the Symfony target keeps the method attribute.
 - ADR 0012's api-platform row is amended to match: the developer writes the api's generated handler interfaces, as on Symfony, and generated processors call them, a safe operation's included; steps 2 to 8 run in the Symfony target's `kernel.controller` listener, which finds the operation from the route's `_seampact_operation` default, not from `_api_operation_name`; no deserialize decorator; a generated decorator of the main processor writes the reply.
-- ADR 0010 "API Platform spike" is answered: `security` runs after the boundary's steps; the item `@id` is the boundary's; the restricted input field is refused by step 7 before any denormalization; validation answers the contract's `schemaInvalid` role, 422 with the pack; the context and document routes are framework routes; the operation comes from the route default; Symfony now, Laravel in 1.1.x.
+- ADR 0010 "API Platform spike" is answered: `security` runs after the boundary's steps; the item `@id` is the boundary's; the restricted input field is refused by step 7 before any denormalization; validation answers the contract's `schemaInvalid` role, 422 with the pack; the context and document routes are framework routes; the operation comes from the route default; Symfony now, Laravel in 1.2.0.
 
 ## Traceability
 
