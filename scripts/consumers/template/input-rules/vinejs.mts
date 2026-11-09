@@ -1,6 +1,8 @@
 // The `input-rules` case's app input rules in VineJS: each rule from `vine.createRule` reports with its name, and the
 // unnamed one reports with an empty name. The generated VineJS validators cannot be extended, so the part's schema is
-// written here. The consumer harness copies this file to `src/input-rules.mts` when the validators are VineJS.
+// written here, without the optional `note`: VineJS's optional members do not compile under the template's
+// `exactOptionalPropertyTypes`, and the object rules read the note from the value they get. The consumer harness
+// copies this file to `src/input-rules.mts` when the validators are VineJS.
 import vine from "@vinejs/vine";
 import type { FieldContext } from "@vinejs/vine/types";
 import {
@@ -59,7 +61,6 @@ const scheduleTaskBody = vine.create(
     .object({
       start: vine.string(),
       end: vine.string().use(endAfterStart()),
-      note: vine.string().optional(),
     })
     .use(windowTooLong())
     .use(unnamedNoteRule()),
