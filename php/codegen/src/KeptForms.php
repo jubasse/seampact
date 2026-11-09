@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Seampact\Codegen;
 
+use Seampact\Codegen\Runtime\MemberRoute;
 use Seampact\Ir\Model\AccessUnknown;
 use Seampact\Ir\Model\ArrayTypeUse;
 use Seampact\Ir\Model\BasicScheme;
@@ -62,6 +63,7 @@ final class KeptForms
     private const JSON_MEDIA = 'application/json';
     // The response media the replies write: JSON, and JSON-LD, which `pack-api-platform` declares for its items and pages.
     private const SUPPORTED_RESPONSE_MEDIA = [self::JSON_MEDIA, 'application/ld+json'];
+    public const MEMBER_ROUTE_RULE = 'format.self.member-route';
     private const PAGING_PARAMS_DERIVATION = 'paging.params';
     private const QUERY_PART = 'query';
     private const TOP_LEVEL_POINTER = '/^\/[^\/]+$/D';
@@ -222,6 +224,7 @@ final class KeptForms
         $this->readAccess($operation, $at);
         $this->readFormat($operation->format);
         $this->readPageTemplates($operation);
+        $this->readMemberUrlSlots($operation, $at);
         $this->readWaitingMembers($operation, $at);
         $this->readRequirements($operation, $at);
         $this->readAccessDeclarations($operation);
@@ -481,6 +484,73 @@ final class KeptForms
             $named = implode(', ', array_map(static fn (string $slot): string => "'\${$slot}'", $unrendered));
             $this->refusals->waiting('paging.response.slot', "The page slots {$named} of the paging style '{$styleId}'", $templateAt, Delivery::AfterOneZero);
         }
+    }
+
+    // `$itemSelf`, and `$self` of an item envelope, are the member URL of a resource that has an id property: the
+    // boundary builds it from the resource's member route, so an operation with none is refused rather than answered
+    // without the id or with the collection's URL.
+    private function readMemberUrlSlots(Operation $operation, IrPlace $at): void
+    {
+        $idProperty = $operation->resource?->idProperty;
+        if ($idProperty === null || $this->memberRouteOf($operation) !== null) {
+            return;
+        }
+
+        $slot = $this->memberUrlSlotWritten($operation);
+        if ($slot === null) {
+            return;
+        }
+
+        $this->refusals->add(
+            self::MEMBER_ROUTE_RULE,
+            "The format writes '\${$slot}', the member URL of a '{$operation->resource->type}', but no route of that resource through its id parameter has a parent path that '{$operation->path}' starts with.",
+            "Declare a member route for '{$operation->resource->type}' beside this operation (a get through its id parameter), or write the format without '\${$slot}'.",
+            $at,
+        );
+    }
+
+    /** @return ?array{path: string, idParam: string} */
+    private function memberRouteOf(Operation $operation): ?array
+    {
+        return MemberRoute::find(
+            $operation->resource?->type,
+            $operation->path,
+            array_map(static fn (Operation $candidate): array => ['type' => $candidate->resource?->type, 'idParam' => $candidate->resource?->idParam, 'path' => $candidate->path], $this->ir->operations),
+        );
+    }
+
+    /** The member URL slot the operation's page items or item responses write, or null. */
+    private function memberUrlSlotWritten(Operation $operation): ?string
+    {
+        foreach ($this->pageBodyTemplates($operation) as $template) {
+            if (in_array('itemSelf', self::templateSlots($template), true)) {
+                return 'itemSelf';
+            }
+        }
+
+        $format = $this->ir->formats[$operation->format] ?? null;
+        $writesItem = array_filter($operation->responses, static fn (Response $response): bool => $response->shape->value === ResponseShape::Item) !== [];
+        if ($format !== null && $writesItem && in_array('self', self::templateSlots($format->success->item->body->toJson()), true)) {
+            return 'self';
+        }
+
+        return null;
+    }
+
+    /** @return list<\stdClass> the templates a page of the operation writes its items with: the style's own, or the format's */
+    private function pageBodyTemplates(Operation $operation): array
+    {
+        $style = $operation->paging === null ? null : ($this->ir->pagings[$operation->paging->style] ?? null);
+        if ($style === null) {
+            return [];
+        }
+        if ($style->response->body !== null) {
+            return [$style->response->body->toJson()];
+        }
+
+        $pageFormat = $this->ir->formats[$operation->format] ?? null;
+
+        return $pageFormat === null ? [] : [$pageFormat->success->page->body->toJson()];
     }
 
     /** @return list<string>|null the member names down to the slot, reached through named object members only, or the slot's `$merge` into one of them */

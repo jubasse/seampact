@@ -80,16 +80,29 @@ final class ResponseHeaders
      */
     private static function successorLink(BoundaryState $state, string $path, string $rel): string
     {
-        $target = preg_replace_callback(self::PATH_PARAM, static function (array $param) use ($state, $path): string {
-            $raw = $state->rawParameters[$param[1]] ?? throw new \LogicException("seampact: the successor path '{$path}' of operation '{$state->operationId}' names the param '{$param[1]}', which the request has not; regenerate the code.");
+        return '<' . ($state->publicOrigin ?? '') . $state->contract->mount . self::pathWithRequestParams($state, $path) . ">; rel=\"{$rel}\"";
+    }
+
+    /**
+     * The path with each `{param}` written as the request's param of the same name, decoded then encoded as one path
+     * segment, or as the segment `$given` holds for it.
+     *
+     * @param array<string, string> $given already encoded segments by param name
+     */
+    public static function pathWithRequestParams(BoundaryState $state, string $path, array $given = []): string
+    {
+        return preg_replace_callback(self::PATH_PARAM, static function (array $param) use ($state, $path, $given): string {
+            if (isset($given[$param[1]])) {
+                return $given[$param[1]];
+            }
+
+            $raw = $state->rawParameters[$param[1]] ?? throw new \LogicException("seampact: the path '{$path}' of operation '{$state->operationId}' names the param '{$param[1]}', which the request has not; regenerate the code.");
 
             // Step 1 refused a param that does not decode to UTF-8, so the value here always does.
             $decoded = WireValues::decodedSegment($raw) ?? throw new \LogicException("seampact: the path param '{$param[1]}' of operation '{$state->operationId}' passed step 1 without decoding to UTF-8.");
 
             return self::encodedPathSegment($decoded);
-        }, $path);
-
-        return '<' . ($state->publicOrigin ?? '') . $state->contract->mount . $target . ">; rel=\"{$rel}\"";
+        }, $path) ?? '';
     }
 
     // The item's version as a strong entity tag, `"7"`: the field's safe integer or text, as the client sends it back.

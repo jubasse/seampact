@@ -111,7 +111,8 @@ final class PageReply
         if ($resource !== null) {
             $slots[ResourceIris::RESOURCE_SLOT] = $resource;
         }
-        $slots[Templates::ITEM_SLOTS] = array_map(static fn (mixed $item): array => self::itemSlots($state, $item), $items);
+        $memberRoute = ResourceIris::memberRoute($state);
+        $slots[Templates::ITEM_SLOTS] = array_map(static fn (mixed $item): array => self::itemSlots($state, $memberRoute, $item), $items);
         $slots['status'] = $status;
         $slots['path'] = $requestPath;
         $meta = self::renderedMeta($style, $slots, $writeNulls);
@@ -127,11 +128,12 @@ final class PageReply
     /**
      * The slots one item of `$items` binds inside `$each`.
      *
+     * @param ?array{path: string, idParam: string} $memberRoute
      * @return array<string, mixed>
      */
-    private static function itemSlots(BoundaryState $state, mixed $item): array
+    private static function itemSlots(BoundaryState $state, ?array $memberRoute, mixed $item): array
     {
-        $memberUrl = ResourceIris::memberUrl($state, $item);
+        $memberUrl = ResourceIris::memberUrl($state, $memberRoute, $item);
 
         return $memberUrl === null ? [] : [ResourceIris::ITEM_SELF_SLOT => $memberUrl];
     }

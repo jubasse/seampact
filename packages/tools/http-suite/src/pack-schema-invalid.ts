@@ -29,7 +29,10 @@ export interface SchemaInvalidBinding {
   readonly issues: IssuesMember | undefined;
 }
 
-/** The pack's rebinding of `schemaInvalid`, or undefined while the role still answers the reference's code. */
+/**
+ * The pack's rebinding of `schemaInvalid`, or undefined while the role still answers the reference's code. It reads
+ * the first api's IR: a profile serves apis that apply the pack the same way, as `packProfileOf` reads its format.
+ */
 export function schemaInvalidBindingOf(ir: ContractIR): SchemaInvalidBinding | undefined {
   const bindings = ir.conventions[ERRORS_DERIVED_CONVENTION]?.value;
   const binding = isObject(bindings) ? bindings[SCHEMA_INVALID_ROLE] : undefined;
