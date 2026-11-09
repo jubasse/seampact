@@ -1,0 +1,3 @@
+### Handler results
+
+The generated handler interface takes the operation's `input` from the types link and returns its `output` or its `errors` (ADR 0007 roles): a success `{ status, body }` or a declared error `{ status, code, params }`, checked by the compiler. A code the operation does not list is a type error, and at run time a 500. A handler or a service throws a declared error as the exported `ContractException(code, params)`, typed with the api's codes and their params, through the same filter; the generated exception per code of ADR 0012 (`TasksLockedError`) still comes after the slice and goes through the same filter.

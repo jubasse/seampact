@@ -201,6 +201,7 @@ The remaining generated tree is still scanned by the app's tools, so `seampact c
 
 ## Traceability
 
+- History: the dated amendments this ADR carried until PR #451 are folded into the sections they changed; `git show 43055be4:docs/adr/0025-runtime-packaging.md` holds them with their dates.
 - Amendments: A3 (publication at 1.0), A19 (Composer mirrors), A40 (`hooks: vendored`, the model for a copy mode), A47 (no mode a consumer does not need).
 - ADRs: 0009 (run-time dependencies, amended), 0010 (namespaces, artifacts), 0015 (runtime helpers and golden tests, amended), 0016 to 0024 (the targets' placement, dependencies and boot checks).
 - Proof in the development phase: the review of this ADR, then the golden trees, the G2 and G3 unit tests and the HTTP suite of each delivery PR.

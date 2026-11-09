@@ -1,0 +1,15 @@
+### The reply path
+
+Every contract route's reply is written by the boundary with `res.statusCode`, `res.setHeader` and `res.end`, never `res.json` or `res.send`: one path for a 2xx among several, the derived 304, an idempotent replay (written without calling the handler) and every error. Express computes its weak ETag and its 304 inside `res.send`, so a reply written with `res.end` gets neither, and the app's own routes keep Express's settings. ADR 0012's step 10 obligation for nestjs is met by this one rule.
+
+NestJS still writes its own reply after the handler returns, unless the route takes the raw response. The composite therefore applies NestJS's public `Res()` parameter decorator at the first index after both the method's declared parameters (`method.length`) and its highest decorated parameter, since `length` stops at a parameter with a default value or a rest parameter: NestJS then treats the response as handled and never writes it, and the handler receives the response as an extra trailing argument its interface does not declare. In the default reply mode a result an app's interceptor maps on a contract route is discarded, since the wrapper already wrote the contract's projection; in the interceptor mode the mapped value is the one step 10 checks and writes. An interceptor that answers without calling `next.handle()` (`@nestjs/cache-manager`'s `CacheInterceptor` on a hit) skips the input pipe and the handler, so the boot check refuses a cache interceptor that can answer a contract route (below), and a value that reaches the reply interceptor without the input checked answers 500 with a log; in the default reply mode the reply interceptor is placed only where an app interceptor can answer ("The NestJS stages"). The target exports `isContractRoute(context)`, true when the handler carries an operation's composite metadata, for such an interceptor to call `next.handle()` at once on contract routes.
+
+The spike that backs this, run on NestJS 12.1.3, `@nestjs/platform-express` 12.1.3, Express 5.2.1 and Node 24.21, and not kept, compared three ways for an interceptor that writes the reply:
+
+| Way | Wire result | After the reply |
+|---|---|---|
+| write, then emit a value | right status, headers and body | NestJS replies again on the ended response; on the 304, Express's `res.send` finds the request fresh and throws `ERR_HTTP_HEADERS_SENT` into the filter |
+| write, then complete without a value | right status, headers and body | every reply raises an `EmptyError` into the filter |
+| mark the response with `Res()`, write, then emit | right status, headers and body | nothing: no second reply, no error |
+
+With the marked way, a GET answered 200 with the boundary's strong ETag and no Express ETag, a matching `If-None-Match` answered the boundary's 304, a POST whose NestJS default is 201 answered the handler's 202, a replay answered 201 with the replay header without calling the handler, and a guard refusal answered 401 through the filter. On the same app, a route of the app's own kept Express's weak ETag and its 304.
