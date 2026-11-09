@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Seampact\ApiPlatform\Tests\Support;
 
 use Seampact\ApiPlatform\Runtime\ApiPlatformBoundarySubscriber;
-use Seampact\Symfony\Runtime\OperationMark;
 use Symfony\Component\HttpKernel\Event\ControllerEvent;
 use Symfony\Component\Validator\Constraint;
 
@@ -34,7 +33,7 @@ final class MarkedOperationSubscriber extends ApiPlatformBoundarySubscriber
 
     protected function operationAttribute(): string
     {
-        return OperationMark::class;
+        return HandlerMark::class;
     }
 
     protected function contractExceptionClass(): string

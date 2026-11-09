@@ -26,6 +26,9 @@ interface SymfonyFlavour
     /** The runtime class the generated boundary subscriber extends. */
     public function boundaryParent(SymfonyPlacement $placement): string;
 
+    /** @return list<string> the controllers of a framework's own routes that the boot check accepts as framework routes */
+    public function frameworkRouteControllers(): array;
+
     /**
      * @param array<string, string> $routePaths each routable operation's Symfony path, by operation id
      * @return list<PhpClassFile> the files the flavour adds to the api's tree

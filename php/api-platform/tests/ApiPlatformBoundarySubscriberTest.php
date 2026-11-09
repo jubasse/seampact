@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Seampact\ApiPlatform\Tests;
 
 use PHPUnit\Framework\TestCase;
+use Seampact\ApiPlatform\Tests\Support\MarkedHandler;
 use Seampact\ApiPlatform\Tests\Support\MarkedOperationSubscriber;
 use Seampact\Codegen\Runtime\HookLookup;
 use Seampact\Symfony\Runtime\ContractSettings;
@@ -16,19 +17,36 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 /** The operation marker, read from the contract route because the resolved controller is never a handler method. */
 final class ApiPlatformBoundarySubscriberTest extends TestCase
 {
-    public function testAContractRouteIsMarkedByItsOperationAlone(): void
+    public function testAContractRouteApiPlatformRegisteredIsMarkedByItsOperationAlone(): void
     {
-        self::assertSame('getTask', $this->subscriber()->marked(self::event(), 'getTask'));
+        $request = new Request(attributes: ['_api_operation_name' => 'seampact.tasks.getTask']);
+
+        self::assertSame('getTask', $this->subscriber()->marked(self::event($request), 'getTask'));
     }
 
     public function testARouteThatIsNotTheContractsCarriesNoMark(): void
     {
-        self::assertNull($this->subscriber()->marked(self::event(), null));
+        $request = new Request(attributes: ['_api_operation_name' => 'other']);
+
+        self::assertNull($this->subscriber()->marked(self::event($request), null));
     }
 
-    private static function event(): ControllerEvent
+    public function testAHandlerMethodReachedThroughAnAppRouteStaysMarkedByItsAttribute(): void
     {
-        return new ControllerEvent(self::createStub(HttpKernelInterface::class), static fn (): null => null, new Request(), HttpKernelInterface::MAIN_REQUEST);
+        $event = self::event(new Request(), [new MarkedHandler(), 'getTask']);
+
+        self::assertSame('getTask', $this->subscriber()->marked($event, null));
+    }
+
+    public function testAPlainRouteReusingTheContractNameIsNotMarkedAsTheContractsOwn(): void
+    {
+        self::assertNull($this->subscriber()->marked(self::event(new Request()), 'getTask'));
+    }
+
+    /** @param callable(): mixed $controller */
+    private static function event(Request $request, callable $controller = null): ControllerEvent
+    {
+        return new ControllerEvent(self::createStub(HttpKernelInterface::class), $controller ?? static fn (): null => null, $request, HttpKernelInterface::MAIN_REQUEST);
     }
 
     private function subscriber(): MarkedOperationSubscriber

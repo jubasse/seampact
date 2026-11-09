@@ -31,6 +31,11 @@ final class PlainSymfony implements SymfonyFlavour
         return $placement->runtime('BoundarySubscriber');
     }
 
+    public function frameworkRouteControllers(): array
+    {
+        return [];
+    }
+
     public function files(ContractIR $ir, SymfonyPlacement $placement, TargetOptions $options, Refusals $refusals, array $routePaths): array
     {
         return [];

@@ -25,7 +25,7 @@ final class OperationMetadataCheckTest extends TestCase
 
     public function testEachChangedSwitchIsListedAtOnce(): void
     {
-        $changed = self::operation(['read' => true, 'deserialize' => true, 'securityPostDenormalize' => 'is_granted("ROLE_USER")', 'provider' => 'App\\Provider']);
+        $changed = self::operation(['read' => true, 'write' => false, 'deserialize' => true, 'validate' => true, 'contentNegotiation' => true, 'securityPostDenormalize' => 'is_granted("ROLE_USER")', 'securityPostValidation' => 'is_granted("ROLE_USER")', 'extraProperties' => [], 'provider' => 'App\\Provider']);
 
         try {
             self::check($changed)->warmUp('/tmp');
@@ -33,7 +33,12 @@ final class OperationMetadataCheckTest extends TestCase
         } catch (\LogicException $failure) {
             self::assertStringContainsString("the api 'tasks' cannot start", $failure->getMessage());
             self::assertStringContainsString('sets read: true, not false', $failure->getMessage());
+            self::assertStringContainsString('sets write: false, not true', $failure->getMessage());
             self::assertStringContainsString('sets deserialize: true, not false', $failure->getMessage());
+            self::assertStringContainsString('sets validate: true, not false', $failure->getMessage());
+            self::assertStringContainsString('sets contentNegotiation: true, not false', $failure->getMessage());
+            self::assertStringContainsString('does not set the extra property _api_disable_swagger_provider', $failure->getMessage());
+            self::assertStringContainsString('sets securityPostValidation', $failure->getMessage());
             self::assertStringContainsString('sets securityPostDenormalize', $failure->getMessage());
             self::assertStringContainsString('sets a provider', $failure->getMessage());
         }
@@ -47,19 +52,20 @@ final class OperationMetadataCheckTest extends TestCase
         self::check(self::operation(['processor' => 'App\\Other']))->warmUp('/tmp');
     }
 
-    /** @param array{read?: bool, deserialize?: bool, securityPostDenormalize?: string, provider?: string, processor?: string} $changes */
+    /** @param array{read?: bool, write?: bool, deserialize?: bool, validate?: bool, contentNegotiation?: bool, securityPostDenormalize?: string, securityPostValidation?: string, extraProperties?: array<string, bool>, provider?: string, processor?: string} $changes */
     private static function operation(array $changes): Get
     {
         return new Get(
             name: 'seampact.tasks.getTask',
             defaults: [OperationSwitches::OPERATION_DEFAULT => 'getTask'],
             read: $changes['read'] ?? false,
-            write: true,
-            contentNegotiation: false,
+            write: $changes['write'] ?? true,
+            contentNegotiation: $changes['contentNegotiation'] ?? false,
             deserialize: $changes['deserialize'] ?? false,
-            validate: false,
-            extraProperties: OperationSwitches::EXTRA_PROPERTIES,
+            validate: $changes['validate'] ?? false,
+            extraProperties: $changes['extraProperties'] ?? OperationSwitches::EXTRA_PROPERTIES,
             securityPostDenormalize: $changes['securityPostDenormalize'] ?? null,
+            securityPostValidation: $changes['securityPostValidation'] ?? null,
             provider: $changes['provider'] ?? null,
             processor: $changes['processor'] ?? self::PROCESSOR,
         );

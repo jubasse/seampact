@@ -155,7 +155,7 @@ final class BundleFiles
             $body .= "\$services->set(self::HOOK_CHECK_WARMER_SERVICE, {$warmer}::class)->args([service(self::HOOKS_SERVICE), {$contract}::class])->tag('kernel.cache_warmer');\n";
         }
         if ($this->bootCheck !== null) {
-            $body .= "\$services->set(self::ROUTE_CHECK_SERVICE, {$routeCheck}::class)->decorate('routing.loader')->args([service('.inner'), {$contract}::class, {$routeLoader}::RESOURCE, " . var_export($this->bootCheck->frameworkRoutes, true) . ']);';
+            $body .= "\$services->set(self::ROUTE_CHECK_SERVICE, {$routeCheck}::class)->decorate('routing.loader')->args([service('.inner'), {$contract}::class, {$routeLoader}::RESOURCE, " . var_export($this->bootCheck->frameworkRoutes, true) . $this->frameworkControllersArgument() . ']);';
         }
         $flavourStatements = $this->flavour->bundleStatements($file, $this->placement, $this->bootCheck);
         $load->setBody($flavourStatements === '' ? rtrim($body) : rtrim($body) . "\n" . $flavourStatements);
@@ -392,6 +392,14 @@ final class BundleFiles
             ->setBody('return ' . var_export($this->bootCheck !== null && $this->bootCheck->hooks, true) . ';');
 
         return $file;
+    }
+
+    /** The route check's fifth argument, written only for a flavour that accepts framework controllers. */
+    private function frameworkControllersArgument(): string
+    {
+        $controllers = $this->flavour->frameworkRouteControllers();
+
+        return $controllers === [] ? '' : ', ' . var_export($controllers, true);
     }
 
     private function writesAbsoluteUrls(): bool

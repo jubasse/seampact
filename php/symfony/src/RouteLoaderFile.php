@@ -143,7 +143,7 @@ final class RouteLoaderFile
             }
 
             if (preg_match(self::PLACEHOLDER_INSIDE, $segment) === 1) {
-                $this->refuse($operation, $index, 'path.segment.mixed.unsupported', "The path segment '{$segment}' mixes a parameter with literal text, which the symfony target does not route, as on Laravel, Spring and the Node targets.", 'Give the parameter a segment of its own.');
+                $this->refuse($operation, $index, 'path.segment.mixed.unsupported', "The path segment '{$segment}' mixes a parameter with literal text, which the Symfony-based targets do not route, as on Laravel, Spring and the Node targets.", 'Give the parameter a segment of its own.');
 
                 return null;
             }

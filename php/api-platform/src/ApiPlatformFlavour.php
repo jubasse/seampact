@@ -23,6 +23,13 @@ final class ApiPlatformFlavour implements SymfonyFlavour
     public const TARGET = 'api-platform';
     public const PACKAGE = 'seampact/api-platform';
     public const PROCESSOR_TAG = 'api_platform.state_processor';
+    /** The controllers of API Platform's own routes (documentation, entrypoint, errors, context), which are framework routes. */
+    private const OWN_ROUTE_CONTROLLERS = [
+        'api_platform.action.documentation',
+        'api_platform.action.entrypoint',
+        'api_platform.action.not_exposed',
+        'api_platform.jsonld.action.context',
+    ];
 
     /** @var \WeakMap<SymfonyPlacement, ApiPlatformPlacement> */
     private \WeakMap $names;
@@ -45,6 +52,11 @@ final class ApiPlatformFlavour implements SymfonyFlavour
     public function boundaryParent(SymfonyPlacement $placement): string
     {
         return ApiPlatformBoundarySubscriber::class;
+    }
+
+    public function frameworkRouteControllers(): array
+    {
+        return self::OWN_ROUTE_CONTROLLERS;
     }
 
     public function files(ContractIR $ir, SymfonyPlacement $placement, TargetOptions $options, Refusals $refusals, array $routePaths): array
