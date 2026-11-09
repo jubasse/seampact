@@ -4,7 +4,7 @@ Status: accepted
 
 ## Context
 
-ADR 0016 fixes, for the first Node server target, the obligations every Node server target meets with the shared request checks of `@seampact/codegen-core/node-server`: the check order of ADR 0012, a reply written by the boundary, exceptions handled narrowly, the outgoing response check and its `responses` modes, the raw-body check, the body limit, query decoding and the bounded values. `@seampact/codegen-express` generates, per api of the app config, a router factory that places those checks around a developer handler map. This ADR states only what Express changes: the placement in Express's middleware chain, the compatibility of Express 4 and 5, the per-route body parser, the router's error middleware, the errors raised before the router and the refusals. What it does not restate holds as ADR 0016 says.
+ADR 0016 fixes, for the first Node server target, the obligations every Node server target meets with the shared request checks of `@seampact/server-runtime`: the check order of ADR 0012, a reply written by the boundary, exceptions handled narrowly, the outgoing response check and its `responses` modes, the raw-body check, the body limit, query decoding and the bounded values. `@seampact/codegen-express` generates, per api of the app config, a router factory that places those checks around a developer handler map. This ADR states only what Express changes: the placement in Express's middleware chain, the compatibility of Express 4 and 5, the per-route body parser, the router's error middleware, the errors raised before the router and the refusals. What it does not restate holds as ADR 0016 says.
 
 ADR 0016's NestJS target runs on Express, so the platform behaviours are the same: `res.send` and `res.json` add a weak ETag and answer 304 on their own, and a body parser placed by the app runs before any route. Two Express behaviours shape the rest. Middleware placed before the router, and a path no route serves, never enter the router: while an error is pending, Express skips every layer that is not an error middleware, a mounted router included. And Express 4 does not forward a rejected promise to the error middleware, where Express 5 does.
 
@@ -36,7 +36,7 @@ app.use(TasksExpress.router({ handlers: { TasksEndpoints: tasksHandlers }, hooks
 
 After the routes, the router holds one catch-all per contract path (`router.all` on the path's pattern) that answers the path's `notFound` 404 in the api's format, then its own error middleware (below). Hook calls are wrapped as ADR 0016 states; Express's own denial is an error whose `status` or `statusCode` is 401 or 403 (`http-errors`, `express-jwt`): thrown inside a decide hook it answers the requirement's first declared denial code, and any other failure of a hook is a 500 with `onUnexpectedError` called (ADR 0012 "Failures inside hooks").
 
-The router factory is generated into the target's module of the api, `express.ts`, re-exported by the api's `index.ts` (ADR 0007 "Amendment 2026-10-19: generated modules"). Its fixed exports are `router`, `checkFrameworkRoutes`, `preRoutingErrorHandler`, `renderPreRoutingError`, `renderContractError`, `isContractRoute`, `keepRawBody`, `LARGEST_BODY_LIMIT`, `MAX_CHECKED_ERROR_BODY_BYTES` and `MAX_RENDERED_ISSUES`; no export is named by an operation, so none takes the reserved-name suffix. Next to it, the generated tree holds the shared `routes.ts`, `handlers.ts` and `hooks.ts` modules and the shared request checks under `node-server/`, copied with the generated header (ADR 0009 "What generated code depends on at run time"); this target adds one placement file that imports them, and takes the Express body handling it shares with the NestJS target (the raw-bytes `verify` function, the parsed byte count, a parser error mapped to its contract role) from the same shared checks.
+The router factory is generated into the target's module of the api, `express.ts`, re-exported by the api's `index.ts` (ADR 0007 section 7). Its fixed exports are `router`, `checkFrameworkRoutes`, `preRoutingErrorHandler`, `renderPreRoutingError`, `renderContractError`, `isContractRoute`, `keepRawBody`, `LARGEST_BODY_LIMIT`, `MAX_CHECKED_ERROR_BODY_BYTES` and `MAX_RENDERED_ISSUES`; no export is named by an operation, so none takes the reserved-name suffix. Next to it, the api's generated tree holds `routes.ts`, `handlers.ts`, `hooks.ts` and `index.ts`. The shared request checks are those of `@seampact/server-runtime`, imported, not copied (ADR 0025), and the placement file is the package's `/express` export; `express.ts` hands it the app's own `express`, so the routers and their body parsers come from the Express the app runs, 4 or 5. This target takes the Express body handling it shares with the NestJS target (the raw-bytes `verify` function, the parsed byte count, a parser error mapped to its contract role) from the same shared checks.
 
 ### Express 4 and 5
 
@@ -57,7 +57,7 @@ Every reply of a contract route the boundary writes goes through the shared `wri
 
 The router's final error middleware answers, in the api's format, only the generated contract exceptions, every client error (4xx) of the route's own body parser by its status (a corrupt compressed body, a length mismatch or an aborted request is a 400, not a 500), and an error whose `status` or `statusCode` is 401, 403 or 429, each mapped to the role of its status as ADR 0016 maps NestJS's classes. Any other error is passed on with `next(error)` to the app's error middleware, untouched. A refusal whose status the operation does not declare is a 500. An app error middleware renders a contract error with `renderContractError(res, error)`, which writes it through the reply path above.
 
-Under `NODE_ENV=development` the reply Express's default error handler writes for an exception the router does not map goes out as written, whatever the `responses` mode, after a log line naming the exception's message and where it was thrown and the usual `onUnexpectedError` call (ADR 0016 "Amendment 2026-10-28"); an app error handler's non-contract reply skips the violation check in debug.
+Under `NODE_ENV=development` the reply Express's default error handler writes for an exception the router does not map goes out as written, whatever the `responses` mode, after a log line naming the exception's message and where it was thrown and the usual `onUnexpectedError` call (ADR 0016 "The outgoing response check"); an app error handler's non-contract reply skips the violation check in debug.
 
 ### The outgoing response check
 
@@ -86,25 +86,17 @@ The target options are ADR 0016's: `responses` (`strict`, the default, or `warn`
 
 ### The boot check
 
-`router()` runs it when called and throws, so the app does not reach `listen`; it lists every problem at once with the operation id, the name and the fix: the hook problems of ADR 0016's list, a contract operation without a bound handler (`handlers` lacks the interface's object or the object lacks the method), and a key of `operations` that names no operation of the api.
+`router()` runs it when called and throws, so the app does not reach `listen`; it lists every problem at once with the operation id, the name and the fix: the runtime version, checked before any other step (the version the api's route table carries is compared with the installed runtime's, and a table written by another `major.minor` or a later patch throws `runtime.generated-for-other-version` when `express.ts` is imported; each api keeps its own logger in the shared runtime, keyed by its route table), the hook problems of ADR 0016's list, a contract operation without a bound handler (`handlers` lacks the interface's object or the object lacks the method), and a key of `operations` that names no operation of the api.
 
 Express has no start hook, so the framework-route check of ADR 0012 is `checkFrameworkRoutes(app)`, which the app calls once every route is mounted, before `listen`, and which throws the problems. When the app never calls it, the router runs it over `req.app` on the first request it receives; with problems, every request the router receives answers 500 in the api's format and logs them with their fix until the app restarts. Neither runs when the app config switches the check off.
 
 ### What the generated code depends on
 
-At run time: `express` 4 or 5 as a peer dependency, for `Router` and `express.json`, the zod link's runtime and, for types only, `@seampact/hooks` (ADR 0009).
+At run time: `express` 4 or 5 as a peer dependency, for `Router` and `express.json`, the zod link's runtime and, for types only, `@seampact/hooks` (ADR 0009). The runtime package is a production dependency: `@seampact/server-runtime`, its root, `/node` and `/express` exports, at the generator's version (ADR 0025, G1). `seampact generate` refuses an app that does not install it (`runtime.missing`) or installs one of another `major.minor` or a lower patch (`runtime.version-mismatch`).
 
 ### Refused by name or waiting
 
 `generate` refuses by name, with the case's code and its fix, everything ADR 0016 "Refused by name or waiting" lists for the slice apart from its NestJS platform and `class-validator` items. Express adds no refusal of its own.
-
-### Amendment 2026-10-27: the runtime package
-
-ADR 0025 moves the shared request checks out of the generated tree: they are those of `@seampact/server-runtime`, imported, no longer the copies of `@seampact/codegen-core/node-server` under `node-server/`, and the placement file is the package's `/express` export, no longer `express-boundary.ts`. Each api's generated tree keeps `express.ts`, `routes.ts`, `handlers.ts`, `hooks.ts` and `index.ts`. `express.ts` hands the app's own `express` to the placement, so the routers and their body parsers come from the Express the app runs, 4 or 5.
-
-What the generated code depends on adds `@seampact/server-runtime` as a production dependency: its root, `/node` and `/express` exports, at the generator's version (ADR 0025, G1). `seampact generate` refuses an app that does not install it (`runtime.missing`) or installs one of another `major.minor` or a lower patch (`runtime.version-mismatch`).
-
-The boot check runs one step first, before any other: the version the api's route table carries is compared with the installed runtime's, and a table written by another `major.minor` or a later patch throws `runtime.generated-for-other-version` when `express.ts` is imported. Each api keeps its own logger in the shared runtime, keyed by its route table.
 
 ## Spike
 

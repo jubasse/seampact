@@ -4,7 +4,7 @@ Status: accepted
 
 ## Context
 
-[A48](../decisions.md#a48) puts the Python targets in v1: FastAPI, Django REST Framework and Django Ninja, on a shared Python core. ADR 0012 fixes what every server target generates around the developer's handlers. ADR 0016 fixes the rules a target meets: the check order, a reply written by the boundary, exceptions handled narrowly, the outgoing response check, the body limit and the boot check. ADR 0010 "Amendment 2026-11-01: the Python channels" fixes how a Python build gets the binary.
+[A48](../decisions.md#a48) puts the Python targets in v1: FastAPI, Django REST Framework and Django Ninja, on a shared Python core. ADR 0012 fixes what every server target generates around the developer's handlers. ADR 0016 fixes the rules a target meets: the check order, a reply written by the boundary, exceptions handled narrowly, the outgoing response check, the body limit and the boot check. ADR 0010 "The Python channels" fixes how a Python build gets the binary.
 
 This ADR states two things. First, the Python core: the distributions, the versions, sync and async code, the hook protocols, and what the PHP core gave it. ADR 0027 builds the Django targets on the same core. Second, the FastAPI target: `seampact-fastapi` generates, per api of the app config, Python that places the checks around the developer's handlers in a FastAPI app. `seampact generate` runs it with pip only, and the app builds on a machine without Node ([A9](../decisions.md#a9)). What this ADR does not restate holds as ADR 0016 and ADR 0023 say.
 
@@ -52,7 +52,7 @@ The runner finds targets through the entry point group `seampact.generators`, re
 
 #### The binary and the root project
 
-ADR 0010 "Amendment 2026-11-01: the Python channels" holds. The `seampact-compiler` wheel puts the binary at `seampact/compiler/bin/<asset>`. Only the `pyproject.toml` of the project directory sets an override. A `[tool.seampact.binary]` table in a uv workspace member, or in a locally installed project (read from its `direct_url.json`), is refused (`binary.override-not-root`, naming the file). A project without a `pyproject.toml` has no override: a pip-only project is legitimate, unlike a Composer project without `composer.json`.
+ADR 0010 "The Python channels" holds. The `seampact-compiler` wheel puts the binary at `seampact/compiler/bin/<asset>`. Only the `pyproject.toml` of the project directory sets an override. A `[tool.seampact.binary]` table in a uv workspace member, or in a locally installed project (read from its `direct_url.json`), is refused (`binary.override-not-root`, naming the file). A project without a `pyproject.toml` has no override: a pip-only project is legitimate, unlike a Composer project without `composer.json`.
 
 #### Versions
 
