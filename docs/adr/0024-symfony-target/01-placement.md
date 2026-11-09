@@ -19,7 +19,7 @@ Codegen emits, per api, under the target entry's `out`, in its PSR-4 namespace:
   - `kernel.request` at priority 31, right after `RouterListener`, which marks that routing ran.
   - `kernel.controller` at priority 0, which runs steps 2 to 8 (below) and stores the typed input in a request attribute; its fail-closed checks also run on sub-requests ("Types and validation").
   - `kernel.view` at priority 0, which writes the reply of a generated result ("The reply path").
-  - `kernel.exception` at priority 2048, which records the first exception of the request, and at priority 128, which renders the generated exceptions, and at priority -64, which answers an exception no role maps ("Exceptions on contract routes").
+  - `kernel.exception` at priority 2048, which records the first exception of the request, and at priority 128, which renders the generated exceptions and answers the boundary's own failures, and at priority -64, which answers an exception no role maps ("Exceptions on contract routes").
   - `LoginFailureEvent`, which records an authenticator's exception as the request's exception, since an authenticator's failure reply never reaches `kernel.exception`. SecurityBundle copies a global listener of that event onto every firewall's dispatcher.
   - `kernel.response` at priority -2048, after `SessionListener` (-1000), which runs the outgoing response check and the mapping of framework refusals.
 - **The input value resolver** (`TasksInputResolver`), tagged `controller.argument_value_resolver` at priority 150, above `RequestAttributeValueResolver` (100). For a parameter typed with one of the api's input classes, it returns the input the `kernel.controller` listener stored, and nothing else.

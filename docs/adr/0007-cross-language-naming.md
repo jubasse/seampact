@@ -30,7 +30,7 @@ interface Name { segments: string[]; role: Role; status?: number }
 |---|---|---|
 | `schema` | a declared schema, enum, scalar, right, scope, identity | none |
 | `input`, `output`, `query`, `headers`, `path` | an operation's inline body, single success body, query, request headers, path parameters | `input`, `output`, `query`, `headers`, `path` |
-| `response` | an inline body of a `responses` entry, even when the map has a single entry, so adding a second status renames nothing | `response` plus the status (`response`, `201`) |
+| `response` | an inline body of a `responses` entry, even when the map has a single entry, so adding a second status renames nothing | `response` plus the status (`response`, `201`; a single entry gives `CreateTaskResponse202`) |
 | `params` | the params of a right, rule or error | `params` |
 | `error` | the generated exception or error class of one error code (ADR 0012) | `error` |
 | `errors` | an operation's typed error result, the union of its codes | `errors` |
