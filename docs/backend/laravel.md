@@ -206,6 +206,10 @@ Gate::define('notes.update', [NotePolicy::class, 'update']);
 - The arguments are the subject first, then the other scopes, then the request. A scope is the value its resolver loaded: load the model in the resolver and the Policy receives it. A scope with no loaded value arrives as its `SubjectRef` or `ResolvedScope`, never as the raw id, so a client cannot pick the Policy.
 - A denial answers the right's first denial code, as `Gate::authorize()` in a decider does. `Response::denyAsNotFound()` answers the operation's `notFound` code when the operation declares one, else the first denial code.
 
+## Add your own rules
+
+Your own rules, such as "the end comes after the start", are written in Laravel's validation syntax: see [Add your own rules](../types-and-validation/laravel-rules.md#add-your-own-rules).
+
 ## Options
 
 Set under `options:` on the target entry.
@@ -337,6 +341,7 @@ The app refuses to start, and lists every problem. It runs at `php artisan route
 |---|---|
 | An identity has no authenticate hook, a right or rule no decider, a scope no resolver. | Bind the hook, tag the decider or the resolver. |
 | An idempotent operation has no store. | Bind one under `IDEMPOTENCY_STORE_KEY`. |
+| Input rules name an operation the api lacks, a part with no input, a relay operation, or two rule sets claim one part. | Fix the rule class, or remove it; tag only classes implementing the api's `<Api>InputRules`. |
 | An operation has no handler, or its route is missing or served twice. | Bind the endpoints interface; call `Route::seampact()` once. |
 | A route that is not in the contract is served and not allow-listed. | Add it to `frameworkRoutes` on the entry, or remove it. |
 | The boundary is not the first global middleware, or the access middleware is not before `SubstituteBindings`. | Do not prepend another global middleware; keep the order of `middleware.<kind>`. |

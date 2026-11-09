@@ -159,6 +159,7 @@ jobs:
         run: |
           scripts/consumers/php/bundle.sh packages/tools/binary/dist/bin/seampact-linux-x64 "$RUNNER_TEMP/bundles/reference"
           scripts/consumers/php/bundle.sh packages/tools/binary/dist/bin/seampact-linux-x64 "$RUNNER_TEMP/bundles/pack-laravel" fixtures/golden/pack-laravel/contract
+          scripts/consumers/php/bundle.sh packages/tools/binary/dist/bin/seampact-linux-x64 "$RUNNER_TEMP/bundles/input-rules" packages/tools/http-suite/contracts/input-rules
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: laravel-contract-bundle

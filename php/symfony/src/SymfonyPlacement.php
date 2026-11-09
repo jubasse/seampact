@@ -169,6 +169,12 @@ final class SymfonyPlacement implements BoundaryNames
         return $this->unexpectedErrorListener;
     }
 
+    /** The Symfony target runs no input rules yet. */
+    public function inputRules(): ?string
+    {
+        return null;
+    }
+
     public function runtime(string $simpleName): string
     {
         return $this->runtimeClasses->name($simpleName);

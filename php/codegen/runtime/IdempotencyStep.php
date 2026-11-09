@@ -68,10 +68,6 @@ final class IdempotencyStep
         };
     }
 
-    /**
-     * Completes the claimed record with the reply that went out, or abandons it; a store failure is logged, since the
-     * reply already stands.
-     */
     /** The stored key of a client key: the api, operation, identity and principal members partition it (ADR 0012). */
     public static function partitionKey(BoundaryState $state, string $clientKey): string
     {
@@ -84,7 +80,11 @@ final class IdempotencyStep
         ]);
     }
 
-    /** Releases the key this request claimed, without a reply to keep; a store failure is logged. */
+    /**
+     * Releases the key this request claimed and clears it, so the reply's settle stores nothing: after a failure, and
+     * when an app input rule refuses (ADR 0028), so a corrected retry with the same key is checked again. A request
+     * without a claim is left as it is; a store failure is logged.
+     */
     public static function abandon(BoundaryState $state): void
     {
         $key = $state->idempotencyKey;
@@ -100,6 +100,10 @@ final class IdempotencyStep
         }
     }
 
+    /**
+     * Completes the claimed record with the reply that went out, or abandons it; a store failure is logged, since the
+     * reply already stands.
+     */
     public static function settle(BoundaryState $state, Response $response): void
     {
         $key = $state->idempotencyKey;

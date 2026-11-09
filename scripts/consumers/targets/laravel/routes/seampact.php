@@ -21,6 +21,7 @@ Route::seampact('tasksAbsoluteUrls');
 Route::seampact('tasksResponses');
 Route::seampact('tasksPaging');
 Route::seampact('tasksSplitSort');
+Route::seampact('inputRules');
 
 // The suite's control routes (ADR 0015 "Control routes"), allow-listed in seampact.config.yaml.
 Route::put('/__seampact/script', [SuiteControlController::class, 'loadScript']);

@@ -54,15 +54,26 @@ final class FormSteps
 
         $issues = [...$issues, ...self::cursorIssues($state, $request, $api)];
 
+        return AccessSteps::schemaInvalid($state, self::rendered($issues));
+    }
+
+    /**
+     * The issues a 400 answers: listed by part, without repeats, capped.
+     *
+     * @param list<array{in: string, pointer: string, rule: string}> $issues
+     * @return list<array{in: string, pointer: string, rule: string}>
+     */
+    public static function rendered(array $issues): array
+    {
         // A stable sort: within a part, the issues keep the order they were found in.
         usort($issues, static fn (array $first, array $second): int => (self::ISSUE_PART_ORDER[$first['in']] ?? count(self::ISSUE_PART_ORDER)) <=> (self::ISSUE_PART_ORDER[$second['in']] ?? count(self::ISSUE_PART_ORDER)));
 
-        return AccessSteps::schemaInvalid($state, array_slice(self::unique($issues), 0, self::MAX_RENDERED_ISSUES));
+        return array_slice(self::unique($issues), 0, self::MAX_RENDERED_ISSUES);
     }
 
     /**
      * Step 7, the typed input of the operation with a paged list's limit filled in, then the idempotency claim: a replayed reply is thrown, so the handler
-     * never runs. Both cursors of a Stripe-style pair, which every Laravel rule passes, are refused first.
+     * never runs; then step 8b, the app's input rules. Both cursors of a Stripe-style pair, which every Laravel rule passes, are refused first.
      *
      * @throws ReplayedReply
      * @throws ContractRefusal
@@ -88,6 +99,7 @@ final class FormSteps
         if ($replayed !== null) {
             throw new ReplayedReply($replayed);
         }
+        InputRulesStep::run($state, $input);
 
         return $input;
     }

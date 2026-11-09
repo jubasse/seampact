@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Suite;
 
 use App\Generated\Tasks\Laravel\UnexpectedErrorListener;
+use App\Generated\InputRules\Laravel\UnexpectedErrorListener as InputRulesUnexpectedErrorListener;
 use App\Generated\TasksAbsoluteUrls\Laravel\UnexpectedErrorListener as AbsoluteUrlsUnexpectedErrorListener;
 use App\Generated\TasksDevices\Laravel\UnexpectedErrorListener as DevicesUnexpectedErrorListener;
 use App\Generated\TasksOptionalAuth\Laravel\UnexpectedErrorListener as OptionalAuthUnexpectedErrorListener;
@@ -22,7 +23,8 @@ final class TasksUnexpectedErrors implements
     DevicesUnexpectedErrorListener,
     OptionalAuthUnexpectedErrorListener,
     AbsoluteUrlsUnexpectedErrorListener,
-    ResponsesUnexpectedErrorListener
+    ResponsesUnexpectedErrorListener,
+    InputRulesUnexpectedErrorListener
 {
     public function onUnexpectedError(UnexpectedFailure $failure): void
     {

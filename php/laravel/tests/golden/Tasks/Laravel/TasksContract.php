@@ -2364,6 +2364,7 @@ final class TasksContract
             ],
         ],
         'unexpectedErrorListener' => 'Seampact\Golden\Tasks\Laravel\UnexpectedErrorListener',
+        'inputRules' => 'Seampact\Golden\Tasks\Laravel\TasksInputRules',
     ];
 
     /** The app routes the entry's `frameworkRoutes` lets through the boot check. */
