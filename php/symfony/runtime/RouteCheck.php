@@ -32,12 +32,14 @@ final class RouteCheck implements LoaderInterface
     /**
      * @param string $routingResource the resource the api's route loader answers, which the app imports
      * @param bool $checksFrameworkRoutes the `frameworkRoutes` switch of `artefacts.bootCheck`
+     * @param list<string> $frameworkControllers controllers of a framework's own routes that a target accepts, such as API Platform's
      */
     public function __construct(
         private readonly LoaderInterface $inner,
         private readonly string $contractClass,
         private readonly string $routingResource,
         private readonly bool $checksFrameworkRoutes,
+        private readonly array $frameworkControllers = [],
     ) {
     }
 
@@ -164,20 +166,24 @@ final class RouteCheck implements LoaderInterface
 
         $requirementOf = static fn (string $placeholder): ?string => $route->getRequirement($placeholder);
         $scopedPath = FrameworkRoutes::withCatchAlls($route->getPath(), $requirementOf);
-        if (!$this->checksFrameworkRoutes || self::isSymfonyRoute($name, $controller) || !$contract->checksAppRoute($scopedPath) || FrameworkRoutes::allows($contract->frameworkRoutes, $route->getPath(), $requirementOf, array_values($route->getMethods()), $route->hasDefault(...))) {
+        if (!$this->checksFrameworkRoutes || $this->isFrameworkRoute($name, $controller) || !$contract->checksAppRoute($scopedPath) || FrameworkRoutes::allows($contract->frameworkRoutes, $route->getPath(), $requirementOf, array_values($route->getMethods()), $route->hasDefault(...))) {
             return [];
         }
 
         return ["the app route '{$name}' ({$route->getPath()}) is not a contract route and the entry's frameworkRoutes does not list it: add it to frameworkRoutes, or turn the frameworkRoutes boot check off (a route whose parameter can take a '/' is allowed only by a '**' entry, and one with an optional parameter only by entries that also take its path without it)"];
     }
 
-    private static function isSymfonyRoute(string $name, mixed $controller): bool
+    private function isFrameworkRoute(string $name, mixed $controller): bool
     {
         if ([$name, $controller] === self::ERROR_PREVIEW) {
             return true;
         }
 
         if (preg_match(self::LOGOUT_NAME, $name) === 1 && $controller === null) {
+            return true;
+        }
+
+        if (is_string($controller) && in_array($controller, $this->frameworkControllers, true)) {
             return true;
         }
 

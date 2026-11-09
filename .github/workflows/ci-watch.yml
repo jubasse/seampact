@@ -33,6 +33,7 @@ on:
       - PHP core packages
       - Laravel target
       - Symfony target
+      - API Platform target
       - Front consumers
       - Spring Boot target
       - Vue consumers

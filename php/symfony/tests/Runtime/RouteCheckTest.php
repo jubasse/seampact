@@ -36,6 +36,41 @@ final class RouteCheckTest extends TestCase
         self::assertStringNotContainsString('app_docs', $problems);
     }
 
+    public function testAFrameworkControllerTheTargetListsIsAcceptedAndAnotherIsNot(): void
+    {
+        $routes = new RouteCollection();
+        $routes->add('api_doc', new Route('/v1/docs.{_format}', ['_controller' => 'api_platform.action.documentation']));
+        $routes->add('api_errors', new Route('/v1/errors/{status}', ['_controller' => 'api_platform.action.not_exposed']));
+        $routes->add('api_context', new Route('/v1/contexts/{shortName}', ['_controller' => 'api_platform.jsonld.action.context']));
+        $routes->add('_api_/v1/widgets_get', new Route('/v1/widgets', ['_controller' => 'api_platform.action.placeholder']));
+        $controllers = ['api_platform.action.documentation', 'api_platform.action.not_exposed', 'api_platform.jsonld.action.context'];
+        $check = new RouteCheck(self::loaderOf($routes), CatchAllAllowListContract::class, self::ROUTING_RESOURCE, true, $controllers);
+
+        $problems = '';
+        try {
+            $check->load(self::ROUTING_RESOURCE);
+        } catch (\LogicException $failure) {
+            $problems = $failure->getMessage();
+        }
+
+        self::assertStringContainsString("the app route '_api_/v1/widgets_get'", $problems);
+        self::assertStringNotContainsString('api_doc', $problems);
+        self::assertStringNotContainsString('api_errors', $problems);
+        self::assertStringNotContainsString('api_context', $problems);
+    }
+
+    public function testPlainSymfonyListsNoFrameworkControllerSoApiPlatformsRouteIsRefused(): void
+    {
+        $routes = new RouteCollection();
+        $routes->add('api_doc', new Route('/v1/docs.{_format}', ['_controller' => 'api_platform.action.documentation']));
+        $check = new RouteCheck(self::loaderOf($routes), CatchAllAllowListContract::class, self::ROUTING_RESOURCE, true);
+
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage("the app route 'api_doc'");
+
+        $check->load(self::ROUTING_RESOURCE);
+    }
+
     public function testARouteWithAnOptionalPlaceholderIsAllowListedOnlyWhenThePathWithoutItIsListedToo(): void
     {
         $routes = new RouteCollection();
