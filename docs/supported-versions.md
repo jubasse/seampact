@@ -13,6 +13,7 @@ Use this page to check that your framework version works, and to know what happe
 | Fastify | 5 | zod, yup, Ajv |
 | AdonisJS | 7 (6 still works but is no longer maintained, see below) | zod, yup, VineJS |
 | Hono | 4 | zod, yup |
+| Next.js | 16 (Node.js runtime) | zod, yup |
 | Spring Boot | 4 | generated checks, Jakarta constraints on the records |
 | Symfony | 7.4, 8 | generated checks, Symfony Validator constraints on the inputs |
 | Laravel | 13 (PHP 8.3 to 8.5) | generated `FormRequest` rules, Laravel's own value rules by default |

@@ -42,7 +42,7 @@ targets:
       validators: validators
 ```
 
-The request is checked with [zod](../types-and-validation/zod.md), and the types come from [TypeScript types](../types-and-validation/typescript-types.md).
+The request is checked with [zod](../types-and-validation/zod.md), and the types come from [TypeScript types](../types-and-validation/typescript-types.md). To check with [yup](../types-and-validation/yup.md) instead, use `@seampact/codegen-yup` in the `validators` entry: the rest is the same.
 
 Generate, then commit the files: `seampact check` fails later if they drift from the contract.
 
@@ -152,6 +152,13 @@ npx tsc -p .
 ```
 
 You see no output.
+
+Build and start the app. Turbopack and webpack both work: the generated imports have no extension.
+
+```sh
+npx next build
+npx next start
+```
 
 ## Write the hooks
 
