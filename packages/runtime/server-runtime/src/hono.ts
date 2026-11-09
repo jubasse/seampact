@@ -4,6 +4,7 @@
 // paths and base paths; the boot check; the framework-route check the app calls before serving, without which every
 // contract request answers 500; and the exported helpers for the app's `onError` and middleware. Each api's
 // generated module calls `createHonoBoundary` once with its route table.
+import type { InputRuleSets } from "./input-rules.js";
 import type { Context, Env, Hono, Next, Schema } from "hono";
 import { refuseCodeOfOtherVersion } from "./generator-version-check.js";
 import {
@@ -81,8 +82,13 @@ const ROOT_BASE_PATH = "/";
 const NO_BODY: ReadRequestBody = { body: undefined };
 
 /** The registration options of one api on a Hono app: the shared ones and the client address of a request. */
-export interface HonoRegistrationOptions<Hooks, Handlers, Operation extends string, E extends Env>
-  extends RegistrationOptions<Hooks, Handlers, Operation> {
+export interface HonoRegistrationOptions<
+  Hooks,
+  Handlers,
+  Operation extends string,
+  E extends Env,
+  InputRules = InputRuleSets,
+> extends RegistrationOptions<Hooks, Handlers, Operation, InputRules> {
   /** The client's address, which a `Request` does not carry, such as `getConnInfo(c).remote.address`. */
   readonly clientAddress?: (c: Context<E>) => string | undefined;
 }
@@ -92,6 +98,7 @@ export function createHonoBoundary<
   Hooks extends RegisteredHooks,
   Handlers,
   Operation extends string,
+  InputRules = InputRuleSets,
 >(api: ContractApi, generated: ResponseSettings, bindings: HandlerBindings) {
   refuseCodeOfOtherVersion(api);
 
@@ -107,7 +114,8 @@ export function createHonoBoundary<
   /** Registers the api's routes on the app that serves, wraps its `fetch` once; runs the boot check. */
   function registerRoutes<E extends Env, S extends Schema, BasePath extends string>(
     app: Hono<E, S, BasePath>,
-    options: HonoRegistrationOptions<Hooks, Handlers, Operation, E> & HooksRequirement<Hooks>,
+    options: HonoRegistrationOptions<Hooks, Handlers, Operation, E, InputRules> &
+      HooksRequirement<Hooks>,
   ): void {
     useRuntimeLogger(options.logger, api);
 
@@ -221,7 +229,7 @@ export function createHonoBoundary<
     next: Next,
     route: ContractRoute,
     settings: ResponseSettings,
-    options: HonoRegistrationOptions<Hooks, Handlers, Operation, E>,
+    options: HonoRegistrationOptions<Hooks, Handlers, Operation, E, InputRules>,
     hooks: BoundaryHooks,
   ): Promise<Response | undefined> {
     const reported = webReportedRequest(c.req.raw);
@@ -292,7 +300,7 @@ export function createHonoBoundary<
   async function runSteps<E extends Env>(
     c: Context<E>,
     context: BoundaryContext,
-    options: HonoRegistrationOptions<Hooks, Handlers, Operation, E>,
+    options: HonoRegistrationOptions<Hooks, Handlers, Operation, E, InputRules>,
     reported: ReportedRequest,
   ): Promise<Response> {
     const route = context.route;
@@ -316,7 +324,7 @@ export function createHonoBoundary<
 
       context.grant = await authorizeRequest(state);
 
-      const started = await runInputSteps(state, context);
+      const started = await runInputSteps(state, context, options.inputRules);
       const reply =
         started?.replay ?? (await handlerResultReply(state, context, options.handlers, binding));
 

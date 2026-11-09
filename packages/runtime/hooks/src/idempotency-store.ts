@@ -49,6 +49,9 @@ export interface IdempotencyStore {
    */
   complete(key: string, response: StoredResponse): Awaitable<void>;
 
-  /** Releases the key after a server error or an error reply marked `no-store`, so the client may retry. */
+  /**
+   * Releases the key after a server error, an error reply marked `no-store` or a refusal of the app's input rules, so
+   * the client may retry, and a corrected retry is checked again.
+   */
   abandon(key: string): Awaitable<void>;
 }

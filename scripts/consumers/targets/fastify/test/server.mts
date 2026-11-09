@@ -5,6 +5,7 @@
 import compress from "@fastify/compress";
 import { HOOK_CALLS_ROUTE, LOG_LINES_ROUTE, SCRIPT_ROUTE } from "@seampact/http-suite";
 import Fastify, { type FastifyError, type FastifyReply, type FastifyRequest } from "fastify";
+import * as InputRulesFastify from "../generated/server/inputRules/index.js";
 import * as TasksFastify from "../generated/server/tasks/index.js";
 import * as TasksDevicesFastify from "../generated/server/tasksDevices/index.js";
 import * as TasksPagingFastify from "../generated/server/tasksPaging/index.js";
@@ -27,11 +28,14 @@ import {
   tasksServiceWritesHandlers,
 } from "../src/handlers.mjs";
 import {
+  inputRulesHooks,
   tasksDevicesHooks,
   tasksHooks,
   tasksServiceHooks,
   tasksServiceWritesHooks,
 } from "../src/hooks.mjs";
+import { inputRules } from "../src/input-rules.mjs";
+import { inputRulesHandlers } from "../src/input-rules-handlers.mjs";
 import { tasksPagingHandlers, tasksPagingHooks } from "../src/paging-handlers.mjs";
 import { tasksResponsesHandlers, tasksResponsesHooks } from "../src/responses-handlers.mjs";
 import {
@@ -60,7 +64,8 @@ function renderedByAnApi(request: FastifyRequest, reply: FastifyReply, error?: E
     TasksServiceWritesFastify.renderPreRoutingError(request, reply, error) ||
     TasksDevicesFastify.renderPreRoutingError(request, reply, error) ||
     TasksResponsesFastify.renderPreRoutingError(request, reply, error) ||
-    TasksPagingFastify.renderPreRoutingError(request, reply, error)
+    TasksPagingFastify.renderPreRoutingError(request, reply, error) ||
+    InputRulesFastify.renderPreRoutingError(request, reply, error)
   );
 }
 
@@ -141,6 +146,11 @@ export async function startServer(): Promise<RunningServer> {
       EventsEndpoints: tasksPagingHandlers,
     },
     hooks: tasksPagingHooks(),
+  });
+  await app.register(InputRulesFastify.plugin, {
+    handlers: { AppEndpoints: inputRulesHandlers },
+    hooks: inputRulesHooks(),
+    inputRules,
   });
   await app.listen({ port: 0, host: HOST });
 

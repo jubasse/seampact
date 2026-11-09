@@ -20,7 +20,7 @@ const ENUM_RULE = "enum";
 const EXCLUSIVE_CURSORS_RULE = "exclusiveCursors";
 
 // The validator input's parts, as an issue's `in` names them (ADR 0006 section 6).
-const ISSUE_PARTS = {
+export const ISSUE_PARTS = {
   path: "path",
   query: "query",
   headers: "header",
@@ -129,7 +129,8 @@ function issueKeys(issue: StandardIssue): string[] {
   );
 }
 
-function jsonPointer(keys: readonly string[]): string {
+/** Keys as a JSON pointer, `~` and `/` escaped. */
+export function jsonPointer(keys: readonly string[]): string {
   return keys.map((key) => `/${key.replaceAll("~", "~0").replaceAll("/", "~1")}`).join("");
 }
 

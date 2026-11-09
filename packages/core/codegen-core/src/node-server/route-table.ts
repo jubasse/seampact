@@ -28,6 +28,7 @@ import type { Refusal } from "../refusal.js";
 import { askedRequirements } from "./asked-requirements.js";
 import { fingerprintHeaderNames } from "./fingerprint-headers.js";
 import { identityResponseHeaderRefusals, operationIdentityHeaders } from "./identity-headers.js";
+import { inputRulesTypeSource } from "./input-rules-type.js";
 import type { CompressionOption, FrameworkEtagMode } from "./options.js";
 import { pageBodyTemplate, pagingEntry } from "./paging-entry.js";
 import { encodedSegmentRefusals } from "./path-segment-refusals.js";
@@ -170,12 +171,23 @@ export function routeTableSource(
     catchAll: options.catchAll,
   };
 
+  const inputRules = inputRulesTypeSource(ir, SERVER_RUNTIME_PACKAGE, (operation) => {
+    const ref = Object.hasOwn(validators.descriptor.operations, operation.id)
+      ? validators.descriptor.operations[operation.id]?.input
+      : undefined;
+
+    return ref === undefined ? undefined : imports.expression(ref.module, ref.export).text;
+  });
+
   return [
     `import type { ContractApi } from "${SERVER_RUNTIME_PACKAGE}";`,
+    ...inputRules.imports,
     ...imports.lines(),
     "",
     "/** Every operation of the api as the boundary checks it. */",
     `export const CONTRACT_API: ContractApi = ${sourceOf(table)};`,
+    "",
+    ...inputRules.declaration,
     "",
   ].join("\n");
 }
@@ -296,6 +308,8 @@ function routeEntry(
       validatorRef === undefined
         ? null
         : imports.expression(validatorRef.module, validatorRef.export),
+    relays:
+      operation.relays === undefined ? undefined : `${operation.relays.api}.${operation.relays.id}`,
     idempotency: idempotencyEntry(operation, location, refusals),
     versionHeader: versionHeaderEntry(operation, location, refusals),
     responses: operation.responses.map((response, index) => ({

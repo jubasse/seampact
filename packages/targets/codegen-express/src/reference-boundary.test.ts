@@ -95,6 +95,37 @@ describe("the generated reference router compiles", () => {
     });
   });
 
+  test(
+    "inputRules is typed: a zod schema compiles; a misspelt operation, a wrong part and another kind do not",
+    () => {
+      const check = join(PROJECT, "input-rules.check.ts");
+      const errorsOf = (rules: string): string[] => {
+        writeFileSync(
+          check,
+          [
+            'import { z } from "zod";',
+            'import * as Tasks from "./generated/server/tasks/index.js";',
+            "",
+            'type Rules = NonNullable<Parameters<typeof Tasks.router>[0]["inputRules"]>;',
+            "",
+            `export const rules: Rules = ${rules};`,
+            "",
+          ].join("\n"),
+        );
+
+        return typeErrorsOf(PROJECT, [...files, check], REFERENCE_COMPILER_OPTIONS);
+      };
+
+      expect(errorsOf("{ createTask: { body: z.any(), path: z.any() } }")).toEqual([]);
+      expect(errorsOf("{ createTsk: { body: z.any() } }")).not.toEqual([]);
+      expect(errorsOf("{ createTask: { cookies: z.any() } }")).not.toEqual([]);
+      expect(errorsOf("{ createTask: { body: (data: unknown) => data !== null } }")).not.toEqual(
+        [],
+      );
+    },
+    4 * TYPE_CHECK_TIMEOUT_MILLISECONDS,
+  );
+
   test("the route table lists a static segment before a param at the same place", () => {
     const routes = readFileSync(join(PROJECT, "generated/server/tasks/routes.ts"), "utf8");
     const firstParamTask = routes.indexOf('"/v1/channels/{channelId}/tasks/{taskId}');

@@ -7,6 +7,7 @@ import { HOOK_CALLS_ROUTE, LOG_LINES_ROUTE, SCRIPT_ROUTE } from "@seampact/http-
 import { type Context, Hono } from "hono";
 import { compress } from "hono/compress";
 import { cors } from "hono/cors";
+import * as InputRulesHono from "../generated/server/inputRules/index.js";
 import * as TasksHono from "../generated/server/tasks/index.js";
 import * as TasksDevicesHono from "../generated/server/tasksDevices/index.js";
 import * as TasksPagingHono from "../generated/server/tasksPaging/index.js";
@@ -29,11 +30,14 @@ import {
   tasksServiceWritesHandlers,
 } from "../src/handlers.mjs";
 import {
+  inputRulesHooks,
   tasksDevicesHooks,
   tasksHooks,
   tasksServiceHooks,
   tasksServiceWritesHooks,
 } from "../src/hooks.mjs";
+import { inputRules } from "../src/input-rules.mjs";
+import { inputRulesHandlers } from "../src/input-rules-handlers.mjs";
 import { tasksPagingHandlers, tasksPagingHooks } from "../src/paging-handlers.mjs";
 import { tasksResponsesHandlers, tasksResponsesHooks } from "../src/responses-handlers.mjs";
 import {
@@ -63,7 +67,8 @@ async function renderedByAnApi(c: Context, error: Error): Promise<Response | und
     (await TasksServiceWritesHono.renderPreRoutingError(c, error)) ??
     (await TasksDevicesHono.renderPreRoutingError(c, error)) ??
     (await TasksResponsesHono.renderPreRoutingError(c, error)) ??
-    (await TasksPagingHono.renderPreRoutingError(c, error))
+    (await TasksPagingHono.renderPreRoutingError(c, error)) ??
+    (await InputRulesHono.renderPreRoutingError(c, error))
   );
 }
 
@@ -130,12 +135,19 @@ export async function startServer(): Promise<RunningServer> {
     hooks: tasksPagingHooks(),
     clientAddress,
   });
+  InputRulesHono.registerRoutes(app, {
+    handlers: { AppEndpoints: inputRulesHandlers },
+    hooks: inputRulesHooks(),
+    inputRules,
+    clientAddress,
+  });
   TasksHono.checkFrameworkRoutes(app);
   TasksServiceHono.checkFrameworkRoutes(app);
   TasksServiceWritesHono.checkFrameworkRoutes(app);
   TasksDevicesHono.checkFrameworkRoutes(app);
   TasksResponsesHono.checkFrameworkRoutes(app);
   TasksPagingHono.checkFrameworkRoutes(app);
+  InputRulesHono.checkFrameworkRoutes(app);
 
   const { server, port } = await listening(app);
 
