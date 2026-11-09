@@ -35,5 +35,6 @@ Each section lives in its own file under the folder named like this ADR, in the 
 
 ## Traceability
 
+- History: the dated amendments this ADR carried until PR #451 are folded into the sections they changed; `git show 43055be4:docs/adr/0010-native-generators.md` holds them with their dates.
 - FRs: FR-40, FR-38, FR-37 (version checks), FR-14 (native targets), FR-17 (standalone binary and mirrors), FR-19 (Gradle and Maven plugins), FR-21 (PHP targets), FR-13 (`diff` in the binary); amendments A7, A9, A13, A15, A19, A26, A27, A28, [A41](../decisions.md#a41), A42, A43, [A48](../decisions.md#a48).
 - Checklist items enabled: CHK-072 (unpublished installs from Maven local and Composer path repositories), CHK-076 (no Node.js on native consumers), CHK-077 and CHK-078 (version checks and open enums in the native models), CHK-079 (Java 21 and 25 through Gradle and Maven), CHK-083, CHK-084 and CHK-085 (PHP targets), CHK-088 (mirror trees installable), CHK-140 (binary commands), CHK-158 (`Field`), CHK-159 (PHP decoding), CHK-166 (JVM DSL, build-directory output, artisan), CHK-167 (JSON-LD contexts).
