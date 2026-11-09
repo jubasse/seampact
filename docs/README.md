@@ -132,5 +132,5 @@ For contributors. Users do not need these pages.
 - [ADRs](adr/): design records.
 - [Product decisions](decisions.md): the log of decisions, A1 to A48.
 - [Design decisions](design-decisions.md)
-- [Release](maintainers/release.md): how a release goes out, for maintainers.
+- [Maintainers](maintainers/): how a release goes out.
 - [Roadmap](roadmap.md)
