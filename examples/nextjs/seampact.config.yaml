@@ -1,0 +1,35 @@
+outDir: src/__generated__
+sources:
+  notes:
+    path: ./contract
+targets:
+  - id: types
+    use: "@seampact/codegen-ts"
+    apis: [notes]
+  # The Next.js server imports without an extension and the fetch client with `.js`: each links its own types entry.
+  - id: types-nextjs
+    use: "@seampact/codegen-ts"
+    apis: [notes]
+  - id: validators
+    use: "@seampact/codegen-zod"
+    apis: [notes]
+  - id: server
+    use: "@seampact/codegen-nextjs"
+    apis: [notes]
+    options:
+      bodyValidation: true
+    link:
+      types: types-nextjs
+      validators: validators
+  - id: client
+    use: "@seampact/codegen-fetch"
+    apis: [notes]
+    link:
+      types: types
+  - id: queries
+    use: "@seampact/codegen-react"
+    apis: [notes]
+    options:
+      query: tanstack
+    link:
+      client: client
