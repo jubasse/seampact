@@ -20,6 +20,7 @@
     "codegen"
   ],
   "description": "Seampact convention pack for Laravel API Resources and paginators: data wrapping, length-aware and cursor pages.",
+  "license": "MIT",
   "seampact": {
     "role": "pack",
     "pack": "pack.yaml"

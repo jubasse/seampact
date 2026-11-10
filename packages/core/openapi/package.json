@@ -1,6 +1,7 @@
 {
   "name": "@seampact/openapi",
   "description": "Writes OpenAPI 3.1 documents from a seampact API contract, keeping what OpenAPI cannot say as x-seampact-* extensions.",
+  "license": "MIT",
   "version": "1.0.1",
   "repository": {
     "type": "git",

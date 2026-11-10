@@ -1,6 +1,7 @@
 {
   "name": "@seampact/lint",
   "description": "Lint rules over a seampact API contract's IR, and the API to write your own.",
+  "license": "MIT",
   "version": "1.0.1",
   "repository": {
     "type": "git",

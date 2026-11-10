@@ -1,6 +1,7 @@
 {
   "name": "@seampact/codegen-adonis",
   "description": "Seampact target for AdonisJS: generates routes with checking middleware, the reply path, error helpers and a boot check around your controllers.",
+  "license": "MIT",
   "version": "1.0.1",
   "repository": {
     "type": "git",

@@ -1,6 +1,7 @@
 {
   "name": "@seampact/codegen-express",
   "description": "Seampact target for Express 4 and 5: generates a router per api that checks access, input and replies around your handler map.",
+  "license": "MIT",
   "version": "1.0.1",
   "repository": {
     "type": "git",

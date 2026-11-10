@@ -1,6 +1,7 @@
 {
   "name": "@seampact/codegen-fetch",
   "description": "Seampact target that generates a typed fetch client with one method per operation, returning success and error responses as typed results.",
+  "license": "MIT",
   "version": "1.0.1",
   "repository": {
     "type": "git",

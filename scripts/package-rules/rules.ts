@@ -374,11 +374,13 @@ function checkNpmNames(pkgs: Npm[], out: Violation[]): void {
       });
 }
 
+const PACKAGE_LICENSE = "MIT";
+
 function checkPublicMetadata(root: string, pkgs: Npm[], out: Violation[]): void {
   for (const p of pkgs) {
     if (UNPUBLISHED_PACKAGES.includes(p.name)) continue;
     const add = (message: string) => out.push({ file: p.file, rule: "metadata", message });
-    const { repository, homepage, bugs } = p.json;
+    const { repository, homepage, bugs, license } = p.json;
 
     if (
       !isRec(repository) ||
@@ -392,6 +394,8 @@ function checkPublicMetadata(root: string, pkgs: Npm[], out: Violation[]): void 
       add(`needs a \`homepage\` on the docs site, ${DOCS_SITE_URL}`);
 
     if (!isRec(bugs) || bugs.url !== ISSUES_URL) add(`needs \`bugs\` {url: "${ISSUES_URL}"}`);
+
+    if (license !== PACKAGE_LICENSE) add(`needs \`license\` "${PACKAGE_LICENSE}"`);
 
     if (!hasReadme(join(root, p.dir, "README.md")))
       out.push({

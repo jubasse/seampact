@@ -1,6 +1,7 @@
 {
   "name": "@seampact/codegen-axios",
   "description": "Seampact target that runs the typed fetch client over your own axios instance, so the React, Vue and Angular targets use axios.",
+  "license": "MIT",
   "version": "1.0.1",
   "repository": {
     "type": "git",

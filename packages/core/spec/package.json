@@ -1,6 +1,7 @@
 {
   "name": "@seampact/spec",
   "description": "The JSON Schemas of the seampact contract and IR with their TypeScript types, and the shared naming and bundle test vectors.",
+  "license": "MIT",
   "version": "1.0.1",
   "repository": {
     "type": "git",

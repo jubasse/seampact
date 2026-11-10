@@ -20,6 +20,7 @@
     "codegen"
   ],
   "description": "Seampact convention pack for HAL: items and pages with _links and _embedded, and Spring HATEOAS's page object.",
+  "license": "MIT",
   "seampact": {
     "role": "pack",
     "pack": "pack.yaml"

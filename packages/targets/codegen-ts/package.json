@@ -1,6 +1,7 @@
 {
   "name": "@seampact/codegen-ts",
   "description": "Seampact target that generates a TypeScript type per schema and each operation's input, output and error union.",
+  "license": "MIT",
   "version": "1.0.1",
   "repository": {
     "type": "git",

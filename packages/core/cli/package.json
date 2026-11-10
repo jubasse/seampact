@@ -1,6 +1,7 @@
 {
   "name": "@seampact/cli",
   "description": "The seampact command: compile a YAML API contract and generate typed server code, validators, OpenAPI and clients, then check them in CI.",
+  "license": "MIT",
   "version": "1.0.1",
   "repository": {
     "type": "git",

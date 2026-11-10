@@ -1,6 +1,7 @@
 {
   "name": "@seampact/codegen-hono",
   "description": "Seampact target for Hono 4: generates a registerRoutes function that adds each contract route with access, validation and reply checks around your handler map.",
+  "license": "MIT",
   "version": "1.0.1",
   "repository": {
     "type": "git",

@@ -1,6 +1,7 @@
 {
   "name": "@seampact/http-suite",
   "description": "The black-box HTTP suite shared by the seampact server targets: JSON case scripts, a runner against a base URL and a report keyed by checklist id.",
+  "license": "MIT",
   "version": "1.0.1",
   "repository": {
     "type": "git",

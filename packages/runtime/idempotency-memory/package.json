@@ -1,6 +1,7 @@
 {
   "name": "@seampact/idempotency-memory",
   "description": "An in-memory idempotency store for seampact-generated Node servers, for one process in development and tests.",
+  "license": "MIT",
   "version": "1.0.1",
   "repository": {
     "type": "git",

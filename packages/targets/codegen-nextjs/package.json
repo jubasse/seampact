@@ -1,6 +1,7 @@
 {
   "name": "@seampact/codegen-nextjs",
   "description": "Seampact target for Next.js 16: generates a routeHandler per api for a catch-all route with access, validation and reply checks around your handler map.",
+  "license": "MIT",
   "version": "1.0.1",
   "repository": {
     "type": "git",

@@ -1,6 +1,7 @@
 {
   "name": "@seampact/codegen-vue",
   "description": "Seampact target for Vue: generates TanStack Query or Pinia Colada options and composables, or plain fetch composables, over the typed fetch client.",
+  "license": "MIT",
   "version": "1.0.1",
   "repository": {
     "type": "git",

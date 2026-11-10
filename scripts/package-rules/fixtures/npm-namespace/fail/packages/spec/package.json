@@ -10,6 +10,7 @@
   "bugs": {
     "url": "https://github.com/jubasse/seampact/issues"
   },
+  "license": "MIT",
   "private": false,
   "seampact": {
     "role": "core"

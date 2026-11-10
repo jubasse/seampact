@@ -1,6 +1,7 @@
 {
   "name": "@seampact/compiler",
   "description": "Compiles a seampact YAML API contract into the IR the generators read, reporting errors with file, line and column.",
+  "license": "MIT",
   "version": "1.0.1",
   "repository": {
     "type": "git",

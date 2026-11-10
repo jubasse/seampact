@@ -20,6 +20,7 @@
     "codegen"
   ],
   "description": "Seampact convention pack that gives an API Spring Data's Page as its paging style.",
+  "license": "MIT",
   "seampact": {
     "role": "pack",
     "pack": "pack.yaml"

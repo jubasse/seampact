@@ -1,6 +1,7 @@
 {
   "name": "@seampact/codegen-nestjs",
   "description": "Seampact target for NestJS: generates operation decorators, the access guard, validating input pipes, the error filter and a boot check around your controllers.",
+  "license": "MIT",
   "version": "1.0.1",
   "repository": {
     "type": "git",
