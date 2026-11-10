@@ -1,0 +1,108 @@
+# docs/conformance/proofs/proofs-servers.yaml
+# The refusals of the forms 1.0 leaves out on the Next.js and API Platform servers: each generator refuses the form by
+# name, so the release gate leaves the form out for them and these tests prove the refusal.
+lane: proofs-servers
+proofs:
+  - id: CHK-004
+    refusals:
+      - 'nextjs: packages/targets/codegen-nextjs/src/forms-refused.test.ts#a principal with variants is refused by name'
+      - 'nextjs: packages/targets/codegen-nextjs/src/forms-refused.test.ts#optional authentication is refused by name'
+      - 'api-platform: php/api-platform/tests/ApiPlatformRefusalsTest.php#testTheAccessFormsOneZeroLeavesOutAreRefusedByName'
+  - id: CHK-006
+    refusals:
+      - 'nextjs: packages/targets/codegen-nextjs/src/forms-refused.test.ts#a principal with variants is refused by name'
+      - 'nextjs: packages/targets/codegen-nextjs/src/forms-refused.test.ts#optional authentication is refused by name'
+      - 'api-platform: php/api-platform/tests/ApiPlatformRefusalsTest.php#testTheAccessFormsOneZeroLeavesOutAreRefusedByName'
+  - id: CHK-013
+    refusals:
+      - 'nextjs: packages/targets/codegen-nextjs/src/forms-refused.test.ts#is refused by name at generation'
+      - 'api-platform: php/codegen/tests/HandlerFormsTest.php#testAnIdentityHeaderWrittenOnAResponseIsRefusedByNameAtItsDeclaration'
+  - id: CHK-019
+    refusals:
+      - 'nextjs: packages/targets/codegen-nextjs/src/forms-refused.test.ts#a principal requirement is refused by name'
+      - 'api-platform: php/api-platform/tests/ApiPlatformRefusalsTest.php#testTheAccessFormsOneZeroLeavesOutAreRefusedByName'
+  - id: CHK-020
+    refusals:
+      - 'nextjs: packages/targets/codegen-nextjs/src/forms-refused.test.ts#a principal binding is refused by name'
+      - 'api-platform: php/api-platform/tests/ApiPlatformRefusalsTest.php#testTheAccessFormsOneZeroLeavesOutAreRefusedByName'
+  - id: CHK-022
+    refusals:
+      - 'nextjs: packages/targets/codegen-ts/src/generated-types.test.ts#a response header the route writes itself is refused by name'
+      - 'api-platform: php/api-platform/tests/ApiPlatformRefusalsTest.php#testAResponseHeaderTheRouteWritesIsRefusedByName'
+  - id: CHK-024
+    refusals:
+      - 'nextjs: packages/targets/codegen-ts/src/response-forms-refused.test.ts#a tagged union is refused by name'
+      - 'api-platform: php/api-platform/tests/ApiPlatformRefusalsTest.php#testAUnionIsRefusedByName'
+  - id: CHK-027
+    refusals:
+      - 'nextjs: packages/targets/codegen-nextjs/src/forms-refused.test.ts#a degradable operation is refused by name'
+      - 'api-platform: php/api-platform/tests/ApiPlatformRefusalsTest.php#testADegradableOperationIsRefusedByName'
+  - id: CHK-032
+    refusals:
+      - 'api-platform: php/api-platform/tests/ApiPlatformRefusalsTest.php#testTheCompletePageFactOfAChangesFeedIsRefusedByName'
+  - id: CHK-033
+    refusals:
+      - 'nextjs: packages/targets/codegen-nextjs/src/forms-refused.test.ts#a sort key restricted by a right is refused by name'
+      - 'api-platform: php/api-platform/tests/ApiPlatformRefusalsTest.php#testASortKeyRestrictedByARightIsRefusedByName'
+  - id: CHK-094
+    refusals:
+      - 'nextjs: packages/targets/codegen-nextjs/src/forms-refused.test.ts#a scope resolved by the application is refused by name'
+      - 'api-platform: php/api-platform/tests/ApiPlatformRefusalsTest.php#testTheAccessFormsOneZeroLeavesOutAreRefusedByName'
+  - id: CHK-128
+    refusals:
+      - 'nextjs: packages/targets/codegen-nextjs/src/forms-refused.test.ts#a split sort style is refused by name'
+  - id: CHK-129
+    refusals:
+      - 'nextjs: packages/targets/codegen-nextjs/src/forms-refused.test.ts#the HAL pack''s pages is refused by name'
+      - 'api-platform: php/api-platform/tests/ApiPlatformRefusalsTest.php#testAPageBodyWritingSlotsThePageReplyDoesNotFillIsRefusedByName'
+  - id: CHK-130
+    refusals:
+      - 'nextjs: packages/targets/codegen-nextjs/src/forms-refused.test.ts#absolute URLs is refused by name'
+  - id: CHK-131
+    refusals:
+      - 'nextjs: packages/targets/codegen-nextjs/src/forms-refused.test.ts#a signature verified by the application is refused by name'
+      - 'api-platform: php/api-platform/tests/ApiPlatformRefusalsTest.php#testASignatureVerifiedByTheApplicationIsRefusedByName'
+  - id: CHK-132
+    refusals:
+      - 'nextjs: packages/targets/codegen-nextjs/src/forms-refused.test.ts#a query API key scheme is refused by name'
+      - 'nextjs: packages/targets/codegen-nextjs/src/forms-refused.test.ts#an HTTP Basic scheme is refused by name'
+      - 'api-platform: php/api-platform/tests/ApiPlatformRefusalsTest.php#testAQueryApiKeySchemeIsRefusedByName'
+      - 'api-platform: php/api-platform/tests/ApiPlatformRefusalsTest.php#testTheAccessFormsOneZeroLeavesOutAreRefusedByName'
+  - id: CHK-133
+    refusals:
+      - 'nextjs: packages/targets/codegen-nextjs/src/forms-refused.test.ts#optional authentication is refused by name'
+  - id: CHK-150
+    refusals:
+      - 'nextjs: packages/targets/codegen-nextjs/src/forms-refused.test.ts#a form body is refused by name'
+      - 'api-platform: php/api-platform/tests/ApiPlatformRefusalsTest.php#testAFormBodyIsRefusedByName'
+  - id: CHK-151
+    refusals:
+      - 'nextjs: packages/targets/codegen-nextjs/src/forms-refused.test.ts#a multipart body is refused by name'
+      - 'api-platform: php/api-platform/tests/ApiPlatformRefusalsTest.php#testAMultipartBodyIsRefusedByName'
+  - id: CHK-152
+    refusals:
+      - 'nextjs: packages/targets/codegen-nextjs/src/forms-refused.test.ts#a file download is refused by name'
+      - 'api-platform: php/api-platform/tests/ApiPlatformRefusalsTest.php#testAFileDownloadIsRefusedByName'
+  - id: CHK-153
+    refusals:
+      - 'nextjs: packages/targets/codegen-nextjs/src/forms-refused.test.ts#a redirect response is refused by name'
+      - 'api-platform: php/api-platform/tests/ApiPlatformRefusalsTest.php#testARedirectResponseIsRefusedByName'
+  - id: CHK-160
+    refusals:
+      - 'nextjs: packages/targets/codegen-nextjs/src/forms-refused.test.ts#a query list in brackets form is refused by name'
+      - 'api-platform: php/api-platform/tests/ApiPlatformRefusalsTest.php#testAQueryListInBracketsFormIsRefusedByName'
+  - id: CHK-163
+    refusals:
+      - 'nextjs: packages/targets/codegen-nextjs/src/native-access-refused.test.ts#native access is refused by name'
+      - 'api-platform: php/api-platform/tests/ApiPlatformRefusalsTest.php#testNativeAccessIsRefusedByName'
+  - id: CHK-187
+    refusals:
+      - 'nextjs: packages/targets/codegen-nextjs/src/forms-refused.test.ts#an input field right below the top level is refused by name'
+      - 'api-platform: php/api-platform/tests/ApiPlatformRefusalsTest.php#testAnInputFieldRightBelowTheTopLevelIsRefusedByName'
+  - id: CHK-188
+    refusals:
+      - 'nextjs: packages/targets/codegen-nextjs/src/forms-refused.test.ts#a scope id read from a source other than the path is refused by name at its source'
+      - 'api-platform: php/api-platform/tests/ApiPlatformRefusalsTest.php#testAScopeIdReadFromAQueryIsRefusedByName'
+  - id: CHK-189
+    refusals:
+      - 'nextjs: packages/targets/codegen-nextjs/src/forms-refused.test.ts#idempotency enforced by none is refused by name'

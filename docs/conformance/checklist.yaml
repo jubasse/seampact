@@ -990,7 +990,7 @@ items:
     targets: [spring-boot, laravel]
   - id: CHK-167
     source: "A28"
-    fact: The api-platform target serves the JSON-LD contexts as allow-listed framework routes, and another target claiming the api-platform pack serves them too or is refused by the matrix.
+    fact: The api-platform target serves the JSON-LD contexts as allow-listed framework routes, and a Node server given the api-platform pack refuses its slots by name at generation.
     frs: [FR-21, FR-42]
     scenario: SCN-100
     targets: [core, api-platform]

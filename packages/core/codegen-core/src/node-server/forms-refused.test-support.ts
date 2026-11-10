@@ -217,6 +217,14 @@ export const FORMS_REFUSED_BY_ONE_ZERO: readonly RefusedForm[] = [
     },
   },
   {
+    // The pack's JSON-LD `@context` and Hydra page slots need the contexts the api-platform target serves.
+    title: "the API Platform pack's pages",
+    code: "paging.response.slot.unsupported",
+    change: (ir) => {
+      Object.assign(ir, packIr("pack-api-platform", "tasks"));
+    },
+  },
+  {
     title: "the Spring pack's pair sort",
     code: "paging.sort.style.unsupported",
     change: (ir) => {

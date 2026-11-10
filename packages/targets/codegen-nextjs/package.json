@@ -46,6 +46,7 @@
     "@seampact/codegen-core": "workspace:*",
     "@seampact/spec": "workspace:*",
     "@types/node": "24.19.2",
+    "next": "16.4.5",
     "typescript": "6.0.3",
     "zod": "4.6.7"
   }

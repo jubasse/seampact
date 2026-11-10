@@ -857,6 +857,9 @@ importers:
       '@types/node':
         specifier: 24.19.2
         version: 24.19.2
+      next:
+        specifier: 16.4.5
+        version: 16.4.5(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       typescript:
         specifier: 6.0.3
         version: 6.0.3

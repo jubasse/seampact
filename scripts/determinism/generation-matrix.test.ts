@@ -104,6 +104,7 @@ const DETERMINISM_CASES: readonly DeterminismCase[] = [
   serverCase("express", "express"),
   serverCase("adonis", "@adonisjs/core"),
   serverCase("hono", "hono"),
+  serverCase("nextjs", "next"),
   { target: "fetch", entries: CLIENT_ENTRIES },
   { target: "axios", entries: [TYPES_ENTRY, clientEntry("codegen-axios")] },
   validatorsCase("zod"),

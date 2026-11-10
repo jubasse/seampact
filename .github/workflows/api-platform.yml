@@ -152,7 +152,8 @@ jobs:
           if-no-files-found: error
 
   # The consumer generated from the bundle with Node removed, warmed by `cache:warmup` (the boot check), then served by
-  # `php -S` to the http suite's default profile; its pack-api-platform app runs the `pack:api-platform` profile.
+  # `php -S` to the http suite's default and hand-written profiles; the boot profile warms the boot-variant apps, and its
+  # pack-api-platform app runs the `pack:api-platform` profile.
   e2e:
     name: e2e (PHP ${{ matrix.php-version }}, Symfony ${{ matrix.symfony }})
     needs: [changes, contract-bundle]
@@ -194,21 +195,26 @@ jobs:
         with:
           name: api-platform-contract-bundle
           path: ${{ runner.temp }}/bundles
-      - name: Assemble, install, generate and warm the consumer and its pack-api-platform app
+      - name: Assemble, install, generate and warm the consumer and its boot-variant and pack-api-platform apps
         shell: bash
         env:
           SYMFONY_MAJOR: ${{ matrix.symfony }}
         run: |
           set -euo pipefail
-          scripts/consumers/targets/api-platform/assemble.sh "$WORK" "$RUNNER_TEMP/bundles/reference" "$SYMFONY_MAJOR"
-          scripts/consumers/targets/api-platform/assemble.sh "$WORK" "$RUNNER_TEMP/bundles/pack-api-platform" "$SYMFONY_MAJOR" pack-api-platform
-          for app in app app-pack-laravel; do
-            cd "$WORK/$app"
-            bash "$GITHUB_WORKSPACE/.github/actions/composer-cache/composer-with-retry.sh" update --no-interaction --no-progress --no-plugins --no-scripts
-            "$GITHUB_WORKSPACE/scripts/consumers/targets/symfony/check-majors.sh" . "$SYMFONY_MAJOR"
-            bash "$GITHUB_WORKSPACE/.github/actions/composer-cache/composer-with-retry.sh" audit --no-interaction
-            vendor/bin/seampact generate
-            php bin/console cache:warmup
+          for variant in "" allow-listed route-check-off hook-check-off pack-api-platform; do
+            bundled="$RUNNER_TEMP/bundles/reference"
+            if [ "$variant" = "pack-api-platform" ]; then bundled="$RUNNER_TEMP/bundles/pack-api-platform"; fi
+            scripts/consumers/targets/api-platform/assemble.sh "$WORK" "$bundled" "$SYMFONY_MAJOR" $variant
+            app="$WORK/app${variant:+-$variant}"
+            if [ "$variant" = "pack-api-platform" ]; then app="$WORK/app-pack-laravel"; fi
+            (
+              cd "$app"
+              bash "$GITHUB_WORKSPACE/.github/actions/composer-cache/composer-with-retry.sh" update --no-interaction --no-progress --no-plugins --no-scripts
+              "$GITHUB_WORKSPACE/scripts/consumers/targets/symfony/check-majors.sh" . "$SYMFONY_MAJOR"
+              bash "$GITHUB_WORKSPACE/.github/actions/composer-cache/composer-with-retry.sh" audit --no-interaction
+              vendor/bin/seampact generate
+              php bin/console cache:warmup
+            )
           done
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -216,9 +222,12 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Run the default and pack:api-platform profiles
+      - name: Run the default, hand-written, boot and pack:api-platform profiles
         env:
           SEAMPACT_API_PLATFORM_APP: ${{ env.WORK }}/app
+          SEAMPACT_API_PLATFORM_ALLOW_LISTED_APP: ${{ env.WORK }}/app-allow-listed
+          SEAMPACT_API_PLATFORM_ROUTE_CHECK_OFF_APP: ${{ env.WORK }}/app-route-check-off
+          SEAMPACT_API_PLATFORM_HOOK_CHECK_OFF_APP: ${{ env.WORK }}/app-hook-check-off
           SEAMPACT_API_PLATFORM_PACK_APP: ${{ env.WORK }}/app-pack-laravel
           SEAMPACT_API_PLATFORM_REPORTS: ${{ github.workspace }}/reports
         run: pnpm vitest run --config scripts/consumers/targets/api-platform/suite/vitest.config.ts

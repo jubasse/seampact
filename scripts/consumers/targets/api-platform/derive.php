@@ -43,15 +43,15 @@ const INPUT_RULES_EDITS = [
         "use App\\Generated\\InputRules\\Symfony\\UnexpectedErrorListener as InputRulesUnexpectedErrorListener;\n" => '',
         "    ResponsesUnexpectedErrorListener,\n    InputRulesUnexpectedErrorListener\n" => "    ResponsesUnexpectedErrorListener\n",
     ],
-    'seampact.config.yaml' => [
-        "  inputRules: { path: input-rules-contract }\n" => '',
-        "  - id: inputRules\n    out: InputRules\n    use: seampact/symfony\n    api: inputRules\n    frameworkRoutes:\n      - { path: \"/__seampact/**\", reason: \"The http suite's control routes (ADR 0015); not part of the api.\" }\n" => '',
-    ],
 ];
+const INPUT_RULES_SOURCE = "  inputRules: { path: input-rules-contract }\n";
+/** The inputRules entry is the last of every config, the boot variants' included, so it runs to the end of the file. */
+const INPUT_RULES_ENTRY = '/^  - id: inputRules\n.*\z/ms';
 const INPUT_RULES_FILES = ['src/Controller/InputRulesController.php', 'src/Suite/Rules'];
 const ROUTE_IMPORTS_FROM = '        // The mount-mismatch boot variant imports';
 const ROUTE_IMPORTS_TO = '        // The suite\'s control routes';
-const API_PLATFORM_ROUTES = "        // API Platform registers each generated operation as a route; no route loader is imported.\n        \$routes->import('.', 'api_platform');\n\n";
+// The mount-mismatch boot variant imports the routes under a prefix the entry's mount does not state, as on Symfony.
+const API_PLATFORM_ROUTES = "        // API Platform registers each generated operation as a route; no route loader is imported.\n        if (BootVariant::mountsUnderMismatchedPrefix()) {\n            \$routes->import('.', 'api_platform')->prefix(BootVariant::MISMATCHED_MOUNT);\n        } else {\n            \$routes->import('.', 'api_platform');\n        }\n\n";
 
 function applied(string $source, string $search, string $replacement): string
 {
@@ -82,6 +82,13 @@ function withoutInputRules(string $app): void
         }
         file_put_contents("{$app}/{$file}", $source);
     }
+    $configFile = "{$app}/seampact.config.yaml";
+    $config = applied((string) file_get_contents($configFile), INPUT_RULES_SOURCE, '');
+    $withoutEntry = preg_replace(INPUT_RULES_ENTRY, '', $config, -1, $removed);
+    if ($withoutEntry === null || $removed !== 1) {
+        throw new RuntimeException('derive.php: the Symfony consumer config no longer ends with its inputRules entry.');
+    }
+    file_put_contents($configFile, $withoutEntry);
     foreach (INPUT_RULES_FILES as $path) {
         exec('rm -rf ' . escapeshellarg("{$app}/{$path}"));
     }

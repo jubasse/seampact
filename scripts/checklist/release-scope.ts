@@ -85,24 +85,36 @@ const VALIDATORS: readonly string[] = ["zod", "yup", "class-validator"];
 const UNKNOWN_KEYS_POLICIES =
   "1.0 refuses the unknown keys policies ignore and keep of an operation input by name at generation, on the validators targets";
 
-// The servers whose refusals of the forms below are tested; API Platform and Next.js join them with their proofs.
-const SERVERS_WITHOUT_TESTED_REFUSALS: readonly string[] = ["api-platform", "nextjs"];
+export const SERVERS_WITH_TESTED_REFUSALS: readonly string[] = SERVER_TARGETS;
 
-export const SERVERS_WITH_TESTED_REFUSALS: readonly string[] = SERVER_TARGETS.filter(
-  (target) => !SERVERS_WITHOUT_TESTED_REFUSALS.includes(target),
-);
-
-const NODE_SERVERS: readonly string[] = ["nestjs", "fastify", "express", "adonis", "hono"];
+const NODE_SERVERS: readonly string[] = [
+  "nestjs",
+  "fastify",
+  "express",
+  "adonis",
+  "hono",
+  "nextjs",
+];
 
 const PYTHON_SERVERS: readonly string[] = ["fastapi", "drf", "ninja"];
 
-const PHP_AND_PYTHON_SERVERS: readonly string[] = ["laravel", "symfony", ...PYTHON_SERVERS];
+const PHP_AND_PYTHON_SERVERS: readonly string[] = [
+  "laravel",
+  "symfony",
+  "api-platform",
+  ...PYTHON_SERVERS,
+];
 
 const VARIANTS_FORM =
   "a principal with variants (viewer_or_device) and, on the Node servers, optional authentication";
 
 // The servers whose generators read the IR without Node: the JVM and PHP targets.
-const JVM_AND_PHP_SERVERS: readonly string[] = ["spring-boot", "laravel", "symfony"];
+const JVM_AND_PHP_SERVERS: readonly string[] = [
+  "spring-boot",
+  "laravel",
+  "symfony",
+  "api-platform",
+];
 
 // The targets whose generators refuse the body and query forms below by name, each with a refusal test.
 const BODY_AND_QUERY_FORMS_REFUSED_ON: readonly string[] = [
@@ -281,9 +293,9 @@ export const ITEMS_DEFERRED: ReadonlyMap<string, ItemDeferred> = indexItemsDefer
   [
     "CHK-162",
     {
-      targets: ["express", "fastify", "hono", "fastapi"],
+      targets: ["express", "fastify", "hono", "nextjs", "fastapi"],
       reason:
-        "express, fastify, hono and fastapi generate no native access export, and express, fastify and hono map no framework security refusals, since those frameworks ship none of their own and the app's middleware owns them: additive artefacts a later release can add",
+        "express, fastify, hono, nextjs and fastapi generate no native access export, and express, fastify, hono and nextjs map no framework security refusals, since those frameworks ship none of their own and the app's middleware owns them: additive artefacts a later release can add",
     },
   ],
   [
@@ -303,6 +315,22 @@ export const ITEMS_DEFERRED: ReadonlyMap<string, ItemDeferred> = indexItemsDefer
         "1.0 refuses the suffixes option and handlers perOperation by name at generation, and NestJS also refuses codeName; Spring Boot and Laravel serve codeName",
     },
   ],
+  [
+    "CHK-029",
+    {
+      targets: ["nextjs"],
+      reason:
+        "Next.js redirects a path with '//' with a 308 before the route handler runs, so the api's 404 for it is not reachable (ADR 0030, Routes); the other framework refusals render in the declared error format",
+    },
+  ],
+  ...["CHK-062", "CHK-063", "CHK-147", "CHK-161"].map((id): [string, ItemDeferred] => [
+    id,
+    {
+      targets: ["nextjs"],
+      reason:
+        "Next.js has no boot check: the app routes by file, so no route scan runs at boot (ADR 0030), and CHK-062 and CHK-063 name it their exception; the suite part of CHK-074 still proves its default profile",
+    },
+  ]),
   [
     "CHK-072",
     { reason: "internal installs before publication (A3), gone once the packages are published" },
