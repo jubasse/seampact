@@ -26,6 +26,15 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const SLOW_ANSWER_MILLISECONDS = 1500;
 const SHORT_BUDGET_MILLISECONDS = 100;
 const SETUP_TIMEOUT_MILLISECONDS = 60_000;
+const UNKNOWN_STATE = "archived-by-a-newer-server";
+const UNKNOWN_FIELD = "fieldOfANewerServer";
+const PLAIN_CODES_API = "tasksPlainCodes";
+// The tasks contract with three of its error codes renamed outside the dotted form.
+const PLAIN_CODES = {
+  "api.not_found": "TASK_NOT_FOUND",
+  "state.conflict": "E1042",
+  "api.forbidden": "not-found",
+} as const;
 
 type Method = (request?: unknown, options?: unknown) => Promise<Record<string, unknown>>;
 
@@ -66,9 +75,31 @@ let serviceWrites: Record<string, Method>;
 let paging: Record<string, Method>;
 let splitSort: Record<string, Method>;
 let laravel: Record<string, Method>;
+let plainCodes: Record<string, Method>;
 
 function readIr(name: string, golden = REFERENCE_GOLDEN): ContractIR {
   return JSON.parse(readFileSync(new URL(`${golden}/${name}.ir.json`, GOLDEN_ROOT), "utf8"));
+}
+
+function renamedCode(code: string): string {
+  return new Map<string, string>(Object.entries(PLAIN_CODES)).get(code) ?? code;
+}
+
+// Renames an error code where it is an object key or a whole string value, never inside a longer text.
+function withPlainCodes(node: unknown): unknown {
+  if (typeof node === "string") return renamedCode(node);
+
+  if (Array.isArray(node)) return node.map(withPlainCodes);
+
+  if (node === null || typeof node !== "object") return node;
+
+  return Object.fromEntries(
+    Object.entries(node).map(([key, value]) => [renamedCode(key), withPlainCodes(value)]),
+  );
+}
+
+function plainCodesIr(): ContractIR {
+  return JSON.parse(JSON.stringify(withPlainCodes(readIr("tasks"))));
 }
 
 async function generate(
@@ -87,10 +118,14 @@ async function generate(
   return outcome.files;
 }
 
-async function clientOf(name: string, golden = REFERENCE_GOLDEN): Promise<Record<string, Method>> {
+async function clientOf(
+  name: string,
+  golden = REFERENCE_GOLDEN,
+  ir: ContractIR = readIr(name, golden),
+): Promise<Record<string, Method>> {
   const directory = join(PROJECT, golden, name);
 
-  for (const file of await generate(target, readIr(name, golden))) {
+  for (const file of await generate(target, ir)) {
     mkdirSync(dirname(join(directory, file.path)), { recursive: true });
     writeFileSync(join(directory, file.path), file.contents);
   }
@@ -153,6 +188,7 @@ describe("the generated client over axios", () => {
     paging = await clientOf("tasksPaging");
     splitSort = await clientOf("tasksSplitSort");
     laravel = await clientOf("tasks", "pack-laravel");
+    plainCodes = await clientOf(PLAIN_CODES_API, REFERENCE_GOLDEN, plainCodesIr());
   }, SETUP_TIMEOUT_MILLISECONDS);
 
   afterAll(() => new Promise((resolve) => server.close(resolve)));
@@ -503,6 +539,66 @@ describe("the generated client over axios", () => {
     )({ path: { channelId: "c1" }, query: { page: 1, per_page: 2 } });
 
     expect(new URL(lastReceived().path, baseUrl).searchParams.toString()).toBe("page=1&per_page=2");
+  });
+
+  test("an enum member and a field the client does not know reach the caller as sent over axios", async () => {
+    const task = { taskId: "t1", title: "T", state: UNKNOWN_STATE, [UNKNOWN_FIELD]: { deep: [1] } };
+
+    answer = { status: 200, body: task };
+
+    const result = await call(tasks, "getTask")({ path: { channelId: "c1", taskId: "t1" } });
+
+    expect(result).toMatchObject({ ok: true, status: 200 });
+    expect(result.body).toEqual(task);
+  });
+
+  test("every error the IR derives for an operation is a declared result over axios", async () => {
+    const ir = readIr("tasks");
+    const operation = ir.operations.find((candidate) => candidate.id === "getTask");
+
+    expect(operation).toBeDefined();
+
+    const derived = (operation?.errors ?? []).map((error) => error.code);
+
+    expect(derived.length).toBeGreaterThan(0);
+
+    for (const code of derived) {
+      answer = {
+        status: ir.errors[code]?.http.status ?? 0,
+        headers: { "content-type": "application/problem+json" },
+        body: { code },
+      };
+
+      expect(
+        await call(tasks, "getTask")({ path: { channelId: "c1", taskId: "t1" }, headers: {} }),
+        code,
+      ).toMatchObject({ ok: false, unexpected: false, code });
+    }
+  });
+
+  test("error codes outside the dotted form reach the caller unchanged over axios", async () => {
+    const ir = plainCodesIr();
+
+    for (const plain of Object.values(PLAIN_CODES)) {
+      const status = ir.errors[plain]?.http.status ?? 0;
+
+      answer = {
+        status,
+        headers: { "content-type": "application/problem+json" },
+        body: { code: plain },
+      };
+
+      expect(
+        await call(
+          plainCodes,
+          "updateTask",
+        )({
+          path: { channelId: "c1", taskId: "t1" },
+          body: { title: "T" },
+        }),
+        plain,
+      ).toMatchObject({ ok: false, unexpected: false, code: plain });
+    }
   });
 
   test("the pack-hal client is refused by name", async () => {
