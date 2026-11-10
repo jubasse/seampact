@@ -54,6 +54,7 @@ proofs:
   - id: CHK-103
     tests:
       - "api-platform: php/api-platform/tests/GoldenTest.php#testASecondRunUnderAnotherTimeZoneWritesTheSameTree"
+      - "nextjs: scripts/determinism/generation-matrix.test.ts#generation determinism nextjs generates the same bytes on every run, under another TZ and LANG, and from the included form"
   - id: CHK-155
     tests:
       - "api-platform: php/api-platform/tests/GoldenTest.php#testTheGeneratedTreeIsTheCommittedGolden"
