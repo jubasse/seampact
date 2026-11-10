@@ -6,7 +6,7 @@ Page: https://jubasse.github.io/seampact/backend/spring-boot/
 
 ## Set up
 
-The runtime, the hooks and the Maven plugin are on Maven Central under `io.github.jubasse`. The Gradle plugin is on the Gradle Plugin Portal. While the Portal reviews a new release, add Maven Central to the plugin repositories in `settings.gradle.kts`:
+The runtime, the hooks and the Maven plugin are on Maven Central under `io.github.jubasse`. The Gradle plugin is on the Gradle Plugin Portal. For a release the Portal does not serve yet, add Maven Central to the plugin repositories in `settings.gradle.kts`:
 
 ```kotlin
 pluginManagement {

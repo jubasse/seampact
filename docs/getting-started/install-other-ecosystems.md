@@ -29,7 +29,7 @@ pluginManagement {
 }
 ```
 
-The Gradle Plugin Portal is still reviewing the plugin. Until it approves, Gradle loads the plugin from Maven Central, which `mavenCentral()` above already adds.
+Gradle loads the plugin from the Gradle Plugin Portal. `mavenCentral()` above also lets it load the plugin from Maven Central, for a release the Portal does not serve yet.
 
 Maven, in `pom.xml`:
 
