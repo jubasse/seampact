@@ -1,6 +1,6 @@
 # ADR 0028: App input rules
 
-Status: accepted
+Status: accepted, delivered by #425, #428, #433, #435
 
 ## Context
 

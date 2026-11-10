@@ -1,6 +1,6 @@
 # ADR 0029: The API Platform server target
 
-Status: accepted
+Status: accepted, delivered by #427, #429, #437, #445, #448
 
 ## Context
 

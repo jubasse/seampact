@@ -214,8 +214,8 @@ export function treeSchemasShapeOf(value: TreeSchemasRawObject): Shape | undefin
 }
 
 // The words a child name starts with: the parent's segments, then its role's default suffix words (`RolesParams`
-// gives `roles params`), so the child of a derived schema never meets the child of its declared namesake (ADR 0007,
-// amendment 2026-10-12, item 10).
+// gives `roles params`), so the child of a derived schema never meets the child of its declared namesake (ADR 0007
+// section 3).
 const wordsOf = (name: Name | undefined): string[] | undefined =>
   name === undefined ? undefined : [...name.segments, ...suffixWords(name)];
 

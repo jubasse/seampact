@@ -193,7 +193,7 @@ export function suffixWords(name: Name, suffixes?: Suffixes): string[] {
  * the owner, the role selecting the suffix word. For `property` and `variant`, `owner` already
  * holds the parent's whole name followed by the property's or the tag's segments: the parent's
  * segments, then its default suffix words when it is derived (`[roles, params, scope]`, ADR 0007
- * amendment 2026-10-12, item 10). `status` is required for a `response` and rejected for every
+ * section 3). `status` is required for a `response` and rejected for every
  * other role. Throws on an unknown role or a malformed segment or status.
  */
 export function deriveName(owner: readonly string[], role: "response", status: number): Name;

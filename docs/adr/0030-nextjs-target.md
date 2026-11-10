@@ -1,6 +1,6 @@
 # ADR 0030: The Next.js server target
 
-Status: accepted
+Status: accepted, delivered by #438, #444, #447, #452
 
 ## Context
 
