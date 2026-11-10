@@ -110,6 +110,7 @@ proofs:
     fixtures: [fixtures/golden/pack-api-platform]
     tests:
       - "api-platform: ci: api-platform.yml#e2e"
+      - "core: packages/targets/codegen-nextjs/src/forms-refused.test.ts#the forms 1.0 refuses on Next.js the API Platform pack's pages is refused by name"
   - id: CHK-028
     tests:
       - "api-platform: ci: api-platform.yml#e2e"

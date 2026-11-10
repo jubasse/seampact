@@ -10,6 +10,7 @@
     "spring-boot",
     "laravel",
     "symfony",
+    "api-platform",
     "fastapi",
     "drf",
     "ninja"
