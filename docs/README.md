@@ -69,7 +69,7 @@ The same pages, with search, are on the [documentation site](https://jubasse.git
 - [Django REST Framework](backend/drf.md): Python, the wheels, settings, URLconf, handlers, hooks and DRF's own auth.
 - [Django Ninja](backend/ninja.md): Python, the wheels, `bind_<api>()`, handlers, hooks, Ninja's own auth and docs.
 
-Input rules (checks your app adds to the contract's): the "Add your own rules" section of each guide above (NestJS, Express, Fastify, AdonisJS, Hono, Next.js, Laravel and Symfony), and [ADR 0028](adr/0028-app-input-rules.md).
+Input rules (checks your app adds to the contract's): the "Add your own rules" section of each guide above (NestJS, Express, Fastify, AdonisJS, Hono, Laravel and Symfony; Next.js in its [Options](backend/nextjs.md#options)), and [ADR 0028](adr/0028-app-input-rules.md).
 
 ## Client guides
 

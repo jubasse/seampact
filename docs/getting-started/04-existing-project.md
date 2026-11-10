@@ -248,7 +248,7 @@ The app refuses to boot, and the message lists every problem. The boot check lis
 <details>
 <summary>PHP: API Platform</summary>
 
-Follow [Set up](../backend/api-platform.md#set-up) of the API Platform guide to install it, then add to `seampact.config.yaml`: `composer require seampact/api-platform api-platform/symfony` and one entry with `use: seampact/api-platform` and `api: shop`.
+Follow [Set up](../backend/api-platform.md#set-up) of the API Platform guide to install it (`composer require seampact/api-platform api-platform/symfony`), then add to `seampact.config.yaml` one entry with `use: seampact/api-platform` and `api: shop`.
 
 Generate, then commit the files. Implement the generated interface in your existing controller for the products routes, and delete the DTO or request classes it replaces: [Write a handler](../backend/api-platform.md#write-a-handler). List the api's bundle and let API Platform read the generated resources ([Wire it in](../backend/api-platform.md#wire-it-in)).
 
