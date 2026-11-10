@@ -4,7 +4,7 @@
 // starts the app; plain JavaScript, copied next to the compiled generated tree, so it imports the generated modules by
 // relative path.
 import "reflect-metadata";
-import { Controller, Module } from "@nestjs/common";
+import { Controller, Get, Module } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { ApiOkResponse, ApiProperty, DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 
@@ -54,6 +54,7 @@ function shadowingController(schemaName) {
 
   const descriptor = Object.getOwnPropertyDescriptor(ShadowController.prototype, "shadowed");
 
+  Get()(ShadowController.prototype, "shadowed", descriptor);
   ApiOkResponse({ type: Shadow })(ShadowController.prototype, "shadowed", descriptor);
   Controller("shadow")(ShadowController);
 
