@@ -293,9 +293,9 @@ export const ITEMS_DEFERRED: ReadonlyMap<string, ItemDeferred> = indexItemsDefer
   [
     "CHK-162",
     {
-      targets: ["express", "fastify", "hono", "fastapi"],
+      targets: ["express", "fastify", "hono", "nextjs", "fastapi"],
       reason:
-        "express, fastify, hono and fastapi generate no native access export, and express, fastify and hono map no framework security refusals, since those frameworks ship none of their own and the app's middleware owns them: additive artefacts a later release can add",
+        "express, fastify, hono, nextjs and fastapi generate no native access export, and express, fastify, hono and nextjs map no framework security refusals, since those frameworks ship none of their own and the app's middleware owns them: additive artefacts a later release can add",
     },
   ],
   [
@@ -313,6 +313,14 @@ export const ITEMS_DEFERRED: ReadonlyMap<string, ItemDeferred> = indexItemsDefer
       refusedOn: ["spring-boot", "laravel", "nestjs"],
       reason:
         "1.0 refuses the suffixes option and handlers perOperation by name at generation, and NestJS also refuses codeName; Spring Boot and Laravel serve codeName",
+    },
+  ],
+  [
+    "CHK-029",
+    {
+      targets: ["nextjs"],
+      reason:
+        "Next.js redirects a path with '//' with a 308 before the route handler runs, so the api's 404 for it is not reachable (ADR 0030, Routes); the other framework refusals render in the declared error format",
     },
   ],
   [

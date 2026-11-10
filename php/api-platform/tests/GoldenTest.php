@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 use Seampact\ApiPlatform\ApiPlatformFlavour;
 use Seampact\ApiPlatform\ApiPlatformGenerator;
 use Seampact\Codegen\GoldenTree;
+use Seampact\Codegen\Tests\Support\OtherTimeZone;
 use Seampact\Codegen\Tests\Support\PhpLint;
 use Seampact\Codegen\Tests\Support\ReferenceContract;
 use Seampact\Ir\Write\GeneratedFile;
@@ -55,6 +56,13 @@ final class GoldenTest extends TestCase
     {
         self::assertTrue((new ApiPlatformFlavour())->refusesInputRules());
         self::assertSame([], array_filter(array_keys(self::byPath(self::apiPlatformFiles())), static fn (string $path): bool => str_contains($path, 'InputRules')));
+    }
+
+    public function testASecondRunUnderAnotherTimeZoneWritesTheSameTree(): void
+    {
+        $generate = static fn (): array => GoldenTree::flattened(['Tasks' => self::apiPlatformFiles()]);
+
+        self::assertSame($generate(), OtherTimeZone::run($generate));
     }
 
     public function testTheGeneratedTreeIsParsablePhp(): void
