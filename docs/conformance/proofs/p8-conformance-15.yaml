@@ -63,6 +63,7 @@ proofs:
       - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#a request whose enum member is outside the enum fails to type-check'
       - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#an enum member and a field the client does not know reach the caller as sent'
       - 'zod: packages/targets/codegen-zod/src/generated-validators.test.ts#a state outside the enum is refused in a request and read back in a response'
+      - 'axios: packages/targets/codegen-axios/src/reference-client-over-axios.test.ts#an enum member and a field the client does not know reach the caller as sent over axios'
   - id: CHK-048
     fixtures: [fixtures/golden/extensions]
     refusals:
@@ -71,6 +72,7 @@ proofs:
     fixtures: [fixtures/golden/reference]
     tests:
       - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#an enum member and a field the client does not know reach the caller as sent'
+      - 'axios: packages/targets/codegen-axios/src/reference-client-over-axios.test.ts#an enum member and a field the client does not know reach the caller as sent over axios'
   - id: CHK-105
     fixtures: [fixtures/golden/reference]
     tests:
@@ -93,14 +95,17 @@ proofs:
     fixtures: [fixtures/golden/reference]
     tests:
       - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#every operation answers as declared exactly the error codes its IR derives'
+      - 'axios: packages/targets/codegen-axios/src/reference-client-over-axios.test.ts#every error the IR derives for an operation is a declared result over axios, and its 404 is declared once'
   - id: CHK-116
     fixtures: [fixtures/golden/reference]
     tests:
       - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#a 404 is declared once per operation, and a nested list answers its scope''s code only'
+      - 'axios: packages/targets/codegen-axios/src/reference-client-over-axios.test.ts#every error the IR derives for an operation is a declared result over axios, and its 404 is declared once'
   - id: CHK-124
     fixtures: [fixtures/golden/reference]
     tests:
       - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#error codes outside the dotted form reach the caller unchanged'
+      - 'axios: packages/targets/codegen-axios/src/reference-client-over-axios.test.ts#error codes outside the dotted form reach the caller unchanged over axios'
   - id: CHK-126
     fixtures: [fixtures/golden/reference]
     refusals:
