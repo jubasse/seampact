@@ -1,6 +1,6 @@
 {
   "name": "@seampact/pack-jsonapi",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jubasse/seampact.git",
@@ -10,7 +10,16 @@
   "bugs": {
     "url": "https://github.com/jubasse/seampact/issues"
   },
-  "description": "JSON:API resource objects, page[number] paging and the errors array.",
+  "keywords": [
+    "convention-pack",
+    "jsonapi",
+    "seampact",
+    "api-contract",
+    "openapi",
+    "codegen"
+  ],
+  "description": "Seampact convention pack for JSON:API: resource objects, page[number] paging and the errors array.",
+  "license": "MIT",
   "seampact": {
     "role": "pack",
     "pack": "pack.yaml"

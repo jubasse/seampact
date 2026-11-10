@@ -1,6 +1,7 @@
 // The route table a Node server boundary reads: one entry per contract operation, emitted from the IR, and the
 // request view every check step receives.
 import type { SignatureTemplate } from "@seampact/hooks";
+import type { ClassValidatorCalls } from "./class-validator-rules.js";
 import type { FrameworkRouteCheck } from "./framework-route-patterns.js";
 import {
   decodePathParam,
@@ -247,6 +248,8 @@ export interface ContractRoute {
     readonly rawBody: boolean;
   };
   readonly validator: StandardValidator;
+  /** A relay route: the public operation it relays, `<api>.<operationId>`, which takes no app input rules. */
+  readonly relays?: string;
   /** Keyed by the input pointer, `/body/title`, an array item written `*`. */
   readonly idempotency?: {
     readonly header: string;
@@ -289,6 +292,8 @@ export interface ContractApi {
   readonly frameworkEtag: "strip" | "keep";
   /** False leaves a request the contract does not serve (an unserved method or path under a base path) to the app. */
   readonly catchAll: boolean;
+  /** The class-validator calls app input rules run through, when the api's validators are class-validator's. */
+  readonly classValidator?: ClassValidatorCalls;
 }
 
 /** The request as every check step sees it, whatever the framework. */

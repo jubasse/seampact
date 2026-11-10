@@ -12,6 +12,7 @@ return [
     App\Generated\TasksResponses\Laravel\TasksResponsesSeampactServiceProvider::class,
     App\Generated\TasksPaging\Laravel\TasksPagingSeampactServiceProvider::class,
     App\Generated\TasksSplitSort\Laravel\TasksSplitSortSeampactServiceProvider::class,
+    App\Generated\InputRules\Laravel\InputRulesSeampactServiceProvider::class,
     App\Providers\SuiteServiceProvider::class,
     App\Providers\PagingServiceProvider::class,
 ];

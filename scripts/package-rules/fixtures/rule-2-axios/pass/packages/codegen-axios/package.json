@@ -1,0 +1,23 @@
+{
+  "name": "@seampact/codegen-axios",
+  "version": "0.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jubasse/seampact.git",
+    "directory": "packages/codegen-axios"
+  },
+  "homepage": "https://jubasse.github.io/seampact/",
+  "bugs": {
+    "url": "https://github.com/jubasse/seampact/issues"
+  },
+  "license": "MIT",
+  "private": true,
+  "seampact": {
+    "role": "target"
+  },
+  "peerDependencies": {
+    "@seampact/codegen-core": "*",
+    "@seampact/codegen-fetch": "*",
+    "@seampact/spec": "*"
+  }
+}

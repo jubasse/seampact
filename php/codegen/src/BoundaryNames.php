@@ -28,6 +28,9 @@ interface BoundaryNames
     /** The api's own `UnexpectedErrorListener` interface, the container key the runtime looks the app's listener up by. */
     public function unexpectedErrorListener(): string;
 
+    /** The api's own input rules interface, the contract types entry the runtime checks rule sets against; null for a target that runs no input rules yet. */
+    public function inputRules(): ?string;
+
     /** The full name of the runtime class `$simpleName`, in the target's runtime namespace or the shared one. */
     public function runtime(string $simpleName): string;
 }

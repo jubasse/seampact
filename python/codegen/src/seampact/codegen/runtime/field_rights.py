@@ -1,8 +1,8 @@
-"""Field rights (ADR 0012 "Field rights"): step 7 refuses a restricted top-level input member sent without its right,
-or leaves it out under `inputPolicy: strip`; before a success is written, each restricted output member whose right
-the decider denies for its holder is left out, one decision per right, use-site params, pointer and subject, and a
-member the contract never sends on the operation (`always: absent`) is left out without a decision. Each returns a
-copy; the tree it reads is never changed."""
+"""Field rights (ADR 0012 section 6, Restricted fields): step 7 refuses a restricted top-level input member sent
+without its right, or leaves it out under `inputPolicy: strip`; before a success is written, each restricted output
+member whose right the decider denies for its holder is left out, one decision per right, use-site params, pointer and
+subject, and a member the contract never sends on the operation (`always: absent`) is left out without a decision. Each
+returns a copy; the tree it reads is never changed."""
 
 import copy
 import json

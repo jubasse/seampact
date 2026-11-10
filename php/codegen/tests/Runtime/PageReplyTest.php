@@ -79,7 +79,7 @@ final class PageReplyTest extends TestCase
         PageReply::render($state, 'per_page=2', '/v1/items', [['id' => 'a']], ['total' => 1], 200);
     }
 
-    private static function lookup(): HookLookup
+    public static function lookup(): HookLookup
     {
         return new class () implements HookLookup {
             public function authenticateHook(ApiContract $contract, string $identity): AuthenticateHook

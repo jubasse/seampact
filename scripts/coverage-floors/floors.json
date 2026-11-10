@@ -68,6 +68,10 @@
       "lines": 97,
       "branches": 67
     },
+    "packages/targets/codegen-axios": {
+      "lines": 95,
+      "branches": 70
+    },
     "packages/targets/codegen-class-validator": {
       "lines": 89,
       "branches": 78
@@ -96,6 +100,10 @@
       "lines": 93,
       "branches": 79
     },
+    "packages/targets/codegen-nextjs": {
+      "lines": 99,
+      "branches": 99
+    },
     "packages/targets/codegen-react": {
       "lines": 98,
       "branches": 64
@@ -123,6 +131,9 @@
     "packages/tools/http-suite": {
       "lines": 90,
       "branches": 81
+    },
+    "php/api-platform": {
+      "lines": 70
     },
     "php/codegen": {
       "lines": 61

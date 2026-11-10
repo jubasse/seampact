@@ -4,7 +4,7 @@ Repository conventions every agent follows. Your task prompt adds the task, the 
 
 ## Before you start
 
-- Read `docs/agents/cartography.md` before exploring: packages, roles, compiler stages and one line per source directory.
+- `docs/agents/cartography.md` maps packages, roles, compiler stages and one line per directory, so work is not duplicated: an implementer or refactor agent reads it whole before writing; other roles `rg` it for the directory or topic they need.
 - Product decisions are in `docs/decisions.md` (cited as `A<n>`), design in `docs/adr/`.
 - Read a decision by grepping its anchor (`rg -n 'id="a44"' docs/decisions.md`), then the lines after it; never read `docs/decisions.md` whole.
 - Read the grammar and the IR by section file: `docs/grammar/` (ADR 0002, one `<NN>-<slug>.md` per section NN, plus `example.md`) and `docs/ir/` (ADR 0004, same naming). The ADR keeps the summary and a section-to-file table.
@@ -19,7 +19,7 @@ Repository conventions every agent follows. Your task prompt adds the task, the 
 
 ## Gates
 
-- Local gate: the affected tests (`pnpm vitest run <paths>`) and `pnpm typecheck`; for `jvm/`, `./gradlew :<module>:test` there; for `python/`, from `python/` with `UV_PYTHON_INSTALL_BIN=0`: `uv run --locked mypy` and `uv run --locked pytest <paths>`.
+- Local gate: the affected tests (`pnpm vitest run <paths>`) and `pnpm typecheck`; for `jvm/`, `./gradlew :<module>:test` there; for `python/`, from `python/` with `UV_PYTHON_INSTALL_BIN=0`: `uv run --locked mypy` and `uv run --locked pytest <paths>`. Before hand-back, also `pnpm exec eslint` on the `.ts` files you touched: the pre-commit hook runs biome only, and eslint rules (blank lines between statements) fail CI.
 - CI is the full gate: lint, format, checklist, cartography and the target matrix run there, not locally. A CI failure on your branch comes back to you as a follow-up.
 - The pre-commit hook (installed by `pnpm install`) refuses added lines citing `LD-<n>` or `.work/`, then formats and lints with biome the staged files it handles; a file that also has unstaged changes is skipped, so stage whole files.
 - A test failure is a flake only once that test passes alone (name it in the hand-back); otherwise it is a failure.
@@ -52,8 +52,9 @@ Repository conventions every agent follows. Your task prompt adds the task, the 
 
 ## Development phase (A47)
 
-- Reach the end-to-end slice first; do not add `docs/conformance/proofs/` entries or per-branch fixtures.
-- Unit tests for bricks that will not move (IR format, YAML reader, naming); other code is covered by the slice's end-to-end test; a bug fix still gets a test that failed before.
+- Reach the version's end-to-end slice first; do not add `docs/conformance/proofs/` entries or per-branch fixtures.
+- Proofs come in the version's testing phase, before its release: point to an existing unit test, http suite case or CI job first (`rg` the checklist id); write a new one only when none covers the behaviour.
+- Unit tests for bricks that will not move (IR format, YAML reader, naming); other code is covered by the end-to-end slice; a bug fix still gets a test that failed before.
 - A case no consumer needs yet is refused by name with a diagnostic, never modelled.
 - One deliverable per PR (about 3,000 to 4,000 hand-written lines); at the call cap, relay on the same branch; a seam others wait on stays small and lands first.
 

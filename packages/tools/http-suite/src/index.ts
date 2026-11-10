@@ -33,6 +33,13 @@ export {
   formatReaderOf,
   type ReadBody,
 } from "./format-reader.js";
+export {
+  INPUT_RULES_CASE_ID,
+  type InputRulePointers,
+  inputRulePointerVariables,
+  inputRulesNotYetRefusal,
+  ROOT_INPUT_RULE_POINTERS,
+} from "./input-rules-case.js";
 export { CASES_DIRECTORY, loadSuiteCases } from "./load-cases.js";
 export type { SentRequest } from "./operation-match.js";
 export { type PackProfile, packProfileName, packProfileOf } from "./pack-profile.js";
@@ -51,6 +58,7 @@ export {
   decideHookName,
   HOLD_HOOK_NAME,
   HOLD_LIMIT_MS,
+  inputRuleHookName,
   OVERRIDDEN_RIGHT,
   operationKey,
   overriddenDecideHookName,

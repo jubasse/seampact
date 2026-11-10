@@ -4,7 +4,7 @@ import java.io.StringReader
 import java.util.Properties
 
 /**
- * The binary a plugin release pins (ADR 0010, "Distribution and pinning"): one compiler [version] and the SHA-256 of
+ * The binary a plugin release pins (ADR 0010 section 5, The standalone compiler binary): one compiler [version] and the SHA-256 of
  * its binary on every platform. A plugin jar embeds it as [RESOURCE_NAME], written at plugin build time from the
  * release `SHA256SUMS`; a consumer overrides it with a version and all its hashes, or with a local path and one hash.
  */

@@ -16,7 +16,7 @@ Gradle, in `build.gradle.kts` and `settings.gradle.kts`:
 
 ```kotlin
 plugins {
-    id("io.github.jubasse.seampact") version "1.0.0"
+    id("io.github.jubasse.seampact") version "1.1.0"
 }
 ```
 
@@ -29,7 +29,7 @@ pluginManagement {
 }
 ```
 
-The Gradle Plugin Portal is still reviewing the plugin. Until it approves, Gradle loads the plugin from Maven Central, which `mavenCentral()` above already adds.
+Gradle loads the plugin from the Gradle Plugin Portal. `mavenCentral()` above also lets it load the plugin from Maven Central, for a release the Portal does not serve yet.
 
 Maven, in `pom.xml`:
 
@@ -37,7 +37,7 @@ Maven, in `pom.xml`:
 <plugin>
   <groupId>io.github.jubasse</groupId>
   <artifactId>seampact-maven-plugin</artifactId>
-  <version>1.0.0</version>
+  <version>1.1.0</version>
 </plugin>
 ```
 
@@ -57,7 +57,13 @@ For Symfony:
 composer require seampact/symfony
 ```
 
-The packages are read-only mirrors of this repository: report problems on GitHub, not on the mirror. Follow the [Laravel](../backend/laravel.md) or [Symfony](../backend/symfony.md) guide.
+For API Platform 5 (on Symfony):
+
+```sh
+composer require seampact/api-platform api-platform/symfony
+```
+
+The packages are read-only mirrors of this repository: report problems on GitHub, not on the mirror. Follow the [Laravel](../backend/laravel.md), [Symfony](../backend/symfony.md) or [API Platform](../backend/api-platform.md) guide.
 
 ## PyPI
 
@@ -99,4 +105,4 @@ sh ~/src/seampact/scripts/consumers/python/build-wheels.sh ~/src/seampact/python
 pip install --no-index --find-links ~/src/seampact/python/dist
 ```
 
-Next: the guide of your framework, [Spring Boot](../backend/spring-boot.md), [Laravel](../backend/laravel.md), [Symfony](../backend/symfony.md), [FastAPI](../backend/fastapi.md), [Django REST Framework](../backend/drf.md) or [Django Ninja](../backend/ninja.md).
+Next: the guide of your framework, [Spring Boot](../backend/spring-boot.md), [Laravel](../backend/laravel.md), [Symfony](../backend/symfony.md), [API Platform](../backend/api-platform.md), [FastAPI](../backend/fastapi.md), [Django REST Framework](../backend/drf.md) or [Django Ninja](../backend/ninja.md).

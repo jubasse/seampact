@@ -1,0 +1,124 @@
+# docs/conformance/proofs/proofs-servers-served.yaml
+# The ids the Next.js and API Platform servers serve: Next.js shares the Node servers' generation tests, API Platform
+# generates the Symfony target's tree but for its own files, so the Symfony tests of the shared files count for it.
+lane: proofs-servers-served
+proofs:
+  - id: CHK-044
+    tests:
+      - "nextjs: packages/targets/codegen-nextjs/src/generation-proofs.test.ts#an error is a union on its code: a declared code type-checks, an undeclared one does not"
+      - "nextjs: packages/targets/codegen-nextjs/src/generation-proofs.test.ts#each error code of the registry is defined once, as a constant of the api"
+      - "api-platform: php/api-platform/tests/GoldenTest.php#testTheGeneratedTreeIsTheCommittedGolden"
+      - "api-platform: php/api-platform/tests/GoldenTest.php#testEveryOtherFileIsTheSymfonyTargets"
+  - id: CHK-061
+    tests:
+      - "nextjs: packages/targets/codegen-nextjs/src/generation-proofs.test.ts#a handler whose status, error code or body the operation does not declare fails to type-check"
+      - "api-platform: php/symfony/tests/HandlerReturnTypeTest.php#testAHandlerReturningItsOperationsResultLoads"
+      - "api-platform: php/symfony/tests/HandlerReturnTypeTest.php#testAHandlerReturningAnotherTypeThanItsOperationsResultIsRefusedWhenTheClassLoads"
+      - "api-platform: php/symfony/tests/HandlerReturnTypeTest.php#testAHandlerReturningAnotherOperationsResultIsRefusedWhenTheClassLoads"
+      - "api-platform: php/api-platform/tests/GoldenTest.php#testEveryOtherFileIsTheSymfonyTargets"
+  - id: CHK-066
+    tests:
+      - "nextjs: packages/targets/codegen-nextjs/src/generation-proofs.test.ts#the idempotency store is the documented IdempotencyStore interface and the reference store implements it"
+  - id: CHK-077
+    tests:
+      - "nextjs: packages/targets/codegen-nextjs/src/generation-proofs.test.ts#an irVersion outside the range the target reads is refused by name"
+      - "api-platform: php/ir/tests/IrReaderTest.php#testRefusesOtherVersion"
+      - "api-platform: php/ir/tests/IrReaderTest.php#testRefusesOtherRevision"
+  - id: CHK-078
+    tests:
+      - "nextjs: packages/targets/codegen-nextjs/src/generation-proofs.test.ts#an unknown IR field is ignored and an unknown kind is refused by name"
+      - "api-platform: php/ir/tests/IrReaderTest.php#testDropsUnknownMembersOnly"
+      - "api-platform: php/ir/tests/IrReaderTest.php#testRefusesUnknownKind"
+  - id: CHK-086
+    tests:
+      - "nextjs: packages/targets/codegen-nextjs/src/generation-proofs.test.ts#the decide request is typed per right and rule of the contract"
+      - "nextjs: packages/targets/codegen-nextjs/src/generation-proofs.test.ts#the decide request of a right carries the right's declared params type"
+      - "nextjs: packages/targets/codegen-nextjs/src/generation-proofs.test.ts#the decide request of a rule carries the rule's declared params type"
+      - "nextjs: packages/targets/codegen-nextjs/src/generation-proofs.test.ts#the decide request of a right or rule without params admits no params"
+      - "api-platform: php/symfony/tests/TypedRequirementParamsTest.php#testTheDecideRequestOfARightCarriesItsGeneratedParamsClass"
+      - "api-platform: php/symfony/tests/TypedRequirementParamsTest.php#testTheDecideRequestOfARuleCarriesItsGeneratedParamsClass"
+      - "api-platform: php/symfony/tests/TypedRequirementParamsTest.php#testTheDecideRequestOfARightWithoutParamsCarriesNone"
+      - "api-platform: php/api-platform/tests/GoldenTest.php#testEveryOtherFileIsTheSymfonyTargets"
+  - id: CHK-099
+    tests:
+      - "nextjs: packages/targets/codegen-nextjs/src/generation-proofs.test.ts#one neutral hook per concern, a registration export and the boot check"
+      - "api-platform: php/api-platform/tests/GoldenTest.php#testTheGeneratedTreeIsTheCommittedGolden"
+      - "api-platform: php/symfony/tests/HookCheckWarmerTest.php#testAWrongTypedIdempotencyStoreIsListedWithTheOtherProblems"
+  - id: CHK-154
+    tests:
+      - "nextjs: packages/targets/codegen-nextjs/src/generation-proofs.test.ts#no framework controller is generated: the developer implements the generated handler interface"
+      - "nextjs: packages/targets/codegen-nextjs/src/generation-proofs.test.ts#every generated path stays below the output directory"
+      - "api-platform: php/api-platform/tests/GoldenTest.php#testTheGeneratedTreeIsTheCommittedGolden"
+      - "api-platform: php/ir/tests/Config/ConfigReaderTest.php#testAnAppWithoutAnOutDirWritesEachTargetUnderGenerated"
+      - "api-platform: php/ir/tests/Write/GeneratedWriterTest.php#testRefusesPathsThatLeaveTheOutputDirectory"
+  - id: CHK-103
+    tests:
+      - "api-platform: php/api-platform/tests/GoldenTest.php#testASecondRunUnderAnotherTimeZoneWritesTheSameTree"
+      - "nextjs: scripts/determinism/generation-matrix.test.ts#generation determinism nextjs generates the same bytes on every run, under another TZ and LANG, and from the included form"
+  - id: CHK-155
+    tests:
+      - "api-platform: php/api-platform/tests/GoldenTest.php#testTheGeneratedTreeIsTheCommittedGolden"
+      - "api-platform: php/symfony/tests/GeneratedPlacementTest.php#testTheLoaderServesItsOwnApiAndRegistersALiteralSegmentBeforeAPlaceholder"
+      - "api-platform: php/symfony/tests/GeneratedPlacementTest.php#testTheControllerPassRunsBeforeTheControllerLocatorIsBuilt"
+      - "api-platform: php/api-platform/tests/GoldenTest.php#testEveryOtherFileIsTheSymfonyTargets"
+  - id: CHK-158
+    tests:
+      - "api-platform: php/symfony/tests/AbsentVersusNullTest.php#testAnAbsentMemberReachesTheHandlerAsAbsentAndAnExplicitNullAsNull"
+      - "api-platform: php/api-platform/tests/GoldenTest.php#testEveryOtherFileIsTheSymfonyTargets"
+  - id: CHK-159
+    tests:
+      - "api-platform: php/symfony/tests/Runtime/InputConstraintTest.php#testAnObjectInPlaceOfAListIsATypeIssueAtTheMemberAndAnEmptyListPasses"
+      - "api-platform: php/symfony/tests/Runtime/InputConstraintTest.php#testAnUnknownKeyIsAnIssueAtItsOwnPointerUnlessTheObjectKeepsIt"
+      - "api-platform: php/symfony/tests/Runtime/InputConstraintTest.php#testAnIntegerTakesAWholeNumberInTheSafeRangeAndRefusesALargerOneAsItsBound"
+      - "api-platform: php/codegen/tests/Runtime/WireCodecTest.php#testAnEmptyTableAndAnEmptyObjectAreWrittenAsBracesAndAnEmptyListAsBrackets"
+      - "api-platform: php/api-platform/tests/GoldenTest.php#testEveryOtherFileIsTheSymfonyTargets"
+  - id: CHK-162
+    tests:
+      - "api-platform: php/symfony/tests/GeneratedPlacementTest.php#testEachAccessKindHasARequestMatcherServiceThatMatchesOnlyItsOperations"
+      - "api-platform: php/symfony/tests/Runtime/ExceptionRolesTest.php#testAnHttpExceptionOf401403404429Or503TakesTheRoleOfItsStatus"
+      - "api-platform: php/symfony/tests/Runtime/ExceptionRolesTest.php#testTheRateLimitersDelayComesBeforeTheResponsesRetryAfter"
+      - "api-platform: php/api-platform/tests/GoldenTest.php#testEveryOtherFileIsTheSymfonyTargets"
+  - id: CHK-168
+    tests:
+      - "api-platform: php/symfony/tests/RedactionTest.php#testVarDumpShowsNoSecret"
+      - "api-platform: php/symfony/tests/RedactionTest.php#testPrintRShowsNoSecret"
+      - "api-platform: php/api-platform/tests/GoldenTest.php#testEveryOtherFileIsTheSymfonyTargets"
+  - id: CHK-174
+    tests:
+      - "api-platform: php/api-platform/tests/ApiPlatformBoundarySubscriberTest.php#testAProcessorRefusesARequestTheBoundaryDidNotAdmit"
+      - "api-platform: php/api-platform/tests/ApiPlatformBoundarySubscriberTest.php#testAProcessorRefusesAContextWithoutARequest"
+  - id: CHK-104
+    tests:
+      - "api-platform: scripts/package-rules/package-rules.test.ts#passes on the repository"
+      - "api-platform: scripts/package-rules/package-rules.test.ts#namespaces and no publish"
+  - id: CHK-076
+    tests:
+      - "api-platform: ci: api-platform.yml#e2e"
+      - "api-platform: ci: p6-php-core.yml#local-yaml"
+      - "api-platform: php/ir/tests/Bundle/BundleVectorsTest.php#testExtractsTheValidArchiveIntoAPrivateDirectoryThatVerifies"
+      - "api-platform: php/ir/tests/Binary/BinaryPinTest.php#testAStubWithAWrongHashNeverStarts"
+      - "api-platform: php/ir/tests/Binary/BinaryStubRunTest.php#testRunsTheCopyAndReadsTheIrOfEachApi"
+  - id: CHK-085
+    fixtures: [fixtures/golden/reference]
+    tests:
+      - "api-platform: ci: api-platform.yml#e2e"
+  - id: CHK-100
+    fixtures: [fixtures/golden/pack-api-platform]
+    tests:
+      - "api-platform: ci: api-platform.yml#e2e"
+  - id: CHK-167
+    fixtures: [fixtures/golden/pack-api-platform]
+    tests:
+      - "api-platform: ci: api-platform.yml#e2e"
+      - "core: packages/targets/codegen-nextjs/src/forms-refused.test.ts#the forms 1.0 refuses on Next.js the API Platform pack's pages is refused by name"
+  - id: CHK-028
+    tests:
+      - "api-platform: ci: api-platform.yml#e2e"
+  - id: CHK-031
+    tests:
+      - "api-platform: ci: api-platform.yml#e2e"
+  - id: CHK-170
+    tests:
+      - "api-platform: packages/core/cli/src/config/document-plan.test.ts#writes every document of every api a server target serves when the app has no openapi key"
+      - "api-platform: packages/core/cli/src/config/document-plan.test.ts#writes no document for an app with client targets only, or with openapi none"
+      - "api-platform: packages/core/cli/src/commands/native-docs.test.ts#nativeDocs is off by default and needs the boundary"

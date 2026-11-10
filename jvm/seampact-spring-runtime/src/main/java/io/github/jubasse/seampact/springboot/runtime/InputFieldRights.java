@@ -14,7 +14,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * Step 7 of the check order (ADR 0012 "Field rights"): a restricted input field sent without its right is refused
+ * Step 7 of the check order (ADR 0012 section 6, Restricted fields): a restricted input field sent without its right is refused
  * with its pointer, or removed from the body under `inputPolicy: strip`. Only top-level members are restricted.
  */
 final class InputFieldRights {

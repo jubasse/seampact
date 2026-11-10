@@ -1,15 +1,75 @@
-// What the 1.0 release gate does not require: the targets and the checklist items that come after 1.0, each item
-// with its reason. A release policy over the checklist, which stays the list of facts.
+// What the release gate does not require in the version it gates (1.1.0): the checklist items it leaves out, each
+// with its reason, and the declared deferrals of a suite case a server refuses until a later version. A release
+// policy over the checklist, which stays the list of facts.
+import {
+  INPUT_RULES_CASE_ID,
+  inputRulesNotYetRefusal,
+} from "../../packages/tools/http-suite/src/input-rules-case.ts";
 import type { Item, Problem } from "./model.ts";
-import { expandTargets, SERVER_TARGETS } from "./targets.ts";
+import { CONCRETE_TARGETS, expandTargets, SERVER_TARGETS } from "./targets.ts";
 
 export const RELEASE_SCOPE_FILE = "scripts/checklist/release-scope.ts";
 
-/** Targets the 1.0 release gate does not require: API Platform comes after v1. */
-export const TARGETS_AFTER_1_0: readonly string[] = ["api-platform"];
+/** The version the release gate gates. */
+export const GATED_VERSION = "1.1.0";
 
-/** An item the 1.0 gate does not require: on the targets named, or on all its targets without `targets`. */
-export interface ItemAfter1_0 {
+/** The targets the gate does not require yet, each with its reason: every pair of the target waits. */
+export const DEFERRED_TARGETS: ReadonlyMap<string, string> = new Map([]);
+
+/**
+ * A suite case that servers refuse by name until a later version: its refusal no longer turns a profile id refused.
+ * The refusal test is the consumer's own suite refusals, which hold the case under the declared reason; the
+ * checklist tests import each consumer's refusals and check it.
+ */
+export interface DeclaredDeferral {
+  readonly caseId: string;
+  readonly targets: readonly string[];
+  /** The reason the report gives the refused case on a target. */
+  readonly reasonOn: (target: string) => string;
+}
+
+const INPUT_RULES_RELEASE = "1.2.0";
+
+const inputRulesReasonOn = (target: string): string =>
+  inputRulesNotYetRefusal(target, INPUT_RULES_RELEASE)[INPUT_RULES_CASE_ID] ?? "";
+
+export const DECLARED_DEFERRALS: readonly DeclaredDeferral[] = [
+  {
+    caseId: INPUT_RULES_CASE_ID,
+    targets: ["spring-boot", "fastapi", "drf", "ninja", "api-platform"],
+    reasonOn: inputRulesReasonOn,
+  },
+];
+
+/** Whether a report's refused case is a declared deferral on [target]: its id and its exact reason. */
+export function isDeclaredDeferral(
+  deferrals: readonly DeclaredDeferral[],
+  caseId: string,
+  target: string,
+  reason: string | undefined,
+): boolean {
+  return deferrals.some(
+    (deferral) =>
+      deferral.caseId === caseId &&
+      deferral.targets.includes(target) &&
+      deferral.reasonOn(target) === reason,
+  );
+}
+
+/** Each declared deferral on a target that is no server. */
+export function declaredDeferralProblems(deferrals: readonly DeclaredDeferral[]): Problem[] {
+  return deferrals.flatMap((deferral) =>
+    deferral.targets
+      .filter((target) => !SERVER_TARGETS.includes(target))
+      .map((target) => ({
+        file: RELEASE_SCOPE_FILE,
+        message: `declared deferral of ${deferral.caseId} on ${target}, not a server target`,
+      })),
+  );
+}
+
+/** An item the gate does not require: on the targets named, or on all its targets without `targets`. */
+export interface ItemDeferred {
   readonly targets?: readonly string[];
   readonly reason: string;
   /** Targets on which generation refuses the form by name; each needs a refusal test in a proof file. */
@@ -18,7 +78,6 @@ export interface ItemAfter1_0 {
 
 const SCALE_CAPACITY =
   "generated code at scale: no behaviour a fix would change; scripts/golden/scale.test.ts proves the core pair";
-const API_PLATFORM_AFTER_V1 = "API Platform comes after v1";
 
 const ADAPTERS: readonly string[] = ["nestjs-casl", "laravel-spatie"];
 const ADAPTERS_IN_1_1 = "the CASL and spatie adapters ship in 1.1 (A24 amended)";
@@ -26,62 +85,76 @@ const VALIDATORS: readonly string[] = ["zod", "yup", "class-validator"];
 const UNKNOWN_KEYS_POLICIES =
   "1.0 refuses the unknown keys policies ignore and keep of an operation input by name at generation, on the validators targets";
 
-// The servers the gate requires: every generator refuses the access forms below by name, so each of them is deferred
-// with its refusal tested.
-export const SERVERS_FOR_1_0: readonly string[] = SERVER_TARGETS.filter(
-  (target) => !TARGETS_AFTER_1_0.includes(target),
-);
+export const SERVERS_WITH_TESTED_REFUSALS: readonly string[] = SERVER_TARGETS;
 
-const NODE_SERVERS: readonly string[] = ["nestjs", "fastify", "express", "adonis", "hono"];
+const NODE_SERVERS: readonly string[] = [
+  "nestjs",
+  "fastify",
+  "express",
+  "adonis",
+  "hono",
+  "nextjs",
+];
 
 const PYTHON_SERVERS: readonly string[] = ["fastapi", "drf", "ninja"];
 
-const PHP_AND_PYTHON_SERVERS: readonly string[] = ["laravel", "symfony", ...PYTHON_SERVERS];
+const PHP_AND_PYTHON_SERVERS: readonly string[] = [
+  "laravel",
+  "symfony",
+  "api-platform",
+  ...PYTHON_SERVERS,
+];
 
 const VARIANTS_FORM =
   "a principal with variants (viewer_or_device) and, on the Node servers, optional authentication";
 
 // The servers whose generators read the IR without Node: the JVM and PHP targets.
-const JVM_AND_PHP_SERVERS: readonly string[] = ["spring-boot", "laravel", "symfony"];
+const JVM_AND_PHP_SERVERS: readonly string[] = [
+  "spring-boot",
+  "laravel",
+  "symfony",
+  "api-platform",
+];
 
 // The targets whose generators refuse the body and query forms below by name, each with a refusal test.
 const BODY_AND_QUERY_FORMS_REFUSED_ON: readonly string[] = [
   "fetch",
+  "axios",
   ...NODE_SERVERS,
   ...JVM_AND_PHP_SERVERS,
   ...PYTHON_SERVERS,
 ];
 
-const refusedForm = (form: string, targets: readonly string[]): ItemAfter1_0 => ({
+const refusedForm = (form: string, targets: readonly string[]): ItemDeferred => ({
   targets,
   refusedOn: targets,
   reason: `1.0 refuses ${form} by name at generation on ${targets.join(", ")}`,
 });
 
-const refusedOnEveryServer = (form: string): ItemAfter1_0 => ({
-  targets: SERVERS_FOR_1_0,
-  refusedOn: SERVERS_FOR_1_0,
+const refusedOnEveryServer = (form: string): ItemDeferred => ({
+  targets: SERVERS_WITH_TESTED_REFUSALS,
+  refusedOn: SERVERS_WITH_TESTED_REFUSALS,
   reason: `1.0 refuses ${form} by name at generation`,
 });
 
-const refusedOnTheNodeServers = (form: string): ItemAfter1_0 => ({
+const refusedOnTheNodeServers = (form: string): ItemDeferred => ({
   targets: NODE_SERVERS,
   refusedOn: NODE_SERVERS,
   reason: `1.0 refuses ${form} by name at generation on the Node servers`,
 });
 
 // A response form every server and the clients named refuse by name.
-const refusedOnEveryServerAndClient = (form: string, clients: readonly string[]): ItemAfter1_0 => ({
-  targets: [...SERVERS_FOR_1_0, ...clients],
-  refusedOn: [...SERVERS_FOR_1_0, ...clients],
+const refusedOnEveryServerAndClient = (form: string, clients: readonly string[]): ItemDeferred => ({
+  targets: [...SERVERS_WITH_TESTED_REFUSALS, ...clients],
+  refusedOn: [...SERVERS_WITH_TESTED_REFUSALS, ...clients],
   reason: `1.0 refuses ${form} by name at generation on every server and in ${clients.join(" and ")}`,
 });
 
-/** The after-1.0 list from its entries; an id listed twice is refused by name, as a Map would keep the last one. */
-export function indexItemsAfter1_0(
-  entries: readonly (readonly [string, ItemAfter1_0])[],
-): ReadonlyMap<string, ItemAfter1_0> {
-  const index = new Map<string, ItemAfter1_0>();
+/** The deferred list from its entries; an id listed twice is refused by name, as a Map would keep the last one. */
+export function indexItemsDeferred(
+  entries: readonly (readonly [string, ItemDeferred])[],
+): ReadonlyMap<string, ItemDeferred> {
+  const index = new Map<string, ItemDeferred>();
 
   for (const [id, deferred] of entries) {
     if (index.has(id)) throw new Error(`release-scope.ts lists ${id} twice; merge its entries.`);
@@ -92,10 +165,10 @@ export function indexItemsAfter1_0(
   return index;
 }
 
-export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = indexItemsAfter1_0([
-  ["CHK-001", { targets: ["fetch", "nestjs"], reason: SCALE_CAPACITY }],
-  ["CHK-002", { targets: ["fetch", "nestjs"], reason: SCALE_CAPACITY }],
-  ["CHK-003", { targets: ["fetch"], reason: SCALE_CAPACITY }],
+export const ITEMS_DEFERRED: ReadonlyMap<string, ItemDeferred> = indexItemsDeferred([
+  ["CHK-001", { targets: ["fetch", "axios", "nestjs"], reason: SCALE_CAPACITY }],
+  ["CHK-002", { targets: ["fetch", "axios", "nestjs"], reason: SCALE_CAPACITY }],
+  ["CHK-003", { targets: ["fetch", "axios"], reason: SCALE_CAPACITY }],
   ["CHK-004", refusedOnEveryServer(VARIANTS_FORM)],
   ["CHK-006", refusedOnEveryServer(VARIANTS_FORM)],
   [
@@ -128,7 +201,7 @@ export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = indexItemsAfte
   [
     "CHK-189",
     {
-      targets: SERVERS_FOR_1_0,
+      targets: SERVERS_WITH_TESTED_REFUSALS,
       refusedOn: NODE_SERVERS,
       reason:
         "1.0 refuses `idempotency.enforce: none` by name at generation on the Node servers; Spring Boot, Laravel, Symfony, FastAPI, DRF and Ninja generate it, not covered by the 1.0 suite",
@@ -151,7 +224,7 @@ export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = indexItemsAfte
   ["CHK-152", refusedForm("a file download", BODY_AND_QUERY_FORMS_REFUSED_ON)],
   ["CHK-160", refusedForm("a query list in brackets form", BODY_AND_QUERY_FORMS_REFUSED_ON)],
   ["CHK-163", refusedOnEveryServer("native access (accessHooks: false)")],
-  ...["CHK-074", "CHK-077", "CHK-078", "CHK-103"].map((id): [string, ItemAfter1_0] => [
+  ...["CHK-074", "CHK-077", "CHK-078", "CHK-103"].map((id): [string, ItemDeferred] => [
     id,
     { targets: ADAPTERS, reason: ADAPTERS_IN_1_1 },
   ]),
@@ -160,25 +233,25 @@ export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = indexItemsAfte
   [
     "CHK-048",
     {
-      targets: ["fetch"],
+      targets: ["fetch", "axios"],
       refusedOn: ["fetch"],
       reason:
-        "1.0 refuses an open enum's fallback by name at generation, in the types the fetch client is generated beside",
+        "1.0 refuses an open enum's fallback by name at generation, in the types a client is generated beside: the axios client generates no types of its own, so the refusal is the types target's, proved beside the fetch client",
     },
   ],
   [
     "CHK-125",
     {
-      targets: ["fetch"],
+      targets: ["fetch", "axios"],
       reason:
-        "the generated fetch client carries no retry rule taken from the base nature of a code; the front targets retry a rejection and never a declared error, so a rule by nature is additive",
+        "the generated fetch and axios clients carry no retry rule taken from the base nature of a code (the axios adapter retries nothing, and a retry interceptor of the app's instance is the app's); the front targets retry a rejection and never a declared error, so a rule by nature is additive",
     },
   ],
   [
     "CHK-126",
     {
-      targets: ["fetch"],
-      refusedOn: ["fetch"],
+      targets: ["fetch", "axios"],
+      refusedOn: ["fetch", "axios"],
       reason:
         "1.0 refuses an error format that writes the code only inside a text template by name at generation, so the client does not recover a code from a template",
     },
@@ -220,9 +293,9 @@ export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = indexItemsAfte
   [
     "CHK-162",
     {
-      targets: ["express", "fastify", "hono", "fastapi"],
+      targets: ["express", "fastify", "hono", "nextjs", "fastapi"],
       reason:
-        "express, fastify, hono and fastapi generate no native access export, and express, fastify and hono map no framework security refusals, since those frameworks ship none of their own and the app's middleware owns them: additive artefacts a later release can add",
+        "express, fastify, hono, nextjs and fastapi generate no native access export, and express, fastify, hono and nextjs map no framework security refusals, since those frameworks ship none of their own and the app's middleware owns them: additive artefacts a later release can add",
     },
   ],
   [
@@ -243,10 +316,25 @@ export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = indexItemsAfte
     },
   ],
   [
+    "CHK-029",
+    {
+      targets: ["nextjs"],
+      reason:
+        "Next.js redirects a path with '//' with a 308 before the route handler runs, so the api's 404 for it is not reachable (ADR 0030, Routes); the other framework refusals render in the declared error format",
+    },
+  ],
+  ...["CHK-062", "CHK-063", "CHK-147", "CHK-161"].map((id): [string, ItemDeferred] => [
+    id,
+    {
+      targets: ["nextjs"],
+      reason:
+        "Next.js has no boot check: the app routes by file, so no route scan runs at boot (ADR 0030), and CHK-062 and CHK-063 name it their exception, so the suite cases that prove CHK-062 skip it; the suite part of CHK-074 still proves its default profile",
+    },
+  ]),
+  [
     "CHK-072",
     { reason: "internal installs before publication (A3), gone once the packages are published" },
   ],
-  ["CHK-085", { reason: API_PLATFORM_AFTER_V1 }],
   [
     "CHK-088",
     {
@@ -254,7 +342,6 @@ export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = indexItemsAfte
         "internal PHP packaging, covered by the PHP split job that installs each mirror alone",
     },
   ],
-  ["CHK-100", { reason: API_PLATFORM_AFTER_V1 }],
   [
     "CHK-102",
     {
@@ -275,88 +362,97 @@ export const ITEMS_AFTER_1_0: ReadonlyMap<string, ItemAfter1_0> = indexItemsAfte
   ],
   ["CHK-148", { reason: "opt-in vendored hooks (A40), off by default" }],
   ["CHK-165", { reason: "opt-in nativeDocs artefact (A43), off by default" }],
-  ["CHK-167", { reason: API_PLATFORM_AFTER_V1 }],
   ["CHK-176", { reason: "internal fixture completeness; the classification itself is CHK-175" }],
   [
     "CHK-022",
-    refusedOnEveryServerAndClient("a response header the route writes itself", ["fetch"]),
+    refusedOnEveryServerAndClient("a response header the route writes itself", ["fetch", "axios"]),
   ],
-  ["CHK-024", refusedOnEveryServerAndClient("a tagged union", ["zod", "fetch"])],
-  ["CHK-027", refusedOnEveryServerAndClient("a degradable operation", ["fetch"])],
+  ["CHK-024", refusedOnEveryServerAndClient("a tagged union", ["zod", "fetch", "axios"])],
+  ["CHK-027", refusedOnEveryServerAndClient("a degradable operation", ["fetch", "axios"])],
   [
     "CHK-058",
     {
-      targets: ["fetch"],
-      refusedOn: ["fetch"],
-      reason: "1.0 refuses a deprecated operation by name at generation in the fetch client",
+      targets: ["fetch", "axios"],
+      refusedOn: ["fetch", "axios"],
+      reason:
+        "1.0 refuses a deprecated operation by name at generation in the fetch and axios clients",
     },
   ],
-  ["CHK-153", refusedOnEveryServerAndClient("a redirect response", ["fetch"])],
+  [
+    "CHK-070",
+    {
+      targets: ["axios"],
+      reason:
+        "the standalone consumer project drives the fetch client and none exists for axios; the axios client generates the fetch client's files, which the axios client tests run over real HTTP on axios",
+    },
+  ],
+  ["CHK-153", refusedOnEveryServerAndClient("a redirect response", ["fetch", "axios"])],
 ]);
 
-/** Whether the 1.0 gate leaves the pair of [id] and [target] for after 1.0. */
+/** Whether the gate leaves the pair of [id] and [target] out of its scope. */
 export function isDeferredPair(
-  itemsAfter1_0: ReadonlyMap<string, ItemAfter1_0>,
+  itemsDeferred: ReadonlyMap<string, ItemDeferred>,
   id: string,
   target: string,
 ): boolean {
-  if (TARGETS_AFTER_1_0.includes(target)) return true;
+  if (DEFERRED_TARGETS.has(target)) return true;
 
-  const deferred = itemsAfter1_0.get(id);
+  const deferred = itemsDeferred.get(id);
 
   return deferred !== undefined && (deferred.targets?.includes(target) ?? true);
 }
 
-/** The targets of an item the release gate requires: its concrete targets without the pairs after 1.0. */
+/** The targets of an item the release gate requires: its concrete targets without its deferred pairs. */
 export function releaseGateTargets(
   item: Item,
-  itemsAfter1_0: ReadonlyMap<string, ItemAfter1_0>,
+  itemsDeferred: ReadonlyMap<string, ItemDeferred>,
 ): string[] {
   return expandTargets(item.targets).filter(
-    (target) => !isDeferredPair(itemsAfter1_0, item.id, target),
+    (target) => !isDeferredPair(itemsDeferred, item.id, target),
   );
 }
 
 /**
- * Each entry of the after-1.0 list that no longer holds: an unknown or retired id, a target the item does not list,
+ * Each entry of the deferred list that no longer holds: an unknown or retired id, a target the item does not list,
  * an empty reason, a pair that [proven] says a proof or a suite report now proves, or a refusal that [refusalProven]
  * says no proof file tests.
  */
 export function releaseScopeProblems(
   items: readonly Item[],
-  itemsAfter1_0: ReadonlyMap<string, ItemAfter1_0>,
+  itemsDeferred: ReadonlyMap<string, ItemDeferred>,
   proven: (id: string, target: string) => boolean,
   refusalProven: (id: string, target: string) => boolean,
+  deferredTargets: ReadonlyMap<string, string> = DEFERRED_TARGETS,
 ): Problem[] {
-  const problems: Problem[] = [];
+  const problems: Problem[] = deferredTargetProblems(deferredTargets);
   const byId = new Map(items.map((item) => [item.id, item]));
 
-  for (const [id, deferred] of itemsAfter1_0) {
+  for (const [id, deferred] of itemsDeferred) {
     const at = (message: string) => problems.push({ file: RELEASE_SCOPE_FILE, id, message });
     const item = byId.get(id);
 
     if (item === undefined) {
-      at("after-1.0 list names an unknown id (not in the checklist)");
+      at("deferred list names an unknown id (not in the checklist)");
       continue;
     }
 
     if (item.retired !== undefined) {
-      at(`after-1.0 list names a retired id (retired: ${item.retired})`);
+      at(`deferred list names a retired id (retired: ${item.retired})`);
       continue;
     }
 
-    if (deferred.reason.trim() === "") at("after-1.0 entry without a reason");
+    if (deferred.reason.trim() === "") at("deferred entry without a reason");
 
     const listed = expandTargets(item.targets);
 
     for (const target of deferred.targets ?? []) {
       if (!listed.includes(target))
-        at(`after-1.0 entry names a target the item does not list: ${target}`);
+        at(`deferred entry names a target the item does not list: ${target}`);
     }
 
     for (const target of deferred.targets ?? listed) {
       if (listed.includes(target) && proven(id, target))
-        at(`proven for target ${target}: drop it from the after-1.0 list`);
+        at(`proven for target ${target}: drop it from the deferred list`);
     }
 
     for (const message of refusalProblems(id, deferred, listed, refusalProven)) at(message);
@@ -365,16 +461,28 @@ export function releaseScopeProblems(
   return problems;
 }
 
+/** Each deferred target that is not a known target or has no reason. */
+function deferredTargetProblems(deferredTargets: ReadonlyMap<string, string>): Problem[] {
+  return [...deferredTargets].flatMap(([target, reason]) => {
+    const at = (message: string) => ({ file: RELEASE_SCOPE_FILE, message });
+
+    return [
+      ...(CONCRETE_TARGETS.includes(target) ? [] : [at(`deferred target is unknown: ${target}`)]),
+      ...(reason.trim() === "" ? [at(`deferred target ${target} without a reason`)] : []),
+    ];
+  });
+}
+
 /** The refusal named by [deferred] on a target it does not defer or that no proof file tests. */
 function refusalProblems(
   id: string,
-  deferred: ItemAfter1_0,
+  deferred: ItemDeferred,
   listed: readonly string[],
   refusalProven: (id: string, target: string) => boolean,
 ): string[] {
   return (deferred.refusedOn ?? []).flatMap((target) => {
     if (!listed.includes(target) || !(deferred.targets ?? listed).includes(target))
-      return [`after-1.0 entry names a refusal on a target it does not defer: ${target}`];
+      return [`deferred entry names a refusal on a target it does not defer: ${target}`];
 
     return refusalProven(id, target)
       ? []
@@ -382,11 +490,18 @@ function refusalProblems(
   });
 }
 
-/** One line per item after 1.0, for the gate summary. */
-export function itemsAfter1_0Lines(itemsAfter1_0: ReadonlyMap<string, ItemAfter1_0>): string[] {
-  return [...itemsAfter1_0].map(([id, deferred]) => {
-    const scope = deferred.targets === undefined ? "" : ` on ${deferred.targets.join(", ")}`;
+/** One line per deferred target and per item the gate leaves out, for the gate summary. */
+export function itemsDeferredLines(itemsDeferred: ReadonlyMap<string, ItemDeferred>): string[] {
+  const targetLines = [...DEFERRED_TARGETS].map(
+    ([target, reason]) =>
+      `release gate: not required in ${GATED_VERSION}: every id on ${target} (${reason})`,
+  );
 
-    return `release gate: not required before 1.0: ${id}${scope} (${deferred.reason})`;
-  });
+  return targetLines.concat(
+    [...itemsDeferred].map(([id, deferred]) => {
+      const scope = deferred.targets === undefined ? "" : ` on ${deferred.targets.join(", ")}`;
+
+      return `release gate: not required in ${GATED_VERSION}: ${id}${scope} (${deferred.reason})`;
+    }),
+  );
 }

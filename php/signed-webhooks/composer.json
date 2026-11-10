@@ -1,8 +1,9 @@
 {
   "name": "seampact/signed-webhooks",
-  "description": "Verifies template-signed webhooks for PHP (ADR 0013): HMAC over the raw body, timestamp tolerance and secret rotation.",
+  "description": "Verifies signed webhooks in a seampact authenticate hook on PHP: HMAC over the raw body, timestamp tolerance and secret rotation.",
   "type": "library",
   "license": "MIT",
+  "keywords": ["webhooks", "hmac", "php", "seampact", "api-contract", "openapi", "codegen"],
   "homepage": "https://jubasse.github.io/seampact/concepts/packages/",
   "support": {
     "docs": "https://jubasse.github.io/seampact/",

@@ -4,21 +4,18 @@
 // paths and base paths; the boot check; the framework-route check the app calls before serving, without which every
 // contract request answers 500; and the exported helpers for the app's `onError` and middleware. Each api's
 // generated module calls `createHonoBoundary` once with its route table.
+
 import type { Context, Env, Hono, Next, Schema } from "hono";
 import { refuseCodeOfOtherVersion } from "./generator-version-check.js";
 import {
-  authorizeRequest,
   type BootProblem,
   type BoundaryContext,
   type BoundaryHooks,
   basePathClaimsOf,
   bootProblemsMessage,
   boundaryContext,
-  type CheckState,
   type ContractApi,
-  ContractError,
   type ContractReply,
-  type ContractRequest,
   type ContractRoute,
   claimsBasePathAlone,
   enforcedHookBootProblems,
@@ -26,15 +23,12 @@ import {
   frameworkRouteProblems,
   type HandlerBindings,
   type HooksRequirement,
-  handlerResultReply,
   isBoundaryRoute,
-  isStatusDenial,
   type ListedRoute,
   leftToFrameworkInDebug,
   markBoundaryRoute,
   matchContractRoute,
   matchesContractPath,
-  mediaTypeRefusal,
   notFoundError,
   type PlatformFixes,
   RETRY_AFTER_HEADER,
@@ -47,26 +41,26 @@ import {
   renderContractReply,
   reportContractError,
   resolvedHooks,
-  runInputSteps,
   runtimeLogOf,
   settingsOf,
   unexpectedError,
   useRuntimeLogger,
 } from "./index.js";
+import type { InputRuleSets } from "./input-rules.js";
 import {
   checkOutgoingResponse,
+  claimedWebError,
+  clientAddressProblems,
   claimFetchWrap,
   currentRequestSlot,
   errorResponse,
   notServedResponse,
-  type ReadRequestBody,
   type RequestSlot,
-  readContractBody,
   recordBoundaryResponse,
   replaceReplyHeaders,
+  runWebContractSteps,
   servedInRequestSlot,
   settledContractResponse,
-  webContractRequest,
   webReportedRequest,
 } from "./web.js";
 
@@ -76,13 +70,18 @@ const HONO_FIXES: PlatformFixes = {
   rawBody: SKIP_CONTRACT_ROUTES_FIX,
   bodySize: SKIP_CONTRACT_ROUTES_FIX,
 };
+const CLIENT_ADDRESS_EXAMPLE = "(c) => getConnInfo(c).remote.address";
 const INTERNAL_SERVER_ERROR_STATUS = 500;
 const ROOT_BASE_PATH = "/";
-const NO_BODY: ReadRequestBody = { body: undefined };
 
 /** The registration options of one api on a Hono app: the shared ones and the client address of a request. */
-export interface HonoRegistrationOptions<Hooks, Handlers, Operation extends string, E extends Env>
-  extends RegistrationOptions<Hooks, Handlers, Operation> {
+export interface HonoRegistrationOptions<
+  Hooks,
+  Handlers,
+  Operation extends string,
+  E extends Env,
+  InputRules = InputRuleSets,
+> extends RegistrationOptions<Hooks, Handlers, Operation, InputRules> {
   /** The client's address, which a `Request` does not carry, such as `getConnInfo(c).remote.address`. */
   readonly clientAddress?: (c: Context<E>) => string | undefined;
 }
@@ -92,6 +91,7 @@ export function createHonoBoundary<
   Hooks extends RegisteredHooks,
   Handlers,
   Operation extends string,
+  InputRules = InputRuleSets,
 >(api: ContractApi, generated: ResponseSettings, bindings: HandlerBindings) {
   refuseCodeOfOtherVersion(api);
 
@@ -107,7 +107,8 @@ export function createHonoBoundary<
   /** Registers the api's routes on the app that serves, wraps its `fetch` once; runs the boot check. */
   function registerRoutes<E extends Env, S extends Schema, BasePath extends string>(
     app: Hono<E, S, BasePath>,
-    options: HonoRegistrationOptions<Hooks, Handlers, Operation, E> & HooksRequirement<Hooks>,
+    options: HonoRegistrationOptions<Hooks, Handlers, Operation, E, InputRules> &
+      HooksRequirement<Hooks>,
   ): void {
     useRuntimeLogger(options.logger, api);
 
@@ -115,7 +116,7 @@ export function createHonoBoundary<
     const problems = [
       ...enforcedHookBootProblems(api, hooks),
       ...registrationProblems(api, bindings, options, generated),
-      ...optionProblems(options),
+      ...clientAddressProblems(options.clientAddress, CLIENT_ADDRESS_EXAMPLE),
     ];
 
     if (registeredApps.has(app)) {
@@ -221,7 +222,7 @@ export function createHonoBoundary<
     next: Next,
     route: ContractRoute,
     settings: ResponseSettings,
-    options: HonoRegistrationOptions<Hooks, Handlers, Operation, E>,
+    options: HonoRegistrationOptions<Hooks, Handlers, Operation, E, InputRules>,
     hooks: BoundaryHooks,
   ): Promise<Response | undefined> {
     const reported = webReportedRequest(c.req.raw);
@@ -289,51 +290,25 @@ export function createHonoBoundary<
 
   // Steps 1 to 10 of one contract request; a refusal the api answers is its reply, anything else is kept for
   // `onUnexpectedError` and rethrown to the app's `onError`.
-  async function runSteps<E extends Env>(
+  function runSteps<E extends Env>(
     c: Context<E>,
     context: BoundaryContext,
-    options: HonoRegistrationOptions<Hooks, Handlers, Operation, E>,
+    options: HonoRegistrationOptions<Hooks, Handlers, Operation, E, InputRules>,
     reported: ReportedRequest,
   ): Promise<Response> {
-    const route = context.route;
-    const binding = bindings[route.id];
-
-    try {
-      if (binding === undefined) {
-        throw unexpectedError(route, new Error(`seampact: '${route.id}' has no handler binding`));
-      }
-
-      const request = c.req.raw;
-      const mediaRefusal = mediaTypeRefusal(route, webContractRequest(request, NO_BODY, undefined));
-
-      if (mediaRefusal !== undefined) throw mediaRefusal;
-
-      const read = await readContractBody(route, request, SKIP_CONTRACT_ROUTES_FIX);
-      const state = checkState(
-        context,
-        webContractRequest(request, read, options.clientAddress?.(c)),
-      );
-
-      context.grant = await authorizeRequest(state);
-
-      const started = await runInputSteps(state, context);
-      const reply =
-        started?.replay ?? (await handlerResultReply(state, context, options.handlers, binding));
-
-      return await answer(c, context, reply);
-    } catch (error) {
-      const claimed = claimedError(route, error, c);
-
-      if (claimed === undefined) {
-        context.unclaimedException = error;
-
-        throw error;
-      }
-
-      await reportContractError(context.hooks, api, route, claimed, reported);
-
-      return answer(c, context, renderContractReply(api, route, claimed));
-    }
+    return runWebContractSteps(context, {
+      request: c.req.raw,
+      reported,
+      clientAddress: () => options.clientAddress?.(c),
+      handlers: options.handlers,
+      inputRules: options.inputRules,
+      binding: bindings[context.route.id],
+      fixes: HONO_FIXES,
+      bodyUsedFix: SKIP_CONTRACT_ROUTES_FIX,
+      retryAfterValues: () => retryAfterSet(c),
+      respond: (reply) => answer(c, context, reply),
+      unclaimed: (error) => Promise.reject(error),
+    });
   }
 
   // The boundary's reply becomes `c.res`, which merges the headers middleware set before `next()` and lets them
@@ -356,18 +331,6 @@ export function createHonoBoundary<
     return c.res;
   }
 
-  function checkState(context: BoundaryContext, request: ContractRequest): CheckState {
-    return {
-      api: context.api,
-      route: context.route,
-      request,
-      pathParams: context.pathParams,
-      hooks: context.hooks,
-      isFrameworkDenial: isStatusDenial,
-      fixes: HONO_FIXES,
-    };
-  }
-
   // What Hono answers when no `onError` is set; the debug path leaves it to the app's own handler.
   function honoDefaultErrorResponse(c: Context): Response {
     return c.text("Internal Server Error", INTERNAL_SERVER_ERROR_STATUS);
@@ -380,7 +343,10 @@ export function createHonoBoundary<
     const reported = webReportedRequest(c.req.raw);
     const route = context?.route ?? matchContractRoute(api, reported.method, reported.path)?.route;
 
-    if (context !== undefined && claimedError(context.route, error, c) === undefined) {
+    if (
+      context !== undefined &&
+      claimedWebError(context.route, error, retryAfterSet(c)) === undefined
+    ) {
       context.unclaimedException = error;
 
       if (leftToFrameworkInDebug(context, reported)) return honoDefaultErrorResponse(c);
@@ -389,7 +355,7 @@ export function createHonoBoundary<
     const contractError =
       route === undefined
         ? unexpectedError(undefined, error)
-        : (claimedError(route, error, c) ?? unexpectedError(route, error));
+        : (claimedWebError(route, error, retryAfterSet(c)) ?? unexpectedError(route, error));
     const reply = renderContractReply(api, route, contractError);
 
     await reportContractError(
@@ -473,29 +439,12 @@ function isMiddlewareEntry(entry: HonoRouteEntry): boolean {
   return typeof entry.handler === "function" && entry.handler.length >= MIDDLEWARE_ARITY;
 }
 
-function claimedError(route: ContractRoute, error: unknown, c: Context): ContractError | undefined {
-  if (error instanceof ContractError) return error;
-
-  return frameworkRefusal(route, error, retryAfterSet(c));
-}
-
 // The `Retry-After` a rate-limit middleware set with `c.header()` before it raised its 429; `Headers.get` joins
 // duplicate values with a comma, so the first one is the value taken.
 function retryAfterSet(c: Context): string[] {
   const value = c.res.headers.get(RETRY_AFTER_HEADER)?.split(",")[0];
 
   return value === undefined ? [] : [value];
-}
-
-function optionProblems(options: { readonly clientAddress?: unknown }): BootProblem[] {
-  if (options.clientAddress === undefined || typeof options.clientAddress === "function") return [];
-
-  return [
-    {
-      problem: "'clientAddress' is not a function",
-      fix: "pass a function of the request context, such as (c) => getConnInfo(c).remote.address, or leave it out",
-    },
-  ];
 }
 
 // `app.basePath()` prefixes every route the registration adds, which differs from the entry's mount.

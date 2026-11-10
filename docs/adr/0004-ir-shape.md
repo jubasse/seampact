@@ -43,7 +43,7 @@ The sections are cited as "ADR 0004 section N" and live one per file under `docs
 | 10. Byte-stable serialisation | [ir/10-byte-stable-serialisation.md](../ir/10-byte-stable-serialisation.md) |
 | 11. The source-location side table | [ir/11-source-location-side-table.md](../ir/11-source-location-side-table.md) |
 | 12. The OpenAPI mapping | [ir/12-the-openapi-mapping.md](../ir/12-the-openapi-mapping.md) |
-| 13. Schema forms (amendment 2026-10-12, M1) | [ir/13-schema-forms.md](../ir/13-schema-forms.md) |
+| 13. Schema forms | [ir/13-schema-forms.md](../ir/13-schema-forms.md) |
 
 ## Consequences
 
@@ -56,5 +56,6 @@ The sections are cited as "ADR 0004 section N" and live one per file under `docs
 
 ## Traceability
 
+- History: the dated amendments this ADR carried until PR #451 are folded into the sections they changed; `git show 43055be4:docs/adr/0004-ir-shape.md` holds them with their dates.
 - FRs: FR-9, FR-11 (the OpenAPI mapping and its `x-seampact-*` extensions), FR-37 (extension slots, open `kind` members), FR-38 (names as segments and role), FR-40 (subset-shaped JSON Schema for model generation), FR-2 (origins of inherited settings), FR-5 (requirements union and order), FR-6 (`derivedFrom`, errors by code), FR-8 (`relays`, documents), FR-23 (field rights), FR-30 (query wire form), FR-31 and A31 (paging styles), FR-33, FR-42 and A30 (formats), FR-27, FR-28; amendment A43 (which documents exist, merged documents).
 - CHK items enabled: CHK-024, CHK-025, CHK-033, CHK-045, CHK-052, CHK-059, CHK-077, CHK-078, CHK-092, and the IR side of every server item (CHK-011 to CHK-043), CHK-124 to CHK-136, CHK-138, CHK-149 to CHK-153, CHK-160, CHK-171 (merged documents), CHK-172 (distinct component keys).

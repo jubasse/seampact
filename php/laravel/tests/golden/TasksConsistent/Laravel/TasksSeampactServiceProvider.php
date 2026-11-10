@@ -18,6 +18,9 @@ final class TasksSeampactServiceProvider extends ContractServiceProvider
     /** The container tag of the scope resolvers of this api. */
     public const SCOPE_RESOLVERS_TAG = Hooks::TAG_PREFIX . 'tasks' . Hooks::SCOPE_RESOLVERS_TAG_SUFFIX;
 
+    /** The container tag of the input rules of this api. */
+    public const INPUT_RULES_TAG = Hooks::TAG_PREFIX . 'tasks' . Hooks::INPUT_RULES_TAG_SUFFIX;
+
     /** The container key the app binds the idempotency store of this api under. */
     public const IDEMPOTENCY_STORE_KEY = Hooks::TAG_PREFIX . 'tasks' . Hooks::IDEMPOTENCY_STORE_KEY_SUFFIX;
 

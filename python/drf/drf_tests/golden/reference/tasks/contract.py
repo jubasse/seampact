@@ -8,7 +8,7 @@ from . import schemas as _schemas
 
 CONTRACT: _typing.Final = _contract.ApiContract(
     api="tasks",
-    generated_by="1.0.1",
+    generated_by="1.1.0",
     mount="",
     ir_view={
         "api": {

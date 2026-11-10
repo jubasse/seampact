@@ -48,7 +48,10 @@ const TARGET_TEST_TIMEOUT_MILLISECONDS = 180_000;
 const APIS = "apis: [tasks, tasksService]";
 const TYPES_ENTRY = `  - { id: types, use: "@seampact/codegen-ts", ${APIS} }`;
 const VALIDATORS_ENTRY = `  - { id: validators, use: "@seampact/codegen-zod", ${APIS} }`;
-const CLIENT_ENTRY = `  - { id: client, use: "@seampact/codegen-fetch", ${APIS}, link: { types: types } }`;
+
+function clientEntry(packageName: string): string {
+  return `  - { id: client, use: "@seampact/${packageName}", ${APIS}, link: { types: types } }`;
+}
 
 function serverEntry(packageName: string): string {
   return `  - id: server
@@ -78,7 +81,7 @@ interface DeterminismCase {
 }
 
 const SERVER_ENTRIES = [TYPES_ENTRY, VALIDATORS_ENTRY];
-const CLIENT_ENTRIES = [TYPES_ENTRY, CLIENT_ENTRY];
+const CLIENT_ENTRIES = [TYPES_ENTRY, clientEntry("codegen-fetch")];
 
 function serverCase(target: string, framework: string): DeterminismCase {
   return { target, framework, entries: [...SERVER_ENTRIES, serverEntry(`codegen-${target}`)] };
@@ -101,7 +104,9 @@ const DETERMINISM_CASES: readonly DeterminismCase[] = [
   serverCase("express", "express"),
   serverCase("adonis", "@adonisjs/core"),
   serverCase("hono", "hono"),
+  serverCase("nextjs", "next"),
   { target: "fetch", entries: CLIENT_ENTRIES },
+  { target: "axios", entries: [TYPES_ENTRY, clientEntry("codegen-axios")] },
   validatorsCase("zod"),
   validatorsCase("yup"),
   validatorsCase("class-validator"),

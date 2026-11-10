@@ -61,6 +61,7 @@ function publicMetadata(directory: string): Record<string, unknown> {
     repository: { type: "git", url: "git+https://github.com/jubasse/seampact.git", directory },
     homepage: "https://jubasse.github.io/seampact/",
     bugs: { url: "https://github.com/jubasse/seampact/issues" },
+    license: "MIT",
   };
 }
 
@@ -152,6 +153,12 @@ describe("package rules", () => {
       "packages/codegen-fetch/package.json",
       "@seampact/codegen-core as a peer",
     );
+    proves(
+      "rule-2-axios",
+      "rule 2",
+      "packages/codegen-msw/package.json",
+      "depends on @seampact/codegen-fetch (peerDependencies)",
+    );
   });
 
   it("dependency rule 3", () => {
@@ -236,11 +243,11 @@ describe("package rules", () => {
     proves("composer", "namespaces", "php/laravel/composer.json", 'Composer name "acme/laravel"');
   });
 
-  it("a public package has repository, homepage, bugs and a README", () => {
+  it("a public package has repository, homepage, bugs, license and a README", () => {
     const fail = fixture("metadata", "fail");
 
     expect(fixture("metadata", "pass")).toEqual([]);
-    expect(fail).toHaveLength(8);
+    expect(fail).toHaveLength(9);
     expect(fail.join("\n")).toContain(
       "php/hooks/composer.json: metadata: needs a `homepage` on the docs site, https://jubasse.github.io/seampact/",
     );
@@ -256,6 +263,9 @@ describe("package rules", () => {
     expect(fail.join("\n")).toContain("needs `repository`");
     expect(fail.join("\n")).toContain("needs a `homepage`");
     expect(fail.join("\n")).toContain("needs `bugs`");
+    expect(fail.join("\n")).toContain(
+      'packages/spec/package.json: metadata: needs `license` "MIT"',
+    );
     expect(fail.join("\n")).toContain("packages/spec/README.md: metadata: a public package");
     expect(fixture("metadata", "empty-readme").join("\n")).toContain(
       "packages/spec/README.md: metadata: a public package",

@@ -1,0 +1,22 @@
+### The boot check
+
+The module runs it in `onApplicationBootstrap`, before the app accepts a request, through NestJS's public `DiscoveryService` and `Reflector`; it lists every problem at once with the operation id, the name and the fix, and throws, so the app does not start. The first step runs before any other: the version the api's route table carries is compared with the installed runtime's, and a table written by another `major.minor` or a later patch throws `runtime.generated-for-other-version` when `nestjs.ts` is imported. Each api keeps its own logger in the shared runtime, keyed by its route table. Then:
+
+- an identity used by a bound operation without an authenticate hook, a right or rule without a decider, a scope without a resolver, an idempotent operation without an idempotency store;
+- two deciders claiming one name;
+- a contract operation without a bound handler: no controller method carries its composite;
+- a route of the Express adapter that no operation's decorated controller method registered and that is not allow-listed in `frameworkRoutes` (ADR 0012), unless `artefacts.bootCheck.frameworkRoutes` is false;
+- on a contract method, a NestJS decorator that writes after the boundary's reply (`Redirect`, `Render`, `Sse`) or a developer `Res`, `Response` or `Next` parameter, the `passthrough` cookie idiom included, all read through `Reflector`: NestJS would write again after the reply and raise `ERR_HTTP_HEADERS_SENT`;
+- a platform other than Express (`HttpAdapterHost`);
+- a contract method without its operation's input param, read through NestJS's route-argument metadata: no pipe would run steps 6 to 8;
+- a contract method whose guard list does not end with the seampact guard (an empty list included), once, naming the guards after it;
+- an app interceptor in effect on a contract route (global, controller or route) whose `trackBy` function, `@nestjs/cache-manager`'s API read without importing it, returns a key for a request of the route's method and path, or throws: a cache hit would answer without steps 6 to 8 and the idempotency claim for this caller (a request-scoped interceptor has no instance at boot and is not probed, so the boot warns naming it);
+- `forRoot` options other than the four above, or a `logger` without `warn` and `error` functions;
+- on a contract method, `@HttpCode` or `@Header`, which shape a reply NestJS never writes there;
+- a path prefix on a contract route: a controller path (`@Controller('tasks')`), a `RouterModule` path of the controller's module, or a global prefix (`setGlobalPrefix`) whose `exclude` option does not match the route, read from `ApplicationConfig` with NestJS's own exclusion test.
+
+A controller in a lazily loaded module is not checked at boot: NestJS runs no boot hook for it.
+
+It reads the app's global interceptors from NestJS's `ApplicationConfig`, a provider of every module, which lists those of `useGlobalInterceptors` as well as `APP_INTERCEPTOR` providers. The cache probe builds its execution context with NestJS's `ExecutionContextHost`, exported by `@nestjs/core/internal` only; a test of the target fails by name if a NestJS release moves it. It also warns, without stopping the boot: in the default reply mode, once per api naming the app's global interceptors and once per contract route naming its controller and route interceptors, since a value they map is ignored; in the interceptor mode, once naming each app global interceptor still before the reply interceptor after the module moved it first (one another module's `configure` puts in front later), with the fix.
+
+One check of ADR 0012's list moves to the request, since NestJS 12 exposes no public read of it at boot (Express keeps the parser limit inside the parser): a parser limit below a route's limit is answered as above. A global prefix, refused at boot above, is also caught by the module middleware when the request path is a contract path under a leading prefix (one set after the boot), and answers 500 with a log naming `setGlobalPrefix` and its `exclude` option. The middleware reads the request target raw from `req.originalUrl`, never through WHATWG `URL` (which turns `\` into `/` and resolves dot segments), so it checks the path Express routes. Express 5 also routes a path case-insensitively and with a trailing slash; the contract serves neither as sent, so such a path under the api's base path answers the api's `notFound` code (404) without calling the handler, and one outside it (`/V1/...`) gets NestJS's own 404 through the global filters.

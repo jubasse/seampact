@@ -26,7 +26,7 @@ Adonis also copies `runtime/vine-support.ts` of its package as `validators/vine-
 
 The runtime is already contract-neutral: the Node targets copy it unchanged, Spring rewrites the `package` line, and PHP rewrites the namespace line, drops the shared runtime's `use` lines and refuses any other seampact reference. Three behaviours depend on per-api copies:
 
-- a NestJS `ContractException` of one api, thrown on a route of another, matches neither api's filter (ADR 0016 "Amendment 2026-10-27: NestJS idioms on the boundary");
+- a NestJS `ContractException` of one api, thrown on a route of another, matches neither api's filter (ADR 0016 "Exceptions on contract routes");
 - the Symfony operation attribute is a class of each api;
 - the unexpected-error listener is looked up by its runtime class: Laravel resolves the container key `UnexpectedErrorListener::class`, Symfony the service of that class, and Spring every bean of that type. Each api's copy is another class, so each api finds its own listener.
 
@@ -147,7 +147,7 @@ Golden tests (ADR 0015 "Golden tests"):
 - The Node reference and live-boundary tests compile the generated tree against the built package.
 - Unit tests cover G2 (a generate refused for an absent runtime, another `major.minor` and a lower patch) and G3 (a boot refused for a foreign version) in each ecosystem. The rest of the runtime stays covered by the golden compile and the shared HTTP suite on each sample app, installed from the package. A CommonJS NestJS consumer joins the test consumers.
 
-Publication ([A3](../decisions.md#a3)): nothing is published before 1.0, and the publication pipelines do not exist yet; they are prepared shortly before 1.0. They then add one npm package, `@seampact/server-runtime`, and one Maven Central artifact, `io.github.jubasse:seampact-spring-runtime`. Both use the accounts the other packages already need, the npm `@seampact` scope and the Central namespace `io.github.jubasse` (ADR 0010 "Namespaces"); no new Packagist package or read-only mirror ([A19](../decisions.md#a19)) is needed. Until 1.0 the sample apps install the runtime from a workspace, a path repository or an included build, as they install `hooks`.
+Publication ([A3](../decisions.md#a3)): nothing is published before 1.0. The `release` workflow publishes every package, `@seampact/server-runtime` and `io.github.jubasse:seampact-spring-runtime` included, to npm, Maven Central, the Gradle Plugin Portal, PyPI and the PHP mirrors, and proves the installs from local registries in its dry run and from the real registries after a release with `post-release.yml`; a real run starts by hand from `main`, behind one approval of the `release` environment. The runtime adds one npm package, `@seampact/server-runtime`, and one Maven Central artifact, `io.github.jubasse:seampact-spring-runtime`. Both use the accounts the other packages already need, the npm `@seampact` scope and the Central namespace `io.github.jubasse` (ADR 0010 "Namespaces"); no new Packagist package or read-only mirror ([A19](../decisions.md#a19)) is needed. Until 1.0 the sample apps install the runtime from a workspace, a path repository or an included build, as they install `hooks`.
 
 After 1.0:
 
@@ -177,7 +177,7 @@ The remaining generated tree is still scanned by the app's tools, so `seampact c
 | 4 | Laravel namespaces N1; the Laravel golden trees, a `name.collision` test of a FormRequest against a root class, the sample app through the HTTP suite. It lands before PR 5, so the golden trees change once per concern |
 | 5 | Laravel and Symfony importing `Seampact\Codegen\Runtime` and `Seampact\<Target>\Runtime`, the Symfony autoload root, the per-api identity classes and the per-api lookup of `UnexpectedErrorListener`, G3 at boot; `RuntimeCopy` and its test removed; the guides' install lines (Symfony leaves `--dev`); the four golden trees, a G3 unit test, the HTTP suite on both sample apps |
 | 6 | the `seampact-spring-runtime` subproject with its optional Spring Data and Spring Security dependencies, the per-api lookup of `UnexpectedErrorListener`, the Gradle plugin adding the dependency, the Maven goal's G2 check, G3 at boot; `SpringBootGoldenTest`, `goldenTest`, a G3 unit test, the HTTP suite |
-| 7 | not a lane PR: an entry for the publication pipelines prepared shortly before 1.0, which add the npm package and the Central artifact |
+| 7 | not a lane PR: the publication pipelines ("Publication"), which publish the npm package and the Central artifact |
 
 ### What each ADR states when its PR lands
 
@@ -186,7 +186,7 @@ The remaining generated tree is still scanned by the app's tools, so `seampact c
 | 0009 "What generated code depends on at run time" | generated server code imports its ecosystem's runtime package (this ADR) besides `hooks`; contract-specific code and per-api identity classes stay generated; client code still imports nothing from seampact. "Target resolution from the app config": the runtime package is in lockstep with its generators (G1) and checked by G2, while `hooks` keeps its own semver line and its declared range in the target metadata. "Package list for 1.0" gains `@seampact/server-runtime` and `seampact-spring-runtime` |
 | 0010 | the JVM table gains `seampact-spring-runtime`; its package keeps `...springboot.runtime`, an exception to `io.github.jubasse.seampact.<module>`; `seampact/symfony` is a production package |
 | 0015 "Runtime helpers" | the boundary runtime is a package, not a copy; optional helpers stay never imported. "Golden tests": the trees hold no runtime |
-| 0016 NestJS | the request checks of `@seampact/codegen-core/node-server`, "copied into the generated tree", become those of `@seampact/server-runtime`, imported; "What the generated code depends on" adds `@seampact/server-runtime` (root, `/node`, `/nestjs`); the amendment of 2026-10-27 says each api's `ContractException` subclass, not its runtime copy, keeps two apis apart; the module class name; G3 in "The boot check" |
+| 0016 NestJS | the request checks of `@seampact/codegen-core/node-server`, "copied into the generated tree", become those of `@seampact/server-runtime`, imported; "What the generated code depends on" adds `@seampact/server-runtime` (root, `/node`, `/nestjs`); each api's `ContractException` subclass, not its runtime copy, keeps two apis apart; the module class name; G3 in "The boot check" |
 | 0017 Fastify, 0018 Express, 0019 Adonis | the shared request checks of `@seampact/codegen-core/node-server` become those of `@seampact/server-runtime`, and 0019's "copied into the generated tree" becomes imported; "What the generated code depends on" adds `@seampact/server-runtime` (root, `/node`, `/<target>`); G3 in "The boot check" |
 | 0020 Hono | the `web` profile of `nodeServerRuntimeFiles()` becomes the `/web` export; "What the generated code depends on" adds the root, `/web` and `/hono`; G3 in "The boot check" |
 | 0021 front targets | nothing |
@@ -199,12 +199,9 @@ The remaining generated tree is still scanned by the app's tools, so `seampact c
 - A copy mode, `runtime: vendored`, only on a user's request.
 - A separate PHP `-runtime` package, if the generator in production `vendor/` becomes a problem for users.
 
-### Amendment 2026-11-06: the publication pipelines exist
-
-The statements at "Publication" and in the delivery table that the publication pipelines do not exist yet are replaced: the `release` workflow now publishes every package, including `@seampact/server-runtime` and `io.github.jubasse:seampact-spring-runtime`, to npm, Maven Central, the Gradle Plugin Portal, PyPI and the PHP mirrors, and proves the installs from local registries in its dry run and from the real registries after a release with `post-release.yml`. Publication itself stays gated by [A3](../decisions.md#a3): a real run starts by hand from `main`, behind one approval of the `release` environment.
-
 ## Traceability
 
+- History: the dated amendments this ADR carried until PR #451 are folded into the sections they changed; `git show 43055be4:docs/adr/0025-runtime-packaging.md` holds them with their dates.
 - Amendments: A3 (publication at 1.0), A19 (Composer mirrors), A40 (`hooks: vendored`, the model for a copy mode), A47 (no mode a consumer does not need).
 - ADRs: 0009 (run-time dependencies, amended), 0010 (namespaces, artifacts), 0015 (runtime helpers and golden tests, amended), 0016 to 0024 (the targets' placement, dependencies and boot checks).
 - Proof in the development phase: the review of this ADR, then the golden trees, the G2 and G3 unit tests and the HTTP suite of each delivery PR.

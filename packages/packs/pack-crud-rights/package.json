@@ -1,6 +1,6 @@
 {
   "name": "@seampact/pack-crud-rights",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jubasse/seampact.git",
@@ -10,7 +10,17 @@
   "bugs": {
     "url": "https://github.com/jubasse/seampact/issues"
   },
-  "description": "Derives a <resource>.<op> right for every list, get, create, update, delete and batch route and requires it first.",
+  "keywords": [
+    "convention-pack",
+    "authorization",
+    "rights",
+    "seampact",
+    "api-contract",
+    "openapi",
+    "codegen"
+  ],
+  "description": "Seampact convention pack that derives a <resource>.<op> access right for every list, get, create, update, delete and batch route.",
+  "license": "MIT",
   "seampact": {
     "role": "pack",
     "pack": "pack.yaml"

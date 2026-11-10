@@ -58,7 +58,7 @@ A server checks at boot that every hook the contract needs is registered. `artef
 - `warn`: log and start. Only the Node servers take it.
 - `off`: start silently.
 
-Spring Boot, Laravel, Symfony, FastAPI, DRF and Ninja take `error` or `off`. `warn` is refused there (`artefacts.bootCheck.hooks.warn.unsupported`; `artefact.bootCheck.hooks.warn.unsupported` on Spring Boot) and any other value is `.invalid`.
+Spring Boot, Laravel, Symfony, API Platform, FastAPI, DRF and Ninja take `error` or `off`. `warn` is refused there (`artefacts.bootCheck.hooks.warn.unsupported`; `artefact.bootCheck.hooks.warn.unsupported` on Spring Boot) and any other value is `.invalid`.
 
 A route whose hook is missing answers 500 on every request, whatever the level. An output field right with a missing decider runs the handler first, then answers 500. A right claimed by two deciders always refuses to start, even with `bootCheck: false`.
 
@@ -136,7 +136,7 @@ Set them under `options:` of a target entry. A key a target does not know is ref
 
 ### Node servers
 
-Every Node server target takes the four shared options below. [codegen-nestjs](#codegen-nestjs), [codegen-fastify](#codegen-fastify), [codegen-express](#codegen-express), [codegen-hono](#codegen-hono) and [codegen-adonis](#codegen-adonis) link here.
+Every Node server target takes the four shared options below. [codegen-nestjs](#codegen-nestjs), [codegen-fastify](#codegen-fastify), [codegen-express](#codegen-express), [codegen-hono](#codegen-hono), [codegen-nextjs](#codegen-nextjs) and [codegen-adonis](#codegen-adonis) link here.
 
 | Option | Default | What it does |
 |---|---|---|
@@ -182,6 +182,10 @@ The shared Node server options only. Guide: [Express](../backend/express.md).
 
 The shared Node server options only. Guide: [Hono](../backend/hono.md).
 
+### codegen-nextjs
+
+The shared Node server options, except `catchAll: false`: the api's catch-all route file is its only route. Guide: [Next.js](../backend/nextjs.md).
+
 ### codegen-adonis
 
 The shared Node server options, and:
@@ -217,6 +221,10 @@ The same `rules` option as [codegen-zod](#codegen-zod).
 | `errorStyle` | `result` | `result` returns the error as a value. `throw` throws a `ContractError`. |
 
 Guide: [React](../frontend/react.md) shows the client it feeds.
+
+### codegen-axios
+
+The options of `codegen-fetch` (`errorStyle`). Guide: [Axios client](../frontend/axios-client.md).
 
 ### codegen-react
 
@@ -281,6 +289,10 @@ Guide: [Laravel](../backend/laravel.md).
 | `indent` | 4 | Spaces per indent, up to 8. |
 
 Guide: [Symfony](../backend/symfony.md).
+
+### api-platform
+
+The options of [`symfony`](#symfony). Guide: [API Platform](../backend/api-platform.md).
 
 ### seampact-fastapi
 

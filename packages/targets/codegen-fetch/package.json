@@ -1,7 +1,8 @@
 {
   "name": "@seampact/codegen-fetch",
-  "description": "Generates a typed fetch client with one method per operation, returning its success and error responses as typed results.",
-  "version": "1.0.1",
+  "description": "Seampact target that generates a typed fetch client with one method per operation, returning success and error responses as typed results.",
+  "license": "MIT",
+  "version": "1.1.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jubasse/seampact.git",
@@ -11,6 +12,15 @@
   "bugs": {
     "url": "https://github.com/jubasse/seampact/issues"
   },
+  "keywords": [
+    "fetch",
+    "client",
+    "typescript",
+    "seampact",
+    "api-contract",
+    "openapi",
+    "codegen"
+  ],
   "type": "module",
   "files": [
     "dist",

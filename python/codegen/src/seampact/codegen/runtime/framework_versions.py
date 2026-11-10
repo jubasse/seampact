@@ -2,7 +2,8 @@
 the target serves or runs on, the units of the compatibility matrix (a major, or a `<major>.<minor>` for a 0.x
 framework) plus the entry's `allowUntested` ones, and the boot check refuses an installed version outside them, so an
 upgrade after `generate` fails the boot by name. A framework checked by major may also record the matrix's tested
-minors: an installed minor outside them, within a tested major, is only warned of (ADR 0027 "Matrix")."""
+minors: an installed minor outside them, within a tested major, is only warned of (ADR 0027 section 1, The shared
+Django layer)."""
 
 import re
 from collections.abc import Sequence

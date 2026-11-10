@@ -1,0 +1,1 @@
+The app input rules of the `input-rules` http-suite case, one file per validator library (zod, yup, Ajv, class-validator, VineJS): the consumer harness copies the chosen library's file to `src/input-rules.mts`.

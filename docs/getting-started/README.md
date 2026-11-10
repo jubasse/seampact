@@ -2,7 +2,7 @@
 
 You write a contract in YAML. seampact generates the types, the validators, the server routes and the clients. You write the handlers. This guide builds a notes API on the server of your choice and calls it from React.
 
-You need Node.js 24 or later and npm to run the `seampact` command on Node. Spring Boot, Laravel, Symfony and Python install through their own tools: [install in other ecosystems](install-other-ecosystems.md).
+You need Node.js 24 or later and npm to run the `seampact` command on Node. Spring Boot, Laravel, Symfony, API Platform and Python install through their own tools: [install in other ecosystems](install-other-ecosystems.md).
 
 1. [Install](01-install.md) seampact with npm and start a project.
 2. [Your first API](your-first-api.md): write the contract, generate, write the handlers for your server and run the app.

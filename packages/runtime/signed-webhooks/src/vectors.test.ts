@@ -25,7 +25,7 @@ const KEY_ID = "test";
 const MILLISECONDS_PER_SECOND = 1000;
 const PAIR_FORMAT = /^(?:[A-Za-z0-9]+=\{(?:ts|sig)\},?)+$/;
 
-// The header parsing the generated boundary does (ADR 0013 "Header parsing is fixed by the format"), enough for
+// The header parsing the generated boundary does (ADR 0013, A signed identity kind with a declared scheme), enough for
 // the two formats of the vectors.
 function parseSignatureHeader(
   format: string,

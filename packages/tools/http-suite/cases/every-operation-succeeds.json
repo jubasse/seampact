@@ -1,7 +1,26 @@
 {
   "id": "every-operation-succeeds",
   "title": "Every reference operation answers its declared success once",
-  "checks": ["CHK-062", "CHK-105"],
+  "checks": [
+    {
+      "id": "CHK-062",
+      "targets": [
+        "nestjs",
+        "fastify",
+        "express",
+        "adonis",
+        "hono",
+        "spring-boot",
+        "laravel",
+        "symfony",
+        "api-platform",
+        "fastapi",
+        "drf",
+        "ninja"
+      ]
+    },
+    "CHK-105"
+  ],
   "profiles": ["default", "hand-written"],
   "steps": [
     {

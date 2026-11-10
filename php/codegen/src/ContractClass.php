@@ -103,12 +103,15 @@ final class ContractClass
             $enums[$enumId] = $this->layout->enumClass($enumId);
         }
 
+        $inputRules = $this->names->inputRules();
+
         return [
             'schemas' => $schemas,
             'enums' => $enums,
             'operations' => $this->operationTypes(),
             'identities' => $this->identityTypes(),
             'unexpectedErrorListener' => $this->names->unexpectedErrorListener(),
+            ...($inputRules === null ? [] : ['inputRules' => $inputRules]),
         ];
     }
 

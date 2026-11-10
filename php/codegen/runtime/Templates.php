@@ -11,7 +11,10 @@ namespace Seampact\Codegen\Runtime;
  */
 final class Templates
 {
+    /** The slot `$each` binds to each element, and the slots of the page reply derived from each (`$itemSelf`). */
     private const ITEM_SLOT = 'item';
+    /** The per-element slots of the `of` list, by index: not a template slot, read only by `$each`. */
+    public const ITEM_SLOTS = 'itemSlots';
 
     private function __construct()
     {
@@ -96,8 +99,11 @@ final class Templates
         }
 
         $items = [];
-        foreach ($source as $item) {
-            $value = self::render(Ir::map($template, 'as'), [...$slots, self::ITEM_SLOT => $item], $writeNulls);
+        $perItem = Ir::map($slots, self::ITEM_SLOTS);
+        foreach (array_values($source) as $index => $item) {
+            /** @var array<string, mixed> $bound */
+            $bound = [...$slots, self::ITEM_SLOT => $item, ...Ir::map($perItem, $index)];
+            $value = self::render(Ir::map($template, 'as'), $bound, $writeNulls);
             if ($value->present) {
                 $items[] = $value->value;
             }

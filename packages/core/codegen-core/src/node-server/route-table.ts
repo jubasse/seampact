@@ -10,12 +10,13 @@ import {
   type TypeUse,
   type WireFormat,
 } from "@seampact/spec/ir";
-import type { ValidatorsDescriptor } from "../descriptors.js";
+import type { ValidatorStyle, ValidatorsDescriptor } from "../descriptors.js";
 import type { FrameworkRouteCheck, HookBootCheck } from "../framework-route-check.js";
 import { type GenerateWarning, warnLeftToHandler } from "../generate-warning.js";
-import { importSpecifier } from "../import-specifier.js";
+import { type ImportSpecifierStyle, importSpecifier } from "../import-specifier.js";
 import { below, type IrLocation, operationLocation } from "../ir-location.js";
 import type { Link } from "../links.js";
+import { mountedBasePaths } from "../mounted-base-paths.js";
 import {
   refuseInconsistentIr,
   refuseNotGeneratedYet,
@@ -28,6 +29,7 @@ import type { Refusal } from "../refusal.js";
 import { askedRequirements } from "./asked-requirements.js";
 import { fingerprintHeaderNames } from "./fingerprint-headers.js";
 import { identityResponseHeaderRefusals, operationIdentityHeaders } from "./identity-headers.js";
+import { inputRulesTypeSource } from "./input-rules-type.js";
 import type { CompressionOption, FrameworkEtagMode } from "./options.js";
 import { pageBodyTemplate, pagingEntry } from "./paging-entry.js";
 import { encodedSegmentRefusals } from "./path-segment-refusals.js";
@@ -64,6 +66,8 @@ export interface RouteTableOptions {
   readonly frameworkEtag: FrameworkEtagMode;
   /** The entry's `catchAll` option: false leaves a request the contract does not serve to the app. */
   readonly catchAll: boolean;
+  /** How the module's relative imports name their modules. */
+  readonly importSpecifiers: ImportSpecifierStyle;
 }
 
 const API_LOCATION: IrLocation = { member: "" };
@@ -109,7 +113,7 @@ export function routeTableSource(
   refusals: Refusal[],
   warnings: GenerateWarning[],
 ): string {
-  const imports = new ModuleImports(validators, fromFile);
+  const imports = new ModuleImports(validators, fromFile, options.importSpecifiers);
   const format = errorFormat(ir, refusals);
 
   refusals.push(...encodedSegmentRefusals(ir));
@@ -150,12 +154,9 @@ export function routeTableSource(
     );
   }
 
-  const basePaths = [
-    ...new Set(
-      Object.values(ir.api.surfaces).map((surface) => `${options.mount}${surface.prefix}`),
-    ),
-  ];
+  const basePaths = mountedBasePaths(ir, options.mount);
   const frameworkRoutes = frameworkRoutesValue(options.frameworkRoutes, basePaths);
+  const isClassValidator = validators.descriptor.style === CLASS_VALIDATOR_STYLE;
   const table: SourceValue = {
     id: ir.api.id,
     generatorVersion: options.generatorVersion,
@@ -168,16 +169,57 @@ export function routeTableSource(
     compression: options.compression,
     frameworkEtag: options.frameworkEtag,
     catchAll: options.catchAll,
+    ...(isClassValidator ? { classValidator: new SourceExpression(CLASS_VALIDATOR_CALLS) } : {}),
   };
+
+  const inputRules = inputRulesTypeSource(
+    ir,
+    SERVER_RUNTIME_PACKAGE,
+    validators.descriptor.style,
+    fromFile,
+    options.importSpecifiers,
+    (operation) => {
+      const ref = Object.hasOwn(validators.descriptor.operations, operation.id)
+        ? validators.descriptor.operations[operation.id]?.input
+        : undefined;
+
+      return ref === undefined ? undefined : imports.expression(ref.module, ref.export).text;
+    },
+  );
 
   return [
     `import type { ContractApi } from "${SERVER_RUNTIME_PACKAGE}";`,
+    ...inputRules.imports,
+    ...(isClassValidator ? classValidatorImports(validators, fromFile) : []),
     ...imports.lines(),
     "",
     "/** Every operation of the api as the boundary checks it. */",
     `export const CONTRACT_API: ContractApi = ${sourceOf(table)};`,
     "",
+    ...inputRules.declaration,
+    "",
   ].join("\n");
+}
+
+// The class-validator calls app input rules run through (ADR 0028): the app's own `class-transformer` and
+// `class-validator`, with the strict options of the class-validator target's copied runtime module.
+const CLASS_VALIDATOR_STYLE: ValidatorStyle = "class-validator";
+const CLASS_VALIDATOR_OPTIONS_MODULE = "validation-options";
+const CLASS_VALIDATOR_CALLS =
+  "{ plainToInstance, validate, getMetadataStorage, options: STRICT_VALIDATION_OPTIONS }";
+
+function classValidatorImports(validators: Link<"validators">, fromFile: string): string[] {
+  const optionsModule = importSpecifier(
+    validators,
+    { module: CLASS_VALIDATOR_OPTIONS_MODULE, export: "" },
+    fromFile,
+  );
+
+  return [
+    'import { plainToInstance } from "class-transformer";',
+    'import { getMetadataStorage, validate } from "class-validator";',
+    `import { STRICT_VALIDATION_OPTIONS } from "${optionsModule}";`,
+  ];
 }
 
 class ModuleImports {
@@ -186,6 +228,7 @@ class ModuleImports {
   constructor(
     private readonly link: Link<"validators">,
     private readonly fromFile: string,
+    private readonly style: ImportSpecifierStyle,
   ) {}
 
   expression(module: string, exportName: string): SourceExpression {
@@ -202,7 +245,7 @@ class ModuleImports {
   lines(): string[] {
     return [...this.aliases].map(
       ([module, alias]) =>
-        `import * as ${alias} from "${importSpecifier(this.link, { module, export: "" }, this.fromFile)}";`,
+        `import * as ${alias} from "${importSpecifier(this.link, { module, export: "" }, this.fromFile, this.style)}";`,
     );
   }
 }
@@ -296,6 +339,8 @@ function routeEntry(
       validatorRef === undefined
         ? null
         : imports.expression(validatorRef.module, validatorRef.export),
+    relays:
+      operation.relays === undefined ? undefined : `${operation.relays.api}.${operation.relays.id}`,
     idempotency: idempotencyEntry(operation, location, refusals),
     versionHeader: versionHeaderEntry(operation, location, refusals),
     responses: operation.responses.map((response, index) => ({

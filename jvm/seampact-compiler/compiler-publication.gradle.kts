@@ -1,4 +1,4 @@
-// The standalone compiler binaries as Maven artefacts (ADR 0010, "Distribution and pinning"): one publication,
+// The standalone compiler binaries as Maven artefacts (ADR 0010 section 5, The standalone compiler binary): one publication,
 // `io.github.jubasse:seampact-compiler:<version>`, with one artefact of type `exe` per platform classifier. The
 // binaries come from `-PseampactBinariesDir=<dir>`, the release assets beside their `SHA256SUMS`; each is checked
 // against the manifest before it is staged, so a published file always has the hash the release lists.

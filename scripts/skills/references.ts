@@ -20,6 +20,7 @@ export interface SkillReferences {
 
 const BACKEND_STACKS = [
   "adonisjs",
+  "api-platform",
   "drf",
   "express",
   "fastapi",
@@ -27,6 +28,7 @@ const BACKEND_STACKS = [
   "hono",
   "laravel",
   "nestjs",
+  "nextjs",
   "ninja",
   "spring-boot",
   "symfony",
@@ -48,6 +50,15 @@ const TROUBLESHOOTING_PAGES = [
   "tree",
   "validate",
 ] as const;
+
+/** The backend pages with no `Paging` section. */
+const STACKS_WITHOUT_PAGING_SECTION: ReadonlySet<string> = new Set(["api-platform", "nextjs"]);
+
+function handlerSections(stack: string): string[] {
+  return STACKS_WITHOUT_PAGING_SECTION.has(stack)
+    ? ["Write a handler", "Wire it in"]
+    : ["Write a handler", "Paging", "Wire it in"];
+}
 
 function whole(docsPath: string): ReferenceSource {
   return { docsPath };
@@ -74,9 +85,7 @@ export const SKILL_REFERENCES: readonly SkillReferences[] = [
     skill: "seampact-implement-handler",
     files: BACKEND_STACKS.map((stack) => ({
       path: `references/${stack}.md`,
-      sources: [
-        { docsPath: `backend/${stack}.md`, sections: ["Write a handler", "Paging", "Wire it in"] },
-      ],
+      sources: [{ docsPath: `backend/${stack}.md`, sections: handlerSections(stack) }],
     })),
   },
   {

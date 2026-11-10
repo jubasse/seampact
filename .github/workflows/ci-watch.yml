@@ -26,6 +26,7 @@ on:
       - AdonisJS consumer
       - Express and Fastify consumers
       - Hono consumer
+      - Next.js consumer
       - NestJS consumer
       - Angular consumers
       - JVM core
@@ -33,7 +34,9 @@ on:
       - PHP core packages
       - Laravel target
       - Symfony target
+      - API Platform target
       - Front consumers
+      - Examples
       - Spring Boot target
       - Vue consumers
       - Own validators consumer

@@ -17,6 +17,9 @@ The same pages, with search, are on the [documentation site](https://jubasse.git
 - [Install](getting-started/01-install.md): install seampact from npm and start a project.
 - [Your first API](getting-started/your-first-api.md): a notes API on the server of your choice, step by step.
 - [Call it from React](getting-started/call-it-from-react.md): a typed client and hooks.
+- [Runnable example](../examples/nestjs-react/README.md): a NestJS server and a React client from one contract, kept green by CI.
+- [Runnable example: Laravel and Vue](../examples/laravel-vue/README.md): a Laravel server and a Vue client from one contract, kept green by CI.
+- [Runnable example: Next.js](../examples/nextjs/README.md): Next.js route handlers and a React client in one app, from one contract, kept green by CI.
 - [Check it in CI](features/check-in-ci.md): fail the build on drift.
 - [Add to an existing app](getting-started/04-existing-project.md): move routes one at a time.
 - [Project layout](getting-started/05-project-layout.md): what each file is.
@@ -56,17 +59,22 @@ The same pages, with search, are on the [documentation site](https://jubasse.git
 - [Fastify](backend/fastify.md): Node, Fastify 5 with route hooks.
 - [AdonisJS](backend/adonisjs.md): Node, AdonisJS 7 and 6.
 - [Hono](backend/hono.md): Hono 4 on any Web-standard runtime.
-- [Access hooks on Node](backend/node-hooks.md): authenticate, decide and resolve scope on the five Node servers.
+- [Next.js](backend/nextjs.md): Next.js 16, one route handler per api.
+- [Access hooks on Node](backend/node-hooks.md): authenticate, decide and resolve scope on the six Node servers.
 - [Spring Boot](backend/spring-boot.md): Java, the Gradle or Maven plugin, controllers and hooks.
 - [Laravel](backend/laravel.md): PHP, Composer, controllers, hooks and Laravel's own auth.
 - [Symfony](backend/symfony.md): PHP, the Composer package, bundle, controllers, hooks and SecurityBundle.
+- [API Platform](backend/api-platform.md): PHP, API Platform 5 on Symfony.
 - [FastAPI](backend/fastapi.md): Python, the wheels, `bind_<api>()`, handlers, hooks and FastAPI's own docs.
 - [Django REST Framework](backend/drf.md): Python, the wheels, settings, URLconf, handlers, hooks and DRF's own auth.
 - [Django Ninja](backend/ninja.md): Python, the wheels, `bind_<api>()`, handlers, hooks, Ninja's own auth and docs.
 
+Input rules (checks your app adds to the contract's): the "Add your own rules" section of each guide above (NestJS, Express, Fastify, AdonisJS, Hono, Laravel and Symfony; Next.js in its [Options](backend/nextjs.md#options)), and [ADR 0028](adr/0028-app-input-rules.md).
+
 ## Client guides
 
 - [Fetch client](frontend/fetch-client.md): the typed `fetch` client every other client builds on.
+- [Axios client](frontend/axios-client.md): the same client, sent through your own axios instance.
 - [React](frontend/react.md): TanStack Query, SWR or RTK Query hooks over the fetch client.
 - [Vue](frontend/vue.md): TanStack Query, Pinia Colada or plain `fetch` composables.
 - [Angular](frontend/angular.md): an `HttpClient` service with signals, NgRx optional.
@@ -119,6 +127,7 @@ The same pages, with search, are on the [documentation site](https://jubasse.git
 ## Release notes
 
 - [Release notes](release-notes/README.md): what each release ships and its known limits.
+- [1.1.0](release-notes/1.1.0.md): API Platform, Next.js, axios, app input rules.
 - [1.0.1](release-notes/1.0.1.md): server fixes, clearer errors, docs and agent skills.
 - [1.0.0](release-notes/1.0.0.md): the first release.
 
@@ -128,6 +137,17 @@ For contributors. Users do not need these pages.
 
 - [IR](ir/): the compiled form of a contract.
 - [ADRs](adr/): design records.
+- [ADR 0003 sections](adr/0003-schema-language/): the schema language, one file per decision.
+- [ADR 0010 sections](adr/0010-native-generators/): native generators, one file per decision.
+- [ADR 0012 sections](adr/0012-access-hooks/): access hooks, one file per decision.
+- [ADR 0016 sections](adr/0016-nestjs-target/): the NestJS target, one file per decision.
+- [ADR 0021 sections](adr/0021-front-query-targets/): the front query targets, one file per decision.
+- [ADR 0022 sections](adr/0022-spring-boot-target/): the Spring Boot target, one file per decision.
+- [ADR 0023 sections](adr/0023-laravel-target/): the Laravel target, one file per decision.
+- [ADR 0024 sections](adr/0024-symfony-target/): the Symfony target, one file per decision.
+- [ADR 0026 sections](adr/0026-python-fastapi-target/): the Python core and the FastAPI target, one file per decision.
+- [ADR 0027 sections](adr/0027-django-targets/): the Django targets, one file per decision.
 - [Product decisions](decisions.md): the log of decisions, A1 to A48.
 - [Design decisions](design-decisions.md)
+- [Maintainers](maintainers/): how a release goes out.
 - [Roadmap](roadmap.md)

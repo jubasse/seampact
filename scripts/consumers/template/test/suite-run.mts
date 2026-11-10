@@ -30,6 +30,7 @@ import {
 } from "./credentials.mjs";
 import { startServer } from "./server.mjs";
 import { SUITE_REFUSALS } from "./suite-refusals.mjs";
+import { TARGET_INPUT_RULE_POINTERS } from "./target-input-rule-pointers.mjs";
 import { runOnVariantApps, variantAppRefusals } from "./variant-app-cases.mjs";
 
 export const CONSUMER_ROOT = join(import.meta.dirname, "..");
@@ -128,6 +129,7 @@ function describeSuiteRun({ profile, cases, refusals, reader }: SuiteRun): void 
         credentials: SUITE_CREDENTIALS,
         cases: runCases,
         refusals: refusalsOf(runCases, runRefusals),
+        inputRulePointers: TARGET_INPUT_RULE_POINTERS,
         ...(reader === undefined ? {} : { reader }),
       });
 

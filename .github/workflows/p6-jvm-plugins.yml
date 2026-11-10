@@ -138,7 +138,7 @@ jobs:
           java-version: |
             21
             25
-      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
           # One writer per pull request job, its first row in the nightly or a manual run, so the cache holds one Gradle home and
           # dependency set per job. The other rows restore that entry; the queue, post-merge and drift copies, which write
@@ -180,6 +180,15 @@ jobs:
             jvm/seampact-gradle-plugin/build/testkit/caches/modules-2/metadata-2.*
           key: ${{ steps.testkit-cache-key.outputs.key }}
           restore-keys: ${{ steps.testkit-cache-key.outputs.restore-prefix }}
+      # TestKit downloads the Gradle release of `-PtestGradle` from services.gradle.org into ~/.gradle/wrapper/dists on
+      # every run, and that download timed out: this keeps the distribution between runs.
+      - name: Restore the TestKit Gradle distribution
+        id: testkit-distribution
+        if: matrix.test-gradle != 'wrapper'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: &testkit-distribution-path ~/.gradle/wrapper/dists/gradle-${{ matrix.test-gradle }}-bin
+          key: gradle-distribution-${{ runner.os }}-${{ matrix.test-gradle }}
       - name: Check the Gradle plugin on Java ${{ matrix.test-jdk }} and Gradle ${{ matrix.test-gradle }}
         working-directory: jvm
         env:
@@ -196,6 +205,12 @@ jobs:
         with:
           path: *testkit-cache-paths
           key: ${{ steps.testkit-cache-key.outputs.key }}
+      - name: Save the TestKit Gradle distribution
+        if: matrix.test-gradle != 'wrapper' && steps.testkit-distribution.outputs.cache-hit != 'true' && github.event_name != 'pull_request' && github.event_name != 'merge_group'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: *testkit-distribution-path
+          key: gradle-distribution-${{ runner.os }}-${{ matrix.test-gradle }}
 
   gradle-plugin-queue:
     name: *gradle-plugin-name
@@ -250,7 +265,7 @@ jobs:
           java-version: |
             21
             25
-      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
           # One writer per pull request job, its first row in the nightly or a manual run, so the cache holds one Gradle home and
           # dependency set per job. The other rows restore that entry; the queue, post-merge and drift copies, which write
@@ -316,7 +331,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 25
-      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
           # One writer per pull request job, its first row in the nightly or a manual run, so the cache holds one Gradle home and
           # dependency set per job. The other rows restore that entry; the queue, post-merge and drift copies, which write

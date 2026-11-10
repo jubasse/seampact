@@ -1,7 +1,8 @@
 {
   "name": "@seampact/codegen-express",
-  "description": "Generates an Express router per api that serves each contract route behind its access, validation and reply checks around your handler map, on Express 4 and 5, validating with zod.",
-  "version": "1.0.1",
+  "description": "Seampact target for Express 4 and 5: generates a router per api that checks access, input and replies around your handler map.",
+  "license": "MIT",
+  "version": "1.1.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jubasse/seampact.git",
@@ -11,6 +12,15 @@
   "bugs": {
     "url": "https://github.com/jubasse/seampact/issues"
   },
+  "keywords": [
+    "express",
+    "server",
+    "validation",
+    "seampact",
+    "api-contract",
+    "openapi",
+    "codegen"
+  ],
   "type": "module",
   "files": [
     "dist"
@@ -50,6 +60,7 @@
     "express": "5.3.0",
     "express4": "npm:express@4.22.3",
     "typescript": "6.0.3",
+    "yup": "1.7.1",
     "zod": "4.6.7"
   }
 }

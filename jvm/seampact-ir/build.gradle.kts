@@ -10,7 +10,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
-description = "The seampact IR model and reader, the contract bundle channels, the pinned compiler binary and the app config reader."
+description = "The seampact IR model and reader for the JVM, with the contract bundle channels, the pinned compiler binary and the app config reader."
 
 val repositoryRoot = rootProject.projectDir.parentFile
 

@@ -659,33 +659,89 @@
       "file": "tasks/api.yaml",
       "line": 106
     },
+    "pack:@seampact/pack-api-platform#/conventions/errors/derived": {
+      "column": 5,
+      "endColumn": 1,
+      "endLine": 63,
+      "file": ".packs/@seampact/pack-api-platform@1.1.0/pack.yaml",
+      "line": 59
+    },
+    "pack:@seampact/pack-api-platform#/conventions/errors/derived/schemaInvalid": {
+      "column": 7,
+      "endColumn": 1,
+      "endLine": 63,
+      "file": ".packs/@seampact/pack-api-platform@1.1.0/pack.yaml",
+      "line": 60
+    },
     "pack:@seampact/pack-api-platform#/conventions/format": {
       "column": 3,
       "endColumn": 17,
-      "endLine": 41,
-      "file": ".packs/@seampact/pack-api-platform@1.0.1/pack.yaml",
-      "line": 41
+      "endLine": 57,
+      "file": ".packs/@seampact/pack-api-platform@1.1.0/pack.yaml",
+      "line": 57
     },
     "pack:@seampact/pack-api-platform#/conventions/paging/default": {
       "column": 13,
       "endColumn": 27,
-      "endLine": 42,
-      "file": ".packs/@seampact/pack-api-platform@1.0.1/pack.yaml",
-      "line": 42
+      "endLine": 63,
+      "file": ".packs/@seampact/pack-api-platform@1.1.0/pack.yaml",
+      "line": 63
+    },
+    "pack:@seampact/pack-api-platform#/errors/api.validation_failed": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 22,
+      "file": ".packs/@seampact/pack-api-platform@1.1.0/pack.yaml",
+      "line": 8
+    },
+    "pack:@seampact/pack-api-platform#/errors/api.validation_failed/params": {
+      "column": 5,
+      "endColumn": 1,
+      "endLine": 21,
+      "file": ".packs/@seampact/pack-api-platform@1.1.0/pack.yaml",
+      "line": 12
+    },
+    "pack:@seampact/pack-api-platform#/errors/api.validation_failed/params/violations": {
+      "column": 7,
+      "endColumn": 1,
+      "endLine": 21,
+      "file": ".packs/@seampact/pack-api-platform@1.1.0/pack.yaml",
+      "line": 13
+    },
+    "pack:@seampact/pack-api-platform#/errors/api.validation_failed/params/violations/items": {
+      "column": 9,
+      "endColumn": 1,
+      "endLine": 21,
+      "file": ".packs/@seampact/pack-api-platform@1.1.0/pack.yaml",
+      "line": 15
+    },
+    "pack:@seampact/pack-api-platform#/errors/api.validation_failed/params/violations/items/properties/message": {
+      "column": 13,
+      "endColumn": 38,
+      "endLine": 19,
+      "file": ".packs/@seampact/pack-api-platform@1.1.0/pack.yaml",
+      "line": 19
+    },
+    "pack:@seampact/pack-api-platform#/errors/api.validation_failed/params/violations/items/properties/propertyPath": {
+      "column": 13,
+      "endColumn": 43,
+      "endLine": 18,
+      "file": ".packs/@seampact/pack-api-platform@1.1.0/pack.yaml",
+      "line": 18
     },
     "pack:@seampact/pack-api-platform#/formats/jsonld": {
       "column": 3,
       "endColumn": 1,
-      "endLine": 24,
-      "file": ".packs/@seampact/pack-api-platform@1.0.1/pack.yaml",
-      "line": 8
+      "endLine": 40,
+      "file": ".packs/@seampact/pack-api-platform@1.1.0/pack.yaml",
+      "line": 24
     },
     "pack:@seampact/pack-api-platform#/pagings/hydra": {
       "column": 3,
       "endColumn": 1,
-      "endLine": 39,
-      "file": ".packs/@seampact/pack-api-platform@1.0.1/pack.yaml",
-      "line": 26
+      "endLine": 55,
+      "file": ".packs/@seampact/pack-api-platform@1.1.0/pack.yaml",
+      "line": 42
     },
     "shared#/buckets/write": {
       "column": 3,
@@ -728,20 +784,6 @@
       "endLine": 95,
       "file": "shared/base.yaml",
       "line": 95
-    },
-    "shared#/conventions/errors/derived": {
-      "column": 5,
-      "endColumn": 1,
-      "endLine": 104,
-      "file": "shared/base.yaml",
-      "line": 100
-    },
-    "shared#/conventions/errors/derived/schemaInvalid": {
-      "column": 7,
-      "endColumn": 1,
-      "endLine": 104,
-      "file": "shared/base.yaml",
-      "line": 101
     },
     "shared#/conventions/errors/every": {
       "column": 5,
@@ -823,37 +865,37 @@
     "shared#/enums/ReauthIntent": {
       "column": 3,
       "endColumn": 94,
-      "endLine": 110,
-      "file": "shared/base.yaml",
-      "line": 110
-    },
-    "shared#/enums/Role": {
-      "column": 3,
-      "endColumn": 88,
       "endLine": 106,
       "file": "shared/base.yaml",
       "line": 106
     },
+    "shared#/enums/Role": {
+      "column": 3,
+      "endColumn": 88,
+      "endLine": 102,
+      "file": "shared/base.yaml",
+      "line": 102
+    },
     "shared#/enums/Service": {
       "column": 3,
       "endColumn": 88,
-      "endLine": 109,
+      "endLine": 105,
       "file": "shared/base.yaml",
-      "line": 109
+      "line": 105
     },
     "shared#/enums/Surface": {
       "column": 3,
       "endColumn": 76,
-      "endLine": 108,
+      "endLine": 104,
       "file": "shared/base.yaml",
-      "line": 108
+      "line": 104
     },
     "shared#/enums/TaskState": {
       "column": 3,
       "endColumn": 91,
-      "endLine": 107,
+      "endLine": 103,
       "file": "shared/base.yaml",
-      "line": 107
+      "line": 103
     },
     "shared#/errors/api.rate_limited": {
       "column": 3,
@@ -882,27 +924,6 @@
       "endLine": 78,
       "file": "shared/base.yaml",
       "line": 78
-    },
-    "shared#/errors/api.schema_invalid": {
-      "column": 3,
-      "endColumn": 1,
-      "endLine": 74,
-      "file": "shared/base.yaml",
-      "line": 69
-    },
-    "shared#/errors/api.schema_invalid/params": {
-      "column": 5,
-      "endColumn": 31,
-      "endLine": 72,
-      "file": "shared/base.yaml",
-      "line": 72
-    },
-    "shared#/errors/api.schema_invalid/params/issues": {
-      "column": 15,
-      "endColumn": 29,
-      "endLine": 72,
-      "file": "shared/base.yaml",
-      "line": 72
     },
     "shared#/headers/actorSurface": {
       "column": 3,
@@ -1043,27 +1064,6 @@
       "endLine": 60,
       "file": "shared/base.yaml",
       "line": 57
-    },
-    "shared#/schemas/Issues/items": {
-      "column": 3,
-      "endColumn": 1,
-      "endLine": 23,
-      "file": "shared/schemas.yaml",
-      "line": 19
-    },
-    "shared#/schemas/Issues/items/properties/pointer": {
-      "column": 19,
-      "endColumn": 44,
-      "endLine": 22,
-      "file": "shared/schemas.yaml",
-      "line": 22
-    },
-    "shared#/schemas/Issues/items/properties/rule": {
-      "column": 46,
-      "endColumn": 68,
-      "endLine": 22,
-      "file": "shared/schemas.yaml",
-      "line": 22
     },
     "shared#/schemas/ServicePrincipal": {
       "column": 1,

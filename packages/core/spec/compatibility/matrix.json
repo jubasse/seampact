@@ -29,6 +29,12 @@
       "package": "@seampact/codegen-fetch",
       "kind": "client",
       "style": "fetch"
+    },
+    {
+      "id": "axios",
+      "package": "@seampact/codegen-axios",
+      "kind": "client",
+      "style": "fetch"
     }
   ],
   "serverTargets": [
@@ -142,6 +148,31 @@
           }
         ],
         "incompatible": []
+      },
+      "validatorStyles": ["standard-schema"],
+      "ownValidators": []
+    },
+    {
+      "package": "@seampact/codegen-nextjs",
+      "framework": {
+        "id": "nextjs",
+        "package": "next",
+        "tested": [
+          {
+            "major": 16,
+            "consumer": "nextjs"
+          }
+        ],
+        "incompatible": [
+          {
+            "major": 14,
+            "reason": "The generated route handler is written for Next.js 16 and its Node.js runtime only."
+          },
+          {
+            "major": 15,
+            "reason": "The generated route handler is written for Next.js 16 and its Node.js runtime only."
+          }
+        ]
       },
       "validatorStyles": ["standard-schema"],
       "ownValidators": []
@@ -382,6 +413,26 @@
           {
             "major": 6,
             "reason": "The generated boundary is written and tested for Symfony 7.4 LTS and 8 only."
+          }
+        ]
+      }
+    },
+    {
+      "package": "seampact/api-platform",
+      "framework": {
+        "id": "api-platform",
+        "package": "api-platform/symfony",
+        "floor": "5.0",
+        "tested": [
+          {
+            "major": 5,
+            "consumer": "api-platform"
+          }
+        ],
+        "incompatible": [
+          {
+            "major": 4,
+            "reason": "The generated resources and operations are written and tested for API Platform 5 only."
           }
         ]
       }

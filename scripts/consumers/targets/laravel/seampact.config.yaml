@@ -4,6 +4,7 @@ outDir: app/Generated
 openapi: none
 sources:
   contract: { path: contract }
+  inputRules: { path: input-rules-contract }
 targets:
   - id: tasks
     out: Tasks
@@ -66,5 +67,11 @@ targets:
     out: TasksSplitSort
     use: seampact/laravel
     api: tasksSplitSort
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+  - id: inputRules
+    out: InputRules
+    use: seampact/laravel
+    api: inputRules
     frameworkRoutes:
       - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }

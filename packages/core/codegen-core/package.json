@@ -1,7 +1,8 @@
 {
   "name": "@seampact/codegen-core",
-  "description": "The API the code generators are written against.",
-  "version": "1.0.1",
+  "description": "The API the seampact code generators are written against, for writing your own generator.",
+  "license": "MIT",
+  "version": "1.1.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jubasse/seampact.git",
@@ -11,6 +12,14 @@
   "bugs": {
     "url": "https://github.com/jubasse/seampact/issues"
   },
+  "keywords": [
+    "generator",
+    "plugin-api",
+    "seampact",
+    "api-contract",
+    "openapi",
+    "codegen"
+  ],
   "type": "module",
   "files": [
     "dist",

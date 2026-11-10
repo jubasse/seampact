@@ -125,12 +125,12 @@ test("a target without own validators keeps the missing validators link", () => 
 
 const CLIENT_NEEDS = { client: { styles: ["fetch"] } } as const;
 
-test("a missing client link is refused, naming codegen-fetch", () => {
+test("a missing client link is refused, naming codegen-fetch and codegen-axios", () => {
   expect(refuseUnmetLinks(CLIENT_NEEDS, { types: TYPES_LINK })).toEqual([
     {
       code: "link.missing",
       message: "This target consumes a 'client' link in style fetch, and none is given.",
-      fix: "Link `@seampact/codegen-fetch` in the target's `link` entry.",
+      fix: "Link `@seampact/codegen-fetch` or `@seampact/codegen-axios` in the target's `link` entry.",
     },
   ]);
 });

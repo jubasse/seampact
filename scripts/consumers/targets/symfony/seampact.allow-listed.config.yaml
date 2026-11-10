@@ -5,6 +5,7 @@ outDir: src/Generated
 openapi: none
 sources:
   contract: { path: contract }
+  inputRules: { path: input-rules-contract }
 targets:
   - id: tasks
     out: Tasks
@@ -71,3 +72,9 @@ targets:
     frameworkRoutes:
       - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
       - { path: /v1/unlisted, method: GET, reason: "The allow-listed-framework-route boot variant (ADR 0015)." }
+  - id: inputRules
+    out: InputRules
+    use: seampact/symfony
+    api: inputRules
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }

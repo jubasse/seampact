@@ -1,5 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { parseSampleAppScript, SampleAppScriptError } from "./sample-app-script.js";
+import {
+  inputRuleHookName,
+  parseSampleAppScript,
+  SampleAppScriptError,
+} from "./sample-app-script.js";
 import { parseSuiteCase, SuiteCaseError } from "./suite-case.js";
 
 describe("parseSampleAppScript", () => {
@@ -29,6 +33,12 @@ describe("parseSampleAppScript", () => {
       hookFailures: { "resolve-scope:channel": "the membership store is down" },
     });
     expect(parseSampleAppScript({})).toEqual({});
+  });
+
+  test("lets an app input rule's double throw, under the name the rule's hook name gives", () => {
+    const failures = { [inputRuleHookName("endAfterStart")]: "the rule store is down" };
+
+    expect(parseSampleAppScript({ hookFailures: failures })).toEqual({ hookFailures: failures });
   });
 
   test.each([

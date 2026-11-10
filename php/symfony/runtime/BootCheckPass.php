@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Seampact\Symfony\Runtime;
 
 use Seampact\Codegen\Runtime\ApiContract;
+use Seampact\Codegen\Runtime\Ir;
 use Seampact\Codegen\Runtime\PublicOrigin;
 use Symfony\Component\DependencyInjection\Argument\ServiceClosureArgument;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
@@ -69,6 +70,7 @@ final class BootCheckPass implements CompilerPassInterface
         $contract = Regeneration::contract($this->contractClass);
         $problems = [
             ...($this->checksHandlers ? $this->handlers($container, $contract) : []),
+            ...self::inputRules($container, $contract),
             ...$this->listeners($container),
             ...$this->shadowingBoundaries($container, $contract),
             ...$this->platform($container),
@@ -134,6 +136,29 @@ final class BootCheckPass implements CompilerPassInterface
         }
 
         throw new \LogicException("seampact: the generated settings class {$this->settingsClass} takes no " . ContractSettings::PUBLIC_ORIGIN_ARGUMENT . ' argument; regenerate the code.');
+    }
+
+    /**
+     * A class implementing the runtime's `InputRules` and no api's generated interface is never tagged, so its rules
+     * would never run: refused here, at every level of the check (ADR 0028 "The boot check").
+     *
+     * @return list<string>
+     */
+    private static function inputRules(ContainerBuilder $container, ApiContract $contract): array
+    {
+        $problems = [];
+        $generatesInterface = Ir::string($contract->types, 'inputRules') !== null;
+        foreach (self::implementing($container, InputRules::class) as $class) {
+            $generated = array_filter($class->getInterfaceNames(), static fn (string $interface): bool => is_subclass_of($interface, InputRules::class));
+            if ($generated === []) {
+                $problems[] = "the service {$class->name} implements " . InputRules::class . ' directly, so no api runs it; '
+                    . ($generatesInterface
+                        ? 'implement the generated <Api>InputRules interface of the api it serves'
+                        : "this api's flavour generates no input rules interface and refuses input rules (input.rules.unsupported); remove the service");
+            }
+        }
+
+        return $problems;
     }
 
     /** @return list<string> */

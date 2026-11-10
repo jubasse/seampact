@@ -4,7 +4,7 @@
 
 Page: https://jubasse.github.io/seampact/getting-started/01-install/
 
-Install the `seampact` command from npm and start a project. This page is for a Node.js app. For Spring Boot, Laravel, Symfony or Python, go to [install in other ecosystems](https://jubasse.github.io/seampact/getting-started/install-other-ecosystems/); [commands per stack](https://jubasse.github.io/seampact/features/commands-per-stack/) shows how each runs the commands.
+Install the `seampact` command from npm and start a project. This page is for a Node.js app. For Spring Boot, Laravel, Symfony, API Platform or Python, go to [install in other ecosystems](https://jubasse.github.io/seampact/getting-started/install-other-ecosystems/); [commands per stack](https://jubasse.github.io/seampact/features/commands-per-stack/) shows how each runs the commands.
 
 You need Node.js 24 or later and npm.
 

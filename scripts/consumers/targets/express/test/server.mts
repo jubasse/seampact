@@ -6,6 +6,7 @@ import { once } from "node:events";
 import type { AddressInfo } from "node:net";
 import { HOOK_CALLS_ROUTE, LOG_LINES_ROUTE, SCRIPT_ROUTE } from "@seampact/http-suite";
 import express, { type Response } from "express";
+import * as InputRulesExpress from "../generated/server/inputRules/index.js";
 import * as TasksExpress from "../generated/server/tasks/index.js";
 import * as TasksDevicesExpress from "../generated/server/tasksDevices/index.js";
 import * as TasksPagingExpress from "../generated/server/tasksPaging/index.js";
@@ -28,11 +29,14 @@ import {
   tasksServiceWritesHandlers,
 } from "../src/handlers.mjs";
 import {
+  inputRulesHooks,
   tasksDevicesHooks,
   tasksHooks,
   tasksServiceHooks,
   tasksServiceWritesHooks,
 } from "../src/hooks.mjs";
+import { inputRules } from "../src/input-rules.mjs";
+import { inputRulesHandlers } from "../src/input-rules-handlers.mjs";
 import { tasksPagingHandlers, tasksPagingHooks } from "../src/paging-handlers.mjs";
 import { tasksResponsesHandlers, tasksResponsesHooks } from "../src/responses-handlers.mjs";
 import {
@@ -117,18 +121,27 @@ export async function startServer(): Promise<RunningServer> {
       hooks: tasksPagingHooks(),
     }),
   );
+  app.use(
+    InputRulesExpress.router({
+      handlers: { AppEndpoints: inputRulesHandlers },
+      hooks: inputRulesHooks(),
+      inputRules,
+    }),
+  );
   app.use(TasksExpress.preRoutingErrorHandler);
   app.use(TasksServiceExpress.preRoutingErrorHandler);
   app.use(TasksServiceWritesExpress.preRoutingErrorHandler);
   app.use(TasksDevicesExpress.preRoutingErrorHandler);
   app.use(TasksResponsesExpress.preRoutingErrorHandler);
   app.use(TasksPagingExpress.preRoutingErrorHandler);
+  app.use(InputRulesExpress.preRoutingErrorHandler);
   TasksExpress.checkFrameworkRoutes(app);
   TasksServiceExpress.checkFrameworkRoutes(app);
   TasksServiceWritesExpress.checkFrameworkRoutes(app);
   TasksDevicesExpress.checkFrameworkRoutes(app);
   TasksResponsesExpress.checkFrameworkRoutes(app);
   TasksPagingExpress.checkFrameworkRoutes(app);
+  InputRulesExpress.checkFrameworkRoutes(app);
 
   const server = app.listen(0, HOST);
 

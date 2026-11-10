@@ -41,6 +41,8 @@ test("the offered pairs are zod and yup on every server target and major, class-
     "@seampact/codegen-adonis@7+vinejs",
     "@seampact/codegen-hono@4+zod",
     "@seampact/codegen-hono@4+yup",
+    "@seampact/codegen-nextjs@16+zod",
+    "@seampact/codegen-nextjs@16+yup",
   ]);
 });
 
@@ -103,7 +105,10 @@ test("the packages of a style keep the matrix order", () => {
     "@seampact/codegen-class-validator",
   ]);
   expect(firstPartyPackagesOfStyle("typescript")).toEqual(["@seampact/codegen-ts"]);
-  expect(firstPartyPackagesOfStyle("fetch")).toEqual(["@seampact/codegen-fetch"]);
+  expect(firstPartyPackagesOfStyle("fetch")).toEqual([
+    "@seampact/codegen-fetch",
+    "@seampact/codegen-axios",
+  ]);
 });
 
 test("provider ids are unique, so a tool can select a provider by id", () => {
@@ -119,7 +124,7 @@ test("a target package the matrix does not record is refused by name", () => {
   );
 });
 
-test("each server target records its framework id, its tested majors with their consumer and no incompatible major", () => {
+test("each server target records its framework id, its tested majors with their consumer and its incompatible majors", () => {
   const frameworks = SERVER_TARGETS.map((target) => ({
     target: target.package,
     id: target.framework.id,
@@ -143,6 +148,23 @@ test("each server target records its framework id, its tested majors with their 
       incompatible: [],
     },
     { target: "@seampact/codegen-hono", id: "hono", tested: ["4:hono"], incompatible: [] },
+    {
+      target: "@seampact/codegen-nextjs",
+      id: "nextjs",
+      tested: ["16:nextjs"],
+      incompatible: [
+        {
+          major: 14,
+          reason:
+            "The generated route handler is written for Next.js 16 and its Node.js runtime only.",
+        },
+        {
+          major: 15,
+          reason:
+            "The generated route handler is written for Next.js 16 and its Node.js runtime only.",
+        },
+      ],
+    },
   ]);
 });
 
@@ -169,6 +191,7 @@ test("every pair carries the consumer overlay of its framework major", () => {
     "@seampact/codegen-adonis@6:adonis6",
     "@seampact/codegen-adonis@7:adonis",
     "@seampact/codegen-hono@4:hono",
+    "@seampact/codegen-nextjs@16:nextjs",
   ]);
 });
 
@@ -210,7 +233,10 @@ test("the react client row names its fetch link style, React 19 and each query l
   expect(
     react.libraries?.map((library) => `${library.package}@${library.testedMajors.join()}`),
   ).toEqual(["@tanstack/react-query@5", "swr@2", "@reduxjs/toolkit@2", "react-redux@9"]);
-  expect(firstPartyPackagesOfStyle("fetch")).toEqual(["@seampact/codegen-fetch"]);
+  expect(firstPartyPackagesOfStyle("fetch")).toEqual([
+    "@seampact/codegen-fetch",
+    "@seampact/codegen-axios",
+  ]);
 });
 
 test("a client target is not a server target and offers no validator pair", () => {
@@ -240,6 +266,7 @@ test("the laravel PHP target is tested on Laravel 13 and refuses Laravel 11 and 
   expect(PHP_TARGETS.map((target) => target.package)).toEqual([
     "seampact/laravel",
     "seampact/symfony",
+    "seampact/api-platform",
   ]);
   expect(PHP_TARGETS[0]?.framework.tested.map((tested) => tested.major)).toEqual([13]);
   expect(PHP_TARGETS[0]?.framework.incompatible.map((incompatible) => incompatible.major)).toEqual([

@@ -58,7 +58,7 @@ public sealed interface BinaryDocumentsResult {
 }
 
 /**
- * Compiles local YAML sources with the pinned standalone binary (ADR 0010, "Amendment 2026-10-21: the JVM channels",
+ * Compiles local YAML sources with the pinned standalone binary (ADR 0010, "The JVM channels",
  * Runner and Exits): checks the private cache and hashes the copy right before it starts, runs
  * `compile --config <app config> --out <temporary directory>` from the app config's directory with only the
  * environment variables the binary reads, then reads each `<api>.ir.json` with [IrReader] under the caller's support.

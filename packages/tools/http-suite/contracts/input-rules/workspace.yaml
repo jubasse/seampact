@@ -1,0 +1,5 @@
+# The contract of the `input-rules` case (ADR 0028 "Tests"): a server consumer that enables the case compiles it as a
+# second source beside the reference contract, so the reference apis and their goldens stay as they are.
+workspace:
+  apis:
+    inputRules: ./api.yaml

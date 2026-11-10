@@ -1,8 +1,8 @@
 # zod
 
-`@seampact/codegen-zod` writes a zod schema for each schema of your contract. NestJS, Express, Fastify, AdonisJS and Hono use them to refuse a bad request before your handler runs.
+`@seampact/codegen-zod` writes a zod schema for each schema of your contract. NestJS, Express, Fastify, AdonisJS, Hono and Next.js use them to refuse a bad request before your handler runs.
 
-Used by: [NestJS](../backend/nestjs.md) (the default), [Express](../backend/express.md), [Hono](../backend/hono.md), [Fastify](../backend/fastify.md) and [AdonisJS](../backend/adonisjs.md), through the `validators` link.
+Used by: [NestJS](../backend/nestjs.md) (the default), [Express](../backend/express.md), [Hono](../backend/hono.md), [Next.js](../backend/nextjs.md), [Fastify](../backend/fastify.md) and [AdonisJS](../backend/adonisjs.md), through the `validators` link.
 
 ## Set up
 

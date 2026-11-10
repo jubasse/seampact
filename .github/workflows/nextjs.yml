@@ -1,0 +1,170 @@
+name: Next.js consumer
+
+# Builds and packs the seampact packages, then installs them from the tarballs into the Next.js test consumer,
+# generates the boundary of the reference apis, typechecks, builds the app with `next build`, starts it with
+# `next start` on the Node.js runtime and runs the http suite's default and hand-written profiles against it (ADR 0030);
+# the pack-consumer job runs the pack:laravel profile of the same app generated with the laravel pack applied.
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  merge_group:
+    types: [checks_requested]
+    branches: [main, develop]
+  workflow_dispatch:
+  # The nightly run has no base, so it runs every row whatever the change: the net under the narrowed paths.
+  schedule:
+    - cron: "30 0 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nextjs-consumer-${{ github.event_name }}-${{ github.event_name == 'push' && github.sha || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.detect.outputs.run }}
+      queue: ${{ steps.detect.outputs.queue }}
+      post-merge: ${{ steps.detect.outputs.post-merge }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history without file contents: the change list reads commits and trees only, and only the shared
+          # actions are checked out.
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout: .github/actions
+          persist-credentials: false
+      - name: Detect a change beyond documentation no test reads
+        id: detect
+        uses: ./.github/actions/lane-changes
+        with:
+          # The packages a Node server consumer installs (core, packs, runtime, the TypeScript, fetch and validator
+          # targets, its own), the http suite, the consumer harness and its overlays, the reference contract and the pins.
+          watched-paths: |
+            ^packages/(core|packs|runtime)/
+            ^packages/targets/codegen-(ts|fetch|zod|yup|nextjs)/
+            ^packages/tools/http-suite/
+            ^scripts/consumers/(cli|build-and-pack|consumer-project|install-into|ignore-vendor|packed-packages|run-step|served-app|validator-choice)\.ts$
+            ^scripts/consumers/template/
+            ^scripts/consumers/pack/
+            ^fixtures/golden/pack-laravel/
+            ^scripts/consumers/targets/(nextjs)/
+            ^scripts/golden/
+            ^fixtures/reference/
+            ^\.github/actions/
+            ^\.github/workflows/nextjs\.yml$
+            ^pnpm-lock\.yaml$
+            ^pnpm-workspace\.yaml$
+            ^package\.json$
+            ^tsconfig\.base\.json$
+            ^\.nvmrc$
+          # The fast tier: a pull request to develop runs this lane only for its own code.
+          pull-request-paths: |
+            ^packages/targets/codegen-(nextjs)/
+            ^scripts/consumers/targets/(nextjs)/
+            ^\.github/workflows/nextjs\.yml$
+
+  # The PR row: the Next.js 16 app on zod; the post-merge job below runs the yup pair.
+  consumer:
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: nextjs, validators: zod }
+    steps: &consumer-steps
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Run the ${{ matrix.target }} consumer on ${{ matrix.validators }} from packed tarballs
+        run: node scripts/consumers/cli.ts --target "${{ matrix.target }}" --validators "${{ matrix.validators }}" --dir "$RUNNER_TEMP/test-seampact-${{ matrix.target }}-${{ matrix.validators }}"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: ${{ matrix.target }}-http-suite-${{ matrix.validators }}
+          overwrite: true
+          path: ${{ runner.temp }}/test-seampact-${{ matrix.target }}-${{ matrix.validators }}/reports
+          retention-days: 90
+          if-no-files-found: warn
+
+  consumer-post-merge:
+    needs: changes
+    if: needs.changes.outputs.post-merge == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: nextjs, validators: yup }
+    steps: *consumer-steps
+
+  # The queue row of the pack profile (ADR 0015 "Suite profiles"): the app generated from the reference contract with
+  # the laravel pack applied, which runs that pack's profile. The Node servers refuse the pair sort style of pack-spring
+  # and pack-hal by name (paging.sort.style.unsupported), so only pack-laravel runs.
+  pack-consumer:
+    needs: changes
+    if: needs.changes.outputs.queue == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: nextjs, validators: zod, pack: laravel }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Run the ${{ matrix.target }} consumer under pack-${{ matrix.pack }} from packed tarballs
+        run: node scripts/consumers/cli.ts --target "${{ matrix.target }}" --validators "${{ matrix.validators }}" --pack "${{ matrix.pack }}" --dir "$RUNNER_TEMP/test-seampact-${{ matrix.target }}-pack-${{ matrix.pack }}"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: ${{ matrix.target }}-http-suite-pack-${{ matrix.pack }}
+          overwrite: true
+          path: ${{ runner.temp }}/test-seampact-${{ matrix.target }}-pack-${{ matrix.pack }}/reports
+          retention-days: 90
+          if-no-files-found: warn
+
+  # The required check: a skipped job passes only when the change filter said skip; a failed or cancelled one fails.
+  nextjs:
+    # Every job this check stands for is listed here, or its failure would not reach the required check.
+    needs: [changes, consumer, consumer-post-merge, pack-consumer]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .github/actions
+          persist-credentials: false
+      - uses: ./.github/actions/lane-aggregate
+        with:
+          needs: ${{ toJSON(needs) }}
+          should-run: ${{ needs.changes.outputs.run }}
+          # Queue rows: a pull request to develop runs without them.
+          allow-skip: ${{ needs.changes.outputs.queue == 'false' && 'pack-consumer' || '' }}

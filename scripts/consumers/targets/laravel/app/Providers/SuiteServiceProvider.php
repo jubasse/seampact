@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Generated\InputRules\AppEndpoints as InputRulesAppEndpoints;
+use App\Generated\InputRules\Laravel\InputRulesSeampactServiceProvider;
+use App\Generated\InputRules\Laravel\UnexpectedErrorListener as InputRulesUnexpectedErrorListener;
+use App\Generated\InputRules\Laravel\UserAuthenticateHook as InputRulesUserAuthenticateHook;
 use App\Generated\Tasks\AppEndpoints;
 use App\Generated\Tasks\ChannelsEndpoints;
 use App\Generated\Tasks\DraftsEndpoints;
@@ -42,6 +46,7 @@ use App\Http\Controllers\ChannelsController;
 use App\Http\Controllers\DevicesController;
 use App\Http\Controllers\DraftsController;
 use App\Http\Controllers\HooksController;
+use App\Http\Controllers\InputRulesController;
 use App\Http\Controllers\InternalController;
 use App\Http\Controllers\InternalWritesController;
 use App\Http\Controllers\NotesController;
@@ -54,6 +59,7 @@ use App\Http\Controllers\WelcomeController;
 use App\Suite\ChannelResolver;
 use App\Suite\DeviceHook;
 use App\Suite\OverriddenRightDecider;
+use App\Suite\Rules\ScheduleTaskBodyRules;
 use App\Suite\ServiceDecider;
 use App\Suite\ServiceHook;
 use App\Suite\StripeHook;
@@ -149,6 +155,14 @@ final class SuiteServiceProvider extends ServiceProvider
         $this->app->bind(ResponsesUserAuthenticateHook::class, UserHook::class);
         $this->app->bind(TasksResponsesSeampactServiceProvider::IDEMPOTENCY_STORE_KEY, FileIdempotencyStore::class);
         $this->app->bind(ResponsesUnexpectedErrorListener::class, TasksUnexpectedErrors::class);
+
+        $this->app->bind(InputRulesAppEndpoints::class, InputRulesController::class);
+        $this->app->bind(InputRulesUserAuthenticateHook::class, UserHook::class);
+        $this->app->tag([TasksDecider::class], InputRulesSeampactServiceProvider::DECIDERS_TAG);
+        $this->app->tag([ChannelResolver::class], InputRulesSeampactServiceProvider::SCOPE_RESOLVERS_TAG);
+        $this->app->tag([ScheduleTaskBodyRules::class], InputRulesSeampactServiceProvider::INPUT_RULES_TAG);
+        $this->app->bind(InputRulesSeampactServiceProvider::IDEMPOTENCY_STORE_KEY, FileIdempotencyStore::class);
+        $this->app->bind(InputRulesUnexpectedErrorListener::class, TasksUnexpectedErrors::class);
     }
 
     public function boot(): void

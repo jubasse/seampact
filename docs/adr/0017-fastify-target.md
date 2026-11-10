@@ -4,7 +4,7 @@ Status: accepted
 
 ## Context
 
-ADR 0016 fixes, for the first Node server target, the obligations every Node server target meets with the shared request checks of `@seampact/codegen-core/node-server`: the check order of ADR 0012, a reply written by the boundary, exceptions handled narrowly, the outgoing response check and its `responses` modes, the raw-body check, the body limit, query decoding and the bounded values. `@seampact/codegen-fastify` generates, per api of the app config, a Fastify plugin that places those checks around a developer handler map. This ADR states only what Fastify changes: the placement in Fastify's route lifecycle, the reply path, the plugin's error handler, the scoped JSON parser, the boot check and the refusals. What it does not restate holds as ADR 0016 says.
+ADR 0016 fixes, for the first Node server target, the obligations every Node server target meets with the shared request checks of `@seampact/server-runtime`: the check order of ADR 0012, a reply written by the boundary, exceptions handled narrowly, the outgoing response check and its `responses` modes, the raw-body check, the body limit, query decoding and the bounded values. `@seampact/codegen-fastify` generates, per api of the app config, a Fastify plugin that places those checks around a developer handler map. This ADR states only what Fastify changes: the placement in Fastify's route lifecycle, the reply path, the plugin's error handler, the scoped JSON parser, the boot check and the refusals. What it does not restate holds as ADR 0016 says.
 
 Three Fastify behaviours shape the placement. Each route runs its own lifecycle of hooks (`onRequest`, `preParsing`, `preValidation`, `preHandler`, `onSend`, `onResponse`), and Fastify parses the body after routing, so the body limit and a parse error belong to the route. An encapsulated plugin owns its error handler and its content-type parsers, which never reach the app's own routes. And `reply.send` runs the `onSend` hooks of every enclosing context, where plugins such as `@fastify/compress` and `@fastify/etag` rewrite the payload, the status or the headers.
 
@@ -42,7 +42,7 @@ Route paths use Fastify's syntax with positional parameter names (`/tasks/:p1`) 
 
 The route table lists the operations most specific first, static segments before parameters (`/tasks/search` before `/tasks/{id}`), and the plugin registers them in that order. Fastify's router prefers a static segment whatever the order; `matchContractRoute` iterates the same table. Fastify decodes a percent-encoded static segment (`/tasks/%73earch` reaches `/tasks/search`) while the boundary matches the raw path, so when the two name different operations the boundary answers the path's `notFound` 404 before any check, and no handler runs under another operation's access and input.
 
-The plugin is generated into the target's module of the api, `fastify.ts`, re-exported by the api's `index.ts` (ADR 0007 "Amendment 2026-10-19: generated modules"). Its fixed exports are `plugin`, `collectFrameworkRoutes`, `renderContractError`, `renderPreRoutingError`, `isContractRoute`, `MAX_CHECKED_ERROR_BODY_BYTES` and `MAX_RENDERED_ISSUES`; no export is named by an operation, so none takes the reserved-name suffix. Next to it, the generated tree holds the shared `routes.ts`, `handlers.ts` and `hooks.ts` modules and the shared request checks under `node-server/`, copied with the generated header (ADR 0009 "What generated code depends on at run time"); this target adds one placement file that imports them.
+The plugin is generated into the target's module of the api, `fastify.ts`, re-exported by the api's `index.ts` (ADR 0007 section 7). Its fixed exports are `plugin`, `collectFrameworkRoutes`, `renderContractError`, `renderPreRoutingError`, `isContractRoute`, `MAX_CHECKED_ERROR_BODY_BYTES` and `MAX_RENDERED_ISSUES`; no export is named by an operation, so none takes the reserved-name suffix. Next to it, the api's generated tree holds `routes.ts`, `handlers.ts`, `hooks.ts`, `index.ts`, its own validators when it writes them and, with `nativeDocs`, its docs module. The shared request checks are those of `@seampact/server-runtime`, imported, not copied (ADR 0025), and the placement file is the package's `/fastify` export.
 
 ### The reply path
 
@@ -54,7 +54,7 @@ The plugin's `setErrorHandler` answers, in the api's format, only the generated 
 
 An app's root-level hooks run before the route's `onRequest`. An error thrown there reaches the plugin's error handler without a request context; the handler finds the operation from the route's config and answers as above (spike). Before it rethrows an error outside that set, it installs the outgoing response check on `reply.raw` when it is absent, with the operation from the route's config, so the app error handler's reply is checked as on any contract request. A reply an app root hook writes itself is not checked, since the check is not installed yet; such a hook throws instead, or skips contract routes with `isContractRoute(request)`.
 
-Under `NODE_ENV=development` the error handler's reply to an exception the plugin does not map goes out as Fastify wrote it, whatever the `responses` mode, after a log line naming the exception's message and where it was thrown and the usual `onUnexpectedError` call (ADR 0016 "Amendment 2026-10-28"), and the violation check is skipped for it.
+Under `NODE_ENV=development` the error handler's reply to an exception the plugin does not map goes out as Fastify wrote it, whatever the `responses` mode, after a log line naming the exception's message and where it was thrown and the usual `onUnexpectedError` call (ADR 0016 "The outgoing response check"), and the violation check is skipped for it.
 
 ### The outgoing response check
 
@@ -92,6 +92,7 @@ The target options are ADR 0016's: `responses` (`strict`, the default, or `warn`
 
 The plugin runs it when Fastify loads it, so `app.ready()` and `app.listen()` reject and the app does not start; it lists every problem at once with the operation id, the name and the fix:
 
+- the runtime version, checked before any other step: the version the api's route table carries is compared with the installed runtime's, and a table written by another `major.minor` or a later patch throws `runtime.generated-for-other-version` when `fastify.ts` is imported. Each api keeps its own logger in the shared runtime, keyed by its route table.
 - the hook problems of ADR 0016's list (a missing authenticate hook, decider, scope resolver or idempotency store; two deciders claiming one name);
 - a contract operation without a bound handler: `handlers` lacks the interface's object or the object lacks the method;
 - a key of `operations` that names no operation of the api;
@@ -103,19 +104,11 @@ The framework-route check of ADR 0012 runs at `onReady`, over the routes that `c
 
 ### What the generated code depends on
 
-At run time: `fastify` 5 as a peer dependency, the zod link's runtime and, for types only, `@seampact/hooks` (ADR 0009). It imports no `@fastify/*` plugin and not `fastify-plugin`.
+At run time: `fastify` 5 as a peer dependency, the zod link's runtime and, for types only, `@seampact/hooks` (ADR 0009). It imports no `@fastify/*` plugin and not `fastify-plugin`. The runtime package is a production dependency: `@seampact/server-runtime`, its root, `/node` and `/fastify` exports, at the generator's version (ADR 0025, G1). `seampact generate` refuses an app that does not install it (`runtime.missing`) or installs one of another `major.minor` or a lower patch (`runtime.version-mismatch`).
 
 ### Refused by name or waiting
 
 `generate` refuses by name, with the case's code and its fix, everything ADR 0016 "Refused by name or waiting" lists for the slice apart from its NestJS platform and `class-validator` items, and a path segment that mixes a placeholder with literal text ("Placement"). The validators link is required in the slice: its absence is the shared `link.missing` refusal, and the Ajv fallback of ADR 0012 "Target obligations" waits for a consumer without a validator library.
-
-### Amendment 2026-10-27: the runtime package
-
-ADR 0025 moves the shared request checks out of the generated tree: they are those of `@seampact/server-runtime`, imported, no longer the copies of `@seampact/codegen-core/node-server` under `node-server/`, and the placement file is the package's `/fastify` export, no longer `fastify-boundary.ts`. Each api's generated tree keeps `fastify.ts`, `routes.ts`, `handlers.ts`, `hooks.ts`, `index.ts`, its own validators when it writes them and, with `nativeDocs`, its docs module.
-
-What the generated code depends on adds `@seampact/server-runtime` as a production dependency: its root, `/node` and `/fastify` exports, at the generator's version (ADR 0025, G1). `seampact generate` refuses an app that does not install it (`runtime.missing`) or installs one of another `major.minor` or a lower patch (`runtime.version-mismatch`).
-
-The boot check runs one step first, before any other: the version the api's route table carries is compared with the installed runtime's, and a table written by another `major.minor` or a later patch throws `runtime.generated-for-other-version` when `fastify.ts` is imported. Each api keeps its own logger in the shared runtime, keyed by its route table.
 
 ## Spike
 
@@ -154,6 +147,7 @@ Run on Fastify 5.12.7, `@fastify/compress` 9.2.2 and Node 24.21, and not kept. A
 
 ## Traceability
 
+- History: the dated amendments this ADR carried until PR #451 are folded into the sections they changed; `git show 43055be4:docs/adr/0017-fastify-target.md` holds them with their dates.
 - FRs: FR-5 (the check order), FR-14 (a case refused by name), FR-35 (the shared suite this boundary will pass); amendments A36, A39, A40, A41, A42, A47.
 - ADRs: 0007 (names, generated modules), 0009 (links, run-time dependencies), 0012 (placement and target obligations), 0013 (raw body), 0016 (the shared obligations).
 - Proof in the development phase: the review of this ADR, the spike above, and the slice's end-to-end gate on the Fastify consumer.

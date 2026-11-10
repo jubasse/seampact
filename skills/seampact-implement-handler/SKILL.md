@@ -9,7 +9,7 @@ The generated code fixes the interface. The handler is yours: it receives a chec
 
 1. Run `generate` first, so the types match the contract (command lines are in AGENTS.md).
 2. Find the stack: the `use:` of the server target in `seampact.config.yaml`. Open the one reference for it, and no other:
-   `references/nestjs.md`, `express.md`, `fastify.md`, `hono.md`, `adonisjs.md`, `spring-boot.md`, `laravel.md`, `symfony.md`, `fastapi.md`, `drf.md` or `ninja.md`.
+   `references/nestjs.md`, `express.md`, `fastify.md`, `hono.md`, `adonisjs.md`, `spring-boot.md`, `laravel.md`, `symfony.md`, `fastapi.md`, `drf.md`, `ninja.md`, `nextjs.md` or `api-platform.md`.
 3. Read the generated types of the operation in the generated folder (`outDir` in the config). Copy the names and signatures you find there; do not guess them. For one operation whole, with the file and line each part comes from, run `seampact explain <api>.<operationId>`.
 4. Write the handler beside your own code, not in the generated folder. Return one arm of the generated result, or a declared error. Never write a status code or a content type.
 5. Map your own models to the contract's type before you return them. A reply that breaks the contract answers 500.

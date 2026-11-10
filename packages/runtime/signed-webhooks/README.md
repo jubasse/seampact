@@ -1,5 +1,11 @@
 # @seampact/signed-webhooks
 
-Verifies a template-signed webhook (HMAC, timestamp tolerance, secret rotation) inside an authenticate hook.
+Verifies signed webhooks (HMAC, timestamp tolerance, secret rotation) inside a seampact authenticate hook on a Node server.
 
-Install and use it with seampact: https://jubasse.github.io/seampact/concepts/packages/
+```sh
+npm install @seampact/signed-webhooks
+```
+
+Guide: https://jubasse.github.io/seampact/concepts/packages/
+
+Verifies a template-signed webhook (HMAC, timestamp tolerance, secret rotation) inside an authenticate hook.

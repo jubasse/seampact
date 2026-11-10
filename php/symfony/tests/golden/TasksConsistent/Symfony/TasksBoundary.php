@@ -58,4 +58,9 @@ final class TasksBoundary extends BoundarySubscriber
   {
     return true;
   }
+
+  protected function checksInputRules(): bool
+  {
+    return true;
+  }
 }

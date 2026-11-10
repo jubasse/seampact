@@ -16,7 +16,7 @@ const HOOK_CHECK = "hooks";
 
 /**
  * The check the entry asks: off when switched off, else on with the entry's allow-list, copied, over the app routes
- * that overlap the contract's base paths, or every app route when `strict`.
+ * that overlap the contract's base paths, or every app route when `strict`, marked when the entry writes the switch.
  */
 export function frameworkRouteCheckOf(entry: TargetEntry): FrameworkRouteCheck {
   if (isFrameworkRouteCheckOff(entry.artefacts)) return { status: "off" };
@@ -29,6 +29,7 @@ export function frameworkRouteCheckOf(entry: TargetEntry): FrameworkRouteCheck {
       reason: allowance.reason,
     })),
     scope: isFrameworkRouteCheckStrict(entry.artefacts) ? "strict" : "contract",
+    ...(frameworkRoutesSwitchOf(entry.artefacts) === undefined ? {} : { written: true }),
   };
 }
 

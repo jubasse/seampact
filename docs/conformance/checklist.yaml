@@ -7,8 +7,8 @@
 #              headed "Acceptance: <area>") carry it only when a decision also applies.
 #   frs:       the FEAT-001 requirements the item realises.
 #   scenario:  the FEAT-001 scenario that proves it.
-#   targets:   who must pass it. "server" = nestjs, fastify, express, adonis, spring-boot,
-#              laravel, symfony, api-platform, fastapi, drf, ninja (A17, through the shared HTTP suite);
+#   targets:   who must pass it. "server" = nestjs, fastify, express, adonis, hono, nextjs,
+#              spring-boot, laravel, symfony, api-platform, fastapi, drf, ninja (A17, through the shared HTTP suite);
 #              "core" = compiler, emitter or CLI only. Acceptance-area items need at least
 #              zod, fetch, nestjs and fastify fixtures.
 #   retired:   the reason an item is no longer live; the id stays and never carries a proof.
@@ -51,23 +51,23 @@ items:
     fact: The scale fixture holds 3 apis with 93, 90 and 13 operations (196 in all) and compiles.
     frs: [FR-18, FR-8]
     scenario: SCN-024
-    targets: [core, fetch, nestjs]
+    targets: [core, fetch, axios, nestjs]
   - id: CHK-002
     fact: The scale fixture holds 241 named schemas and 119 named examples, every example parsed, and the generated fetch and nestjs code compiles under strict without type-instantiation errors.
     frs: [FR-18, FR-3]
     scenario: SCN-024
-    targets: [core, fetch, nestjs]
+    targets: [core, fetch, axios, nestjs]
   - id: CHK-003
     fact: The scale fixture holds 112 error codes in 11 families, each with a status, a nature and example params.
     frs: [FR-18, FR-6]
     scenario: SCN-037
-    targets: [core, fetch]
+    targets: [core, fetch, axios]
   # ---------- Acceptance: Access ----------
   - id: CHK-004
     fact: Four identities (viewer, viewer_or_device, operator, service) are declared once and resolved per route.
     frs: [FR-27, FR-4]
     scenario: SCN-076
-    targets: [core, server, fetch]
+    targets: [core, server, fetch, axios]
   - id: CHK-005
     fact: Five typed security schemes (session cookie, CSRF token, bearer, device token, internal token) are checked at compile time and emitted to OpenAPI.
     frs: [FR-27, FR-11]
@@ -103,17 +103,17 @@ items:
     fact: Every service call carries a deadline header (504 once passed, computed by the client from the budget) and a relayed trace context.
     frs: [FR-28]
     scenario: SCN-078
-    targets: [server, fetch]
+    targets: [server, fetch, axios]
   - id: CHK-012
     fact: Every service write carries the actor surface header, a strict enum, and a write without it answers 400.
     frs: [FR-28]
     scenario: SCN-078
-    targets: [server, fetch]
+    targets: [server, fetch, axios]
   - id: CHK-013
     fact: Operator writes and responses carry the rights-version header; a stale write answers the declared 403.
     frs: [FR-28]
     scenario: SCN-079
-    targets: [server, fetch]
+    targets: [server, fetch, axios]
   # ---------- Acceptance: Rules ----------
   - id: CHK-014
     fact: Requirements are checked in declared order after the identity, with short-circuit, and the server refuses to boot on an unbound one.
@@ -155,22 +155,22 @@ items:
     fact: One route declares several 2xx responses, and server and client type each.
     frs: [FR-7]
     scenario: SCN-038
-    targets: [server, fetch]
+    targets: [server, fetch, axios]
   - id: CHK-022
     fact: A 202 carries Location and Retry-After.
     frs: [FR-7]
     scenario: SCN-039
-    targets: [server, fetch]
+    targets: [server, fetch, axios]
   - id: CHK-023
     fact: A DELETE answers 200 with a body.
     frs: [FR-7]
     scenario: SCN-040
-    targets: [server, fetch]
+    targets: [server, fetch, axios]
   - id: CHK-024
     fact: Tagged unions have a discriminator (a body property, or a request header for a route's whole input) and a mapping, are strict on the server, emitted as oneOf with mapping, and keep an unknown variant in clients.
     frs: [FR-3, FR-15]
     scenario: SCN-033
-    targets: [core, server, zod, fetch]
+    targets: [core, server, zod, fetch, axios]
   - id: CHK-025
     fact: A restricted output field is absent, never null, for a caller without its right.
     frs: [FR-23]
@@ -185,12 +185,12 @@ items:
     fact: A degradable part is removed and listed in the format's degraded meta field or in conventions.degradedHeader through the generated helper, typed in the client.
     frs: [FR-32]
     scenario: SCN-085
-    targets: [server, fetch]
+    targets: [server, fetch, axios]
   - id: CHK-028
     fact: Success and error envelopes per api come from a convention pack, and handlers return unwrapped data.
     frs: [FR-42, FR-10]
     scenario: SCN-048
-    targets: [server, fetch]
+    targets: [server, fetch, axios]
   - id: CHK-029
     fact: Framework refusals (400, 404, 413, 415) are rendered in the api's declared error format.
     frs: [FR-42]
@@ -202,19 +202,19 @@ items:
     fact: Cursor paging through a declared paging style (A31) with the per-api default style, maxLimit, and the page body, headers and Link relations the style maps.
     frs: [FR-31]
     scenario: SCN-012
-    targets: [server, fetch]
+    targets: [server, fetch, axios]
   - id: CHK-031
     source: "A31"
     fact: Page-number paging with the parameter names and page base (one or zero) its paging style declares.
     frs: [FR-31]
     scenario: SCN-083
-    targets: [server, fetch]
+    targets: [server, fetch, axios]
   - id: CHK-032
     source: "A22"
     fact: A changes-since paging style (since, nextSince and complete roles) answers changes with the completeness flag and 410 on a stale token, over an opaque token or an instant.
     frs: [FR-31]
     scenario: SCN-082
-    targets: [server, fetch]
+    targets: [server, fetch, axios]
   - id: CHK-033
     fact: Sortable keys, and a right-restricted key that answers 403 without the right.
     frs: [FR-31, FR-23]
@@ -224,12 +224,12 @@ items:
     fact: Query decoding rules (number, boolean, list, exploded object) and an undeclared key refused by name; the client encodes the same way.
     frs: [FR-30]
     scenario: SCN-081
-    targets: [server, fetch]
+    targets: [server, fetch, axios]
   - id: CHK-035
     fact: A batch read is a safe POST answered as a table keyed by id, with no idempotency key and no CSRF.
     frs: [FR-32]
     scenario: SCN-084
-    targets: [core, server, fetch]
+    targets: [core, server, fetch, axios]
   - id: CHK-036
     fact: Cache families give one Cache-Control per caller kind, with Vary.
     frs: [FR-33]
@@ -239,12 +239,12 @@ items:
     fact: ETag and 304 are generated, with no handler code.
     frs: [FR-33]
     scenario: SCN-013
-    targets: [server, fetch]
+    targets: [server, fetch, axios]
   - id: CHK-038
     fact: A budget sets the client's default timeout and the budget extension.
     frs: [FR-7]
     scenario: SCN-043
-    targets: [core, fetch]
+    targets: [core, fetch, axios]
   - id: CHK-039
     fact: Body limits default to 1 MiB, with more on a batch, and 413 above.
     frs: [FR-7]
@@ -272,13 +272,13 @@ items:
     fact: With conventions.idempotency set, the writes of its methods carry idempotency keys, required unless it says otherwise (400 when missing), created per call by clients and reused by a caller that retries, and checked against the store interface (replay, 422 for a key reused with another request, 409 while in progress), with written exemptions; without it, no key is derived (A34).
     frs: [FR-7]
     scenario: SCN-042
-    targets: [server, fetch]
+    targets: [server, fetch, axios]
   # ---------- Acceptance: Errors and enums ----------
   - id: CHK-044
     fact: The error registry defines each code once with nature, params and an example; the client error type is a union on code.
     frs: [FR-6]
     scenario: SCN-037
-    targets: [core, fetch, server]
+    targets: [core, fetch, axios, server]
   - id: CHK-045
     fact: Every derived error carries derivedFrom.
     frs: [FR-6]
@@ -293,17 +293,17 @@ items:
     fact: Enums are strict on input and open on output.
     frs: [FR-29, FR-3]
     scenario: SCN-005
-    targets: [zod, fetch, server]
+    targets: [zod, fetch, axios, server]
   - id: CHK-048
     fact: An enum carries its source or is local, a local enum and a narrowing may state a reason, a narrowing is a strict subset, and an unknown fallback is used by clients.
     frs: [FR-29]
     scenario: SCN-080
-    targets: [core, fetch]
+    targets: [core, fetch, axios]
   - id: CHK-049
     fact: Strict emit (undeclared fields stripped) and tolerant read (unknown fields and members kept).
     frs: [FR-16, FR-15]
     scenario: SCN-053
-    targets: [server, fetch]
+    targets: [server, fetch, axios]
   # ---------- Acceptance: Extensions ----------
   - id: CHK-050
     fact: About twenty consumer extension keys are emitted under the consumer prefix.
@@ -350,7 +350,7 @@ items:
     fact: Deprecation with a sunset and a successor emits Deprecation, Sunset and Link headers and deprecated in OpenAPI.
     frs: [FR-13]
     scenario: SCN-051
-    targets: [core, server, fetch]
+    targets: [core, server, fetch, axios]
   - id: CHK-059
     fact: Each OpenAPI document an app writes (without an openapi key, an app with a server target writes one per api or declared document, and a client-only app writes none) is generated, committed and drift-checked, a drift failing check by default (checks.openapi error, or warning or disabled).
     frs: [FR-11]
@@ -413,7 +413,7 @@ items:
     fact: A standalone test consumer writes its contracts in YAML, generates, implements the boundaries and passes end to end with no hand-written boundary code.
     frs: [FR-18, FR-36]
     scenario: SCN-024
-    targets: [zod, fetch, nestjs, fastify]
+    targets: [zod, fetch, axios, nestjs, fastify]
   # ---------- Amendments ----------
   - id: CHK-071
     source: "A1, A2"
@@ -625,19 +625,19 @@ items:
     fact: A contract with no format pack serves bare payloads and RFC 9457 problem+json errors discriminated on code, and every other wire format comes from an opt-in pack.
     frs: [FR-42, FR-10]
     scenario: SCN-048
-    targets: [core, server, fetch]
+    targets: [core, server, fetch, axios]
   - id: CHK-106
     source: "A31"
     fact: A paged list names a paging style whose roles map to query names, body members, headers and Link relations; a paged list with neither a style nor a pack is a compile error naming both fixes.
     frs: [FR-31, FR-42]
     scenario: SCN-101
-    targets: [core, server, fetch]
+    targets: [core, server, fetch, axios]
   - id: CHK-107
     source: "A32"
     fact: The first-party format packs (api-platform, laravel, spring, jsonapi, hal) each compile the reference contract, and every server target that claims one passes that pack's HTTP suite profile.
     frs: [FR-42, FR-10, FR-35]
     scenario: SCN-100
-    targets: [core, server, fetch]
+    targets: [core, server, fetch, axios]
   - id: CHK-108
     source: "A33"
     fact: The /v{version} path prefix is a default; conventions.pathVersion none, set by the api or a pack, or a surface's pathVersion none keeps it out, a string api.version is then allowed, and with the default a literal version segment is refused.
@@ -661,7 +661,7 @@ items:
     fact: Error codes declared or attached on any tree node (api, collection, single, scope node, route) reach every operation below it with the attaching node as origin, limited by the attachment's reach (subtree or resource) and for (all, reads or writes); a conflicting redeclaration is a compile error; errorRoles renames a derived code for a subtree.
     frs: [FR-6, FR-2]
     scenario: SCN-011
-    targets: [core, fetch]
+    targets: [core, fetch, axios]
   - id: CHK-112
     source: "A36"
     fact: The reference contract compiles with every core default overridden (format, paging style and its over-limit policy, error codes and their pattern, header names, path version, query encoding and unknown-key policy, body unknown-key policy, int64 wire form, deprecation header names, ops defaults, operation ids and paths, URL form, cache directives), and with none of the opt-ins (no pack, no idempotency, no CSRF); no convention is applied that the contract or a pack cannot rename or turn off.
@@ -690,7 +690,7 @@ items:
     fact: A route below a collection member scope derives the notFound 404 only for a member id that no scope of the route reads; a list nested under scoped parents answers the scopes' codes and no second 404.
     frs: [FR-6, FR-24]
     scenario: SCN-069
-    targets: [core, fetch]
+    targets: [core, fetch, axios]
   - id: CHK-117
     fact: A relay route has no field rights, on output or input; the service sends every restricted field without a decide call, and the public operation projects it for its caller.
     frs: [FR-8, FR-23]
@@ -735,19 +735,19 @@ items:
     fact: Error codes outside the dotted form (TASK_NOT_FOUND, E1042, not-found) compile and reach the wire unchanged; a code's family is its family key or the part before its first dot, and conventions.errors.pattern narrows the codes on request.
     frs: [FR-6]
     scenario: SCN-037
-    targets: [core, fetch]
+    targets: [core, fetch, axios]
   - id: CHK-125
     source: "A40"
     fact: A contract nature mapped onto a base nature is written on the wire by its name, and a generated client takes its retry rule from the base of the code's declaration.
     frs: [FR-6, FR-15]
     scenario: SCN-112
-    targets: [core, fetch]
+    targets: [core, fetch, axios]
   - id: CHK-126
     source: "A36"
     fact: Every error format writes the code, as a member or inside a text template, and a format that writes none fails to compile; under a strict RFC 9457 format with absolute type URIs the client recovers the code from the template.
     frs: [FR-42, FR-6]
     scenario: SCN-048
-    targets: [core, fetch]
+    targets: [core, fetch, axios]
   - id: CHK-127
     source: "A36"
     fact: With a header.If-Match version, a stale tag answers 412 and a missing header 428, both renamable roles; a body or query version keeps 409.
@@ -759,7 +759,7 @@ items:
     fact: Paging styles express a more flag, after and before cursors (both sent answers 400), overLimit clamp (served as maxLimit and reported by the limit role, native paging resolvers included) and a split sort; the Stripe and GitHub styles of ADR 0002 compile and are served.
     frs: [FR-31]
     scenario: SCN-113
-    targets: [core, server, fetch]
+    targets: [core, server, fetch, axios]
   - id: CHK-129
     source: "A36"
     fact: resourceType, typeName and idProperty set the values of the collection, resource and id slots, so a nested collection whose item holds its id as id renders JSON:API, HAL and JSON-LD bodies with the wire names it chooses.
@@ -891,25 +891,25 @@ items:
     fact: A form body (Slack style, signed, with a JSON text field) is decoded with the query rules, its JSON field parsed and validated, and the handler typed.
     frs: [FR-7, FR-20]
     scenario: SCN-118
-    targets: [core, server, fetch]
+    targets: [core, server, fetch, axios]
   - id: CHK-151
     source: "A39"
     fact: A multipart upload with typed fields and files answers 400 for a file outside its media list or above maxSize and 413 above the body limit, and the handler receives the framework's own upload object.
     frs: [FR-7]
     scenario: SCN-119
-    targets: [core, server, fetch]
+    targets: [core, server, fetch, axios]
   - id: CHK-152
     source: "A39"
     fact: A file download sets Content-Type from the declared media and Content-Disposition from the handler's file name, bypasses the wire format, and clients return the content with its media type.
     frs: [FR-7]
     scenario: SCN-120
-    targets: [core, server, fetch]
+    targets: [core, server, fetch, axios]
   - id: CHK-153
     source: "A39"
     fact: A 302 and a 303 carry the derived Location header from a typed handler result, and clients that can read a redirect return its status and location.
     frs: [FR-7]
     scenario: SCN-121
-    targets: [core, server, fetch]
+    targets: [core, server, fetch, axios]
   - id: CHK-154
     source: "A41"
     fact: No target generates the framework controller; the developer's controller implements the generated interface, generated utilities place every step of the check order around it, and all generated code goes to the app's outDir, __generated__ by default.
@@ -951,7 +951,7 @@ items:
     fact: A query list in brackets form (tag[]=a&tag[]=b) is accepted and sent, and every server decodes the raw query string, so PHP's last-value parsing and Express's parser setting change nothing.
     frs: [FR-30]
     scenario: SCN-081
-    targets: [core, server, fetch]
+    targets: [core, server, fetch, axios]
   - id: CHK-161
     source: "A41"
     fact: A server target entry's mount states the framework's own path prefix, the boot check, or on Express and AdonisJS the first contract request, refuses a mismatch, and nestjs routes are version-neutral with the full contract path.
@@ -990,7 +990,7 @@ items:
     targets: [spring-boot, laravel]
   - id: CHK-167
     source: "A28"
-    fact: The api-platform target serves the JSON-LD contexts as allow-listed framework routes, and another target claiming the api-platform pack serves them too or is refused by the matrix.
+    fact: The api-platform target serves the JSON-LD contexts as allow-listed framework routes, and a Node server given the api-platform pack refuses its slots by name at generation.
     frs: [FR-21, FR-42]
     scenario: SCN-100
     targets: [core, api-platform]
@@ -1118,6 +1118,12 @@ items:
     frs: [FR-7]
     scenario: SCN-042
     targets: [server]
+  - id: CHK-190
+    source: "A45"
+    fact: An app input rule runs after the contract's validation and the claim, answers the operation's schema-invalid role with the rule's name and pointer, and releases the claim.
+    frs: [FR-5]
+    scenario: SCN-130
+    targets: [nestjs, fastify, express, adonis, hono, nextjs, laravel, symfony]
 not_in_checklist:
   - source: "A4, A16"
     reason: Development process decisions (how features are framed, what research may inform); nothing to test in the product.

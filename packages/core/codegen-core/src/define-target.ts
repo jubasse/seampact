@@ -1,4 +1,5 @@
 import { ARTEFACT_ID_PATTERN } from "@seampact/spec/config";
+import { DEFAULT_IMPORT_SPECIFIER_STYLE } from "./import-specifier.js";
 import type { ContractIR } from "@seampact/spec/ir";
 import type { DescriptorSet, LinkKind } from "./descriptors.js";
 import { finishFiles } from "./finish-files.js";
@@ -64,6 +65,8 @@ export function defineTarget<
       frameworkRoutes: structuredClone(request.frameworkRoutes ?? DEFAULT_FRAMEWORK_ROUTE_CHECK),
       hookCheck: request.hookCheck ?? DEFAULT_HOOK_BOOT_CHECK,
       mount: request.mount ?? NO_MOUNT,
+      importSpecifiers:
+        request.importSpecifiers ?? metadata.importSpecifiers ?? DEFAULT_IMPORT_SPECIFIER_STYLE,
       ...(request.nativeDocsDocument === undefined
         ? {}
         : { nativeDocsDocument: structuredClone(request.nativeDocsDocument) }),

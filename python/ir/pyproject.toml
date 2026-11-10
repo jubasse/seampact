@@ -4,14 +4,17 @@ build-backend = "hatchling.build"
 
 [project]
 name = "seampact-ir"
-version = "1.0.1"
-description = "The seampact IR model, naming and reader for Python generators."
+version = "1.1.0"
+description = "The seampact IR model, naming and reader for Python generators, with the bundle verifier and the compiler runner."
+keywords = ["ir", "generator", "python", "seampact", "api-contract", "openapi", "codegen"]
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.12"
 dependencies = ["jsonschema==4.26.0", "ruamel.yaml==0.19.1"]
 classifiers = [
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Code Generators",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
     "Typing :: Typed",
@@ -26,7 +29,7 @@ Issues = "https://github.com/jubasse/seampact/issues"
 [project.optional-dependencies]
 # The compiler binary of this platform, for a `path` source or the OpenAPI documents of an app config; a bundle-only
 # app with `openapi: none` never needs it.
-compiler = ["seampact-compiler==1.0.1"]
+compiler = ["seampact-compiler==1.1.0"]
 
 # PEP 420: `seampact` is a namespace shared by every seampact distribution, so it has no `__init__.py`.
 [project.scripts]

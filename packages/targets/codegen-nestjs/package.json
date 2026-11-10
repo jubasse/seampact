@@ -1,7 +1,8 @@
 {
   "name": "@seampact/codegen-nestjs",
-  "description": "Generates the NestJS boundary around your controllers: a decorator per operation, the access guard, an input decorator whose pipe validates, a handler wrapper or opt-in reply interceptor that writes the checked reply, the error filter and a boot check, validating with zod.",
-  "version": "1.0.1",
+  "description": "Seampact target for NestJS: generates operation decorators, the access guard, validating input pipes, the error filter and a boot check around your controllers.",
+  "license": "MIT",
+  "version": "1.1.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jubasse/seampact.git",
@@ -11,6 +12,15 @@
   "bugs": {
     "url": "https://github.com/jubasse/seampact/issues"
   },
+  "keywords": [
+    "nestjs",
+    "server",
+    "validation",
+    "seampact",
+    "api-contract",
+    "openapi",
+    "codegen"
+  ],
   "type": "module",
   "files": [
     "dist"
@@ -46,7 +56,7 @@
     "@nestjs/common": "12.3.2",
     "@nestjs/core": "12.3.2",
     "@nestjs/platform-express": "12.3.2",
-    "@nestjs/swagger": "12.0.4",
+    "@nestjs/swagger": "12.0.5",
     "@nestjs/testing": "12.3.2",
     "@seampact/codegen-core": "workspace:*",
     "@seampact/spec": "workspace:*",

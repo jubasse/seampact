@@ -6,7 +6,7 @@ plugins {
     `java-library`
 }
 
-description = "Verifies template-signed webhooks (HMAC-SHA256) behind the seampact authenticate hook."
+description = "Verifies signed webhooks (HMAC-SHA256) on the JVM, behind the seampact authenticate hook."
 
 val repositoryRoot = rootProject.projectDir.parentFile
 
@@ -30,7 +30,7 @@ val runtimeDependencies: Provider<List<String>> =
         }
     }
 
-val verifyNoRuntimeDependency by tasks.registering {
+val verifyNoRuntimeDependency = tasks.register("verifyNoRuntimeDependency") {
     description = "Fails when seampact-signed-webhooks has a runtime dependency, naming its coordinates."
     group = LifecycleBasePlugin.VERIFICATION_GROUP
     // A local copy: the action must not capture the script, which the configuration cache cannot store.

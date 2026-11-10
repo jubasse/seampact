@@ -184,6 +184,12 @@ function allowUntestedItemOf(frameworkId: string, installed: InstalledVersion): 
   return `${frameworkId}@0.${minor ?? "<minor>"}`;
 }
 
+function testedOnOf(subject: { id: string; testedMajors: readonly number[] }): string {
+  if (subject.testedMajors.length === 0) return `tested on no ${subject.id} major yet`;
+
+  return `tested on ${subject.id} ${subject.testedMajors.join(", ")} only`;
+}
+
 // An installed major the matrix does not test is a warning, an error under `checks.matrix: error`, and nothing when
 // the entry accepts it in `allowUntested`.
 function reportUntestedMajor(
@@ -201,7 +207,7 @@ function reportUntestedMajor(
 
   const untested = {
     code: "config.matrix.untested",
-    message: `${installed.packageName} ${installed.version} is installed, and the target '${entry.use}' is tested on ${subject.id} ${subject.testedMajors.join(", ")} only.`,
+    message: `${installed.packageName} ${installed.version} is installed, and the target '${entry.use}' is ${testedOnOf(subject)}.`,
     fix: `Install a tested major, or accept this one with \`allowUntested: [${allowItem}]\` on the entry.`,
     where: entryWhere(entry.id),
   };

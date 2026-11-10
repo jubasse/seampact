@@ -12,6 +12,7 @@ use Seampact\Codegen\Runtime\DebugLookup;
 use Seampact\Codegen\Runtime\Decider;
 use Seampact\Codegen\Runtime\HookLookup;
 use Seampact\Codegen\Runtime\IdempotencyStoreLookup;
+use Seampact\Codegen\Runtime\InputRulesLookup;
 use Seampact\Codegen\Runtime\Ir;
 use Seampact\Codegen\Runtime\UnexpectedErrorListener;
 use Seampact\Hooks\AuthenticateHook;
@@ -22,12 +23,12 @@ use Symfony\Component\DependencyInjection\Attribute\Exclude;
  * The api's hooks as tagged services, which the bundle autoconfigures from the hook interfaces: a service locator of
  * the authenticate hooks keyed by their generated interface, the deciders and scope resolvers as tagged iterators, the
  * optional unexpected-error listener of the api's generated interface and idempotency store of the api's own service
- * id, and the app's logger. A
+ * id, the input rules as a tagged iterator, and the app's logger. A
  * missing hook is a `LogicException`, which the boundary answers with the api's 500. Symfony's `AccessDeniedException` (`denyAccessUnlessGranted()`) is a decider's access
  * denial, named as a string so an app without SecurityBundle still loads this class. Debug mode is `kernel.debug`.
  */
 #[Exclude]
-final class Hooks implements HookLookup, IdempotencyStoreLookup, DebugLookup
+final class Hooks implements HookLookup, IdempotencyStoreLookup, InputRulesLookup, DebugLookup
 {
     /** The tags are `TAG_PREFIX . <api> . <kind suffix>`; the generated bundle builds its tags from these. */
     public const TAG_PREFIX = 'seampact.';
@@ -36,6 +37,7 @@ final class Hooks implements HookLookup, IdempotencyStoreLookup, DebugLookup
     public const SCOPE_RESOLVERS_TAG_SUFFIX = '.scope_resolvers';
     /** The service id the app aliases to an api's idempotency store is `TAG_PREFIX . <api> . IDEMPOTENCY_STORE_SUFFIX`. */
     public const IDEMPOTENCY_STORE_SUFFIX = '.idempotency_store';
+    public const INPUT_RULES_TAG_SUFFIX = '.input_rules';
     /** The tag attribute naming an authenticate hook's generated interface, the locator's key. */
     public const HOOK_ATTRIBUTE = 'hook';
     public const DECIDER_FIX = "register a service implementing the api's Decider and naming it, or '" . Decider::EVERY_NAME . "', with autoconfiguration on";
@@ -46,6 +48,7 @@ final class Hooks implements HookLookup, IdempotencyStoreLookup, DebugLookup
     /**
      * @param iterable<mixed> $deciders
      * @param iterable<mixed> $scopeResolvers
+     * @param iterable<mixed> $inputRules
      */
     public function __construct(
         private readonly ContainerInterface $authenticateHooks,
@@ -55,6 +58,7 @@ final class Hooks implements HookLookup, IdempotencyStoreLookup, DebugLookup
         private readonly LoggerInterface $logger,
         private readonly mixed $idempotencyStore = null,
         private readonly bool $debug = false,
+        private readonly iterable $inputRules = [],
     ) {
     }
 
@@ -86,6 +90,24 @@ final class Hooks implements HookLookup, IdempotencyStoreLookup, DebugLookup
     public function scopeResolvers(ApiContract $contract): iterable
     {
         return $this->scopeResolvers;
+    }
+
+    /** @return iterable<mixed> */
+    public function inputRules(ApiContract $contract): iterable
+    {
+        return $this->inputRules;
+    }
+
+    /** @return class-string<InputRules> the api's own `InputRules` interface, which every registered rule set must implement */
+    public function inputRulesInterface(ApiContract $contract): string
+    {
+        $interface = Ir::string($contract->types, 'inputRules')
+            ?? throw new \LogicException("seampact: the contract of api '{$contract->api}' names no input rules interface; regenerate it.");
+        if (!is_subclass_of($interface, InputRules::class)) {
+            throw new \LogicException("seampact: the input rules interface {$interface} of api '{$contract->api}' does not exist or does not extend " . InputRules::class . '; regenerate it.');
+        }
+
+        return $interface;
     }
 
     public function unexpectedErrorListener(ApiContract $contract): ?UnexpectedErrorListener

@@ -1,7 +1,8 @@
 {
   "name": "@seampact/cli",
-  "description": "The seampact command: init, compile, check, lint, diff, generate, bundle, explain.",
-  "version": "1.0.1",
+  "description": "The seampact command: compile a YAML API contract and generate typed server code, validators, OpenAPI and clients, then check them in CI.",
+  "license": "MIT",
+  "version": "1.1.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jubasse/seampact.git",
@@ -11,6 +12,14 @@
   "bugs": {
     "url": "https://github.com/jubasse/seampact/issues"
   },
+  "keywords": [
+    "cli",
+    "contract-first",
+    "seampact",
+    "api-contract",
+    "openapi",
+    "codegen"
+  ],
   "type": "module",
   "files": [
     "dist"

@@ -32,6 +32,8 @@ Every generator handles every format and paging style your contract declares. Wh
 | `codegen-express` | server boundary for Express 4 and 5 | `validators`: zod or yup |
 | `codegen-adonis` | server boundary for AdonisJS 6 and 7 | `validators`: zod or yup, or VineJS without a link |
 | `codegen-hono` | server boundary for Hono 4 on Web-standard `Request` and `Response` | `validators`: zod or yup |
+| `codegen-nextjs` | a route handler for a Next.js 16 catch-all route file | `validators`: zod or yup |
+| `codegen-axios` | the fetch client sent through your axios instance | `types`; needs `@seampact/codegen-fetch` installed |
 | `codegen-react` | React hooks: TanStack Query (`query: tanstack`), SWR (`query: swr`) or RTK Query (`query: rtk`), or no library (`query: fetch`) | `client`: fetch |
 | `codegen-vue` | plain composables, or with `query: tanstack` or `query: pinia-colada` | `client`: fetch |
 | `codegen-angular` | injectable services over `HttpClient`, and with `state: ngrx` or `state: ngrx-signals` typed actions and effects, or a Signal Store feature | nothing |
@@ -39,11 +41,12 @@ Every generator handles every format and paging style your contract declares. Wh
 | Spring Boot plugin | composed annotations, interceptor and argument resolver around your controllers, with Bean Validation | nothing |
 | `seampact/laravel` | routes, middleware and Form Requests around your controllers | nothing |
 | `seampact/symfony` | route loader, attributes, a listener, a value resolver and Validator constraints around your controllers | nothing |
+| `seampact/api-platform` | what Symfony generates, plus API Platform resources, processors and security glue, around your controllers | nothing |
 | `pypi:seampact-fastapi` | routes, a boundary middleware and dependencies around your handlers, with Pydantic models | nothing |
 | `pypi:seampact-drf` | views, serializers, a boundary middleware and an exception handler around your handlers | nothing |
 | `pypi:seampact-ninja` | a bind function that adds a Ninja router, with a boundary middleware and Pydantic models, around your handlers | nothing |
 
-Guides: [React](../frontend/react.md), [Vue](../frontend/vue.md), [Angular](../frontend/angular.md), [NestJS](../backend/nestjs.md), [Spring Boot](../backend/spring-boot.md), [Laravel](../backend/laravel.md), [Symfony](../backend/symfony.md), [FastAPI](../backend/fastapi.md), [Django REST Framework](../backend/drf.md), [Django Ninja](../backend/ninja.md). Their options are in [Per-target options](reference.md#per-target-options).
+Guides: [React](../frontend/react.md), [Vue](../frontend/vue.md), [Angular](../frontend/angular.md), [NestJS](../backend/nestjs.md), [Next.js](../backend/nextjs.md), [Spring Boot](../backend/spring-boot.md), [Laravel](../backend/laravel.md), [Symfony](../backend/symfony.md), [API Platform](../backend/api-platform.md), [Axios client](../frontend/axios-client.md), [FastAPI](../backend/fastapi.md), [Django REST Framework](../backend/drf.md), [Django Ninja](../backend/ninja.md). Their options are in [Per-target options](reference.md#per-target-options).
 
 ## The entry of each stack
 
@@ -78,7 +81,7 @@ A Node entry writes `apis: [notes]`. Every other entry writes `api: notes`, once
 ```yaml
   - id: notes
     out: Notes
-    use: seampact/laravel   # or seampact/symfony
+    use: seampact/laravel   # or seampact/symfony, seampact/api-platform
     api: notes
 ```
 

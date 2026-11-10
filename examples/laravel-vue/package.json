@@ -1,0 +1,32 @@
+{
+  "name": "seampact-example-laravel-vue",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "pnpm generate:web && pnpm generate:api",
+    "generate:web": "node --import tsx node_modules/@seampact/cli/src/bin.ts generate",
+    "generate:api": "tsx scripts/generate-api.ts",
+    "check:types": "vue-tsc --noEmit",
+    "build": "vite build",
+    "start": "tsx scripts/serve-api.ts",
+    "dev:web": "vite",
+    "e2e": "tsx scripts/e2e.ts"
+  },
+  "dependencies": {
+    "@seampact/hooks": "workspace:*",
+    "@tanstack/vue-query": "5.104.5",
+    "vue": "3.5.44"
+  },
+  "devDependencies": {
+    "@seampact/cli": "workspace:*",
+    "@seampact/codegen-fetch": "workspace:*",
+    "@seampact/codegen-ts": "workspace:*",
+    "@seampact/codegen-vue": "workspace:*",
+    "@types/node": "24.19.2",
+    "@vitejs/plugin-vue": "6.0.10",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "vite": "8.3.4",
+    "vue-tsc": "3.3.14"
+  }
+}

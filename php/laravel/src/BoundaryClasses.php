@@ -12,7 +12,7 @@ use Seampact\Codegen\PhpClassFile;
 /**
  * The api's boundary wiring (ADR 0023 "The boundary"): the boundary and access middleware, each naming the contract
  * class, the service provider the app lists in `bootstrap/providers.php`, with its boot check switches and the
- * container tags its deciders and scope resolvers take and the key of its idempotency store, and the interface the app binds its unexpected-error listener to.
+ * container tags its deciders, scope resolvers and input rules take and the key of its idempotency store, the interface the app binds its unexpected-error listener to, and the interface its input rules implement.
  */
 final class BoundaryClasses
 {
@@ -31,6 +31,11 @@ final class BoundaryClasses
                 $this->layout->unexpectedErrorListener,
                 $this->layout->runtime('UnexpectedErrorListener'),
                 "Told of every failure api '{$this->layout->ir->api->id}' answers with its 500: bind your listener to this interface.",
+            ),
+            ApiInterfaceFile::extending(
+                $this->layout->inputRules,
+                $this->layout->runtime('InputRules'),
+                "The app's input rules of api '{$this->layout->ir->api->id}', one class per operation and input part: tag each with the provider's INPUT_RULES_TAG.",
             ),
         ];
     }
@@ -57,6 +62,8 @@ final class BoundaryClasses
             ->addComment('The container tag of the deciders of this api.');
         $class->addConstant('SCOPE_RESOLVERS_TAG', self::tagLiteral($hooks, $api, 'SCOPE_RESOLVERS_TAG_SUFFIX'))->setPublic()
             ->addComment('The container tag of the scope resolvers of this api.');
+        $class->addConstant('INPUT_RULES_TAG', self::tagLiteral($hooks, $api, 'INPUT_RULES_TAG_SUFFIX'))->setPublic()
+            ->addComment('The container tag of the input rules of this api.');
         $class->addConstant('IDEMPOTENCY_STORE_KEY', self::tagLiteral($hooks, $api, 'IDEMPOTENCY_STORE_KEY_SUFFIX'))->setPublic()
             ->addComment('The container key the app binds the idempotency store of this api under.');
 

@@ -2,6 +2,7 @@ import {
   type GeneratedFile,
   type GenerateInput,
   type GenerateOutcome,
+  type ImportSpecifierStyle,
   relativeModuleSpecifier,
 } from "@seampact/codegen-core";
 import {
@@ -55,7 +56,12 @@ export function generateValidators(
   ];
 
   const files: GeneratedFile[] = modules.flatMap(({ module, source }) => {
-    const contents = moduleContents(module, source, libraryImports(module, source.supportNames));
+    const contents = moduleContents(
+      module,
+      source,
+      libraryImports(module, source.supportNames, input.importSpecifiers),
+      input.importSpecifiers,
+    );
 
     return contents === undefined ? [] : [{ path: modulePath(module), contents }];
   });
@@ -68,16 +74,20 @@ export function generateValidators(
     files.push({ path: modulePath(YUP_SUPPORT_MODULE), contents: YUP_SUPPORT_SOURCE });
   }
 
-  return { status: "generated", files: [...files, ...indexFile(files)] };
+  return { status: "generated", files: [...files, ...indexFile(files, input.importSpecifiers)] };
 }
 
 type RenderedModule = ModuleSource & { supportNames: ReadonlySet<string> };
 
 // The yup import first, then the names the module takes from the shared support.
-function libraryImports(module: string, supportNames: ReadonlySet<string>): string {
+function libraryImports(
+  module: string,
+  supportNames: ReadonlySet<string>,
+  style: ImportSpecifierStyle | undefined,
+): string {
   if (supportNames.size === 0) return YUP_IMPORT;
 
-  const specifier = relativeModuleSpecifier(modulePath(module), YUP_SUPPORT_MODULE);
+  const specifier = relativeModuleSpecifier(modulePath(module), YUP_SUPPORT_MODULE, style);
 
   return `${YUP_IMPORT}\nimport { ${[...supportNames].sort().join(", ")} } from "${specifier}";`;
 }

@@ -30,7 +30,7 @@ public sealed interface BinaryInstall {
 }
 
 /**
- * Installs a resolved binary for use (ADR 0010, "Amendment 2026-10-21: the JVM channels", Cache): hashes it and
+ * Installs a resolved binary for use (ADR 0010, "The JVM channels", Cache): hashes it and
  * refuses one whose SHA-256 differs from the pin (`binary.hash-mismatch`, naming both), then copies it into
  * `<cache root>/<sha256>/`, the only copy that runs. A resolved artefact and a `path` override are copied alike, so a
  * file someone else may change is never started. The source is hashed before the cache is looked at, so a warm cache

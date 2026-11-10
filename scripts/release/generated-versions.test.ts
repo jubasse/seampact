@@ -5,12 +5,25 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { GOLDEN_TREES, generatedVersionEdits } from "./generated-versions.ts";
+import { isJsonRecord } from "./json-record.ts";
 import { ReleaseError } from "./release-version.ts";
 
 const REPOSITORY_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
-// The version the committed goldens carry; test vectors at other versions are not the stamp's business.
-const STAMPED_VERSION = "1.0.0";
+// The version the committed goldens carry: the last release on develop, the release itself once stamped. Test
+// vectors at other versions are not the stamp's business.
+const STAMPED_VERSION = repositoryVersion();
+
+function repositoryVersion(): string {
+  const manifest: unknown = JSON.parse(
+    readFileSync(join(REPOSITORY_ROOT, "packages/core/cli/package.json"), "utf8"),
+  );
+
+  if (!isJsonRecord(manifest) || typeof manifest.version !== "string")
+    throw new Error("packages/core/cli/package.json has no version: restore its `version` field");
+
+  return manifest.version;
+}
 
 function trackedFiles(): string[] {
   return execFileSync("git", ["ls-files", "-z"], {

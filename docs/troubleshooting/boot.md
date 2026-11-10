@@ -28,12 +28,13 @@ By default only routes that reach a path of the api are checked. Set `artefacts.
 
 ## Node servers
 
-Express, Fastify, Hono, NestJS and AdonisJS. The check runs when the app starts and the message starts with `seampact: the api '<id>' cannot start:`.
+Express, Fastify, Hono, NestJS, AdonisJS and Next.js. The check runs when the app starts (on Next.js, when the route file loads) and the message starts with `seampact: the api '<id>' cannot start:`.
 
 | You see | Cause and fix |
 |---|---|
 | `the framework route 'GET /docs' is outside the contract and not allow-listed` | The app has a route the contract does not declare. [Allow-list it](#allow-listing-framework-routes). |
 | `differs from the entry's mount (write the prefix as the entry's 'mount' in seampact.config.yaml instead)` | The framework adds a prefix (route group, plugin prefix, `basePath`, mount path) the contract does not know. Remove it from the framework and set `mount` on the target entry. |
+| `runtime.edge.unsupported: the route module loads on the Edge runtime` | Next.js: the route file runs on the Edge runtime. Export `runtime = "nodejs"` from it. |
 | `handlers has no 'NotesEndpoints' object` | Pass one object per generated handler interface. |
 | `handlers.NotesEndpoints has no method getNote()` | Implement the method on that object. |
 | `'bodyValidation' is turned on, but the target generated no output validators` | Set `bodyValidation: true` in the target's `options`, then run `generate`. |
@@ -42,6 +43,13 @@ Express, Fastify, Hono, NestJS and AdonisJS. The check runs when the app starts 
 | `no scope resolver for the scope '<scope>'` | Register `scopeResolvers.<scope>`. |
 | `no idempotency store for an idempotent operation` | Register `idempotencyStore`, for example `createMemoryIdempotencyStore()` of `@seampact/idempotency-memory`. |
 | `two deciders claim '<name>'` | Keep the name in one decider. |
+| `'inputRules' names '<id>', which is no operation of the api` | Key [your input rules](../backend/express.md#add-your-own-rules) by an operation id the fix lists. An operation the entry's `operations` filter drops takes no rules. |
+| `'inputRules' names the relay of '<api>.<id>', which takes no rules` | Register the rules on the gateway's own operation, which checks the input before it forwards. |
+| `its 'inputRules' entry names the part '<part>'` | Key the rules by part: `path`, `query`, `headers` or `body`. |
+| `its 'inputRules' entry has rules for '<part>', where the operation takes no input` | Remove those rules, or declare that input in the contract. |
+| `its input rules cannot run on the api's generated validators` | Input rules are written in the validators' library: generate them with zod, yup or class-validator, or with the Fastify target's own Ajv or the AdonisJS target's own VineJS validators. With class-validator, generate the api again so its route table hands the runtime the class-validator calls. |
+| `its '<part>' rules are not <kind>` | Pass a value of the api validators' library, as the problem names it. On NestJS with class-validator, pass a class with class-validator constraints. |
+| `an app input rule of '<id>' on its <part> reports no usable name` (a warning at run time) | The refusal answered `app.invalid`. Name the rule as the warning's fix says: zod `params: { rule }`, yup `.test({ name })`, the Ajv keyword, the class-validator constraint's `name`, or the name a VineJS rule reports. |
 
 ### NestJS
 
@@ -83,6 +91,12 @@ The check runs with `bin/console cache:warmup` and on the first request. The mes
 | `two deciders claim '<name>'` | Two services answer the same name. Keep the name in one decider. |
 | `no idempotency store for '<operation>'` | An idempotent operation has no store. Alias `seampact.<api key>.idempotency_store` to a service implementing `Seampact\Hooks\IdempotencyStore`. |
 | `operation '<id>' has no handler` | No controller serves the operation. Register one controller service implementing the `<Resource>Endpoints` interface. |
+| `<Class> has input rules for operation '<id>', which api '<api>' lacks or whose entry's operations filter drops` | The rule class names an operation that is not served. Fix the id in `operationId()`, or remove the class. |
+| `<Class> has input rules for the part '<part>' of operation '<id>', which has no ...` | The operation has no input in that part. Name a part the message lists, or remove the class. |
+| `<Class> has input rules for operation '<id>', which relays '<id>' of api '<api>'` | A relay operation takes no rules. Put them on the public operation in the gateway. |
+| `two input rule sets claim the part '<part>' of operation '<id>'` | Two classes cover one part. Merge their constraints into one class. |
+| `the input rules service <Class> does not implement ...` | A service tagged `seampact.<api>.input_rules` does not implement the api's `<Api>InputRules`. Implement the generated interface, or untag it. |
+| `the service <Class> implements Seampact\Symfony\Runtime\InputRules directly, so no api runs it` | No api tags a class that implements the runtime interface itself. Implement the generated `<Api>InputRules` of the api it serves. |
 | `the method <class>::<method> handles operation '<id>' but is not marked #[SeampactOperation('<id>')]` | The method has no operation attribute. Add `#[SeampactOperation('<id>')]`. |
 | `the controller <class> carries #[IsGranted]` | `#[IsGranted]` would decide access outside the contract. Remove it. For a plain role check, paste the `access_control` rule the message prints; for anything else, write a decider. |
 | `the method <class>::<method> carries #[IsGranted]` | `#[IsGranted]` on a method has the same effect as on the controller. Same as the controller form. |
@@ -106,6 +120,18 @@ The check runs with `bin/console cache:warmup` and on the first request. The mes
 
 An invalid `%env()%` value of the bundle configuration does not stop the start: the api answers 500 on its routes and the log names the key.
 
+## API Platform
+
+The check runs with `bin/console cache:warmup`, and lists every problem at once. The [Symfony](#symfony) rows apply too: the boundary is the same.
+
+| You see | Cause and fix |
+|---|---|
+| `input.rules.unsupported: <Class> is tagged as app input rules ...` | The API Platform target does not run app input rules before 1.2.0. Untag the service, or serve the api on Symfony. |
+| `the operation '<name>' sets <read, write, contentNegotiation, deserialize or validate>: ...` | The app changed a switch of a contract operation. The boundary reads, negotiates, deserializes and validates it. Remove the change. |
+| `the operation '<name>' does not set the extra property ...` | A change dropped a marker the generated resource sets. Remove it. |
+| `the operation '<name>' sets securityPostDenormalize` (or `securityPostValidation`) | Both need the object API Platform's deserialize would build. Use `security`, which runs before the handler. |
+| `the operation '<name>' has another processor than its generated ...`, `the operation '<name>' sets a provider` | A processor or a provider replaced the generated one. Remove it. |
+
 ## Laravel
 
 The check runs at `php artisan route:cache` and at the first HTTP boot while the routes are not cached.
@@ -117,6 +143,11 @@ The check runs at `php artisan route:cache` and at the first HTTP boot while the
 | `no scope resolver for the scope '<scope>': tag a ScopeResolver with ...` | A scope has no resolver. Tag a scope resolver with `seampact.<api>.scope-resolvers`. |
 | `no idempotency store for ...: bind 'seampact.<api>.idempotency-store' ...` | An idempotent operation has no store. Bind your `IdempotencyStore` implementation under the provider's `IDEMPOTENCY_STORE_KEY`. |
 | `operation '<id>' has no handler: bind <Endpoints> to a controller in the container` | No controller serves the operation. Bind the generated `<Resource>Endpoints` interface to your controller. |
+| `<Class> has input rules for operation '<id>', which api '<api>' lacks or whose entry's operations filter drops` | The rule class names an operation that is not served. Fix the id in `operationId()`, or remove the class. |
+| `<Class> has input rules for the part '<part>' of operation '<id>', which has no ...` | The operation has no input in that part. Name a part the message lists, or remove the class. |
+| `<Class> has input rules for operation '<id>', which relays '<id>' of api '<api>'` | A relay operation takes no rules. Put them on the public operation in the gateway. |
+| `two input rule sets claim the part '<part>' of operation '<id>'` | Two classes cover one part. Merge their rules into one class. |
+| `the input rules service <Class> does not implement ...` | A class tagged `seampact.<api>.input_rules` does not implement the api's `<Api>InputRules`. Implement the generated `<Api>InputRules` interface, or untag it. |
 | `the framework route <METHOD> /<path> is outside the contract: allow-list it in the entry's frameworkRoutes, or remove it` | The app has a route the contract does not declare. [Allow-list it](#allow-listing-framework-routes), or remove the route. |
 | `operation '<id>' has 0 contract routes: call Route::seampact('<api>') once in the app's routes` | The contract routes are not registered. Call `Route::seampact('<api>')` once, from `withRouting(then: ...)` in `bootstrap/app.php`, outside any route group prefix. |
 | `the boundary middleware ... is not the first global middleware` | A global middleware runs before the boundary. Remove the one you prepended. Two apis whose base paths overlap: set `catch_all: false` on the broader one. |

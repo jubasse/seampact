@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Suite;
 
+use App\Generated\InputRules\Symfony\UnexpectedErrorListener as InputRulesUnexpectedErrorListener;
 use App\Generated\Tasks\Symfony\UnexpectedErrorListener;
 use App\Generated\TasksAbsoluteUrls\Symfony\UnexpectedErrorListener as AbsoluteUrlsUnexpectedErrorListener;
 use App\Generated\TasksDevices\Symfony\UnexpectedErrorListener as DevicesUnexpectedErrorListener;
@@ -22,7 +23,8 @@ final class TasksUnexpectedErrors implements
     DevicesUnexpectedErrorListener,
     OptionalAuthUnexpectedErrorListener,
     AbsoluteUrlsUnexpectedErrorListener,
-    ResponsesUnexpectedErrorListener
+    ResponsesUnexpectedErrorListener,
+    InputRulesUnexpectedErrorListener
 {
     public function __construct(private readonly LoggerInterface $logger)
     {

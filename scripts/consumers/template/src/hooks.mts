@@ -183,13 +183,29 @@ export const serviceDeciderHook = {
 
     const scripted = scriptedDecision(request.name, request.purpose.kind);
 
-    if (scripted !== undefined) return { deny: forbiddenDenial(scripted) };
+    if (scripted !== undefined) return { deny: forbiddenDenial(scripted, request.operation.api) };
 
     if (request.name === CALLER_SERVICE_RIGHT && !callerServiceAllowed(request)) {
       return { deny: FORBIDDEN };
     }
 
     return { allow: true };
+  },
+};
+
+/** The `inputRules` api's decider: denies what the script denies, else allows. */
+export const inputRulesDeciderHook = {
+  decide(request: RequirementRequest): Decision<Forbidden> {
+    recordHookCall(decideHookName(request.name), request.operation, request.bucket);
+    throwScriptedHookFailure(decideHookName(request.name));
+
+    assertRolesRequestComplete(request);
+
+    const scripted = scriptedDecision(request.name, request.purpose.kind);
+
+    return scripted === undefined
+      ? { allow: true }
+      : { deny: forbiddenDenial(scripted, request.operation.api) };
   },
 };
 
@@ -243,10 +259,10 @@ function tasksDenial(denial: ScriptedDenial): TasksDenial {
   }
 }
 
-function forbiddenDenial(denial: ScriptedDenial): Forbidden {
+function forbiddenDenial(denial: ScriptedDenial, api: string): Forbidden {
   if (denial.code !== "api.forbidden") {
     throw new Error(
-      `the script denies with '${denial.code}'; the tasksService api's decide hooks declare api.forbidden`,
+      `the script denies with '${denial.code}'; the ${api} api's decide hooks declare api.forbidden`,
     );
   }
 
@@ -353,6 +369,17 @@ export function tasksDevicesHooks() {
     authenticate: { device: deviceAuthenticateHook },
     deciders: [],
     scopeResolvers: {},
+    onUnexpectedError: logUnexpectedError,
+  };
+}
+
+/** The `inputRules` api's hooks: the user identity, the channel scope, its decider and an idempotency store. */
+export function inputRulesHooks() {
+  return {
+    authenticate: { user: userAuthenticateHook },
+    deciders: [{ names: "all" as const, decider: inputRulesDeciderHook }],
+    scopeResolvers: { channel: scopeResolverHook },
+    idempotencyStore: createIdempotencyStore(),
     onUnexpectedError: logUnexpectedError,
   };
 }

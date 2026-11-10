@@ -1,7 +1,8 @@
 {
   "name": "@seampact/http-suite",
-  "description": "The shared black-box HTTP suite: JSON case scripts, the sample app's control routes, a runner against a base URL and a report keyed by checklist id.",
-  "version": "1.0.1",
+  "description": "The black-box HTTP suite shared by the seampact server targets: JSON case scripts, a runner against a base URL and a report keyed by checklist id.",
+  "license": "MIT",
+  "version": "1.1.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jubasse/seampact.git",
@@ -11,10 +12,20 @@
   "bugs": {
     "url": "https://github.com/jubasse/seampact/issues"
   },
+  "keywords": [
+    "http",
+    "testing",
+    "conformance",
+    "seampact",
+    "api-contract",
+    "openapi",
+    "codegen"
+  ],
   "type": "module",
   "files": [
     "dist",
-    "cases"
+    "cases",
+    "contracts"
   ],
   "main": "./src/index.ts",
   "exports": {

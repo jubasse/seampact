@@ -10,6 +10,10 @@ const SOURCE = "case.json";
 const REFERENCE_WORKSPACE = fileURLToPath(
   new URL("../../../../fixtures/reference/workspace.yaml", import.meta.url),
 );
+// The `input-rules` case's own contract, which the consumers that enable the case compile as a second source.
+const INPUT_RULES_WORKSPACE = fileURLToPath(
+  new URL("../contracts/input-rules/workspace.yaml", import.meta.url),
+);
 
 function minimalCase(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -319,12 +323,18 @@ describe("loadSuiteCases", () => {
   });
 
   // A typo in `apis` would make a pack profile refuse the case as an api its app does not serve.
-  test("names in each shipped case's apis only apis of the reference workspace", () => {
-    const referenceApis = new Set(referenceWorkspaceApis());
+  test("names in each shipped case's apis only apis of the reference or the suite's own workspaces", () => {
+    const referenceApis = new Set([
+      ...workspaceApis(REFERENCE_WORKSPACE),
+      ...workspaceApis(INPUT_RULES_WORKSPACE),
+    ]);
     const unknownApis = shippedCases().flatMap((suiteCase) =>
       (suiteCase.apis ?? [])
         .filter((api) => !referenceApis.has(api))
-        .map((api) => `${suiteCase.id}: '${api}' is not an api of the reference workspace`),
+        .map(
+          (api) =>
+            `${suiteCase.id}: '${api}' is not an api of the reference or the suite's own workspaces`,
+        ),
     );
 
     expect(referenceApis.size).toBeGreaterThan(0);
@@ -340,12 +350,12 @@ function shippedCases(): SuiteCase[] {
     );
 }
 
-function referenceWorkspaceApis(): string[] {
-  const workspace: unknown = parse(readFileSync(REFERENCE_WORKSPACE, "utf8"));
+function workspaceApis(workspaceFile: string): string[] {
+  const workspace: unknown = parse(readFileSync(workspaceFile, "utf8"));
   const apis =
     isRecord(workspace) && isRecord(workspace.workspace) ? workspace.workspace.apis : undefined;
 
-  if (!isRecord(apis)) throw new Error(`${REFERENCE_WORKSPACE} has no workspace.apis map`);
+  if (!isRecord(apis)) throw new Error(`${workspaceFile} has no workspace.apis map`);
 
   return Object.keys(apis);
 }

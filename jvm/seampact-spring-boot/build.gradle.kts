@@ -10,7 +10,7 @@ plugins {
     alias(libs.plugins.kotlin.jvm)
 }
 
-description = "The seampact Spring Boot server generator both build plugins call."
+description = "The seampact Spring Boot code generator that the Gradle and Maven plugins call."
 
 // `-PtestJdk=<major>` also compiles the golden tree on that JDK (the convention plugin runs the tests on it).
 val testJdk: String? = providers.gradleProperty("testJdk").orNull

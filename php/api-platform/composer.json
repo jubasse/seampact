@@ -1,0 +1,101 @@
+{
+  "name": "seampact/api-platform",
+  "description": "Seampact target for API Platform 5: generates the resources, operations and processors of an API contract on top of the Symfony target.",
+  "type": "library",
+  "license": "MIT",
+  "keywords": [
+    "api-platform",
+    "symfony",
+    "server",
+    "seampact",
+    "api-contract",
+    "openapi",
+    "codegen"
+  ],
+  "homepage": "https://jubasse.github.io/seampact/backend/api-platform/",
+  "support": {
+    "docs": "https://jubasse.github.io/seampact/",
+    "issues": "https://github.com/jubasse/seampact/issues",
+    "source": "https://github.com/jubasse/seampact"
+  },
+  "require": {
+    "api-platform/symfony": "^5.0",
+    "ext-json": "*",
+    "nette/php-generator": "~4.2.0",
+    "php": ">=8.3.36 <8.4 || >=8.4.27 <8.5 || >=8.5.12",
+    "seampact/codegen": "self.version",
+    "seampact/hooks": "self.version",
+    "seampact/ir": "self.version",
+    "seampact/symfony": "self.version",
+    "symfony/console": "^7.4 || ^8.0",
+    "symfony/framework-bundle": "^7.4 || ^8.0",
+    "symfony/http-foundation": "^7.4 || ^8.0",
+    "symfony/http-kernel": "^7.4 || ^8.0",
+    "symfony/validator": "^7.4 || ^8.0"
+  },
+  "require-dev": {
+    "phpstan/phpstan": "2.2.16",
+    "phpunit/phpunit": "11.5.56",
+    "symfony/security-core": "7.4.23",
+    "symfony/security-http": "7.4.23",
+    "symfony/var-dumper": "7.4.22"
+  },
+  "repositories": [
+    {
+      "type": "path",
+      "url": "../codegen",
+      "options": {
+        "symlink": false
+      }
+    },
+    {
+      "type": "path",
+      "url": "../ir",
+      "options": {
+        "symlink": false
+      }
+    },
+    {
+      "type": "path",
+      "url": "../hooks",
+      "options": {
+        "symlink": false
+      }
+    },
+    {
+      "type": "path",
+      "url": "../symfony",
+      "options": {
+        "symlink": false
+      }
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "Seampact\\ApiPlatform\\": "src/",
+      "Seampact\\ApiPlatform\\Runtime\\": "runtime/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Seampact\\ApiPlatform\\Tests\\": "tests/",
+      "Seampact\\Codegen\\Tests\\Support\\": "../codegen/tests/Support/",
+      "Seampact\\Golden\\": "tests/golden/"
+    }
+  },
+  "extra": {
+    "seampact": {
+      "generator": "Seampact\\ApiPlatform\\ApiPlatformGenerator"
+    }
+  },
+  "config": {
+    "platform": {
+      "php": "8.3.36"
+    },
+    "sort-packages": true
+  },
+  "scripts": {
+    "test": "phpunit",
+    "analyse": "phpstan analyse"
+  }
+}

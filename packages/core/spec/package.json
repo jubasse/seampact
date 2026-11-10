@@ -1,7 +1,8 @@
 {
   "name": "@seampact/spec",
-  "description": "The JSON Schemas of the YAML files and of the IR, with their TypeScript types, the naming vectors and the bundle vectors.",
-  "version": "1.0.1",
+  "description": "The JSON Schemas of the seampact contract and IR with their TypeScript types, and the shared naming and bundle test vectors.",
+  "license": "MIT",
+  "version": "1.1.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jubasse/seampact.git",
@@ -11,6 +12,14 @@
   "bugs": {
     "url": "https://github.com/jubasse/seampact/issues"
   },
+  "keywords": [
+    "json-schema",
+    "ir",
+    "seampact",
+    "api-contract",
+    "openapi",
+    "codegen"
+  ],
   "type": "module",
   "files": [
     "dist",

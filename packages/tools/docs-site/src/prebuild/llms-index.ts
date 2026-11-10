@@ -15,7 +15,7 @@ const FOLDER_INDEX_PAGES_LEFT_OUT = new Set([
 ]);
 
 const SUMMARY =
-  "seampact turns one YAML contract into the server code, the typed clients and the OpenAPI document of an HTTP API, for NestJS, Express, Fastify, Hono, AdonisJS, Spring Boot, Laravel, Symfony, FastAPI, Django REST Framework and Django Ninja. You write the handlers; the generated code checks every request and reply.";
+  "seampact turns one YAML contract into the server code, the typed clients and the OpenAPI document of an HTTP API, for NestJS, Express, Fastify, Hono, AdonisJS, Next.js, Spring Boot, Laravel, Symfony, API Platform, FastAPI, Django REST Framework and Django Ninja. You write the handlers; the generated code checks every request and reply.";
 
 const START_LINES = [
   "Change the API in the contract (`contract/*.yaml`), never in the generated folder (`outDir` in `seampact.config.yaml`).",

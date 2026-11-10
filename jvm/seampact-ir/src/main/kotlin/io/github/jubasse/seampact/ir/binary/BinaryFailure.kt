@@ -1,6 +1,6 @@
 package io.github.jubasse.seampact.ir.binary
 
-/** Why the pinned standalone compiler binary cannot be used (ADR 0010, "Distribution and pinning"). */
+/** Why the pinned standalone compiler binary cannot be used (ADR 0010 section 5, The standalone compiler binary). */
 public enum class BinaryFailureCode(public val code: String) {
     PLATFORM_UNSUPPORTED("binary.platform-unsupported"),
     PIN_MISSING("binary.pin-missing"),

@@ -46,7 +46,7 @@ pnpm install --frozen-lockfile
 pnpm gate
 ```
 
-It runs typecheck, lint, the format check and the tests, and fails on any error. `pnpm format` rewrites files to the expected style. The pre-commit hook that `pnpm install` sets up formats the staged files for you; a file with unstaged changes is skipped, so stage whole files. A narrower run while you work is `pnpm vitest run <paths>`, `pnpm typecheck` and `pnpm lint` (which does not check format: `pnpm exec biome check <files>` does).
+It runs typecheck, lint, the format check and the tests, and fails on any error. `pnpm format` rewrites files to the expected style. `pnpm install` sets up two git hooks. Pre-commit refuses added lines that cite a maintainer decision id or point into the maintainers' git-ignored working folder, then formats and lints the staged files with biome; a file with unstaged changes is skipped, so stage whole files. Pre-push regenerates `docs/agents/cartography.md` and stops the push when it changed: commit it, then push again. A narrower run while you work is `pnpm vitest run <paths>`, `pnpm typecheck` and `pnpm lint` (which does not check format: `pnpm exec biome check <files>` does).
 
 Two repository checks run in the `checklist` job, and you run them before a PR: `node scripts/checklist/cli.ts check` (the conformance checklist, its proofs and the workflows' job names) and `node scripts/cartography/cli.ts --check` (the generated map `docs/agents/cartography.md`; `--write` regenerates it). `node scripts/package-rules/cli.ts` checks the package manifests and READMEs.
 
@@ -69,29 +69,7 @@ Two repository checks run in the `checklist` job, and you run them before a PR: 
 
 ## Release
 
-- Every package of every ecosystem carries one version. On `release/<version>`, run `node scripts/release/stamp.ts <version>` and commit the result; `node scripts/release/check-version.ts <version>` says what is not at the version yet.
-- The `release` workflow does the rest. Run it by hand on the release branch as a dry run first: it builds, checks and installs everything from a local registry, and publishes nothing. A pull request that changes the release path runs the same dry run.
-- Then run it from `main` with `dry-run` off. It drafts the GitHub release, waits for one approval of the `release` environment, publishes to the registries, and publishes the GitHub release last. The npm publish takes exactly the tarballs the pack job checked, matched by their SHA-256, and nothing else; Maven Central takes exactly the bundle the JVM build job checked, signed with the release key after the approval, and publishes it once the portal has validated it.
-- The JVM build job holds no secret and stages unsigned bundles. A dry run signs them with a throwaway key, by the same script as a real run, and publishes the bundle to a local Central Portal, which a Gradle and a Maven build of the Spring Boot consumer then use. The Gradle plugin goes to the Gradle Plugin Portal under the same approval, once Central serves the modules it depends on; the portal reviews a new plugin by hand before it is public. A rerun during that review counts the portal's "already exists" answer as published.
-- PyPI takes every Python distribution of the workspace, a wheel and an sdist each, and the five `seampact-compiler` wheels, each holding its binary as `SHA256SUMS` lists it. They go out through trusted publishing with PEP 740 attestations, so there is no token. Each distribution is published by its own job from its own GitHub environment, `pypi-<distribution>`, since PyPI takes one pending publisher per workflow and environment; the run's approval of the `release` environment covers them. Rerunning a failed PyPI leg publishes without a new approval, and only the files of the already approved run. Each `seampact-compiler` wheel is also checked against the binary call's `wheels-sha256`. A dry run checks them with `twine check --strict`, publishes them to a local index, installs each one alone from it in a clean venv and imports its top module.
-- Release setup for PyPI: create the GitHub environments below, deployment branch `main` only and no reviewer, then register on pypi.org one pending publisher per distribution: the project name, owner `jubasse`, repository `seampact`, workflow `release.yml` and its environment.
-
-  | Project | Environment |
-  | --- | --- |
-  | `seampact-ir` | `pypi-seampact-ir` |
-  | `seampact-compiler` | `pypi-seampact-compiler` |
-  | `seampact-hooks` | `pypi-seampact-hooks` |
-  | `seampact-codegen` | `pypi-seampact-codegen` |
-  | `seampact-signed-webhooks` | `pypi-seampact-signed-webhooks` |
-  | `seampact-django` | `pypi-seampact-django` |
-  | `seampact-fastapi` | `pypi-seampact-fastapi` |
-  | `seampact-drf` | `pypi-seampact-drf` |
-  | `seampact-ninja` | `pypi-seampact-ninja` |
-
-- Each PHP package goes to its mirror `jubasse/seampact-<name>`: its split pushed to `main`, and the tag `v<version>` on one commit that adds the repository's `LICENSE` and, for seampact/ir, the release's `resources/binaries.json`. The push uses `PHP_MIRRORS_TOKEN`, scoped to the six mirrors, and Packagist follows the tags. Each package's `.gitattributes` leaves its tests and dev configs out of the Composer dist archive. A dry run pushes to local bare repositories, and Composer installs each package alone from them; seampact/ir's installed pins must be the ones `SHA256SUMS` gives. A mirror already tagged at the release tree is skipped; a tag at another tree fails by name.
-- The conformance gate blocks the release: on a manual release run, `release.yml` starts every workflow `node scripts/checklist/cli.ts gate-workflows` lists at the release commit (`scripts/release/run-gate-workflows.sh`), then reads those runs; a checklist gap or a consumer without a report fails the run before anything is published. `node scripts/checklist/cli.ts` also checks the proofs under `docs/conformance/proofs/` against `docs/conformance/checklist.yaml`.
-- Once the six PHP mirrors are on Packagist, start `post-release.yml` by hand with the published version. It installs that version from the real registries only (NestJS from npm, Spring Boot with Gradle and Maven, Laravel from Packagist, FastAPI from PyPI) and runs the http suite's default profile from the tag's checkout. It publishes nothing and reads no secret.
-- A failed job can be rerun alone: a version already published with the same files is skipped. A full rerun packs again; if it packs other bytes than a version already published, it fails by name and publishes nothing. Fix it with a new patch version. If Central fails the upload while an earlier deployment of the version is still publishing, wait for that deployment on central.sonatype.com, then rerun. A gate workflow that fails on a registry error is rerun once automatically, and `publish-npm` stops at npm's new-package limit with a hint to rerun later.
+Maintainers: see [Release](docs/maintainers/release.md).
 
 ## CI
 
@@ -103,7 +81,8 @@ Two repository checks run in the `checklist` job, and you run them before a PR: 
 - `checklist` lints every workflow with actionlint.
 - A new workflow reuses the shared actions in `.github/actions/`: `lane-changes` and `lane-aggregate` for the change filter and the required check, `compiler-binary` for the compiler binary, `gradle-retry`, `composer-cache` and `maven-cache` for downloads.
 - Caches are saved by pushes to `develop`, the nightly and manual runs; pull requests and merge groups only read them. The repository has a 10 GB cache limit, and an entry a pull request saved would serve only that pull request. To refresh the caches without waiting for the night, run the workflow by hand on `develop`.
-- Coverage: the pull request row of each language's unit job measures coverage per package (vitest in `ci`, JaCoCo, pytest-cov, PHPUnit with pcov) and fails when a package falls under its floor in `scripts/coverage-floors/floors.json`, naming the package, the metric, the value and the floor; the job uploads the summary as a `coverage-*` artifact. When coverage rises, raise the floor by hand to the new value minus 1 point, rounded down: the check prints each package's value (`node scripts/coverage-floors/check.ts --format <vitest|coverage-py|cobertura> --summary <file>`; JaCoCo's HTML report for the JVM). A floor never goes down without the reason in the pull request.
+- The `ci` check runs typecheck, lint and the format check once, and the vitest suite in four parallel shards (`ci-shard (1/4)` to `(4/4)`); `ci` then merges their reports, writes the coverage summary, and fails if any shard failed or was skipped.
+- Coverage: the pull request row of each language's unit job measures coverage per package (vitest in `ci`, merged from the shards, JaCoCo, pytest-cov, PHPUnit with pcov) and fails when a package falls under its floor in `scripts/coverage-floors/floors.json`, naming the package, the metric, the value and the floor; the job uploads the summary as a `coverage-*` artifact. When coverage rises, raise the floor by hand to the new value minus 1 point, rounded down: the check prints each package's value (`node scripts/coverage-floors/check.ts --format <vitest|coverage-py|cobertura> --summary <file>`; JaCoCo's HTML report for the JVM). A floor never goes down without the reason in the pull request.
 
 ## Dependencies
 

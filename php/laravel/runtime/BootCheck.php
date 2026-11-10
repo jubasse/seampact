@@ -14,6 +14,7 @@ use Seampact\Codegen\Runtime\ApiContract;
 use Seampact\Codegen\Runtime\Decider;
 use Seampact\Codegen\Runtime\FrameworkRoutes;
 use Seampact\Codegen\Runtime\HookCheck;
+use Seampact\Codegen\Runtime\InputRuleCheck;
 use Seampact\Codegen\Runtime\PublicOrigin;
 use Seampact\Hooks\IdempotencyStore;
 
@@ -45,6 +46,7 @@ final class BootCheck
     {
         $problems = [
             ...($switches[self::HOOKS] ? self::hooks($app, $contract) : []),
+            ...self::inputRules($app, $contract),
             ...self::middleware($app, $boundaryClass, $accessClass),
             ...self::exceptionHandler($app),
             ...self::routes($app, $contract, $accessClass, $switches),
@@ -68,7 +70,23 @@ final class BootCheck
             "tag a ScopeResolver with '" . Hooks::scopeResolversTag($contract->api) . "'",
         );
 
-        return [...$problems, ...HookCheck::idempotencyStoreProblems(new Hooks($app), $contract, self::idempotencyStoreFix($contract->api))];
+        return [
+            ...$problems,
+            ...HookCheck::idempotencyStoreProblems(new Hooks($app), $contract, self::idempotencyStoreFix($contract->api)),
+        ];
+    }
+
+    /** @return list<string> the input rules are checked at every `bootCheck.hooks` level (ADR 0028) */
+    private static function inputRules(Application $app, ApiContract $contract): array
+    {
+        $hooks = new Hooks($app);
+        if (iterator_to_array($hooks->inputRules($contract), false) === []) {
+            return [];
+        }
+
+        $interface = $hooks->inputRulesInterface($contract);
+
+        return InputRuleCheck::problems($hooks, $contract, $interface, "tag a class implementing {$interface} with '" . Hooks::inputRulesTag($contract->api) . "'");
     }
 
     private static function idempotencyStoreFix(string $api): string
