@@ -1,6 +1,6 @@
 {
   "name": "@seampact/codegen-vue",
-  "description": "Generates TanStack Query or Pinia Colada options and Vue composables, or plain fetch composables with no query library, over the typed fetch client, with keys, invalidation and paging read from the contract.",
+  "description": "Seampact target for Vue: generates TanStack Query or Pinia Colada options and composables, or plain fetch composables, over the typed fetch client.",
   "version": "1.0.1",
   "repository": {
     "type": "git",
@@ -11,6 +11,16 @@
   "bugs": {
     "url": "https://github.com/jubasse/seampact/issues"
   },
+  "keywords": [
+    "vue",
+    "client",
+    "tanstack-query",
+    "pinia-colada",
+    "seampact",
+    "api-contract",
+    "openapi",
+    "codegen"
+  ],
   "type": "module",
   "files": [
     "dist"

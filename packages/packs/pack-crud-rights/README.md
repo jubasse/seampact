@@ -1,5 +1,13 @@
 # @seampact/pack-crud-rights
 
+Seampact convention pack that derives a <resource>.<op> access right for every list, get, create, update, delete and batch route.
+
+```sh
+npm install --save-dev @seampact/pack-crud-rights
+```
+
+Guide: https://jubasse.github.io/seampact/features/convention-packs/
+
 Declares one `derive` entry, `crud`: a right `{resource}.{op}` for every `list`, `get`, `create`, `update`, `delete` and `batch` route, required first in the route's `requires`.
 
 - A member route takes the resource as subject; a collection route takes its innermost scope, and none when it has no scope above it.

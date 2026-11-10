@@ -1,6 +1,6 @@
 {
   "name": "@seampact/lint",
-  "description": "Lint rules over the IR, and the API to write your own.",
+  "description": "Lint rules over a seampact API contract's IR, and the API to write your own.",
   "version": "1.0.1",
   "repository": {
     "type": "git",
@@ -11,6 +11,14 @@
   "bugs": {
     "url": "https://github.com/jubasse/seampact/issues"
   },
+  "keywords": [
+    "lint",
+    "linter",
+    "seampact",
+    "api-contract",
+    "openapi",
+    "codegen"
+  ],
   "type": "module",
   "main": "./src/index.ts",
   "files": [

@@ -11,7 +11,7 @@ plugins {
     `java-test-fixtures`
 }
 
-description = "The seampact run both JVM build plugins share: app config, IR, generation and checks."
+description = "The run the seampact Gradle and Maven plugins share: app config, IR, generation and checks."
 
 // The compiler binaries both plugins pin: `-PseampactBinarySums=<SHA256SUMS>` of the release
 // `-PseampactCompilerVersion=<version>`. Without them the jar embeds no pin, and a `path` source needs a binary

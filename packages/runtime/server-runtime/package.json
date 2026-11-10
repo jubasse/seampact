@@ -1,6 +1,6 @@
 {
   "name": "@seampact/server-runtime",
-  "description": "The request checks and replies every generated Node and Web-standard server boundary imports, with one placement per framework.",
+  "description": "The runtime that seampact-generated Node and Web-standard server code imports: request checks, replies and one placement per framework.",
   "version": "1.0.1",
   "repository": {
     "type": "git",
@@ -11,6 +11,15 @@
   "bugs": {
     "url": "https://github.com/jubasse/seampact/issues"
   },
+  "keywords": [
+    "runtime",
+    "node",
+    "server",
+    "seampact",
+    "api-contract",
+    "openapi",
+    "codegen"
+  ],
   "type": "module",
   "files": [
     "dist"

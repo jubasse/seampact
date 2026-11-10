@@ -1,8 +1,9 @@
 {
   "name": "seampact/codegen",
-  "description": "The framework-neutral PHP emitters the Seampact PHP targets share: value types with Field, enums, naming, refusals and the golden tree.",
+  "description": "The framework-neutral PHP emitters shared by the seampact PHP targets: value types, enums, naming and refusals.",
   "type": "library",
   "license": "MIT",
+  "keywords": ["generator", "php", "seampact", "api-contract", "openapi", "codegen"],
   "homepage": "https://jubasse.github.io/seampact/concepts/packages/",
   "support": {
     "docs": "https://jubasse.github.io/seampact/",

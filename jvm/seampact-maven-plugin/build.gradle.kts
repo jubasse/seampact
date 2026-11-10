@@ -12,7 +12,7 @@ plugins {
     alias(libs.plugins.maven.plugin.development)
 }
 
-description = "Generates the Spring Boot code of a seampact contract from a pinned bundle or the pinned compiler."
+description = "Seampact for Spring Boot: generates the Java code of a YAML API contract when you build, with request and reply checks around your controllers."
 
 // `-PtestMaven=<version>` runs the Maven builds of the tests on that Maven release (CI passes 3.9 and 4); without it
 // they run on the 3.9 floor.

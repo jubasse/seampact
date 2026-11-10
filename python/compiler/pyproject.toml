@@ -5,12 +5,15 @@ build-backend = "hatchling.build"
 [project]
 name = "seampact-compiler"
 version = "1.0.1"
-description = "The seampact compiler binary for one platform, run by seampact-ir."
+description = "The seampact compiler binary for one platform, installed with the seampact-ir[compiler] extra."
+keywords = ["compiler", "python", "seampact", "api-contract", "openapi", "codegen"]
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.12"
 classifiers = [
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Code Generators",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
 ]

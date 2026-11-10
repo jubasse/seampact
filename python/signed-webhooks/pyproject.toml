@@ -5,13 +5,16 @@ build-backend = "hatchling.build"
 [project]
 name = "seampact-signed-webhooks"
 version = "1.0.1"
-description = "Verifies a template-signed webhook (HMAC, timestamp tolerance, secret rotation) inside an authenticate hook."
+description = "Verifies a signed webhook (HMAC, timestamp tolerance, secret rotation) inside a seampact authenticate hook on Python."
+keywords = ["webhooks", "hmac", "python", "seampact", "api-contract", "openapi", "codegen"]
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.12"
 dependencies = []
 classifiers = [
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Code Generators",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
     "Typing :: Typed",

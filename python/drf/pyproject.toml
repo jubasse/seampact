@@ -5,13 +5,16 @@ build-backend = "hatchling.build"
 [project]
 name = "seampact-drf"
 version = "1.0.1"
-description = "The seampact Django REST Framework target: its generator and the runtime of the code it generates."
+description = "Seampact target for Django REST Framework: its generator and the runtime of the server code it generates."
+keywords = ["django", "django-rest-framework", "drf", "server", "python", "seampact", "api-contract", "openapi", "codegen"]
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.12"
 dependencies = ["djangorestframework>=3.18", "seampact-django==1.0.1"]
 classifiers = [
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Code Generators",
     "Framework :: Django",
     "Framework :: Django :: 5.2",
     "Framework :: Django :: 6.0",

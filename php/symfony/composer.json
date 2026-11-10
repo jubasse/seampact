@@ -1,8 +1,9 @@
 {
   "name": "seampact/symfony",
-  "description": "The Seampact Symfony target: generates the types, controller interfaces, routes, constraints and bundle of a contract for Symfony 7.4 and 8.",
+  "description": "Seampact target for Symfony 7.4 and 8: generates the types, controller interfaces, routes, constraints and bundle of an API contract.",
   "type": "library",
   "license": "MIT",
+  "keywords": ["symfony", "server", "validation", "seampact", "api-contract", "openapi", "codegen"],
   "homepage": "https://jubasse.github.io/seampact/backend/symfony/",
   "support": {
     "docs": "https://jubasse.github.io/seampact/",

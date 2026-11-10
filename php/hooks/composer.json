@@ -1,8 +1,9 @@
 {
   "name": "seampact/hooks",
-  "description": "The Seampact hook interfaces, decision and subject types for PHP: what generated boundaries call and applications implement.",
+  "description": "The hook interfaces, decision and subject types that seampact-generated PHP boundaries call and your application implements.",
   "type": "library",
   "license": "MIT",
+  "keywords": ["hooks", "authorization", "php", "seampact", "api-contract", "openapi", "codegen"],
   "homepage": "https://jubasse.github.io/seampact/concepts/packages/",
   "support": {
     "docs": "https://jubasse.github.io/seampact/",

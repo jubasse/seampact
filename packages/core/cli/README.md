@@ -1,5 +1,13 @@
 # @seampact/cli
 
+The seampact command: compile a YAML API contract and generate typed server code, validators, OpenAPI and clients, then check them in CI.
+
+```sh
+npm install --save-dev @seampact/cli
+```
+
+Guide: https://jubasse.github.io/seampact/getting-started/
+
 The `seampact` command. It reads the app config, `seampact.config.yaml` (ADR 0011), compiles the contract sources its targets use, and runs each target package resolved from the app's own project.
 
 - `seampact compile [--config <path>] [--out <dir>]` prints the compiler's diagnostics; `--out` writes each api's IR as `<api>.ir.json`.

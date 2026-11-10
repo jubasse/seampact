@@ -1,8 +1,17 @@
 {
   "name": "seampact/api-platform",
-  "description": "The Seampact API Platform target: generates the API Platform 5 resources, operations and processors of a contract on top of the Symfony target.",
+  "description": "Seampact target for API Platform 5: generates the resources, operations and processors of an API contract on top of the Symfony target.",
   "type": "library",
   "license": "MIT",
+  "keywords": [
+    "api-platform",
+    "symfony",
+    "server",
+    "seampact",
+    "api-contract",
+    "openapi",
+    "codegen"
+  ],
   "homepage": "https://jubasse.github.io/seampact/backend/api-platform/",
   "support": {
     "docs": "https://jubasse.github.io/seampact/",

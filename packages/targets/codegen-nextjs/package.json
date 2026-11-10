@@ -1,6 +1,6 @@
 {
   "name": "@seampact/codegen-nextjs",
-  "description": "Generates a routeHandler per api that serves a Next.js 16 catch-all route with the contract's access, validation and reply checks around your handler map, validating with zod.",
+  "description": "Seampact target for Next.js 16: generates a routeHandler per api for a catch-all route with access, validation and reply checks around your handler map.",
   "version": "1.0.1",
   "repository": {
     "type": "git",
@@ -11,6 +11,15 @@
   "bugs": {
     "url": "https://github.com/jubasse/seampact/issues"
   },
+  "keywords": [
+    "nextjs",
+    "server",
+    "validation",
+    "seampact",
+    "api-contract",
+    "openapi",
+    "codegen"
+  ],
   "type": "module",
   "files": [
     "dist"

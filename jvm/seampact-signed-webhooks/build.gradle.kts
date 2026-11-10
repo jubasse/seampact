@@ -6,7 +6,7 @@ plugins {
     `java-library`
 }
 
-description = "Verifies template-signed webhooks (HMAC-SHA256) behind the seampact authenticate hook."
+description = "Verifies signed webhooks (HMAC-SHA256) on the JVM, behind the seampact authenticate hook."
 
 val repositoryRoot = rootProject.projectDir.parentFile
 

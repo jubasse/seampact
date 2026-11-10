@@ -1,8 +1,17 @@
 {
   "name": "seampact/laravel",
-  "description": "The Seampact Laravel target: generates the FormRequests, types, controller interfaces, routes and boundary of a contract for Laravel 13.",
+  "description": "Seampact target for Laravel 13: generates the FormRequests, types, controller interfaces, routes and boundary of an API contract.",
   "type": "library",
   "license": "MIT",
+  "keywords": [
+    "laravel",
+    "server",
+    "form-request",
+    "seampact",
+    "api-contract",
+    "openapi",
+    "codegen"
+  ],
   "homepage": "https://jubasse.github.io/seampact/backend/laravel/",
   "support": {
     "docs": "https://jubasse.github.io/seampact/",

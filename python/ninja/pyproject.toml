@@ -5,7 +5,8 @@ build-backend = "hatchling.build"
 [project]
 name = "seampact-ninja"
 version = "1.0.1"
-description = "The Django Ninja target of seampact: its generator and the placement runtime of the generated code."
+description = "Seampact target for Django Ninja: its generator and the placement runtime of the server code it generates."
+keywords = ["django", "django-ninja", "pydantic", "server", "python", "seampact", "api-contract", "openapi", "codegen"]
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
@@ -19,6 +20,8 @@ dependencies = [
     "seampact-hooks==1.0.1",
 ]
 classifiers = [
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Code Generators",
     "Framework :: Django",
     "Framework :: Django :: 5.2",
     "Framework :: Django :: 6.0",

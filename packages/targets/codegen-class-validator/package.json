@@ -1,6 +1,6 @@
 {
   "name": "@seampact/codegen-class-validator",
-  "description": "Generates decorated class-validator DTO classes per schema and direction, with Standard Schema adapters for the NestJS target.",
+  "description": "Seampact validators for class-validator: decorated DTO classes per schema and direction, with Standard Schema adapters for NestJS.",
   "version": "1.0.1",
   "repository": {
     "type": "git",
@@ -11,6 +11,16 @@
   "bugs": {
     "url": "https://github.com/jubasse/seampact/issues"
   },
+  "keywords": [
+    "class-validator",
+    "nestjs",
+    "validation",
+    "standard-schema",
+    "seampact",
+    "api-contract",
+    "openapi",
+    "codegen"
+  ],
   "type": "module",
   "files": [
     "dist",

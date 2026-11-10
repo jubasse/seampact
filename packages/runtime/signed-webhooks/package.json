@@ -1,6 +1,6 @@
 {
   "name": "@seampact/signed-webhooks",
-  "description": "Verifies a template-signed webhook (HMAC, timestamp tolerance, secret rotation) inside an authenticate hook.",
+  "description": "Verifies signed webhooks (HMAC, timestamp tolerance, secret rotation) inside a seampact authenticate hook on a Node server.",
   "version": "1.0.1",
   "repository": {
     "type": "git",
@@ -11,6 +11,16 @@
   "bugs": {
     "url": "https://github.com/jubasse/seampact/issues"
   },
+  "keywords": [
+    "webhooks",
+    "hmac",
+    "runtime",
+    "node",
+    "seampact",
+    "api-contract",
+    "openapi",
+    "codegen"
+  ],
   "type": "module",
   "files": [
     "dist"
