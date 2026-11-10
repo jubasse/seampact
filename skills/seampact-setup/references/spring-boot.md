@@ -51,7 +51,7 @@ The Node CLI does not generate a Spring Boot entry: `seampact generate` refuses 
 
 ### With Maven
 
-Add the runtime and the plugin to `pom.xml`, next to `seampact-hooks`, at the same version. Set it once in `<properties>`: `<seampact.version>1.0.0</seampact.version>`.
+Add the runtime and the plugin to `pom.xml`, next to `seampact-hooks`, at the same version. Set it once in `<properties>`: `<seampact.version>1.1.0</seampact.version>`.
 
 ```xml
 <dependency>

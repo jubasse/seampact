@@ -16,7 +16,7 @@ Gradle, in `build.gradle.kts` and `settings.gradle.kts`:
 
 ```kotlin
 plugins {
-    id("io.github.jubasse.seampact") version "1.0.0"
+    id("io.github.jubasse.seampact") version "1.1.0"
 }
 ```
 
@@ -37,7 +37,7 @@ Maven, in `pom.xml`:
 <plugin>
   <groupId>io.github.jubasse</groupId>
   <artifactId>seampact-maven-plugin</artifactId>
-  <version>1.0.0</version>
+  <version>1.1.0</version>
 </plugin>
 ```
 

@@ -1,8 +1,9 @@
-// Every version edit of a release, across npm, changesets, the packs, the runtime constants, the JVM, Python and the
-// generator version of the committed goldens.
+// Every version edit of a release, across npm, changesets, the packs, the runtime constants, the JVM, Python, the
+// generator version of the committed goldens and the install snippets of the docs.
 // Composer needs none: sibling constraints are `self.version`, and the mirror tag gives the version. The stamp writes these edits; the version
 // check fails on any.
 import { changesetAccessEdit } from "./changeset-access.ts";
+import { docsVersionEdits } from "./docs-versions.ts";
 import { generatedVersionEdits } from "./generated-versions.ts";
 import { jvmVersionEdits } from "./jvm-versions.ts";
 import { npmVersionEdits } from "./npm-versions.ts";
@@ -27,6 +28,7 @@ export function versionFileEdits(root: string, version: string): VersionEdit[] {
     ...jvmVersionEdits(root, version),
     ...pythonVersionEdits(root, version),
     ...generatedVersionEdits(root, version),
+    ...docsVersionEdits(root, version),
   ];
 }
 

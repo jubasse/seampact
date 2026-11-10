@@ -121,6 +121,33 @@ const GOLDEN_SOURCES: Record<string, string> = {
     JAVA_BINDING,
 };
 
+// The install snippets of the docs, in the form each page writes them, at the last release.
+const INSTALL_SNIPPETS = `\`\`\`kotlin
+plugins {
+    id("io.github.jubasse.seampact") version "1.0.0"
+}
+\`\`\`
+
+\`\`\`xml
+<plugin>
+  <groupId>io.github.jubasse</groupId>
+  <artifactId>seampact-maven-plugin</artifactId>
+  <version>1.0.0</version>
+</plugin>
+\`\`\`
+`;
+// The Maven property reference is split so the linter does not read it as a template placeholder.
+const SPRING_BOOT_GUIDE =
+  "Set it once in `<properties>`: `<seampact.version>1.0.0</seampact.version>`.\n\n<version>$" +
+  "{seampact.version}</version>\n";
+
+const DOCS_SOURCES: Record<string, string> = {
+  "packages/tools/docs-site/home/index.mdx": INSTALL_SNIPPETS,
+  "docs/getting-started/install-other-ecosystems.md": INSTALL_SNIPPETS,
+  "docs/backend/spring-boot.md": SPRING_BOOT_GUIDE,
+  "skills/seampact-setup/references/spring-boot.md": SPRING_BOOT_GUIDE,
+};
+
 const trees: string[] = [];
 
 afterEach(() => {
@@ -156,6 +183,8 @@ function developmentTree(): string {
   for (const [file, text] of Object.entries(RUNTIME_SOURCES)) writeTreeFile(root, file, text);
 
   for (const [file, text] of Object.entries(GOLDEN_SOURCES)) writeTreeFile(root, file, text);
+
+  for (const [file, text] of Object.entries(DOCS_SOURCES)) writeTreeFile(root, file, text);
 
   writeTreeFile(root, ".changeset/config.json", CHANGESET_CONFIG);
   writeTreeFile(root, "jvm/gradle.properties", GRADLE_PROPERTIES);
@@ -281,6 +310,39 @@ describe("the release stamp", () => {
 
     expect(() => releaseVersionEdits(root, RELEASE)).toThrow(
       "php/symfony/tests/golden has no file the stamp can read GENERATED_BY from",
+    );
+  });
+
+  it("writes the plugin versions of the docs install snippets, and keeps a property reference", () => {
+    const root = developmentTree();
+
+    stamp(root, RELEASE);
+
+    const releasedSnippets = INSTALL_SNIPPETS.replaceAll("1.0.0", RELEASE);
+
+    expect(readTreeFile(root, "packages/tools/docs-site/home/index.mdx")).toBe(releasedSnippets);
+    expect(readTreeFile(root, "docs/getting-started/install-other-ecosystems.md")).toBe(
+      releasedSnippets,
+    );
+    expect(readTreeFile(root, "docs/backend/spring-boot.md")).toBe(
+      SPRING_BOOT_GUIDE.replace("1.0.0", RELEASE),
+    );
+    expect(readTreeFile(root, "skills/seampact-setup/references/spring-boot.md")).toBe(
+      SPRING_BOOT_GUIDE.replace("1.0.0", RELEASE),
+    );
+  });
+
+  it("refuses an install snippet it cannot read, by file and field", () => {
+    const root = developmentTree();
+
+    writeTreeFile(
+      root,
+      "docs/getting-started/install-other-ecosystems.md",
+      INSTALL_SNIPPETS.replace("<version>1.0.0</version>", ""),
+    );
+
+    expect(() => releaseVersionEdits(root, RELEASE)).toThrow(
+      "docs/getting-started/install-other-ecosystems.md has no line the stamp can read the Maven plugin version from",
     );
   });
 
