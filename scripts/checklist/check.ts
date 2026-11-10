@@ -13,7 +13,7 @@ import {
 import { loadModel } from "./load.ts";
 import type { Item, Model, Problem, Proof, TestRef } from "./model.ts";
 import { CHECKLIST_FILE, chkNumber } from "./model.ts";
-import type { ItemAfter1_0 } from "./release-scope.ts";
+import type { ItemDeferred } from "./release-scope.ts";
 import {
   type DeclaredDeferral,
   declaredDeferralProblems,
@@ -42,7 +42,7 @@ export interface CheckOptions {
   /** With the release gate: a directory of downloaded http-suite reports, each a proof for its target. */
   suiteReports?: string;
   /** The items the gate does not require (release-scope.ts); none when absent, as for a fixture checklist. */
-  itemsAfter1_0?: ReadonlyMap<string, ItemAfter1_0>;
+  itemsDeferred?: ReadonlyMap<string, ItemDeferred>;
   /** The suite cases a server refuses by name until a later version (release-scope.ts); none when absent. */
   declaredDeferrals?: readonly DeclaredDeferral[];
   /** The items a target proves across several CI rows (variant-rows.ts); none when absent. */
@@ -120,7 +120,7 @@ export function checkModel(
     problems.push(...suiteConsumerProblems(o.root, o.suiteConsumers));
 
   const scope: GateScope = {
-    itemsAfter1_0: o.itemsAfter1_0 ?? new Map(),
+    itemsDeferred: o.itemsDeferred ?? new Map(),
     declaredDeferrals: o.declaredDeferrals ?? [],
     variantRowSets: o.variantRowSets ?? new Map(),
     proofs: proofsById(model.proofs),
@@ -128,7 +128,7 @@ export function checkModel(
       ? suitePairsOf(
           model,
           suiteProofs,
-          o.itemsAfter1_0 ?? new Map(),
+          o.itemsDeferred ?? new Map(),
           o.declaredDeferrals ?? [],
           problems,
         )
@@ -136,12 +136,12 @@ export function checkModel(
     ...(o.releaseGate ? { ciJobResults } : {}),
   };
 
-  problems.push(...declaredDeferralProblems(o.root, scope.declaredDeferrals));
+  problems.push(...declaredDeferralProblems(scope.declaredDeferrals));
   problems.push(...variantRowSetProblems(model.items, scope.variantRowSets));
   problems.push(
     ...releaseScopeProblems(
       model.items,
-      scope.itemsAfter1_0,
+      scope.itemsDeferred,
       (id, target) => testedByProof(scope, id, target) || suitePassed(scope, id, target),
       (id, target) =>
         (scope.proofs.get(id) ?? []).some((p) => p.refusals.some((r) => r.target === target)),
@@ -155,7 +155,7 @@ export function checkModel(
 
 /** What the release gate reads besides the items: the policy tables, the proofs and the suite proofs per pair. */
 interface GateScope {
-  itemsAfter1_0: ReadonlyMap<string, ItemAfter1_0>;
+  itemsDeferred: ReadonlyMap<string, ItemDeferred>;
   declaredDeferrals: readonly DeclaredDeferral[];
   variantRowSets: ReadonlyMap<string, VariantRowSet>;
   proofs: ReadonlyMap<string, readonly Proof[]>;
@@ -171,7 +171,7 @@ interface GateScope {
 function suitePairsOf(
   model: Model,
   suiteProofs: readonly SuiteProof[],
-  itemsAfter1_0: ReadonlyMap<string, ItemAfter1_0>,
+  itemsDeferred: ReadonlyMap<string, ItemDeferred>,
   declaredDeferrals: readonly DeclaredDeferral[],
   problems: Problem[],
 ): Map<string, SuiteProof[]> {
@@ -208,7 +208,7 @@ function suitePairsOf(
       ...s,
       outcome: gateOutcomeOf(
         s,
-        (id, target) => isDeferredPair(itemsAfter1_0, id, target),
+        (id, target) => isDeferredPair(itemsDeferred, id, target),
         (caseId, target, reason) => isDeclaredDeferral(declaredDeferrals, caseId, target, reason),
       ),
     };
@@ -247,14 +247,14 @@ function suitePassed(scope: GateScope, id: string, target: string): boolean {
 /**
  * Every live id needs a fixture and, for every target the gate requires of it, a test. A proof file's fixture or test
  * counts, and so does a suite report that passed the id: its cases are the committed fixture and its run the
- * target's test. An id whose every pair comes after 1.0 needs neither.
+ * target's test. An id whose every pair is deferred needs neither.
  */
 function releaseGateProblems(model: Model, scope: GateScope): Problem[] {
   const problems: Problem[] = [];
 
   for (const item of model.items) {
     if (item.retired !== undefined) continue;
-    const targets = releaseGateTargets(item, scope.itemsAfter1_0);
+    const targets = releaseGateTargets(item, scope.itemsDeferred);
     const at = (message: string) => problems.push({ file: CHECKLIST_FILE, id: item.id, message });
 
     if (targets.length === 0) continue;

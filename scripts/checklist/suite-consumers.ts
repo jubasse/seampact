@@ -42,7 +42,7 @@ export function suiteConsumerProblems(
 
   for (const [target, workflowFile] of suiteConsumers) {
     if (!SERVER_TARGETS.includes(target))
-      at(`consumer workflow for ${target}, not a server target the release gate requires`);
+      at(`consumer workflow for ${target}, not a server target`);
 
     if (!existsSync(join(root, WORKFLOWS_DIR, workflowFile)))
       at(`consumer workflow of ${target} does not exist: ${workflowFile}`);

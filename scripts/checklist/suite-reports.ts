@@ -294,8 +294,8 @@ function caseAppliesTo(reported: ReportedCase, target: string): boolean {
  * The outcome a suite report gives an id in the release gate. A refused id passes when the run passed one of its
  * cases and refused each other case only because the case does not apply to the target, or because the run refused it
  * as a declared deferral of the release scope on that target, or because the case cites
- * other ids that [isDeferredPair] leaves for after 1.0 on that target. A refused case citing the id itself is never
- * excused as deferred, and a failed case citing the id (or listed for it) keeps it refused.
+ * other ids that [isDeferredPair] leaves out of the gate on that target. A refused case citing the id itself is never
+ * excused as deferred or as a declared deferral, and a failed case citing the id (or listed for it) keeps it refused.
  */
 export function gateOutcomeOf(
   proof: SuiteProof,
@@ -314,7 +314,8 @@ export function gateOutcomeOf(
 
   const excused = (refusedCase: RefusedCase) =>
     !refusedCase.appliesToTarget ||
-    isDeclaredDeferral(refusedCase.caseId, proof.target, refusedCase.reason) ||
+    (!refusedCase.checks.includes(proof.id) &&
+      isDeclaredDeferral(refusedCase.caseId, proof.target, refusedCase.reason)) ||
     (refusedCase.checks.length > 0 &&
       refusedCase.checks.every((id) => id !== proof.id && isDeferredPair(id, proof.target)));
 

@@ -30,9 +30,10 @@ import {
   DECLARED_DEFERRALS,
   DEFERRED_TARGETS,
   declaredDeferralProblems,
-  ITEMS_AFTER_1_0,
-  indexItemsAfter1_0,
+  ITEMS_DEFERRED,
+  indexItemsDeferred,
   releaseGateTargets,
+  releaseScopeProblems,
 } from "./release-scope.ts";
 import { parseResults, renderReport, shares, testPassed } from "./report.ts";
 import { SUITE_CONSUMERS, suiteConsumerProblems } from "./suite-consumers.ts";
@@ -61,9 +62,7 @@ function expectOne(name: string, file: string, id: string | undefined, part: str
 describe("checklist check", () => {
   it("checklist check passes on the repository", () => {
     expect(
-      lines(
-        check({ root: REPO, itemsAfter1_0: ITEMS_AFTER_1_0, variantRowSets: VARIANT_ROW_SETS }),
-      ),
+      lines(check({ root: REPO, itemsDeferred: ITEMS_DEFERRED, variantRowSets: VARIANT_ROW_SETS })),
     ).toEqual([]);
   });
 
@@ -557,7 +556,7 @@ describe("checklist release scope", () => {
 
     const out = gateOver(
       directory,
-      { itemsAfter1_0: ITEMS_AFTER_1_0, variantRowSets: VARIANT_ROW_SETS },
+      { itemsDeferred: ITEMS_DEFERRED, variantRowSets: VARIANT_ROW_SETS },
       REPO,
     );
 
@@ -595,20 +594,20 @@ describe("checklist release scope", () => {
   });
 
   it("a deferred pair is not required", () => {
-    const itemsAfter1_0 = new Map([
+    const itemsDeferred = new Map([
       ["CHK-001", { targets: ["nestjs"], reason: "after" }],
       ["CHK-002", { reason: "after" }],
     ]);
-    const out = gateOver(artefacts({ other: { target: "hono", checks: {} } }), { itemsAfter1_0 });
+    const out = gateOver(artefacts({ other: { target: "hono", checks: {} } }), { itemsDeferred });
 
     expect(out).toEqual([]);
   });
 
-  it("an id listed twice in the after-1.0 list is refused by name", () => {
+  it("an id listed twice in the deferred list is refused by name", () => {
     const entry = { reason: "after" };
 
     expect(() =>
-      indexItemsAfter1_0([
+      indexItemsDeferred([
         ["CHK-001", entry],
         ["CHK-001", entry],
       ]),
@@ -616,16 +615,16 @@ describe("checklist release scope", () => {
   });
 
   it("a proven deferred id fails by name", () => {
-    const itemsAfter1_0 = new Map([["CHK-001", { targets: ["nestjs"], reason: "after" }]]);
+    const itemsDeferred = new Map([["CHK-001", { targets: ["nestjs"], reason: "after" }]]);
     const out = gateOver(
       artefacts({ nestjs: { target: "nestjs", checks: { "CHK-001": passed } } }),
       {
-        itemsAfter1_0,
+        itemsDeferred,
       },
     );
 
     expect(out).toContain(
-      "scripts/checklist/release-scope.ts: CHK-001: proven for target nestjs: drop it from the after-1.0 list",
+      "scripts/checklist/release-scope.ts: CHK-001: proven for target nestjs: drop it from the deferred list",
     );
   });
 
@@ -661,7 +660,7 @@ describe("checklist release scope", () => {
         JSON.stringify(edit(suiteReportOf({ target: runTarget, profile: "hand-written" }, cases))),
       );
 
-      return gateOver(directory, { itemsAfter1_0: ITEMS_AFTER_1_0 }, REPO);
+      return gateOver(directory, { itemsDeferred: ITEMS_DEFERRED }, REPO);
     }
 
     it("passes when each refused case cites only ids deferred for the target", () => {
@@ -835,7 +834,7 @@ describe("checklist release scope", () => {
     expect(lines(suiteConsumerProblems(REPO, suiteConsumers))).toEqual([
       "scripts/checklist/suite-consumers.ts: -: server target drf has no consumer workflow: name the one that runs its http suite",
       "scripts/checklist/suite-consumers.ts: -: consumer workflow of ninja does not exist: p7-gone.yml",
-      "scripts/checklist/suite-consumers.ts: -: consumer workflow for axios, not a server target the release gate requires",
+      "scripts/checklist/suite-consumers.ts: -: consumer workflow for axios, not a server target",
     ]);
   });
 
@@ -849,10 +848,10 @@ describe("checklist release scope", () => {
     };
 
     it("requires api-platform for its own ids and defers axios by name", () => {
-      expect(releaseGateTargets(item("CHK-085"), ITEMS_AFTER_1_0)).toEqual(["api-platform"]);
-      expect(releaseGateTargets(item("CHK-100"), ITEMS_AFTER_1_0)).toEqual(["api-platform"]);
+      expect(releaseGateTargets(item("CHK-085"), ITEMS_DEFERRED)).toEqual(["api-platform"]);
+      expect(releaseGateTargets(item("CHK-100"), ITEMS_DEFERRED)).toEqual(["api-platform"]);
       expect(DEFERRED_TARGETS.get("axios")).toBe("proofs in the axios step");
-      expect(releaseGateTargets(item("CHK-004"), ITEMS_AFTER_1_0)).not.toContain("axios");
+      expect(releaseGateTargets(item("CHK-004"), ITEMS_DEFERRED)).not.toContain("axios");
     });
 
     it("gives the input rules case one id on the Node and PHP servers, in the checklist and the case", () => {
@@ -947,29 +946,76 @@ describe("checklist release scope", () => {
       expect(out).toContain(refusedId);
     });
 
-    it("holds in the repository: each declared target writes its refusal", () => {
-      expect(declaredDeferralProblems(REPO, DECLARED_DEFERRALS)).toEqual([]);
+    it("keeps the id refused when the refused case cites the id itself", () => {
+      const directory = mkdtempSync(join(tmpdir(), "checklist-deferral-"));
+      const citing: CaseResult = {
+        ...refusedResult(inputRules, declaredReason, target),
+        checks: ["CHK-079"],
+      };
+
+      mkdirSync(join(directory, target));
+      writeFileSync(
+        join(directory, target, "http-suite-default.json"),
+        JSON.stringify(suiteReportOf({ target, profile: "default" }, [plain, citing])),
+      );
+
+      expect(gateOver(directory, { declaredDeferrals: DECLARED_DEFERRALS }, REPO)).toContain(
+        refusedId,
+      );
     });
 
-    it("fails by name for a declared target whose consumer does not write the refusal", () => {
-      const root = mkdtempSync(join(tmpdir(), "checklist-declared-"));
+    it("holds in the repository: each declared target's consumer refuses the case with the reason", async () => {
+      const refusals = {
+        "spring-boot": "spring-boot/suite/suite-refusals.ts",
+        fastapi: "fastapi/suite/suite-refusals.ts",
+        drf: "drf/suite/suite-refusals.ts",
+        ninja: "ninja/suite/suite-refusals.ts",
+        "api-platform": "api-platform/suite/suite-refusals.ts",
+      };
+      const [deferral] = DECLARED_DEFERRALS;
 
-      mkdirSync(join(root, "scripts/consumers/targets/drf/suite"), { recursive: true });
-      writeFileSync(
-        join(root, "scripts/consumers/targets/drf/suite/suite-refusals.ts"),
-        "export {};\n",
+      expect(Object.keys(refusals).sort()).toEqual([...(deferral?.targets ?? [])].sort());
+
+      for (const [declaredTarget, file] of Object.entries(refusals)) {
+        const loaded = await import(`../consumers/targets/${file}`);
+        const [table] = Object.values<Record<string, string>>(loaded);
+
+        expect(table?.[INPUT_RULES_CASE_ID]).toBe(deferral?.reasonOn(declaredTarget));
+      }
+
+      expect(declaredDeferralProblems(DECLARED_DEFERRALS)).toEqual([]);
+    });
+
+    it("fails by name for a declared deferral on a target that is no server", () => {
+      const out = lines(
+        declaredDeferralProblems([
+          { caseId: "input-rules", targets: ["axios"], reasonOn: () => "" },
+        ]),
       );
 
-      const out = lines(declaredDeferralProblems(root, DECLARED_DEFERRALS));
+      expect(out).toEqual([
+        "scripts/checklist/release-scope.ts: -: declared deferral of input-rules on axios, not a server target",
+      ]);
+    });
 
-      rmSync(root, { recursive: true, force: true });
+    it("fails by name for a deferred target that is unknown or has no reason", () => {
+      const out = lines(
+        releaseScopeProblems(
+          [],
+          new Map(),
+          () => false,
+          () => false,
+          new Map([
+            ["nope", "later"],
+            ["axios", " "],
+          ]),
+        ),
+      );
 
-      expect(out).toContain(
-        'scripts/checklist/release-scope.ts: -: declared deferral of input-rules on drf has no refusal test: scripts/consumers/targets/drf/suite/suite-refusals.ts does not hold inputRulesNotYetRefusal("drf", "1.2.0")',
-      );
-      expect(out).toContain(
-        "scripts/checklist/release-scope.ts: -: declared deferral of input-rules on spring-boot has no refusal test: scripts/consumers/targets/spring-boot/suite/suite-refusals.ts does not exist",
-      );
+      expect(out).toEqual([
+        "scripts/checklist/release-scope.ts: -: deferred target is unknown: nope",
+        "scripts/checklist/release-scope.ts: -: deferred target axios without a reason",
+      ]);
     });
   });
 
@@ -994,22 +1040,22 @@ describe("checklist release scope", () => {
     it("accepts it once a proof file tests the refusal on the target", () => {
       const root = rootRefusing(["nestjs: src/a.test.txt#refused by name"]);
 
-      expect(lines(check({ root, itemsAfter1_0: refusedOnNestjs }))).toEqual([]);
+      expect(lines(check({ root, itemsDeferred: refusedOnNestjs }))).toEqual([]);
     });
 
     it("refuses it when no proof file tests the refusal", () => {
-      expect(lines(check({ root: fx("release-gate"), itemsAfter1_0: refusedOnNestjs }))).toEqual([
+      expect(lines(check({ root: fx("release-gate"), itemsDeferred: refusedOnNestjs }))).toEqual([
         "scripts/checklist/release-scope.ts: CHK-001: refused on target nestjs with no refusal test in a proof file",
       ]);
     });
 
     it("refuses a refusal on a target the entry does not defer", () => {
-      const itemsAfter1_0 = new Map([
+      const itemsDeferred = new Map([
         ["CHK-001", { targets: ["nestjs"], refusedOn: ["core"], reason: "refused" }],
       ]);
 
-      expect(lines(check({ root: fx("release-gate"), itemsAfter1_0 }))).toEqual([
-        "scripts/checklist/release-scope.ts: CHK-001: after-1.0 entry names a refusal on a target it does not defer: core",
+      expect(lines(check({ root: fx("release-gate"), itemsDeferred }))).toEqual([
+        "scripts/checklist/release-scope.ts: CHK-001: deferred entry names a refusal on a target it does not defer: core",
       ]);
     });
 
@@ -1021,17 +1067,17 @@ describe("checklist release scope", () => {
     });
   });
 
-  it("refuses an after-1.0 entry of an unknown id, an unlisted target or without a reason", () => {
-    const itemsAfter1_0 = new Map([
+  it("refuses an deferred entry of an unknown id, an unlisted target or without a reason", () => {
+    const itemsDeferred = new Map([
       ["CHK-009", { reason: "after" }],
       ["CHK-001", { targets: ["express"], reason: " " }],
     ]);
-    const out = lines(check({ root: fx("release-gate"), itemsAfter1_0 }));
+    const out = lines(check({ root: fx("release-gate"), itemsDeferred }));
 
     expect(out).toEqual([
-      "scripts/checklist/release-scope.ts: CHK-009: after-1.0 list names an unknown id (not in the checklist)",
-      "scripts/checklist/release-scope.ts: CHK-001: after-1.0 entry without a reason",
-      "scripts/checklist/release-scope.ts: CHK-001: after-1.0 entry names a target the item does not list: express",
+      "scripts/checklist/release-scope.ts: CHK-009: deferred list names an unknown id (not in the checklist)",
+      "scripts/checklist/release-scope.ts: CHK-001: deferred entry without a reason",
+      "scripts/checklist/release-scope.ts: CHK-001: deferred entry names a target the item does not list: express",
     ]);
   });
 });
