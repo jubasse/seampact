@@ -166,77 +166,77 @@
       "column": 5,
       "endColumn": 1,
       "endLine": 63,
-      "file": ".packs/@seampact/pack-api-platform@1.0.1/pack.yaml",
+      "file": ".packs/@seampact/pack-api-platform@1.1.0/pack.yaml",
       "line": 59
     },
     "pack:@seampact/pack-api-platform#/conventions/errors/derived/schemaInvalid": {
       "column": 7,
       "endColumn": 1,
       "endLine": 63,
-      "file": ".packs/@seampact/pack-api-platform@1.0.1/pack.yaml",
+      "file": ".packs/@seampact/pack-api-platform@1.1.0/pack.yaml",
       "line": 60
     },
     "pack:@seampact/pack-api-platform#/conventions/format": {
       "column": 3,
       "endColumn": 17,
       "endLine": 57,
-      "file": ".packs/@seampact/pack-api-platform@1.0.1/pack.yaml",
+      "file": ".packs/@seampact/pack-api-platform@1.1.0/pack.yaml",
       "line": 57
     },
     "pack:@seampact/pack-api-platform#/conventions/paging/default": {
       "column": 13,
       "endColumn": 27,
       "endLine": 63,
-      "file": ".packs/@seampact/pack-api-platform@1.0.1/pack.yaml",
+      "file": ".packs/@seampact/pack-api-platform@1.1.0/pack.yaml",
       "line": 63
     },
     "pack:@seampact/pack-api-platform#/errors/api.validation_failed": {
       "column": 3,
       "endColumn": 1,
       "endLine": 22,
-      "file": ".packs/@seampact/pack-api-platform@1.0.1/pack.yaml",
+      "file": ".packs/@seampact/pack-api-platform@1.1.0/pack.yaml",
       "line": 8
     },
     "pack:@seampact/pack-api-platform#/errors/api.validation_failed/params": {
       "column": 5,
       "endColumn": 1,
       "endLine": 21,
-      "file": ".packs/@seampact/pack-api-platform@1.0.1/pack.yaml",
+      "file": ".packs/@seampact/pack-api-platform@1.1.0/pack.yaml",
       "line": 12
     },
     "pack:@seampact/pack-api-platform#/errors/api.validation_failed/params/violations": {
       "column": 7,
       "endColumn": 1,
       "endLine": 21,
-      "file": ".packs/@seampact/pack-api-platform@1.0.1/pack.yaml",
+      "file": ".packs/@seampact/pack-api-platform@1.1.0/pack.yaml",
       "line": 13
     },
     "pack:@seampact/pack-api-platform#/errors/api.validation_failed/params/violations/items": {
       "column": 9,
       "endColumn": 1,
       "endLine": 21,
-      "file": ".packs/@seampact/pack-api-platform@1.0.1/pack.yaml",
+      "file": ".packs/@seampact/pack-api-platform@1.1.0/pack.yaml",
       "line": 15
     },
     "pack:@seampact/pack-api-platform#/errors/api.validation_failed/params/violations/items/properties/message": {
       "column": 13,
       "endColumn": 38,
       "endLine": 19,
-      "file": ".packs/@seampact/pack-api-platform@1.0.1/pack.yaml",
+      "file": ".packs/@seampact/pack-api-platform@1.1.0/pack.yaml",
       "line": 19
     },
     "pack:@seampact/pack-api-platform#/errors/api.validation_failed/params/violations/items/properties/propertyPath": {
       "column": 13,
       "endColumn": 43,
       "endLine": 18,
-      "file": ".packs/@seampact/pack-api-platform@1.0.1/pack.yaml",
+      "file": ".packs/@seampact/pack-api-platform@1.1.0/pack.yaml",
       "line": 18
     },
     "pack:@seampact/pack-api-platform#/formats/jsonld": {
       "column": 3,
       "endColumn": 1,
       "endLine": 40,
-      "file": ".packs/@seampact/pack-api-platform@1.0.1/pack.yaml",
+      "file": ".packs/@seampact/pack-api-platform@1.1.0/pack.yaml",
       "line": 24
     },
     "shared#/conventions/batch/bodyLimit": {

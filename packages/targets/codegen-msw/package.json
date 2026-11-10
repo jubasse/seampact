@@ -2,7 +2,7 @@
   "name": "@seampact/codegen-msw",
   "description": "Seampact target for Mock Service Worker 2: generates handlers per operation that answer the contract's examples or the typed result a test gives.",
   "license": "MIT",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jubasse/seampact.git",

@@ -2,7 +2,7 @@
   "name": "@seampact/codegen-react",
   "description": "Seampact target for React: generates TanStack Query or SWR options and hooks, an RTK Query api, or plain fetch hooks over the typed fetch client.",
   "license": "MIT",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jubasse/seampact.git",

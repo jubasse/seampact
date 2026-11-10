@@ -1,7 +1,7 @@
 {
   "name": "@seampact/docs-site",
   "description": "The documentation website: Starlight on GitHub Pages, built from the repository's docs/ folder.",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "seampact": {

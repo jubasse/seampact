@@ -2,7 +2,7 @@
   "name": "@seampact/codegen-class-validator",
   "description": "Seampact validators for class-validator: decorated DTO classes per schema and direction, with Standard Schema adapters for NestJS.",
   "license": "MIT",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jubasse/seampact.git",
