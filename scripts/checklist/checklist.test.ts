@@ -847,11 +847,11 @@ describe("checklist release scope", () => {
       return found;
     };
 
-    it("requires api-platform for its own ids and defers axios by name", () => {
+    it("requires api-platform for its own ids and axios for the client ids", () => {
       expect(releaseGateTargets(item("CHK-085"), ITEMS_DEFERRED)).toEqual(["api-platform"]);
       expect(releaseGateTargets(item("CHK-100"), ITEMS_DEFERRED)).toEqual(["api-platform"]);
-      expect(DEFERRED_TARGETS.get("axios")).toBe("proofs in the axios step");
-      expect(releaseGateTargets(item("CHK-004"), ITEMS_DEFERRED)).not.toContain("axios");
+      expect(DEFERRED_TARGETS.has("axios")).toBe(false);
+      expect(releaseGateTargets(item("CHK-004"), ITEMS_DEFERRED)).toContain("axios");
     });
 
     it("gives the input rules case one id on the Node and PHP servers, in the checklist and the case", () => {
