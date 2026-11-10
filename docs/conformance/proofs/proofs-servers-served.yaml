@@ -112,3 +112,8 @@ proofs:
   - id: CHK-028
     tests:
       - "api-platform: ci: api-platform.yml#e2e"
+  - id: CHK-170
+    tests:
+      - "api-platform: packages/core/cli/src/config/document-plan.test.ts#writes every document of every api a server target serves when the app has no openapi key"
+      - "api-platform: packages/core/cli/src/config/document-plan.test.ts#writes no document for an app with client targets only, or with openapi none"
+      - "api-platform: packages/core/cli/src/commands/native-docs.test.ts#nativeDocs is off by default and needs the boundary"
