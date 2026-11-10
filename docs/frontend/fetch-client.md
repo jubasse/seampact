@@ -126,4 +126,6 @@ Forms the client does not read yet are refused by name when you generate: see [G
 
 ## Next
 
+To send through your own axios instance: [Axios client](axios-client.md).
+
 [React](react.md), [Vue](vue.md), [Angular](angular.md), [Expo and React Native](mobile.md) or [MSW mocks](msw.md).

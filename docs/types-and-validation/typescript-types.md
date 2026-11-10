@@ -2,7 +2,7 @@
 
 `@seampact/codegen-ts` writes one TypeScript type for each schema of your contract, and one input, output and error type for each operation. Every Node server and every client uses them.
 
-Used by: [NestJS](../backend/nestjs.md), [Express](../backend/express.md), [Fastify](../backend/fastify.md), [AdonisJS](../backend/adonisjs.md), [Hono](../backend/hono.md) and the [fetch client](../frontend/fetch-client.md) with the clients built on it.
+Used by: [NestJS](../backend/nestjs.md), [Express](../backend/express.md), [Fastify](../backend/fastify.md), [AdonisJS](../backend/adonisjs.md), [Hono](../backend/hono.md), [Next.js](../backend/nextjs.md) and the [fetch client](../frontend/fetch-client.md) with the clients built on it.
 
 ## Set up
 

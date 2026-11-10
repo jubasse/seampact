@@ -15,7 +15,7 @@ The server target reads its validators from the entry its `validators` link name
 
 `@seampact/codegen-zod` and `@seampact/codegen-yup` work on every Node server. `@seampact/codegen-class-validator` works on NestJS only. Install the library you pick in your app (`yup`, or `class-validator` and `class-transformer`), then run `seampact generate` ([commands per stack](../features/commands-per-stack.md)).
 
-You see the `validators` folder rewritten. On NestJS, Express and Hono, a server without a `validators` link stops `generate` with `link.missing`, which names the packages to link.
+You see the `validators` folder rewritten. On NestJS, Express, Hono and Next.js, a server without a `validators` link stops `generate` with `link.missing`, which names the packages to link.
 
 Fastify and AdonisJS can skip it: leave out the `validators` entry and the link, and the server validates with the framework's own library, [Ajv](../types-and-validation/ajv.md) on Fastify and [VineJS](../types-and-validation/vinejs.md) on AdonisJS. Install `ajv` or `@vinejs/vine` in your app.
 
@@ -39,7 +39,7 @@ Where the native rules differ from the contract, the page of the library lists i
 
 ## Other servers
 
-On AdonisJS, Laravel, Symfony and the Python servers, `rules` sits on the server entry. Each guide's options table says what it changes: [AdonisJS](../backend/adonisjs.md#options), [Laravel](../backend/laravel.md#options), [Symfony](../backend/symfony.md#options), [FastAPI](../backend/fastapi.md#options), [DRF](../backend/drf.md#options), [Ninja](../backend/ninja.md#options).
+On AdonisJS, Laravel, Symfony, API Platform and the Python servers, `rules` sits on the server entry. Each guide's options table says what it changes: [AdonisJS](../backend/adonisjs.md#options), [Laravel](../backend/laravel.md#options), [Symfony](../backend/symfony.md#options), [API Platform](../backend/api-platform.md#set-up), [FastAPI](../backend/fastapi.md#options), [DRF](../backend/drf.md#options), [Ninja](../backend/ninja.md#options).
 
 Spring Boot has no `rules` option: [Java records](../types-and-validation/java-records.md) says what it checks.
 

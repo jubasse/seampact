@@ -176,9 +176,10 @@ When the browser calls another origin, the server must allow it (CORS). seampact
 | Express | the `cors` package |
 | Fastify | `@fastify/cors` |
 | Hono | `hono/cors` |
+| Next.js | `headers()` in `next.config` |
 | Spring Boot | `CorsConfiguration` |
 | Laravel | `config/cors.php` |
-| Symfony | NelmioCorsBundle |
+| Symfony, API Platform | NelmioCorsBundle |
 | FastAPI | `CORSMiddleware`, see [FastAPI](../backend/fastapi.md) |
 | Django REST framework, Django Ninja | `django-cors-headers`, see [Ninja](../backend/ninja.md) |
 

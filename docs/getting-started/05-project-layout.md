@@ -16,7 +16,7 @@ notes-app/
 - Add the `baseline` folder (from [diff](../features/diff.md)) to `.gitignore`.
 
 <details>
-<summary>Node: NestJS, Express, Fastify, Hono, AdonisJS</summary>
+<summary>Node: NestJS, Express, Fastify, Hono, AdonisJS, Next.js</summary>
 
 ```text
 notes-app/
@@ -27,6 +27,8 @@ notes-app/
 ```
 
 Commit `src/__generated__` and `openapi/`.
+
+Next.js has no `main.ts`: your handlers are wired in one catch-all route file under the api's base path, `src/app/v1/[[...path]]/route.ts` ([Wire it in](../backend/nextjs.md#wire-it-in)).
 
 </details>
 
@@ -44,11 +46,11 @@ The build writes the generated folder: do not commit it.
 </details>
 
 <details>
-<summary>PHP: Laravel, Symfony</summary>
+<summary>PHP: Laravel, Symfony, API Platform</summary>
 
 ```text
 notes-app/
-  app/Generated/       Laravel (Symfony: src/Generated)
+  app/Generated/       Laravel (Symfony and API Platform: src/Generated)
   app/Http/...         your controllers
 ```
 

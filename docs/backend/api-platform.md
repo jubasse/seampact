@@ -113,7 +113,7 @@ It sets the API Platform wire for the api:
 
 | Code | When | Fix |
 |---|---|---|
-| `input.rules.unsupported` | A service is tagged `seampact.<api>.input_rules`: `cache:warmup` stops. The api gets no `<Api>InputRules` interface. | Untag it, or serve the api on [Symfony](symfony.md). Input rules arrive in 1.1.x. |
+| `input.rules.unsupported` | A service is tagged `seampact.<api>.input_rules`: `cache:warmup` stops. The api gets no `<Api>InputRules` interface. | Untag it, or serve the api on [Symfony](symfony.md). Input rules arrive in 1.2.0. |
 | `format.self.member-route` | `generate`: the format writes a member URL and the resource has no member route. | Declare the member route, or write the format without the slot. |
 | `paging.handlerResult.unsupported` | `generate`: a paging fact (`complete`, the changes feed) is not generated yet. | Remove the operation from `operations`. |
 | the operation sets `<switch>` | Boot: the app changed `read`, `write`, content negotiation, `deserialize` or `validate`, replaced a processor, or set a provider on a contract operation. | Remove the change. |

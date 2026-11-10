@@ -99,7 +99,7 @@ If a target refuses the form, `generate` says which and how to fix it: see [Targ
 
 ## Read the page in a handler
 
-The handler reads the position and the limit the style names, and returns the items. The server writes the rest. Each server guide has a Paging section: [Express](../backend/express.md#paging), [Fastify](../backend/fastify.md#paging), [Hono](../backend/hono.md#paging), [NestJS](../backend/nestjs.md#paging), [AdonisJS](../backend/adonisjs.md#paging), [Spring Boot](../backend/spring-boot.md#paging), [Laravel](../backend/laravel.md#paging) and [Symfony](../backend/symfony.md#paging).
+The handler reads the position and the limit the style names, and returns the items. The server writes the rest. Each server guide has a Paging section: [Express](../backend/express.md#paging), [Fastify](../backend/fastify.md#paging), [Hono](../backend/hono.md#paging), [NestJS](../backend/nestjs.md#paging), [AdonisJS](../backend/adonisjs.md#paging), [Spring Boot](../backend/spring-boot.md#paging), [Laravel](../backend/laravel.md#paging) and [Symfony](../backend/symfony.md#paging). [Next.js](../backend/nextjs.md) reads the page as [Hono](../backend/hono.md#paging) does, and [API Platform](../backend/api-platform.md) as Symfony does (it does not generate the `complete` fact or the changes feed yet: [Refusals](../backend/api-platform.md#refusals)).
 
 ## Ready-made styles
 

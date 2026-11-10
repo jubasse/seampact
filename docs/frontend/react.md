@@ -1,6 +1,6 @@
 # React
 
-seampact writes React hooks over the [fetch client](fetch-client.md), for TanStack Query 5, SWR 2 or RTK Query 2, or with no query library. Pick one with the `query` option. Use it for a React web app; for a phone, see [Expo and React Native](mobile.md). The types come from [TypeScript types](../types-and-validation/typescript-types.md).
+seampact writes React hooks over the [fetch client](fetch-client.md) (or the [axios client](axios-client.md)), for TanStack Query 5, SWR 2 or RTK Query 2, or with no query library. Pick one with the `query` option. Use it for a React web app; for a phone, see [Expo and React Native](mobile.md). The types come from [TypeScript types](../types-and-validation/typescript-types.md).
 
 ## Add the targets
 
