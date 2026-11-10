@@ -1,6 +1,6 @@
 # ADR 0028: App input rules
 
-Status: accepted, delivered by #425, #428, #433, #435
+Status: accepted, delivered on the Node and PHP servers by #425, #428, #433, #435; Python, Spring Boot and API Platform in 1.2.0
 
 ## Context
 

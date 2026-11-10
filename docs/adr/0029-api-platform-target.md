@@ -1,6 +1,6 @@
 # ADR 0029: The API Platform server target
 
-Status: accepted, delivered by #427, #429, #437, #445, #448
+Status: accepted, Symfony flavour delivered by #427, #429, #437, #445, #448; the Laravel flavour and app input rules in 1.2.0
 
 ## Context
 
