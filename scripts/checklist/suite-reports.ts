@@ -39,6 +39,9 @@ export interface RefusedIdCases {
 
 /** A refused case: the checklist ids it cites for the report's target, and whether it applies to that target. */
 export interface RefusedCase {
+  caseId: string;
+  /** The reason the report gives the refusal. */
+  reason?: string;
   checks: readonly string[];
   appliesToTarget: boolean;
 }
@@ -129,6 +132,7 @@ interface ValidReport {
 
 /** One entry of a report's `cases`, as the gate reads it. */
 interface ReportedCase {
+  caseId: string;
   outcome: CaseOutcome;
   checks: readonly string[];
   reason?: string;
@@ -198,7 +202,12 @@ function reportedCasesOf(cases: unknown): Map<string, ReportedCase> {
 
     const reason = typeof entry.reason === "string" ? { reason: entry.reason } : {};
 
-    reported.set(entry.id, { outcome: entry.outcome, checks: [...entry.checks], ...reason });
+    reported.set(entry.id, {
+      caseId: entry.id,
+      outcome: entry.outcome,
+      checks: [...entry.checks],
+      ...reason,
+    });
   }
 
   return reported;
@@ -256,6 +265,8 @@ function refusedIdCasesOf(
     refused: reportedCases
       .filter((reported) => reported.outcome === "refused")
       .map((reported) => ({
+        caseId: reported.caseId,
+        ...(reported.reason === undefined ? {} : { reason: reported.reason }),
         checks: reported.checks,
         appliesToTarget: caseAppliesTo(reported, report.target),
       })),
@@ -281,13 +292,15 @@ function caseAppliesTo(reported: ReportedCase, target: string): boolean {
 
 /**
  * The outcome a suite report gives an id in the release gate. A refused id passes when the run passed one of its
- * cases and refused each other case only because the case does not apply to the target, or because the case cites
- * other ids that [isDeferredPair] leaves for after 1.0 on that target. A refused case citing the id itself is never
- * excused as deferred, and a failed case citing the id (or listed for it) keeps it refused.
+ * cases and refused each other case only because the case does not apply to the target, or because the run refused it
+ * as a declared deferral of the release scope on that target, or because the case cites
+ * other ids that [isDeferredPair] leaves out of the gate on that target. A refused case citing the id itself is never
+ * excused as deferred or as a declared deferral, and a failed case citing the id (or listed for it) keeps it refused.
  */
 export function gateOutcomeOf(
   proof: SuiteProof,
   isDeferredPair: (id: string, target: string) => boolean,
+  isDeclaredDeferral: (caseId: string, target: string, reason: string | undefined) => boolean,
 ): CaseOutcome {
   const cases = proof.refusedIdCases;
 
@@ -301,6 +314,8 @@ export function gateOutcomeOf(
 
   const excused = (refusedCase: RefusedCase) =>
     !refusedCase.appliesToTarget ||
+    (!refusedCase.checks.includes(proof.id) &&
+      isDeclaredDeferral(refusedCase.caseId, proof.target, refusedCase.reason)) ||
     (refusedCase.checks.length > 0 &&
       refusedCase.checks.every((id) => id !== proof.id && isDeferredPair(id, proof.target)));
 

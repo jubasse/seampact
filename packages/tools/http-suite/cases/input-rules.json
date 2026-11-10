@@ -1,7 +1,12 @@
 {
   "id": "input-rules",
   "title": "App input rules run after the contract and the claim, answer the schema-invalid role and release the claim",
-  "checks": [],
+  "checks": [
+    {
+      "id": "CHK-190",
+      "targets": ["nestjs", "fastify", "express", "adonis", "hono", "nextjs", "laravel", "symfony"]
+    }
+  ],
   "apis": ["inputRules"],
   "profiles": ["default"],
   "steps": [

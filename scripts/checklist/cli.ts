@@ -6,7 +6,7 @@ import { ciJobLine, dispatchInputsOf, matchesEveryJob, workflowJobs } from "./ci
 import { loadModel } from "./load.ts";
 import type { Problem } from "./model.ts";
 import { formatProblem } from "./model.ts";
-import { ITEMS_AFTER_1_0, itemsAfter1_0Lines } from "./release-scope.ts";
+import { DECLARED_DEFERRALS, ITEMS_DEFERRED, itemsDeferredLines } from "./release-scope.ts";
 import { loadResults, renderReport } from "./report.ts";
 import { gateWorkflows, RELEASE_GATE_INPUT, SUITE_CONSUMERS } from "./suite-consumers.ts";
 import { VARIANT_ROW_SETS } from "./variant-rows.ts";
@@ -32,7 +32,8 @@ function main(argv: string[]): number {
   const releasePolicy =
     values.root === undefined
       ? {
-          itemsAfter1_0: ITEMS_AFTER_1_0,
+          itemsDeferred: ITEMS_DEFERRED,
+          declaredDeferrals: DECLARED_DEFERRALS,
           variantRowSets: VARIANT_ROW_SETS,
           suiteConsumers: SUITE_CONSUMERS,
         }
@@ -60,7 +61,7 @@ function main(argv: string[]): number {
     for (const p of problems) console.error(formatProblem(p));
 
     if (releaseGate) {
-      for (const line of itemsAfter1_0Lines(releasePolicy.itemsAfter1_0 ?? new Map()))
+      for (const line of itemsDeferredLines(releasePolicy.itemsDeferred ?? new Map()))
         console.error(line);
     }
 
