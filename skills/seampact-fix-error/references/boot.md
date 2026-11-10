@@ -130,7 +130,7 @@ The check runs with `bin/console cache:warmup`, and lists every problem at once.
 
 | You see | Cause and fix |
 |---|---|
-| `input.rules.unsupported: <Class> is tagged as app input rules ...` | The API Platform target does not run app input rules before 1.1.x. Untag the service, or serve the api on Symfony. |
+| `input.rules.unsupported: <Class> is tagged as app input rules ...` | The API Platform target does not run app input rules before 1.2.0. Untag the service, or serve the api on Symfony. |
 | `the operation '<name>' sets <read, write, contentNegotiation, deserialize or validate>: ...` | The app changed a switch of a contract operation. The boundary reads, negotiates, deserializes and validates it. Remove the change. |
 | `the operation '<name>' does not set the extra property ...` | A change dropped a marker the generated resource sets. Remove it. |
 | `the operation '<name>' sets securityPostDenormalize` (or `securityPostValidation`) | Both need the object API Platform's deserialize would build. Use `security`, which runs before the handler. |

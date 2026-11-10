@@ -1,4 +1,4 @@
-# Role bindings (ADR 0002 section 11 "Error roles", ADR 0006 section 6, A35): a pack binding, a conventions binding
+# Role bindings (ADR 0002 section 11, Errors and natures, ADR 0006 section 6, A35): a pack binding, a conventions binding
 # with a params template, and errorRoles on nodes where the nearest wins, each reaching the role's required data by
 # name or through the template.
 api: { name: shop, version: 1, kind: product }

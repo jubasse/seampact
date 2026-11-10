@@ -125,6 +125,16 @@ export const STACK_FILES: readonly StackFile[] = [
     troubleshootingFamilies: NODE_FAMILIES,
   },
   {
+    id: "nextjs",
+    commandColumns: NODE_COLUMNS,
+    title: "Next.js",
+    summary:
+      "Next.js server: one catch-all route handler serves the contract; you write the handlers and the hooks.",
+    guide: serverGuide("backend/nextjs.md"),
+    validator: NODE_VALIDATOR,
+    troubleshootingFamilies: NODE_FAMILIES,
+  },
+  {
     id: "spring-boot",
     commandColumns: ["Gradle", "Maven"],
     title: "Spring Boot",
@@ -151,6 +161,21 @@ export const STACK_FILES: readonly StackFile[] = [
     summary:
       "PHP server: a Composer package and a bundle generate controllers and hooks; you write the handlers.",
     guide: serverGuide("backend/symfony.md"),
+    validator: OTHER_SERVERS_VALIDATOR,
+    troubleshootingFamilies: otherServerFamilies("PHP"),
+  },
+  {
+    id: "api-platform",
+    commandColumns: ["PHP"],
+    title: "API Platform",
+    summary:
+      "PHP server: a Composer package generates the boundary on API Platform 5 and Symfony; you write the handlers.",
+    guide: [
+      {
+        docsPath: "backend/api-platform.md",
+        sections: ["Set up", "Write a handler", "Wire it in", "Refusals"],
+      },
+    ],
     validator: OTHER_SERVERS_VALIDATOR,
     troubleshootingFamilies: otherServerFamilies("PHP"),
   },
@@ -189,11 +214,15 @@ export const STACK_FILES: readonly StackFile[] = [
     commandColumns: NODE_COLUMNS,
     title: "clients",
     summary:
-      "Typed TypeScript clients: the fetch client and the React, Vue and Angular layers over it.",
+      "Typed TypeScript clients: the fetch and axios clients and the React, Vue and Angular layers over the fetch client.",
     guide: [
       {
         docsPath: "frontend/fetch-client.md",
         sections: ["Add the target", "Create and call it", "ContractError"],
+      },
+      {
+        docsPath: "frontend/axios-client.md",
+        sections: ["Add the target", "Create and call it", "What axios does here"],
       },
       {
         docsPath: "frontend/react.md",

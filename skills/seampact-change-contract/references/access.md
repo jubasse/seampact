@@ -50,7 +50,7 @@ surfaces:
 - `principal` is the shape of the caller your handlers receive.
 - A child route can still opt out with its own `access: { public: "<reason>" }`.
 
-seampact does not check the credential. A [hook](https://jubasse.github.io/seampact/concepts/glossary/) is code you write and seampact calls. It generates one named `authenticate`: you check the token there and return the caller. The hook is an object in Node, an interface in Spring Boot, a class in Laravel and Symfony, and a function in Python: see the guides under Next.
+seampact does not check the credential. A [hook](https://jubasse.github.io/seampact/concepts/glossary/) is code you write and seampact calls. It generates one named `authenticate`: you check the token there and return the caller. The hook is an object in Node, an interface in Spring Boot, a class in Laravel, Symfony and API Platform, and a function in Python: see the guides under Next.
 
 ## Require a right
 
@@ -84,5 +84,5 @@ surfaces:
 ## Next
 
 - Next: [Lists](https://jubasse.github.io/seampact/contract/05-lists/).
-- Write the hooks: [Node servers](https://jubasse.github.io/seampact/backend/node-hooks/), [Spring Boot](https://jubasse.github.io/seampact/backend/spring-boot/#write-the-hooks), [Symfony](https://jubasse.github.io/seampact/backend/symfony/#write-the-hooks), [Laravel](https://jubasse.github.io/seampact/backend/laravel/#write-the-hooks), [FastAPI](https://jubasse.github.io/seampact/backend/fastapi/#write-the-hooks), [Django REST Framework](https://jubasse.github.io/seampact/backend/drf/#write-the-hooks), [Django Ninja](https://jubasse.github.io/seampact/backend/ninja/#write-the-hooks).
+- Write the hooks: [Node servers](https://jubasse.github.io/seampact/backend/node-hooks/) (Next.js included), [Spring Boot](https://jubasse.github.io/seampact/backend/spring-boot/#write-the-hooks), [Symfony](https://jubasse.github.io/seampact/backend/symfony/#write-the-hooks), [API Platform](https://jubasse.github.io/seampact/backend/api-platform/#security), [Laravel](https://jubasse.github.io/seampact/backend/laravel/#write-the-hooks), [FastAPI](https://jubasse.github.io/seampact/backend/fastapi/#write-the-hooks), [Django REST Framework](https://jubasse.github.io/seampact/backend/drf/#write-the-hooks), [Django Ninja](https://jubasse.github.io/seampact/backend/ninja/#write-the-hooks).
 - In depth: [Access](https://jubasse.github.io/seampact/grammar/09-access-identities-rights-rules/).

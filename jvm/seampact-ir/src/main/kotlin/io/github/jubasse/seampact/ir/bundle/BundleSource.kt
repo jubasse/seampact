@@ -1,7 +1,7 @@
 package io.github.jubasse.seampact.ir.bundle
 
 /**
- * Where a bundle comes from (ADR 0011 "Channels", ADR 0010 "The contract bundle as a Maven artefact"), with the
+ * Where a bundle comes from (ADR 0011 "Channels", ADR 0010 section 8, The JVM channels), with the
  * [integrity] the config or the build file pins; a missing pin fails the check and prints the value to pin.
  */
 public sealed interface BundleSource {

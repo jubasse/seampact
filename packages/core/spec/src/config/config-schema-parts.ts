@@ -34,7 +34,7 @@ const MAVEN_COORDINATE_PATTERN =
   "^[A-Za-z0-9_][A-Za-z0-9_.-]*:[A-Za-z0-9_][A-Za-z0-9_.-]*:[A-Za-z0-9_+\\[(][A-Za-z0-9_.+\\[\\](),-]*$";
 
 // One contract source: a workspace directory or one of the bundle forms (ADR 0011 "The app config"); the `maven`
-// form is read by the JVM plugins only (ADR 0010 "The contract bundle as a Maven artefact").
+// form is read by the JVM plugins only (ADR 0010 section 8, The JVM channels).
 export const SOURCE_SCHEMA: JsonSchema = {
   type: "object",
   additionalProperties: false,

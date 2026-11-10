@@ -17,7 +17,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 // A version pin resolves the `seampact-compiler` classifier artefact through the build's own repositories, here a
-// file Maven repository (ADR 0010 "Resolution"): an artefact with another hash never starts, one the repositories do
+// file Maven repository (ADR 0010 section 8, The JVM channels): an artefact with another hash never starts, one the repositories do
 // not hold is refused by name, the pinned one runs, and the next build reuses its cached copy.
 @DisabledOnOs(OS.WINDOWS, disabledReason = "the stub binary is a shell script")
 class BinaryArtefactTest {

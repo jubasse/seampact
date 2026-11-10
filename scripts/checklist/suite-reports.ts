@@ -1,4 +1,4 @@
-// The http-suite reports of the consumer runs (ADR 0015 "Report"), read as proofs for the release gate: each report
+// The http-suite reports of the consumer runs (ADR 0015, The shared black-box HTTP suite), read as proofs for the release gate: each report
 // names its server target and the outcome of every checklist id its cases prove.
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";

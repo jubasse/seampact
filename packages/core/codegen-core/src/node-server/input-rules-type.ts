@@ -3,7 +3,7 @@ import type { ValidatorStyle } from "../descriptors.js";
 import { type ImportSpecifierStyle, relativeModuleSpecifier } from "../import-specifier.js";
 import { HANDLERS_MODULE, operationIdentifier } from "./server-types.js";
 
-// The `InputRules` type of the routes module (ADR 0028 "Typed on Node"): for each operation and part with input, the
+// The `InputRules` type of the routes module (ADR 0028 section 4, Per family): for each operation and part with input, the
 // library schema type of the api's validators over that part as its handler receives it, without the body proof
 // fields. The registration's `inputRules` takes it, so a misspelt operation, a wrong part, a missing member or
 // another library's schema does not compile. class-validator registers a class, checked on its members only.

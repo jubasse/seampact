@@ -8,7 +8,7 @@ use Seampact\Codegen\Runtime\ApiContract;
 use Seampact\Codegen\Runtime\Ir;
 
 /**
- * The wire pointer of an app rule's violation (ADR 0028 "Pointers"): a Symfony property path names code members
+ * The wire pointer of an app rule's violation (ADR 0028 section 2, Written in the configured library only): a Symfony property path names code members
  * (`window.endDate`, `items[0].name`), and the walker maps each segment back to its wire name through the contract's
  * member tables, keeping array indices. A segment it cannot map points at the nearest mapped parent.
  */

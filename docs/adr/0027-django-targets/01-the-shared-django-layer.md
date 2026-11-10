@@ -47,7 +47,7 @@ The keys mirror ADR 0026's `bind_<api>()` arguments: `handlers`, `authenticate`,
 
 #### The boundary middleware
 
-Codegen emits, per api, a boundary middleware class (`TasksBoundary`) in the api's `django` module. The app lists it first in `MIDDLEWARE`. It runs step 1: the request context, the raw-path match of "Routes", the media type, the bounded body read and the decoding. On the way back it runs the route-chosen check and the outgoing response check. It answers its own refusals in the api's format. Several apis list several boundaries, each accepting the others before it, as ADR 0026 "Several apis" says.
+Codegen emits, per api, a boundary middleware class (`TasksBoundary`) in the api's `django` module. The app lists it first in `MIDDLEWARE`. It runs step 1: the request context, the raw-path match of "Routes", the media type, the bounded body read and the decoding. On the way back it runs the route-chosen check and the outgoing response check. It answers its own refusals in the api's format. Several apis list several boundaries, each accepting the others before it, as [ADR 0026, section 9: Query and bounded values](../0026-python-fastapi-target/09-query-and-bounded-values.md) says.
 
 The body read:
 

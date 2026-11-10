@@ -1,5 +1,5 @@
 // The report of one suite run: every case with its outcome, and the outcome of every checklist id the cases prove,
-// which the checklist script reads (ADR 0015 "Report").
+// which the checklist script reads (ADR 0015, The shared black-box HTTP suite).
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { checkIdsForTarget, type ScopedCheck } from "./scoped-check.js";

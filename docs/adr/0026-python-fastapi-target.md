@@ -101,7 +101,7 @@ Starlette 1.10's `TestClient` warns that `httpx` is deprecated in favour of `htt
 
 ## Consequences
 
-- App input rules ([ADR 0028](0028-app-input-rules.md)): FastAPI (1.1.x): step 8b runs in `featured_input` right after the claim, with `input_rules` in `bind_<api>()`; a refusal calls `abandon_idempotency` and clears `state.idempotency`.
+- App input rules ([ADR 0028](0028-app-input-rules.md)): FastAPI (1.2.0): step 8b runs in `featured_input` right after the claim, with `input_rules` in `bind_<api>()`; a refusal calls `abandon_idempotency` and clears `state.idempotency`.
 - An app keeps its routes, its middleware, its dependencies, its exception handlers and its settings. On contract routes the boundary's checks and reply win.
 - The app calls one function per api, last. A middleware added after it is refused at boot.
 - Handlers are classes behind a protocol, not decorated functions; `Depends`, the per-request dependency cache and `dependency_overrides` still work. The FastAPI guide shows it first.

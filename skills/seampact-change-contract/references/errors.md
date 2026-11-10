@@ -85,7 +85,7 @@ return new GetNoteErrors.ApiNotFound();
 </details>
 
 <details>
-<summary>Laravel and Symfony (PHP)</summary>
+<summary>Laravel, Symfony and API Platform (PHP)</summary>
 
 ```php
 return GetNoteErrors::apiNotFound();

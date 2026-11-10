@@ -1,5 +1,5 @@
 # An api with the CRUD rights pack and no scope above its routes: a collection and a single derive rights whose
-# subject is none (ADR 0008, "the innermost scope when it has one, and none otherwise").
+# subject is none (ADR 0008, First-party packs in 1.0).
 api: { name: notes, version: 1 }
 packs: [./pack.yaml]
 

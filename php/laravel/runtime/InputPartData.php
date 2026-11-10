@@ -9,7 +9,7 @@ use Seampact\Codegen\Runtime\Ir;
 use Seampact\Codegen\Runtime\WireCodec;
 
 /**
- * One part of the handler's typed input as the validator reads it (ADR 0028 "The value a rule sees"): an array keyed
+ * One part of the handler's typed input as the validator reads it (ADR 0028 section 2, Written in the configured library only): an array keyed
  * by wire name, written back through the generated member names, so step 7's strip, the served limit and the sent
  * version are in and the body's proof fields are out. A header's key is lower case. PHP arrays copy by value, so a
  * rule that changes its data changes nothing of the handler's input.
