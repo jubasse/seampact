@@ -25,7 +25,7 @@ Run this on your own diff, fix what it finds, then run the end-of-PR gate: `pnpm
 
 - No silent drop or fallback: every input is used, refused with a diagnostic, or listed as out of scope.
 - Every value a pass stores is copied (`pipelineCopy`), never kept by reference.
-- Tests follow A47: unit tests on stable bricks, the slice's end-to-end test otherwise; a bug fix has a test that failed before.
+- Tests follow A47: unit tests on stable bricks, the version's end-to-end slice otherwise; a bug fix has a test that failed before.
 - No copied helper: search for an existing one first, else one shared helper.
 - Rule ids, messages and fixes are consistent across code, tests and docs.
 - `git diff origin/develop...HEAD | rg -n '^\+.*(LD-[0-9]+|\.work/)'` prints nothing.
