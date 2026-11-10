@@ -1,5 +1,11 @@
 # @seampact/idempotency-memory
 
-An in-memory idempotency store for one process, for development and tests.
+An in-memory idempotency store for seampact-generated Node servers, for one process in development and tests.
 
-Install and use it with seampact: https://jubasse.github.io/seampact/concepts/packages/
+```sh
+npm install @seampact/idempotency-memory
+```
+
+Guide: https://jubasse.github.io/seampact/concepts/packages/
+
+An in-memory idempotency store for one process, for development and tests.

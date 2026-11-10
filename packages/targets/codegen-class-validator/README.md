@@ -1,5 +1,11 @@
 # @seampact/codegen-class-validator
 
-Generates decorated class-validator DTO classes per schema and direction, with Standard Schema adapters for the NestJS target.
+Seampact validators for class-validator: decorated DTO classes per schema and direction, with Standard Schema adapters for NestJS.
 
-Install and use it with seampact: https://jubasse.github.io/seampact/configuration/validators/
+```sh
+npm install --save-dev @seampact/codegen-class-validator
+```
+
+Guide: https://jubasse.github.io/seampact/configuration/validators/
+
+Generates decorated class-validator DTO classes per schema and direction, with Standard Schema adapters for the NestJS target.

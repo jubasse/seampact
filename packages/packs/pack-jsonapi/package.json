@@ -10,7 +10,16 @@
   "bugs": {
     "url": "https://github.com/jubasse/seampact/issues"
   },
-  "description": "JSON:API resource objects, page[number] paging and the errors array.",
+  "keywords": [
+    "convention-pack",
+    "jsonapi",
+    "seampact",
+    "api-contract",
+    "openapi",
+    "codegen"
+  ],
+  "description": "Seampact convention pack for JSON:API: resource objects, page[number] paging and the errors array.",
+  "license": "MIT",
   "seampact": {
     "role": "pack",
     "pack": "pack.yaml"

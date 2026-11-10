@@ -1,6 +1,7 @@
 {
   "name": "@seampact/codegen-zod",
-  "description": "Generates Standard Schema zod validators per schema and direction, and one input validator per operation.",
+  "description": "Seampact validators for zod: Standard Schema validators per schema and direction, and one input validator per operation.",
+  "license": "MIT",
   "version": "1.0.1",
   "repository": {
     "type": "git",
@@ -11,6 +12,15 @@
   "bugs": {
     "url": "https://github.com/jubasse/seampact/issues"
   },
+  "keywords": [
+    "zod",
+    "validation",
+    "standard-schema",
+    "seampact",
+    "api-contract",
+    "openapi",
+    "codegen"
+  ],
   "type": "module",
   "files": [
     "dist"

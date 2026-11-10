@@ -1,6 +1,7 @@
 {
   "name": "@seampact/openapi",
-  "description": "Writes the OpenAPI 3.1 documents from the IR, with what OpenAPI cannot say as x-seampact-* extensions.",
+  "description": "Writes OpenAPI 3.1 documents from a seampact API contract, keeping what OpenAPI cannot say as x-seampact-* extensions.",
+  "license": "MIT",
   "version": "1.0.1",
   "repository": {
     "type": "git",
@@ -11,6 +12,14 @@
   "bugs": {
     "url": "https://github.com/jubasse/seampact/issues"
   },
+  "keywords": [
+    "openapi-3.1",
+    "documentation",
+    "seampact",
+    "api-contract",
+    "openapi",
+    "codegen"
+  ],
   "type": "module",
   "main": "./src/index.ts",
   "files": [

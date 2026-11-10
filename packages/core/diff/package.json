@@ -1,6 +1,7 @@
 {
   "name": "@seampact/diff",
-  "description": "Classifies the changes between two contract versions as additive or breaking, per direction.",
+  "description": "Classifies the changes between two versions of a seampact API contract as additive or breaking, per direction, for a CI gate.",
+  "license": "MIT",
   "version": "1.0.1",
   "repository": {
     "type": "git",
@@ -11,6 +12,14 @@
   "bugs": {
     "url": "https://github.com/jubasse/seampact/issues"
   },
+  "keywords": [
+    "breaking-changes",
+    "ci",
+    "seampact",
+    "api-contract",
+    "openapi",
+    "codegen"
+  ],
   "type": "module",
   "main": "./src/index.ts",
   "files": [

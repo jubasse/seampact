@@ -1,6 +1,7 @@
 {
   "name": "@seampact/idempotency-memory",
-  "description": "An in-memory idempotency store for one process, for development and tests.",
+  "description": "An in-memory idempotency store for seampact-generated Node servers, for one process in development and tests.",
+  "license": "MIT",
   "version": "1.0.1",
   "repository": {
     "type": "git",
@@ -11,6 +12,15 @@
   "bugs": {
     "url": "https://github.com/jubasse/seampact/issues"
   },
+  "keywords": [
+    "idempotency",
+    "runtime",
+    "node",
+    "seampact",
+    "api-contract",
+    "openapi",
+    "codegen"
+  ],
   "type": "module",
   "files": [
     "dist"

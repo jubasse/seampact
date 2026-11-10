@@ -1,6 +1,7 @@
 {
   "name": "@seampact/compiler",
-  "description": "Reads the YAML contract, reports errors with file, line and column, and produces the IR.",
+  "description": "Compiles a seampact YAML API contract into the IR the generators read, reporting errors with file, line and column.",
+  "license": "MIT",
   "version": "1.0.1",
   "repository": {
     "type": "git",
@@ -11,6 +12,14 @@
   "bugs": {
     "url": "https://github.com/jubasse/seampact/issues"
   },
+  "keywords": [
+    "compiler",
+    "yaml",
+    "seampact",
+    "api-contract",
+    "openapi",
+    "codegen"
+  ],
   "type": "module",
   "files": [
     "dist"

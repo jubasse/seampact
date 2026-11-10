@@ -6,7 +6,7 @@ plugins {
     `java-library`
 }
 
-description = "The access hook interfaces and runtime types the generated Java code of seampact imports."
+description = "The access hook interfaces and runtime types that seampact-generated Java code imports and your app implements."
 
 val repositoryRoot = rootProject.projectDir.parentFile
 

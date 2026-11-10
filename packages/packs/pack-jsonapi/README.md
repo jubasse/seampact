@@ -1,5 +1,13 @@
 # @seampact/pack-jsonapi
 
+Seampact convention pack for JSON:API: resource objects, page[number] paging and the errors array.
+
+```sh
+npm install --save-dev @seampact/pack-jsonapi
+```
+
+Guide: https://jubasse.github.io/seampact/features/convention-packs/
+
 Declares the `jsonapi` format (`application/vnd.api+json`, resource objects, an `errors` array) and the `jsonapiPages` paging style (`page[number]`, `page[size]`, signed `sort`).
 
 - Sets `conventions.format: jsonapi` and `conventions.paging.default: jsonapiPages`; a later layer may choose others.

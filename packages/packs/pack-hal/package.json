@@ -10,7 +10,17 @@
   "bugs": {
     "url": "https://github.com/jubasse/seampact/issues"
   },
-  "description": "HAL items and pages with _links, _embedded and Spring HATEOAS's page object.",
+  "keywords": [
+    "convention-pack",
+    "hal",
+    "hateoas",
+    "seampact",
+    "api-contract",
+    "openapi",
+    "codegen"
+  ],
+  "description": "Seampact convention pack for HAL: items and pages with _links and _embedded, and Spring HATEOAS's page object.",
+  "license": "MIT",
   "seampact": {
     "role": "pack",
     "pack": "pack.yaml"

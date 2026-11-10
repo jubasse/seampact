@@ -8,42 +8,42 @@ The workspace packages, the compiler stages and one line per source directory, t
 
 | Package | Directory | Role | Description |
 |---|---|---|---|
-| `@seampact/cli` | `packages/core/cli` | core | The seampact command: init, compile, check, lint, diff, generate, bundle, explain. |
-| `@seampact/codegen-core` | `packages/core/codegen-core` | core | The API the code generators are written against. |
-| `@seampact/compiler` | `packages/core/compiler` | core | Reads the YAML contract, reports errors with file, line and column, and produces the IR. |
-| `@seampact/diff` | `packages/core/diff` | core | Classifies the changes between two contract versions as additive or breaking, per direction. |
-| `@seampact/lint` | `packages/core/lint` | core | Lint rules over the IR, and the API to write your own. |
-| `@seampact/openapi` | `packages/core/openapi` | core | Writes the OpenAPI 3.1 documents from the IR, with what OpenAPI cannot say as x-seampact-* extensions. |
-| `@seampact/spec` | `packages/core/spec` | core | The JSON Schemas of the YAML files and of the IR, with their TypeScript types, the naming vectors and the bundle vectors. |
-| `@seampact/pack-api-platform` | `packages/packs/pack-api-platform` | pack | JSON-LD items, Hydra collections and the iri-reference format for API Platform. |
-| `@seampact/pack-crud-rights` | `packages/packs/pack-crud-rights` | pack | Derives a <resource>.<op> right for every list, get, create, update, delete and batch route and requires it first. |
-| `@seampact/pack-hal` | `packages/packs/pack-hal` | pack | HAL items and pages with _links, _embedded and Spring HATEOAS's page object. |
-| `@seampact/pack-jsonapi` | `packages/packs/pack-jsonapi` | pack | JSON:API resource objects, page[number] paging and the errors array. |
-| `@seampact/pack-laravel` | `packages/packs/pack-laravel` | pack | Laravel API Resources and paginators: data wrapping, length-aware and cursor pages. |
-| `@seampact/pack-spring` | `packages/packs/pack-spring` | pack | Spring Data's Page as a paging style. |
-| `@seampact/hooks` | `packages/runtime/hooks` | hooks | The neutral hook interfaces and idempotency store interface every generated Node server boundary types against. |
-| `@seampact/idempotency-memory` | `packages/runtime/idempotency-memory` | helper | An in-memory idempotency store for one process, for development and tests. |
-| `@seampact/server-runtime` | `packages/runtime/server-runtime` | helper | The request checks and replies every generated Node and Web-standard server boundary imports, with one placement per framework. |
-| `@seampact/signed-webhooks` | `packages/runtime/signed-webhooks` | helper | Verifies a template-signed webhook (HMAC, timestamp tolerance, secret rotation) inside an authenticate hook. |
-| `@seampact/codegen-adonis` | `packages/targets/codegen-adonis` | target | Generates the AdonisJS boundary around your controllers: the routes of each api with their checking middleware, the reply path, the error helpers for your exception handler and a boot check, validating with the zod or yup link you give or with VineJS validators it generates. |
-| `@seampact/codegen-angular` | `packages/targets/codegen-angular` | target | Generates an injectable Angular api service over HttpClient with signal readers built on resource(), over the typed fetch client, with no query library, and opt-in NgRx action groups and effects. |
-| `@seampact/codegen-axios` | `packages/targets/codegen-axios` | target | Generates the typed client of the fetch target over your own axios instance, so the React, Vue and Angular targets run over axios. |
-| `@seampact/codegen-class-validator` | `packages/targets/codegen-class-validator` | target | Generates decorated class-validator DTO classes per schema and direction, with Standard Schema adapters for the NestJS target. |
-| `@seampact/codegen-express` | `packages/targets/codegen-express` | target | Generates an Express router per api that serves each contract route behind its access, validation and reply checks around your handler map, on Express 4 and 5, validating with zod. |
-| `@seampact/codegen-fastify` | `packages/targets/codegen-fastify` | target | Generates a Fastify plugin per api that registers each contract route with its access, validation and reply checks around your handler map, on Fastify 5, validating with the zod or yup link you give or with Ajv validators it generates. |
-| `@seampact/codegen-fetch` | `packages/targets/codegen-fetch` | target | Generates a typed fetch client with one method per operation, returning its success and error responses as typed results. |
-| `@seampact/codegen-hono` | `packages/targets/codegen-hono` | target | Generates a registerRoutes function per api that adds each contract route to a Hono 4 app with its access, validation and reply checks around your handler map, validating with zod. |
-| `@seampact/codegen-msw` | `packages/targets/codegen-msw` | target | Generates Mock Service Worker 2 handlers per operation that answer the contract's examples, or the typed success or error a test gives, in the api's wire format. |
-| `@seampact/codegen-nestjs` | `packages/targets/codegen-nestjs` | target | Generates the NestJS boundary around your controllers: a decorator per operation, the access guard, an input decorator whose pipe validates, a handler wrapper or opt-in reply interceptor that writes the checked reply, the error filter and a boot check, validating with zod. |
-| `@seampact/codegen-nextjs` | `packages/targets/codegen-nextjs` | target | Generates a routeHandler per api that serves a Next.js 16 catch-all route with the contract's access, validation and reply checks around your handler map, validating with zod. |
-| `@seampact/codegen-react` | `packages/targets/codegen-react` | target | Generates TanStack Query or SWR options and React hooks, an RTK Query api, or plain fetch hooks with no query library, over the typed fetch client, with keys, invalidation and paging read from the contract. |
-| `@seampact/codegen-ts` | `packages/targets/codegen-ts` | target | Generates a named TypeScript type per schema and each operation's input, output and error union. |
-| `@seampact/codegen-vue` | `packages/targets/codegen-vue` | target | Generates TanStack Query or Pinia Colada options and Vue composables, or plain fetch composables with no query library, over the typed fetch client, with keys, invalidation and paging read from the contract. |
-| `@seampact/codegen-yup` | `packages/targets/codegen-yup` | target | Generates Standard Schema yup validators per schema and direction, and one input validator per operation. |
-| `@seampact/codegen-zod` | `packages/targets/codegen-zod` | target | Generates Standard Schema zod validators per schema and direction, and one input validator per operation. |
+| `@seampact/cli` | `packages/core/cli` | core | The seampact command: compile a YAML API contract and generate typed server code, validators, OpenAPI and clients, then check them in CI. |
+| `@seampact/codegen-core` | `packages/core/codegen-core` | core | The API the seampact code generators are written against, for writing your own generator. |
+| `@seampact/compiler` | `packages/core/compiler` | core | Compiles a seampact YAML API contract into the IR the generators read, reporting errors with file, line and column. |
+| `@seampact/diff` | `packages/core/diff` | core | Classifies the changes between two versions of a seampact API contract as additive or breaking, per direction, for a CI gate. |
+| `@seampact/lint` | `packages/core/lint` | core | Lint rules over a seampact API contract's IR, and the API to write your own. |
+| `@seampact/openapi` | `packages/core/openapi` | core | Writes OpenAPI 3.1 documents from a seampact API contract, keeping what OpenAPI cannot say as x-seampact-* extensions. |
+| `@seampact/spec` | `packages/core/spec` | core | The JSON Schemas of the seampact contract and IR with their TypeScript types, and the shared naming and bundle test vectors. |
+| `@seampact/pack-api-platform` | `packages/packs/pack-api-platform` | pack | Seampact convention pack for API Platform: JSON-LD items, Hydra collections and the iri-reference format. |
+| `@seampact/pack-crud-rights` | `packages/packs/pack-crud-rights` | pack | Seampact convention pack that derives a <resource>.<op> access right for every list, get, create, update, delete and batch route. |
+| `@seampact/pack-hal` | `packages/packs/pack-hal` | pack | Seampact convention pack for HAL: items and pages with _links and _embedded, and Spring HATEOAS's page object. |
+| `@seampact/pack-jsonapi` | `packages/packs/pack-jsonapi` | pack | Seampact convention pack for JSON:API: resource objects, page[number] paging and the errors array. |
+| `@seampact/pack-laravel` | `packages/packs/pack-laravel` | pack | Seampact convention pack for Laravel API Resources and paginators: data wrapping, length-aware and cursor pages. |
+| `@seampact/pack-spring` | `packages/packs/pack-spring` | pack | Seampact convention pack that gives an API Spring Data's Page as its paging style. |
+| `@seampact/hooks` | `packages/runtime/hooks` | hooks | The neutral hook and idempotency store interfaces that seampact-generated Node servers call and your app implements. |
+| `@seampact/idempotency-memory` | `packages/runtime/idempotency-memory` | helper | An in-memory idempotency store for seampact-generated Node servers, for one process in development and tests. |
+| `@seampact/server-runtime` | `packages/runtime/server-runtime` | helper | The runtime that seampact-generated Node and Web-standard server code imports: request checks, replies and one placement per framework. |
+| `@seampact/signed-webhooks` | `packages/runtime/signed-webhooks` | helper | Verifies signed webhooks (HMAC, timestamp tolerance, secret rotation) inside a seampact authenticate hook on a Node server. |
+| `@seampact/codegen-adonis` | `packages/targets/codegen-adonis` | target | Seampact target for AdonisJS: generates routes with checking middleware, the reply path, error helpers and a boot check around your controllers. |
+| `@seampact/codegen-angular` | `packages/targets/codegen-angular` | target | Seampact target for Angular: generates an injectable api service over HttpClient with signal readers, and opt-in NgRx actions and effects. |
+| `@seampact/codegen-axios` | `packages/targets/codegen-axios` | target | Seampact target that runs the typed fetch client over your own axios instance, so the React, Vue and Angular targets use axios. |
+| `@seampact/codegen-class-validator` | `packages/targets/codegen-class-validator` | target | Seampact validators for class-validator: decorated DTO classes per schema and direction, with Standard Schema adapters for NestJS. |
+| `@seampact/codegen-express` | `packages/targets/codegen-express` | target | Seampact target for Express 4 and 5: generates a router per api that checks access, input and replies around your handler map. |
+| `@seampact/codegen-fastify` | `packages/targets/codegen-fastify` | target | Seampact target for Fastify 5: generates a plugin per api that registers each contract route with access, validation and reply checks around your handler map. |
+| `@seampact/codegen-fetch` | `packages/targets/codegen-fetch` | target | Seampact target that generates a typed fetch client with one method per operation, returning success and error responses as typed results. |
+| `@seampact/codegen-hono` | `packages/targets/codegen-hono` | target | Seampact target for Hono 4: generates a registerRoutes function that adds each contract route with access, validation and reply checks around your handler map. |
+| `@seampact/codegen-msw` | `packages/targets/codegen-msw` | target | Seampact target for Mock Service Worker 2: generates handlers per operation that answer the contract's examples or the typed result a test gives. |
+| `@seampact/codegen-nestjs` | `packages/targets/codegen-nestjs` | target | Seampact target for NestJS: generates operation decorators, the access guard, validating input pipes, the error filter and a boot check around your controllers. |
+| `@seampact/codegen-nextjs` | `packages/targets/codegen-nextjs` | target | Seampact target for Next.js 16: generates a routeHandler per api for a catch-all route with access, validation and reply checks around your handler map. |
+| `@seampact/codegen-react` | `packages/targets/codegen-react` | target | Seampact target for React: generates TanStack Query or SWR options and hooks, an RTK Query api, or plain fetch hooks over the typed fetch client. |
+| `@seampact/codegen-ts` | `packages/targets/codegen-ts` | target | Seampact target that generates a TypeScript type per schema and each operation's input, output and error union. |
+| `@seampact/codegen-vue` | `packages/targets/codegen-vue` | target | Seampact target for Vue: generates TanStack Query or Pinia Colada options and composables, or plain fetch composables, over the typed fetch client. |
+| `@seampact/codegen-yup` | `packages/targets/codegen-yup` | target | Seampact validators for yup: Standard Schema validators per schema and direction, and one input validator per operation. |
+| `@seampact/codegen-zod` | `packages/targets/codegen-zod` | target | Seampact validators for zod: Standard Schema validators per schema and direction, and one input validator per operation. |
 | `@seampact/binary` | `packages/tools/binary` | tool | The standalone compiler binary: the CLI as a Node single executable application for five platforms, with the first-party packs embedded. |
 | `@seampact/docs-site` | `packages/tools/docs-site` | tool | The documentation website: Starlight on GitHub Pages, built from the repository's docs/ folder. |
-| `@seampact/http-suite` | `packages/tools/http-suite` | tool | The shared black-box HTTP suite: JSON case scripts, the sample app's control routes, a runner against a base URL and a report keyed by checklist id. |
+| `@seampact/http-suite` | `packages/tools/http-suite` | tool | The black-box HTTP suite shared by the seampact server targets: JSON case scripts, a runner against a base URL and a report keyed by checklist id. |
 
 ## Python packages
 
@@ -51,15 +51,15 @@ The uv workspace `python/`. A source directory is a package with an `__init__.py
 
 | Package | Directory | Description |
 |---|---|---|
-| `seampact-codegen` | `python/codegen` | The neutral code generation of the seampact Python targets and the framework-free runtime of generated code. |
-| `seampact-compiler` | `python/compiler` | The seampact compiler binary for one platform, run by seampact-ir. |
-| `seampact-django` | `python/django` | The Django layer the seampact DRF and Ninja targets share: the URLconf and settings emitters and the Django runtime of generated code. |
-| `seampact-drf` | `python/drf` | The seampact Django REST Framework target: its generator and the runtime of the code it generates. |
-| `seampact-fastapi` | `python/fastapi` | The FastAPI target of seampact: its generator and the placement runtime of the generated code. |
+| `seampact-codegen` | `python/codegen` | The framework-neutral code generation of the seampact Python targets and the runtime their generated code imports. |
+| `seampact-compiler` | `python/compiler` | The seampact compiler binary for one platform, installed with the seampact-ir[compiler] extra. |
+| `seampact-django` | `python/django` | The Django layer shared by the seampact DRF and Ninja targets: URLconf and settings emitters and the runtime of generated code. |
+| `seampact-drf` | `python/drf` | Seampact target for Django REST Framework: its generator and the runtime of the server code it generates. |
+| `seampact-fastapi` | `python/fastapi` | Seampact target for FastAPI: its generator and the placement runtime of the server code it generates. |
 | `seampact-hooks` | `python/hooks` | The seampact hook protocols and the values they exchange, for Python apps and generated code. |
-| `seampact-ir` | `python/ir` | The seampact IR model, naming and reader for Python generators. |
-| `seampact-ninja` | `python/ninja` | The Django Ninja target of seampact: its generator and the placement runtime of the generated code. |
-| `seampact-signed-webhooks` | `python/signed-webhooks` | Verifies a template-signed webhook (HMAC, timestamp tolerance, secret rotation) inside an authenticate hook. |
+| `seampact-ir` | `python/ir` | The seampact IR model, naming and reader for Python generators, with the bundle verifier and the compiler runner. |
+| `seampact-ninja` | `python/ninja` | Seampact target for Django Ninja: its generator and the placement runtime of the server code it generates. |
+| `seampact-signed-webhooks` | `python/signed-webhooks` | Verifies a signed webhook (HMAC, timestamp tolerance, secret rotation) inside a seampact authenticate hook on Python. |
 
 ## Compiler stages
 
@@ -94,7 +94,7 @@ In pipeline order (ADR 0006 section 1).
 
 ### `@seampact/compiler`
 
-- `packages/core/compiler/src`: Reads the YAML contract, reports errors with file, line and column, and produces the IR.
+- `packages/core/compiler/src`: Compiles a seampact YAML API contract into the IR the generators read, reporting errors with file, line and column.
 - `packages/core/compiler/src/bundle`: Contract bundles in the compiler (ADR 0011): the workspace bundled and written as a directory or a reproducible tarball, the tarball reader, the pinned-bundle check, the three channels that fetch a bundle with its cache, workspace imports and the local-source refusal.
 - `packages/core/compiler/src/derivations`: The derivation table and the derivation roles of ADR 0006 sections 5 and 6, held as data.
 - `packages/core/compiler/src/diagnostics`: Located diagnostics: the diagnostic type, its sort order and the printer.
@@ -133,7 +133,7 @@ In pipeline order (ADR 0006 section 1).
 
 ### `@seampact/spec`
 
-- `packages/core/spec/src`: The JSON Schemas of the YAML files and of the IR, with their TypeScript types, the naming vectors and the bundle vectors.
+- `packages/core/spec/src`: The JSON Schemas of the seampact contract and IR with their TypeScript types, and the shared naming and bundle test vectors.
 - `packages/core/spec/src/authoring`: The authoring grammar: the JSON Schemas of the YAML files (ADR 0002), their schema keywords and markers.
 - `packages/core/spec/src/authoring/grammar`: The grammar modules the authoring JSON Schemas are generated from, one per file and fragment kind (ADR 0002 and 0003).
 - `packages/core/spec/src/bundle`: Contract bundles (`@seampact/spec/bundle`, ADR 0011): the manifest types and JSON Schema, the portable-path rule, the canonical file list the integrity hashes, the manifest rules beyond the schema and the failure codes.
@@ -336,13 +336,13 @@ In pipeline order (ADR 0006 section 1).
 
 ### `php`
 
-- `php/api-platform`: The API Platform 5 target: resources, operations and processors of a contract on top of the Symfony target.
-- `php/codegen`: The framework-neutral PHP emitters the PHP targets share: value types, enums, naming, refusals and the golden tree.
-- `php/hooks`: The hook interfaces, decision and subject types for PHP that generated boundaries call and applications implement.
-- `php/ir`: The seampact IR model and reader for PHP.
-- `php/laravel`: The Laravel 13 target: FormRequests, types, controller interfaces, routes and boundary of a contract.
-- `php/signed-webhooks`: Verifies template-signed webhooks for PHP: HMAC over the raw body, timestamp tolerance and secret rotation.
-- `php/symfony`: The Symfony 7.4 and 8 target: types, controller interfaces, routes, constraints and bundle of a contract.
+- `php/api-platform`: seampact/api-platform
+- `php/codegen`: seampact/codegen
+- `php/hooks`: seampact/hooks
+- `php/ir`: seampact/ir
+- `php/laravel`: seampact/laravel
+- `php/signed-webhooks`: seampact/signed-webhooks
+- `php/symfony`: seampact/symfony
 
 ### `.github/actions`
 

@@ -5,13 +5,16 @@ build-backend = "hatchling.build"
 [project]
 name = "seampact-codegen"
 version = "1.0.1"
-description = "The neutral code generation of the seampact Python targets and the framework-free runtime of generated code."
+description = "The framework-neutral code generation of the seampact Python targets and the runtime their generated code imports."
+keywords = ["generator", "python", "pydantic", "seampact", "api-contract", "openapi", "codegen"]
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.12"
 dependencies = ["seampact-hooks==1.0.1"]
 classifiers = [
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Code Generators",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
     "Typing :: Typed",

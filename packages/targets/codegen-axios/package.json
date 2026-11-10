@@ -1,6 +1,7 @@
 {
   "name": "@seampact/codegen-axios",
-  "description": "Generates the typed client of the fetch target over your own axios instance, so the React, Vue and Angular targets run over axios.",
+  "description": "Seampact target that runs the typed fetch client over your own axios instance, so the React, Vue and Angular targets use axios.",
+  "license": "MIT",
   "version": "1.0.1",
   "repository": {
     "type": "git",
@@ -11,6 +12,15 @@
   "bugs": {
     "url": "https://github.com/jubasse/seampact/issues"
   },
+  "keywords": [
+    "axios",
+    "client",
+    "typescript",
+    "seampact",
+    "api-contract",
+    "openapi",
+    "codegen"
+  ],
   "type": "module",
   "files": [
     "dist",

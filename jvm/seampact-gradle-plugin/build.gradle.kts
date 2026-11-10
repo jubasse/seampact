@@ -15,7 +15,7 @@ plugins {
     alias(libs.plugins.gradle.plugin.publish)
 }
 
-description = "Generates the Spring Boot code of a seampact contract from a pinned bundle or the pinned compiler."
+description = "Seampact for Spring Boot: generates the Java code of a YAML API contract when you build, with request and reply checks around your controllers."
 
 // `-PtestGradle=<version>` runs the TestKit builds on that Gradle release (CI passes the 8.14 floor); without it they
 // run on this build's Gradle.
@@ -49,9 +49,9 @@ gradlePlugin {
         create("seampact") {
             id = "io.github.jubasse.seampact"
             implementationClass = "io.github.jubasse.seampact.gradle.SeampactPlugin"
-            displayName = "seampact"
-            description = "Generates the Spring Boot code of a seampact contract from a pinned bundle or the pinned compiler."
-            tags = listOf("seampact", "contract", "codegen", "spring-boot", "openapi")
+            displayName = "seampact Spring Boot"
+            description = "Seampact for Spring Boot: generates the Java code of a YAML API contract when you build, with request and reply checks around your controllers."
+            tags = listOf("seampact", "api-contract", "codegen", "spring-boot", "openapi", "java")
         }
     }
 }

@@ -10,7 +10,18 @@
   "bugs": {
     "url": "https://github.com/jubasse/seampact/issues"
   },
-  "description": "JSON-LD items, Hydra collections and the iri-reference format for API Platform.",
+  "keywords": [
+    "convention-pack",
+    "api-platform",
+    "json-ld",
+    "hydra",
+    "seampact",
+    "api-contract",
+    "openapi",
+    "codegen"
+  ],
+  "description": "Seampact convention pack for API Platform: JSON-LD items, Hydra collections and the iri-reference format.",
+  "license": "MIT",
   "seampact": {
     "role": "pack",
     "pack": "pack.yaml"

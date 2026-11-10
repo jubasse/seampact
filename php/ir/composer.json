@@ -1,8 +1,9 @@
 {
   "name": "seampact/ir",
-  "description": "The Seampact IR model and reader for PHP.",
+  "description": "Reads a seampact API contract's IR into PHP value types, for the seampact PHP generators.",
   "type": "library",
   "license": "MIT",
+  "keywords": ["ir", "php", "seampact", "api-contract", "openapi", "codegen"],
   "homepage": "https://jubasse.github.io/seampact/concepts/packages/",
   "support": {
     "docs": "https://jubasse.github.io/seampact/",
