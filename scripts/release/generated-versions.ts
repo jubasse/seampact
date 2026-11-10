@@ -92,6 +92,11 @@ export const GOLDEN_TREES: readonly GoldenTree[] = [
     regenerate: `from php/symfony/: ${PHPUNIT_UPDATE}`,
   },
   {
+    directory: "php/api-platform/tests/golden",
+    form: PHP_GENERATED_BY,
+    regenerate: `from php/api-platform/: ${PHPUNIT_UPDATE}`,
+  },
+  {
     directory: "jvm/seampact-spring-boot/src/test/golden",
     form: JAVA_GENERATOR_VERSION,
     regenerate: "from jvm/: ./gradlew :seampact-spring-boot:test -PupdateGolden",

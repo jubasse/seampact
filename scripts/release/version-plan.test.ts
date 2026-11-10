@@ -115,6 +115,7 @@ const GOLDEN_SOURCES: Record<string, string> = {
   "python/ninja/ninja_tests/golden/reference/tasks/contract.py": PYTHON_CONTRACT,
   "php/laravel/tests/golden/Tasks/Laravel/TasksContract.php": PHP_CONTRACT,
   "php/symfony/tests/golden/Tasks/Symfony/TasksContract.php": PHP_CONTRACT,
+  "php/api-platform/tests/golden/Tasks/Symfony/TasksContract.php": PHP_CONTRACT,
   "jvm/seampact-spring-boot/src/test/golden/com/example/tasks/TasksSeampactBinding.java":
     JAVA_BINDING,
   "jvm/seampact-spring-boot/src/test/golden-opt-ins/com/example/optins/TasksSeampactBinding.java":
