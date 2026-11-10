@@ -649,7 +649,7 @@ items:
     fact: Generated types list properties in authored order, and moving properties into an $include keeps that order and the IR bytes.
     frs: [FR-9, FR-38]
     scenario: SCN-001
-    targets: [core, fetch, axios, nestjs, spring-boot]
+    targets: [core, fetch, nestjs, spring-boot]
   - id: CHK-110
     source: "A34"
     fact: A contract with no pack compiles, each derived error answering its role's default code, and each default code is renamable by the conventions or a pack.
