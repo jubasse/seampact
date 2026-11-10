@@ -9,9 +9,8 @@ proofs:
     fixtures: [fixtures/reference/tasks-paging/api.yaml]
     tests:
       - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#a changes feed sends its token, reads the next one and completeness, and a stale token as its 410'
-      - 'axios: packages/targets/codegen-fetch/src/reference-client.test.ts#a changes feed sends its token, reads the next one and completeness, and a stale token as its 410'
+      - 'axios: packages/targets/codegen-axios/src/reference-client-over-axios.test.ts#a changes feed sends its token, reads the next one and completeness, and a stale token as its 410'
       - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#a since page reads its next start and whether the feed is complete'
-      - 'axios: packages/targets/codegen-fetch/src/reference-client.test.ts#a since page reads its next start and whether the feed is complete'
     refusals:
       - 'laravel: php/laravel/tests/PageFactRefusalTest.php#testTheCompletePageFactOfAChangesFeedIsRefusedByName'
       - 'symfony: php/symfony/tests/PageFactRefusalTest.php#testTheCompletePageFactOfAChangesFeedIsRefusedByName'
@@ -22,9 +21,9 @@ proofs:
     fixtures: [fixtures/reference/tasks-paging/api.yaml, fixtures/reference/tasks-split-sort/api.yaml]
     tests:
       - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#a Stripe list sends the cursor it pages after and reads its more flag'
-      - 'axios: packages/targets/codegen-fetch/src/reference-client.test.ts#a Stripe list sends the cursor it pages after and reads its more flag'
+      - 'axios: packages/targets/codegen-axios/src/reference-client-over-axios.test.ts#a Stripe list sends the cursor it pages after and reads its more flag'
       - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#GitHub pages send one sort key and its direction, and read the page links'
-      - 'axios: packages/targets/codegen-fetch/src/reference-client.test.ts#GitHub pages send one sort key and its direction, and read the page links'
+      - 'axios: packages/targets/codegen-axios/src/reference-client-over-axios.test.ts#GitHub pages send one sort key and its direction, and read the page links from the Link header'
     refusals:
       - 'nestjs: packages/targets/codegen-nestjs/src/reference-boundary.test.ts#a split sort style is refused by name'
       - 'fastify: packages/targets/codegen-fastify/src/reference-boundary.test.ts#a split sort style is refused by name'

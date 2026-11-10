@@ -15,7 +15,8 @@ import { target } from "./index.js";
 // axios, where only the transport differs.
 
 const PROJECT = fileURLToPath(new URL("../.vitest/reference-over-axios/", import.meta.url));
-const GOLDEN = new URL("../../../../fixtures/golden/reference/", import.meta.url);
+const GOLDEN_ROOT = new URL("../../../../fixtures/golden/", import.meta.url);
+const REFERENCE_GOLDEN = "reference";
 const ADAPTER_PATH = "axios.ts";
 // Each generated file names the target that wrote it in its header.
 const AXIOS_PACKAGE = "@seampact/codegen-axios";
@@ -44,6 +45,7 @@ interface Received {
   readonly method: string;
   readonly path: string;
   readonly headers: IncomingHttpHeaders;
+  readonly body: string;
 }
 
 const TASK = {
@@ -61,9 +63,12 @@ const received: Received[] = [];
 let tasks: Record<string, Method>;
 let service: Record<string, Method>;
 let serviceWrites: Record<string, Method>;
+let paging: Record<string, Method>;
+let splitSort: Record<string, Method>;
+let laravel: Record<string, Method>;
 
-function readIr(name: string): ContractIR {
-  return JSON.parse(readFileSync(new URL(`${name}.ir.json`, GOLDEN), "utf8"));
+function readIr(name: string, golden = REFERENCE_GOLDEN): ContractIR {
+  return JSON.parse(readFileSync(new URL(`${golden}/${name}.ir.json`, GOLDEN_ROOT), "utf8"));
 }
 
 async function generate(
@@ -82,10 +87,10 @@ async function generate(
   return outcome.files;
 }
 
-async function clientOf(name: string): Promise<Record<string, Method>> {
-  const directory = join(PROJECT, name);
+async function clientOf(name: string, golden = REFERENCE_GOLDEN): Promise<Record<string, Method>> {
+  const directory = join(PROJECT, golden, name);
 
-  for (const file of await generate(target, readIr(name))) {
+  for (const file of await generate(target, readIr(name, golden))) {
     mkdirSync(dirname(join(directory, file.path)), { recursive: true });
     writeFileSync(join(directory, file.path), file.contents);
   }
@@ -97,13 +102,17 @@ async function clientOf(name: string): Promise<Record<string, Method>> {
 
 function startServer(): Promise<Server> {
   const listening = createServer((request, response) => {
-    received.push({
-      method: request.method ?? "",
-      path: request.url ?? "",
-      headers: request.headers,
-    });
-    request.resume();
+    const chunks: Buffer[] = [];
+
+    request.on("data", (chunk: Buffer) => chunks.push(chunk));
     request.on("end", () => {
+      received.push({
+        method: request.method ?? "",
+        path: request.url ?? "",
+        headers: request.headers,
+        body: Buffer.concat(chunks).toString("utf8"),
+      });
+
       setTimeout(() => {
         response.writeHead(answer.status, {
           "content-type": "application/json",
@@ -141,6 +150,9 @@ describe("the generated client over axios", () => {
     tasks = await clientOf("tasks");
     service = await clientOf("tasksService");
     serviceWrites = await clientOf("tasksServiceWrites");
+    paging = await clientOf("tasksPaging");
+    splitSort = await clientOf("tasksSplitSort");
+    laravel = await clientOf("tasks", "pack-laravel");
   }, SETUP_TIMEOUT_MILLISECONDS);
 
   afterAll(() => new Promise((resolve) => server.close(resolve)));
@@ -158,21 +170,31 @@ describe("the generated client over axios", () => {
     return method;
   };
 
-  test("the files are the fetch client's byte for byte, beside the adapter", async () => {
-    const ir = readIr("tasks");
-    const fetchFiles = new Map((await generate(fetchTarget, ir)).map((f) => [f.path, f.contents]));
-    const axiosFiles = new Map((await generate(target, ir)).map((f) => [f.path, f.contents]));
+  test.each([
+    ["tasks", REFERENCE_GOLDEN],
+    ["tasksPaging", REFERENCE_GOLDEN],
+    ["tasksSplitSort", REFERENCE_GOLDEN],
+    ["tasks", "pack-laravel"],
+  ])(
+    "the files are the fetch client's byte for byte, beside the adapter: %s of %s",
+    async (name, golden) => {
+      const ir = readIr(name, golden);
+      const fetchFiles = new Map(
+        (await generate(fetchTarget, ir)).map((f) => [f.path, f.contents]),
+      );
+      const axiosFiles = new Map((await generate(target, ir)).map((f) => [f.path, f.contents]));
 
-    expect(axiosFiles.has(ADAPTER_PATH)).toBe(true);
+      expect(axiosFiles.has(ADAPTER_PATH)).toBe(true);
 
-    for (const [path, contents] of fetchFiles) {
-      if (path === "index.ts") continue;
+      for (const [path, contents] of fetchFiles) {
+        if (path === "index.ts") continue;
 
-      expect(axiosFiles.get(path)?.replaceAll(AXIOS_PACKAGE, FETCH_PACKAGE), path).toBe(contents);
-    }
+        expect(axiosFiles.get(path)?.replaceAll(AXIOS_PACKAGE, FETCH_PACKAGE), path).toBe(contents);
+      }
 
-    expect(target.describe(ir, {})).toEqual(fetchTarget.describe(ir, {}));
-  });
+      expect(target.describe(ir, {})).toEqual(fetchTarget.describe(ir, {}));
+    },
+  );
 
   test("generation is the same bytes on every run", async () => {
     const ir = readIr("tasks");
@@ -229,6 +251,7 @@ describe("the generated client over axios", () => {
     );
 
     expect(result).toMatchObject({ ok: true, status: 201 });
+    expect(JSON.parse(lastReceived().body)).toEqual({ title: "Relayed" });
     expect(lastReceived().headers["x-actor-surface"]).toBe("studio");
     expect(lastReceived().headers["idempotency-key"]).toMatch(UUID);
   });
@@ -317,6 +340,8 @@ describe("the generated client over axios", () => {
     const names = Object.keys(lastReceived().headers);
 
     expect(lastReceived().method).toBe("POST");
+    expect(lastReceived().headers["content-type"]).toMatch(/^application\/json/);
+    expect(JSON.parse(lastReceived().body)).toEqual({ ids: ["a"] });
     expect(result).toMatchObject({ ok: true, status: 200, body: { a: { taskId: "a" } } });
     expect(names).not.toContain("idempotency-key");
     expect(names.filter((name) => /csrf|xsrf/.test(name))).toEqual([]);
@@ -328,6 +353,9 @@ describe("the generated client over axios", () => {
     answer = { status: 201, body: TASK };
 
     await call(tasks, "createTask")(request);
+
+    expect(lastReceived().headers["content-type"]).toMatch(/^application\/json/);
+    expect(JSON.parse(lastReceived().body)).toEqual(request.body);
 
     const first = lastReceived().headers["idempotency-key"];
 
@@ -350,6 +378,154 @@ describe("the generated client over axios", () => {
       await call(tasks, "getPreferences")({ headers: { "if-none-match": '"v1"' } }),
     ).toMatchObject({ ok: true, status: 304 });
     expect(lastReceived().headers["if-none-match"]).toBe('"v1"');
+  });
+
+  test("the replay flag is read from the response header", async () => {
+    const request = { path: { channelId: "c1" }, headers: {}, body: { title: "Write" } };
+
+    answer = { status: 201, body: TASK, headers: { "idempotency-replayed": "true" } };
+
+    expect(await call(tasks, "createTask")(request)).toMatchObject({ ok: true, replayed: true });
+
+    answer = { status: 201, body: TASK };
+
+    expect(await call(tasks, "createTask")(request)).toMatchObject({ ok: true, replayed: false });
+  });
+
+  test("a changes feed sends its token, reads the next one and completeness, and a stale token as its 410", async () => {
+    answer = {
+      status: 200,
+      body: { items: [TASK], next: "changes-2", complete: false, limit: 10 },
+    };
+
+    expect(await call(paging, "listChanges")({ query: { since: "changes-1" } })).toMatchObject({
+      ok: true,
+      body: { items: [TASK], nextSince: "changes-2", complete: false },
+    });
+    expect(new URL(lastReceived().path, baseUrl).searchParams.get("since")).toBe("changes-1");
+
+    answer = { status: 410, body: { code: "api.cursor_too_old" } };
+
+    expect(await call(paging, "listChanges")({ query: { since: "changes-0" } })).toMatchObject({
+      ok: false,
+      status: 410,
+      code: "api.cursor_too_old",
+    });
+  });
+
+  test("a Stripe list sends the cursor it pages after and reads its more flag", async () => {
+    const cursor = "30000000-0000-4000-8000-000000000000";
+
+    answer = { status: 200, body: { object: "list", data: [TASK], has_more: true, url: "/n" } };
+
+    expect(await call(paging, "listNotes")({ query: { starting_after: cursor } })).toMatchObject({
+      ok: true,
+      body: { items: [TASK], more: true },
+    });
+    expect(new URL(lastReceived().path, baseUrl).searchParams.get("starting_after")).toBe(cursor);
+  });
+
+  test("GitHub pages send one sort key and its direction, and read the page links from the Link header", async () => {
+    answer = {
+      status: 200,
+      body: [TASK],
+      headers: {
+        link: '</split-sort/v1/notes?page=2>; rel="next", </split-sort/v1/notes?page=3>; rel="last"',
+      },
+    };
+
+    expect(
+      await call(
+        splitSort,
+        "listNotes",
+      )({ query: { page: 1, per_page: 100, sort: "created", direction: "desc" } }),
+    ).toMatchObject({
+      ok: true,
+      body: {
+        items: [TASK],
+        next: "/split-sort/v1/notes?page=2",
+        last: "/split-sort/v1/notes?page=3",
+      },
+    });
+    expect(Object.fromEntries(new URL(lastReceived().path, baseUrl).searchParams)).toEqual({
+      page: "1",
+      per_page: "100",
+      sort: "created",
+      direction: "desc",
+    });
+  });
+
+  test("pack-laravel: data-wrapped items and a length-aware page", async () => {
+    answer = { status: 200, body: { data: { taskId: "t1", title: "Write" } } };
+
+    expect(
+      await call(laravel, "getTask")({ path: { channelId: "c1", taskId: "t1" } }),
+    ).toMatchObject({ ok: true, body: { taskId: "t1", title: "Write" } });
+
+    answer = {
+      status: 200,
+      body: {
+        data: [TASK],
+        links: { first: "/p1", last: "/p4", prev: "/p1", next: null },
+        meta: { current_page: 2, from: 3, last_page: 4, path: "/v", per_page: 2, to: 4, total: 7 },
+      },
+    };
+
+    const page = await call(
+      laravel,
+      "listTasks",
+    )({ path: { channelId: "c1" }, query: { page: 2 } });
+
+    expect(page.body).toMatchObject({
+      items: [TASK],
+      first: "/p1",
+      last: "/p4",
+      previous: "/p1",
+      page: 2,
+      totalPages: 4,
+      total: 7,
+    });
+  });
+
+  test("pack-laravel: a page-number request writes the style's page and limit names", async () => {
+    answer = {
+      status: 200,
+      body: {
+        data: [TASK],
+        links: { first: "?page=1", last: "?page=1", prev: null, next: null },
+        meta: { current_page: 1, from: 1, last_page: 1, path: "/v", per_page: 2, to: 2, total: 2 },
+      },
+    };
+
+    await call(
+      laravel,
+      "listTasks",
+    )({ path: { channelId: "c1" }, query: { page: 1, per_page: 2 } });
+
+    expect(new URL(lastReceived().path, baseUrl).searchParams.toString()).toBe("page=1&per_page=2");
+  });
+
+  test("the pack-hal client is refused by name", async () => {
+    const ir = readIr("tasks", "pack-hal");
+    const outcome = await target.generate({
+      ir,
+      options: {},
+      links: typesLinks(ir),
+      artefacts: new Set(["client"]),
+    });
+
+    expect(outcome).toMatchObject({
+      status: "refused",
+      refusals: expect.arrayContaining([
+        expect.objectContaining({ code: "format.template.unsupported" }),
+      ]),
+    });
+  });
+
+  test("the pack-spring client is generated", async () => {
+    const ir = readIr("tasks", "pack-spring");
+
+    expect(await generate(target, ir)).not.toHaveLength(0);
   });
 
   test("the budget aborts a slow call with a TimeoutError", async () => {

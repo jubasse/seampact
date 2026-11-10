@@ -30,7 +30,6 @@ proofs:
       - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#the query is written as the servers decode it: percent-encoded values, a list comma-separated'
       - 'axios: packages/targets/codegen-axios/src/reference-client-over-axios.test.ts#the query is written as the servers decode it: percent-encoded values, a list repeated or comma-separated'
       - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#a boolean or object query value is refused by name when the client is generated'
-      - 'axios: packages/targets/codegen-fetch/src/reference-client.test.ts#a boolean or object query value is refused by name when the client is generated'
   - id: CHK-035
     fixtures: [fixtures/golden/reference]
     tests:
@@ -52,70 +51,56 @@ proofs:
       - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#each write call generates its own idempotency key and a read carries none'
       - 'axios: packages/targets/codegen-axios/src/reference-client-over-axios.test.ts#each write call generates its own idempotency key and a read carries none'
       - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#the generated idempotency key and the replay flag'
-      - 'axios: packages/targets/codegen-fetch/src/reference-client.test.ts#the generated idempotency key and the replay flag'
+      - 'axios: packages/targets/codegen-axios/src/reference-client-over-axios.test.ts#the replay flag is read from the response header'
   - id: CHK-044
     fixtures: [fixtures/golden/reference]
     tests:
       - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#the error of a call is a union on its code: a declared code narrows its params, an undeclared one does not type-check'
       - 'axios: packages/targets/codegen-axios/src/reference-client-over-axios.test.ts#a declared error is a result on its code, never an axios throw'
-      - 'axios: packages/targets/codegen-fetch/src/reference-client.test.ts#the error of a call is a union on its code: a declared code narrows its params, an undeclared one does not type-check'
   - id: CHK-047
     fixtures: [fixtures/golden/reference]
     tests:
       - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#a request whose enum member is outside the enum fails to type-check'
-      - 'axios: packages/targets/codegen-fetch/src/reference-client.test.ts#a request whose enum member is outside the enum fails to type-check'
       - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#an enum member and a field the client does not know reach the caller as sent'
-      - 'axios: packages/targets/codegen-fetch/src/reference-client.test.ts#an enum member and a field the client does not know reach the caller as sent'
       - 'zod: packages/targets/codegen-zod/src/generated-validators.test.ts#a state outside the enum is refused in a request and read back in a response'
   - id: CHK-048
     fixtures: [fixtures/golden/extensions]
     refusals:
       - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#an enum fallback is refused by name by the types the client is generated beside'
-      - 'axios: packages/targets/codegen-fetch/src/reference-client.test.ts#an enum fallback is refused by name by the types the client is generated beside'
   - id: CHK-049
     fixtures: [fixtures/golden/reference]
     tests:
       - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#an enum member and a field the client does not know reach the caller as sent'
-      - 'axios: packages/targets/codegen-fetch/src/reference-client.test.ts#an enum member and a field the client does not know reach the caller as sent'
   - id: CHK-105
     fixtures: [fixtures/golden/reference]
     tests:
       - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#a bare payload is read as sent and an error comes as problem+json on its code'
       - 'axios: packages/targets/codegen-axios/src/reference-client-over-axios.test.ts#a declared error is a result on its code, never an axios throw'
-      - 'axios: packages/targets/codegen-fetch/src/reference-client.test.ts#a bare payload is read as sent and an error comes as problem+json on its code'
   - id: CHK-106
     fixtures: [fixtures/golden/reference]
     tests:
       - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#a page with its next cursor, and the listTasks query string'
-      - 'axios: packages/targets/codegen-fetch/src/reference-client.test.ts#a page with its next cursor, and the listTasks query string'
       - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#a { data, meta } page joins the style''s meta members'
-      - "axios: packages/targets/codegen-fetch/src/reference-client.test.ts#a { data, meta } page joins the style's meta members"
       - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#a page body with flat members beside its items'
-      - 'axios: packages/targets/codegen-fetch/src/reference-client.test.ts#a page body with flat members beside its items'
       - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#a page whose facts travel in headers and in Link'
-      - 'axios: packages/targets/codegen-fetch/src/reference-client.test.ts#a page whose facts travel in headers and in Link'
+      - 'axios: packages/targets/codegen-axios/src/reference-client-over-axios.test.ts#a page reads its items and the next cursor from the Link header'
       - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#a paging none list reads a bare array, and an object comes back as unexpected'
-      - 'axios: packages/targets/codegen-fetch/src/reference-client.test.ts#a paging none list reads a bare array, and an object comes back as unexpected'
   - id: CHK-109
     fixtures: [fixtures/golden/reference]
     tests:
       - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#generated types list the properties of every object schema in authored order'
-      - 'axios: packages/targets/codegen-fetch/src/reference-client.test.ts#generated types list the properties of every object schema in authored order'
   - id: CHK-111
     fixtures: [fixtures/golden/reference]
     tests:
       - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#every operation answers as declared exactly the error codes its IR derives'
-      - 'axios: packages/targets/codegen-fetch/src/reference-client.test.ts#every operation answers as declared exactly the error codes its IR derives'
   - id: CHK-116
     fixtures: [fixtures/golden/reference]
     tests:
       - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#a 404 is declared once per operation, and a nested list answers its scope''s code only'
-      - "axios: packages/targets/codegen-fetch/src/reference-client.test.ts#a 404 is declared once per operation, and a nested list answers its scope's code only"
   - id: CHK-124
     fixtures: [fixtures/golden/reference]
     tests:
       - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#error codes outside the dotted form reach the caller unchanged'
-      - 'axios: packages/targets/codegen-fetch/src/reference-client.test.ts#error codes outside the dotted form reach the caller unchanged'
   - id: CHK-126
     fixtures: [fixtures/golden/reference]
     refusals:

@@ -222,9 +222,9 @@ export const ITEMS_DEFERRED: ReadonlyMap<string, ItemDeferred> = indexItemsDefer
     "CHK-048",
     {
       targets: ["fetch", "axios"],
-      refusedOn: ["fetch", "axios"],
+      refusedOn: ["fetch"],
       reason:
-        "1.0 refuses an open enum's fallback by name at generation, in the types the fetch client is generated beside",
+        "1.0 refuses an open enum's fallback by name at generation, in the types a client is generated beside: the axios client generates no types of its own, so the refusal is the types target's, proved beside the fetch client",
     },
   ],
   [
@@ -232,7 +232,7 @@ export const ITEMS_DEFERRED: ReadonlyMap<string, ItemDeferred> = indexItemsDefer
     {
       targets: ["fetch", "axios"],
       reason:
-        "the generated fetch client carries no retry rule taken from the base nature of a code; the front targets retry a rejection and never a declared error, so a rule by nature is additive",
+        "the generated fetch and axios clients carry no retry rule taken from the base nature of a code (the axios adapter retries nothing, and a retry interceptor of the app's instance is the app's); the front targets retry a rejection and never a declared error, so a rule by nature is additive",
     },
   ],
   [
@@ -355,7 +355,7 @@ export const ITEMS_DEFERRED: ReadonlyMap<string, ItemDeferred> = indexItemsDefer
     {
       targets: ["axios"],
       reason:
-        "the standalone consumer drives the fetch client; the axios client generates the same files, which reference-client-over-axios.test.ts runs over axios",
+        "the standalone consumer project drives the fetch client and none exists for axios; the axios client generates the fetch client's files, which the axios client tests run over real HTTP on axios",
     },
   ],
   ["CHK-153", refusedOnEveryServerAndClient("a redirect response", ["fetch", "axios"])],
