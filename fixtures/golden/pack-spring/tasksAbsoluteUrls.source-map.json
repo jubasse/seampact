@@ -96,14 +96,14 @@
       "column": 13,
       "endColumn": 32,
       "endLine": 16,
-      "file": ".packs/@seampact/pack-spring@1.0.1/pack.yaml",
+      "file": ".packs/@seampact/pack-spring@1.1.0/pack.yaml",
       "line": 16
     },
     "pack:@seampact/pack-spring#/pagings/springPage": {
       "column": 3,
       "endColumn": 1,
       "endLine": 14,
-      "file": ".packs/@seampact/pack-spring@1.0.1/pack.yaml",
+      "file": ".packs/@seampact/pack-spring@1.1.0/pack.yaml",
       "line": 5
     },
     "shared#/conventions/batch/bodyLimit": {

@@ -2,7 +2,7 @@
   "name": "@seampact/server-runtime",
   "description": "The runtime that seampact-generated Node and Web-standard server code imports: request checks, replies and one placement per framework.",
   "license": "MIT",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jubasse/seampact.git",
