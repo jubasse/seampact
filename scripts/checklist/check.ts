@@ -14,7 +14,14 @@ import { loadModel } from "./load.ts";
 import type { Item, Model, Problem, Proof, TestRef } from "./model.ts";
 import { CHECKLIST_FILE, chkNumber } from "./model.ts";
 import type { ItemAfter1_0 } from "./release-scope.ts";
-import { isDeferredPair, releaseGateTargets, releaseScopeProblems } from "./release-scope.ts";
+import {
+  type DeclaredDeferral,
+  declaredDeferralProblems,
+  isDeclaredDeferral,
+  isDeferredPair,
+  releaseGateTargets,
+  releaseScopeProblems,
+} from "./release-scope.ts";
 import { shown } from "./shown.ts";
 import { missingReportProblems, suiteConsumerProblems } from "./suite-consumers.ts";
 import type { SuiteProof } from "./suite-reports.ts";
@@ -34,8 +41,10 @@ export interface CheckOptions {
   releaseGate?: boolean;
   /** With the release gate: a directory of downloaded http-suite reports, each a proof for its target. */
   suiteReports?: string;
-  /** The items the 1.0 gate does not require (release-scope.ts); none when absent, as for a fixture checklist. */
+  /** The items the gate does not require (release-scope.ts); none when absent, as for a fixture checklist. */
   itemsAfter1_0?: ReadonlyMap<string, ItemAfter1_0>;
+  /** The suite cases a server refuses by name until a later version (release-scope.ts); none when absent. */
+  declaredDeferrals?: readonly DeclaredDeferral[];
   /** The items a target proves across several CI rows (variant-rows.ts); none when absent. */
   variantRowSets?: ReadonlyMap<string, VariantRowSet>;
   /**
@@ -112,14 +121,22 @@ export function checkModel(
 
   const scope: GateScope = {
     itemsAfter1_0: o.itemsAfter1_0 ?? new Map(),
+    declaredDeferrals: o.declaredDeferrals ?? [],
     variantRowSets: o.variantRowSets ?? new Map(),
     proofs: proofsById(model.proofs),
     suitePairs: o.releaseGate
-      ? suitePairsOf(model, suiteProofs, o.itemsAfter1_0 ?? new Map(), problems)
+      ? suitePairsOf(
+          model,
+          suiteProofs,
+          o.itemsAfter1_0 ?? new Map(),
+          o.declaredDeferrals ?? [],
+          problems,
+        )
       : new Map(),
     ...(o.releaseGate ? { ciJobResults } : {}),
   };
 
+  problems.push(...declaredDeferralProblems(o.root, scope.declaredDeferrals));
   problems.push(...variantRowSetProblems(model.items, scope.variantRowSets));
   problems.push(
     ...releaseScopeProblems(
@@ -139,6 +156,7 @@ export function checkModel(
 /** What the release gate reads besides the items: the policy tables, the proofs and the suite proofs per pair. */
 interface GateScope {
   itemsAfter1_0: ReadonlyMap<string, ItemAfter1_0>;
+  declaredDeferrals: readonly DeclaredDeferral[];
   variantRowSets: ReadonlyMap<string, VariantRowSet>;
   proofs: ReadonlyMap<string, readonly Proof[]>;
   suitePairs: ReadonlyMap<string, readonly SuiteProof[]>;
@@ -154,6 +172,7 @@ function suitePairsOf(
   model: Model,
   suiteProofs: readonly SuiteProof[],
   itemsAfter1_0: ReadonlyMap<string, ItemAfter1_0>,
+  declaredDeferrals: readonly DeclaredDeferral[],
   problems: Problem[],
 ): Map<string, SuiteProof[]> {
   const byId = new Map<string, Item>(model.items.map((i) => [i.id, i]));
@@ -187,7 +206,11 @@ function suitePairsOf(
     const key = suiteKey(s.id, s.target);
     const gated: SuiteProof = {
       ...s,
-      outcome: gateOutcomeOf(s, (id, target) => isDeferredPair(itemsAfter1_0, id, target)),
+      outcome: gateOutcomeOf(
+        s,
+        (id, target) => isDeferredPair(itemsAfter1_0, id, target),
+        (caseId, target, reason) => isDeclaredDeferral(declaredDeferrals, caseId, target, reason),
+      ),
     };
 
     suitePairs.set(key, [...(suitePairs.get(key) ?? []), gated]);
