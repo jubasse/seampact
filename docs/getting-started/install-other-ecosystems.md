@@ -57,7 +57,13 @@ For Symfony:
 composer require seampact/symfony
 ```
 
-The packages are read-only mirrors of this repository: report problems on GitHub, not on the mirror. Follow the [Laravel](../backend/laravel.md) or [Symfony](../backend/symfony.md) guide.
+For API Platform 5 (on Symfony):
+
+```sh
+composer require seampact/api-platform api-platform/symfony
+```
+
+The packages are read-only mirrors of this repository: report problems on GitHub, not on the mirror. Follow the [Laravel](../backend/laravel.md), [Symfony](../backend/symfony.md) or [API Platform](../backend/api-platform.md) guide.
 
 ## PyPI
 
@@ -99,4 +105,4 @@ sh ~/src/seampact/scripts/consumers/python/build-wheels.sh ~/src/seampact/python
 pip install --no-index --find-links ~/src/seampact/python/dist
 ```
 
-Next: the guide of your framework, [Spring Boot](../backend/spring-boot.md), [Laravel](../backend/laravel.md), [Symfony](../backend/symfony.md), [FastAPI](../backend/fastapi.md), [Django REST Framework](../backend/drf.md) or [Django Ninja](../backend/ninja.md).
+Next: the guide of your framework, [Spring Boot](../backend/spring-boot.md), [Laravel](../backend/laravel.md), [Symfony](../backend/symfony.md), [API Platform](../backend/api-platform.md), [FastAPI](../backend/fastapi.md), [Django REST Framework](../backend/drf.md) or [Django Ninja](../backend/ninja.md).

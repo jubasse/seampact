@@ -124,6 +124,6 @@ const reply = await client.listNotes({});
 if (reply.ok) console.log(reply.status, reply.body.items);
 ```
 
-Errors, `errorStyle` and `idempotencyKey` are in [the fetch client](../frontend/fetch-client.md).
+Errors, `errorStyle` and `idempotencyKey` are in [the fetch client](../frontend/fetch-client.md). To send the calls through your own axios instance, see the [axios client](../frontend/axios-client.md).
 
 Next: [check it in CI](../features/check-in-ci.md), so the generated files in both apps never drift from the contract.

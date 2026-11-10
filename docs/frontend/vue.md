@@ -1,6 +1,6 @@
 # Vue
 
-seampact writes Vue composables over the [fetch client](fetch-client.md), for TanStack Query 5 (`@tanstack/vue-query`), Pinia Colada 1 (`@pinia/colada`) or with no query library. Pick one with the `query` option. Use it for a Vue 3 web app. The types come from [TypeScript types](../types-and-validation/typescript-types.md).
+seampact writes Vue composables over the [fetch client](fetch-client.md) (or the [axios client](axios-client.md)), for TanStack Query 5 (`@tanstack/vue-query`), Pinia Colada 1 (`@pinia/colada`) or with no query library. Pick one with the `query` option. Use it for a Vue 3 web app. The types come from [TypeScript types](../types-and-validation/typescript-types.md).
 
 ## Add the targets
 

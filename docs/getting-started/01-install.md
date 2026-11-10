@@ -1,6 +1,6 @@
 # Install
 
-Install the `seampact` command from npm and start a project. This page is for a Node.js app. For Spring Boot, Laravel, Symfony or Python, go to [install in other ecosystems](install-other-ecosystems.md); [commands per stack](../features/commands-per-stack.md) shows how each runs the commands.
+Install the `seampact` command from npm and start a project. This page is for a Node.js app. For Spring Boot, Laravel, Symfony, API Platform or Python, go to [install in other ecosystems](install-other-ecosystems.md); [commands per stack](../features/commands-per-stack.md) shows how each runs the commands.
 
 You need Node.js 24 or later and npm.
 

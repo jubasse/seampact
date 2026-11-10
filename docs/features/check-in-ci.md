@@ -19,7 +19,7 @@ You see `check.generated.drift`. `check` exits with 1 on drift. Run `npx seampac
 Every stack uses the same job: check out the code, install the tools, lint the contract, check the generated files, and run your own tests. Only the install and run lines change. Open your stack.
 
 <details>
-<summary>Node</summary>
+<summary>Node: NestJS, Express, Fastify, Hono, AdonisJS, Next.js</summary>
 
 ```yaml
 # .github/workflows/seampact.yml
@@ -66,7 +66,7 @@ jobs:
 </details>
 
 <details>
-<summary>PHP: Laravel, Symfony</summary>
+<summary>PHP: Laravel, Symfony, API Platform</summary>
 
 ```yaml
 # .github/workflows/seampact.yml

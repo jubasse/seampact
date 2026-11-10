@@ -372,4 +372,5 @@ Allow-list your own routes in the entry, with a reason. By default only routes t
 
 - [Call the api from React](../frontend/react.md)
 - [Call it with the fetch client](../frontend/fetch-client.md)
+- [Serve the api on API Platform](api-platform.md)
 - [Check the generated code in CI](../features/check-in-ci.md)
