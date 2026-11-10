@@ -14,9 +14,7 @@ export const RELEASE_SCOPE_FILE = "scripts/checklist/release-scope.ts";
 export const GATED_VERSION = "1.1.0";
 
 /** The targets the gate does not require yet, each with its reason: every pair of the target waits. */
-export const DEFERRED_TARGETS: ReadonlyMap<string, string> = new Map([
-  ["axios", "proofs in the axios step"],
-]);
+export const DEFERRED_TARGETS: ReadonlyMap<string, string> = new Map([]);
 
 /**
  * A suite case that servers refuse by name until a later version: its refusal no longer turns a profile id refused.
@@ -109,6 +107,7 @@ const JVM_AND_PHP_SERVERS: readonly string[] = ["spring-boot", "laravel", "symfo
 // The targets whose generators refuse the body and query forms below by name, each with a refusal test.
 const BODY_AND_QUERY_FORMS_REFUSED_ON: readonly string[] = [
   "fetch",
+  "axios",
   ...NODE_SERVERS,
   ...JVM_AND_PHP_SERVERS,
   ...PYTHON_SERVERS,
@@ -155,9 +154,9 @@ export function indexItemsDeferred(
 }
 
 export const ITEMS_DEFERRED: ReadonlyMap<string, ItemDeferred> = indexItemsDeferred([
-  ["CHK-001", { targets: ["fetch", "nestjs"], reason: SCALE_CAPACITY }],
-  ["CHK-002", { targets: ["fetch", "nestjs"], reason: SCALE_CAPACITY }],
-  ["CHK-003", { targets: ["fetch"], reason: SCALE_CAPACITY }],
+  ["CHK-001", { targets: ["fetch", "axios", "nestjs"], reason: SCALE_CAPACITY }],
+  ["CHK-002", { targets: ["fetch", "axios", "nestjs"], reason: SCALE_CAPACITY }],
+  ["CHK-003", { targets: ["fetch", "axios"], reason: SCALE_CAPACITY }],
   ["CHK-004", refusedOnEveryServer(VARIANTS_FORM)],
   ["CHK-006", refusedOnEveryServer(VARIANTS_FORM)],
   [
@@ -222,25 +221,25 @@ export const ITEMS_DEFERRED: ReadonlyMap<string, ItemDeferred> = indexItemsDefer
   [
     "CHK-048",
     {
-      targets: ["fetch"],
+      targets: ["fetch", "axios"],
       refusedOn: ["fetch"],
       reason:
-        "1.0 refuses an open enum's fallback by name at generation, in the types the fetch client is generated beside",
+        "1.0 refuses an open enum's fallback by name at generation, in the types a client is generated beside: the axios client generates no types of its own, so the refusal is the types target's, proved beside the fetch client",
     },
   ],
   [
     "CHK-125",
     {
-      targets: ["fetch"],
+      targets: ["fetch", "axios"],
       reason:
-        "the generated fetch client carries no retry rule taken from the base nature of a code; the front targets retry a rejection and never a declared error, so a rule by nature is additive",
+        "the generated fetch and axios clients carry no retry rule taken from the base nature of a code (the axios adapter retries nothing, and a retry interceptor of the app's instance is the app's); the front targets retry a rejection and never a declared error, so a rule by nature is additive",
     },
   ],
   [
     "CHK-126",
     {
-      targets: ["fetch"],
-      refusedOn: ["fetch"],
+      targets: ["fetch", "axios"],
+      refusedOn: ["fetch", "axios"],
       reason:
         "1.0 refuses an error format that writes the code only inside a text template by name at generation, so the client does not recover a code from a template",
     },
@@ -338,19 +337,28 @@ export const ITEMS_DEFERRED: ReadonlyMap<string, ItemDeferred> = indexItemsDefer
   ["CHK-176", { reason: "internal fixture completeness; the classification itself is CHK-175" }],
   [
     "CHK-022",
-    refusedOnEveryServerAndClient("a response header the route writes itself", ["fetch"]),
+    refusedOnEveryServerAndClient("a response header the route writes itself", ["fetch", "axios"]),
   ],
-  ["CHK-024", refusedOnEveryServerAndClient("a tagged union", ["zod", "fetch"])],
-  ["CHK-027", refusedOnEveryServerAndClient("a degradable operation", ["fetch"])],
+  ["CHK-024", refusedOnEveryServerAndClient("a tagged union", ["zod", "fetch", "axios"])],
+  ["CHK-027", refusedOnEveryServerAndClient("a degradable operation", ["fetch", "axios"])],
   [
     "CHK-058",
     {
-      targets: ["fetch"],
-      refusedOn: ["fetch"],
-      reason: "1.0 refuses a deprecated operation by name at generation in the fetch client",
+      targets: ["fetch", "axios"],
+      refusedOn: ["fetch", "axios"],
+      reason:
+        "1.0 refuses a deprecated operation by name at generation in the fetch and axios clients",
     },
   ],
-  ["CHK-153", refusedOnEveryServerAndClient("a redirect response", ["fetch"])],
+  [
+    "CHK-070",
+    {
+      targets: ["axios"],
+      reason:
+        "the standalone consumer project drives the fetch client and none exists for axios; the axios client generates the fetch client's files, which the axios client tests run over real HTTP on axios",
+    },
+  ],
+  ["CHK-153", refusedOnEveryServerAndClient("a redirect response", ["fetch", "axios"])],
 ]);
 
 /** Whether the gate leaves the pair of [id] and [target] out of its scope. */

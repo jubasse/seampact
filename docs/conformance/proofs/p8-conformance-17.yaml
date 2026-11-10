@@ -5,3 +5,4 @@ proofs:
     fixtures: [fixtures/golden/reference]
     tests:
       - 'fetch: packages/targets/codegen-fetch/src/reference-client.test.ts#sends the actor-surface header it is given beside the service token'
+      - 'axios: packages/targets/codegen-axios/src/reference-client-over-axios.test.ts#sends the actor-surface header it is given beside the service token'

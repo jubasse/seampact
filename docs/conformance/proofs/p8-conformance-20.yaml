@@ -6,6 +6,7 @@ proofs:
   - id: CHK-150
     refusals:
       - 'fetch: packages/targets/codegen-fetch/src/body-and-query-forms-refused.test.ts#a application/x-www-form-urlencoded body is refused by name'
+      - 'axios: packages/targets/codegen-axios/src/refused-forms.test.ts#a application/x-www-form-urlencoded body is refused by name'
       - 'nestjs: packages/targets/codegen-nestjs/src/reference-boundary.test.ts#a form body is refused by name'
       - 'fastify: packages/targets/codegen-fastify/src/reference-boundary.test.ts#a form body is refused by name'
       - 'express: packages/targets/codegen-express/src/reference-boundary.test.ts#a form body is refused by name'
@@ -20,6 +21,7 @@ proofs:
   - id: CHK-151
     refusals:
       - 'fetch: packages/targets/codegen-fetch/src/body-and-query-forms-refused.test.ts#a multipart/form-data body is refused by name'
+      - 'axios: packages/targets/codegen-axios/src/refused-forms.test.ts#a multipart/form-data body is refused by name'
       - 'nestjs: packages/targets/codegen-nestjs/src/reference-boundary.test.ts#a multipart body is refused by name'
       - 'fastify: packages/targets/codegen-fastify/src/reference-boundary.test.ts#a multipart body is refused by name'
       - 'express: packages/targets/codegen-express/src/reference-boundary.test.ts#a multipart body is refused by name'
@@ -34,6 +36,7 @@ proofs:
   - id: CHK-152
     refusals:
       - 'fetch: packages/targets/codegen-fetch/src/body-and-query-forms-refused.test.ts#a file download is refused by name'
+      - 'axios: packages/targets/codegen-axios/src/refused-forms.test.ts#a file download is refused by name'
       - 'nestjs: packages/targets/codegen-nestjs/src/reference-boundary.test.ts#a file download is refused by name'
       - 'fastify: packages/targets/codegen-fastify/src/reference-boundary.test.ts#a file download is refused by name'
       - 'express: packages/targets/codegen-express/src/reference-boundary.test.ts#a file download is refused by name'
@@ -48,6 +51,7 @@ proofs:
   - id: CHK-160
     refusals:
       - 'fetch: packages/targets/codegen-fetch/src/body-and-query-forms-refused.test.ts#a query list in brackets form is refused by name'
+      - 'axios: packages/targets/codegen-axios/src/refused-forms.test.ts#a query list in brackets form is refused by name'
       - 'nestjs: packages/targets/codegen-nestjs/src/reference-boundary.test.ts#a query list in brackets form is refused by name'
       - 'fastify: packages/targets/codegen-fastify/src/reference-boundary.test.ts#a query list in brackets form is refused by name'
       - 'express: packages/targets/codegen-express/src/reference-boundary.test.ts#a query list in brackets form is refused by name'
