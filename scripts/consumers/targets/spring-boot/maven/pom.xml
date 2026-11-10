@@ -23,7 +23,7 @@
   <properties>
     <!-- `-Djava.version=25` builds for Java 25. -->
     <java.version>21</java.version>
-    <seampact.version>1.0.1</seampact.version>
+    <seampact.version>1.1.0</seampact.version>
   </properties>
 
   <dependencies>

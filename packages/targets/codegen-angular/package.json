@@ -2,7 +2,7 @@
   "name": "@seampact/codegen-angular",
   "description": "Seampact target for Angular: generates an injectable api service over HttpClient with signal readers, and opt-in NgRx actions and effects.",
   "license": "MIT",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jubasse/seampact.git",

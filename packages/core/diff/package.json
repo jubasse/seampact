@@ -2,7 +2,7 @@
   "name": "@seampact/diff",
   "description": "Classifies the changes between two versions of a seampact API contract as additive or breaking, per direction, for a CI gate.",
   "license": "MIT",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jubasse/seampact.git",

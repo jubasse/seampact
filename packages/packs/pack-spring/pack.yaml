@@ -1,5 +1,5 @@
 # Spring Data's Page as a paging style.
-pack: { name: '@seampact/pack-spring', version: 1.0.1, extends: [] }
+pack: { name: '@seampact/pack-spring', version: 1.1.0, extends: [] }
 
 pagings:
   springPage:
