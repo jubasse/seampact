@@ -27,7 +27,7 @@ import {
   deriveErrorsReadRoleParams,
 } from "./role-params.js";
 
-// Role bindings (ADR 0002 section 11 "Error roles", ADR 0006 section 6, A35): per operation, the nearest
+// Role bindings (ADR 0002 section 11, Errors and natures, ADR 0006 section 6, A35): per operation, the nearest
 // `errorRoles` binding wins, then `conventions.errors.derived` (packs included), then the role's default code. A
 // binding is a code or `{ code, params }`, `params` a template over the role's data. Every written binding, and a
 // default binding to a default code a layer redeclares, must name a registered code whose params receive each datum

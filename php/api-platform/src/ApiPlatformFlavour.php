@@ -59,7 +59,7 @@ final class ApiPlatformFlavour implements SymfonyFlavour
         return ApiPlatformBoundarySubscriber::class;
     }
 
-    /** App input rules wait for 1.1.x (ADR 0029 "App input rules"): the placement generates no interface, and the boot check refuses a tagged service. */
+    /** App input rules wait for 1.2.0 (ADR 0029 "App input rules"): the placement generates no interface, and the boot check refuses a tagged service. */
     public function refusesInputRules(): bool
     {
         return true;

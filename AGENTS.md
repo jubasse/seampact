@@ -19,7 +19,7 @@ Repository conventions every agent follows. Your task prompt adds the task, the 
 
 ## Gates
 
-- Local gate: the affected tests (`pnpm vitest run <paths>`) and `pnpm typecheck`; for `jvm/`, `./gradlew :<module>:test` there; for `python/`, from `python/` with `UV_PYTHON_INSTALL_BIN=0`: `uv run --locked mypy` and `uv run --locked pytest <paths>`.
+- Local gate: the affected tests (`pnpm vitest run <paths>`) and `pnpm typecheck`; for `jvm/`, `./gradlew :<module>:test` there; for `python/`, from `python/` with `UV_PYTHON_INSTALL_BIN=0`: `uv run --locked mypy` and `uv run --locked pytest <paths>`. Before hand-back, also `pnpm exec eslint` on the `.ts` files you touched: the pre-commit hook runs biome only, and eslint rules (blank lines between statements) fail CI.
 - CI is the full gate: lint, format, checklist, cartography and the target matrix run there, not locally. A CI failure on your branch comes back to you as a follow-up.
 - The pre-commit hook (installed by `pnpm install`) refuses added lines citing `LD-<n>` or `.work/`, then formats and lints with biome the staged files it handles; a file that also has unstaged changes is skipped, so stage whole files.
 - A test failure is a flake only once that test passes alone (name it in the hand-back); otherwise it is a failure.

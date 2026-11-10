@@ -13,6 +13,6 @@ The flow is short:
 
 On Node you type `npx seampact generate`. Gradle and Maven run it in the build, and PHP and Python have their own `seampact` command: see [commands per stack](../features/commands-per-stack.md).
 
-seampact works with Node.js 24, Spring Boot on Java 21, Laravel and Symfony on PHP 8.3, and FastAPI and Django on Python 3.12, and with React, Vue, Angular and mobile clients. [Supported versions](../supported-versions.md) lists every framework and version.
+seampact works with Node.js 24, Next.js 16, Spring Boot on Java 21, Laravel, Symfony and API Platform 5 on PHP 8.3, and FastAPI and Django on Python 3.12, and with React, Vue, Angular and mobile clients. [Supported versions](../supported-versions.md) lists every framework and version.
 
 Next: [what you get and what you write](what-you-get.md), or start with [Install](../getting-started/01-install.md).

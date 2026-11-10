@@ -1,5 +1,5 @@
 #!/bin/sh
-# Bundles the reference contract with the compiler binary (ADR 0011 "Bundles"), so the PHP jobs need no Node:
+# Bundles the reference contract with the compiler binary (ADR 0011, The bundle), so the PHP jobs need no Node:
 # `bundle.sh <binary> <out> [<contract>]` writes the bundle to <out>/bundle and its integrity pin to <out>/integrity;
 # <out> is new. <contract> is a contract directory of the repository, `fixtures/reference` by default.
 set -eu

@@ -19,7 +19,7 @@ import java.nio.file.Path
 
 /**
  * Resolves the `maven` bundle sources and the pinned compiler binary through Resolver, with the project's remote
- * repositories, so `settings.xml` mirrors, proxies and `-o` apply (ADR 0010 "Resolution"). An artefact served by the
+ * repositories, so `settings.xml` mirrors, proxies and `-o` apply (ADR 0010 section 8, The JVM channels). An artefact served by the
  * local repository (installed there, not downloaded) or by a `file:` repository counts as a local source (ADR 0011).
  */
 internal class ResolverArtefacts(

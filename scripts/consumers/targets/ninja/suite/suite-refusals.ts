@@ -5,5 +5,5 @@ import { nativePagingRefusals } from "../../../paging-refusals.ts";
 
 export const NINJA_SUITE_REFUSALS: Readonly<Record<string, string>> = {
   ...nativePagingRefusals("ninja"),
-  ...inputRulesNotYetRefusal("ninja", "1.1.x"),
+  ...inputRulesNotYetRefusal("ninja", "1.2.0"),
 };

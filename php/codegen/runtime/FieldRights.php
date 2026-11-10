@@ -11,7 +11,7 @@ use Seampact\Hooks\RequirementKind;
 use Seampact\Hooks\SubjectRef;
 
 /**
- * Field rights (ADR 0012 "Field rights"): step 7 refuses a restricted top-level input member sent without its right,
+ * Field rights (ADR 0012 section 6, Restricted fields): step 7 refuses a restricted top-level input member sent without its right,
  * or removes it under `inputPolicy: strip`; before a success is written, each restricted output member whose right
  * the decider denies for its holder is removed, one decision per right, use-site params, pointer and subject.
  */

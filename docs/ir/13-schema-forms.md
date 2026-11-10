@@ -1,4 +1,4 @@
-### 13. Schema forms (amendment 2026-10-12, M1)
+### 13. Schema forms (from M1)
 
 From M1, the merge of the IR JSON Schema (p1-ir-schema), the schema files in `packages/core/spec/schemas/ir` are normative for member shapes: names, types, optionality and union tags. The TypeScript sketches of sections 2 to 8 and 11 are informative; where they differ, the schema holds, and a change to it is an IR change PR (ADR 0005 section 1). `packages/core/spec/schemas/ir/README.md` gives the reader rules. The forms the schema chose, each with its reason:
 

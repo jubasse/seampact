@@ -16,7 +16,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * Restricted output fields (ADR 0012 "Field rights"): before the reply is written, each restricted member whose
+ * Restricted output fields (ADR 0012 section 6, Restricted fields): before the reply is written, each restricted member whose
  * right the decider denies for its holder is removed. One decision is asked per right, use-site params, pointer and subject.
  */
 final class OutputFieldRights {

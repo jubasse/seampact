@@ -13,8 +13,8 @@ One meaning for each word. Other pages link here the first time they use one.
 | entry | One item of the `targets:` list in `seampact.config.yaml`, with an `id`, a `use`, `apis` and optional `link` and `options`. |
 | generator | The package an entry names in `use`, such as `@seampact/codegen-nestjs`. It writes the code. See [the package map](packages.md). |
 | link | A `link` in an entry names the other entries it builds on, for example `types: types`. See [targets and links](../configuration/targets-and-links.md). |
-| handler | The code you write for one operation. seampact generates the interface and calls your handler. It is a controller method on NestJS, Spring Boot, Laravel and Symfony, a function or method on Express, Fastify, Hono, AdonisJS and FastAPI, and a view method on Django. |
-| hook | Code you give the generated server: authenticate, decide or resolve a scope. It is an object on Node, an interface implementation on Spring Boot, a class on Laravel and Symfony, and a function or class on Python. The app refuses to start while one is missing. |
+| handler | The code you write for one operation. seampact generates the interface and calls your handler. It is a controller method on NestJS, Spring Boot, Laravel, Symfony and API Platform, a function or method on Express, Fastify, Hono, Next.js, AdonisJS and FastAPI, and a view method on Django. |
+| hook | Code you give the generated server: authenticate, decide or resolve a scope. It is an object on Node, an interface implementation on Spring Boot, a class on Laravel, Symfony and API Platform, and a function or class on Python. The app refuses to start while one is missing. |
 | boundary | The generated code that checks each request and each reply against the contract. |
 | bundle | A packed, versioned copy of a contract that other repositories pin and reuse. `seampact bundle` makes it. See [sharing contracts](../features/sharing-contracts.md). |
 | app | One project with its own `seampact.config.yaml`: a backend, a frontend or a service. |

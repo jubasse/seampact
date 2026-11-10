@@ -28,6 +28,8 @@ openapi:
 | FastAPI | yes | [FastAPI](../backend/fastapi.md#docs) |
 | Django Ninja | yes | [Django Ninja](../backend/ninja.md#docs) |
 | Django REST Framework | no | [Django REST Framework](../backend/drf.md#docs-and-openapi) |
+| API Platform | no | API Platform keeps its own docs: [API Platform](../backend/api-platform.md) |
+| Next.js | no | Serve `openapi/<api>.yaml` yourself: [Next.js](../backend/nextjs.md) |
 | Express, Hono, AdonisJS, Laravel, Symfony | no | Serve `openapi/<api>.yaml` yourself |
 
 The docs routes are routes outside the contract: allow-list them with `frameworkRoutes` ([the boot check](reference.md#boot-check)). The examples for NestJS and Fastify follow.

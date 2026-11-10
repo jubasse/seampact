@@ -10,7 +10,7 @@ Generated value types:
 
 Wire names that differ from the Java member name are carried by `@JsonProperty`, which Jackson 3 keeps in `com.fasterxml.jackson.annotation`.
 
-Step 6 decodes path, query, headers and the held body to a Jackson 3 `JsonNode` with the boundary's own `JsonMapper`, never the app's bean (ADR 0012 "Each target places the steps"). It then runs two passes:
+Step 6 decodes path, query, headers and the held body to a Jackson 3 `JsonNode` with the boundary's own `JsonMapper`, never the app's bean ([ADR 0012, section 5: The check order](../0012-access-hooks/05-the-check-order.md)). It then runs two passes:
 
 1. **A generated structural validator** walks the tree and carries every rule of the contract, so a request gets every issue at once: `required`, `type` (no coercion), `unknownKeys`, `enum`, `oneOf`, the discriminator and every value rule. The value rules whose Jakarta meaning differs from the contract's keep the contract's meaning:
    - string lengths in code points, where `@Size` counts UTF-16 units;

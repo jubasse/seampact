@@ -19,16 +19,16 @@ Each schema becomes one type and one validator per direction: input (what a clie
 | Stack | Types | Validator | You pick the validator? |
 |---|---|---|---|
 | NestJS | [TypeScript types](typescript-types.md) | [zod](zod.md) (default), [yup](yup.md) or [class-validator](class-validator.md) | Yes, with the `validators` entry |
-| Express, Hono | [TypeScript types](typescript-types.md) | [zod](zod.md) or [yup](yup.md) | Yes, with the `validators` entry |
+| Express, Hono, Next.js | [TypeScript types](typescript-types.md) | [zod](zod.md) or [yup](yup.md) | Yes, with the `validators` entry |
 | Fastify | [TypeScript types](typescript-types.md) | [zod](zod.md) or [yup](yup.md), or [Ajv](ajv.md) when you link none | Yes |
 | AdonisJS | [TypeScript types](typescript-types.md) | [zod](zod.md) or [yup](yup.md), or [VineJS](vinejs.md) when you link none | Yes |
 | Spring Boot | [Java records](java-records.md) | A generated structural validator | No |
 | Laravel | PHP classes | [Laravel rules](laravel-rules.md) | `rules` only |
-| Symfony | PHP classes | [Symfony constraints](symfony-constraints.md) | `rules` only |
+| Symfony, API Platform | PHP classes | [Symfony constraints](symfony-constraints.md) | `rules` only |
 | FastAPI, Django Ninja | [Pydantic](pydantic.md) models | Pydantic | `rules` only |
 | Django REST Framework | dataclasses | [DRF serializers](drf-serializers.md) | `rules` only |
 
-Server guides: [NestJS](../backend/nestjs.md), [Express](../backend/express.md), [Fastify](../backend/fastify.md), [AdonisJS](../backend/adonisjs.md), [Hono](../backend/hono.md), [Spring Boot](../backend/spring-boot.md), [Laravel](../backend/laravel.md), [Symfony](../backend/symfony.md), [FastAPI](../backend/fastapi.md), [Django REST Framework](../backend/drf.md), [Django Ninja](../backend/ninja.md).
+Server guides: [NestJS](../backend/nestjs.md), [Express](../backend/express.md), [Fastify](../backend/fastify.md), [AdonisJS](../backend/adonisjs.md), [Hono](../backend/hono.md), [Spring Boot](../backend/spring-boot.md), [Laravel](../backend/laravel.md), [Symfony](../backend/symfony.md), [API Platform](../backend/api-platform.md), [Next.js](../backend/nextjs.md), [FastAPI](../backend/fastapi.md), [Django REST Framework](../backend/drf.md), [Django Ninja](../backend/ninja.md).
 
 Client guides use the [TypeScript types](typescript-types.md) through the [fetch client](../frontend/fetch-client.md). The generators that write zod, yup and class-validator validators serve the server only.
 
@@ -77,6 +77,10 @@ Each issue has three members.
 The reply lists every issue, up to 100. An unknown key gives one issue per key. The message text a library writes is its own and never travels in the body.
 
 A contract can rename the code or reshape `issues` with a `derived` binding ([Errors and natures](../grammar/11-errors-and-natures.md)). The members above are the defaults.
+
+## Add your own rules
+
+Your app can add checks the contract cannot say. Each guide has an "Add your own rules" section: [NestJS](../backend/nestjs.md#add-your-own-rules), [Express](../backend/express.md#add-your-own-rules), [Fastify](../backend/fastify.md#add-your-own-rules), [AdonisJS](../backend/adonisjs.md#add-your-own-rules), [Hono](../backend/hono.md#add-your-own-rules), [Next.js](../backend/nextjs.md#options), [Laravel](../backend/laravel.md#add-your-own-rules), [Symfony](../backend/symfony.md#add-your-own-rules). The design is in [ADR 0028](../adr/0028-app-input-rules.md).
 
 ## Next
 

@@ -30,7 +30,7 @@ final class OperationMetadataCheck implements CacheWarmerInterface
 
     public const INPUT_RULES_TAG_SUFFIX = '.input_rules';
     public const INPUT_RULES_REFUSAL = 'input.rules.unsupported';
-    public const INPUT_RULES_RELEASE = '1.1.x';
+    public const INPUT_RULES_RELEASE = '1.2.0';
 
     /**
      * @param list<class-string> $resourceClasses the api's generated resources

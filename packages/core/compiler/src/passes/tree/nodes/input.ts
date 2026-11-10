@@ -18,7 +18,7 @@ import {
   treeNodesSchema,
 } from "./raw.js";
 
-// The request body a route declares (ADR 0002 section 7, "Bodies beyond JSON"): its media, its type use from the
+// The request body a route declares (ADR 0002 section 7, Routes): its media, its type use from the
 // schema service, its origin, and for a form or multipart body the wire of each field. Files travel only as a
 // top-level multipart field (or as a download, a response), each within the route's body limit.
 

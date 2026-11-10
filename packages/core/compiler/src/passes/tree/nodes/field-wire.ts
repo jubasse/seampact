@@ -3,7 +3,7 @@ import type { TreeSchemaService } from "../../../pipeline/seam.js";
 
 // The wire form of a form or multipart field (ADR 0002 section 7, ADR 0004 section 13): a file, a JSON text field,
 // or a query wire kind with its style. access.rights computes a body proof's `wire` with the same function, so the
-// two never disagree (ADR 0004 section 13, "shared rather than copied").
+// two never disagree (ADR 0004 section 13, Schema forms).
 
 /** Whether a use is a file, or a list of files (a multipart field with several files). */
 export function treeNodesIsFileField(use: IrWriter.TypeUse): boolean {

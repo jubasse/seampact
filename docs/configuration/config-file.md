@@ -48,7 +48,7 @@ Where the files go, whether you commit them and who runs `generate` depends on t
 | Spring Boot, Gradle | A folder under `build/`, such as `build/generated/sources/seampact/main` | No | The build: `./gradlew build` |
 | Spring Boot, Maven | `target/generated-sources/seampact` | No | The build: `./mvnw verify` |
 | Laravel | `app/Generated` | Yes | You: `vendor/bin/seampact generate` |
-| Symfony | `src/Generated` | Yes | You: `vendor/bin/seampact generate` |
+| Symfony, API Platform | `src/Generated` | Yes | You: `vendor/bin/seampact generate` |
 | FastAPI, Django REST Framework, Django Ninja | `generated` | Yes | You: `seampact generate` |
 
 A folder you commit is the one `seampact check` compares with the contract in CI: [Check in CI](../features/check-in-ci.md). Never edit it by hand. The Gradle check skips an `outDir` under `build/`, since nobody commits it. `outDir` is `__generated__` when you do not set it.
@@ -59,10 +59,11 @@ A Node entry lists the apis in `apis: [notes]`. Every other entry names one api 
 
 | Stack | `use` | Apis |
 |---|---|---|
-| NestJS, Express, Fastify, Hono, AdonisJS | `"@seampact/codegen-nestjs"`, `-express`, `-fastify`, `-hono`, `-adonis` | `apis: [notes]` |
+| NestJS, Express, Fastify, Hono, AdonisJS, Next.js | `"@seampact/codegen-nestjs"`, `-express`, `-fastify`, `-hono`, `-adonis`, `-nextjs` | `apis: [notes]` |
 | Spring Boot | `io.github.jubasse:seampact-spring-boot` | `api: notes` |
 | Laravel | `seampact/laravel` | `api: notes` |
 | Symfony | `seampact/symfony` | `api: notes` |
+| API Platform | `seampact/api-platform` | `api: notes` |
 | FastAPI, DRF, Ninja | `pypi:seampact-fastapi`, `pypi:seampact-drf`, `pypi:seampact-ninja` | `api: notes` |
 
 The full entry of each server is in its guide: [server guides](../README.md#server-guides).

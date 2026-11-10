@@ -5,5 +5,5 @@ import { nativePagingRefusals } from "../../../paging-refusals.ts";
 
 export const DRF_SUITE_REFUSALS: Readonly<Record<string, string>> = {
   ...nativePagingRefusals("drf"),
-  ...inputRulesNotYetRefusal("drf", "1.1.x"),
+  ...inputRulesNotYetRefusal("drf", "1.2.0"),
 };

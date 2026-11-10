@@ -58,7 +58,7 @@ A server checks at boot that every hook the contract needs is registered. `artef
 - `warn`: log and start. Only the Node servers take it.
 - `off`: start silently.
 
-Spring Boot, Laravel, Symfony, FastAPI, DRF and Ninja take `error` or `off`. `warn` is refused there (`artefacts.bootCheck.hooks.warn.unsupported`; `artefact.bootCheck.hooks.warn.unsupported` on Spring Boot) and any other value is `.invalid`.
+Spring Boot, Laravel, Symfony, API Platform, FastAPI, DRF and Ninja take `error` or `off`. `warn` is refused there (`artefacts.bootCheck.hooks.warn.unsupported`; `artefact.bootCheck.hooks.warn.unsupported` on Spring Boot) and any other value is `.invalid`.
 
 A route whose hook is missing answers 500 on every request, whatever the level. An output field right with a missing decider runs the handler first, then answers 500. A right claimed by two deciders always refuses to start, even with `bootCheck: false`.
 
@@ -222,6 +222,10 @@ The same `rules` option as [codegen-zod](#codegen-zod).
 
 Guide: [React](../frontend/react.md) shows the client it feeds.
 
+### codegen-axios
+
+The options of `codegen-fetch` (`errorStyle`). Guide: [Axios client](../frontend/axios-client.md).
+
 ### codegen-react
 
 | Option | Default | What it does |
@@ -285,6 +289,10 @@ Guide: [Laravel](../backend/laravel.md).
 | `indent` | 4 | Spaces per indent, up to 8. |
 
 Guide: [Symfony](../backend/symfony.md).
+
+### api-platform
+
+The options of [`symfony`](#symfony). Guide: [API Platform](../backend/api-platform.md).
 
 ### seampact-fastapi
 
