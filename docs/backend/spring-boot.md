@@ -6,7 +6,7 @@ Spring Boot 4 on Java 21 or later. See [Versions](#versions) and [Supported vers
 
 ## Set up
 
-The runtime, the hooks and the Maven plugin are on Maven Central under `io.github.jubasse`. The Gradle plugin is on the Gradle Plugin Portal. While the Portal reviews a new release, add Maven Central to the plugin repositories in `settings.gradle.kts`:
+The runtime, the hooks and the Maven plugin are on Maven Central under `io.github.jubasse`. The Gradle plugin is on the Gradle Plugin Portal. For a release the Portal does not serve yet, add Maven Central to the plugin repositories in `settings.gradle.kts`:
 
 ```kotlin
 pluginManagement {
@@ -51,7 +51,7 @@ The Node CLI does not generate a Spring Boot entry: `seampact generate` refuses 
 
 ### With Maven
 
-Add the runtime and the plugin to `pom.xml`, next to `seampact-hooks`, at the same version. Set it once in `<properties>`: `<seampact.version>1.0.0</seampact.version>`.
+Add the runtime and the plugin to `pom.xml`, next to `seampact-hooks`, at the same version. Set it once in `<properties>`: `<seampact.version>1.1.0</seampact.version>`.
 
 ```xml
 <dependency>

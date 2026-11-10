@@ -127,6 +127,7 @@ Input rules (checks your app adds to the contract's): the "Add your own rules" s
 ## Release notes
 
 - [Release notes](release-notes/README.md): what each release ships and its known limits.
+- [1.1.0](release-notes/1.1.0.md): API Platform, Next.js, axios, app input rules.
 - [1.0.1](release-notes/1.0.1.md): server fixes, clearer errors, docs and agent skills.
 - [1.0.0](release-notes/1.0.0.md): the first release.
 

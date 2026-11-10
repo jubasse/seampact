@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "seampact-signed-webhooks"
-version = "1.0.1"
+version = "1.1.0"
 description = "Verifies a signed webhook (HMAC, timestamp tolerance, secret rotation) inside a seampact authenticate hook on Python."
 keywords = ["webhooks", "hmac", "python", "seampact", "api-contract", "openapi", "codegen"]
 readme = "README.md"

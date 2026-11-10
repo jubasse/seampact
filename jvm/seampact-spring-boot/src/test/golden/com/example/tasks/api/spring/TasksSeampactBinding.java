@@ -307,7 +307,7 @@ public final class TasksSeampactBinding implements ApiBinding {
 
     @Override
     public String generatorVersion() {
-        return "1.0.1";
+        return "1.1.0";
     }
 
     @Override

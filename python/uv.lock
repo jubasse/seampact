@@ -1505,7 +1505,7 @@ wheels = [
 
 [[package]]
 name = "seampact-codegen"
-version = "1.0.1"
+version = "1.1.0"
 source = { editable = "codegen" }
 dependencies = [
     { name = "seampact-hooks" },
@@ -1529,12 +1529,12 @@ provides-extras = ["pydantic", "generate"]
 
 [[package]]
 name = "seampact-compiler"
-version = "1.0.1"
+version = "1.1.0"
 source = { editable = "compiler" }
 
 [[package]]
 name = "seampact-django"
-version = "1.0.1"
+version = "1.1.0"
 source = { editable = "django" }
 dependencies = [
     { name = "django" },
@@ -1556,7 +1556,7 @@ provides-extras = ["generate"]
 
 [[package]]
 name = "seampact-drf"
-version = "1.0.1"
+version = "1.1.0"
 source = { editable = "drf" }
 dependencies = [
     { name = "djangorestframework" },
@@ -1578,7 +1578,7 @@ provides-extras = ["generate"]
 
 [[package]]
 name = "seampact-fastapi"
-version = "1.0.1"
+version = "1.1.0"
 source = { editable = "fastapi" }
 dependencies = [
     { name = "fastapi" },
@@ -1604,12 +1604,12 @@ provides-extras = ["generate"]
 
 [[package]]
 name = "seampact-hooks"
-version = "1.0.1"
+version = "1.1.0"
 source = { editable = "hooks" }
 
 [[package]]
 name = "seampact-ir"
-version = "1.0.1"
+version = "1.1.0"
 source = { editable = "ir" }
 dependencies = [
     { name = "jsonschema" },
@@ -1631,7 +1631,7 @@ provides-extras = ["compiler"]
 
 [[package]]
 name = "seampact-ninja"
-version = "1.0.1"
+version = "1.1.0"
 source = { editable = "ninja" }
 dependencies = [
     { name = "django-ninja" },
@@ -1657,7 +1657,7 @@ provides-extras = ["generate"]
 
 [[package]]
 name = "seampact-signed-webhooks"
-version = "1.0.1"
+version = "1.1.0"
 source = { editable = "signed-webhooks" }
 
 [[package]]

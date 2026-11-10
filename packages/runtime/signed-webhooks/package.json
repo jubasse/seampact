@@ -2,7 +2,7 @@
   "name": "@seampact/signed-webhooks",
   "description": "Verifies signed webhooks (HMAC, timestamp tolerance, secret rotation) inside a seampact authenticate hook on a Node server.",
   "license": "MIT",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jubasse/seampact.git",

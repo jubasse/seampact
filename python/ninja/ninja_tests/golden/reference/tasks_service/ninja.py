@@ -21,7 +21,7 @@ from .operations import (
     TasksServiceContractError,
 )
 
-GENERATED_BY: _typing.Final = "1.0.1"
+GENERATED_BY: _typing.Final = "1.1.0"
 
 
 PLACEMENT: _typing.Final = _runtime.ApiPlacement(
