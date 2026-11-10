@@ -39,25 +39,46 @@ export function lineVersionEdit(
   version: string,
   field: string,
 ): VersionEdit {
+  return fieldsVersionEdit(root, file, [{ line, field }], version);
+}
+
+/** One version a file spells, in the form `lineVersionEdit` reads it. */
+export interface VersionField {
+  readonly line: RegExp;
+  readonly field: string;
+}
+
+/** The edit of several versions one file spells, each in its own known line. */
+export function fieldsVersionEdit(
+  root: string,
+  file: string,
+  fields: readonly VersionField[],
+  version: string,
+): VersionEdit {
+  const fieldNames = fields.map((versionField) => versionField.field).join(", ");
+
   if (!existsSync(join(root, file)))
-    throw new ReleaseError(`${file} does not exist: the stamp writes ${field} there`);
+    throw new ReleaseError(`${file} does not exist: the stamp writes ${fieldNames} there`);
 
   const before = readRepositoryFile(root, file);
-  const current = line.exec(before);
+  let after = before;
+  const changes: string[] = [];
 
-  if (current === null)
-    throw new ReleaseError(
-      `${file} has no line the stamp can read ${field} from (${line.source}): restore its form`,
-    );
+  for (const { line, field } of fields) {
+    const current = line.exec(after);
 
-  const [, prefix, written, suffix] = current;
+    if (current === null)
+      throw new ReleaseError(
+        `${file} has no line the stamp can read ${field} from (${line.source}): restore its form`,
+      );
 
-  if (written === version) return { file, before, after: before, changes: [] };
+    const [, prefix, written, suffix] = current;
 
-  return {
-    file,
-    before,
-    after: before.replace(line, `${prefix}${version}${suffix}`),
-    changes: [`${field} is "${written}", not "${version}"`],
-  };
+    if (written === version) continue;
+
+    after = after.replace(line, `${prefix}${version}${suffix}`);
+    changes.push(`${field} is "${written}", not "${version}"`);
+  }
+
+  return { file, before, after, changes };
 }

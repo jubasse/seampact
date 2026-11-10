@@ -14,7 +14,7 @@ class TasksServiceBoundary(_drf_runtime.DrfContractBoundary):
     """The boundary middleware of api 'tasksService'."""
 
     api = "tasksService"
-    generated_by = "1.0.1"
+    generated_by = "1.1.0"
     contract = _contract.CONTRACT
     settings_keys = _settings.SETTINGS_KEYS
     handler_resources: _typing.ClassVar[_abc.Mapping[str, _abc.Sequence[str]]] = {

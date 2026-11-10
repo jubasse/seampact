@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "seampact-hooks"
-version = "1.0.1"
+version = "1.1.0"
 description = "The seampact hook protocols and the values they exchange, for Python apps and generated code."
 keywords = ["hooks", "authorization", "python", "seampact", "api-contract", "openapi", "codegen"]
 readme = "README.md"
