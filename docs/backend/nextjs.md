@@ -222,6 +222,7 @@ The route handler checks itself when its route file loads. Fix the lines it prin
 - Next.js answers three requests itself, outside the api's format: a path with `//` (a 308 redirect), a malformed percent-escape such as `%E0%A4%A` (its 500), and a request a more specific route file or a rewrite takes.
 - `isContractRoute` and `renderPreRoutingError` of Hono have no Next.js version yet.
 - Next.js 15 and older are refused.
+- seampact serves no docs page or OpenAPI route on this target: serve `openapi/<api>.yaml` yourself.
 
 Every refusal and its fix: [Node servers](../troubleshooting/generate.md#node-servers) and [every server](../troubleshooting/generate.md#every-server).
 

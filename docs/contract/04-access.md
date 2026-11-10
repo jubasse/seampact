@@ -46,7 +46,7 @@ surfaces:
 - `principal` is the shape of the caller your handlers receive.
 - A child route can still opt out with its own `access: { public: "<reason>" }`.
 
-seampact does not check the credential. A [hook](../concepts/glossary.md) is code you write and seampact calls. It generates one named `authenticate`: you check the token there and return the caller. The hook is an object in Node, an interface in Spring Boot, a class in Laravel and Symfony, and a function in Python: see the guides under Next.
+seampact does not check the credential. A [hook](../concepts/glossary.md) is code you write and seampact calls. It generates one named `authenticate`: you check the token there and return the caller. The hook is an object in Node, an interface in Spring Boot, a class in Laravel, Symfony and API Platform, and a function in Python: see the guides under Next.
 
 ## Require a right
 
@@ -80,5 +80,5 @@ surfaces:
 ## Next
 
 - Next: [Lists](05-lists.md).
-- Write the hooks: [Node servers](../backend/node-hooks.md), [Spring Boot](../backend/spring-boot.md#write-the-hooks), [Symfony](../backend/symfony.md#write-the-hooks), [Laravel](../backend/laravel.md#write-the-hooks), [FastAPI](../backend/fastapi.md#write-the-hooks), [Django REST Framework](../backend/drf.md#write-the-hooks), [Django Ninja](../backend/ninja.md#write-the-hooks).
+- Write the hooks: [Node servers](../backend/node-hooks.md) (Next.js included), [Spring Boot](../backend/spring-boot.md#write-the-hooks), [Symfony](../backend/symfony.md#write-the-hooks), [API Platform](../backend/api-platform.md#security), [Laravel](../backend/laravel.md#write-the-hooks), [FastAPI](../backend/fastapi.md#write-the-hooks), [Django REST Framework](../backend/drf.md#write-the-hooks), [Django Ninja](../backend/ninja.md#write-the-hooks).
 - In depth: [Access](../grammar/09-access-identities-rights-rules.md).

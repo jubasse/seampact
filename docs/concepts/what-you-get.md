@@ -8,8 +8,8 @@ From one YAML contract:
 
 | Output | What you get |
 |---|---|
-| Types and validators | One type per schema, per request and per reply, with checks on every input. TypeScript with zod, yup, class-validator, VineJS or Ajv on Node. Java records with a generated structural validator on Spring Boot. PHP classes with the Laravel or Symfony validator. Python Pydantic models, or DRF fields. The Node choices are in [validators](../configuration/validators.md). |
-| Server boundary | Routes for NestJS, Express, Fastify, AdonisJS, Hono, Spring Boot, Laravel, Symfony, FastAPI, Django REST Framework and Django Ninja. They check the input, call your access hooks and check each reply against the contract. |
+| Types and validators | One type per schema, per request and per reply, with checks on every input. TypeScript with zod, yup, class-validator, VineJS or Ajv on Node. Java records with a generated structural validator on Spring Boot. PHP classes with the Laravel or Symfony validator (API Platform uses Symfony's). Python Pydantic models, or DRF fields. The Node choices are in [validators](../configuration/validators.md). |
+| Server boundary | Routes for NestJS, Express, Fastify, AdonisJS, Hono, Next.js, Spring Boot, Laravel, Symfony, API Platform, FastAPI, Django REST Framework and Django Ninja. They check the input, call your access hooks and check each reply against the contract. |
 | Built-in rules | Paging, rate limits, idempotency keys, ETags, CSRF, signed requests and field rights, declared in the contract and enforced at the boundary. You plug in the stores and decisions. |
 | Errors | One error format, RFC 9457 `problem+json` by default, with typed error codes per route. |
 | Clients | A typed `fetch` client, React hooks (TanStack Query, SWR or RTK Query), Vue composables, an Angular service and MSW mock handlers. |

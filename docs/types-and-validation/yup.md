@@ -1,8 +1,8 @@
 # yup
 
-`@seampact/codegen-yup` writes a yup schema for each schema of your contract. NestJS, Express, Fastify, AdonisJS and Hono can use them to refuse a bad request before your handler runs.
+`@seampact/codegen-yup` writes a yup schema for each schema of your contract. NestJS, Express, Fastify, AdonisJS, Hono and Next.js can use them to refuse a bad request before your handler runs.
 
-Used by: any Node server that takes the `validators` link: [NestJS](../backend/nestjs.md), [Express](../backend/express.md), [Hono](../backend/hono.md), [Fastify](../backend/fastify.md) and [AdonisJS](../backend/adonisjs.md). The default is [zod](zod.md).
+Used by: any Node server that takes the `validators` link: [NestJS](../backend/nestjs.md), [Express](../backend/express.md), [Hono](../backend/hono.md), [Next.js](../backend/nextjs.md), [Fastify](../backend/fastify.md) and [AdonisJS](../backend/adonisjs.md). The default is [zod](zod.md).
 
 ## Set up
 
