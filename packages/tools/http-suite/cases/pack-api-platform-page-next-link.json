@@ -1,6 +1,6 @@
 {
   "id": "pack-api-platform-page-next-link",
-  "title": "A page is fetched with the api-platform request names and its next link is followed (the member count is not asserted: the sample app answers one item whatever itemsPerPage says)",
+  "title": "A page is fetched with the api-platform request names, its view links carry the page and limit names and base, and the next link is followed (the member count is not asserted: the sample app answers one item whatever itemsPerPage says)",
   "checks": ["CHK-031", "CHK-107"],
   "profiles": ["pack:api-platform"],
   "steps": [
@@ -25,7 +25,12 @@
       "expect": {
         "status": 200,
         "body": {
-          "@type": "Collection"
+          "@type": "Collection",
+          "view": {
+            "@id": "?itemsPerPage=2&page=1",
+            "first": "?itemsPerPage=2&page=1",
+            "next": "?itemsPerPage=2&page=2"
+          }
         }
       }
     },
@@ -42,7 +47,8 @@
         "status": 200,
         "body": {
           "view": {
-            "@id": "{{nextPage}}"
+            "@id": "?itemsPerPage=2&page=2",
+            "first": "?itemsPerPage=2&page=1"
           }
         }
       }

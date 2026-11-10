@@ -323,12 +323,12 @@ export const ITEMS_DEFERRED: ReadonlyMap<string, ItemDeferred> = indexItemsDefer
         "Next.js redirects a path with '//' with a 308 before the route handler runs, so the api's 404 for it is not reachable (ADR 0030, Routes); the other framework refusals render in the declared error format",
     },
   ],
-  ...["CHK-063", "CHK-147", "CHK-161"].map((id): [string, ItemDeferred] => [
+  ...["CHK-062", "CHK-063", "CHK-147", "CHK-161"].map((id): [string, ItemDeferred] => [
     id,
     {
       targets: ["nextjs"],
       reason:
-        "Next.js has no boot check: the app routes by file, so no route scan runs at boot (ADR 0030), and CHK-063 names it its exception; the suite part of CHK-074 still proves its default profile",
+        "Next.js has no boot check: the app routes by file, so no route scan runs at boot (ADR 0030), and CHK-062 and CHK-063 name it their exception, so the suite cases that prove CHK-062 skip it; the suite part of CHK-074 still proves its default profile",
     },
   ]),
   [
