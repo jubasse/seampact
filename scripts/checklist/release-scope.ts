@@ -85,24 +85,36 @@ const VALIDATORS: readonly string[] = ["zod", "yup", "class-validator"];
 const UNKNOWN_KEYS_POLICIES =
   "1.0 refuses the unknown keys policies ignore and keep of an operation input by name at generation, on the validators targets";
 
-// The servers whose refusals of the forms below are tested; API Platform and Next.js join them with their proofs.
-const SERVERS_WITHOUT_TESTED_REFUSALS: readonly string[] = ["api-platform", "nextjs"];
+export const SERVERS_WITH_TESTED_REFUSALS: readonly string[] = SERVER_TARGETS;
 
-export const SERVERS_WITH_TESTED_REFUSALS: readonly string[] = SERVER_TARGETS.filter(
-  (target) => !SERVERS_WITHOUT_TESTED_REFUSALS.includes(target),
-);
-
-const NODE_SERVERS: readonly string[] = ["nestjs", "fastify", "express", "adonis", "hono"];
+const NODE_SERVERS: readonly string[] = [
+  "nestjs",
+  "fastify",
+  "express",
+  "adonis",
+  "hono",
+  "nextjs",
+];
 
 const PYTHON_SERVERS: readonly string[] = ["fastapi", "drf", "ninja"];
 
-const PHP_AND_PYTHON_SERVERS: readonly string[] = ["laravel", "symfony", ...PYTHON_SERVERS];
+const PHP_AND_PYTHON_SERVERS: readonly string[] = [
+  "laravel",
+  "symfony",
+  "api-platform",
+  ...PYTHON_SERVERS,
+];
 
 const VARIANTS_FORM =
   "a principal with variants (viewer_or_device) and, on the Node servers, optional authentication";
 
 // The servers whose generators read the IR without Node: the JVM and PHP targets.
-const JVM_AND_PHP_SERVERS: readonly string[] = ["spring-boot", "laravel", "symfony"];
+const JVM_AND_PHP_SERVERS: readonly string[] = [
+  "spring-boot",
+  "laravel",
+  "symfony",
+  "api-platform",
+];
 
 // The targets whose generators refuse the body and query forms below by name, each with a refusal test.
 const BODY_AND_QUERY_FORMS_REFUSED_ON: readonly string[] = [
