@@ -938,7 +938,10 @@ describe("checklist release scope", () => {
 
     it("keeps the id refused on a target the deferral does not name", () => {
       const out = runRefusing(declaredReason, {
-        declaredDeferrals: [{ ...DECLARED_DEFERRALS[0]!, targets: ["fastapi"] }],
+        declaredDeferrals: DECLARED_DEFERRALS.map((deferral) => ({
+          ...deferral,
+          targets: ["fastapi"],
+        })),
       });
 
       expect(out).toContain(refusedId);
