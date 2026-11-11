@@ -36,6 +36,7 @@ For maintainers and contributors. This page covers why seampact's compiler and g
   - user diagnostics go through a sink;
   - environment failures (I/O, network, a bad bundle) are typed errors per crate;
   - a bug is an internal diagnostic with its own exit code, never a silent fallback.
+- **Ready for a watch mode and a language server.** The compiler is a library function (files in, IR and diagnostics out, no global state, no exit midway), diagnostics carry a file position, the writer touches only files whose bytes change, and the set of input files is explicit.
 - **Pass ownership (ADR 0006) enforced by types.** Each pass half returns its own output and reads earlier outputs by shared reference. Writing outside ownership does not compile.
 
 ## Generators
@@ -50,7 +51,10 @@ For maintainers and contributors. This page covers why seampact's compiler and g
 - **One refusal code per fault**, from one list. The troubleshooting tables are generated from it.
 - **Generated code style.** Blank lines go before `return`, `if`, loops, `switch`, `try` and `throw`, after a group of declarations and after a block. Lines are at most 100 columns, or the language's norm. One code model and one printer serve PHP, Python and Java.
 - **Your own formatter.** A project can run its own formatter on the generated files. The generated-file checks then compare the formatted output, so reformatting is not reported as a hand edit.
+- **First-party generators are compiled into the binary.** Each one stays inert until the config names its target: it writes nothing, refuses nothing and adds no run time. Shipping them as shared libraries or WebAssembly packages would save a few megabytes at the cost of an ABI, per-platform artefacts and a runtime engine.
+- **One contract inside and outside.** The generator trait inside the binary has the same contract as the external protocol: the IR and the target options in, files and refusals out. A first-party generator can move out of the binary, or a community one move in, without a rewrite.
 - **Custom targets.** An external generator protocol takes the IR in and gives files out, in any language, through a versioned JSON schema. Each first-party target also runs through the protocol in one test, so the protocol cannot fall behind.
+- **Installed with each ecosystem's own tool.** npm platform packages, PyPI wheels, Gradle and Maven plugins that fetch the platform binary, and the Composer package. A project installs it as a development dependency, so its lockfile pins the version. A launcher holds no generation logic: it fetches the binary, checks its SHA-256, runs it and wires the output into the build (Gradle, Maven) or the framework's console (artisan, `bin/console`, `manage.py`). Stacks without a launcher download the binary, and the config pins its version.
 
 ## How the port is checked
 
@@ -93,7 +97,6 @@ For maintainers and contributors. This page covers why seampact's compiler and g
 
 ## Open
 
-- First-party generators compiled into the binary (each inert until the config names it) or shipped as WebAssembly packages.
 - The TypeScript formatter (Biome, oxc or our own printer), and how a project's formatter plugs in.
 - Integers above 2^53 in examples and defaults: today they are rounded, Rust can keep them exact.
 - A manual CI run on three operating systems at a few milestones during the port.

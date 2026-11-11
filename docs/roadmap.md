@@ -16,6 +16,7 @@ seampact's compiler and generators move from TypeScript to Rust, and the feature
 - Every first-party generator runs in the binary. The runtime packages your app imports stay separate, opt-in packages, as today. Most npm packages of the compiler side (`compiler`, `openapi`, `diff`, `lint`, `codegen-core`, the `codegen-*` targets) are retired; `@seampact/cli` installs the launcher and one platform package.
 - The contract, the IR and the config stay the same. The generated code keeps its behaviour. Its formatting changes once, to one airy style shared by every language, and you can run your own formatter on the generated files without them being reported as hand-edited.
 - One refusal code per fault on every stack: the same unsupported or inconsistent form gets the same code in TypeScript, PHP, Python and Kotlin. A few codes change name.
+- Install seampact as a development dependency with your ecosystem's own tool: npm, PyPI, the Gradle and Maven plugins or Composer. Generation runs in your build or your framework's console (artisan, `bin/console`, `manage.py`).
 - Custom targets: an external generator protocol (the IR in, files out), in any language.
 - `seampact test`: the server HTTP suite in the binary, so JVM, PHP and Python apps run it without Node.js.
 - App input rules on Python (FastAPI, Django REST Framework, Django Ninja), Spring Boot and API Platform.
@@ -31,6 +32,9 @@ seampact's compiler and generators move from TypeScript to Rust, and the feature
 ## After 2.0.0
 
 - A Flask target.
+- A watch mode: the contract recompiles and the code regenerates on save, with plugins for Vite and Gradle's continuous build.
+- Editor extensions for VS Code and JetBrains on a language server: completion, live validation with the refusal codes, go to definition, hover docs.
+- Debug panels in the frameworks' own tools (Laravel Debugbar and Telescope, the Symfony profiler, Spring Boot Actuator, Django Debug Toolbar, NestJS Devtools): the matched operation, the rules applied and the refusal codes of each request.
 - ASP.NET Core, the first target on a .NET runtime, published on NuGet.
 - API Platform's Laravel flavour: later, on demand. Its usage is small beside Laravel's own resources (`api-platform/laravel` has about 0.14% of `laravel/framework`'s downloads).
 
