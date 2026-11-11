@@ -149,5 +149,5 @@ For contributors. Users do not need these pages.
 - [ADR 0027 sections](adr/0027-django-targets/): the Django targets, one file per decision.
 - [Product decisions](decisions.md): the log of decisions, A1 to A48.
 - [Design decisions](design-decisions.md)
-- [Maintainers](maintainers/): how a release goes out.
+- [Maintainers](maintainers/): how a release goes out, and the 2.0.0 Rust rewrite.
 - [Roadmap](roadmap.md)

@@ -1,6 +1,6 @@
 # ADR 0029: The API Platform server target
 
-Status: accepted, Symfony flavour delivered by #427, #429, #437, #445, #448; the Laravel flavour and app input rules in 1.2.0
+Status: accepted, Symfony flavour delivered by #427, #429, #437, #445, #448; app input rules in 2.0.0; the Laravel flavour later, on demand
 
 ## Context
 
@@ -17,7 +17,7 @@ Five API Platform behaviours, seen in the spike below, shape the placement:
 ## Options
 
 - API Platform lines: 4 and 5, or 5 only. Choice: 5 only. Composer resolves 5 for a new app (the spike got 5.0.6), and each supported line is a matrix of its own. API Platform 4 comes only on demand; until then the compatibility matrix records it as unsupported and `generate` refuses it by name (ADR 0009 "Artefacts and the compatibility matrix").
-- Flavours: Symfony and Laravel together, or Symfony first. Choice: Symfony in 1.1.0, Laravel in a 1.2.0 release. The Laravel flavour has the same shape but its own routes, middleware and error handler, about 0.6 of the Symfony work ("The Laravel flavour" below).
+- Flavours: Symfony and Laravel together, or Symfony first. Choice: Symfony in 1.1.0, Laravel later, on demand (first planned for 1.2.0, moved out after a usage count, "The Laravel flavour" below). The Laravel flavour has the same shape but its own routes, middleware and error handler, about 0.6 of the Symfony work ("The Laravel flavour" below).
 - Who writes the wire: API Platform's serializer, `IriConverter` and error normalizers, or the boundary. Choice: the boundary, as on every other target. API Platform rendering would need resources that carry every identifier for their IRIs, and would make the wire depend on the framework's normalizers, where the contract guarantees one wire whatever the target. The native look is a pack concern ("The native look"), never a per-target switch of the reply check.
 - Routes: a route loader as on Symfony, or API Platform's resource metadata. Choice: the metadata. It gives the exact path, name and defaults with no loader, and API Platform's documentation, context routes and security glue keep working on the same operations.
 - Steps 2 to 8: in decorators of API Platform's providers (ADR 0012's api-platform row), or in the Symfony target's `kernel.controller` listener. Choice: the listener. It runs before the whole provider chain, so before API Platform's `security`, read and deserialize, with no API Platform change.
@@ -140,7 +140,7 @@ Step 8b is refused by name on this target in 1.1.0: the generator emits no `<Api
 
 ### The Laravel flavour
 
-API Platform's Laravel flavour waits for a 1.2.0 release. It has the same shape: routes registered per operation from `uriTemplate` and `name`, wrapped in `ApiPlatformMiddleware`; `ApiPlatformController` runs the same provider and processor chains, so the decorators port. It differs in its security, a Gate `policy` checked after the data is provided, in its errors, through an `ErrorHandler` decorating Laravel's, and in its Eloquent-centred metadata. The Laravel target's boundary is middleware, which runs before the controller, so the access steps stay in front there too. Laravel's native 422 body is a `pack-laravel` concern of the same release.
+API Platform's Laravel flavour comes later, on demand. It was planned for 1.2.0 and moved out in November 2026: `api-platform/laravel` had about 32,000 Packagist downloads a month, 0.14% of `laravel/framework`'s 23.5 million, while `api-platform/symfony` had 8.7% of `symfony/framework-bundle`'s. Laravel apps build their APIs on Laravel's own resources, which `pack-jsonapi` renders in 2.0.0. The design below stays for when an app asks for it. It has the same shape: routes registered per operation from `uriTemplate` and `name`, wrapped in `ApiPlatformMiddleware`; `ApiPlatformController` runs the same provider and processor chains, so the decorators port. It differs in its security, a Gate `policy` checked after the data is provided, in its errors, through an `ErrorHandler` decorating Laravel's, and in its Eloquent-centred metadata. The Laravel target's boundary is middleware, which runs before the controller, so the access steps stay in front there too. Laravel's native 422 body is a `pack-laravel` concern of 2.0.0.
 
 ### Refused by name or waiting
 
@@ -148,8 +148,8 @@ API Platform's Laravel flavour waits for a 1.2.0 release. It has the same shape:
 
 | Waits for | What |
 |---|---|
-| on demand | API Platform 4 (refused by the compatibility matrix) |
-| 1.2.0 | the Laravel flavour; app input rules |
+| on demand | API Platform 4 (refused by the compatibility matrix); the Laravel flavour |
+| 2.0.0 | app input rules |
 | an app that needs it | `nativeDocs`; API Platform's `securityPostDenormalize` and `securityPostValidation` on contract operations; API Platform's own read, content negotiation, deserialize, validate, paginator and serializer on contract operations |
 
 Worker runtimes are refused as on Symfony, by the same two guards.
