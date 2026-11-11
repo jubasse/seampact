@@ -38,6 +38,12 @@ function repositoryWith(files: Record<string, string>): string {
   return root;
 }
 
+function initGitRepository(root: string): void {
+  const run = spawnSync("git", ["init", "--quiet"], { cwd: root, encoding: "utf8" });
+
+  if (run.status !== 0) throw new Error(`git init failed in ${root}: ${run.stderr}`);
+}
+
 function manifest(name: string | undefined, description?: string, role?: string): string {
   return JSON.stringify({
     name,
@@ -131,6 +137,24 @@ describe("cartography", () => {
     expect(problems).toEqual([
       "scripts/bare: no header; add a one-line comment at the top of scripts/bare/index.ts, or a README.md",
     ]);
+  });
+
+  it("skips the tooling subdirectories git ignores, such as local build output", () => {
+    const root = repositoryWith({
+      ".gitignore": "jvm/build/\njvm/.gradle/\n",
+      "packages/.keep": "",
+      "jvm/module/README.md": "# A JVM module\n",
+      "jvm/build/classes/Main.class": "",
+      "jvm/.gradle/cache.bin": "",
+    });
+
+    initGitRepository(root);
+
+    const { markdown, problems } = buildCartography({ root, stages: NO_STAGES });
+
+    expect(markdown).toContain("- `jvm/module`: A JVM module");
+    expect(markdown).not.toContain("jvm/build");
+    expect(problems).toEqual([]);
   });
 
   it("orders packages and directories by code unit and writes no timestamp", () => {

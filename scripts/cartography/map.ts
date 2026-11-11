@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { PACKAGES_DIR, packageDirectories } from "../workspace/index.ts";
@@ -230,9 +231,12 @@ function readToolingRoots(root: string, problems: string[]): ToolingRoot[] {
     if (!existsSync(absoluteRoot)) continue;
 
     const directories: SourceDirectory[] = [];
+    const candidates = sortedSubdirectories(absoluteRoot).map((child) => `${rootPath}/${child}`);
+    const ignored = gitIgnoredPaths(root, candidates);
 
-    for (const child of sortedSubdirectories(absoluteRoot)) {
-      const directory = `${rootPath}/${child}`;
+    for (const directory of candidates) {
+      if (ignored.has(directory)) continue;
+
       const summary = readHeader(join(root, directory));
 
       if (summary === undefined) {
@@ -494,6 +498,30 @@ function sortedSubdirectories(directory: string): string[] {
     .filter((entry) => entry.isDirectory() && !SKIPPED_DIRS.has(entry.name))
     .map((entry) => entry.name)
     .sort(compareText);
+}
+
+/**
+ * The paths git ignores, such as local build output (`jvm/build`, `jvm/.gradle`).
+ * Outside a git checkout nothing is ignored, so a throwaway test root maps every directory.
+ */
+function gitIgnoredPaths(root: string, paths: string[]): Set<string> {
+  if (paths.length === 0 || !existsSync(join(root, ".git"))) return new Set();
+
+  const run = spawnSync("git", ["check-ignore", "--stdin"], {
+    cwd: root,
+    input: paths.join("\n"),
+    encoding: "utf8",
+  });
+
+  const noPathIgnored = run.status === 1;
+
+  if (noPathIgnored) return new Set();
+
+  if (run.status !== 0) {
+    throw new Error(`git check-ignore failed in ${root}: ${run.error?.message ?? run.stderr}`);
+  }
+
+  return new Set(run.stdout.split("\n").filter((line) => line !== ""));
 }
 
 function holdsAFile(directory: string): boolean {
