@@ -1,6 +1,6 @@
 # ADR 0010: Native generators and the standalone compiler
 
-Status: accepted. Amended for 2.0.0 by [ADR 0031](0031-rust-core.md): the native IR readers and generators go (sections 01, 02, 04), the standalone binary carries the generators (05), and the JVM, PHP and Python channels become launchers (08, 09, 10).
+Status: accepted. Amended for 2.0.0 by [ADR 0031](0031-rust-core.md): the native IR readers and generators go (sections 01, 02, 04), the standalone binary carries the generators (05), and the JVM, PHP and Python channels become launchers (08, 09, 10). Linux binaries are static musl builds, so Alpine is supported.
 
 ## Context
 

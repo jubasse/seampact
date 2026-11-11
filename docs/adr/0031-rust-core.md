@@ -13,7 +13,7 @@ In 1.x the compiler, OpenAPI, diff, lint, bundles and the CLI are TypeScript, an
 ### What stays
 
 - The contract grammar (ADR 0002), the IR (ADRs 0004, 0005) and the config keys.
-- The IR keeps its bytes: keys in UTF-16 code-unit order, numbers written as ECMAScript writes them. One exception: an integer above 2^53 in an example or a default is written exactly as the contract writes it, where 1.x rounds it. PHP, Python and Java read it exactly; a JavaScript reader rounds it on parse, as before.
+- The IR keeps its bytes: keys in UTF-16 code-unit order, numbers written as ECMAScript writes them. One exception: an integer above 2^53 in an example or a default is written exactly as the contract writes it, where 1.x rounds it. Python reads it exactly, PHP and Java up to 64 bits; a JavaScript reader rounds it on parse, as before.
 - The runtime packages an app imports: `@seampact/server-runtime`, `@seampact/hooks` and the helpers on npm, the PHP, Python and Spring runtimes, and the packs (data only).
 - The behaviour of the generated code. The consumer projects and the HTTP suite prove it.
 
@@ -26,11 +26,12 @@ In 1.x the compiler, OpenAPI, diff, lint, bundles and the CLI are TypeScript, an
 ### Target ids
 
 - A target is named by a short id, the same in every ecosystem: `use: zod`, `use: fastify`, `use: laravel`, `use: spring-boot`.
-- A 1.x string (`@seampact/codegen-zod`, `pypi:seampact-fastapi`, a Maven or Composer coordinate) is refused by a diagnostic that names the short id.
+- The short id is the 1.x package name without its registry, scope and `codegen-` prefix: `@seampact/codegen-zod` gives `zod`, `pypi:seampact-fastapi` gives `fastapi`, `seampact/laravel` gives `laravel`.
+- A 1.x string naming a first-party target is refused by a diagnostic that names its short id. Any other package string is refused with a fix that points to an `exec` entry.
 
 ### External generators
 
-- An `exec:` entry runs a program in any language. The request (IR, options, switched-on artefacts, links, installed runtime versions) goes to its stdin as one JSON document; the response (files, warnings, refusals) comes back on stdout. The binary writes and checks the files, so `check` covers external targets too.
+- An entry `use: exec` with `command: [<program>, <args>...]` (an argument list, never a shell string) runs a program in any language. The request (IR, options, switched-on artefacts, links, installed runtime versions) goes to its stdin as one JSON document; the response (files, warnings, refusals) comes back on stdout. The binary writes and checks the files, so `check` covers external targets too. Every response path is relative and stays inside the entry's `out` directory; any other path is refused.
 - The protocol ships as experimental `protocol: 1` in 2.0.0 and becomes stable in 2.1. A WASM transport over the same messages and the Rust and TypeScript SDKs come after 2.0.0.
 - `defineTarget` (undocumented in 1.x) and the lint plugin API (never loadable by the CLI) are removed.
 - An external generator is code the user chose to run, with the user's rights, like a build script.
@@ -45,11 +46,11 @@ The server HTTP suite is ported into the binary as `seampact test`, so a JVM, PH
 |---|---|---|---|
 | npm | `compiler`, `diff`, `openapi`, `lint`, `codegen-core`, the 16 `codegen-*`, `http-suite` | `cli` (launcher), `spec` (IR types and schemas) | `@seampact/cli-<os>-<arch>`, five platform packages |
 | PyPI | `seampact-ir` | `seampact-codegen`, `seampact-django`, `seampact-drf`, `seampact-fastapi`, `seampact-ninja` (runtime only); `seampact-compiler` (wheels with the binary and a `seampact` command) | none |
-| Maven Central | `seampact-ir`, `seampact-spring-boot` | `seampact-runner`, the Gradle and Maven plugins (launchers) | none |
+| Maven Central | `seampact-ir`, `seampact-spring-boot` | `seampact-runner`, the Gradle and Maven plugins (launchers); `seampact-compiler` keeps its coordinates, its classifiers now compressed | none |
 | Packagist | `seampact/ir` | `seampact/codegen`, `seampact/laravel`, `seampact/symfony`, `seampact/api-platform` (runtime only) | `seampact/compiler` (launcher) |
 
 - Removed packages are deleted at the 2.0.0 release where the registry allows it (npm within its unpublish policy, PyPI, Packagist), deprecated where npm refuses, and simply no longer published on Maven Central, which forbids deletion.
-- Every Composer package keeps its read-only mirror (A19).
+- Every Composer package keeps its read-only mirror (A19): `seampact/compiler` gets a new one, and the `seampact/ir` mirror is archived.
 
 ### Launchers
 
@@ -63,13 +64,13 @@ The server HTTP suite is ported into the binary as `seampact test`, so a JVM, PH
 
 - The same five as 1.x: Linux x64 and arm64, macOS x64 and arm64, Windows x64. macOS keeps the ad hoc signature, Windows stays unsigned (ADR 0010, section 05).
 - Linux binaries are static musl builds, one per architecture, running on glibc and Alpine alike. PyPI gets `musllinux` wheels beside the `manylinux` ones, carrying the same binary.
-- Each stack guide gets a Docker section. Recommended path first: the generated code is committed and `seampact check` runs in CI, so the image needs no seampact tool, and development dependencies stay out (`npm ci --omit=dev`, `composer install --no-dev`, `uv sync --no-dev`). Then generation in the build, with a multi-stage Dockerfile where seampact stays a development dependency of the build stage.
+- Each stack guide gets a Docker section. Recommended path first: the generated code is committed and `seampact check` runs in CI, so the image needs no seampact tool, and development dependencies stay out (`npm ci --omit=dev`, `composer install --no-dev`, `uv sync --no-dev`; `node_modules` in `.dockerignore`). Then generation in the build, with a multi-stage Dockerfile where seampact stays a development dependency of the build stage.
 
 ### Bytes that change once
 
 2.0.0 changes these outputs once, each recorded in the goldens and in the port's expected-differences file:
 
-- The generated code's formatting, once per language family after parity: blank lines before `return`, `if`, loops, `switch`, `try` and `throw`, after a group of declarations and after a block; lines within 100 columns or the language's norm. The binary emits the blank lines itself; formatters keep blank lines but never add them.
+- The generated code's formatting, once per language family after parity: blank lines before `return`, `if`, loops, `switch`, `try` and `throw`, after a group of declarations and after a block; per family, TypeScript and JavaScript with 2-space indents within 100 columns, PHP with 4 spaces within 120 (PSR-12), Python with 4 spaces within 88 (Black and Ruff), Java with 2 spaces within 100 (Google Java Style). The binary emits the blank lines itself; formatters keep blank lines but never add them.
 - The OpenAPI YAML text (quoting and wrapping of the YAML emitter). OpenAPI JSON keeps its bytes.
 - The gzip bytes of the bundle tarball. The integrity hash covers the file list, not the gzip stream, so existing pins keep working. Reproducibility is stated per binary version (ADR 0011).
 - Diagnostic message text, now from the binary's own catalogue instead of ajv. Rule ids, pointers, severities and positions stay.
@@ -85,15 +86,18 @@ The server HTTP suite is ported into the binary as `seampact test`, so a JVM, PH
   ```yaml
   format:
     - files: ["**/*.ts", "**/*.vue"]
-      command: [biome, format, --write]
-    - files: ["**/*.php"]
-      command: [vendor/bin/pint]
+      command: [biome, format, --write]   # input: files (default), paths appended
+      timeout: 60s
+    - files: ["**/*.py"]
+      command: [ruff, format, --stdin-filename, "{path}", "-"]
+      input: stdin                        # content on stdin, formatted text on stdout
   ```
 
   - The first matching entry formats a file; a file no entry matches keeps the default style. The command runs from the project root, so it finds its own configuration.
   - `generate` runs it only on the files it writes, then runs it once more: a formatter whose second run changes a file is refused (`format.not-idempotent`).
-  - The manifest keeps two hashes per file: the generator's output and the bytes on disk after the formatter. `check` regenerates and compares the generator's output, so it never runs the formatter and needs no formatter in CI. A hand edit is a file whose bytes differ from the second hash.
-  - A missing command, a non-zero exit, a timeout or an empty or non-UTF-8 output is refused by name; nothing of that entry is written. A changed formatter command is a `check` warning: regenerate to apply it.
+  - The manifest (`.seampact-manifest.json`) gains `"version": 2`, and each file a `source` hash (the generator's output) beside `sha256` (the bytes on disk after the formatter); each formatted entry records its `formatter`, the command as written. A 1.x manifest, with no version, is read with `source` equal to `sha256`.
+  - `check` regenerates and compares each file's `source`, so it never runs the formatter and needs no formatter in CI. A hand edit is a file whose bytes differ from `sha256`.
+  - Refusals: `format.command.missing`, `format.command.failed` (exit code and the first lines of stderr), `format.command.timeout`, `format.output.invalid` (empty or not UTF-8), `format.not-idempotent`. On a refusal the manifest is not updated, so the next `generate` rewrites the entry's files. A formatter command that differs from the manifest's is the `check.formatter.changed` warning: regenerate to apply it.
 
 ### Building the port
 
@@ -106,13 +110,14 @@ The server HTTP suite is ported into the binary as `seampact test`, so a JVM, PH
 
 ## Earlier decisions amended
 
-Each gets a dated note now; its text is rewritten by the port PR that changes the behaviour, so the docs describe what ships.
+Each gets a note now; its text is rewritten by the port PR that changes the behaviour, so the docs describe what ships.
 
 | Decision | Change in 2.0.0 |
 |---|---|
 | A2, ADR 0009 | The tool installs the compiler and the first-party generators as one binary; none runs or adds a dependency to the app until its config names it. Runtime helpers stay separate packages. A community target is an external program. |
 | A7, A9 | Every first-party generator runs in the binary; each ecosystem ships a thin launcher and its runtime packages. A launcher runs the binary pinned by hash; no stack needs Node.js. |
-| A10, A48 | The Python packages no longer read the IR; they hold the runtime only. |
+| A10 | .NET targets come after 2.0.0, as a generator in the binary and a NuGet runtime package. |
+| A48 | The Python framework packages hold the runtime only; `seampact-compiler` carries the binary. |
 | A46 | An external generator is code the user chose to run, with the user's rights. |
 | A47 | Port PR size, as above. |
 | ADR 0001 | The Rust toolchain pin beside Node. |
@@ -127,6 +132,6 @@ Each gets a dated note now; its text is rewritten by the port PR that changes th
 
 - An app's dependency tree holds no target and no runtime helper its config does not name.
 - No stack needs Node.js to compile, generate, check or test.
-- About 600 MB per version becomes about 60 MB (estimate), within Maven Central's monthly limit.
+- About 600 MB per version becomes about 60 MB raw for the five platforms, about 20 MB compressed on Maven Central (estimates), so several releases a month fit its 80 MB limit.
 - 1.x configs need their `use:` ids rewritten; the refusal names each short id. Every user sees one formatting diff on the first regenerate, and `check` fails until it is committed.
 - Custom TypeScript targets written against `defineTarget` move to the exec protocol.
