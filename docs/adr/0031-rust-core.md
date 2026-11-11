@@ -100,6 +100,8 @@ The server HTTP suite is ported into the binary as `seampact test`, so a JVM, PH
 - Rust edition 2024, toolchain pinned by `rust-toolchain.toml`; the pinned toolchain is the MSRV.
 - Strict from the first PR: `unsafe_code = "forbid"`, clippy `all` and `pedantic`, no `unwrap`, `expect` or `panic` outside tests, `missing_docs` on library crates, rustfmt, cargo-deny and cargo-machete.
 - The Rust crates are not published in 2.0.0.
+- Ready for a watch mode, a language server and framework debug panels after 2.0.0: the compiler is a library function with no global state and no exit midway, diagnostics carry a file position, the writer touches only files whose bytes change, and the set of input files is explicit.
+- Each port PR keeps the docs current: what it changes in `docs/`, the READMEs, `CONTRIBUTING.md`, `ARCHITECTURE.md`, `AGENTS.md` and the agent docs, and the cartography map. The docs site's own pages and settings change once, at the end of the port.
 - A port PR covers one layer or one feature batch, about 8,000 to 15,000 lines, instead of A47's 3,000 to 4,000; the seams (workspace skeleton, diagnostics, IR and authoring types, writers) stay small and land first.
 
 ## Earlier decisions amended
