@@ -12,7 +12,7 @@
 
 seampact's compiler and generators move from TypeScript to Rust, and the features first planned for 1.2.0 land on the new core, so nothing is written twice. How the port runs: [the 2.0.0 Rust rewrite](maintainers/rust-rewrite.md).
 
-- One standalone binary of about 11-14 MB per platform, against about 125 MB today (estimate). No stack needs Node.js to compile, generate or check anymore, TypeScript targets included.
+- One standalone binary of about 11-14 MB per platform, against about 125 MB today (estimate). On Linux it is static, so it also runs in Alpine images. No stack needs Node.js to compile, generate or check anymore, TypeScript targets included.
 - Every first-party generator runs in the binary. The runtime packages your app imports stay separate, opt-in packages, as today. Most npm packages of the compiler side (`compiler`, `openapi`, `diff`, `lint`, `codegen-core`, the `codegen-*` targets) are retired; `@seampact/cli` installs the launcher and one platform package.
 - The contract, the IR and the config stay the same. The generated code keeps its behaviour. Its formatting changes once, to one airy style shared by every language, and you can run your own formatter on the generated files without them being reported as hand-edited.
 - One refusal code per fault on every stack: the same unsupported or inconsistent form gets the same code in TypeScript, PHP, Python and Kotlin. A few codes change name.
