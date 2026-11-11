@@ -1,6 +1,6 @@
 # ADR 0025: Runtime packaging
 
-Status: accepted
+Status: accepted. Amended for 2.0.0 by [ADR 0031](0031-rust-core.md): the installed-runtime check (G2) runs in the binary.
 
 ## Context
 

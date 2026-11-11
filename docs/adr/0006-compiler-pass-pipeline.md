@@ -1,6 +1,6 @@
 # ADR 0006: Compiler pass pipeline and derivation table
 
-Status: accepted
+Status: accepted. Amended for 2.0.0 by [ADR 0031](0031-rust-core.md): section 4's lint plugin API is removed; external generators use the exec protocol.
 
 ## Context
 

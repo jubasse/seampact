@@ -13,11 +13,11 @@
 seampact's compiler and generators move from TypeScript to Rust, and the features first planned for 1.2.0 land on the new core, so nothing is written twice. How the port runs: [the 2.0.0 Rust rewrite](maintainers/rust-rewrite.md).
 
 - One standalone binary of about 11-14 MB per platform, against about 125 MB today (estimate). On Linux it is static, so it also runs in Alpine images. No stack needs Node.js to compile, generate or check anymore, TypeScript targets included.
-- Every first-party generator runs in the binary. The runtime packages your app imports stay separate, opt-in packages, as today. Most npm packages of the compiler side (`compiler`, `openapi`, `diff`, `lint`, `codegen-core`, the `codegen-*` targets) are retired; `@seampact/cli` installs the launcher and one platform package.
-- The contract, the IR and the config stay the same. The generated code keeps its behaviour. Its formatting changes once, to one airy style shared by every language, and you can run your own formatter on the generated files without them being reported as hand-edited.
+- Every first-party generator runs in the binary. The runtime packages your app imports stay separate, opt-in packages, as today. The npm packages of the compiler side (`compiler`, `openapi`, `diff`, `lint`, `codegen-core`, the `codegen-*` targets, `http-suite`) are removed; `@seampact/cli` installs the launcher and one platform package.
+- The contract and the IR stay the same, and the config keeps its keys. Targets are named by short ids, the same in every ecosystem (`use: zod`, `use: laravel`); a 1.x id is refused with the short one named. The generated code keeps its behaviour. Its formatting changes once, to one airy style shared by every language, and you can run your own formatter on the generated files without them being reported as hand-edited.
 - One refusal code per fault on every stack: the same unsupported or inconsistent form gets the same code in TypeScript, PHP, Python and Kotlin. A few codes change name.
 - Install seampact as a development dependency with your ecosystem's own tool: npm, PyPI, the Gradle and Maven plugins or Composer. Generation runs in your build or your framework's console (artisan, `bin/console`, `manage.py`).
-- Custom targets: an external generator protocol (the IR in, files out), in any language.
+- Custom targets: an external generator protocol (the IR in, files out), in any language, experimental in 2.0.0 and stable in 2.1.
 - `seampact test`: the server HTTP suite in the binary, so JVM, PHP and Python apps run it without Node.js.
 - App input rules on Python (FastAPI, Django REST Framework, Django Ninja), Spring Boot and API Platform.
 - Rights adapters: CASL for NestJS, spatie/laravel-permission for Laravel.

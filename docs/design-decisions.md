@@ -34,3 +34,4 @@ The ADRs cite product decisions by id (`A<n>`); [`decisions.md`](decisions.md) s
 | [0028](adr/0028-app-input-rules.md) | app input rules: the app's own rules, in its validator library, run at step 8b before the handler |
 | [0029](adr/0029-api-platform-target.md) | the API Platform server target |
 | [0030](adr/0030-nextjs-target.md) | the Next.js server target |
+| [0031](adr/0031-rust-core.md) | the 2.0.0 Rust core: one binary with the generators, short target ids, launchers, packages per registry, bytes that change once |

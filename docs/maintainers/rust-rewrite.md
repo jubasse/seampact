@@ -1,6 +1,6 @@
 # The 2.0.0 Rust rewrite
 
-For maintainers and contributors. This page covers why seampact's compiler and generators move to Rust, what the port covers, how it is checked and how work runs while it lasts. What changes for users is in the [roadmap](../roadmap.md#200-the-core-in-rust). The 2.0.0 scope ADR is written before the first port PR and settles the points listed under "Open".
+For maintainers and contributors. This page covers why seampact's compiler and generators move to Rust, what the port covers, how it is checked and how work runs while it lasts. What changes for users is in the [roadmap](../roadmap.md#200-the-core-in-rust). What changes for packages, target ids and earlier decisions is fixed in [ADR 0031](../adr/0031-rust-core.md).
 
 ## Why
 
@@ -19,7 +19,7 @@ For maintainers and contributors. This page covers why seampact's compiler and g
   - the packs, which are YAML data;
   - the consumer projects and the docs site;
   - the repository scripts that work well in TypeScript.
-- **Unchanged contracts:** the contract grammar, the IR and the config. The IR stays the same bytes: keys in UTF-16 code-unit order, numbers written as ECMAScript writes them.
+- **Unchanged contracts:** the contract grammar, the IR and the config keys; targets get short ids ([ADR 0031](../adr/0031-rust-core.md#target-ids)). The IR stays the same bytes: keys in UTF-16 code-unit order, numbers written as ECMAScript writes them. Only integers above 2^53 change: they are written exactly instead of rounded.
 - **Public interfaces:** the IR JSON Schema, the generator protocol schema and the CLI. The Rust crates are not published in 2.0.0.
 
 ## Principles
@@ -69,7 +69,7 @@ For maintainers and contributors. This page covers why seampact's compiler and g
 
 ## How work runs during the port
 
-- **PRs.** `feat/` branches from develop, squash-merged. One PR per layer or feature batch, larger than A47's usual size, which the scope ADR amends for the port. Seams stay small and land first. A pattern review comes after the first few thousand lines of each layer PR.
+- **PRs.** `feat/` branches from develop, squash-merged. One PR per layer or feature batch, about 8,000 to 15,000 lines instead of A47's usual size ([ADR 0031](../adr/0031-rust-core.md#building-the-port)). Seams stay small and land first. A pattern review comes after the first few thousand lines of each layer PR.
 - **No CI on develop during the port.** The gate is local, through the git hooks:
   - pre-commit: formatting and lint on the touched crates;
   - pre-push: the touched crates' tests and the oracle comparison;
@@ -87,7 +87,7 @@ For maintainers and contributors. This page covers why seampact's compiler and g
 
 ## Order
 
-1. **Before the first port PR:** the scope ADR, the rulebook and the agents' Rust skills, a formatter spike, the oracle tooling (expected outputs, pass-half dumps, the expected-differences format), and four small proofs of concept: oracle strength, a two-agent stress test of the rulebook, model choice and restart against repair, and how many lanes build at once on one machine.
+1. **Before the first port PR:** the scope ADR (ADR 0031), the rulebook and the agents' Rust skills, a formatter spike, the oracle tooling (expected outputs, pass-half dumps, the expected-differences format), and four small proofs of concept: oracle strength, a two-agent stress test of the rulebook, model choice and restart against repair, and how many lanes build at once on one machine.
 2. **Seams:** the workspace skeleton and lints, source spans and diagnostics, the IR and authoring types, the canonical JSON writer, the generator writer.
 3. **Layers:**
    1. the loader and the passes, which are the critical path;
@@ -97,8 +97,3 @@ For maintainers and contributors. This page covers why seampact's compiler and g
    5. the launchers per ecosystem;
    6. CI and the release.
 4. **2.0.0 features**, each after its layer reaches parity.
-
-## Open
-
-- The TypeScript formatter (Biome, oxc or our own printer), and how a project's formatter plugs in.
-- Integers above 2^53 in examples and defaults: today they are rounded, Rust can keep them exact.

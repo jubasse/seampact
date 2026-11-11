@@ -1,6 +1,6 @@
 # ADR 0011: Distribution, app config and unpublished installs
 
-Status: accepted
+Status: accepted. Amended for 2.0.0 by [ADR 0031](0031-rust-core.md): the bundle tarball's gzip bytes are reproducible per binary version; the integrity hash is unchanged.
 
 ## Context
 
