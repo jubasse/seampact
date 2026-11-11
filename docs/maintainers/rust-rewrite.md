@@ -81,6 +81,7 @@ For maintainers and contributors. This page covers why seampact's compiler and g
   - UTF-8 paths and one validated relative-path type;
   - output paths that differ only by case or Unicode normalisation are refused;
   - `cargo check` runs for the five target triples.
+- **Docs stay current through the port.** Each PR updates what it changes in `docs/`, the READMEs, `CONTRIBUTING.md`, `ARCHITECTURE.md`, `AGENTS.md` and the agent docs, and regenerates the cartography map. The docs website is built from `docs/`; its own pages and settings are adjusted once, at the end of the port.
 - **The full gate runs on the rebased tip** before each merge, not only on the lane's branch.
 - **Repository scripts stay in TypeScript unless porting pays.** Scripts that ran the TypeScript compiler call the binary instead. A script moves to `cargo xtask` only when it must be rewritten anyway (the release, for cargo and the platform packages) would otherwise copy Rust types, or a measurement shows it slows CI; it then keeps its TypeScript version until the xtask one gives the same outputs.
 
