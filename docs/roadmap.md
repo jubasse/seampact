@@ -10,8 +10,20 @@
 
 ## 1.2.0
 
-- The 1.1 deferrals: app input rules on Python, Spring Boot and API Platform, the Laravel flavour of API Platform, the native 422 of the Laravel pack, a Spring Boot with Angular example, and one types output for a Next.js full-stack app.
+- App input rules on Python (FastAPI, Django REST Framework, Django Ninja), Spring Boot and API Platform.
+- Rights adapters: CASL for NestJS, spatie/laravel-permission for Laravel.
+- A Flask target.
+- JSON:API on Laravel 13's own JSON:API resources, and the native 422 of the Laravel pack.
 - Client conformance suite: one black-box test suite every client target passes (fetch, axios, React, Vue, Angular, mobile), the client-side twin of the server HTTP suite.
+- One types output for a Next.js full-stack app.
+- A Spring Boot with Angular example.
+- Faster CI and releases.
+- The design of the ASP.NET Core target.
+- API Platform's Laravel flavour moves out of 1.2.0: later, on demand. Its usage is small beside Laravel's own resources (`api-platform/laravel` has about 0.14% of `laravel/framework`'s downloads).
+
+## 1.3.0
+
+- ASP.NET Core, the first target on a .NET core, published on NuGet.
 
 ## After 1.2.0
 
@@ -21,11 +33,11 @@ In this order, each step reusing what the one before built:
 2. One shared core per language: each new language starts with a core (reading the contract, the boundary steps, naming) that its frameworks reuse, as the Node runtime serves five servers and the Spring Boot core will serve Quarkus and Micronaut.
 3. More web-standard server targets on the Hono adapter: Bun, Deno, Cloudflare Workers.
 4. Mobile clients: Kotlin first (Android, Ktor client, Kotlin Multiplatform), then Swift, then Dart for Flutter.
-5. Python, beyond the FastAPI, Django REST Framework and Django Ninja targets of 1.0: Flask and Litestar with msgspec, each on demand. marshmallow is not planned.
+5. Python, beyond FastAPI, Django REST Framework, Django Ninja and Flask: Litestar with msgspec, on demand. marshmallow is not planned.
 6. More JVM frameworks on the Spring Boot core: Quarkus, Micronaut, Ktor.
-7. Go: `net/http` handlers, then Gin, Chi and Echo.
-8. .NET: ASP.NET Core.
-9. Rust: Axum and Actix Web.
+7. Rust: Axum, then Actix Web.
+8. Go: `net/http` handlers, then Gin, Chi and Echo.
+9. More .NET frameworks on the ASP.NET Core core, on demand.
 10. Front extras: Angular reactive-form validators.
 11. Much later: Ruby on Rails, Svelte and SvelteKit, Solid. Until then Rails apps read the OpenAPI document, and Svelte and Solid apps use the TypeScript client and zod.
 12. More example apps, one per stack pairing (for example Spring Boot with Vue), each from one contract and kept green by CI.

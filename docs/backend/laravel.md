@@ -370,6 +370,12 @@ Admin panels serve their own routes. Keep the lines of the tools you use. A pane
       - { path: "/nova-vendor/**", reason: "Nova panel." }
 ```
 
+## Other Laravel packages
+
+- spatie/laravel-data: build your `Data` from the checked body, `NoteData::from($request->contractInput()->body)`. Its property names must match the generated class's. `from()` does not validate again; skip `validateAndCreate()`, the boundary already checked the body.
+- Scramble, l5-swagger: they derive a second OpenAPI document from your code. Serve the one `seampact generate` writes instead, see [OpenAPI and docs](../configuration/openapi-and-docs.md).
+- Laravel Orion: not supported. Orion declares its own routes from your models, and on a contract the routes come from the contract.
+
 ## Limits
 
 - `generate` refuses some forms by name, until an app needs them. The list is in [Generate errors](../troubleshooting/generate.md#php); forms refused on every server are under [every server](../troubleshooting/generate.md#every-server).
