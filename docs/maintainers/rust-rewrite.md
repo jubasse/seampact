@@ -1,6 +1,6 @@
 # The 2.0.0 Rust rewrite
 
-For maintainers and contributors. This page covers why seampact's compiler and generators move to Rust, what the port covers, how it is checked and how work runs while it lasts. What changes for users is in the [roadmap](../roadmap.md#200-the-core-in-rust). The 2.0.0 scope ADR is written before the first port PR and settles the points listed under "Open".
+For maintainers and contributors. This page covers why seampact's compiler and generators move to Rust, what the port covers, how it is checked and how work runs while it lasts. What changes for users is in the [roadmap](../roadmap.md#200-the-core-in-rust). What changes for packages, target ids and earlier decisions is fixed in [ADR 0031](../adr/0031-rust-core.md).
 
 ## Why
 
@@ -19,7 +19,7 @@ For maintainers and contributors. This page covers why seampact's compiler and g
   - the packs, which are YAML data;
   - the consumer projects and the docs site;
   - the repository scripts that work well in TypeScript.
-- **Unchanged contracts:** the contract grammar, the IR and the config. The IR stays the same bytes: keys in UTF-16 code-unit order, numbers written as ECMAScript writes them.
+- **Unchanged contracts:** the contract grammar, the IR and the config keys; targets get short ids ([ADR 0031](../adr/0031-rust-core.md#target-ids)). The IR stays the same bytes: keys in UTF-16 code-unit order, numbers written as ECMAScript writes them. Only integers above 2^53 change: they are written exactly instead of rounded.
 - **Public interfaces:** the IR JSON Schema, the generator protocol schema and the CLI. The Rust crates are not published in 2.0.0.
 
 ## Principles
@@ -50,7 +50,7 @@ For maintainers and contributors. This page covers why seampact's compiler and g
   Each family crate decides how a rule is checked in its stack (an annotation, a native argument or a runtime validator) and prints the code.
 - **One refusal code per fault**, from one list. The troubleshooting tables are generated from it.
 - **Generated code style.** Blank lines go before `return`, `if`, loops, `switch`, `try` and `throw`, after a group of declarations and after a block. Lines are at most 100 columns, or the language's norm. One code model and one printer serve PHP, Python and Java.
-- **Your own formatter.** A project can run its own formatter on the generated files. The generated-file checks then compare the formatted output, so reformatting is not reported as a hand edit.
+- **Your own formatter.** A project can run its own formatter on the generated files. The manifest keeps the generator's output hash beside the formatted file's, so `check` never runs the formatter and reformatting is not reported as a hand edit ([ADR 0031](../adr/0031-rust-core.md#formatting)).
 - **First-party generators are compiled into the binary.** Each one stays inert until the config names its target: it writes nothing, refuses nothing and adds no run time. Shipping them as shared libraries or WebAssembly packages would save a few megabytes at the cost of an ABI, per-platform artefacts and a runtime engine.
 - **One contract inside and outside.** The generator trait inside the binary has the same contract as the external protocol: the IR and the target options in, files and refusals out. A first-party generator can move out of the binary, or a community one move in, without a rewrite.
 - **Custom targets.** An external generator protocol takes the IR in and gives files out, in any language, through a versioned JSON schema. Each first-party target also runs through the protocol in one test, so the protocol cannot fall behind.
@@ -62,14 +62,14 @@ For maintainers and contributors. This page covers why seampact's compiler and g
 - **The pipeline can be dumped after each pass half**, so the halves port and check in parallel.
 - **Generated code is compared token by token** (whitespace aside) during the port. The formatting change lands once per language family, after parity.
 - **A refusal parity harness** compares the (code, pointer) refusals of the old generators across families, over the golden IRs.
-- **Every intended difference is listed in an expected-differences file and reviewed.** These are the 1.1.1 fixes, the unified refusal codes and the formatting change.
+- **Every intended difference is listed in an expected-differences file and reviewed.** These are the 1.1.1 fixes and the byte changes of [ADR 0031](../adr/0031-rust-core.md#bytes-that-change-once): formatting, OpenAPI YAML, tarball gzip, diagnostic text, unified refusal codes and integers above 2^53.
 - **The fixtures, goldens and spec vectors stay the main suite.** TypeScript unit tests are ported case by case, as Rust tests of the same behaviour: tests of stable bricks, and tests that catch what the fixtures miss. A behaviour that a 2.0.0 feature changes gets a new test for the new behaviour. Runtime tests and consumer projects stay in their language.
 - **The oracle is checked too.** Deliberately broken versions of the TypeScript compiler (mutation testing) show whether the fixtures catch the breakage, before the oracle becomes the acceptance test.
 - **No shortcuts.** A module that fails the oracle three times is discarded and ported again from an amended brief or rule. Agents never edit expected outputs or the TypeScript sources, and the gate refuses `todo!`, `unimplemented!` and ignored tests.
 
 ## How work runs during the port
 
-- **PRs.** `feat/` branches from develop, squash-merged. One PR per layer or feature batch, larger than A47's usual size, which the scope ADR amends for the port. Seams stay small and land first. A pattern review comes after the first few thousand lines of each layer PR.
+- **PRs.** `feat/` branches from develop, squash-merged. One PR per layer or feature batch, about 8,000 to 15,000 lines instead of A47's usual size ([ADR 0031](../adr/0031-rust-core.md#building-the-port)). Seams stay small and land first. A pattern review comes after the first few thousand lines of each layer PR.
 - **No CI on develop during the port.** The gate is local, through the git hooks:
   - pre-commit: formatting and lint on the touched crates;
   - pre-push: the touched crates' tests and the oracle comparison;
@@ -87,7 +87,7 @@ For maintainers and contributors. This page covers why seampact's compiler and g
 
 ## Order
 
-1. **Before the first port PR:** the scope ADR, the rulebook and the agents' Rust skills, a formatter spike, the oracle tooling (expected outputs, pass-half dumps, the expected-differences format), and four small proofs of concept: oracle strength, a two-agent stress test of the rulebook, model choice and restart against repair, and how many lanes build at once on one machine.
+1. **Before the first port PR:** the scope ADR (ADR 0031), the rulebook and the agents' Rust skills, a formatter spike, the oracle tooling (expected outputs, pass-half dumps, the expected-differences format), and four small proofs of concept: oracle strength, a two-agent stress test of the rulebook, model choice and restart against repair, and how many lanes build at once on one machine.
 2. **Seams:** the workspace skeleton and lints, source spans and diagnostics, the IR and authoring types, the canonical JSON writer, the generator writer.
 3. **Layers:**
    1. the loader and the passes, which are the critical path;
@@ -97,8 +97,3 @@ For maintainers and contributors. This page covers why seampact's compiler and g
    5. the launchers per ecosystem;
    6. CI and the release.
 4. **2.0.0 features**, each after its layer reaches parity.
-
-## Open
-
-- The TypeScript formatter (Biome, oxc or our own printer), and how a project's formatter plugs in.
-- Integers above 2^53 in examples and defaults: today they are rounded, Rust can keep them exact.

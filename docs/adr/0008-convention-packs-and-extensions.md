@@ -1,6 +1,6 @@
 # ADR 0008: Convention packs and user extensions
 
-Status: accepted
+Status: accepted. Amended for 2.0.0 by [ADR 0031](0031-rust-core.md): the first-party packs are embedded in the binary, and lint plugins are removed (ADR 0006, section 4), so a house kit is a pack.
 
 ## Context
 

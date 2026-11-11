@@ -1,6 +1,6 @@
 # ADR 0009: Modular packaging and target composition
 
-Status: accepted
+Status: accepted. Amended for 2.0.0 by [ADR 0031](0031-rust-core.md): the first-party generators are compiled into one binary, each inert until the config names it; the compiler-side npm packages and the `codegen-*` targets are removed; targets get short ids; community targets are external programs.
 
 ## Context
 

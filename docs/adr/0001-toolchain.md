@@ -1,6 +1,6 @@
 # ADR 0001: Toolchain
 
-Status: accepted
+Status: accepted. Amended for 2.0.0 by [ADR 0031](0031-rust-core.md): the Rust toolchain is pinned by `rust-toolchain.toml` beside Node.
 
 ## Context
 

@@ -1,6 +1,6 @@
 # ADR 0015: Codegen determinism and the conformance suite
 
-Status: accepted
+Status: accepted. Amended for 2.0.0 by [ADR 0031](0031-rust-core.md): determinism holds per binary version, and no target pins its own Prettier.
 
 ## Context
 
