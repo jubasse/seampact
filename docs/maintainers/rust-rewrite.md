@@ -14,11 +14,11 @@ For maintainers and contributors. This page covers why seampact's compiler and g
   - the compiler (loader, pipeline, passes, finalize);
   - OpenAPI, diff, lint, bundles and the CLI;
   - the generator half of every family (TypeScript, PHP, Python, Kotlin);
-  - the repository tooling, as `cargo xtask`.
 - **Stays as it is:**
   - the runtime packages each language imports (server runtime, hooks, the PHP, Python and Spring runtimes);
   - the packs, which are YAML data;
-  - the consumer projects and the docs site.
+  - the consumer projects and the docs site;
+  - the repository scripts that work well in TypeScript.
 - **Unchanged contracts:** the contract grammar, the IR and the config. The IR stays the same bytes: keys in UTF-16 code-unit order, numbers written as ECMAScript writes them.
 - **Public interfaces:** the IR JSON Schema, the generator protocol schema and the CLI. The Rust crates are not published in 2.0.0.
 
@@ -36,6 +36,7 @@ For maintainers and contributors. This page covers why seampact's compiler and g
   - user diagnostics go through a sink;
   - environment failures (I/O, network, a bad bundle) are typed errors per crate;
   - a bug is an internal diagnostic with its own exit code, never a silent fallback.
+- **Ready for a watch mode and a language server.** The compiler is a library function (files in, IR and diagnostics out, no global state, no exit midway), diagnostics carry a file position, the writer touches only files whose bytes change, and the set of input files is explicit.
 - **Pass ownership (ADR 0006) enforced by types.** Each pass half returns its own output and reads earlier outputs by shared reference. Writing outside ownership does not compile.
 
 ## Generators
@@ -50,7 +51,10 @@ For maintainers and contributors. This page covers why seampact's compiler and g
 - **One refusal code per fault**, from one list. The troubleshooting tables are generated from it.
 - **Generated code style.** Blank lines go before `return`, `if`, loops, `switch`, `try` and `throw`, after a group of declarations and after a block. Lines are at most 100 columns, or the language's norm. One code model and one printer serve PHP, Python and Java.
 - **Your own formatter.** A project can run its own formatter on the generated files. The generated-file checks then compare the formatted output, so reformatting is not reported as a hand edit.
+- **First-party generators are compiled into the binary.** Each one stays inert until the config names its target: it writes nothing, refuses nothing and adds no run time. Shipping them as shared libraries or WebAssembly packages would save a few megabytes at the cost of an ABI, per-platform artefacts and a runtime engine.
+- **One contract inside and outside.** The generator trait inside the binary has the same contract as the external protocol: the IR and the target options in, files and refusals out. A first-party generator can move out of the binary, or a community one move in, without a rewrite.
 - **Custom targets.** An external generator protocol takes the IR in and gives files out, in any language, through a versioned JSON schema. Each first-party target also runs through the protocol in one test, so the protocol cannot fall behind.
+- **Installed with each ecosystem's own tool.** npm platform packages, PyPI wheels, Gradle and Maven plugins that fetch the platform binary, and the Composer package. A project installs it as a development dependency, so its lockfile pins the version. A launcher holds no generation logic: it fetches the binary, checks its SHA-256, runs it and wires the output into the build (Gradle, Maven) or the framework's console (artisan, `bin/console`, `manage.py`). Linux binaries are static, so they also run on Alpine images. Stacks without a launcher download the binary, and the config pins its version.
 
 ## How the port is checked
 
@@ -70,13 +74,15 @@ For maintainers and contributors. This page covers why seampact's compiler and g
   - pre-commit: formatting and lint on the touched crates;
   - pre-push: the touched crates' tests and the oracle comparison;
   - before a merge: the full gate.
+
+  At a few milestones, the lead starts one manual CI run on Linux, macOS and Windows.
 - **CI is rebuilt last.** It covers the five platforms, the release dry run and new required checks, then the workflows are switched back on.
 - **Portability from the first seam:**
   - UTF-8 paths and one validated relative-path type;
   - output paths that differ only by case or Unicode normalisation are refused;
   - `cargo check` runs for the five target triples.
 - **The full gate runs on the rebased tip** before each merge, not only on the lane's branch.
-- **Repository scripts move to `cargo xtask`.** Each TypeScript script stays until its xtask version gives the same outputs.
+- **Repository scripts stay in TypeScript unless porting pays.** Scripts that ran the TypeScript compiler call the binary instead. A script moves to `cargo xtask` only when it must be rewritten anyway (the release, for cargo and the platform packages) would otherwise copy Rust types, or a measurement shows it slows CI; it then keeps its TypeScript version until the xtask one gives the same outputs.
 
 ## Order
 
@@ -93,8 +99,5 @@ For maintainers and contributors. This page covers why seampact's compiler and g
 
 ## Open
 
-- First-party generators compiled into the binary (each inert until the config names it) or shipped as WebAssembly packages.
 - The TypeScript formatter (Biome, oxc or our own printer), and how a project's formatter plugs in.
 - Integers above 2^53 in examples and defaults: today they are rounded, Rust can keep them exact.
-- A manual CI run on three operating systems at a few milestones during the port.
-- Which repository tools, if any, stay in TypeScript.
