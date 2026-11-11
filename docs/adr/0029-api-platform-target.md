@@ -1,6 +1,6 @@
 # ADR 0029: The API Platform server target
 
-Status: accepted, Symfony flavour delivered by #427, #429, #437, #445, #448; app input rules after 2.0.0; the Laravel flavour later, on demand
+Status: accepted, Symfony flavour delivered by #427, #429, #437, #445, #448; app input rules in 2.0.0; the Laravel flavour later, on demand
 
 ## Context
 
@@ -140,7 +140,7 @@ Step 8b is refused by name on this target in 1.1.0: the generator emits no `<Api
 
 ### The Laravel flavour
 
-API Platform's Laravel flavour comes later, on demand. It was planned for 1.2.0 and moved out in November 2026: `api-platform/laravel` had about 32,000 Packagist downloads a month, 0.14% of `laravel/framework`'s 23.5 million, while `api-platform/symfony` had 8.7% of `symfony/framework-bundle`'s. Laravel apps build their APIs on Laravel's own resources, which `pack-jsonapi` will render after 2.0.0. The design below stays for when an app asks for it. It has the same shape: routes registered per operation from `uriTemplate` and `name`, wrapped in `ApiPlatformMiddleware`; `ApiPlatformController` runs the same provider and processor chains, so the decorators port. It differs in its security, a Gate `policy` checked after the data is provided, in its errors, through an `ErrorHandler` decorating Laravel's, and in its Eloquent-centred metadata. The Laravel target's boundary is middleware, which runs before the controller, so the access steps stay in front there too. Laravel's native 422 body is a `pack-laravel` concern, after 2.0.0.
+API Platform's Laravel flavour comes later, on demand. It was planned for 1.2.0 and moved out in November 2026: `api-platform/laravel` had about 32,000 Packagist downloads a month, 0.14% of `laravel/framework`'s 23.5 million, while `api-platform/symfony` had 8.7% of `symfony/framework-bundle`'s. Laravel apps build their APIs on Laravel's own resources, which `pack-jsonapi` renders in 2.0.0. The design below stays for when an app asks for it. It has the same shape: routes registered per operation from `uriTemplate` and `name`, wrapped in `ApiPlatformMiddleware`; `ApiPlatformController` runs the same provider and processor chains, so the decorators port. It differs in its security, a Gate `policy` checked after the data is provided, in its errors, through an `ErrorHandler` decorating Laravel's, and in its Eloquent-centred metadata. The Laravel target's boundary is middleware, which runs before the controller, so the access steps stay in front there too. Laravel's native 422 body is a `pack-laravel` concern of 2.0.0.
 
 ### Refused by name or waiting
 
@@ -149,7 +149,7 @@ API Platform's Laravel flavour comes later, on demand. It was planned for 1.2.0 
 | Waits for | What |
 |---|---|
 | on demand | API Platform 4 (refused by the compatibility matrix); the Laravel flavour |
-| after 2.0.0 | app input rules |
+| 2.0.0 | app input rules |
 | an app that needs it | `nativeDocs`; API Platform's `securityPostDenormalize` and `securityPostValidation` on contract operations; API Platform's own read, content negotiation, deserialize, validate, paginator and serializer on contract operations |
 
 Worker runtimes are refused as on Symfony, by the same two guards.

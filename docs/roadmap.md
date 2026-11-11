@@ -2,7 +2,7 @@
 
 ## 1.1 (delivered)
 
-- App input rules: add your own rules on top of the generated validation, written in your validator library, on the Node and PHP servers ([ADR 0028](adr/0028-app-input-rules.md)). Python, Spring Boot and API Platform follow after 2.0.0.
+- App input rules: add your own rules on top of the generated validation, written in your validator library, on the Node and PHP servers ([ADR 0028](adr/0028-app-input-rules.md)). Python, Spring Boot and API Platform follow in 2.0.0.
 - API Platform on Symfony.
 - Next.js route handlers.
 - An axios client.
@@ -10,27 +10,26 @@
 
 ## 2.0.0: the core in Rust
 
-seampact's compiler and generators move from TypeScript to Rust, before any new feature, so new targets are written once.
+seampact's compiler and generators move from TypeScript to Rust, and the features first planned for 1.2.0 land on the new core, so nothing is written twice.
 
 - One standalone binary of about 11-14 MB per platform, against about 125 MB today (estimate). No stack needs Node.js to compile, generate or check anymore, TypeScript targets included.
 - Every first-party generator runs in the binary. The runtime packages your app imports stay separate, opt-in packages, as today. Most npm packages of the compiler side (`compiler`, `openapi`, `diff`, `lint`, `codegen-core`, the `codegen-*` targets) are retired; `@seampact/cli` installs the launcher and one platform package.
 - The contract, the IR and the config stay the same. The generated code keeps its behaviour; its formatting changes once, to one airy style shared by every language.
 - Custom targets: an external generator protocol (the IR in, files out), in any language.
 - `seampact test`: the server HTTP suite in the binary, so JVM, PHP and Python apps run it without Node.js.
+- App input rules on Python (FastAPI, Django REST Framework, Django Ninja), Spring Boot and API Platform.
+- Rights adapters: CASL for NestJS, spatie/laravel-permission for Laravel.
+- JSON:API on Laravel 13's own JSON:API resources, and the native 422 of the Laravel pack.
+- Client conformance suite: one black-box test suite every client target passes (fetch, axios, React, Vue, Angular, mobile), the client-side twin of the server HTTP suite.
+- One types output for a Next.js full-stack app.
+- A Spring Boot with Angular example.
+- The fixes planned for 1.1.1: dotted wire names in Laravel's validation error keys, gzip bodies with several members on Python and Spring Boot, one path base for every diagnostic.
 - Tests: the compiler and generator tests move to Rust with the code they test, written as Rust tests rather than copies; the same fixtures, goldens and spec vectors stay the shared corpus, and during the port every output is compared with the TypeScript compiler's. Runtime tests and the consumer projects stay in each language, since they prove the generated code in a real app.
 - CI rebuilt around the binary: Rust, JVM, PHP and Python jobs no longer install Node.js, TypeScript jobs install only what they test, and the repository tooling moves to Rust too. The release publishes the binary per platform, a small npm launcher and lighter Python, Maven and Composer packages, with faster CI and releases.
 
 ## After 2.0.0
 
-The features first planned for 1.2.0, in the next minor releases:
-
-- App input rules on Python (FastAPI, Django REST Framework, Django Ninja), Spring Boot and API Platform.
-- Rights adapters: CASL for NestJS, spatie/laravel-permission for Laravel.
 - A Flask target.
-- JSON:API on Laravel 13's own JSON:API resources, and the native 422 of the Laravel pack.
-- Client conformance suite: one black-box test suite every client target passes (fetch, axios, React, Vue, Angular, mobile), the client-side twin of the server HTTP suite.
-- One types output for a Next.js full-stack app.
-- A Spring Boot with Angular example.
 - ASP.NET Core, the first target on a .NET runtime, published on NuGet.
 - API Platform's Laravel flavour: later, on demand. Its usage is small beside Laravel's own resources (`api-platform/laravel` has about 0.14% of `laravel/framework`'s downloads).
 
