@@ -27,7 +27,7 @@ seampact's compiler and generators move from TypeScript to Rust, and the feature
 - A Spring Boot with Angular example.
 - The fixes planned for 1.1.1: dotted wire names in Laravel's validation error keys, gzip bodies with several members on Python and Spring Boot, one path base for every diagnostic.
 - Tests: the compiler and generator tests move to Rust with the code they test, written as Rust tests rather than copies; the same fixtures, goldens and spec vectors stay the shared corpus, and during the port every output is compared with the TypeScript compiler's. Runtime tests and the consumer projects stay in each language, since they prove the generated code in a real app.
-- CI rebuilt around the binary: Rust, JVM, PHP and Python jobs no longer install Node.js, TypeScript jobs install only what they test, and the repository tooling moves to Rust too. The release publishes the binary per platform, a small npm launcher and lighter Python, Maven and Composer packages, with faster CI and releases.
+- CI rebuilt around the binary: Rust, JVM, PHP and Python jobs no longer install Node.js, TypeScript jobs install only what they test, and the repository scripts call the binary. The release publishes the binary per platform, a small npm launcher and lighter Python, Maven and Composer packages, with faster CI and releases.
 
 ## After 2.0.0
 

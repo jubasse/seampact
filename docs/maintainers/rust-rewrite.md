@@ -14,11 +14,11 @@ For maintainers and contributors. This page covers why seampact's compiler and g
   - the compiler (loader, pipeline, passes, finalize);
   - OpenAPI, diff, lint, bundles and the CLI;
   - the generator half of every family (TypeScript, PHP, Python, Kotlin);
-  - the repository tooling, as `cargo xtask`.
 - **Stays as it is:**
   - the runtime packages each language imports (server runtime, hooks, the PHP, Python and Spring runtimes);
   - the packs, which are YAML data;
-  - the consumer projects and the docs site.
+  - the consumer projects and the docs site;
+  - the repository scripts that work well in TypeScript.
 - **Unchanged contracts:** the contract grammar, the IR and the config. The IR stays the same bytes: keys in UTF-16 code-unit order, numbers written as ECMAScript writes them.
 - **Public interfaces:** the IR JSON Schema, the generator protocol schema and the CLI. The Rust crates are not published in 2.0.0.
 
@@ -82,7 +82,7 @@ For maintainers and contributors. This page covers why seampact's compiler and g
   - output paths that differ only by case or Unicode normalisation are refused;
   - `cargo check` runs for the five target triples.
 - **The full gate runs on the rebased tip** before each merge, not only on the lane's branch.
-- **Repository scripts move to `cargo xtask`.** Each TypeScript script stays until its xtask version gives the same outputs. The benchmark script stays in TypeScript, and the consumer-project runner moves last, if at all.
+- **Repository scripts stay in TypeScript unless porting pays.** Scripts that ran the TypeScript compiler call the binary instead. A script moves to `cargo xtask` only when it must be rewritten anyway (the release, for cargo and the platform packages) or would otherwise copy Rust types; it then keeps its TypeScript version until the xtask one gives the same outputs.
 
 ## Order
 
