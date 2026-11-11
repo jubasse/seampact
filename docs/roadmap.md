@@ -10,11 +10,12 @@
 
 ## 2.0.0: the core in Rust
 
-seampact's compiler and generators move from TypeScript to Rust, and the features first planned for 1.2.0 land on the new core, so nothing is written twice.
+seampact's compiler and generators move from TypeScript to Rust, and the features first planned for 1.2.0 land on the new core, so nothing is written twice. How the port runs: [the 2.0.0 Rust rewrite](maintainers/rust-rewrite.md).
 
 - One standalone binary of about 11-14 MB per platform, against about 125 MB today (estimate). No stack needs Node.js to compile, generate or check anymore, TypeScript targets included.
 - Every first-party generator runs in the binary. The runtime packages your app imports stay separate, opt-in packages, as today. Most npm packages of the compiler side (`compiler`, `openapi`, `diff`, `lint`, `codegen-core`, the `codegen-*` targets) are retired; `@seampact/cli` installs the launcher and one platform package.
-- The contract, the IR and the config stay the same. The generated code keeps its behaviour; its formatting changes once, to one airy style shared by every language.
+- The contract, the IR and the config stay the same. The generated code keeps its behaviour. Its formatting changes once, to one airy style shared by every language, and you can run your own formatter on the generated files without them being reported as hand-edited.
+- One refusal code per fault on every stack: the same unsupported or inconsistent form gets the same code in TypeScript, PHP, Python and Kotlin. A few codes change name.
 - Custom targets: an external generator protocol (the IR in, files out), in any language.
 - `seampact test`: the server HTTP suite in the binary, so JVM, PHP and Python apps run it without Node.js.
 - App input rules on Python (FastAPI, Django REST Framework, Django Ninja), Spring Boot and API Platform.
