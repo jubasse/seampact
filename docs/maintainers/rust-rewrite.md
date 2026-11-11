@@ -74,13 +74,15 @@ For maintainers and contributors. This page covers why seampact's compiler and g
   - pre-commit: formatting and lint on the touched crates;
   - pre-push: the touched crates' tests and the oracle comparison;
   - before a merge: the full gate.
+
+  At a few milestones, the lead starts one manual CI run on Linux, macOS and Windows.
 - **CI is rebuilt last.** It covers the five platforms, the release dry run and new required checks, then the workflows are switched back on.
 - **Portability from the first seam:**
   - UTF-8 paths and one validated relative-path type;
   - output paths that differ only by case or Unicode normalisation are refused;
   - `cargo check` runs for the five target triples.
 - **The full gate runs on the rebased tip** before each merge, not only on the lane's branch.
-- **Repository scripts move to `cargo xtask`.** Each TypeScript script stays until its xtask version gives the same outputs.
+- **Repository scripts move to `cargo xtask`.** Each TypeScript script stays until its xtask version gives the same outputs. The benchmark script stays in TypeScript, and the consumer-project runner moves last, if at all.
 
 ## Order
 
@@ -99,5 +101,3 @@ For maintainers and contributors. This page covers why seampact's compiler and g
 
 - The TypeScript formatter (Biome, oxc or our own printer), and how a project's formatter plugs in.
 - Integers above 2^53 in examples and defaults: today they are rounded, Rust can keep them exact.
-- A manual CI run on three operating systems at a few milestones during the port.
-- Which repository tools, if any, stay in TypeScript.
