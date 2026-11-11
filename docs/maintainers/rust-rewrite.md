@@ -27,7 +27,8 @@ For maintainers and contributors. This page covers why seampact's compiler and g
 - **Not opinionated, as before.** Every target supports every shape the contract allows. Shared Rust code never caps a stack:
   - what a target refuses is data, recording what it delivers so far;
   - a stack's own idiom stays in that stack's code.
-- **Idiomatic Rust, not a transliteration.** Each layer starts with a design note (crate API, core types, ownership, errors), reviewed before its port PRs. The port keeps the behaviour, never the TypeScript shape.
+- **Keep the algorithms, redesign the data.** The port keeps the TypeScript algorithms and the function decomposition, so each Rust function traces back to its TypeScript one through a generated map. Data, ownership and types are redesigned for Rust, as the layer's design note says (crate API, core types, ownership, errors), reviewed before its port PRs. A line-by-line copy is not the goal: the result is clean, idiomatic Rust.
+- **One rulebook for every lane.** A shared TypeScript to Rust rulebook maps the idioms and lists where JavaScript behaves differently from Rust: numbers as 64-bit floats, string lengths and indices in UTF-16, sort stability, `Object.keys` order, `Map` order, case mapping outside ASCII, regex flavour, number text.
 - **Quality bar from the first PR:**
   - `unsafe_code = forbid`, clippy `all` and `pedantic`, and no `unwrap`, `expect` or `panic` outside tests;
   - `missing_docs` on libraries, plus rustfmt, cargo-deny and cargo-machete.
@@ -58,7 +59,9 @@ For maintainers and contributors. This page covers why seampact's compiler and g
 - **Generated code is compared token by token** (whitespace aside) during the port. The formatting change lands once per language family, after parity.
 - **A refusal parity harness** compares the (code, pointer) refusals of the old generators across families, over the golden IRs.
 - **Every intended difference is listed in an expected-differences file and reviewed.** These are the 1.1.1 fixes, the unified refusal codes and the formatting change.
-- **Tests move with the code**, as Rust tests of the same behaviour, not copies. The fixtures, goldens and spec vectors stay the shared corpus. Runtime tests and consumer projects stay in their language.
+- **The fixtures, goldens and spec vectors stay the main suite.** TypeScript unit tests are ported case by case, as Rust tests of the same behaviour: tests of stable bricks, and tests that catch what the fixtures miss. A behaviour that a 2.0.0 feature changes gets a new test for the new behaviour. Runtime tests and consumer projects stay in their language.
+- **The oracle is checked too.** Deliberately broken versions of the TypeScript compiler (mutation testing) show whether the fixtures catch the breakage, before the oracle becomes the acceptance test.
+- **No shortcuts.** A module that fails the oracle three times is discarded and ported again from an amended brief or rule. Agents never edit expected outputs or the TypeScript sources, and the gate refuses `todo!`, `unimplemented!` and ignored tests.
 
 ## How work runs during the port
 
@@ -72,11 +75,12 @@ For maintainers and contributors. This page covers why seampact's compiler and g
   - UTF-8 paths and one validated relative-path type;
   - output paths that differ only by case or Unicode normalisation are refused;
   - `cargo check` runs for the five target triples.
+- **The full gate runs on the rebased tip** before each merge, not only on the lane's branch.
 - **Repository scripts move to `cargo xtask`.** Each TypeScript script stays until its xtask version gives the same outputs.
 
 ## Order
 
-1. **Before the first port PR:** the scope ADR, a formatter spike and the oracle tooling (expected outputs, pass-half dumps, the expected-differences format).
+1. **Before the first port PR:** the scope ADR, the rulebook and the agents' Rust skills, a formatter spike, the oracle tooling (expected outputs, pass-half dumps, the expected-differences format), and four small proofs of concept: oracle strength, a two-agent stress test of the rulebook, model choice and restart against repair, and how many lanes build at once on one machine.
 2. **Seams:** the workspace skeleton and lints, source spans and diagnostics, the IR and authoring types, the canonical JSON writer, the generator writer.
 3. **Layers:**
    1. the loader and the passes, which are the critical path;
