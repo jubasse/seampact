@@ -875,6 +875,17 @@ dependencies = [
 [[package]]
 name = "seampact-load"
 version = "2.0.0"
+dependencies = [
+ "camino",
+ "indexmap",
+ "seampact-authoring",
+ "seampact-diagnostics",
+ "seampact-ir",
+ "seampact-js",
+ "seampact-json",
+ "seampact-span",
+ "thiserror",
+]
 
 [[package]]
 name = "seampact-oracle"

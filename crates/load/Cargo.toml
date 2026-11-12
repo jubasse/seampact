@@ -8,6 +8,15 @@ license.workspace = true
 publish.workspace = true
 
 [dependencies]
+camino.workspace = true
+indexmap.workspace = true
+seampact-authoring.workspace = true
+seampact-diagnostics.workspace = true
+seampact-ir.workspace = true
+seampact-js.workspace = true
+seampact-json.workspace = true
+seampact-span.workspace = true
+thiserror.workspace = true
 
 [lints]
 workspace = true
