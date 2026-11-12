@@ -189,11 +189,11 @@ fn every_expected_ir_and_source_map_is_rewritten_byte_identical() {
     assert_eq!(mismatches, Vec::<String>::new(), "of {} files", files.len());
 }
 
-fn example_files() -> Vec<PathBuf> {
+fn example_files() -> Result<Vec<PathBuf>, String> {
     files_under(&repository_root().join(IR_EXAMPLES_DIRECTORY), &|path| {
         is_json_in(path, "examples")
     })
-    .unwrap()
+    .map_err(|error| error.to_string())
 }
 
 fn example_root(path: &Path) -> Root {
@@ -232,7 +232,7 @@ fn example_rewrite(path: &Path) -> Result<(Vec<Difference>, bool), String> {
 
 #[test]
 fn every_ir_example_keeps_its_value_and_its_canonical_text_is_stable() {
-    let files = example_files();
+    let files = example_files().unwrap();
     let changed_examples: Vec<String> = files
         .iter()
         .filter(|path| !is_unknown_member_example(path))
