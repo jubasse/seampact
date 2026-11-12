@@ -12,7 +12,8 @@
       "!.changeset/*.md",
       "!php/**/composer.lock",
       "!fixtures/rules/load-yaml-syntax/**",
-      "!fixtures/rules/load-workspace-shape/**"
+      "!fixtures/rules/load-workspace-shape/**",
+      "!fixtures/rules/load-file-invalid/**"
     ]
   },
   "formatter": {

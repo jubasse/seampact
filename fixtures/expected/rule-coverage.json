@@ -291,7 +291,9 @@
   "seampact/load/file-extension": [
     "rules/load-file-extension"
   ],
-  "seampact/load/file-invalid": [],
+  "seampact/load/file-invalid": [
+    "rules/load-file-invalid"
+  ],
   "seampact/load/file-missing": [
     "loader/composition/file-missing"
   ],

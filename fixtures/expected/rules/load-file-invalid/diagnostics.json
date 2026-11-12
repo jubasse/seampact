@@ -1,0 +1,16 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/file-invalid",
+      "message": "'d.json' is not valid JSON: Unexpected end of JSON input",
+      "fix": "fix the JSON, or use a .yaml file",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/3/44"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}
