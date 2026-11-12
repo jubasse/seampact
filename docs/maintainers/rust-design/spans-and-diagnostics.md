@@ -18,7 +18,7 @@ How every 2.0.0 layer records where a value came from and reports a problem abou
 - **`Span { file: FileId, range: TextRange }`**: byte offsets into the file's normalised text, with `text-size`'s `TextRange` (`u32` offsets, the type `line-index` takes). Byte offsets slice the stored text with no conversion, so they cost nothing until a position is printed.
 - **`SourceFiles`**: `add(path, raw_text) -> FileId` and `get(FileId) -> Option<&SourceFile>`. `SourceFile` owns the workspace-relative path (the TypeScript `file` string), the normalised text and its `LineIndex`. A lookup of an unknown id is `None`, never a made-up file.
 - **Normalisation in the table.** `SourceFile::new` applies the loader's `normalizeText` (strip one leading U+FEFF, then `\r\n` and a lone `\r` to `\n`) before indexing. The TypeScript computes every position on that text, and doing it here makes a span into the raw text unrepresentable. The loader lane calls it instead of porting `normalizeText`.
-- **Line and column at the edge.** `SourceFiles::location(span) -> Option<Location>` ports `siteOf`: the start and `max(start, end)` each become a 1-based line and a 1-based UTF-16 column, through `line-index` (`try_line_col`, then `to_wide(Utf16)`). This reproduces `LineCounter.linePos`, whose line starts are 0 and the offset after each `\n` of the text. A tab counts one unit, an astral character two, a position at the end of a last line without a newline is its length plus one, and offset 0 of an empty file is `1:1`.
+- **Line and column at the edge.** `SourceFiles::location(span) -> Option<Location>` ports `siteOf`, whose `max(start, end)` is in `Span::new` (an end before the start reads as the start): the start and the end each become a 1-based line and a 1-based UTF-16 column, through `line-index` (`try_line_col`, then `to_wide(Utf16)`). This reproduces `LineCounter.linePos`, whose line starts are 0 and the offset after each `\n` of the text. A tab counts one unit, an astral character two, a position at the end of a last line without a newline is its length plus one, and offset 0 of an empty file is `1:1`.
 - **`Location { file, line, column, end_line, end_column }`**: the TypeScript `SiteLocation`, the record of `SourceMap.locations`. Lines and columns are `u32`. The IR's source-map type uses this record (an item for the IR lane, section 9).
 - Offsets that leave the text or split a character give `None`: a broken span is a bug the caller reports as an internal error (section 6), never a position near it.
 
@@ -47,7 +47,7 @@ pub enum DiagnosticLayer { Api, Shared, Base, Workspace, Pack(String) }
 
 ## 4. The sink
 
-- `DiagnosticSink` wraps a `Vec<Diagnostic>`: `report(diagnostic)`, `error_count()`, `len()`, `into_diagnostics()`. A pass gets `&mut DiagnosticSink` through its context, as the TypeScript `PassContext.report` pushes onto one array per api.
+- `DiagnosticSink` wraps a `Vec<Diagnostic>`: `report(diagnostic)`, `error_count()`, `len()`, `diagnostics()`, `into_diagnostics()`. A pass gets `&mut DiagnosticSink` through its context, as the TypeScript `PassContext.report` pushes onto one array per api.
 - Emit order is kept; the order users see comes from `diagnostic_sort` at the edge (the loader's result, each api's result, the lint run), as in the TypeScript. A stable sort keeps the emit order on a full tie.
 - One sink per api and one for the workspace. Apis run in parallel each own their sink, merged in api order afterwards; no lock, no `Arc` (IR note section 4).
 - Deduplication (the loader's `seen` set) and relabelling stay in the loader's reporter, which owns its sink.
@@ -61,7 +61,7 @@ pub enum DiagnosticLayer { Api, Shared, Base, Workspace, Pack(String) }
 
 ## 6. Bugs: the internal error and the exit code
 
-- `InternalError { what: String, location: &'static Location<'static> }` (`std::panic::Location` from `#[track_caller]`) is the `Err` of a function whose failure can only be a bug: a broken span, a missing table entry the code put there. It goes up with `?` to the driver, never into a sink.
+- `InternalError { what: String, at: &'static Location<'static> }` (`std::panic::Location` from `#[track_caller]`) is the `Err` of a function whose failure can only be a bug: a broken span, a missing table entry the code put there. It goes up with `?` to the driver, never into a sink.
 - The CLI prints it as one line, `internal error: <what> at <file>:<line>. Fix: report it with the seampact version.`, and exits with `EXIT_INTERNAL = 3`. `EXIT_SUCCESS = 0`, `EXIT_REFUSED = 1` and `EXIT_USAGE = 2` keep the TypeScript values; the native channels already read any other exit as `binary.compile-failed` (ADR 0010).
 - A user fault is never an `InternalError`; an environment failure is the crate's `thiserror` enum (PORTING section 3).
 

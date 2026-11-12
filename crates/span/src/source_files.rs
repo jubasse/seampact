@@ -132,7 +132,8 @@ impl SourceFiles {
         Ok(FileId::from_index(index))
     }
 
-    /// The file of `file`; `None` for an id of another table.
+    /// The file of `file`; `None` for an id past the table. An id is only meaningful in
+    /// the table that gave it.
     #[must_use]
     pub fn get(&self, file: FileId) -> Option<&SourceFile> {
         let index = usize::try_from(file.index()).ok()?;
@@ -313,7 +314,7 @@ mod tests {
     }
 
     #[test]
-    fn an_id_of_another_table_has_no_file() {
+    fn an_id_past_the_table_has_no_file() {
         let mut other = SourceFiles::new();
         other.add("a.yaml", "").unwrap();
         let second = other.add("b.yaml", "").unwrap();
