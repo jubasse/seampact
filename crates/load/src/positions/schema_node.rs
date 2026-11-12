@@ -5,7 +5,7 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use indexmap::IndexMap;
-use seampact_json::{JsonNumber, JsonValue};
+use seampact_json::{JsonNumber, JsonObject, JsonValue};
 
 /// The keywords whose value maps names to schemas.
 const SCHEMA_MAP_KEYWORDS: [&str; 4] = [
@@ -68,7 +68,7 @@ impl SchemaNode {
     }
 
     /// The node a JSON object is, with every object below it a node of `file`.
-    pub(super) fn from_object(file: &'static str, object: &seampact_json::JsonObject) -> Self {
+    pub(super) fn from_object(file: &'static str, object: &JsonObject) -> Self {
         let members = object
             .iter()
             .map(|(key, value)| (key.clone(), SchemaValue::from_json(file, value)))
