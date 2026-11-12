@@ -303,7 +303,8 @@ In pipeline order (ADR 0006 section 1).
 
 ### `crates`
 
-- `crates/js`: JavaScript semantics shared by every port lane: UTF-16 string order and JavaScript object key order.
+- `crates/js`: JavaScript semantics shared by every port lane: UTF-16 string order, JavaScript object key order and ECMAScript number text.
+- `crates/json`: JSON values as JavaScript holds them, their canonical text (IR, source map and OpenAPI bytes), the JS-integer reader and the JSON Pointer escape.
 
 ### `scripts`
 

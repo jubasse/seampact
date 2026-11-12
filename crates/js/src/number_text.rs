@@ -64,7 +64,9 @@ mod tests {
     const TWO_POW_53: f64 = 9_007_199_254_740_992.0;
 
     fn number_text(value: f64) -> String {
-        FiniteNumber::new(value).map(|number| number.to_string()).unwrap()
+        FiniteNumber::new(value)
+            .map(|number| number.to_string())
+            .unwrap()
     }
 
     fn hash_of(number: FiniteNumber) -> u64 {

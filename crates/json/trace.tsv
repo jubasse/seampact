@@ -1,0 +1,2 @@
+src/canonical.rs#canonical_json	packages/core/spec/src/json/canonical.ts#canonicalJson
+src/pointer.rs#escape_pointer	packages/core/spec/src/json/pointer.ts#escapePointer
