@@ -1,0 +1,13 @@
+[package]
+name = "seampact-load"
+description = "The loader of the Rust port: workspace readers, load limits and budget, load diagnostics and include fragments."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+
+[lints]
+workspace = true

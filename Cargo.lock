@@ -873,6 +873,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "seampact-load"
+version = "2.0.0"
+
+[[package]]
 name = "seampact-oracle"
 version = "2.0.0"
 dependencies = [
