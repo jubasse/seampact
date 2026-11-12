@@ -753,7 +753,7 @@
     "rules/tree-relay-declaration"
   ],
   "seampact/tree/relay-name": [
-    "rules/workspace-relay-name"
+    "rules/tree-relay-name"
   ],
   "seampact/tree/relay-target": [
     "bundle-channels/imports/tasks-service",
@@ -772,9 +772,9 @@
     "rules/derive-relay-declaration/svc",
     "rules/link-relay-superset/svc",
     "rules/tree-relay-declaration/svc",
+    "rules/tree-relay-name/svc",
     "rules/workspace-relay-cycle/svc",
-    "rules/workspace-relay-cycle/tasks",
-    "rules/workspace-relay-name/svc"
+    "rules/workspace-relay-cycle/tasks"
   ],
   "seampact/tree/relay-unknown": [],
   "seampact/tree/required-property": [

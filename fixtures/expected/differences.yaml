@@ -10,3 +10,27 @@ differences:
     change: value
     from: 9223372036854776000
     to: 9223372036854775807
+  - id: big-integers-exact-tree-schemas
+    reason: The Rust core keeps an integer default above 2^53 exactly in the tree.schemas half, where the TS oracle rounds it to a double.
+    decision: docs/adr/0031-rust-core.md#what-stays
+    applies:
+      fixtures: ["big-integers/**"]
+      output: halves
+      api: bigints
+      half: tree.schemas
+      pointer: /schemas/Counter/properties/0/default
+    change: value
+    from: 9223372036854776000
+    to: 9223372036854775807
+  - id: big-integers-exact-derive-errors
+    reason: The Rust core keeps an integer error example above 2^53 exactly in the derive.errors half, where the TS oracle rounds it to a double.
+    decision: docs/adr/0031-rust-core.md#what-stays
+    applies:
+      fixtures: ["big-integers/**"]
+      output: halves
+      api: bigints
+      half: derive.errors
+      pointer: /errors/api.limit_exceeded/example/limit
+    change: value
+    from: 9007199254740992
+    to: 9007199254740993

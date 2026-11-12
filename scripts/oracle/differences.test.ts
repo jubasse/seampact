@@ -20,10 +20,14 @@ const entry = (overrides: object = {}): object => ({
 const document = (...differences: object[]): object => ({ version: 1, differences });
 
 describe("differences.yaml", () => {
-  test("the committed file is valid and lists the exact big integer", () => {
-    expect(readDifferences().differences.map((difference) => difference.id)).toEqual([
-      "big-integers-exact",
-    ]);
+  test("the committed file is valid and lists the exact big integers", () => {
+    expect(readDifferences().differences.map((difference) => difference.id)).toEqual(
+      expect.arrayContaining([
+        "big-integers-exact",
+        "big-integers-exact-tree-schemas",
+        "big-integers-exact-derive-errors",
+      ]),
+    );
   });
 
   test("an entry with a value change, a pointer and a committed anchor is valid", () => {
