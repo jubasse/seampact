@@ -81,16 +81,16 @@ pub struct HalfInput<'input> {
 pub trait OracleSubject {
     /// Compiles `fixture` from its entry file.
     ///
-    /// The subject takes the `imports` option from the fixture, as `scripts/oracle/compiler.ts`
-    /// does.
+    /// The subject resolves no workspace imports: like `scripts/oracle/compiler.ts`, the oracle
+    /// names every fixture with `workspace.imports` in `excluded.json`.
     fn compile(&self, fixture: &Fixture) -> SubjectAnswer<Compilation>;
 
     /// Runs one pass half of `api` in `fixture` and gives the delta it wrote, in the convention of
     /// `packages/core/compiler/src/pipeline/draft-fixture.ts`.
     ///
     /// `input` holds the expected deltas the half starts from: those of the halves before it in
-    /// `api`, and those of the other apis, the relayed ones among them. The subject takes the
-    /// `imports` option from the fixture, as `scripts/oracle/compiler.ts` does.
+    /// `api`, and those of the other apis, the relayed ones among them. As for `compile`, no
+    /// workspace import is resolved.
     fn run_half(
         &self,
         fixture: &Fixture,
