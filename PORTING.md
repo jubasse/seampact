@@ -8,7 +8,7 @@ The skills `seampact-rust` (how Rust is written here) and `seampact-rust-port-ts
 
 - Keep the TypeScript algorithm and its function decomposition: one Rust function per TypeScript function, same steps, same order of checks, same diagnostics.
 - Redesign the data as the layer's design note says: enums with exhaustive `match` for the IR, grammar nodes and diagnostics; newtypes for ids and names; borrowed or interned strings and source spans instead of copies; traits for generators, lint rules and passes; no class hierarchy.
-- Each crate keeps a `trace.tsv`: one line per ported function, `<rust path>\t<ts file>#<function>`. A Rust function with no TypeScript origin (a helper the redesign needs) is not listed.
+- Each crate keeps a `trace.tsv`: one line per ported function, `<rust path>\t<ts file>#<function>`. A Rust function with no TypeScript origin (a helper the redesign needs) is not listed. The agent writes it for now; POC 1 decides whether a script generates it and how the gate checks it.
 - Never port what the brief's skip list names (npm resolution, the TypeScript plugin API, Prettier glue).
 
 ## 2. Where JavaScript and Rust differ
@@ -18,17 +18,22 @@ Each row is a known trap. Use the shared helper named in the row, never a local 
 | JavaScript | Rust trap | Rule |
 |---|---|---|
 | `a < b`, `.sort()` with no comparator, `compareCodeUnits` on strings: UTF-16 code-unit order | `str` and `String` compare bytes, which is code-point order: astral characters (surrogate pairs in JS) sort before U+E000..U+FFFF in JS, after them in Rust | every string order goes through the UTF-16 compare helper; `BTreeMap<String, _>` iterates in byte order, so never emit output from its iteration |
-| `s.length`, indices, columns: UTF-16 code units | `len()` is bytes, `chars()` is scalar values | limits, positions and columns count UTF-16 units through the text helper; spans store byte offsets and convert at the edge |
-| `number`: one 64-bit float | integers and floats are distinct types | IR numbers keep the source text's value; integers above 2^53 stay exact (ADR 0031); arithmetic that JS does in floats is checked for the same result |
+| `s.length`, indices, columns: UTF-16 code units; `[...s].length`: code points | `len()` is bytes, `chars()` is scalar values | count what the TS counts: load limits, positions and columns in UTF-16 units through the text helper; JSON Schema `minLength` and `maxLength` in code points (`chars().count()`), as the example and wire checks do; spans store byte offsets and convert at the edge |
+| `number`: one 64-bit float | integers and floats are distinct types | IR numbers have the TS value, except integers above 2^53 in examples and defaults, which stay exact (ADR 0031); arithmetic that JS does in floats is checked for the same result |
 | `String(n)`, `JSON.stringify(n)`: ECMAScript number text (`1e+21`, `0.1`, `-0` gives `0`) | `{}` formatting differs (`1e21_f64` prints as `1000000000000000000000`) | numbers are written by the ECMAScript number-text helper only |
 | `Object.keys`, `for...in`, `Object.entries`: integer-like keys first, ascending, then insertion order | `HashMap` has no order, `BTreeMap` sorts bytes | a map that is iterated uses `IndexMap`; where the TS iterated an object with keys like `"200"` or `"404"`, reproduce the integer-first order explicitly |
 | `Map`, `Set`: insertion order | `HashMap`, `HashSet`: random | `IndexMap` and `IndexSet` when iterated; `HashMap` only for lookups never iterated into output |
 | `Array.prototype.sort`: stable | `sort_unstable` reorders equal keys | `sort_by` (stable) unless the keys are unique and the TS sort was on the same total key |
-| `toLowerCase`, `toUpperCase`: full Unicode mapping, locale-free | `to_lowercase` matches outside ASCII except a few context-sensitive cases; `to_ascii_lowercase` is ASCII only | names and wire forms that the grammar limits to ASCII use the ASCII forms; any other text uses `to_lowercase` and a non-ASCII test |
+| `toLowerCase`, `toUpperCase`: full Unicode mapping, locale-free | `to_lowercase` and `to_uppercase` match JS, final sigma included; `to_ascii_lowercase` changes ASCII only | use the same mapping as the TS: the ASCII forms only where the TS input is ASCII by grammar, with a non-ASCII test otherwise |
 | `RegExp`: ECMAScript flavour, `u` flag | the `regex` crate has no backreferences or lookaround, different classes | contract `pattern` values use the ECMAScript-compatible engine the seam picks, tested against the pattern vectors; internal regexes are rewritten as plain code when simple |
-| `JSON.stringify` drops `undefined`, writes `NaN` as `null`, escapes as ECMAScript does | `serde_json` refuses NaN, escapes differently | IR and OpenAPI JSON go through the canonical writer only |
+| `JSON.stringify` drops `undefined` members (writes `null` in arrays); a JS string can hold a lone surrogate | a Rust `String` cannot hold a lone surrogate; `serde_json::Map` sorts its keys unless `preserve_order` is on | IR and OpenAPI JSON go through the canonical writer only; how the loader treats a lone-surrogate escape is fixed in its design note |
 | `Math.round(x)`: halves toward +infinity | `f64::round` rounds halves away from zero | use the rounding helper; check negative halves |
-| `parseInt`, `Number(s)`: lenient parsing | `str::parse` is strict | port the accepted input set exactly, with tests on the edge strings the TS accepted |
+| `parseInt`, `Number(s)`: their own accepted sets (`Number("")` is `0`, `Number("Infinity")` is infinite) | `str::parse::<f64>` accepts `inf`, `NaN` and `infinity`, refuses `""` and surrounding spaces | port the accepted input set exactly, with tests on the edge strings |
+| `trim`, `\s` in a regex: ECMAScript white space, U+FEFF included, U+0085 excluded | `trim` and `char::is_whitespace` use Unicode `White_Space`: U+0085 included, U+FEFF excluded | use the ECMAScript white-space helper |
+| `s.replace("a", "b")` with a string pattern: the first match only | `str::replace` replaces every match | `replacen(pattern, to, 1)` |
+| `s.normalize("NFC")` | no std equivalent | the `unicode-normalization` crate, NFC |
+| a sort comparator that is not a total order still returns some order | `sort_by` may panic on an inconsistent comparator | write total comparators (tie-break on a unique key) |
+| the `yaml` package resolves plain scalars (`yes`, `0x10`, `.inf`, `~`) by its schema | another YAML crate resolves them differently | the loader keeps the TS resolution, checked by the loader fixtures |
 | `x \| 0`, `>>>`, `<<`: 32-bit integer arithmetic | 64-bit and overflow panics in debug | use `i32`/`u32` with wrapping operations where the TS relied on it |
 | exceptions thrown and caught for control flow | panics are bugs | a TS `throw` caught by the caller becomes a `Result`; a TS `throw` that ended the run becomes an internal diagnostic |
 | `Date`, `Math.random`, environment reads in pure code | | none in the compiler and generators: output depends only on input |
@@ -42,9 +47,9 @@ Each row is a known trap. Use the shared helper named in the row, never a local 
 
 ## 4. The oracle loop
 
-- Acceptance is the oracle: the expected outputs in `fixtures/expected/` (IR, diagnostics, source maps, per-half deltas), compared by the Rust harness. A difference is accepted only when an entry of `fixtures/expected/differences.yaml` covers it.
+- Acceptance is the oracle: the expected outputs in `fixtures/expected/` (IR, diagnostics, source maps, per-half deltas), compared by the Rust harness. A difference is accepted only when exactly one entry of `fixtures/expected/differences.yaml` covers it; an entry that covers no difference is stale and fails the gate.
 - Loop: build, run the touched crate's tests and the oracle on the brief's fixture subset, read the first mismatch (fixture, file, JSON pointer), fix, repeat. Never print whole IR or OpenAPI files.
-- Restart rule: a module that still fails the oracle after 3 loops on the same mismatch is stopped. Commit what is green, write the mismatch and what was tried in the report, and hand back. The lead amends the brief or this file and a fresh agent ports the module again; the failed attempt is not repaired.
+- Restart rule: a module that still fails the oracle after 3 loops on the same mismatch is stopped. Commit what is green, write the mismatch and what was tried in the report, and hand back. The lead amends the brief or this file and a fresh agent ports the module again from the branch tip, after the lead's commit that deletes the failed module's files; the failed attempt is not repaired.
 - A pass half starts from the expected delta of the half before it and compares its own delta.
 
 ## 5. No shortcuts
@@ -74,11 +79,12 @@ Each row is a known trap. Use the shared helper named in the row, never a local 
 - While iterating: `cargo check -p <crate> --message-format short`, then clippy and `cargo nextest run -p <crate>`. Keep output short (`-q`, short messages).
 - At most 4 lanes build at once on one machine; the lead staggers cold starts.
 - Git: one branch per worktree; `git add <named files>` then commit, never `git add -A` or `.`; never `git stash`, `git reset --hard`, `git checkout .`, `git clean`, `git gc`, `git worktree prune`, or deleting another lane's branch; no commit on main or develop. The lead creates and removes worktrees.
-- A new dependency is pinned in the workspace `Cargo.toml`, named with its reason in the PR body, and passes cargo-deny. Crate docs through context7.
+- The root `Cargo.toml` and `Cargo.lock` are shared: a lane adds only its own crate and its dependencies there, in a commit of its own named in the hand-back; the lead resolves conflicts at rebase.
+- A new dependency is pinned in `[workspace.dependencies]`, named with its reason in the PR body, and passes cargo-deny. Crate docs through context7.
 
 ## 8. Gate before hand-back
 
-On the branch rebased on develop:
+On the branch rebased on develop. The whole workspace runs, not only the touched crates: it stays fast (POC 4) and catches a break in another crate, an exception to the touched-tests gate of AGENTS.md. The tools are installed once per machine by the lead (`cargo install --locked cargo-nextest cargo-deny cargo-machete`).
 
 ```sh
 cargo fmt --check
@@ -88,4 +94,4 @@ cargo deny check
 cargo machete
 ```
 
-plus the oracle harness on every fixture. Report the result line of each.
+plus the oracle harness on every fixture (its command lands with the workspace skeleton). Report the result line of each.

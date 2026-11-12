@@ -24,7 +24,7 @@ General idiom comes from `rust-best-practices` and `rust-review`. This skill lis
 
 ## Text and paths
 
-- Strings that the contract, the IR or a diagnostic counts (lengths, columns, limits) count UTF-16 units through the text helper. Spans store byte offsets.
+- Count what the TypeScript counts: load limits, positions and columns in UTF-16 units through the text helper, JSON Schema string lengths in code points. Spans store byte offsets.
 - Paths are UTF-8 (`camino`); output paths go through the validated relative-path type, which refuses `..`, absolute paths and names that differ only by case or Unicode normalisation.
 - Line endings: LF in every written file; input accepts CRLF.
 
