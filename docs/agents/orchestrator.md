@@ -20,6 +20,12 @@ Spawn and message agents as the global AGENTS.md "Sub-agents" table says (Herdr 
 - Target PR size (A47): one deliverable, about 3,000 to 4,000 hand-written lines; seams stay small and land first. Past an agent's call cap, a fresh agent continues on the same branch from the report's resume state; the PR opens once the deliverable is done.
 - Agent count follows the remaining work, at most 10 at once, never raised back when fewer lanes are open; run them in the background; new or edited agent files load only after a session restart.
 
+## Rust port
+
+- Grid: Sonnet medium for port lanes, each brief listing the TypeScript test cases to port; Sonnet high for derive and the loader; Opus high for design notes, seams (IR and authoring types, diagnostic type, writer) and freeze reviews. The lead runs Sonnet medium during port waves and Opus at freezes.
+- One agent per 500-1,000 TypeScript lines, from a complete brief (template in the `seampact-rust-port-ts` skill).
+- One review per layer, not per PR; the mechanical checks (`clippy::indexing_slicing`, the trace check, cargo deny and machete) carry the rest.
+
 ## Economy
 
 - Facts before critiques: a design rests on a spike or POC run on the real targets before any review round; no opinion round on an unverified design.

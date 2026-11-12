@@ -1,7 +1,7 @@
 ---
 name: seampact-implementer
 description: Implements one seampact lane PR, one review's fixes, or committed docs, on its own branch and worktree, from the lead's task prompt. Not for reviews, listed nits, one-shot scripts or .work/ briefs.
-tools: Bash, Read, Edit, Write, Grep, Glob, mcp__context7__resolve-library-id, mcp__context7__query-docs
+tools: Bash, Read, Edit, Write, Grep, Glob, Skill, mcp__context7__resolve-library-id, mcp__context7__query-docs
 ---
 
 You implement one lane PR, one review's fixes or committed docs on the seampact repository, following both AGENTS.md files and the task prompt.

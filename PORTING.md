@@ -1,14 +1,17 @@
 # Porting rules: TypeScript to Rust (2.0.0)
 
-The rulebook every port lane follows. What the port is and how it is checked: [the 2.0.0 Rust rewrite](docs/maintainers/rust-rewrite.md); what it changes: [ADR 0031](docs/adr/0031-rust-core.md). Version 0: POCs and the first layers amend it.
+The rulebook every port lane follows. What the port is and how it is checked: [the 2.0.0 Rust rewrite](docs/maintainers/rust-rewrite.md); what it changes: [ADR 0031](docs/adr/0031-rust-core.md). The first layers amend it.
 
 The skills `seampact-rust` (how Rust is written here) and `seampact-rust-port-ts` (the port procedure) apply these rules; this file is the source.
 
 ## 1. Shape of a port
 
-- Keep the TypeScript algorithm and its function decomposition: one Rust function per TypeScript function, same steps, same order of checks, same diagnostics.
+- Keep the TypeScript algorithm and function shape: one Rust function per TypeScript function, same steps, same order of checks, same diagnostics. A TypeScript arrow of a few lines may stay a closure in its caller; a helper may be extracted to keep nesting at 3-4 levels. Port each JavaScript operation by its specification, not by the nearest Rust idiom (section 2).
 - Redesign the data as the layer's design note says: enums with exhaustive `match` for the IR, grammar nodes and diagnostics; newtypes for ids and names; borrowed or interned strings and source spans instead of copies; traits for generators, lint rules and passes; no class hierarchy.
-- Each crate keeps a `trace.tsv`: one line per ported function, `<rust path>\t<ts file>#<function>`. A Rust function with no TypeScript origin (a helper the redesign needs) is not listed. The agent writes it for now; POC 1 decides whether a script generates it and how the gate checks it.
+- Each crate keeps a `trace.tsv`: one line per function of the TypeScript files the brief names, `<rust path>\t<ts file>#<function>`; a function not ported has `-` as its Rust path and a third column, `skip: <reason>` or `merged: <rust path>`. A Rust helper with no TypeScript origin is not listed. The agent writes it; the trace check (it lands with the workspace skeleton) fails on a TypeScript function missing from the file and on a Rust path that does not exist.
+- State: read-only input (the loaded schemas, a bundle) is an immutable struct; memos and lazy caches are one engine state behind a `RefCell` (or `&mut self`), each borrow scoped to a block that does not call back into the engine; a recursion guard (a TypeScript `Set` filled and emptied around a recursive call) is a field of a walk context made per top-level call and passed `&mut`, never engine state.
+- Identity: where the TypeScript keys a `Set`, `Map` or `WeakMap` by object identity, or compares objects with `===`, key on what that identity tells apart: a node read from an input is its (file, path) or its index in a table built at load; an object the TypeScript builds per call and never uses as a key is a plain value. An id arena only for built objects that are themselves keys.
+- Access: a node handle reaches its value in constant time (a `&Value` borrowed from the loaded input, or an index into a table built at load); never walk a path or a JSON pointer from the file root on each keyword read.
 - Never port what the brief's skip list names (npm resolution, the TypeScript plugin API, Prettier glue).
 
 ## 2. Where JavaScript and Rust differ
@@ -17,15 +20,16 @@ Each row is a known trap. Use the shared helper named in the row, never a local 
 
 | JavaScript | Rust trap | Rule |
 |---|---|---|
-| `a < b`, `.sort()` with no comparator, `compareCodeUnits` on strings: UTF-16 code-unit order | `str` and `String` compare bytes, which is code-point order: astral characters (surrogate pairs in JS) sort before U+E000..U+FFFF in JS, after them in Rust | every string order goes through the UTF-16 compare helper; `BTreeMap<String, _>` iterates in byte order, so never emit output from its iteration |
+| `a < b`, `.sort()` with no comparator, `compareCodeUnits` on strings: UTF-16 code-unit order | `str` and `String` compare bytes, which is code-point order: astral characters (surrogate pairs in JS) sort before U+E000..U+FFFF in JS, after them in Rust | every string order goes through the UTF-16 compare helper (`cmp_utf16`, and a `Utf16Key` wrapper for `BTreeMap`, `BTreeSet` and `sort_by_key`), which lands with the workspace skeleton before the first port; `BTreeMap<String, _>` iterates in byte order, so never emit output from its iteration; an enum whose variants are declared in the TypeScript sort order may derive `Ord` |
 | `s.length`, indices, columns: UTF-16 code units; `[...s].length`: code points | `len()` is bytes, `chars()` is scalar values | count what the TS counts: load limits, positions and columns in UTF-16 units through the text helper; JSON Schema `minLength` and `maxLength` in code points (`chars().count()`), as the example and wire checks do; spans store byte offsets and convert at the edge |
 | `number`: one 64-bit float | integers and floats are distinct types | IR numbers have the TS value, except integers above 2^53 in examples and defaults, which stay exact (ADR 0031); arithmetic that JS does in floats is checked for the same result |
-| `String(n)`, `JSON.stringify(n)`: ECMAScript number text (`1e+21`, `0.1`, `-0` gives `0`) | `{}` formatting differs (`1e21_f64` prints as `1000000000000000000000`) | numbers are written by the ECMAScript number-text helper only |
-| `Object.keys`, `for...in`, `Object.entries`: integer-like keys first, ascending, then insertion order | `HashMap` has no order, `BTreeMap` sorts bytes | a map that is iterated uses `IndexMap`; where the TS iterated an object with keys like `"200"` or `"404"`, reproduce the integer-first order explicitly |
+| `Number.isInteger(x)`; `===`, `<` on numbers | an epsilon test, `total_cmp` or `serde_json::Number` equality: `1e-17` is no integer, `0 === -0` is true | `Number.isInteger` is `x.is_finite() && x.fract() == 0.0`; `===` and comparisons on numbers are `f64` `==` and `<`; a comparison the TS makes on `number` stays an `f64` one, even on an `i64` input, unless `differences.yaml` records the change |
+| `String(n)`, `JSON.stringify(n)`: ECMAScript number text (`1e+21`, `0.1`, `-0` gives `0`) | `{}` formatting differs (`1e21_f64` prints as `1000000000000000000000`) | numbers are written by the ECMAScript number-text helper only, built on `ryu-js` |
+| `Object.keys`, `for...in`, `Object.entries`: integer-like keys first, ascending, then insertion order | `HashMap` has no order, `BTreeMap` sorts bytes | a map that is iterated uses `IndexMap`; `serde_json` is built with `preserve_order`, once, in `[workspace.dependencies]` (feature unification turns it on for every crate), so `serde_json::Map` iterates in insertion order; where the TS iterated an object with keys like `"200"` or `"404"` (or any integer-like key), reproduce the integer-first order through one shared helper, never a local copy |
 | `Map`, `Set`: insertion order | `HashMap`, `HashSet`: random | `IndexMap` and `IndexSet` when iterated; `HashMap` only for lookups never iterated into output |
 | `Array.prototype.sort`: stable | `sort_unstable` reorders equal keys | `sort_by` (stable) unless the keys are unique and the TS sort was on the same total key |
 | `toLowerCase`, `toUpperCase`: full Unicode mapping, locale-free | `to_lowercase` and `to_uppercase` match JS, final sigma included; `to_ascii_lowercase` changes ASCII only | use the same mapping as the TS: the ASCII forms only where the TS input is ASCII by grammar, with a non-ASCII test otherwise |
-| `RegExp`: ECMAScript flavour, `u` flag | the `regex` crate has no backreferences or lookaround, different classes | contract `pattern` values use the ECMAScript-compatible engine the seam picks, tested against the pattern vectors; internal regexes are rewritten as plain code when simple |
+| `RegExp`: ECMAScript flavour, `u` flag | the `regex` crate has no backreferences or lookaround, different classes | contract `pattern` values use `regress`, the ECMAScript-compatible engine, tested against the pattern vectors; internal regexes are rewritten as plain code when simple; patterns the bundled schemas carry compile once at load (an invalid one is a typed environment error, not a failure mid-walk), are read from the schema keyword only (not from a property bearing the keyword's name), and a test fails when one leaves the subset where `regex` and ECMAScript `u` agree |
 | `JSON.stringify` drops `undefined` members (writes `null` in arrays); a JS string can hold a lone surrogate | a Rust `String` cannot hold a lone surrogate; `serde_json::Map` sorts its keys unless `preserve_order` is on | IR and OpenAPI JSON go through the canonical writer only; how the loader treats a lone-surrogate escape is fixed in its design note |
 | `Math.round(x)`: halves toward +infinity | `f64::round` rounds halves away from zero | use the rounding helper; check negative halves |
 | `parseInt`, `Number(s)`: their own accepted sets (`Number("")` is `0`, `Number("Infinity")` is infinite) | `str::parse::<f64>` accepts `inf`, `NaN` and `infinity`, refuses `""` and surrounding spaces | port the accepted input set exactly, with tests on the edge strings |
@@ -37,12 +41,15 @@ Each row is a known trap. Use the shared helper named in the row, never a local 
 | `x \| 0`, `>>>`, `<<`: 32-bit integer arithmetic | 64-bit and overflow panics in debug | use `i32`/`u32` with wrapping operations where the TS relied on it |
 | exceptions thrown and caught for control flow | panics are bugs | a TS `throw` caught by the caller becomes a `Result`; a TS `throw` that ended the run becomes an internal diagnostic |
 | `Date`, `Math.random`, environment reads in pure code | | none in the compiler and generators: output depends only on input |
+| `a[i]` out of range gives `undefined` | slice and `Vec` indexing panic | `.get(i)` with `?` or `let ... else`; `clippy::indexing_slicing` is denied in `[workspace.lints]` |
+| a fallible lookup (`throw` on a bad list or role) | a stub returning a total type (`bool`) forces a made-up answer | a total answer type is never forced on a fallible operation: a fallible lookup returns `Result` |
 
 ## 3. Errors and diagnostics
 
 - User diagnostics go to the diagnostic sink with their rule id, severity, message, fix and file position; never as `Err`.
 - Environment failures (I/O, network, a bad bundle) are typed errors per crate (`thiserror`), never `Box<dyn Error>` across crates.
-- A bug is an internal diagnostic with its own exit code: no `unwrap`, `expect`, `panic!` or silent fallback outside tests.
+- A bug is an internal diagnostic with its own exit code: no `unwrap`, `expect`, `panic!`, indexing or silent fallback (`unwrap_or_default`, `unwrap_or(Ordering::Equal)`, `pop().map_or(default, ..)`) outside tests, and no placeholder value for a branch that cannot happen: match the shape (`[only]` slice patterns, `let ... else`) or report the internal diagnostic.
+- An input the TypeScript always had (a schema file of the bundle, a spec table) is a typed environment error when missing, never an empty reading.
 - Messages and fixes come from the rule catalogue; the text is part of the output the oracle compares.
 
 ## 4. The oracle loop
@@ -64,6 +71,7 @@ Each row is a known trap. Use the shared helper named in the row, never a local 
 - The fixtures, goldens and spec vectors are the main suite.
 - Port as Rust tests of the same behaviour (not copies) the TypeScript tests that fixtures do not cover: finalize (collisions, prune, canonical order, serialisation, source map, reference, published packs), link relays, derive errors and wire diagnostics, access diagnostics, the load limits and positions (CPU timing tests become benchmarks), validate diagnostics. Tree and pipeline: only their stable bricks (names, paths, pointers, the draft format).
 - Read a TypeScript test only to list the behaviours it checks, then write the Rust tests.
+- Each section 2 row a ported function touches gets Rust tests on its edge values (`1e-17`, `-0`, `2^53 + 1`, a non-ASCII key, an astral character), even when the TypeScript tests have none: the oracle holds only what the fixtures produce, so a green first run proves nothing about them.
 - A 2.0.0 feature that changes a behaviour gets a new test of the new behaviour.
 - `proptest` on the loader and naming; `cargo-fuzz` targets on the YAML loader and the bundle reader.
 
@@ -94,4 +102,30 @@ cargo deny check
 cargo machete
 ```
 
-plus the oracle harness on every fixture (its command lands with the workspace skeleton). Report the result line of each.
+plus the trace check and the oracle harness on every fixture (their commands land with the workspace skeleton, with `deny.toml`). Report the result line of each; a step that cannot run is reported `not run: <reason>`, never left out.
+
+## 9. Dependencies
+
+Versions are pinned once in `[workspace.dependencies]`. Prefer:
+
+- `serde`, `serde_json` (`preserve_order`), `indexmap`: the parse surface and ordered maps.
+- `ryu-js`: the only maintained ECMAScript number-text implementation, inside the canonical writer.
+- `regress`: ECMAScript regular expressions for contract `pattern`.
+- `saphyr-parser` (events) with our own plain-scalar resolver: YAML 1.2 with spans, resolution stays ours.
+- `camino`, `thiserror` (libraries), `rayon` (indexed `collect`, so output order is fixed).
+- `line-index`, `text-size`: byte to UTF-16 position conversion and span newtypes.
+- `unicode-normalization`: NFC; case mapping stays in `std`.
+- `annotate-snippets`: diagnostic rendering. `flate2`, `tar` (>= 0.4.46; refuse absolute paths, `..` and symlinks ourselves), `sha2`: bundles.
+- Tests: `insta`, `proptest`, `criterion`, `arbitrary` with `libfuzzer-sys` in a separate `fuzz/` crate.
+- `anyhow` only in the CLI binary and `xtask`.
+
+Avoid:
+
+- `serde_yaml` (archived), `serde_yml` (unsound), `yaml-rust`, `unsafe-libyaml`: unmaintained or unsound YAML.
+- `serde_jcs`, `serde_json_canonicalizer`: wrong key order for the IR.
+- `simd-json`, `sonic-rs`: unsafe-heavy speed we do not need.
+- `ariadne` (archived), `miette` (imposes an error model).
+- `internment`, `ustr`, `bumpalo`: supply-chain or global-state risk, or lifetimes leaking into every signature.
+- `tera`, `askama`: compile-time cost for five target layouts; generators share a hand-written `CodeWriter`.
+- `quickcheck`, `goldenfile`: `proptest` and `insta` cover them.
+- `ring`: C build. `tower-lsp`: unmaintained. `snafu`, `eyre`: a second error idiom. `icu_*`: data weight.
