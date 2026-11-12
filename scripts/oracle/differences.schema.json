@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/oracle/differences.schema.json",
+  "title": "Intended differences between the TS oracle and the Rust port",
+  "description": "The Rust harness accepts a mismatch against the expected outputs only when exactly one entry matches it (a fixture glob in applies.fixtures, the output, the pointer or the path, and the change). An entry that matches no mismatch is stale and fails the gate. The TS check ignores this file: TS is the from side.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "differences"],
+  "properties": {
+    "version": { "const": 1 },
+    "differences": {
+      "description": "The listed differences; empty until the port finds one.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/Difference" }
+    }
+  },
+  "$defs": {
+    "Difference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "reason", "decision", "applies", "change"],
+      "properties": {
+        "id": {
+          "description": "Kebab-case and unique in the file.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+        },
+        "reason": {
+          "description": "Why the Rust output differs, one sentence.",
+          "type": "string",
+          "minLength": 1
+        },
+        "decision": {
+          "description": "A committed doc and an anchor in it, `docs/...md#anchor`: the decision that allows the difference.",
+          "type": "string",
+          "pattern": "^docs/[^#\\s]+\\.md#[A-Za-z0-9_-]+$"
+        },
+        "applies": { "$ref": "#/$defs/Applies" },
+        "change": {
+          "description": "The kind of difference. `format` applies to generated output only.",
+          "enum": ["value", "added", "removed", "message", "code-renamed", "format"]
+        },
+        "from": { "description": "The TS output, when the change has one." },
+        "to": { "description": "The Rust output, when the change has one." }
+      },
+      "if": {
+        "type": "object",
+        "properties": { "change": { "const": "format" } },
+        "required": ["change"]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "applies": { "type": "object", "properties": { "output": { "const": "generated" } } }
+        }
+      }
+    },
+    "Applies": {
+      "description": "Which mismatches an entry matches: a fixture glob, an output, and a pointer (a path for generated files).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fixtures", "output"],
+      "properties": {
+        "fixtures": {
+          "description": "Globs over fixture paths (`**` any path, `*` one segment); a mismatch in a fixture matching any of them is in scope.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "output": {
+          "description": "The expected output the mismatch is in.",
+          "enum": ["ir", "diagnostics", "source-map", "halves", "openapi", "generated"]
+        },
+        "pointer": {
+          "description": "A JSON Pointer into the output, `*` matching one segment; for every output but generated.",
+          "type": "string",
+          "pattern": "^(/[^/]*)*$"
+        },
+        "path": {
+          "description": "The generated file path, for generated output.",
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "if": {
+        "type": "object",
+        "properties": { "output": { "const": "generated" } },
+        "required": ["output"]
+      },
+      "then": { "type": "object", "required": ["path"], "not": { "required": ["pointer"] } },
+      "else": { "type": "object", "required": ["pointer"], "not": { "required": ["path"] } }
+    }
+  }
+}
