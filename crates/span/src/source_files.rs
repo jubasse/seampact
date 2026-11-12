@@ -180,6 +180,12 @@ impl SourceFiles {
     }
 }
 
+const _: () = {
+    const fn assert_send_sync<T: Send + Sync>() {}
+
+    assert_send_sync::<SourceFiles>();
+};
+
 #[cfg(test)]
 mod tests {
     use super::*;

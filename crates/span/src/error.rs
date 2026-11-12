@@ -1,4 +1,6 @@
 /// A failure of the file table: a limit the loader enforces earlier, or a span the code broke.
+/// Every variant is a bug once the loader enforces its limits; `seampact-diagnostics` converts
+/// it into an internal error.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum SpanError {
     /// The text is longer than a span offset can address.

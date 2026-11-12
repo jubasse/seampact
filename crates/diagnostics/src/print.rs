@@ -2,10 +2,10 @@ use std::borrow::Borrow;
 use std::cmp::Ordering;
 
 use indexmap::IndexMap;
-use seampact_js::cmp_utf16;
+use seampact_js::{cmp_utf16, is_ecmascript_white_space};
 use seampact_span::Location;
 
-use crate::text::{is_active_character, is_ecmascript_white_space};
+use crate::text::is_active_character;
 use crate::{Diagnostic, DiagnosticOrigin};
 
 const UNKNOWN: PrintedLocation<'static> = PrintedLocation {

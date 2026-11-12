@@ -21,7 +21,8 @@ impl FileId {
 pub struct Span {
     /// The file the range belongs to.
     pub file: FileId,
-    /// The byte range in the file's normalised text.
+    /// The byte range in the file's normalised text; build it with [`Span::new`], which keeps
+    /// `end` from falling before `start` as the loader's `siteOf` does.
     pub range: TextRange,
 }
 

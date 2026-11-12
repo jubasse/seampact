@@ -52,3 +52,9 @@ impl DiagnosticSink {
         self.diagnostics
     }
 }
+
+const _: () = {
+    const fn assert_send_sync<T: Send + Sync>() {}
+
+    assert_send_sync::<DiagnosticSink>();
+};

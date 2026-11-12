@@ -87,14 +87,16 @@ impl fmt::Display for DiagnosticLayer {
 
 /// Where a diagnostic is located: a layer and a pointer, found in the side table by
 /// [`diagnostic_location_key`](crate::diagnostic_location_key).
+///
+/// Fields are in the member order of `diagnostics.json`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct DiagnosticOrigin {
-    /// The api of an origin copied from another api; the location key ignores it.
-    pub api: Option<String>,
     /// The layer the pointer belongs to.
     pub layer: DiagnosticLayer,
     /// A JSON pointer into the layer's tree, or a load site pointer.
     pub pointer: String,
+    /// The api of an origin copied from another api; the location key ignores it.
+    pub api: Option<String>,
 }
 
 /// A second position a diagnostic points to, with what it is.
