@@ -369,6 +369,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "seampact-ir"
+version = "2.0.0"
+dependencies = [
+ "indexmap",
+ "seampact-js",
+ "seampact-json",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "seampact-js"
 version = "2.0.0"
 dependencies = [
