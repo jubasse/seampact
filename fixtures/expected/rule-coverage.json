@@ -449,7 +449,9 @@
   "seampact/tree/collection-id": [
     "passes/tree-nodes/routes-refused"
   ],
-  "seampact/tree/collection-singular": [],
+  "seampact/tree/collection-singular": [
+    "rules/tree-collection-singular"
+  ],
   "seampact/tree/concurrency-field": [
     "passes/tree-nodes/shapes-refused"
   ],
@@ -580,7 +582,8 @@
     "rules/tree-get-input"
   ],
   "seampact/tree/id-property": [
-    "passes/tree-nodes/routes-refused"
+    "passes/tree-nodes/routes-refused",
+    "rules/tree-collection-singular"
   ],
   "seampact/tree/input-file": [
     "passes/tree-nodes/bodies-refused"
@@ -618,7 +621,9 @@
   "seampact/tree/opaque-position": [
     "passes/tree-nodes/routes-refused"
   ],
-  "seampact/tree/operation-id-unique": [],
+  "seampact/tree/operation-id-unique": [
+    "rules/tree-operation-id-unique"
+  ],
   "seampact/tree/operation-name-unique": [],
   "seampact/tree/owner-concurrency": [
     "rules/tree-owner-concurrency"
@@ -626,18 +631,24 @@
   "seampact/tree/paging-items": [
     "passes/tree-nodes/formats-refused"
   ],
-  "seampact/tree/paging-limit": [],
+  "seampact/tree/paging-limit": [
+    "rules/tree-paging-limit"
+  ],
   "seampact/tree/paging-link": [
     "passes/tree-nodes/formats-refused"
   ],
-  "seampact/tree/paging-list": [],
+  "seampact/tree/paging-list": [
+    "rules/tree-paging-list"
+  ],
   "seampact/tree/paging-meta": [
     "passes/tree-nodes/formats-refused"
   ],
   "seampact/tree/paging-meta-clash": [
     "passes/tree-nodes/formats-refused"
   ],
-  "seampact/tree/paging-param": [],
+  "seampact/tree/paging-param": [
+    "rules/tree-paging-param"
+  ],
   "seampact/tree/paging-position": [
     "passes/tree-nodes/formats-refused"
   ],
@@ -650,7 +661,9 @@
   "seampact/tree/paging-role": [
     "passes/tree-nodes/formats-refused"
   ],
-  "seampact/tree/paging-sort": [],
+  "seampact/tree/paging-sort": [
+    "rules/tree-paging-sort"
+  ],
   "seampact/tree/paging-style": [
     "golden/pack-api-platform/contract/tasks-absolute-urls",
     "golden/pack-crud-rights/contract/tasks-absolute-urls",
@@ -660,8 +673,12 @@
     "passes/tree-schemas/catalogues",
     "reference/tasks-absolute-urls"
   ],
-  "seampact/tree/paging-token": [],
-  "seampact/tree/paging-unknown": [],
+  "seampact/tree/paging-token": [
+    "rules/tree-paging-token"
+  ],
+  "seampact/tree/paging-unknown": [
+    "rules/tree-paging-unknown"
+  ],
   "seampact/tree/param-unique": [
     "passes/tree-nodes/routes-refused"
   ],
@@ -695,7 +712,9 @@
     "rules/tree-refinement-type"
   ],
   "seampact/tree/relay-declaration": [],
-  "seampact/tree/relay-name": [],
+  "seampact/tree/relay-name": [
+    "rules/workspace-relay-name"
+  ],
   "seampact/tree/relay-target": [
     "bundle-channels/imports/tasks-service",
     "golden/pack-api-platform/contract/tasks-service",
@@ -709,7 +728,10 @@
     "golden/pack-spring/contract/tasks-service",
     "golden/pack-spring/contract/tasks-service-writes",
     "reference/tasks-service",
-    "reference/tasks-service-writes"
+    "reference/tasks-service-writes",
+    "rules/workspace-relay-cycle/svc",
+    "rules/workspace-relay-cycle/tasks",
+    "rules/workspace-relay-name/svc"
   ],
   "seampact/tree/relay-unknown": [],
   "seampact/tree/required-property": [
@@ -731,7 +753,9 @@
   "seampact/tree/schema-cycle": [
     "rules/tree-schema-cycle"
   ],
-  "seampact/tree/schema-inline": [],
+  "seampact/tree/schema-inline": [
+    "rules/tree-schema-inline"
+  ],
   "seampact/tree/schema-keyword": [
     "rules/tree-schema-keyword"
   ],
@@ -819,5 +843,7 @@
   "seampact/validate/wrong-type": [
     "rules/validate-wrong-type"
   ],
-  "seampact/workspace/relay-cycle": []
+  "seampact/workspace/relay-cycle": [
+    "rules/workspace-relay-cycle"
+  ]
 }
