@@ -58,6 +58,12 @@ Repository conventions every agent follows. Your task prompt adds the task, the 
 - A case no consumer needs yet is refused by name with a diagnostic, never modelled.
 - One deliverable per PR (about 3,000 to 4,000 hand-written lines); at the call cap, relay on the same branch; a seam others wait on stays small and lands first.
 
+## Rust (2.0.0 port)
+
+- Rust work follows [PORTING.md](PORTING.md) and the skills `seampact-rust` (how Rust is written here, over `rust-best-practices`) and `seampact-rust-port-ts` (the port procedure).
+- Toolchain from rustup (`export PATH=$HOME/.cargo/bin:$PATH`); the target dir stays inside your worktree (`unset CARGO_TARGET_DIR RUSTC_WRAPPER`).
+- The gate of a Rust change is PORTING.md section 8 plus the oracle.
+
 ## Code style
 
 - Airy code, blank lines between steps; max 3-4 nesting levels: early return, else extract a function.
