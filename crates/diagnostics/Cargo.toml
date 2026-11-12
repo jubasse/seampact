@@ -9,8 +9,8 @@ publish.workspace = true
 
 [dependencies]
 indexmap.workspace = true
-seampact-js = { path = "../js" }
-seampact-span = { path = "../span" }
+seampact-js.workspace = true
+seampact-span.workspace = true
 
 [dev-dependencies]
 regress.workspace = true
