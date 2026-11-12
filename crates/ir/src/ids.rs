@@ -79,7 +79,7 @@ ir_ids! {
     BucketId;
     /// The id of a service: its catalogue key (ADR 0004 section 9, ADR 0002 section 4).
     ServiceId;
-    /// A declared extension key, written '<prefix>-<key>' (ADR 0002 sections 4 and 12).
+    /// A declared extension key, written `<prefix>-<key>` (ADR 0002 sections 4 and 12).
     ExtensionKeyId;
     /// An extension prefix (ADR 0002 section 4); the compiler refuses 'seampact', which is reserved.
     ExtensionPrefix;
@@ -97,7 +97,7 @@ ir_ids! {
     VariantId;
     /// An operation id (ADR 0004 section 7).
     OperationId;
-    /// A derivation id of the derivation table (ADR 0006 section 5), 'pack.<pack>.<entry>' for a pack entry.
+    /// A derivation id of the derivation table (ADR 0006 section 5), `pack.<pack>.<entry>` for a pack entry.
     DerivationId;
     /// A must-understand feature name (ADR 0005 section 3); none is defined at irRevision 2.
     Feature;

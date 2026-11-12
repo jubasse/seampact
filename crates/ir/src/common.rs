@@ -43,7 +43,7 @@ pub struct Docs {
     pub description: Option<String>,
 }
 
-/// The extension slot: { '<prefix>': { '<key>': value } } (ADR 0004 section 3).
+/// The extension slot: `{ '<prefix>': { '<key>': value } }` (ADR 0004 section 3).
 pub type Extensions = IrMap<ExtensionPrefix, IrMap<ExtensionKey, JsonValue>>;
 
 /// Where an element was declared: a JSON Pointer into the merged authoring tree of its layer (ADR 0004 section 6).
@@ -54,7 +54,7 @@ pub struct Origin {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub api: Option<String>,
 
-    /// 'api', 'shared', 'base', 'pack:<name>', 'core' for a declaration the compiler supplies (its pointer starts with its entry of formats, errors or schemas, with no side-table entry), or 'workspace' for a diagnostic on workspace.yaml (no IR element carries it). Closed: the one exception to open enums (ADR 0004 section 13).
+    /// 'api', 'shared', 'base', `pack:<name>`, 'core' for a declaration the compiler supplies (its pointer starts with its entry of formats, errors or schemas, with no side-table entry), or 'workspace' for a diagnostic on workspace.yaml (no IR element carries it). Closed: the one exception to open enums (ADR 0004 section 13).
     pub layer: Layer,
 
     /// The `pointer` member.

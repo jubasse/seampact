@@ -12,7 +12,7 @@ pub struct SourceMap {
     #[serde(deserialize_with = "integers::positive")]
     pub ir_revision: i64,
 
-    /// Keyed by '<layer>#<pointer>', the serialised form of an Origin; a 'core' origin has no entry (ADR 0004 section 11).
+    /// Keyed by `<layer>#<pointer>`, the serialised form of an Origin; a 'core' origin has no entry (ADR 0004 section 11).
     pub locations: IrMap<String, SourceLocation>,
 }
 
