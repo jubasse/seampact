@@ -6,7 +6,15 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!pnpm-lock.yaml", "!.changeset/*.md", "!php/**/composer.lock"]
+    "includes": [
+      "**",
+      "!pnpm-lock.yaml",
+      "!.changeset/*.md",
+      "!php/**/composer.lock",
+      "!fixtures/rules/load-yaml-syntax/**",
+      "!fixtures/rules/load-workspace-shape/**",
+      "!fixtures/rules/load-file-invalid/**"
+    ]
   },
   "formatter": {
     "indentStyle": "space",

@@ -1,0 +1,16 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/pack-package",
+      "message": "the package '@acme/p' is not a pack: its package.json needs seampact.role: pack and seampact.pack naming the entry file",
+      "fix": "install a convention pack, or reference a pack file by path",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/2/9"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

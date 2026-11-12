@@ -1,0 +1,16 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/ref-fragment",
+      "message": "the pointer '#/X/type' of $ref must name one element of the file",
+      "fix": "point at one element, as in $ref: ./schemas/task.yaml#/Task",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/3/14"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

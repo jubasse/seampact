@@ -1,0 +1,20 @@
+api: { name: shop, version: 1, kind: product }
+
+conventions:
+  rateLimit: { header: Retry-After, param: retryAfterMs, unit: s }
+
+errors:
+  api.rate_limited: { status: 429, params: { retryAfterMs: { type: integer } } }
+
+rules:
+  throttle: { bucket: true }
+
+buckets:
+  perCaller: { key: [address], limit: 60, window: 1m }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: The fixture checks one error declaration only. }
+    routes:
+      ping: { method: get, requires: [{ rule: throttle, bucket: perCaller }] }

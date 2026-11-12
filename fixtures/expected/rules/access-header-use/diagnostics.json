@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/header-use",
+          "message": "identity 'user' uses header 'ghost', which is not declared",
+          "fix": "Declare the header under 'headers' with its name and semantic, or use a declared one.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/identities/user/headers/ghost"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

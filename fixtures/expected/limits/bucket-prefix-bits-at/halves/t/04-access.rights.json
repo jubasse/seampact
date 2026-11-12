@@ -1,0 +1,19 @@
+{
+  "buckets": {
+    "b": {
+      "id": "b",
+      "key": [
+        {
+          "in": "address",
+          "prefixBits": 128
+        }
+      ],
+      "limit": 1,
+      "windowMs": 60000,
+      "origin": {
+        "layer": "api",
+        "pointer": "/buckets/b"
+      }
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/optional-identity",
+          "message": "optional access is written where no identity reaches, so there is none to make optional",
+          "fix": "Set 'identity: <name>' on it or an ancestor, or make the access 'public' with its reason.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/access"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/ping"
+              },
+              "message": "a route it reaches"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

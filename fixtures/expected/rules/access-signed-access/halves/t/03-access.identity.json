@@ -1,0 +1,36 @@
+{
+  "schemes": {
+    "sig": {
+      "id": "sig",
+      "kind": "signature",
+      "name": "X-Sig",
+      "signature": {
+        "verify": "application",
+        "headers": []
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/sig"
+      }
+    }
+  },
+  "identities": {
+    "hook": {
+      "id": "hook",
+      "kind": "signed",
+      "signed": "sig",
+      "principal": {
+        "kind": "schema",
+        "schema": "P"
+      },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/hook"
+      }
+    }
+  }
+}

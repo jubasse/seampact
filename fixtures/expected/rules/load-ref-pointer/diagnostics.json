@@ -1,0 +1,16 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/ref-pointer",
+      "message": "a pointer into the merged catalogues ('#/nowhere') is refused; the name says the same thing",
+      "fix": "write the name: $ref: Task",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/3/15"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

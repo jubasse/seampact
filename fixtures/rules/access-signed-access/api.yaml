@@ -1,0 +1,14 @@
+api: { name: t, version: 1 }
+schemas:
+  P: { type: object, required: [userId], properties: { userId: { type: string } } }
+schemes:
+  sig: { kind: signature, verify: application, name: X-Sig }
+identities:
+  hook: { kind: signed, scheme: sig, principal: P }
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: hook
+    access: { optionalAuth: Maybe. }
+    routes:
+      ping: { method: post }

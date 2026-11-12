@@ -1,0 +1,16 @@
+api: { name: shop, version: 1, kind: product }
+
+conventions:
+  cache: { sensitiveElsewhere: refuse }
+
+errors:
+  shop.leak: { status: 400, params: { token: { type: string, sensitive: true } } }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: The fixture checks one error declaration only. }
+    errors:
+      shop.leak: {}
+    routes:
+      ping: { method: get }

@@ -1,0 +1,7 @@
+api: { name: t, version: 1, kind: product }
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: Open., optionalAuth: true }
+    routes:
+      ping: { method: get }

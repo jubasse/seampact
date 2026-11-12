@@ -1,0 +1,16 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/pack-name",
+      "message": "the pack name 'a#b' holds a '#'",
+      "fix": "name the pack without '#'",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/p.yaml/1/15"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

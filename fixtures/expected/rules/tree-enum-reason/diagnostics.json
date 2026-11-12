@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/enum-reason",
+          "message": "the enum 'Sourced' has a source, and a reason says why an enum is local",
+          "fix": "remove 'reason', or remove the source of a local enum",
+          "origin": {
+            "layer": "api",
+            "pointer": "/enums/Sourced/reason"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

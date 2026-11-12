@@ -1,0 +1,15 @@
+api: { name: t, version: 1 }
+schemes:
+  bearer: { kind: bearer }
+schemas:
+  P: { type: object, required: [userId], properties: { userId: { type: string } } }
+identities:
+  user:
+    schemes: { read: [bearer], write: [bearer] }
+    principal: P
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: user
+    routes:
+      ping: { method: get, principal: { requires: [nope] } }

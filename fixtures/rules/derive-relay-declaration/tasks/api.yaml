@@ -1,0 +1,10 @@
+api: { name: tasks, version: 1, kind: product }
+schemas:
+  Note: { type: object, required: [noteId], properties: { noteId: { type: string } } }
+errors:
+  tasks.locked: { status: 423 }
+surfaces:
+  app:
+    access: { public: Open. }
+    routes:
+      getTask: { method: get, output: Note, errors: { tasks.locked: {} } }

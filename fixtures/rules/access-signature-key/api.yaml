@@ -1,0 +1,22 @@
+api: { name: t, version: 1 }
+schemas:
+  P: { type: object, required: [userId], properties: { userId: { type: string } } }
+identities:
+  user:
+    schemes: { read: [bearer], write: [bearer] }
+    principal: P
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: user
+    routes:
+      ping: { method: get }
+schemes:
+  bearer: { kind: bearer }
+  sig:
+    kind: signature
+    name: X-Sig
+    format: 'sha256={sig}'
+    algorithm: hmac-sha256
+    payload: '{rawBody}'
+    encoding: hex

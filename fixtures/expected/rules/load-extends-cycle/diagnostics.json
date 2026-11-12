@@ -1,0 +1,16 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/extends-cycle",
+      "message": "the api extends itself (P8): api.yaml -> api.yaml",
+      "fix": "break the cycle: extend a base file",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/2/1"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

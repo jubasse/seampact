@@ -1,0 +1,25 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "tasks",
+      "diagnostics": []
+    },
+    {
+      "api": "svc",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/link/relay-superset",
+          "message": "The relay route svc.getTask does not answer the code 'tasks.invalid', which tasks.getTask answers for the role 'unsupportedMediaType'.",
+          "fix": "Bind the role to the same code in both apis, for the api with `conventions.errors.derived` or with `errorRoles` on the relay route.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/internal/routes/getTask/relays"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

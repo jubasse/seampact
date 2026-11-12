@@ -1,0 +1,28 @@
+api: { name: t, version: 1, kind: product }
+
+services:
+  catalog: { maturity: stable }
+
+schemas:
+  Id: { type: string }
+  Note:
+    type: object
+    required: [noteId, text]
+    properties:
+      noteId: Id
+      text: { type: string }
+
+formats:
+  twin:
+    success: { item: { body: { $collection: $payload, notes: 1 } } }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    format: twin
+    routes:
+      notes:
+        kind: collection
+        id: { noteId: Id }
+        item: Note
+        ops: { get: {} }

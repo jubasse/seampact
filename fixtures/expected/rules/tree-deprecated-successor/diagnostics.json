@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/deprecated-successor",
+          "message": "The successor gone of old is no operation of the api.",
+          "fix": "Name the operation id of the route that replaces this one.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/old/deprecated/successor"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

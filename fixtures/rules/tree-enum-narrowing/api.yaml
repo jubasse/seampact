@@ -1,0 +1,8 @@
+api: { name: t, version: 1 }
+enums:
+  Named: { values: [a, b] }
+schemas:
+  Card:
+    type: object
+    properties:
+      all: { enum: { narrow: Named, to: [a, b] } }

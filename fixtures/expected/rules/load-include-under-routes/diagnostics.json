@@ -1,0 +1,16 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/include-under-routes",
+      "message": "$include cannot be a key of a mapping of named tree nodes (routes)",
+      "fix": "include the content inside a route, or write the route inline",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/5/7"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

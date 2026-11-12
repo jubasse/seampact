@@ -1,0 +1,55 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "tasks",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/workspace/relay-cycle",
+          "message": "Relay routes form a cycle between the apis 'tasks', 'svc', so none of them can compile after the others.",
+          "fix": "Remove or retarget one relay route of the cycle, this one from 'tasks' to 'svc' or a related one.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/getTask/relays"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/internal/routes/getTask/relays",
+                "api": "svc"
+              },
+              "message": "api 'svc' relays to 'tasks' here"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "api": "svc",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/workspace/relay-cycle",
+          "message": "Relay routes form a cycle between the apis 'tasks', 'svc', so none of them can compile after the others.",
+          "fix": "Remove or retarget one relay route of the cycle, this one from 'svc' to 'tasks' or a related one.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/internal/routes/getTask/relays"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/getTask/relays",
+                "api": "tasks"
+              },
+              "message": "api 'tasks' relays to 'svc' here"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/ref-file-shape",
+      "message": "'./s.yaml' does not hold a mapping of names to schemas",
+      "fix": "write the file as Name: { ...schema }",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/3/14"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

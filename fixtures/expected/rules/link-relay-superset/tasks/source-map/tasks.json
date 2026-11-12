@@ -1,0 +1,103 @@
+{
+  "irRevision": 6,
+  "locations": {
+    "api#/api": {
+      "column": 1,
+      "endColumn": 48,
+      "endLine": 1,
+      "file": "api.yaml",
+      "line": 1
+    },
+    "api#/api/version": {
+      "column": 21,
+      "endColumn": 31,
+      "endLine": 1,
+      "file": "api.yaml",
+      "line": 1
+    },
+    "api#/conventions/errors/derived": {
+      "column": 5,
+      "endColumn": 1,
+      "endLine": 6,
+      "file": "api.yaml",
+      "line": 4
+    },
+    "api#/conventions/errors/derived/unsupportedMediaType": {
+      "column": 7,
+      "endColumn": 42,
+      "endLine": 5,
+      "file": "api.yaml",
+      "line": 5
+    },
+    "api#/errors/tasks.invalid": {
+      "column": 3,
+      "endColumn": 33,
+      "endLine": 7,
+      "file": "api.yaml",
+      "line": 7
+    },
+    "api#/schemas/NewNote": {
+      "column": 3,
+      "endColumn": 68,
+      "endLine": 10,
+      "file": "api.yaml",
+      "line": 10
+    },
+    "api#/schemas/NewNote/properties/text": {
+      "column": 42,
+      "endColumn": 64,
+      "endLine": 10,
+      "file": "api.yaml",
+      "line": 10
+    },
+    "api#/schemas/Note": {
+      "column": 3,
+      "endColumn": 87,
+      "endLine": 9,
+      "file": "api.yaml",
+      "line": 9
+    },
+    "api#/schemas/Note/properties/noteId": {
+      "column": 59,
+      "endColumn": 83,
+      "endLine": 9,
+      "file": "api.yaml",
+      "line": 9
+    },
+    "api#/surfaces/app": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 16,
+      "file": "api.yaml",
+      "line": 12
+    },
+    "api#/surfaces/app/access": {
+      "column": 5,
+      "endColumn": 30,
+      "endLine": 13,
+      "file": "api.yaml",
+      "line": 13
+    },
+    "api#/surfaces/app/routes/getTask": {
+      "column": 7,
+      "endColumn": 62,
+      "endLine": 15,
+      "file": "api.yaml",
+      "line": 15
+    },
+    "api#/surfaces/app/routes/getTask/input": {
+      "column": 32,
+      "endColumn": 46,
+      "endLine": 15,
+      "file": "api.yaml",
+      "line": 15
+    },
+    "api#/surfaces/app/routes/getTask/output": {
+      "column": 48,
+      "endColumn": 60,
+      "endLine": 15,
+      "file": "api.yaml",
+      "line": 15
+    }
+  }
+}

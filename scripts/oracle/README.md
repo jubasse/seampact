@@ -31,3 +31,14 @@ Per fixture, under `fixtures/expected/<fixture path>/`:
 - A mismatch matched by no entry fails, and one matched by two or more entries fails as ambiguous. An entry that matches no mismatch in the whole run is stale and fails the gate.
 
 `format` applies to `generated` output only. The TS `check` ignores the file: TS is the `from` side.
+
+## Rules without a fixture
+
+`coverage` lists five rule ids that no contract fixture can trigger:
+
+- `derive/error-params`: declared in the rule type, reported nowhere.
+- `finalize/id-collision`: `tree/name-collision` refuses the same collisions earlier.
+- `tree/relay-unknown`: needs an imported IR from a newer seampact with unknown closed values, which a contract cannot write.
+- `load/expansion-limit`, `load/file-too-large`: size budgets too large for a committed fixture; unit tests cover them.
+
+The diagnostics cap is silent: past it, diagnostics are dropped with no marker, so `diagnostics-cap-at` and `diagnostics-cap-over` expect the same output.

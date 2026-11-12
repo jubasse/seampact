@@ -1,0 +1,32 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/validate/conflicting-keywords",
+          "message": "'optionalAuth' cannot be written here: 'public' excludes 'optionalAuth' and 'onRefused'.",
+          "fix": "Remove 'optionalAuth', or the keyword it conflicts with.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/access/optionalAuth"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/reason-required",
+          "message": "'optionalAuth' needs a reason: a safety exception states why, in a non-empty string (A40).",
+          "fix": "Write the reason as a string: optionalAuth: \"<reason>\".",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/access/optionalAuth"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

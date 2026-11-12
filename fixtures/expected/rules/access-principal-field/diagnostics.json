@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/principal-field",
+          "message": "'principal.requires' under identity 'user' names principal field 'nope', which its principal does not hold",
+          "fix": "Name a field of the principal schema, or add it to the schema.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/ping/principal/requires/0"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

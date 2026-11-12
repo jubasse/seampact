@@ -1,0 +1,91 @@
+{
+  "schemes": {
+    "csrfA": {
+      "id": "csrfA",
+      "kind": "header",
+      "name": "X-A",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/csrfA"
+      }
+    },
+    "csrfB": {
+      "id": "csrfB",
+      "kind": "header",
+      "name": "X-B",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/csrfB"
+      }
+    },
+    "one": {
+      "id": "one",
+      "kind": "cookie",
+      "name": "s1",
+      "csrf": "csrfA",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/one"
+      }
+    },
+    "two": {
+      "id": "two",
+      "kind": "cookie",
+      "name": "s2",
+      "csrf": "csrfB",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/two"
+      }
+    }
+  },
+  "identities": {
+    "user": {
+      "id": "user",
+      "kind": "credential",
+      "schemes": {
+        "read": [
+          "one"
+        ],
+        "write": [
+          "one",
+          "two"
+        ],
+        "optionalRead": []
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "P"
+      },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/user"
+      }
+    }
+  },
+  "operations": {
+    "ping": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "one",
+          "two"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    }
+  }
+}

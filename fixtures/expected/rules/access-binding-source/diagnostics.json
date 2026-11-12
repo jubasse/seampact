@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/binding-source",
+          "message": "binding 'body.workspaceId' reads a value route 'ping' does not carry: it has no input body field 'workspaceId'",
+          "fix": "Bind a value the route declares (a path placeholder, a query field or a field of its object input), or move the binding to the routes that carry it.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/ping/bindings/body.workspaceId"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

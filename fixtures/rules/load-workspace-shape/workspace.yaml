@@ -1,0 +1,3 @@
+workspace:
+  apis:
+    tasks: [./api.yaml]

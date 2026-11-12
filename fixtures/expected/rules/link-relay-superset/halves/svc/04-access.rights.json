@@ -1,0 +1,35 @@
+{
+  "rights": {
+    "callerService": {
+      "id": "callerService",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/callerService"
+      }
+    }
+  },
+  "operations": {
+    "getTask": {
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "callerService",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/internal/requires/0"
+          }
+        }
+      ],
+      "fieldRights": []
+    }
+  }
+}

@@ -1,0 +1,4 @@
+api: { name: t, version: 1 }
+schemas:
+  A: { extends: B }
+  B: { extends: A }

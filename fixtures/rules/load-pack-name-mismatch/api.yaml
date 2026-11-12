@@ -1,0 +1,2 @@
+api: { name: t, version: 1 }
+packs: ['@acme/p']

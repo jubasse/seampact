@@ -1,0 +1,16 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/reserved-key",
+      "message": "'__proto__' cannot be a key: it names a property every JavaScript object inherits",
+      "fix": "rename the key",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/3/3"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

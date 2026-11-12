@@ -1,0 +1,16 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/workspace-shape",
+      "message": "workspace.apis.tasks takes a path",
+      "fix": "write the api file's path",
+      "origin": {
+        "layer": "workspace",
+        "pointer": "/~load/workspace.yaml/3/5"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

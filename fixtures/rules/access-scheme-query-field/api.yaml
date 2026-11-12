@@ -1,0 +1,15 @@
+api: { name: t, version: 1 }
+schemas:
+  P: { type: object, required: [userId], properties: { userId: { type: string } } }
+schemes:
+  keyed: { kind: query, name: key }
+identities:
+  user:
+    schemes: { read: [keyed], write: [keyed] }
+    principal: P
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: user
+    routes:
+      ping: { method: get, query: { key: { type: string } } }

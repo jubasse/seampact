@@ -1,0 +1,27 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/pack-shape",
+      "message": "packs is a list of paths and package names",
+      "fix": "write packs: ['@seampact/pack-crud-rights', ./packs/house.yaml]",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/2/1"
+      },
+      "related": []
+    },
+    {
+      "severity": "error",
+      "rule": "seampact/load/scalar-type",
+      "message": "'./p.yaml' is a string where the schema expects a list (P6)",
+      "fix": "write a list",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/2/8"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

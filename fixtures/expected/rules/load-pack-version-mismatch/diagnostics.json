@@ -1,0 +1,16 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/pack-version-mismatch",
+      "message": "the pack manifest says version 1.0.0 and the package.json of '@acme/p' says 2.0.0",
+      "fix": "write the version once, in the manifest: make package.json agree with it",
+      "origin": {
+        "layer": "pack:@acme/p",
+        "pointer": "/~load/node_modules~1@acme~1p~1pack.yaml/1/26"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

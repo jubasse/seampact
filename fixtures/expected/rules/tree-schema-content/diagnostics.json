@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/schema-content",
+          "message": "a JSON text field is a string with both 'contentMediaType: application/json' and 'contentSchema'",
+          "fix": "write 'type: string' with both keywords",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Note/properties/payload"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

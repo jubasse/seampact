@@ -1,0 +1,29 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/owner-concurrency",
+          "message": "drafts is owned by the caller and also declares concurrency; a caller-owned record has no version.",
+          "fix": "Remove concurrency, or remove owner: caller.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/drafts/concurrency"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/drafts/owner"
+              },
+              "message": "owner: caller"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

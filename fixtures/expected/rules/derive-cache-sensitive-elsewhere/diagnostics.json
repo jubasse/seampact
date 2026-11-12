@@ -1,0 +1,29 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "shop",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/derive/cache-sensitive-elsewhere",
+          "message": "conventions.cache.sensitiveElsewhere is refuse, so the params of error 'shop.leak' may not carry the sensitive property 'token' of 'ShopLeakParams'",
+          "fix": "Drop the sensitive mark from the params, or set conventions.cache.sensitiveElsewhere: noStore.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/errors/shop.leak/params"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/conventions/cache/sensitiveElsewhere"
+              },
+              "message": "the convention"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

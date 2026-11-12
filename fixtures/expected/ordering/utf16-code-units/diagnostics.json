@@ -1,0 +1,9 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "ordering",
+      "diagnostics": []
+    }
+  ]
+}

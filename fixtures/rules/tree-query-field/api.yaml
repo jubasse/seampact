@@ -1,0 +1,21 @@
+api: { name: t, version: 1, kind: product }
+
+services:
+  catalog: { maturity: stable }
+
+schemas:
+  Note:
+    type: object
+    required: [text]
+    properties:
+      text: { type: string }
+  Deep:
+    type: object
+    properties:
+      x: { type: object, properties: { leaf: { type: string } } }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      one: { method: get, operationId: findNotes, query: { filter?: Deep }, output: Note }

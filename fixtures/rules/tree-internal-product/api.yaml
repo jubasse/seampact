@@ -1,0 +1,18 @@
+api: { name: t, version: 1, kind: service, caller: { identity: service, right: callerService } }
+schemes:
+  internalToken: { kind: bearer }
+identities:
+  service:
+    schemes: { read: [internalToken], write: [internalToken] }
+    principal: P
+schemas:
+  P: { type: object, required: [service], properties: { service: { type: string } } }
+rights:
+  callerService: {}
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: service
+    requires: [{ right: callerService }]
+    routes:
+      ping: { method: get, internal: true }

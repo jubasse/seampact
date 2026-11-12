@@ -1,0 +1,5 @@
+api: { name: t, version: 1 }
+surfaces:
+  app:
+    routes:
+      $include: ./r.yaml

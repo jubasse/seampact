@@ -1,0 +1,32 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/sort-key",
+          "message": "The sort key -text of listTags is not a property of its item Note.",
+          "fix": "Name a property of Note, or declare -text on it.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/tags/ops/list/sortable/0"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/sort-key-signed",
+          "message": "The sort key -text of listTags holds a ',' or starts with '-', which the signed sort style sorted cannot send.",
+          "fix": "Rename -text, or use a paging style whose sort role is pair, keyed or split.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/tags/ops/list/sortable/0"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

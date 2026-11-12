@@ -1,0 +1,16 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/base-extends",
+      "message": "a base extends nothing (the file 'base.yaml' has extends)",
+      "fix": "what every api shares goes in the workspace's shared file; anything beyond travels as packs",
+      "origin": {
+        "layer": "base",
+        "pointer": "/~load/base.yaml/1/1"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

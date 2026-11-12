@@ -1,0 +1,36 @@
+api: { name: t, version: 1, kind: product }
+
+conventions:
+  paging: { maxLimit: 50 }
+
+services:
+  catalog: { maturity: stable }
+
+pagings:
+  cursor:
+    request: { cursor: { query: cursor }, limit: { query: limit } }
+    response: { body: $items }
+  sorted:
+    request: { cursor: { query: cursor }, sort: { query: sort, style: signed } }
+    response: { body: $items }
+
+schemas:
+  Id: { type: string }
+  Note:
+    type: object
+    required: [noteId, text]
+    properties:
+      noteId: Id
+      text: { type: string }
+      extra: { type: string }
+  NewNote:
+    type: object
+    properties:
+      text: { type: string }
+      expectedVersion: { type: integer }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      peek: { method: get, input: NewNote, output: Note }

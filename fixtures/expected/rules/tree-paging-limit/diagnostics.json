@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/paging-limit",
+          "message": "The list limited pages with cursor, but its defaultLimit 20 is above its maxLimit 10.",
+          "fix": "Lower defaultLimit on the route's paging to its maxLimit or less.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/limited/paging"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

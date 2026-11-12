@@ -1,0 +1,10 @@
+api: { name: t, version: 1 }
+schemas:
+  Article:
+    type: object
+    required: [articleId, title]
+    properties:
+      articleId: { type: string, format: uuid }
+      title: { type: string, minLength: 1, maxLength: 200 }
+      body: { type: string, maxLength: 20000 }
+  Lacks: { pick: { from: Article, fields: [title, missing] } }

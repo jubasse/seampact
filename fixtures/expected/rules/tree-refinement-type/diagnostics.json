@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/refinement-type",
+          "message": "'maxLength' does not apply to a integer",
+          "fix": "remove 'maxLength'",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/A/maxLength"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

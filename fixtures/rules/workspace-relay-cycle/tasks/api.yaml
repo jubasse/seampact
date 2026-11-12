@@ -1,0 +1,8 @@
+api: { name: tasks, version: 1, kind: product }
+schemas:
+  Note: { type: object, required: [noteId], properties: { noteId: { type: string } } }
+surfaces:
+  app:
+    access: { public: Open. }
+    routes:
+      getTask: { relays: svc.getTask }

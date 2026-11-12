@@ -1,0 +1,18 @@
+api: { name: t, version: 1 }
+schemas:
+  P: { type: object, required: [userId], properties: { userId: { type: string } } }
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: user
+    routes:
+      ping: { method: post }
+schemes:
+  csrfA: { kind: header, name: X-A }
+  csrfB: { kind: header, name: X-B }
+  one: { kind: cookie, name: s1, csrf: csrfA }
+  two: { kind: cookie, name: s2, csrf: csrfB }
+identities:
+  user:
+    schemes: { read: [one], write: [one, two] }
+    principal: P

@@ -1,0 +1,28 @@
+api: { name: t, version: 1, kind: product }
+
+services:
+  catalog: { maturity: stable }
+
+schemas:
+  Id: { type: string }
+  Note:
+    type: object
+    required: [noteId, text]
+    properties:
+      noteId: Id
+      text: { type: string }
+  NewNote:
+    type: object
+    properties:
+      text: { type: string }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      notes:
+        kind: collection
+        id: { noteId: Id }
+        item: Note
+        concurrency: { version: query.ver, field: text }
+        ops: { update: { input: NewNote, query: { ver: { type: integer } } } }

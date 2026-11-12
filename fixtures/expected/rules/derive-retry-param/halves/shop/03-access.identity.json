@@ -1,0 +1,19 @@
+{
+  "operations": {
+    "ping": {
+      "access": {
+        "kind": "public",
+        "reason": "The fixture checks one error declaration only.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    }
+  }
+}

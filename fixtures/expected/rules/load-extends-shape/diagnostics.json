@@ -1,0 +1,16 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/extends-shape",
+      "message": "an api extends at most one base, written as a path",
+      "fix": "write extends: ./base.yaml",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/2/1"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

@@ -1,0 +1,29 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/operation-id-unique",
+          "message": "The operation id sameId of /surfaces/app/routes/two is also the id of /surfaces/app/routes/one; operation ids are unique across the api.",
+          "fix": "Rename one of the routes, or set operationId on one of them.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/two"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/one"
+              },
+              "message": "the operation sameId"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

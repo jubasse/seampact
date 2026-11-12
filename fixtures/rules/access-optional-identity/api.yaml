@@ -1,0 +1,11 @@
+api: { name: t, version: 1 }
+schemes:
+  bearer: { kind: bearer }
+schemas:
+  P: { type: object, required: [userId], properties: { userId: { type: string } } }
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { optionalAuth: Maybe. }
+    routes:
+      ping: { method: get }

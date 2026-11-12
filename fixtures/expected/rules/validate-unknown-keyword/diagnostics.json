@@ -1,0 +1,32 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/validate/unknown-keyword",
+          "message": "'extends' is not a keyword of 'A'.",
+          "fix": "Remove 'extends'.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/A/extends"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/unknown-keyword",
+          "message": "'extends' is not a keyword of 'B'.",
+          "fix": "Remove 'extends'.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/B/extends"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

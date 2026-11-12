@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-name",
+          "message": "'id' is not a schema name (ADR 0002 section 4).",
+          "fix": "Rename it to match ^(?:[A-Z][A-Za-z0-9]*|\\$include)$.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/id"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/scalar-type",
+      "message": "'5' is an integer where the schema expects a string (P6)",
+      "fix": "quote it ('5') to write a string",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/3/15"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

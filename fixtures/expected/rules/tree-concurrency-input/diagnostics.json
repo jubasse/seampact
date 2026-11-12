@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/concurrency-input",
+          "message": "The operation updateNote declares query.ver, the version its concurrency adds.",
+          "fix": "Remove ver from the operation; concurrency adds it.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/notes/ops/update/query/ver"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}
