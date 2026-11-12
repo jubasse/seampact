@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/signature-verify",
+          "message": "signature scheme 'sig' verifies by template and has no 'format', 'algorithm', 'payload', 'encoding'",
+          "fix": "Declare format, algorithm, payload and encoding (ADR 0013), or set 'verify: application' to verify in the authenticate hook.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemes/sig"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

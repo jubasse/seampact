@@ -1,0 +1,29 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/binding-conflict",
+          "message": "'path.id' is bound to \"principal.userId\" above and to another principal field here",
+          "fix": "Bind each request value to one principal field: remove one of the two bindings.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/ping/bindings/path.id"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/bindings/path.id"
+              },
+              "message": "the first binding"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
