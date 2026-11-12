@@ -97,6 +97,19 @@ impl<'de> Deserialize<'de> for JsonValue {
     }
 }
 
+/// Reads an optional opaque member so that a present `null` stays a value.
+///
+/// Use as `#[serde(default, deserialize_with = "present", skip_serializing_if = "Option::is_none")]`
+/// on an `Option<JsonValue>`: an absent member is `None`, a present `null` is
+/// `Some(JsonValue::Null)`. Serde alone reads both as `None`, and the IR writes them differently.
+///
+/// # Errors
+///
+/// As [`JsonValue`]'s `Deserialize`: a number with no finite `f64`.
+pub fn present<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Option<JsonValue>, D::Error> {
+    JsonValue::deserialize(deserializer).map(Some)
+}
+
 impl Serialize for JsonValue {
     /// Writes the value for `serde_json`: an exact integer through `serde_json::Number`, an
     /// integral `f64` within 2^53 as an integer, any other `f64` as a float, as `JSON.stringify`
@@ -219,5 +232,26 @@ mod tests {
             parsed(r#"{"b": 1.0, "a": -0}"#).unwrap()
         );
         assert_ne!(parsed("[1, 2]").unwrap(), parsed("[2, 1]").unwrap());
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct ErrorExample {
+        #[serde(default, deserialize_with = "present")]
+        example: Option<JsonValue>,
+        #[serde(default)]
+        example_without_present: Option<JsonValue>,
+    }
+
+    #[test]
+    fn present_keeps_a_present_null_apart_from_an_absent_member() {
+        let absent: ErrorExample = serde_json::from_str("{}").unwrap();
+        let null: ErrorExample =
+            serde_json::from_str(r#"{"example": null, "example_without_present": null}"#).unwrap();
+        let number: ErrorExample = serde_json::from_str(r#"{"example": 4.04e2}"#).unwrap();
+
+        assert_eq!(absent.example, None);
+        assert_eq!(null.example, Some(JsonValue::Null));
+        assert_eq!(null.example_without_present, None);
+        assert_eq!(number.example, Some(parsed("404").unwrap()));
     }
 }
