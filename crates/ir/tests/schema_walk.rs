@@ -140,6 +140,16 @@ impl Definitions {
             .ok_or_else(|| format!("no definition {name}"))
     }
 
+    /// The properties of every definition whose schema is an integer, `type` as a string or list.
+    fn integer_member_count(&self) -> usize {
+        self.0
+            .values()
+            .filter_map(|definition| definition.get("properties")?.as_object())
+            .flat_map(|properties| properties.values())
+            .filter(|member_schema| is_integer_schema(member_schema))
+            .count()
+    }
+
     /// Every object definition and its members, required ones marked.
     fn object_members(&self) -> BTreeMap<(String, String), bool> {
         let mut members = BTreeMap::new();
@@ -157,6 +167,14 @@ impl Definitions {
         }
 
         members
+    }
+}
+
+fn is_integer_schema(schema: &Value) -> bool {
+    match schema.get("type") {
+        Some(Value::String(name)) => name == "integer",
+        Some(Value::Array(names)) => names.contains(&Value::from("integer")),
+        _ => false,
     }
 }
 
@@ -430,13 +448,41 @@ fn the_registries_list_every_open_enum_and_union_of_the_schemas_and_nothing_else
         .collect();
 
     assert_eq!(
-        registered_open_enums,
-        registry_of_schema_open_enums(&definitions)
+        differing_definitions(
+            &registered_open_enums,
+            &registry_of_schema_open_enums(&definitions)
+        ),
+        Vec::<String>::new(),
+        "open enums"
     );
     assert_eq!(
-        registered_unions,
-        registry_of_schema_unions(&definitions).unwrap()
+        differing_definitions(
+            &registered_unions,
+            &registry_of_schema_unions(&definitions).unwrap()
+        ),
+        Vec::<String>::new(),
+        "unions"
     );
+}
+
+/// The definitions the registry and the schemas disagree on: missing, extra or changed.
+fn differing_definitions<Entry: PartialEq + std::fmt::Debug>(
+    registered: &BTreeMap<String, Entry>,
+    in_schemas: &BTreeMap<String, Entry>,
+) -> Vec<String> {
+    let names: BTreeSet<&String> = registered.keys().chain(in_schemas.keys()).collect();
+
+    names
+        .into_iter()
+        .filter(|name| registered.get(*name) != in_schemas.get(*name))
+        .map(|name| {
+            format!(
+                "{name}: registered {:?}, schemas {:?}",
+                registered.get(name),
+                in_schemas.get(name)
+            )
+        })
+        .collect()
 }
 
 #[test]
@@ -589,11 +635,12 @@ fn every_integer_member_reads_its_bounds_and_float_form_and_refuses_beyond_them(
     let definitions = Definitions::load().unwrap();
     let mut mismatches = Vec::new();
     let mut checked_members = 0;
+    let integer_members_in_schemas = definitions.integer_member_count();
 
     for (root, example, occurrences) in examples_with_first_occurrences(&definitions).unwrap() {
-        let integer_occurrences = occurrences.values().filter(|occurrence| {
-            occurrence.member_schema.get("type") == Some(&Value::from("integer"))
-        });
+        let integer_occurrences = occurrences
+            .values()
+            .filter(|occurrence| is_integer_schema(&occurrence.member_schema));
 
         for occurrence in integer_occurrences {
             checked_members += 1;
@@ -605,6 +652,10 @@ fn every_integer_member_reads_its_bounds_and_float_form_and_refuses_beyond_them(
     }
 
     assert!(checked_members > 0, "no integer member found");
+    assert_eq!(
+        checked_members, integer_members_in_schemas,
+        "the walk checked every integer property of the schemas"
+    );
     assert_eq!(
         mismatches,
         Vec::<String>::new(),
