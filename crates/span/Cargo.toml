@@ -1,0 +1,17 @@
+[package]
+name = "seampact-span"
+description = "Source spans, the file table and byte offset to line and UTF-16 column conversion."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+indexmap.workspace = true
+line-index.workspace = true
+text-size.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true
