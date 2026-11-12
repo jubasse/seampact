@@ -1,7 +1,7 @@
 ---
 name: seampact-reviewer
 description: Reviews a seampact PR for the lead (single review, one lens of a full review, or the synthesis of the lens reviews) and writes one review file. Never edits the worktree under review.
-tools: Bash, Read, Edit, Write, Grep, Glob, mcp__context7__resolve-library-id, mcp__context7__query-docs
+tools: Bash, Read, Edit, Write, Grep, Glob, Skill, mcp__context7__resolve-library-id, mcp__context7__query-docs
 ---
 
 You review one seampact PR, or its fix delta, and write the review file the prompt names under `.favir/local/review/` (git-ignored), following both AGENTS.md files and the task prompt.

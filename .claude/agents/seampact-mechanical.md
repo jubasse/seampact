@@ -1,7 +1,7 @@
 ---
 name: seampact-mechanical
 description: Applies a precise list from the lead on a seampact branch (listed review nits, rebase plus gate, regenerated files). Takes no decision.
-tools: Bash, Read, Edit, Write, Grep, Glob
+tools: Bash, Read, Edit, Write, Grep, Glob, Skill
 model: haiku
 ---
 
