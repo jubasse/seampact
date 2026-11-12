@@ -131,7 +131,7 @@ What the feature changes for every serde_json user, and the rule for each:
 | a `serde_json::Value` or `Number` written by a non-serde_json serializer (YAML, TOML, CBOR) becomes a private-struct map `{"$serde_json::private::Number": "1"}`, silently | never hand a serde_json value, or a type whose `Serialize` writes one (`JsonValue`, the IR types), to another format; the YAML emitter takes `JsonValue` |
 | `Number::as_f64` parses text on each call | not measurable in the spike; convert once into `JsonNumber` |
 
-A TypeScript pass that copies an authoring number into an IR integer member converts it with the shared JS-integer helper of section 2 (`Number.isInteger` per PORTING section 2, then the safe range). It fails as a `Result`; it never rounds. There is no draft-level number type: the helper's `Err` becomes the internal diagnostic naming the IR member, the same outcome as today, where a non-integer in an IR integer member fails finalize's strict check as an internal error (`packages/core/compiler/src/finalize/validate.ts`).
+A TypeScript pass that copies an authoring number into an IR integer member converts it with the shared JS-integer helper of section 2 (`Number.isInteger` per PORTING section 2, then the safe range). It fails as a `Result`; it never rounds. There is no draft-level number type: the helper's `Err` becomes an `InternalError` naming the IR member, the same outcome as today, where a non-integer in an IR integer member fails finalize's strict check as an internal error (`packages/core/compiler/src/finalize/validate.ts`).
 
 ## 4. Threads and strings
 
