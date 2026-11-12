@@ -201,7 +201,13 @@ macro_rules! ir_unions {
                     match tag.as_str() {
                         $($tag => serde_json::from_value(value)
                             .map(Self::$variant)
-                            .map_err(D::Error::custom),)+
+                            .map_err(|error| {
+                                D::Error::custom(format!(
+                                    "{} `{}`: {error}",
+                                    stringify!($name),
+                                    $tag
+                                ))
+                            }),)+
                         _ => UnknownVariant::read(tag, value)
                             .map(Self::Unknown)
                             .map_err(D::Error::custom),
@@ -352,6 +358,18 @@ mod tests {
         assert!(matches!(&key, SchemeKey::Value(variant) if variant.value == "secret"));
         assert_eq!(key.tag(), "value");
         assert_eq!(serde_json::to_string(&key).unwrap(), text);
+    }
+
+    #[test]
+    fn an_error_inside_a_known_variant_names_the_union_and_the_tag() {
+        let error = serde_json::from_str::<SchemeKey>(r#"{"kind":"value","value":5}"#)
+            .unwrap_err()
+            .to_string();
+
+        assert!(
+            error.starts_with("SchemeKey `value`: "),
+            "the error is {error:?}"
+        );
     }
 
     #[test]
