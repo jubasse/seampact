@@ -545,15 +545,15 @@ fn adr_references_follow_the_pattern() {
 }
 
 /// The text of the TypeScript table entry of `keyword`, up to the next entry.
-fn keyword_source_entry(keyword: &str) -> &'static str {
+fn keyword_source_entry(keyword: &str) -> Option<&'static str> {
     let opening = format!("keyword: \"{keyword}\",");
-    let (_, from_entry) = KEYWORDS_SOURCE
-        .split_once(&opening)
-        .unwrap_or_else(|| panic!("keywords.ts has no entry for {keyword}"));
+    let (_, from_entry) = KEYWORDS_SOURCE.split_once(&opening)?;
 
-    from_entry
-        .split_once("keyword: \"")
-        .map_or(from_entry, |(entry, _)| entry)
+    Some(
+        from_entry
+            .split_once("keyword: \"")
+            .map_or(from_entry, |(entry, _)| entry),
+    )
 }
 
 /// `source` with a line break after `reason:` or `fix:` (the formatter's wrap of a long value)
@@ -569,11 +569,11 @@ fn unwrapped_members(source: &str) -> String {
 
 /// The two ways the formatter writes `text` as a string literal: double-quoted, or
 /// single-quoted when the text holds double quotes and no single quote.
-fn typescript_literals(text: &str) -> [String; 2] {
-    [
-        serde_json::to_string(text).expect("a string serializes"),
-        format!("'{text}'"),
-    ]
+fn typescript_literals(text: &str) -> Vec<String> {
+    serde_json::to_string(text)
+        .into_iter()
+        .chain(std::iter::once(format!("'{text}'")))
+        .collect()
 }
 
 /// Whether `source` holds the member `name: <literal of text>`.
@@ -586,7 +586,9 @@ fn has_member(source: &str, name: &str, text: &str) -> bool {
 #[test]
 fn every_decision_reason_and_fix_is_the_typescript_text() {
     for entry in SCHEMA_KEYWORDS {
-        let source = unwrapped_members(keyword_source_entry(entry.keyword));
+        let entry_source = keyword_source_entry(entry.keyword)
+            .unwrap_or_else(|| panic!("keywords.ts has no entry for {}", entry.keyword));
+        let source = unwrapped_members(entry_source);
         let decision = match entry.decision {
             SchemaKeywordDecision::Kept => "kept",
             SchemaKeywordDecision::Refused => "refused",
