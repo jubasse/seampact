@@ -1,2 +1,12 @@
 version: 1
-differences: []
+differences:
+  - id: big-integers-exact
+    reason: The Rust core keeps an integer above 2^53 exactly, where the TS oracle rounds it to a double.
+    decision: docs/adr/0031-rust-core.md#what-stays
+    applies:
+      fixtures: ["big-integers/**"]
+      output: ir
+      pointer: /schemas/Counter/properties/0/default
+    change: value
+    from: 9223372036854776000
+    to: 9223372036854775807
