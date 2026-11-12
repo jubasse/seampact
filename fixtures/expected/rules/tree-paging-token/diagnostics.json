@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/paging-token",
+          "message": "The list listNotes sets a token, but its style cursor has no since role.",
+          "fix": "Remove token, or use a style with a since role.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/notes/ops/list/paging"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

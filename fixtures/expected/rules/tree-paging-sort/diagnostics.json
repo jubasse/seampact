@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/paging-sort",
+          "message": "The list searched declares sort keys, but the style cursor has no sort role to send them.",
+          "fix": "Remove sortable, or use a paging style with a sort role.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/searched/sortable"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}
