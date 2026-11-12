@@ -1,0 +1,86 @@
+[graph]
+all-features = true
+# The release platforms (ADR 0031: static musl on Linux) and the gnu triples of dev hosts; wasm-only dependencies stay out of the graph.
+targets = [
+    "x86_64-unknown-linux-gnu",
+    "x86_64-unknown-linux-musl",
+    "aarch64-unknown-linux-gnu",
+    "aarch64-unknown-linux-musl",
+    "x86_64-apple-darwin",
+    "aarch64-apple-darwin",
+    "x86_64-pc-windows-msvc",
+]
+
+[advisories]
+version = 2
+yanked = "deny"
+
+[licenses]
+version = 2
+allow = [
+    "MIT",
+    "MIT-0",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+    "Zlib",
+    # libfuzzer-sys.
+    "NCSA",
+]
+confidence-threshold = 0.9
+# The list covers the pinned set, not only the crates in use today.
+unused-allowed-license = "allow"
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+deny = [
+    # Unmaintained or unsound YAML.
+    { crate = "serde_yaml" },
+    { crate = "serde_yml" },
+    { crate = "yaml-rust" },
+    { crate = "unsafe-libyaml" },
+    # Wrong key order for the IR.
+    { crate = "serde_jcs" },
+    { crate = "serde_json_canonicalizer" },
+    # Unsafe-heavy speed we do not need.
+    { crate = "simd-json" },
+    { crate = "sonic-rs" },
+    # Archived, or imposes an error model.
+    { crate = "ariadne" },
+    { crate = "miette" },
+    # Supply-chain or global-state risk, or lifetimes in every signature.
+    { crate = "internment" },
+    { crate = "ustr" },
+    { crate = "bumpalo" },
+    # Compile-time cost; generators share a hand-written CodeWriter.
+    { crate = "tera" },
+    { crate = "askama" },
+    # Covered by proptest and insta.
+    { crate = "quickcheck" },
+    { crate = "goldenfile" },
+    # C build, unmaintained, a second error idiom, data weight.
+    { crate = "ring" },
+    { crate = "tower-lsp" },
+    { crate = "snafu" },
+    { crate = "eyre" },
+    { crate = "icu_collator" },
+    { crate = "icu_casemap" },
+    { crate = "icu_segmenter" },
+    # idna is gone with jsonschema's default features.
+    { crate = "icu_normalizer" },
+    { crate = "icu_properties" },
+    # Network and C builds: the compiler reads local files only.
+    { crate = "reqwest", reason = "network and C builds: the compiler reads local files only" },
+    { crate = "aws-lc-sys", reason = "network and C builds: the compiler reads local files only" },
+]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+# Git sources come later, with oxc_formatter.
+allow-git = []

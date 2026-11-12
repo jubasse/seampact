@@ -1,0 +1,63 @@
+[workspace]
+resolver = "3"
+members = ["crates/*", "xtask"]
+
+[workspace.package]
+version = "2.0.0"
+edition = "2024"
+rust-version = "1.99"
+license = "MIT"
+publish = false
+
+[workspace.dependencies]
+# Parse surface and ordered maps. `arbitrary_precision` is decided in the IR types design note.
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = { version = "1.0.154", features = ["preserve_order"] }
+indexmap = "2.14.2"
+ryu-js = "1.0.3"
+regress = "0.12.0"
+clap = { version = "4.6.7", features = ["derive"] }
+jsonschema = { version = "0.61.2", default-features = false }
+similar = "3.2.1"
+saphyr-parser = "0.3.4"
+camino = "1.2.6"
+thiserror = "2.0.21"
+rayon = "1.12.0"
+line-index = "0.1.2"
+text-size = "1.1.1"
+unicode-normalization = "0.1.26"
+annotate-snippets = "0.12.18"
+flate2 = "1.1.11"
+tar = "0.4.46"
+sha2 = "0.11.1"
+# Tests and benchmarks.
+insta = "1.49.0"
+snapbox = "1.2.2"
+libtest-mimic = "0.8.2"
+proptest = "1.12.0"
+criterion = "0.8.2"
+arbitrary = "1.5.0"
+libfuzzer-sys = "0.4.13"
+# The CLI binary and xtask only.
+anyhow = "1.0.104"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+indexing_slicing = "deny"
+string_slice = "deny"
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+unreachable = "deny"
+exit = "deny"
+print_stdout = "deny"
+print_stderr = "deny"
+todo = "deny"
+unimplemented = "deny"
+dbg_macro = "deny"
+allow_attributes_without_reason = "deny"

@@ -39,7 +39,7 @@ General idiom comes from `rust-best-practices` and `rust-review`. This skill lis
 ## Dependencies
 
 - Versions pinned once in `[workspace.dependencies]`; a crate uses `dep.workspace = true`.
-- Each new dependency is named with its reason in the PR body and passes `cargo deny check` (MIT-compatible licences, advisories, no duplicate versions, known sources). `cargo machete` finds none unused.
+- Each new dependency is named with its reason in the PR body and passes `cargo deny check` (MIT-compatible licences, advisories, known sources; a duplicate version you introduce is named with its reason in the PR body). `cargo machete` finds none unused.
 - Crate docs through context7, at the pinned version.
 
 ## Tests

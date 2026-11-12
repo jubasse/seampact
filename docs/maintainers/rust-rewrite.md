@@ -69,14 +69,10 @@ For maintainers and contributors. This page covers why seampact's compiler and g
 
 ## How work runs during the port
 
-- **PRs.** `feat/` branches from develop, squash-merged. One PR per layer or feature batch, about 8,000 to 15,000 lines instead of A47's usual size ([ADR 0031](../adr/0031-rust-core.md#building-the-port)). Seams stay small and land first. A pattern review comes after the first few thousand lines of each layer PR.
-- **No CI on develop during the port.** The gate is local, through the git hooks:
-  - pre-commit: formatting and lint on the touched crates;
-  - pre-push: the touched crates' tests and the oracle comparison;
-  - before a merge: the full gate.
-
-  At a few milestones, the lead starts one manual CI run on Linux, macOS and Windows.
-- **CI is rebuilt last.** It covers the five platforms, the release dry run and new required checks, then the workflows are switched back on.
+- **PRs.** Lane branches start from `feat/rust-core` and squash-merge into it once the local gate, `cargo xtask gate`, passes on the tip rebased on `feat/rust-core`. One PR per layer or feature batch, about 8,000 to 15,000 lines instead of A47's usual size ([ADR 0031](../adr/0031-rust-core.md#building-the-port)). Seams stay small and land first. A pattern review comes after the first few thousand lines of each layer PR.
+- **No CI on `feat/rust-core`.** Every workflow trigger filters `main` and `develop`, so develop keeps its required checks and Dependabot while the port runs. Develop is merged into `feat/rust-core` now and then.
+- **The gate is local:** `cargo xtask gate` runs the commands of [PORTING.md](../../PORTING.md) section 8, the trace check and the oracle, and prints one result line per step. At a few milestones, the lead starts one manual CI run on Linux, macOS and Windows.
+- **CI is rebuilt last.** It covers the five platforms, the release dry run and new required checks, and lands on `feat/rust-core`; one PR from `feat/rust-core` to develop then runs it as the real gate, with a release dry run, and merges with a merge commit.
 - **Portability from the first seam:**
   - UTF-8 paths and one validated relative-path type;
   - output paths that differ only by case or Unicode normalisation are refused;
