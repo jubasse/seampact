@@ -10,14 +10,16 @@ license = "MIT"
 publish = false
 
 [workspace.dependencies]
-# Parse surface and ordered maps. `arbitrary_precision` is decided in the IR types design note.
+# Workspace crates.
+seampact-js = { path = "crates/js" }
+# Parse surface and ordered maps; the number features follow the IR types design note, section 3.
 serde = { version = "1.0.229", features = ["derive"] }
-serde_json = { version = "1.0.154", features = ["preserve_order"] }
-indexmap = "2.14.2"
+serde_json = { version = "1.0.154", features = ["preserve_order", "arbitrary_precision", "float_roundtrip"] }
+indexmap = { version = "2.14.2", features = ["serde"] }
 ryu-js = "1.0.3"
 regress = "0.12.0"
 clap = { version = "4.6.7", features = ["derive"] }
-jsonschema = { version = "0.61.2", default-features = false }
+jsonschema = { version = "0.61.2", default-features = false, features = ["arbitrary-precision"] }
 similar = "3.2.1"
 saphyr-parser = "0.3.4"
 camino = "1.2.6"
