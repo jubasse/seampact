@@ -37,3 +37,41 @@ src/report.rs#relabel	packages/core/compiler/src/load/report.ts#Reporter.relabel
 src/report.rs#report	packages/core/compiler/src/load/report.ts#Reporter.report
 src/fragments.rs#load_sort_fragments	packages/core/compiler/src/load/fragments.ts#loadSortFragments
 src/fragments.rs#fragment_key	packages/core/compiler/src/load/fragments.ts#fragmentKey
+-	packages/core/compiler/src/load/positions.ts#schemaFiles	merged: src/positions/schema_files.rs#load
+-	packages/core/compiler/src/load/positions.ts#isSchema	merged: src/positions/schema_node.rs#as_node
+src/positions/schema_files.rs#resolve_reference	packages/core/compiler/src/load/positions.ts#resolveRef
+-	packages/core/compiler/src/load/positions.ts#tagged	skip: the file is a field of SchemaNode, set when the node is built
+-	packages/core/compiler/src/load/positions.ts#fileOf	merged: src/positions/schema_node.rs#file
+src/positions/schema_node.rs#subschemas	packages/core/compiler/src/load/positions.ts#subschemas
+src/positions/schema_files.rs#referenced	packages/core/compiler/src/load/positions.ts#referenced
+src/positions/schema_node.rs#is_conflict	packages/core/compiler/src/load/positions.ts#isConflict
+src/positions/schema_files.rs#is_included_node	packages/core/compiler/src/load/positions.ts#isIncludedNode
+src/positions/types.rs#value_type	packages/core/compiler/src/load/positions.ts#valueType
+src/positions/types.rs#union	packages/core/compiler/src/load/positions.ts#union
+src/positions/types.rs#intersect	packages/core/compiler/src/load/positions.ts#intersect
+src/positions/types.rs#types_of	packages/core/compiler/src/load/positions.ts#typesOf
+src/positions/condition.rs#and	packages/core/compiler/src/load/positions.ts#and
+src/positions/condition.rs#holds	packages/core/compiler/src/load/positions.ts#holds
+src/positions/leaves.rs#leaves	packages/core/compiler/src/load/positions.ts#leaves
+src/positions/position.rs#leaf_set_of	packages/core/compiler/src/load/positions.ts#leafSetOf
+src/positions/position.rs#refine_position	packages/core/compiler/src/load/positions.ts#refinePosition
+src/positions/step.rs#all_of_steps	packages/core/compiler/src/load/positions.ts#allOfSteps
+src/positions/step.rs#any_of_steps	packages/core/compiler/src/load/positions.ts#anyOfSteps
+src/positions/step.rs#own_step	packages/core/compiler/src/load/positions.ts#ownStep
+src/positions/step.rs#step_node	packages/core/compiler/src/load/positions.ts#stepNode
+src/positions/position.rs#is_data	packages/core/compiler/src/load/positions.ts#isData
+src/positions/position.rs#position	packages/core/compiler/src/load/positions.ts#position
+src/positions/position.rs#position_of	packages/core/compiler/src/load/positions.ts#positionOf
+src/positions/position.rs#root_position	packages/core/compiler/src/load/positions.ts#rootPosition
+src/positions/position.rs#entry_root_position	packages/core/compiler/src/load/positions.ts#entryRootPosition
+src/positions/schema_files.rs#matches_pattern	packages/core/compiler/src/load/positions.ts#patternOf
+src/positions/position.rs#mentions	packages/core/compiler/src/load/positions.ts#mentions
+src/positions/position.rs#step_position	packages/core/compiler/src/load/positions.ts#stepPosition
+src/positions/position.rs#position_at	packages/core/compiler/src/load/positions.ts#positionAt
+src/positions/schema_files.rs#file_roots_of	packages/core/compiler/src/load/positions.ts#fileRootsOf
+src/positions/position.rs#position_fragment_kind	packages/core/compiler/src/load/positions.ts#positionFragmentKind
+src/positions/scalar_type.rs#scalar_type	packages/core/compiler/src/load/positions.ts#scalarType
+src/positions/position.rs#expected_types	packages/core/compiler/src/load/positions.ts#expectedTypes
+src/positions/position.rs#expected_keys	packages/core/compiler/src/load/positions.ts#expectedKeys
+src/positions/position.rs#admits_integer	packages/core/compiler/src/load/positions.ts#admitsInteger
+src/positions/position.rs#refuses_scalar	packages/core/compiler/src/load/positions.ts#refusesScalar
