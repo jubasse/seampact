@@ -4,7 +4,7 @@ use camino::Utf8PathBuf;
 use indexmap::IndexMap;
 use seampact_ir::{Layer, Origin};
 use seampact_json::{JsonObject, JsonValue};
-use seampact_span::Span;
+use seampact_span::{Span, location_key};
 
 use crate::ApiLayer;
 
@@ -92,7 +92,7 @@ pub struct RawWorkspace {
 /// [`RawWorkspace::locations`], `workspace#<pointer>` (ADR 0006 section 4).
 #[must_use]
 pub fn entry_location_key(pointer: &str) -> String {
-    format!("{}#{pointer}", Layer::Workspace)
+    location_key(&Layer::Workspace, pointer)
 }
 
 #[cfg(test)]

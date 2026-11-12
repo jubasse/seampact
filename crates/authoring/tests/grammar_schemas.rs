@@ -15,6 +15,9 @@ use seampact_json::{JsonObject, JsonValue, escape_pointer};
 const GRAMMAR_SNAPSHOT: &str =
     include_str!("../../../packages/core/spec/src/authoring/grammar.snapshot.json");
 
+/// The TypeScript keyword table, the source of every `reason` and `fix` the schemas do not carry.
+const KEYWORDS_SOURCE: &str = include_str!("../../../packages/core/spec/src/authoring/keywords.ts");
+
 /// The schema-language keywords seampact adds to the 2020-12 vocabularies (ADR 0003 sections 2
 /// to 6) and the `$include` loader directive: the `plain` properties outside the keyword table.
 const SEAMPACT_SCHEMA_KEYWORDS: [&str; 11] = [
@@ -53,9 +56,9 @@ fn parsed_schemas() -> Vec<(&'static str, JsonValue)> {
         .iter()
         .map(|schema_file| {
             let schema = serde_json::from_str(schema_file.text)
-                .unwrap_or_else(|error| panic!("{}: {error}", schema_file.name));
+                .unwrap_or_else(|error| panic!("{}: {error}", schema_file.file_name));
 
-            (schema_file.file, schema)
+            (schema_file.kind, schema)
         })
         .collect()
 }
@@ -296,6 +299,15 @@ fn every_keyword_carries_its_section_and_each_refusal_its_text() {
             entry.keyword
         );
 
+        let titled_refused = string_member(property, "title") == Some(Marker::Refused.title());
+
+        assert_eq!(
+            entry.decision == SchemaKeywordDecision::Refused,
+            titled_refused,
+            "{}",
+            entry.keyword
+        );
+
         if entry.decision == SchemaKeywordDecision::Refused {
             let shown = refusal_text(entry.section, entry.reason, entry.fix);
 
@@ -322,9 +334,6 @@ fn every_refused_form_is_shown_with_its_reason_and_fix() {
     let properties_by_keyword = keyword_properties();
 
     for entry in SCHEMA_KEYWORDS {
-        let Some(refused_form) = entry.refused_form else {
-            continue;
-        };
         let property = properties_by_keyword
             .get(entry.keyword)
             .expect("a kept keyword is a property");
@@ -332,9 +341,15 @@ fn every_refused_form_is_shown_with_its_reason_and_fix() {
 
         refused_form_descriptions(property, &mut shown);
 
-        let expected = refusal_text(REFUSED_FORM_SECTION, refused_form.reason, refused_form.fix);
+        let expected: Vec<String> = entry
+            .refused_form
+            .map(|refused_form| {
+                refusal_text(REFUSED_FORM_SECTION, refused_form.reason, refused_form.fix)
+            })
+            .into_iter()
+            .collect();
 
-        assert_eq!(shown, [expected], "{}", entry.keyword);
+        assert_eq!(shown, expected, "{}", entry.keyword);
     }
 
     let refused_count = refused_schema_keywords().count();
@@ -389,7 +404,11 @@ fn grammar_keywords() -> GrammarKeywords {
     for schema_file in AUTHORING_SCHEMA_FILES {
         let schema: JsonValue = serde_json::from_str(schema_file.text).unwrap();
 
-        visit(&schema, &format!("{}#", schema_file.name), &mut grammar);
+        visit(
+            &schema,
+            &format!("{}#", schema_file.file_name),
+            &mut grammar,
+        );
     }
 
     grammar
@@ -522,5 +541,80 @@ fn adr_references_follow_the_pattern() {
         "",
     ] {
         assert!(!is_adr_reference(refused), "{refused}");
+    }
+}
+
+/// The text of the TypeScript table entry of `keyword`, up to the next entry.
+fn keyword_source_entry(keyword: &str) -> &'static str {
+    let opening = format!("keyword: \"{keyword}\",");
+    let (_, from_entry) = KEYWORDS_SOURCE
+        .split_once(&opening)
+        .unwrap_or_else(|| panic!("keywords.ts has no entry for {keyword}"));
+
+    from_entry
+        .split_once("keyword: \"")
+        .map_or(from_entry, |(entry, _)| entry)
+}
+
+/// `source` with a line break after `reason:` or `fix:` (the formatter's wrap of a long value)
+/// folded back to one space.
+fn unwrapped_members(source: &str) -> String {
+    let trimmed_lines: Vec<&str> = source.lines().map(str::trim).collect();
+
+    trimmed_lines
+        .join("\n")
+        .replace("reason:\n", "reason: ")
+        .replace("fix:\n", "fix: ")
+}
+
+/// The two ways the formatter writes `text` as a string literal: double-quoted, or
+/// single-quoted when the text holds double quotes and no single quote.
+fn typescript_literals(text: &str) -> [String; 2] {
+    [
+        serde_json::to_string(text).expect("a string serializes"),
+        format!("'{text}'"),
+    ]
+}
+
+/// Whether `source` holds the member `name: <literal of text>`.
+fn has_member(source: &str, name: &str, text: &str) -> bool {
+    typescript_literals(text)
+        .iter()
+        .any(|literal| source.contains(&format!("{name}: {literal}")))
+}
+
+#[test]
+fn every_decision_reason_and_fix_is_the_typescript_text() {
+    for entry in SCHEMA_KEYWORDS {
+        let source = unwrapped_members(keyword_source_entry(entry.keyword));
+        let decision = match entry.decision {
+            SchemaKeywordDecision::Kept => "kept",
+            SchemaKeywordDecision::Refused => "refused",
+        };
+        let mut expected_members = vec![
+            ("decision", decision),
+            ("reason", entry.reason),
+            ("fix", entry.fix),
+        ];
+
+        if let Some(refused_form) = entry.refused_form {
+            expected_members.push(("reason", refused_form.reason));
+            expected_members.push(("fix", refused_form.fix));
+        }
+
+        for (name, text) in expected_members {
+            assert!(
+                has_member(&source, name, text),
+                "{}: keywords.ts lacks {name}: {text:?}",
+                entry.keyword
+            );
+        }
+
+        assert_eq!(
+            source.contains("refusedForm"),
+            entry.refused_form.is_some(),
+            "{}",
+            entry.keyword
+        );
     }
 }

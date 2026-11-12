@@ -3,7 +3,7 @@ use std::cmp::Ordering;
 
 use indexmap::IndexMap;
 use seampact_js::{cmp_utf16, is_ecmascript_white_space};
-use seampact_span::Location;
+use seampact_span::{Location, location_key};
 
 use crate::text::is_active_character;
 use crate::{Diagnostic, DiagnosticOrigin};
@@ -34,7 +34,7 @@ pub struct PrintedLocation<'table> {
 /// belongs to one api, so the origin's api is never part of it.
 #[must_use]
 pub fn diagnostic_location_key(origin: &DiagnosticOrigin) -> String {
-    format!("{}#{}", origin.layer, origin.pointer)
+    location_key(&origin.layer, &origin.pointer)
 }
 
 /// Where `origin` is printed: its entry of `locations` (the table of the api it belongs to,

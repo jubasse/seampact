@@ -7,11 +7,13 @@
 
 mod error;
 mod location;
+mod location_key;
 mod source_files;
 mod span;
 
 pub use error::SpanError;
 pub use location::Location;
+pub use location_key::location_key;
 pub use source_files::{SourceFile, SourceFiles, normalize_text};
 pub use span::{FileId, Span};
 pub use text_size::{TextRange, TextSize};

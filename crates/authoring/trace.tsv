@@ -6,7 +6,7 @@ src/keywords.rs#schema_keyword	packages/core/spec/src/authoring/keywords.ts#sche
 tests/grammar_schemas.rs#grammar_keywords	packages/core/spec/src/authoring/grammar.ts#grammarKeywords
 -	packages/core/spec/src/authoring/schemas.ts#parts	skip: the TypeScript builders stay the source of the committed schemas
 -	packages/core/spec/src/authoring/schemas.ts#authoringSchemas	skip: the TypeScript builders stay the source of the committed schemas
--	packages/core/spec/src/authoring/schemas.ts#authoringSchemaFileName	skip: each embedded file carries its name (AuthoringSchemaFile.name)
+-	packages/core/spec/src/authoring/schemas.ts#authoringSchemaFileName	skip: each embedded file carries its name (AuthoringSchemaFile.file_name)
 -	packages/core/spec/src/authoring/json.ts#formatSchemaJson	skip: the TypeScript builders stay the source of the committed schemas
 -	packages/core/spec/src/authoring/dsl.ts#A2	skip: the TypeScript builders stay the source of the committed schemas
 -	packages/core/spec/src/authoring/dsl.ts#A3	skip: the TypeScript builders stay the source of the committed schemas

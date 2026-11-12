@@ -6,22 +6,22 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct AuthoringSchemaFile {
     /// The file kind, the file name without `.schema.json` (`node-errors`).
-    pub file: &'static str,
+    pub kind: &'static str,
     /// The file name, as `$ref` values name it (`node-errors.schema.json`).
-    pub name: &'static str,
+    pub file_name: &'static str,
     /// The file text.
     pub text: &'static str,
 }
 
-/// Embeds the authoring schema file of kind `file`.
+/// Embeds the authoring schema file of kind `kind`.
 macro_rules! authoring_schema_file {
-    ($file:literal) => {
+    ($kind:literal) => {
         AuthoringSchemaFile {
-            file: $file,
-            name: concat!($file, ".schema.json"),
+            kind: $kind,
+            file_name: concat!($kind, ".schema.json"),
             text: include_str!(concat!(
                 "../../../packages/core/spec/schemas/authoring/",
-                $file,
+                $kind,
                 ".schema.json"
             )),
         }
