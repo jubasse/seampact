@@ -321,10 +321,9 @@ mod tests {
             *value += 1000;
         }
 
-        for (_, value) in map.iter_mut() {
-            *value += 10000;
-        }
+        let entries_mutated = map.iter_mut().map(|(_, value)| *value += 10000).count();
 
+        assert_eq!(entries_mutated, 4);
         assert_eq!(keys_of(&map), ["200", "404", "b", "a"]);
         assert_eq!(map.get("a"), Some(&11130));
         assert_eq!(map.get("200"), Some(&11104));
