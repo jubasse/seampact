@@ -1,0 +1,41 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "tasks",
+      "diagnostics": []
+    },
+    {
+      "api": "svc",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/relay-declaration",
+          "message": "The relay route getTask copies the wire format house of tasks.getTask, which differs from the wire format house this api already holds.",
+          "fix": "Declare house once in a shared file both apis read, or rename one of the two.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/internal/routes/getTask/relays"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/formats/house"
+              },
+              "message": "the wire format house of this api"
+            },
+            {
+              "origin": {
+                "api": "tasks",
+                "layer": "api",
+                "pointer": "/formats/house"
+              },
+              "message": "the wire format house of tasks.getTask"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

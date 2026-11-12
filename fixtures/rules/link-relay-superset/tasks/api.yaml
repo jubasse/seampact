@@ -1,0 +1,15 @@
+api: { name: tasks, version: 1, kind: product }
+conventions:
+  errors:
+    derived:
+      unsupportedMediaType: tasks.invalid
+errors:
+  tasks.invalid: { status: 400 }
+schemas:
+  Note: { type: object, required: [noteId], properties: { noteId: { type: string } } }
+  NewNote: { type: object, properties: { text: { type: string } } }
+surfaces:
+  app:
+    access: { public: Open. }
+    routes:
+      getTask: { method: post, input: NewNote, output: Note }

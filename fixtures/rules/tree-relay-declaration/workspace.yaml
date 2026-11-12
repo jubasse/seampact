@@ -1,0 +1,4 @@
+workspace:
+  apis:
+    tasks: ./tasks/api.yaml
+    svc: ./svc/api.yaml

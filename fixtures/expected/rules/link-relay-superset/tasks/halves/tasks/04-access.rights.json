@@ -1,0 +1,9 @@
+{
+  "operations": {
+    "getTask": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    }
+  }
+}

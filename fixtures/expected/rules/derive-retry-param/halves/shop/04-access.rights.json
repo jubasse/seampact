@@ -1,0 +1,48 @@
+{
+  "rules": {
+    "throttle": {
+      "id": "throttle",
+      "takesBucket": true,
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/throttle"
+      }
+    }
+  },
+  "buckets": {
+    "perCaller": {
+      "id": "perCaller",
+      "key": [
+        {
+          "in": "address"
+        }
+      ],
+      "limit": 60,
+      "windowMs": 60000,
+      "origin": {
+        "layer": "api",
+        "pointer": "/buckets/perCaller"
+      }
+    }
+  },
+  "operations": {
+    "ping": {
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "throttle",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/ping/requires/0"
+          },
+          "bucket": "perCaller"
+        }
+      ],
+      "fieldRights": []
+    }
+  }
+}

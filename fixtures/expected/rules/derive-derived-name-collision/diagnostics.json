@@ -1,0 +1,36 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/derive/derived-name-collision",
+          "message": "operation 'save' already has a header 'Idempotency-Key' declared on the route, so derivation idempotency.write cannot add its own",
+          "fix": "Rename the declared parameter or header, or the name the derivation takes from its scheme, header or convention.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/save"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/Headers/properties/Idempotency-Key"
+              },
+              "message": "the name taken"
+            },
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/conventions/idempotency"
+              },
+              "message": "the derivation"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

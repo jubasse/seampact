@@ -1,0 +1,62 @@
+{
+  "schemes": {
+    "internalToken": {
+      "id": "internalToken",
+      "kind": "bearer",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/internalToken"
+      }
+    }
+  },
+  "identities": {
+    "service": {
+      "id": "service",
+      "kind": "credential",
+      "schemes": {
+        "read": [
+          "internalToken"
+        ],
+        "write": [
+          "internalToken"
+        ],
+        "optionalRead": []
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "P"
+      },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/service"
+      }
+    }
+  },
+  "operations": {
+    "getTask": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "service",
+        "schemes": [
+          "internalToken"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/caller/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    }
+  }
+}

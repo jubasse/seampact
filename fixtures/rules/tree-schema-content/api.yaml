@@ -1,0 +1,17 @@
+api: { name: t, version: 1, kind: product }
+
+services:
+  catalog: { maturity: stable }
+
+schemas:
+  Note:
+    type: object
+    required: [payload]
+    properties:
+      payload: { type: string, contentMediaType: application/json }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      one: { method: get, operationId: getNote, output: Note }

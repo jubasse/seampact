@@ -1,0 +1,16 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/path-empty",
+      "message": "$file names no file",
+      "fix": "write a path such as ./file.yaml",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/3/44"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

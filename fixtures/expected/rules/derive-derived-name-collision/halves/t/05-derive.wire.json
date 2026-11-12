@@ -1,0 +1,62 @@
+{
+  "operations": {
+    "save": {
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "Idempotent-Replayed",
+              "type": {
+                "kind": "scalar",
+                "type": "boolean",
+                "refinements": {}
+              },
+              "required": false,
+              "derivedFrom": {
+                "derivation": "idempotency.write",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/conventions/idempotency"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "idempotency": {
+        "kind": "derived",
+        "header": "Idempotency-Key",
+        "replayHeader": "Idempotent-Replayed",
+        "lifetimeMs": 86400000,
+        "required": true,
+        "enforce": "boundary",
+        "derivedFrom": {
+          "derivation": "idempotency.write",
+          "from": [
+            {
+              "layer": "api",
+              "pointer": "/conventions/idempotency"
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "experimental",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        }
+      }
+    }
+  },
+  "api": {
+    "wire": {
+      "int64": "string",
+      "outputEnums": "enum",
+      "urls": "relative"
+    }
+  }
+}

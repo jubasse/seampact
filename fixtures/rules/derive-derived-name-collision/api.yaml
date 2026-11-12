@@ -1,0 +1,10 @@
+api: { name: t, version: 1, kind: product }
+schemas:
+  Note: { type: object, required: [noteId], properties: { noteId: { type: string } } }
+  Headers: { type: object, properties: { Idempotency-Key: { type: string } } }
+conventions: { idempotency: { header: Idempotency-Key, replayHeader: Idempotent-Replayed, lifetime: 24h } }
+surfaces:
+  app:
+    access: { public: Open. }
+    routes:
+      save: { method: post, output: Note, headers: Headers }

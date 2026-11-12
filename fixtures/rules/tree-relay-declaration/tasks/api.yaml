@@ -1,0 +1,11 @@
+api: { name: tasks, version: 1, kind: product }
+schemas:
+  Note: { type: object, required: [noteId], properties: { noteId: { type: string } } }
+formats:
+  house:
+    success: { item: { body: { data: $payload } } }
+surfaces:
+  app:
+    access: { public: Open. }
+    routes:
+      getTask: { method: get, output: Note, format: house }

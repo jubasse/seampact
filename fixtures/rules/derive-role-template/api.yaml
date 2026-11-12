@@ -1,0 +1,13 @@
+api: { name: shop, version: 1, kind: product }
+
+errors:
+  shop.denied: { status: 403, params: { reason: { type: string } } }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: The fixture checks role bindings only. }
+    errorRoles:
+      forbidden: { code: shop.denied, params: { reason: $nope } }
+    routes:
+      ping: { method: get }
