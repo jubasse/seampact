@@ -90,7 +90,6 @@ impl AccessRightsOutput {
         "operations[].fieldRights",
         "operations[].filteredBy",
         "operations[].params.header",
-        "operations[].input",
         "operations[].input.media",
         "operations[].input.schema",
         "operations[].input.schema.unknownKeys",

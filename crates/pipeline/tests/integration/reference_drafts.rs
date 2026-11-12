@@ -118,7 +118,7 @@ fn each_fixture_decodes_into_the_draft_and_writes_back() -> Result<(), String> {
     for api in FIXTURE_APIS {
         for files in [&AFTER_TREE[..], &AFTER_ACCESS[..]] {
             let json = draft_fixture_json(api, files)?;
-            let decoded = DraftIr::from_json_value(&json).map_err(|failure| failure.to_string())?;
+            let decoded = draft_fixture(api, files)?;
             let written_back = decoded
                 .to_json_value()
                 .map_err(|failure| failure.to_string())?;

@@ -245,7 +245,6 @@ impl TreeNodesOutput {
         "pagings",
         "services",
         "api",
-        "operations",
         "operations[].kind",
         "operations[].id",
         "operations[].name",
