@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/name-segments",
+          "message": "the code name of the value 'a' yields no identifier segment",
+          "fix": "give it a code name with at least one letter or digit",
+          "origin": {
+            "layer": "api",
+            "pointer": "/enums/Blank/codeNames/a"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

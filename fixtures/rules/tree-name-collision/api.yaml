@@ -1,0 +1,4 @@
+api: { name: t, version: 1 }
+enums:
+  HttpCode: { values: [a] }
+  HTTPCode: { values: [b] }
