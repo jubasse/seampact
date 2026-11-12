@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/deprecated-sunset",
+          "message": "The deprecation that reaches legacy gives no sunset date.",
+          "fix": "Write deprecated: { since: '<date>', sunset: '<date>' }.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/legacy/deprecated"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}
