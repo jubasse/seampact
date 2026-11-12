@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/header-declaration",
+          "message": "deadline header 'trace' has no 'name'",
+          "fix": "Declare the header's 'name' and the message it travels in, 'in: request' or 'in: response'.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/headers/trace"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

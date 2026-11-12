@@ -1,0 +1,29 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/signature-key-source",
+          "message": "route 'ping' under signed identity 'hook' has no path parameter 'workspaceId', which signature scheme 'sig' reads its key id from",
+          "fix": "Declare the parameter on the route (a path placeholder, a query field or a request header), or read the key from a source every route of the identity has.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/ping"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemes/sig/key/from"
+              },
+              "message": "the key source"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "schemes": {
+    "sig": {
+      "id": "sig",
+      "kind": "signature",
+      "name": "X-Sig",
+      "signature": {
+        "verify": "template",
+        "format": "sha256={sig}",
+        "algorithm": "hmac-sha256",
+        "payload": "{rawBody}",
+        "encoding": "hex",
+        "key": {
+          "kind": "from",
+          "from": {
+            "in": "path",
+            "name": "workspaceId"
+          }
+        }
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/sig"
+      }
+    }
+  },
+  "identities": {
+    "hook": {
+      "id": "hook",
+      "kind": "signed",
+      "signed": "sig",
+      "principal": {
+        "kind": "schema",
+        "schema": "P"
+      },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/hook"
+      }
+    }
+  },
+  "operations": {
+    "ping": {
+      "access": {
+        "kind": "identity",
+        "identity": "hook",
+        "schemes": ["sig"],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": ["identified"],
+      "principalRequires": [],
+      "bindings": []
+    }
+  }
+}

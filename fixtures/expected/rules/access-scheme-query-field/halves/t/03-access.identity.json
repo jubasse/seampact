@@ -1,0 +1,52 @@
+{
+  "schemes": {
+    "keyed": {
+      "id": "keyed",
+      "kind": "query",
+      "name": "key",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/keyed"
+      }
+    }
+  },
+  "identities": {
+    "user": {
+      "id": "user",
+      "kind": "credential",
+      "schemes": {
+        "read": ["keyed"],
+        "write": ["keyed"],
+        "optionalRead": []
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "P"
+      },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/user"
+      }
+    }
+  },
+  "operations": {
+    "ping": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": ["keyed"],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": ["identified"],
+      "principalRequires": [],
+      "bindings": []
+    }
+  }
+}

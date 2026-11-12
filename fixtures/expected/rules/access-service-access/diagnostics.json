@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/service-access",
+          "message": "a service api runs every route under its caller identity 'service', so public access is refused",
+          "fix": "Remove 'access': the routes of a service api are identified by 'api.caller.identity', or set 'conventions.service.allowPublic: true'.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/access"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

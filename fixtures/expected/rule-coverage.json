@@ -1,7 +1,9 @@
 {
   "seampact/access/access-schemes": [],
   "seampact/access/binding-conflict": [],
-  "seampact/access/binding-source": [],
+  "seampact/access/binding-source": [
+    "rules/access-binding-source"
+  ],
   "seampact/access/bucket-key": [
     "limits/bucket-prefix-bits-over",
     "passes/access-rights/catalogues-refused",
@@ -13,7 +15,9 @@
   "seampact/access/caller-right": [
     "passes/access-rights/service"
   ],
-  "seampact/access/csrf-header": [],
+  "seampact/access/csrf-header": [
+    "rules/access-csrf-header"
+  ],
   "seampact/access/deny-by-default": [
     "passes/tree-nodes/bodies"
   ],
@@ -44,8 +48,12 @@
   "seampact/access/guest-right": [
     "passes/access-rights/guest"
   ],
-  "seampact/access/header-declaration": [],
-  "seampact/access/header-use": [],
+  "seampact/access/header-declaration": [
+    "rules/access-header-declaration"
+  ],
+  "seampact/access/header-use": [
+    "rules/access-header-use"
+  ],
   "seampact/access/identity-member": [],
   "seampact/access/identity-reference": [
     "golden/pack-api-platform/contract/tasks-optional-auth",
@@ -73,7 +81,9 @@
     "reference/tasks-responses",
     "reference/tasks-split-sort"
   ],
-  "seampact/access/optional-identity": [],
+  "seampact/access/optional-identity": [
+    "rules/access-optional-identity"
+  ],
   "seampact/access/pack-right": [
     "passes/access-rights/refused"
   ],
@@ -81,7 +91,9 @@
     "passes/access-rights/refused"
   ],
   "seampact/access/principal": [],
-  "seampact/access/principal-field": [],
+  "seampact/access/principal-field": [
+    "rules/access-principal-field"
+  ],
   "seampact/access/proof-input": [
     "passes/access-rights/proofs-refused"
   ],
@@ -91,7 +103,9 @@
   "seampact/access/proof-schema": [
     "passes/access-rights/catalogues-refused"
   ],
-  "seampact/access/public-identity": [],
+  "seampact/access/public-identity": [
+    "rules/access-public-identity"
+  ],
   "seampact/access/requirement-bucket": [
     "passes/access-rights/refused"
   ],
@@ -119,9 +133,13 @@
   "seampact/access/right-subject": [
     "passes/access-rights/catalogues-refused"
   ],
-  "seampact/access/scheme-kind": [],
+  "seampact/access/scheme-kind": [
+    "rules/access-scheme-kind"
+  ],
   "seampact/access/scheme-member": [],
-  "seampact/access/scheme-query-field": [],
+  "seampact/access/scheme-query-field": [
+    "rules/access-scheme-query-field"
+  ],
   "seampact/access/scheme-reference": [],
   "seampact/access/scope-nesting": [
     "passes/access-rights/refused"
@@ -135,10 +153,16 @@
   "seampact/access/scope-within": [
     "passes/access-rights/catalogues-refused"
   ],
-  "seampact/access/service-access": [],
-  "seampact/access/service-identity": [],
+  "seampact/access/service-access": [
+    "rules/access-service-access"
+  ],
+  "seampact/access/service-identity": [
+    "rules/access-service-identity"
+  ],
   "seampact/access/signature-key": [],
-  "seampact/access/signature-key-source": [],
+  "seampact/access/signature-key-source": [
+    "rules/access-signature-key-source"
+  ],
   "seampact/access/signature-template": [],
   "seampact/access/signature-tolerance": [],
   "seampact/access/signature-verify": [],
@@ -363,8 +387,12 @@
   "seampact/load/yaml-tag": [
     "loader/pitfalls/p9-tag"
   ],
-  "seampact/tree/all-of-member": [],
-  "seampact/tree/all-of-property": [],
+  "seampact/tree/all-of-member": [
+    "rules/tree-all-of-member"
+  ],
+  "seampact/tree/all-of-property": [
+    "rules/tree-all-of-property"
+  ],
   "seampact/tree/annotation-position": [],
   "seampact/tree/api-version": [
     "passes/tree-nodes/routes-refused"
@@ -381,7 +409,9 @@
   "seampact/tree/body-limit": [
     "passes/tree-nodes/routes-refused"
   ],
-  "seampact/tree/budget-duration": [],
+  "seampact/tree/budget-duration": [
+    "rules/tree-budget-duration"
+  ],
   "seampact/tree/collection-id": [
     "passes/tree-nodes/routes-refused"
   ],
@@ -389,7 +419,9 @@
   "seampact/tree/concurrency-field": [
     "passes/tree-nodes/shapes-refused"
   ],
-  "seampact/tree/concurrency-inherit": [],
+  "seampact/tree/concurrency-inherit": [
+    "rules/tree-concurrency-inherit"
+  ],
   "seampact/tree/concurrency-input": [],
   "seampact/tree/concurrency-version": [
     "golden/pack-api-platform/contract/tasks",
@@ -398,25 +430,56 @@
     "golden/pack-laravel/contract/tasks",
     "golden/pack-spring/contract/tasks",
     "passes/tree-nodes/shapes-refused",
-    "reference/tasks"
+    "reference/tasks",
+    "rules/tree-concurrency-version"
   ],
   "seampact/tree/default-value": [
     "passes/tree-schemas/refused"
   ],
-  "seampact/tree/degradable-header": [],
-  "seampact/tree/degradable-path": [],
-  "seampact/tree/deprecated-since": [],
-  "seampact/tree/deprecated-successor": [],
-  "seampact/tree/deprecated-successor-params": [],
-  "seampact/tree/deprecated-sunset": [],
-  "seampact/tree/derived-field": [],
-  "seampact/tree/derived-overlay": [],
-  "seampact/tree/derived-source": [],
-  "seampact/tree/enum-code-name": [],
-  "seampact/tree/enum-cycle": [],
-  "seampact/tree/enum-fallback": [],
-  "seampact/tree/enum-narrowing": [],
-  "seampact/tree/enum-reason": [],
+  "seampact/tree/degradable-header": [
+    "rules/tree-degradable-header",
+    "rules/tree-degradable-path"
+  ],
+  "seampact/tree/degradable-path": [
+    "rules/tree-degradable-header",
+    "rules/tree-degradable-path"
+  ],
+  "seampact/tree/deprecated-since": [
+    "rules/tree-deprecated-since"
+  ],
+  "seampact/tree/deprecated-successor": [
+    "rules/tree-deprecated-successor"
+  ],
+  "seampact/tree/deprecated-successor-params": [
+    "rules/tree-deprecated-successor-params"
+  ],
+  "seampact/tree/deprecated-sunset": [
+    "rules/tree-deprecated-sunset"
+  ],
+  "seampact/tree/derived-field": [
+    "rules/tree-derived-field"
+  ],
+  "seampact/tree/derived-overlay": [
+    "rules/tree-derived-overlay"
+  ],
+  "seampact/tree/derived-source": [
+    "rules/tree-derived-source"
+  ],
+  "seampact/tree/enum-code-name": [
+    "rules/tree-enum-code-name"
+  ],
+  "seampact/tree/enum-cycle": [
+    "rules/tree-enum-cycle"
+  ],
+  "seampact/tree/enum-fallback": [
+    "rules/tree-enum-fallback"
+  ],
+  "seampact/tree/enum-narrowing": [
+    "rules/tree-enum-narrowing"
+  ],
+  "seampact/tree/enum-reason": [
+    "rules/tree-enum-reason"
+  ],
   "seampact/tree/enum-unknown": [
     "golden/pack-api-platform/contract/tasks",
     "golden/pack-crud-rights/contract/tasks",
@@ -424,12 +487,17 @@
     "golden/pack-laravel/contract/tasks",
     "golden/pack-spring/contract/tasks",
     "reference/tasks",
+    "rules/tree-enum-unknown",
     "scale/billing",
     "scale/inventory",
     "scale/notify"
   ],
-  "seampact/tree/enum-values": [],
-  "seampact/tree/example-target": [],
+  "seampact/tree/enum-values": [
+    "rules/tree-enum-values"
+  ],
+  "seampact/tree/example-target": [
+    "rules/tree-example-target"
+  ],
   "seampact/tree/example-value": [
     "passes/tree-schemas/refused"
   ],
@@ -468,9 +536,15 @@
     "passes/tree-nodes/formats-refused"
   ],
   "seampact/tree/format-refinement": [],
-  "seampact/tree/format-type": [],
-  "seampact/tree/format-unknown": [],
-  "seampact/tree/get-input": [],
+  "seampact/tree/format-type": [
+    "rules/tree-format-type"
+  ],
+  "seampact/tree/format-unknown": [
+    "rules/tree-format-unknown"
+  ],
+  "seampact/tree/get-input": [
+    "rules/tree-get-input"
+  ],
   "seampact/tree/id-property": [
     "passes/tree-nodes/routes-refused"
   ],
@@ -481,16 +555,26 @@
     "passes/tree-nodes/bodies-refused"
   ],
   "seampact/tree/internal-product": [],
-  "seampact/tree/map-keys": [],
+  "seampact/tree/map-keys": [
+    "rules/tree-map-keys"
+  ],
   "seampact/tree/mark-position": [
     "passes/tree-schemas/refused"
   ],
-  "seampact/tree/name-collision": [],
-  "seampact/tree/name-segments": [],
+  "seampact/tree/name-collision": [
+    "rules/tree-name-collision",
+    "rules/tree-name-collision-property",
+    "rules/tree-name-collision-schemas"
+  ],
+  "seampact/tree/name-segments": [
+    "rules/tree-name-segments"
+  ],
   "seampact/tree/no-content-body": [
     "passes/tree-nodes/routes-refused"
   ],
-  "seampact/tree/object-empty": [],
+  "seampact/tree/object-empty": [
+    "rules/tree-object-empty"
+  ],
   "seampact/tree/op-input": [
     "passes/tree-nodes/routes-refused"
   ],
@@ -502,7 +586,9 @@
   ],
   "seampact/tree/operation-id-unique": [],
   "seampact/tree/operation-name-unique": [],
-  "seampact/tree/owner-concurrency": [],
+  "seampact/tree/owner-concurrency": [
+    "rules/tree-owner-concurrency"
+  ],
   "seampact/tree/paging-items": [
     "passes/tree-nodes/formats-refused"
   ],
@@ -568,8 +654,12 @@
   "seampact/tree/refinement-precision": [
     "limits/fraction-digits-over"
   ],
-  "seampact/tree/refinement-range": [],
-  "seampact/tree/refinement-type": [],
+  "seampact/tree/refinement-range": [
+    "rules/tree-refinement-range"
+  ],
+  "seampact/tree/refinement-type": [
+    "rules/tree-refinement-type"
+  ],
   "seampact/tree/relay-declaration": [],
   "seampact/tree/relay-name": [],
   "seampact/tree/relay-target": [
@@ -588,22 +678,35 @@
     "reference/tasks-service-writes"
   ],
   "seampact/tree/relay-unknown": [],
-  "seampact/tree/required-property": [],
-  "seampact/tree/required-unknown": [],
+  "seampact/tree/required-property": [
+    "rules/tree-required-property"
+  ],
+  "seampact/tree/required-unknown": [
+    "rules/tree-required-unknown"
+  ],
   "seampact/tree/responses-output": [
     "passes/tree-nodes/routes-refused"
   ],
   "seampact/tree/route-unique": [
     "passes/tree-nodes/routes-refused"
   ],
-  "seampact/tree/scalar-name": [],
+  "seampact/tree/scalar-name": [
+    "rules/tree-scalar-name"
+  ],
   "seampact/tree/schema-content": [],
-  "seampact/tree/schema-cycle": [],
+  "seampact/tree/schema-cycle": [
+    "rules/tree-schema-cycle"
+  ],
   "seampact/tree/schema-inline": [],
-  "seampact/tree/schema-keyword": [],
-  "seampact/tree/schema-reserved": [],
+  "seampact/tree/schema-keyword": [
+    "rules/tree-schema-keyword"
+  ],
+  "seampact/tree/schema-reserved": [
+    "rules/tree-schema-reserved"
+  ],
   "seampact/tree/schema-shape": [
-    "limits/depth-nesting-at"
+    "limits/depth-nesting-at",
+    "rules/tree-schema-shape"
   ],
   "seampact/tree/schema-unknown": [
     "golden/pack-api-platform/contract/tasks",
@@ -616,8 +719,13 @@
     "scale/inventory",
     "scale/notify"
   ],
-  "seampact/tree/sort-key": [],
-  "seampact/tree/sort-key-signed": [],
+  "seampact/tree/sort-key": [
+    "rules/tree-sort-key",
+    "rules/tree-sort-key-dash"
+  ],
+  "seampact/tree/sort-key-signed": [
+    "rules/tree-sort-key-dash"
+  ],
   "seampact/tree/template-each": [
     "passes/tree-nodes/formats-refused"
   ],
@@ -633,14 +741,25 @@
   "seampact/tree/template-syntax": [
     "passes/tree-nodes/formats-refused"
   ],
-  "seampact/tree/union-discriminator": [],
-  "seampact/tree/union-header": [
-    "passes/tree-nodes/routes-refused"
+  "seampact/tree/union-discriminator": [
+    "rules/tree-union-discriminator"
   ],
-  "seampact/tree/union-tag": [],
-  "seampact/tree/union-variant": [],
-  "seampact/tree/unknown-keys": [],
-  "seampact/tree/upstream-service": [],
+  "seampact/tree/union-header": [
+    "passes/tree-nodes/routes-refused",
+    "rules/tree-union-header"
+  ],
+  "seampact/tree/union-tag": [
+    "rules/tree-union-tag"
+  ],
+  "seampact/tree/union-variant": [
+    "rules/tree-union-variant"
+  ],
+  "seampact/tree/unknown-keys": [
+    "rules/tree-unknown-keys"
+  ],
+  "seampact/tree/upstream-service": [
+    "rules/tree-upstream-service"
+  ],
   "seampact/validate/conflicting-keywords": [],
   "seampact/validate/invalid-name": [
     "rules/validate-invalid-name"

@@ -1,0 +1,20 @@
+api: { name: t, version: 1 }
+schemas:
+  P: { type: object, required: [userId], properties: { userId: { type: string } } }
+schemes:
+  sig:
+    kind: signature
+    name: X-Sig
+    format: 'sha256={sig}'
+    algorithm: hmac-sha256
+    payload: '{rawBody}'
+    encoding: hex
+    key: { from: path.workspaceId }
+identities:
+  hook: { kind: signed, scheme: sig, principal: P }
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: hook
+    routes:
+      ping: { method: post }
