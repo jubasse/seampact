@@ -45,6 +45,27 @@ fn exact_big_integers(_name: &str, text: &str) -> String {
         .replace("9007199254740992", "9007199254740993")
 }
 
+/// The exact integers, and the IR written with tabs in place of two spaces.
+fn exact_integers_in_tab_indented_ir(name: &str, text: &str) -> String {
+    let exact = exact_big_integers(name, text);
+
+    if !name.starts_with("ir/") {
+        return exact;
+    }
+
+    let lines: Vec<String> = exact
+        .lines()
+        .map(|line| {
+            let content = line.trim_start_matches(' ');
+            let indent_width = line.len() - content.len();
+
+            format!("{}{content}", "\t".repeat(indent_width / 2))
+        })
+        .collect();
+
+    format!("{}\n", lines.join("\n"))
+}
+
 /// One diagnostics message changed in one fixture.
 fn one_changed_message(name: &str, text: &str) -> String {
     if name == "diagnostics.json" && text.contains("\"message\": ") {
@@ -100,6 +121,30 @@ fn the_exact_integers_of_the_rust_port_are_accepted_by_the_committed_differences
 
     assert!(verdict.passed(), "{verdict}");
     assert_eq!(verdict.matching, verdict.fixtures);
+}
+
+#[test]
+fn an_accepted_value_does_not_excuse_other_bytes_of_the_file() {
+    let subject = ExpectedFilesSubject {
+        repository_root: repository_root(),
+        rewrite: exact_integers_in_tab_indented_ir,
+    };
+    let selection = Selection {
+        fixture_glob: Some(FixtureGlob::new("big-integers/**")),
+        half: None,
+    };
+
+    let verdict = run_oracle(&repository_root(), &selection, &subject).unwrap();
+    let failure = verdict.first_failure.clone().unwrap();
+
+    assert!(!verdict.passed(), "{verdict}");
+    assert_eq!((verdict.fixtures, verdict.differing), (1, 1));
+    assert!(failure.file.starts_with("ir/"), "{failure}");
+    assert_eq!(failure.pointer, None);
+    assert_eq!(
+        failure.summary,
+        "the text differs beyond the values (layout, string escapes or number notation)"
+    );
 }
 
 #[test]

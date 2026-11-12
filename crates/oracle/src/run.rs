@@ -8,13 +8,16 @@ use indexmap::IndexMap;
 use seampact_json::{JsonValue, indented_json};
 use serde_json::Value;
 
-use crate::compare::{Mismatch, MismatchKind, mismatch_context, only_in_one, text_mismatches};
+use crate::compare::{
+    Mismatch, MismatchKind, mismatch_context, only_in_one, text_beyond_accepted, text_mismatches,
+};
 use crate::differences::{DIFFERENCES_FILE, read_differences};
 use crate::expected::{
     DIAGNOSTICS_FILE, ExpectedFiles, expected_fixture_paths, read_expected_files,
 };
 use crate::fixtures::{discover_fixtures, read_excluded};
 use crate::matcher::{ComparedFile, DifferenceLedger, MatchOutcome};
+use crate::raw_text::{AcceptedPointers, identical_outside_accepted};
 use crate::rule_ids::check_rule_ids;
 use crate::verdict::{FirstFailure, Verdict};
 use crate::{
@@ -412,6 +415,7 @@ impl Run<'_> {
         }
 
         let mut file_fails = false;
+        let mut accepted = AcceptedPointers::default();
 
         for mismatch in mismatches {
             let outcome = match &output_file {
@@ -426,21 +430,34 @@ impl Run<'_> {
             };
 
             if outcome == MatchOutcome::Accepted {
+                accepted.note(&mismatch);
+
                 continue;
             }
 
             file_fails = true;
+            self.note_failure(
+                fixture,
+                name,
+                &mismatch,
+                &outcome,
+                (expected_text, actual_text),
+            );
+        }
 
-            if self.verdict.first_failure.is_none() {
-                self.verdict.first_failure = Some(first_failure(
-                    fixture,
-                    name,
-                    &mismatch,
-                    &outcome,
-                    expected_text.unwrap_or_default(),
-                    actual_text.unwrap_or_default(),
-                ));
-            }
+        if !file_fails
+            && let (Some(expected_text), Some(actual_text)) = (expected_text, actual_text)
+            && !accepted.is_empty()
+            && !identical_outside_accepted(expected_text, actual_text, &accepted)
+        {
+            file_fails = true;
+            self.note_failure(
+                fixture,
+                name,
+                &text_beyond_accepted(),
+                &MatchOutcome::Unmatched,
+                (Some(expected_text), Some(actual_text)),
+            );
         }
 
         if file_fails {
@@ -448,6 +465,21 @@ impl Run<'_> {
         }
 
         Ok(())
+    }
+
+    /// Keeps the first failure of the run only.
+    fn note_failure(
+        &mut self,
+        fixture: &Fixture,
+        name: &str,
+        mismatch: &Mismatch,
+        outcome: &MatchOutcome,
+        texts: (Option<&str>, Option<&str>),
+    ) {
+        if self.verdict.first_failure.is_none() {
+            self.verdict.first_failure =
+                Some(first_failure(fixture, name, mismatch, outcome, texts));
+        }
     }
 
     fn file_mismatches(
@@ -499,8 +531,7 @@ fn first_failure(
     name: &str,
     mismatch: &Mismatch,
     outcome: &MatchOutcome,
-    expected_text: &str,
-    actual_text: &str,
+    (expected_text, actual_text): (Option<&str>, Option<&str>),
 ) -> FirstFailure {
     let (expected_context, actual_context) = mismatch_context(expected_text, actual_text, mismatch);
 

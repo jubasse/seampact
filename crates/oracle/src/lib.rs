@@ -13,6 +13,7 @@ mod expected;
 mod fixtures;
 mod glob;
 mod matcher;
+mod raw_text;
 mod rule_ids;
 mod run;
 mod subject;

@@ -10,6 +10,12 @@ const CONTEXT_LINES: usize = 3;
 /// The width of the line number before a context line.
 const LINE_NUMBER_WIDTH: usize = 6;
 
+/// The most characters of a context line shown; a longer line is cut around the differing column.
+const CONTEXT_LINE_WIDTH: usize = 100;
+
+/// Marks the side of a context line that was cut.
+const CUT_MARK: &str = "...";
+
 /// What differs at one pointer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MismatchKind {
@@ -21,8 +27,8 @@ pub enum MismatchKind {
     Removed,
     /// An object has the same members in another order; no entry can accept it.
     MemberOrder,
-    /// The texts differ and the values are equal (layout or number notation); no entry can accept
-    /// it.
+    /// The texts differ where the values do not: layout, string escapes or number notation, outside
+    /// any accepted difference; no entry can accept it.
     Text,
     /// The compiled file is no JSON; no entry can accept it.
     Unparsable,
@@ -57,7 +63,7 @@ impl Mismatch {
             MismatchKind::Removed => format!("{at} is only in the expected output"),
             MismatchKind::MemberOrder => format!("the members of {at} are in another order"),
             MismatchKind::Text => {
-                "the text differs and the parsed JSON values are equal (layout or number notation)"
+                "the text differs beyond the values (layout, string escapes or number notation)"
                     .to_owned()
             }
             MismatchKind::Unparsable => "the compiled file is no JSON".to_owned(),
@@ -68,8 +74,9 @@ impl Mismatch {
 /// Every difference between two parsed values, in document order; empty when they are equal.
 ///
 /// Arrays compare by position, a length difference giving one `Added` or `Removed` per extra
-/// index; objects by member name; numbers by their text token, so integers above 2^53 compare
-/// exactly and `-0` differs from `0`.
+/// index; objects by member name; numbers by the value of their token, so integers above 2^53
+/// compare exactly and `-0` differs from `0`, while the exponent spelling (`1E21`, `1e+21`) is
+/// not a difference here. [`text_mismatches`] and the run hold the text to byte identity.
 #[must_use]
 pub fn value_mismatches(expected: &Value, actual: &Value) -> Vec<Mismatch> {
     let mut mismatches = Vec::new();
@@ -79,7 +86,8 @@ pub fn value_mismatches(expected: &Value, actual: &Value) -> Vec<Mismatch> {
     mismatches
 }
 
-/// Every difference between an expected text and a compiled one, in document order.
+/// Every difference between an expected text and a compiled one, in document order; a text that
+/// differs with equal values is one `Text` mismatch.
 ///
 /// # Errors
 ///
@@ -115,6 +123,16 @@ pub fn text_mismatches(
     }
 
     Ok(mismatches)
+}
+
+/// The mismatch of a file whose values are all accepted but whose text differs elsewhere.
+pub(crate) fn text_beyond_accepted() -> Mismatch {
+    Mismatch {
+        pointer: None,
+        kind: MismatchKind::Text,
+        expected: None,
+        actual: None,
+    }
 }
 
 fn collect_mismatches(expected: &Value, actual: &Value, pointer: &str, found: &mut Vec<Mismatch>) {
@@ -248,15 +266,16 @@ pub(crate) fn pointer_segments(pointer: &str) -> Vec<String> {
 }
 
 /// The expected and the compiled lines around a mismatch, numbered: around the line of its
-/// pointer on each side, or around the first differing line when it has none.
+/// pointer on each side, or around the first differing line when it has none. A side with no
+/// text has no lines; a long line is cut around the column where the two sides differ.
 #[must_use]
 pub fn mismatch_context(
-    expected_text: &str,
-    actual_text: &str,
+    expected_text: Option<&str>,
+    actual_text: Option<&str>,
     mismatch: &Mismatch,
 ) -> (Vec<String>, Vec<String>) {
-    let expected_lines: Vec<&str> = expected_text.split('\n').collect();
-    let actual_lines: Vec<&str> = actual_text.split('\n').collect();
+    let expected_lines = lines_of(expected_text);
+    let actual_lines = lines_of(actual_text);
 
     let first_differing_line = expected_lines
         .iter()
@@ -264,25 +283,48 @@ pub fn mismatch_context(
         .take_while(|(expected_line, actual_line)| expected_line == actual_line)
         .count();
 
-    let line_of = |value: Option<&Value>| match (&mismatch.pointer, value) {
-        (Some(pointer), Some(value)) => line_of_pointer(value, &pointer_segments(pointer)),
+    let line_of = |text: Option<&str>| match (&mismatch.pointer, parsed(text)) {
+        (Some(pointer), Some(value)) => line_of_pointer(&value, &pointer_segments(pointer)),
         _ => first_differing_line,
     };
 
-    let expected_value = parsed(expected_text);
-    let actual_value = parsed(actual_text);
+    let expected_index = line_of(expected_text).min(expected_lines.len().saturating_sub(1));
+    let actual_index = line_of(actual_text).min(actual_lines.len().saturating_sub(1));
+    let column = differing_column(
+        expected_lines.get(expected_index),
+        actual_lines.get(actual_index),
+    );
 
     (
-        context_around(&expected_lines, line_of(expected_value.as_ref())),
-        context_around(&actual_lines, line_of(actual_value.as_ref())),
+        context_around(&expected_lines, expected_index, column),
+        context_around(&actual_lines, actual_index, column),
     )
 }
 
-fn parsed(text: &str) -> Option<Value> {
-    serde_json::from_str(text).ok()
+fn lines_of(text: Option<&str>) -> Vec<&str> {
+    text.map_or_else(Vec::new, |text| {
+        text.trim_end_matches('\n').split('\n').collect()
+    })
 }
 
-fn context_around(lines: &[&str], index: usize) -> Vec<String> {
+fn parsed(text: Option<&str>) -> Option<Value> {
+    serde_json::from_str(text?).ok()
+}
+
+/// The first character position where two lines differ; 0 when a side has no such line.
+fn differing_column(expected_line: Option<&&str>, actual_line: Option<&&str>) -> usize {
+    let (Some(expected_line), Some(actual_line)) = (expected_line, actual_line) else {
+        return 0;
+    };
+
+    expected_line
+        .chars()
+        .zip(actual_line.chars())
+        .take_while(|(expected_character, actual_character)| expected_character == actual_character)
+        .count()
+}
+
+fn context_around(lines: &[&str], index: usize, column: usize) -> Vec<String> {
     let first = index.saturating_sub(CONTEXT_LINES);
 
     lines
@@ -290,8 +332,33 @@ fn context_around(lines: &[&str], index: usize) -> Vec<String> {
         .enumerate()
         .skip(first)
         .take(index + CONTEXT_LINES + 1 - first)
-        .map(|(position, line)| format!("{:>LINE_NUMBER_WIDTH$} {line}", position + 1))
+        .map(|(position, line)| {
+            format!(
+                "{:>LINE_NUMBER_WIDTH$} {}",
+                position + 1,
+                line_around_column(line, column)
+            )
+        })
         .collect()
+}
+
+/// `line`, or its `CONTEXT_LINE_WIDTH` characters around `column` when it is longer.
+fn line_around_column(line: &str, column: usize) -> String {
+    let length = line.chars().count();
+
+    if length <= CONTEXT_LINE_WIDTH {
+        return line.to_owned();
+    }
+
+    let start = column
+        .saturating_sub(CONTEXT_LINE_WIDTH / 2)
+        .min(length - CONTEXT_LINE_WIDTH);
+    let end = start + CONTEXT_LINE_WIDTH;
+    let shown: String = line.chars().skip(start).take(CONTEXT_LINE_WIDTH).collect();
+    let before = if start > 0 { CUT_MARK } else { "" };
+    let after = if end < length { CUT_MARK } else { "" };
+
+    format!("{before}{shown}{after}")
 }
 
 /// The line, in the two-space indented layout, of the deepest value along `segments` that exists.
@@ -426,7 +493,8 @@ mod tests {
         let actual = "{\n  \"a\": [\n    1,\n    2\n  ],\n  \"b\": 4\n}\n";
         let mismatch = text_mismatches(expected, actual).unwrap().remove(0);
 
-        let (expected_context, actual_context) = mismatch_context(expected, actual, &mismatch);
+        let (expected_context, actual_context) =
+            mismatch_context(Some(expected), Some(actual), &mismatch);
 
         assert_eq!(mismatch.pointer.as_deref(), Some("/b"));
         assert_eq!(
@@ -436,13 +504,41 @@ mod tests {
                 "     4     2",
                 "     5   ],",
                 "     6   \"b\": 3",
-                "     7 }",
-                "     8 "
+                "     7 }"
             ]
         );
         assert_eq!(
             actual_context.get(3).map(String::as_str),
             Some("     6   \"b\": 4")
         );
+    }
+
+    #[test]
+    fn a_one_line_file_is_cut_around_the_differing_column() {
+        let padding = "x".repeat(500);
+        let expected = format!("{{\"a\": \"{padding}\", \"b\": 1, \"c\": \"{padding}\"}}\n");
+        let actual = format!("{{\"a\": \"{padding}\", \"b\": 2, \"c\": \"{padding}\"}}\n");
+        let mismatch = text_mismatches(&expected, &actual).unwrap().remove(0);
+
+        let (expected_context, actual_context) =
+            mismatch_context(Some(&expected), Some(&actual), &mismatch);
+
+        let expected_line = expected_context.first().unwrap();
+        let actual_line = actual_context.first().unwrap();
+
+        assert!(expected_line.chars().count() < 200, "{expected_line}");
+        assert!(expected_line.contains("\"b\": 1"), "{expected_line}");
+        assert!(actual_line.contains("\"b\": 2"), "{actual_line}");
+        assert!(expected_line.contains(CUT_MARK));
+    }
+
+    #[test]
+    fn a_side_with_no_text_has_no_context() {
+        let mismatch = only_in_one(String::new(), MismatchKind::Removed, &value("[1]"));
+
+        let (expected_context, actual_context) = mismatch_context(Some("[1]\n"), None, &mismatch);
+
+        assert_eq!(expected_context, vec!["     1 [1]"]);
+        assert_eq!(actual_context, Vec::<String>::new());
     }
 }
