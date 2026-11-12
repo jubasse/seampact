@@ -92,7 +92,7 @@ function textMismatch(file: string, expected: string, actual: string): Mismatch 
     ...(pointer === undefined ? {} : { pointer: pointer === "" ? "(root)" : pointer }),
     summary:
       pointer === undefined
-        ? "the text differs, the JSON value does not"
+        ? "the text differs and the parsed JSON values are equal (formatting or number notation)"
         : `the value at ${pointer === "" ? "the root" : pointer} differs`,
     expectedContext: contextAround(expectedLines, index),
     actualContext: contextAround(actualLines, index),

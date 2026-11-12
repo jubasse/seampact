@@ -28,7 +28,14 @@ export interface Difference {
   id: string;
   reason: string;
   decision: string;
-  applies: { fixtures: string[]; output: DifferenceOutput; pointer?: string; path?: string };
+  applies: {
+    fixtures: string[];
+    output: DifferenceOutput;
+    api?: string;
+    half?: string;
+    pointer?: string;
+    path?: string;
+  };
   change: DifferenceChange;
   /** The TS output: a JSON value, or a bigint for an integer beyond 2^53. */
   from?: unknown;
@@ -41,6 +48,23 @@ export interface Differences {
 }
 
 const isObject = (value: unknown): value is object => typeof value === "object" && value !== null;
+
+// The YAML reader gives every integer as a bigint; only an integer beyond 2^53 stays one.
+function narrowedIntegers(value: unknown): unknown {
+  if (typeof value === "bigint")
+    return value >= BigInt(Number.MIN_SAFE_INTEGER) && value <= BigInt(Number.MAX_SAFE_INTEGER)
+      ? Number(value)
+      : value;
+
+  if (Array.isArray(value)) return value.map(narrowedIntegers);
+
+  if (isObject(value))
+    return Object.fromEntries(
+      Object.entries(value).map(([key, member]) => [key, narrowedIntegers(member)]),
+    );
+
+  return value;
+}
 
 // Validation does not depend on the size of an integer, so a bigint is checked as the number it rounds to.
 function validationCopy(value: unknown): unknown {
@@ -95,6 +119,8 @@ function anchorProblem(entry: Difference): string | undefined {
   const [file = "", anchor = ""] = entry.decision.split("#");
   const path = join(REPO_ROOT, file);
 
+  if (file.split("/").includes("..")) return `${entry.id}: decision ${file} has a '..' segment`;
+
   if (!existsSync(path)) return `${entry.id}: decision ${file} is no committed doc`;
 
   return hasAnchor(readFileSync(path, "utf8"), anchor)
@@ -124,7 +150,7 @@ export function differencesProblems(document: unknown): string[] {
 
 /** Reads and validates a differences file; throws with every problem when it is invalid. */
 export function readDifferences(path: string = DIFFERENCES_FILE): Differences {
-  const document: unknown = parse(readFileSync(path, "utf8"), { intAsBigInt: true });
+  const document = narrowedIntegers(parse(readFileSync(path, "utf8"), { intAsBigInt: true }));
   const problems = differencesProblems(document);
 
   if (problems.length > 0 || !isDifferences(document))

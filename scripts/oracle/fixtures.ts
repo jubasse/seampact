@@ -77,13 +77,30 @@ function walk(directory: string, found: OracleFixture[]): void {
   }
 }
 
+// The names under a fixture's expected directory that hold its own files: a nested fixture there would collide.
+const OWN_EXPECTED_NAMES = ["diagnostics.json", "ir", "source-map", "halves"];
+
+function refuseCollidingNames(fixtures: readonly OracleFixture[]): void {
+  for (const { path } of fixtures) {
+    const parent = fixtures.find((other) => path.startsWith(`${other.path}/`));
+    const below = parent === undefined ? undefined : path.slice(parent.path.length + 1);
+
+    if (below !== undefined && OWN_EXPECTED_NAMES.includes(below.split("/")[0] ?? ""))
+      throw new Error(
+        `fixture ${path} is nested in ${parent?.path} under a name its expected outputs use; rename its directory`,
+      );
+  }
+}
+
 /** Every directory under `fixtures/` holding a `workspace.yaml` or an `api.yaml`, sorted, `expected/` left out. */
 export function discoverFixtures(): OracleFixture[] {
   const found: OracleFixture[] = [];
 
   walk(FIXTURES_ROOT, found);
+  found.sort((left, right) => byCodeUnits(left.path, right.path));
+  refuseCollidingNames(found);
 
-  return found.sort((left, right) => byCodeUnits(left.path, right.path));
+  return found;
 }
 
 const escapeRegExp = (text: string): string => text.replace(/[.+^${}()|[\]\\]/g, "\\$&");

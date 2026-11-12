@@ -1,6 +1,12 @@
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { checkFixtures, checkReport, coverageCommand, writeCommand } from "./commands.ts";
+import {
+  checkFixtures,
+  checkReport,
+  coverageCommand,
+  selectedFixtures,
+  writeCommand,
+} from "./commands.ts";
 
 // The oracle CLI: `node scripts/oracle/cli.ts write|check [<fixture glob>]` and `coverage` (see README.md).
 
@@ -28,6 +34,16 @@ function relaunchWithCompilerFlags(): number {
 }
 
 async function run(command: string | undefined, glob: string | undefined): Promise<number> {
+  if (
+    (command === "write" || command === "check") &&
+    glob !== undefined &&
+    selectedFixtures(glob).length === 0
+  ) {
+    console.error(`oracle: the glob '${glob}' matches no fixture`);
+
+    return EXIT_USAGE;
+  }
+
   if (command === "write") {
     console.log(await writeCommand(glob));
 
@@ -39,13 +55,15 @@ async function run(command: string | undefined, glob: string | undefined): Promi
 
     console.log(checkReport(result));
 
-    return result.differing === 0 ? EXIT_OK : EXIT_FAILED;
+    return result.differing === 0 && result.problems.length === 0 ? EXIT_OK : EXIT_FAILED;
   }
 
   if (command === "coverage" && glob === undefined) {
-    console.log(coverageCommand());
+    const { report, ok } = coverageCommand();
 
-    return EXIT_OK;
+    console.log(report);
+
+    return ok ? EXIT_OK : EXIT_FAILED;
   }
 
   console.error(USAGE);

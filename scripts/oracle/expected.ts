@@ -56,6 +56,21 @@ export const expectedDirectoryOf = (fixture: OracleFixture): string =>
 
 const OWN_ENTRIES = ["diagnostics.json", "ir", "source-map", "halves"] as const;
 
+/** The paths under `fixtures/expected/` that hold a `diagnostics.json`: the fixtures that have expected outputs. */
+export function expectedFixturePaths(directory: string = EXPECTED_ROOT, prefix = ""): string[] {
+  const found: string[] = [];
+
+  for (const name of readdirSync(directory)) {
+    const child = join(directory, name);
+
+    if (name === "diagnostics.json") found.push(prefix);
+    else if (statSync(child).isDirectory() && !(OWN_ENTRIES as readonly string[]).includes(name))
+      found.push(...expectedFixturePaths(child, prefix === "" ? name : `${prefix}/${name}`));
+  }
+
+  return found.filter((path) => path !== "");
+}
+
 function filesBelow(path: string, name: string, found: string[]): void {
   let isDirectory: boolean;
 

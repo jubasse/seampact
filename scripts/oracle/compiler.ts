@@ -1,5 +1,7 @@
-import { resolve } from "node:path";
+import { readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { parseDocument } from "yaml";
 
 // The oracle reads the TS compiler through a dynamic import, as `scripts/golden/compiler.ts` does: the root
 // TypeScript project forbids the parameter properties the compiler sources use, so a static import would make
@@ -128,10 +130,23 @@ function recordingPasses(
   );
 }
 
+// `compileWorkspace` does not resolve workspace imports as the CLI does, so such a fixture is named in `excluded.json`.
+// A file that does not parse is the compiler's to report as a diagnostic, so it is left to it.
+function refuseWorkspaceImports(root: string, entry: string): void {
+  const document = parseDocument(readFileSync(join(root, entry), "utf8"), { uniqueKeys: false });
+
+  if (document.errors.length === 0 && document.hasIn(["workspace", "imports"]))
+    throw new Error(
+      `${join(root, entry)} has workspace.imports, which the oracle does not resolve: add the fixture to scripts/oracle/excluded.json`,
+    );
+}
+
 function oracleCompiler(pipeline: PipelineModule, deltas: DeltaModule): OracleCompiler {
   return {
     halveNames: pipeline.pipelineHalves,
     compile(root, entry) {
+      refuseWorkspaceImports(root, entry);
+
       const halves: HalfDelta[] = [];
       const result = pipeline.compileWorkspace({
         reader: pipeline.loadFsReader(root),

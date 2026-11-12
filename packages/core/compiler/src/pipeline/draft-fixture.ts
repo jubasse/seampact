@@ -116,7 +116,9 @@ export function draftFixture(api: DraftFixtureApi, stage: DraftFixtureStage): Dr
 /**
  * Adds a half's members to a draft (a guarded one in the ownership test): an absent member is set, an object is
  * merged member by member, a list is appended to, and an object over a list names the elements it merges into,
- * by operation id under `operations` and by index elsewhere. A member already set is never replaced: that throws.
+ * by operation id under `operations` and by index elsewhere; a key that names no element yet is appended when it
+ * is the next index (or, under `operations`, the id the new element carries). A member already set is never
+ * replaced: that throws.
  */
 export function draftFixtureApply(draft: object, members: JsonObject): void {
   mergeObject(draft, members, "");

@@ -248,9 +248,16 @@
   "seampact/load/pack-package": [],
   "seampact/load/pack-shape": [],
   "seampact/load/pack-version-mismatch": [],
+  "seampact/load/path-absolute": [
+    "loader/composition/paths-refused"
+  ],
+  "seampact/load/path-backslash": [
+    "loader/composition/paths-refused"
+  ],
   "seampact/load/path-case": [
     "loader/composition/paths-refused"
   ],
+  "seampact/load/path-empty": [],
   "seampact/load/path-escape": [
     "loader/composition/paths-refused"
   ],
@@ -330,6 +337,9 @@
     "passes/tree-nodes/shapes-refused",
     "reference/tasks"
   ],
+  "seampact/tree/default-value": [
+    "passes/tree-schemas/refused"
+  ],
   "seampact/tree/degradable-header": [],
   "seampact/tree/degradable-path": [],
   "seampact/tree/deprecated-since": [],
@@ -364,6 +374,9 @@
     "passes/tree-schemas/refused"
   ],
   "seampact/tree/extension-unknown": [
+    "passes/tree-schemas/refused"
+  ],
+  "seampact/tree/extension-value": [
     "passes/tree-schemas/refused"
   ],
   "seampact/tree/fields-schema": [

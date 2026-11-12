@@ -19,7 +19,7 @@ const STAGE_BY_DIRECTORY: readonly (readonly [string, string])[] = [
 ];
 const FULL_LITERAL = /"(seampact\/[a-z]+\/[a-z0-9-]+)"/g;
 const RULE_LITERAL = /\brule:\s*"([a-z][a-z0-9-]*)"/g;
-const UNION_TYPE = /type\s+\w*Rule\w*\s*=((?:\s*\|\s*"[a-z][a-z0-9-]*")+)/g;
+const UNION_TYPE = /type\s+\w*Rule\w*\s*=((?:\s*\|?\s*"[a-z][a-z0-9-]*")+)/g;
 const UNION_MEMBER = /"([a-z][a-z0-9-]*)"/g;
 
 function sourceFiles(directory: string, found: string[]): string[] {

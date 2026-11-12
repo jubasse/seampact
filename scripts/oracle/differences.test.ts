@@ -70,6 +70,33 @@ describe("differences.yaml", () => {
     ]);
   });
 
+  test("applies takes an optional api and half, and refuses a star inside a pointer segment", () => {
+    const applies = (pointer: string): object => ({ fixtures: ["x"], output: "halves", pointer });
+
+    expect(
+      differencesProblems(
+        document(
+          entry({ applies: { ...(applies("/a/*/b") as object), api: "tasks", half: "tree" } }),
+        ),
+      ),
+    ).toEqual([]);
+    expect(
+      differencesProblems(document(entry({ applies: applies("/a*") }))).length,
+    ).toBeGreaterThan(0);
+    expect(
+      differencesProblems(document(entry({ applies: applies("/**") }))).length,
+    ).toBeGreaterThan(0);
+    expect(
+      differencesProblems(document(entry({ applies: applies("/a/**/b") }))).length,
+    ).toBeGreaterThan(0);
+  });
+
+  test("it refuses a decision path that climbs out of docs", () => {
+    expect(differencesProblems(document(entry({ decision: "docs/../package.json.md#a" })))).toEqual(
+      ["big-integers-exact: decision docs/../package.json.md has a '..' segment"],
+    );
+  });
+
   test("it reads an integer above 2^53 without rounding it", () => {
     const directory = mkdtempSync(join(tmpdir(), "oracle-differences-"));
 
@@ -89,6 +116,7 @@ differences:
 `,
       );
       expect(readDifferences(path).differences[0]?.to).toBe(9007199254740993n);
+      expect(readDifferences(path).version).toBe(1);
       writeFileSync(path, "version: 2\ndifferences: []\n");
       expect(() => readDifferences(path)).toThrow(/invalid/);
     } finally {
