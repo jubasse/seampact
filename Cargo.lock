@@ -913,6 +913,7 @@ dependencies = [
  "indexmap",
  "seampact-diagnostics",
  "seampact-ir",
+ "seampact-js",
  "seampact-json",
  "serde",
  "serde_json",
