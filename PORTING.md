@@ -103,7 +103,7 @@ cargo deny check
 cargo machete
 ```
 
-plus the trace check and the oracle harness on every fixture (their commands land with the workspace skeleton, with `deny.toml`). Report the result line of each; a step that cannot run is reported `not run: <reason>`, never left out.
+plus the trace check (`node scripts/rust/trace-check.ts`) and the oracle harness on every fixture (`cargo xtask oracle`). `cargo xtask gate` runs all seven from the workspace root and prints one result line per step: `<step>: ok`, `<step>: failed` or `<step>: not run: <reason>`; it exits non-zero when a step fails. Report the result line of each; a step that cannot run is reported `not run: <reason>`, never left out.
 
 ## 9. Dependencies
 

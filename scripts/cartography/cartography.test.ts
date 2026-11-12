@@ -122,6 +122,8 @@ describe("cartography", () => {
       "jvm/module/README.md": "# A JVM module\n",
       "php/target/README.md": "A PHP target. It has a long paragraph after the first sentence.\n",
       ".github/actions/cache/README.md": "Caches things.\n",
+      "crates/js/README.md": "JavaScript semantics. More detail.\n",
+      "xtask/README.md": "Workspace tasks.\n",
       "scripts/bare/run.sh": "",
       "scripts/tool/fixtures/case/index.ts": "",
     });
@@ -132,6 +134,8 @@ describe("cartography", () => {
     expect(markdown).toContain("- `jvm/module`: A JVM module");
     expect(markdown).toContain("- `php/target`: A PHP target.");
     expect(markdown).toContain("- `.github/actions/cache`: Caches things.");
+    expect(markdown).toContain("### `crates`\n\n- `crates/js`: JavaScript semantics.");
+    expect(markdown).toContain("### Top-level tools\n\n- `xtask`: Workspace tasks.");
     expect(markdown).not.toContain("long paragraph");
     expect(markdown).not.toContain("fixtures");
     expect(problems).toEqual([
