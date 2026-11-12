@@ -1,0 +1,39 @@
+src/reader.rs#to_posix	packages/core/compiler/src/load/reader.ts#toPosix
+src/reader.rs#load_root_relative	packages/core/compiler/src/load/reader.ts#loadRootRelative
+src/reader.rs#load_ascent_of	packages/core/compiler/src/load/reader.ts#loadAscentOf
+src/reader.rs#new	packages/core/compiler/src/load/reader.ts#loadFsReader
+src/reader.rs#normalize_key	packages/core/compiler/src/load/reader.ts#normalizeKey
+src/reader.rs#new	packages/core/compiler/src/load/reader.ts#loadMemoryReader
+src/paths.rs#load_normalize_path	packages/core/compiler/src/load/paths.ts#loadNormalizePath
+src/paths.rs#dirname_of	packages/core/compiler/src/load/paths.ts#dirnameOf
+src/paths.rs#join_path	packages/core/compiler/src/load/paths.ts#joinPath
+src/paths.rs#is_absolute_path	packages/core/compiler/src/load/paths.ts#isAbsolutePath
+src/paths.rs#is_inside	packages/core/compiler/src/load/paths.ts#isInside
+src/paths.rs#resolve_authored_path	packages/core/compiler/src/load/paths.ts#resolveAuthoredPath
+src/paths.rs#of	packages/core/compiler/src/load/paths.ts#listingIndex
+src/paths.rs#check_case	packages/core/compiler/src/load/paths.ts#checkCase
+src/paths.rs#pointer_segments	packages/core/compiler/src/load/paths.ts#pointerSegments
+src/pack_files.rs#pack_vendored_directory	packages/core/compiler/src/load/pack-files.ts#packVendoredDirectory
+src/pack_files.rs#pack_file_parts	packages/core/compiler/src/load/pack-files.ts#packFileParts
+src/pack_files.rs#package_name_of	packages/core/compiler/src/load/pack-files.ts#packageNameOf
+src/pack_files.rs#pack_vendored_file	packages/core/compiler/src/load/pack-files.ts#packVendoredFile
+src/pack_files.rs#pack_layer_id_of	packages/core/compiler/src/load/pack-files.ts#packLayerIdOf
+src/budget.rs#new	packages/core/compiler/src/load/budget.ts#LoadBudget.constructor
+src/budget.rs#exhausted	packages/core/compiler/src/load/budget.ts#LoadBudget.exhausted
+src/budget.rs#charge	packages/core/compiler/src/load/budget.ts#LoadBudget.charge
+src/budget.rs#charge_text	packages/core/compiler/src/load/budget.ts#LoadBudget.chargeText
+src/budget.rs#exhaust	packages/core/compiler/src/load/budget.ts#LoadBudget.exhaust
+src/budget.rs#load_work_of	packages/core/compiler/src/load/budget.ts#loadWorkOf
+src/json.rs#is_reserved_key	packages/core/compiler/src/load/json.ts#isReservedKey
+-	packages/core/compiler/src/load/json.ts#jsonObject	skip: an empty `JsonObject::new()`; a Rust object has no prototype to defend
+-	packages/core/compiler/src/load/json.ts#setKey	skip: `JsonObject::insert` defines the key and keeps JavaScript key order
+-	packages/core/compiler/src/load/json.ts#asObject	skip: a `match` on `JsonValue::Object` at each caller
+-	packages/core/compiler/src/load/json.ts#ownValue	skip: `JsonObject::get` reads own members only
+-	packages/core/compiler/src/load/json.ts#cloneJson	skip: `JsonValue::clone` is the deep copy
+src/json.rs#show_value	packages/core/compiler/src/load/json.ts#showValue
+src/report.rs#load_site_pointer	packages/core/compiler/src/load/report.ts#loadSitePointer
+src/report.rs#origin_at	packages/core/compiler/src/load/report.ts#Reporter.originAt
+src/report.rs#relabel	packages/core/compiler/src/load/report.ts#Reporter.relabel
+src/report.rs#report	packages/core/compiler/src/load/report.ts#Reporter.report
+src/fragments.rs#load_sort_fragments	packages/core/compiler/src/load/fragments.ts#loadSortFragments
+src/fragments.rs#fragment_key	packages/core/compiler/src/load/fragments.ts#fragmentKey
