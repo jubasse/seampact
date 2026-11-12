@@ -108,6 +108,41 @@ fn serialize_tagged<T: Serialize, S: Serializer>(
     value.serialize(serializer)
 }
 
+/// Reads and writes `Scalar.type`, the one member that holds a variant struct, not its union:
+/// with its tag, as the schema's `ScalarTypeUse` has it.
+pub(crate) mod scalar_type_use_member {
+    use serde::de::Error as _;
+    use serde::{Deserialize, Deserializer, Serializer};
+
+    use super::serialize_tagged;
+    use crate::{ScalarTypeUse, TypeUse};
+
+    /// The tag member of a type use.
+    const TAG_MEMBER: &str = "kind";
+
+    /// The tag of a scalar type use.
+    const SCALAR_TAG: &str = "scalar";
+
+    pub(crate) fn serialize<S: Serializer>(
+        type_use: &ScalarTypeUse,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        serialize_tagged(TAG_MEMBER, SCALAR_TAG, type_use, serializer)
+    }
+
+    pub(crate) fn deserialize<'de, D: Deserializer<'de>>(
+        deserializer: D,
+    ) -> Result<ScalarTypeUse, D::Error> {
+        match TypeUse::deserialize(deserializer)? {
+            TypeUse::Scalar(type_use) => Ok(type_use),
+            other => Err(D::Error::custom(format!(
+                "expected a type use of kind `{SCALAR_TAG}`, found `{}`",
+                other.tag()
+            ))),
+        }
+    }
+}
+
 /// Writes each union, its `tag`, serde by tag dispatch and the [`UNIONS`] registry; one
 /// invocation lists every definition, so the registry cannot miss one.
 ///

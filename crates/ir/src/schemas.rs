@@ -3,6 +3,7 @@
 use seampact_json::JsonValue;
 use serde::{Deserialize, Serialize};
 
+use crate::unions::scalar_type_use_member;
 use crate::{
     DecimalLiteral, DerivedFrom, Direction, Docs, EnumId, Extensions, InputPolicy, JsonMediaType,
     Name, Origin, Reason, RightId, ScalarId, ScalarType, SchemaId, TypeUse, UnionTag,
@@ -526,6 +527,7 @@ pub struct Scalar {
     pub name: Name,
 
     /// The `type` member.
+    #[serde(with = "scalar_type_use_member")]
     pub r#type: ScalarTypeUse,
 
     /// The `directions` member.
