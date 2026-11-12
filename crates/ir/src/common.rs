@@ -31,7 +31,7 @@ pub struct Name {
 }
 
 /// Resolved documentation text.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Docs {
     /// The `summary` member.

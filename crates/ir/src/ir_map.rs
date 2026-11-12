@@ -47,6 +47,11 @@ impl<K, V> IrMap<K, V> {
         self.0.iter()
     }
 
+    /// The entries in iteration order, values mutable; no key can move.
+    pub fn iter_mut(&mut self) -> indexmap::map::IterMut<'_, K, V> {
+        self.0.iter_mut()
+    }
+
     /// The keys in iteration order.
     #[must_use]
     pub fn keys(&self) -> indexmap::map::Keys<'_, K, V> {
@@ -57,6 +62,11 @@ impl<K, V> IrMap<K, V> {
     #[must_use]
     pub fn values(&self) -> indexmap::map::Values<'_, K, V> {
         self.0.values()
+    }
+
+    /// The values in iteration order, mutable.
+    pub fn values_mut(&mut self) -> indexmap::map::ValuesMut<'_, K, V> {
+        self.0.values_mut()
     }
 }
 
@@ -89,6 +99,24 @@ impl<K: AsRef<str> + Hash + Eq, V> IrMap<K, V> {
         Q: Hash + Eq + ?Sized,
     {
         self.0.get(key)
+    }
+
+    /// The value of `key`, mutable, if present; its place does not change.
+    pub fn get_mut<Q>(&mut self, key: &Q) -> Option<&mut V>
+    where
+        K: Borrow<Q>,
+        Q: Hash + Eq + ?Sized,
+    {
+        self.0.get_mut(key)
+    }
+
+    /// Removes `key` and returns its value; the other entries keep their order.
+    pub fn remove<Q>(&mut self, key: &Q) -> Option<V>
+    where
+        K: Borrow<Q>,
+        Q: Hash + Eq + ?Sized,
+    {
+        self.0.shift_remove(key)
     }
 
     /// Whether `key` is present.
@@ -166,6 +194,15 @@ impl<'map, K, V> IntoIterator for &'map IrMap<K, V> {
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.iter()
+    }
+}
+
+impl<'map, K, V> IntoIterator for &'map mut IrMap<K, V> {
+    type Item = (&'map K, &'map mut V);
+    type IntoIter = indexmap::map::IterMut<'map, K, V>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter_mut()
     }
 }
 
@@ -258,6 +295,51 @@ mod tests {
         .unwrap();
 
         assert_eq!(keys_of(&map), ["9", "10", "b", "\u{1F600}", "\u{FF5E}"]);
+    }
+
+    fn map_of_mixed_keys() -> IrMap<String, i64> {
+        ["b", "404", "a", "200"]
+            .into_iter()
+            .zip(1..)
+            .map(|(key, value)| (key.to_owned(), value))
+            .collect()
+    }
+
+    #[test]
+    fn mutating_values_keeps_the_javascript_key_order() {
+        let mut map = map_of_mixed_keys();
+
+        if let Some(value) = map.get_mut("a") {
+            *value = 30;
+        }
+
+        for value in map.values_mut() {
+            *value += 100;
+        }
+
+        for (_, value) in &mut map {
+            *value += 1000;
+        }
+
+        for (_, value) in map.iter_mut() {
+            *value += 10000;
+        }
+
+        assert_eq!(keys_of(&map), ["200", "404", "b", "a"]);
+        assert_eq!(map.get("a"), Some(&11130));
+        assert_eq!(map.get("200"), Some(&11104));
+    }
+
+    #[test]
+    fn remove_returns_the_value_and_keeps_the_order_of_the_rest() {
+        let mut map = map_of_mixed_keys();
+
+        assert_eq!(map.remove("404"), Some(2));
+        assert_eq!(map.remove("404"), None);
+        assert_eq!(keys_of(&map), ["200", "b", "a"]);
+
+        assert_eq!(map.remove("b"), Some(1));
+        assert_eq!(keys_of(&map), ["200", "a"]);
     }
 
     #[test]
