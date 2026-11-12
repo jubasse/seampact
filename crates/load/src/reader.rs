@@ -89,13 +89,7 @@ pub fn load_root_relative(real_root: &Utf8Path, real: &Utf8Path) -> String {
     let climbs = root_parts.len().saturating_sub(common);
     let mut segments: Vec<&str> = vec![".."; climbs];
 
-    segments.extend(
-        real_parts
-            .get(common..)
-            .unwrap_or(&[])
-            .iter()
-            .map(Utf8Component::as_str),
-    );
+    segments.extend(real_parts.iter().skip(common).map(Utf8Component::as_str));
 
     if segments.is_empty() {
         return ROOT_BOUNDARY.to_owned();

@@ -6,7 +6,8 @@
 //! own-property reads, defined keys, the deep copy) are what [`JsonObject`] and `Clone` already
 //! do.
 
-use seampact_json::{JsonObject, JsonValue, write_json_string};
+use seampact_js::FiniteNumber;
+use seampact_json::{JsonNumber, JsonObject, JsonValue, write_json_string};
 
 /// Keys refused wherever an author writes one (`seampact/load/reserved-key`).
 pub const RESERVED_KEYS: [&str; 3] = ["__proto__", "constructor", "prototype"];
@@ -38,10 +39,19 @@ fn write_compact(output: &mut String, value: &JsonValue) {
     match value {
         JsonValue::Null => output.push_str("null"),
         JsonValue::Bool(flag) => output.push_str(if *flag { "true" } else { "false" }),
-        JsonValue::Number(number) => output.push_str(&number.to_string()),
+        JsonValue::Number(number) => output.push_str(&number_text(number)),
         JsonValue::String(text) => write_json_string(output, text),
         JsonValue::Array(items) => write_compact_array(output, items),
         JsonValue::Object(members) => write_compact_object(output, members),
+    }
+}
+
+// A number as the `f64` JavaScript holds, so an integer above 2^53 is rounded; `JSON.stringify`
+// writes a non-finite number as `null`.
+fn number_text(number: &JsonNumber) -> String {
+    match FiniteNumber::new(number.to_f64()) {
+        Some(finite) => finite.to_string(),
+        None => "null".to_owned(),
     }
 }
 
@@ -77,8 +87,6 @@ fn write_compact_object(output: &mut String, members: &JsonObject) {
 
 #[cfg(test)]
 mod tests {
-    use seampact_json::JsonNumber;
-
     use super::*;
 
     fn object(members: Vec<(&str, JsonValue)>) -> JsonValue {
@@ -141,6 +149,16 @@ mod tests {
                 number(2.0),
             ]))),
             "[null,\"é\\n\\u0001\",2]"
+        );
+    }
+
+    #[test]
+    fn an_integer_above_2_pow_53_is_shown_as_the_number_javascript_holds() {
+        let exact = JsonNumber::from_json_text("9007199254740993").expect("a number");
+
+        assert_eq!(
+            show_value(Some(&JsonValue::Number(exact))),
+            "9007199254740992"
         );
     }
 

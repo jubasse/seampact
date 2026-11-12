@@ -45,8 +45,8 @@ pub fn load_normalize_path(path: &str) -> String {
 /// The directory of `file`, `.` for a file at the root.
 #[must_use]
 pub fn dirname_of(file: &str) -> &str {
-    match file.rfind('/') {
-        Some(index) => file.get(..index).unwrap_or(ROOT_BOUNDARY),
+    match file.rsplit_once('/') {
+        Some((directory, _)) => directory,
         None => ROOT_BOUNDARY,
     }
 }
