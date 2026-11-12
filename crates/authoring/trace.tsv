@@ -1,0 +1,28 @@
+src/raw_tree.rs#entry_location_key	packages/core/compiler/src/raw-tree.ts#entryLocationKey
+src/layer.rs#kind	packages/core/compiler/src/raw-tree.ts#layerKindOf
+src/layer.rs#schema_kind	packages/core/compiler/src/raw-tree.ts#schemaKindOf
+src/markers.rs#from_title	packages/core/spec/src/authoring/markers.ts#isMarker
+src/keywords.rs#schema_keyword	packages/core/spec/src/authoring/keywords.ts#schemaKeyword
+tests/grammar_schemas.rs#grammar_keywords	packages/core/spec/src/authoring/grammar.ts#grammarKeywords
+-	packages/core/spec/src/authoring/schemas.ts#parts	skip: the TypeScript builders stay the source of the committed schemas
+-	packages/core/spec/src/authoring/schemas.ts#authoringSchemas	skip: the TypeScript builders stay the source of the committed schemas
+-	packages/core/spec/src/authoring/schemas.ts#authoringSchemaFileName	skip: each embedded file carries its name (AuthoringSchemaFile.file_name)
+-	packages/core/spec/src/authoring/json.ts#formatSchemaJson	skip: the TypeScript builders stay the source of the committed schemas
+-	packages/core/spec/src/authoring/dsl.ts#A2	skip: the TypeScript builders stay the source of the committed schemas
+-	packages/core/spec/src/authoring/dsl.ts#A3	skip: the TypeScript builders stay the source of the committed schemas
+-	packages/core/spec/src/authoring/dsl.ts#ref	skip: the TypeScript builders stay the source of the committed schemas
+-	packages/core/spec/src/authoring/dsl.ts#localiseRefs	skip: the TypeScript builders stay the source of the committed schemas
+-	packages/core/spec/src/authoring/dsl.ts#kw	skip: the TypeScript builders stay the source of the committed schemas
+-	packages/core/spec/src/authoring/dsl.ts#req	skip: the TypeScript builders stay the source of the committed schemas
+-	packages/core/spec/src/authoring/dsl.ts#conflict	skip: the TypeScript builders stay the source of the committed schemas
+-	packages/core/spec/src/authoring/dsl.ts#forbid	skip: the TypeScript builders stay the source of the committed schemas
+-	packages/core/spec/src/authoring/dsl.ts#data	skip: the TypeScript builders stay the source of the committed schemas
+-	packages/core/spec/src/authoring/dsl.ts#str	skip: the TypeScript builders stay the source of the committed schemas
+-	packages/core/spec/src/authoring/dsl.ts#oneOfValues	skip: the TypeScript builders stay the source of the committed schemas
+-	packages/core/spec/src/authoring/dsl.ts#list	skip: the TypeScript builders stay the source of the committed schemas
+-	packages/core/spec/src/authoring/dsl.ts#object	skip: the TypeScript builders stay the source of the committed schemas
+-	packages/core/spec/src/authoring/dsl.ts#keyNames	skip: the TypeScript builders stay the source of the committed schemas
+-	packages/core/spec/src/authoring/dsl.ts#map	skip: the TypeScript builders stay the source of the committed schemas
+-	packages/core/spec/src/authoring/dsl.ts#when	skip: the TypeScript builders stay the source of the committed schemas
+-	packages/core/spec/src/authoring/dsl.ts#stringOr	skip: the TypeScript builders stay the source of the committed schemas
+-	packages/core/spec/src/authoring/dsl.ts#choice	skip: the TypeScript builders stay the source of the committed schemas

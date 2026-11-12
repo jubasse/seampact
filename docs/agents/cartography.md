@@ -303,6 +303,7 @@ In pipeline order (ADR 0006 section 1).
 
 ### `crates`
 
+- `crates/authoring`: The authoring grammar data (embedded authoring schemas, markers, keywords, reserved names), the loaded tree the loader hands over and its typed member readers.
 - `crates/diagnostics`: Diagnostics of the Rust port: the diagnostic type, its sink, sort order and printed form, and the internal error with its exit code.
 - `crates/ir`: The seampact IR and source-map types, their open enums, unions and registries, the embedded IR schema files and the canonical document roots.
 - `crates/js`: JavaScript semantics shared by every port lane: UTF-16 string order, JavaScript object key order and ECMAScript number text.
