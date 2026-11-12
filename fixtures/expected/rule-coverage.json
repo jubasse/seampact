@@ -3,6 +3,7 @@
   "seampact/access/binding-conflict": [],
   "seampact/access/binding-source": [],
   "seampact/access/bucket-key": [
+    "limits/bucket-prefix-bits-over",
     "passes/access-rights/catalogues-refused",
     "passes/access-rights/proofs-refused"
   ],
@@ -199,7 +200,9 @@
   "seampact/derive/role-template": [],
   "seampact/finalize/id-collision": [],
   "seampact/link/relay-superset": [],
-  "seampact/load/api-name-mismatch": [],
+  "seampact/load/api-name-mismatch": [
+    "rules/load-api-name-mismatch"
+  ],
   "seampact/load/base-extends": [],
   "seampact/load/data-null": [
     "loader/pitfalls/data-null"
@@ -227,10 +230,16 @@
   "seampact/load/include-cycle": [
     "loader/pitfalls/p8-include-cycle"
   ],
-  "seampact/load/include-fragment": [],
-  "seampact/load/include-shape": [],
+  "seampact/load/include-fragment": [
+    "rules/load-include-fragment"
+  ],
+  "seampact/load/include-shape": [
+    "rules/load-include-shape"
+  ],
   "seampact/load/include-under-routes": [],
-  "seampact/load/key-not-scalar": [],
+  "seampact/load/key-not-scalar": [
+    "rules/load-key-not-scalar"
+  ],
   "seampact/load/name-not-visible": [
     "loader/composition/layer-visibility"
   ],
@@ -263,10 +272,17 @@
   ],
   "seampact/load/ref-file-shape": [],
   "seampact/load/ref-fragment": [],
-  "seampact/load/ref-pointer": [],
+  "seampact/load/ref-pointer": [
+    "rules/load-ref-pointer"
+  ],
   "seampact/load/reserved-key": [],
-  "seampact/load/scalar-type": [],
-  "seampact/load/too-deep": [],
+  "seampact/load/scalar-type": [
+    "rules/load-scalar-type"
+  ],
+  "seampact/load/too-deep": [
+    "limits/depth-include-over",
+    "limits/depth-nesting-over"
+  ],
   "seampact/load/workspace-shape": [],
   "seampact/load/yaml-ambiguous-scalar": [
     "loader/pitfalls/p3-date-timestamp",
@@ -491,7 +507,10 @@
   "seampact/tree/path-version": [
     "passes/tree-nodes/routes-refused"
   ],
-  "seampact/tree/pattern": [],
+  "seampact/tree/pattern": [
+    "limits/pattern-group-depth-over",
+    "limits/pattern-repeat-over"
+  ],
   "seampact/tree/query-field": [],
   "seampact/tree/query-map": [
     "passes/tree-schemas/refused"
@@ -499,7 +518,9 @@
   "seampact/tree/redirect-body": [
     "passes/tree-nodes/routes-refused"
   ],
-  "seampact/tree/refinement-precision": [],
+  "seampact/tree/refinement-precision": [
+    "limits/fraction-digits-over"
+  ],
   "seampact/tree/refinement-range": [],
   "seampact/tree/refinement-type": [],
   "seampact/tree/relay-declaration": [],
@@ -534,7 +555,9 @@
   "seampact/tree/schema-inline": [],
   "seampact/tree/schema-keyword": [],
   "seampact/tree/schema-reserved": [],
-  "seampact/tree/schema-shape": [],
+  "seampact/tree/schema-shape": [
+    "limits/depth-nesting-at"
+  ],
   "seampact/tree/schema-unknown": [
     "golden/pack-api-platform/contract/tasks",
     "golden/pack-crud-rights/contract/tasks",
@@ -572,16 +595,29 @@
   "seampact/tree/unknown-keys": [],
   "seampact/tree/upstream-service": [],
   "seampact/validate/conflicting-keywords": [],
-  "seampact/validate/invalid-name": [],
-  "seampact/validate/invalid-value": [],
+  "seampact/validate/invalid-name": [
+    "rules/validate-invalid-name"
+  ],
+  "seampact/validate/invalid-value": [
+    "limits/diagnostics-cap-at",
+    "limits/diagnostics-cap-over"
+  ],
   "seampact/validate/missing-keyword": [
     "loader/byte-identity/included",
     "loader/byte-identity/inline",
     "loader/composition/data-positions"
   ],
-  "seampact/validate/reason-required": [],
-  "seampact/validate/refused-keyword": [],
-  "seampact/validate/unknown-keyword": [],
-  "seampact/validate/wrong-type": [],
+  "seampact/validate/reason-required": [
+    "rules/validate-reason-required"
+  ],
+  "seampact/validate/refused-keyword": [
+    "rules/validate-refused-keyword"
+  ],
+  "seampact/validate/unknown-keyword": [
+    "rules/validate-unknown-keyword"
+  ],
+  "seampact/validate/wrong-type": [
+    "rules/validate-wrong-type"
+  ],
   "seampact/workspace/relay-cycle": []
 }

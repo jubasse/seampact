@@ -1,0 +1,16 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/key-not-scalar",
+      "message": "a mapping key must be a plain or quoted string",
+      "fix": "write the key as a string",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/3/5"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

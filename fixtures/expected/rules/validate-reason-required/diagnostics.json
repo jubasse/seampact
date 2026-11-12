@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/validate/reason-required",
+          "message": "'public' needs a reason: a safety exception states why, in a non-empty string (A40).",
+          "fix": "Write the reason as a string: public: \"<reason>\".",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/r/access/public"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/validate/refused-keyword",
+          "message": "This form of 'enum' is refused in a schema: inline value lists are refused because enums live in one catalogue, where each is declared once with its values, source and fallback (ADR 0003 section 1).",
+          "fix": "Declare the values in the 'enums' catalogue and write 'enum: <EnumName>'.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Id/enum"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+api: { name: t, version: 1 }
+schemas:
+  ? [a, b]
+  : { type: string }

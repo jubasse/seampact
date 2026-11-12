@@ -1,0 +1,16 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/include-fragment",
+      "message": "the pointer '#/missing' of './part.yaml#/missing' matches nothing in 'part.yaml'",
+      "fix": "point at an existing mapping, as in ./file.yaml#/Name",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/3/19"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

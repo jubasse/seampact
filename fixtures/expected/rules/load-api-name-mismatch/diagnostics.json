@@ -1,0 +1,24 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/api-name-mismatch",
+      "message": "workspace.apis names this api 'tasks', and api.name is 't'",
+      "fix": "make the two names equal",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/1/8"
+      },
+      "related": [
+        {
+          "origin": {
+            "layer": "api",
+            "pointer": "/~load/workspace.yaml/3/5"
+          },
+          "message": "named here"
+        }
+      ]
+    }
+  ],
+  "apis": []
+}

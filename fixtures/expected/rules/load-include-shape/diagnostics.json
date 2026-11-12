@@ -1,0 +1,16 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/include-shape",
+      "message": "'./list.yaml' does not hold a mapping, and $include merges a mapping",
+      "fix": "include a file or pointer that holds a mapping",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/3/13"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}
