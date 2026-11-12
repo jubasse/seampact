@@ -1,0 +1,593 @@
+{
+  "rights": {
+    "workspaceRole": {
+      "id": "workspaceRole",
+      "params": "WorkspaceRoleParams",
+      "subject": {
+        "kind": "scope",
+        "scope": "workspace"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/workspaceRole"
+      }
+    },
+    "notes.read": {
+      "id": "notes.read",
+      "subject": {
+        "kind": "scope",
+        "scope": "workspace"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/notes.read"
+      }
+    },
+    "notes.seeCost": {
+      "id": "notes.seeCost",
+      "subject": {
+        "kind": "resource",
+        "type": {
+          "segments": [
+            "note"
+          ],
+          "role": "schema"
+        },
+        "idSchema": {
+          "kind": "scalar",
+          "type": "string",
+          "format": "uuid",
+          "refinements": {}
+        }
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/notes.seeCost"
+      }
+    },
+    "notes.annotate": {
+      "id": "notes.annotate",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/notes.annotate"
+      }
+    }
+  },
+  "scopes": {
+    "workspace": {
+      "id": "workspace",
+      "idSchema": {
+        "kind": "scalar",
+        "type": "string",
+        "format": "uuid",
+        "refinements": {}
+      },
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/scopes/workspace"
+      }
+    }
+  },
+  "operations": {
+    "listNotes": {
+      "paging": {
+        "sortKeys": {
+          "1": {
+            "right": "notes.read",
+            "subject": {
+              "source": {
+                "in": "scope",
+                "name": "workspace"
+              }
+            },
+            "derivedFrom": {
+              "derivation": "sortKey.restricted",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/schemas/Note/properties/rating/restrictedTo"
+                }
+              ]
+            }
+          },
+          "2": {
+            "right": "notes.annotate",
+            "derivedFrom": {
+              "derivation": "sortKey.restricted",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/schemas/Note/properties/memo/restrictedTo"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "scopes": [
+        {
+          "scope": "workspace",
+          "source": {
+            "in": "path",
+            "name": "workspaceId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/workspaces/member/scopes/workspace"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": [
+        {
+          "schema": "Note",
+          "pointer": "/cost",
+          "right": "notes.seeCost",
+          "subject": {
+            "source": {
+              "in": "holderField",
+              "name": "noteId"
+            }
+          },
+          "direction": "output",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/schemas/Note/properties/cost/restrictedTo"
+              }
+            ]
+          }
+        },
+        {
+          "schema": "Note",
+          "pointer": "/memo",
+          "right": "notes.annotate",
+          "direction": "output",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/schemas/Note/properties/memo/restrictedTo"
+              }
+            ]
+          }
+        },
+        {
+          "schema": "Note",
+          "pointer": "/rating",
+          "right": "notes.read",
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "workspace"
+            }
+          },
+          "direction": "output",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/schemas/Note/properties/rating/restrictedTo"
+              }
+            ]
+          }
+        }
+      ],
+      "filteredBy": "notes.read"
+    },
+    "createNote": {
+      "scopes": [
+        {
+          "scope": "workspace",
+          "source": {
+            "in": "path",
+            "name": "workspaceId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/workspaces/member/scopes/workspace"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": [
+        {
+          "schema": "CreateNote",
+          "pointer": "/budget",
+          "right": "workspaceRole",
+          "params": {
+            "level": "owner"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "workspace"
+            }
+          },
+          "direction": "input",
+          "inputPolicy": "reject",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/schemas/CreateNote/properties/budget/restrictedTo"
+              }
+            ]
+          }
+        },
+        {
+          "schema": "CreateNote",
+          "pointer": "/memo",
+          "right": "notes.annotate",
+          "direction": "input",
+          "inputPolicy": "strip",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/schemas/CreateNote/properties/memo/restrictedTo"
+              }
+            ]
+          }
+        },
+        {
+          "schema": "Note",
+          "pointer": "/cost",
+          "right": "notes.seeCost",
+          "subject": {
+            "source": {
+              "in": "holderField",
+              "name": "noteId"
+            }
+          },
+          "direction": "output",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/schemas/Note/properties/cost/restrictedTo"
+              }
+            ]
+          }
+        },
+        {
+          "schema": "Note",
+          "pointer": "/memo",
+          "right": "notes.annotate",
+          "direction": "output",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/schemas/Note/properties/memo/restrictedTo"
+              }
+            ]
+          }
+        },
+        {
+          "schema": "Note",
+          "pointer": "/rating",
+          "right": "notes.read",
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "workspace"
+            }
+          },
+          "direction": "output",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/schemas/Note/properties/rating/restrictedTo"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "feedNotes": {
+      "scopes": [
+        {
+          "scope": "workspace",
+          "source": {
+            "in": "path",
+            "name": "workspaceId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/workspaces/member/scopes/workspace"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": [
+        {
+          "schema": "Feed",
+          "pointer": "/latest/cost",
+          "right": "notes.seeCost",
+          "subject": {
+            "source": {
+              "in": "holderField",
+              "name": "noteId"
+            }
+          },
+          "direction": "output",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/schemas/NoteEdited/properties/cost/restrictedTo"
+              }
+            ]
+          }
+        },
+        {
+          "schema": "Feed",
+          "pointer": "/pinned/*/cost",
+          "right": "notes.seeCost",
+          "subject": {
+            "source": {
+              "in": "holderField",
+              "name": "noteId"
+            }
+          },
+          "direction": "output",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/schemas/Note/properties/cost/restrictedTo"
+              }
+            ]
+          }
+        },
+        {
+          "schema": "Feed",
+          "pointer": "/pinned/*/memo",
+          "right": "notes.annotate",
+          "direction": "output",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/schemas/Note/properties/memo/restrictedTo"
+              }
+            ]
+          }
+        },
+        {
+          "schema": "Feed",
+          "pointer": "/pinned/*/rating",
+          "right": "notes.read",
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "workspace"
+            }
+          },
+          "direction": "output",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/schemas/Note/properties/rating/restrictedTo"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "byLabelNotes": {
+      "scopes": [
+        {
+          "scope": "workspace",
+          "source": {
+            "in": "path",
+            "name": "workspaceId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/workspaces/member/scopes/workspace"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": [
+        {
+          "schema": "NotesByLabel",
+          "pointer": "/*/cost",
+          "right": "notes.seeCost",
+          "subject": {
+            "source": {
+              "in": "holderField",
+              "name": "noteId"
+            }
+          },
+          "direction": "output",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/schemas/Note/properties/cost/restrictedTo"
+              }
+            ]
+          }
+        },
+        {
+          "schema": "NotesByLabel",
+          "pointer": "/*/memo",
+          "right": "notes.annotate",
+          "direction": "output",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/schemas/Note/properties/memo/restrictedTo"
+              }
+            ]
+          }
+        },
+        {
+          "schema": "NotesByLabel",
+          "pointer": "/*/rating",
+          "right": "notes.read",
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "workspace"
+            }
+          },
+          "direction": "output",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/schemas/Note/properties/rating/restrictedTo"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "updateNote": {
+      "scopes": [
+        {
+          "scope": "workspace",
+          "source": {
+            "in": "path",
+            "name": "workspaceId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/workspaces/member/scopes/workspace"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": [
+        {
+          "schema": "Note",
+          "pointer": "/cost",
+          "right": "notes.seeCost",
+          "subject": {
+            "source": {
+              "in": "holderField",
+              "name": "noteId"
+            }
+          },
+          "direction": "output",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/schemas/Note/properties/cost/restrictedTo"
+              }
+            ]
+          }
+        },
+        {
+          "schema": "Note",
+          "pointer": "/memo",
+          "right": "notes.annotate",
+          "direction": "output",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/schemas/Note/properties/memo/restrictedTo"
+              }
+            ]
+          }
+        },
+        {
+          "schema": "Note",
+          "pointer": "/rating",
+          "right": "notes.read",
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "workspace"
+            }
+          },
+          "direction": "output",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/schemas/Note/properties/rating/restrictedTo"
+              }
+            ]
+          }
+        },
+        {
+          "schema": "UpdateNote",
+          "pointer": "/cost",
+          "right": "notes.seeCost",
+          "subject": {
+            "source": {
+              "in": "path",
+              "name": "noteId"
+            }
+          },
+          "direction": "input",
+          "inputPolicy": "reject",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/schemas/UpdateNote/properties/cost/restrictedTo"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

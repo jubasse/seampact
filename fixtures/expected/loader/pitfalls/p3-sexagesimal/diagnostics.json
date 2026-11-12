@@ -1,0 +1,16 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/yaml-ambiguous-scalar",
+      "message": "plain '1:30' is a number or a timestamp for YAML 1.1 and a string for YAML 1.2 (P3)",
+      "fix": "quote it ('1:30')",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/3/5"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

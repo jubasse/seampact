@@ -1,0 +1,41 @@
+{
+  "operations": {
+    "listMembers": {
+      "maturity": {
+        "level": "experimental",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        }
+      }
+    },
+    "getUser": {
+      "maturity": {
+        "level": "experimental",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        }
+      }
+    },
+    "historyUser": {
+      "maturity": {
+        "level": "experimental",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        }
+      }
+    }
+  },
+  "api": {
+    "wire": {
+      "int64": "string",
+      "outputEnums": "enum",
+      "urls": "relative"
+    }
+  }
+}

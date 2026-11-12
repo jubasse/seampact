@@ -1,0 +1,24 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/duplicate-key",
+      "message": "key 'tasks' is defined twice in the same mapping (P7)",
+      "fix": "remove the duplicate",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/5/1"
+      },
+      "related": [
+        {
+          "origin": {
+            "layer": "api",
+            "pointer": "/~load/api.yaml/3/1"
+          },
+          "message": "first defined here"
+        }
+      ]
+    }
+  ],
+  "apis": []
+}

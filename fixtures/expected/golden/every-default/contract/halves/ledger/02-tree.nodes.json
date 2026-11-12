@@ -1,0 +1,1387 @@
+{
+  "conventions": {
+    "format": {
+      "value": "house",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/format"
+      }
+    },
+    "pathCase": {
+      "value": "snake",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/pathCase"
+      }
+    },
+    "paging.default": {
+      "value": "pages",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/paging/default"
+      }
+    },
+    "paging.maxLimit": {
+      "value": 40,
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/paging/maxLimit"
+      }
+    },
+    "paging.defaultLimit": {
+      "value": 20,
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/paging/defaultLimit"
+      }
+    },
+    "paging.overLimit": {
+      "value": "clamp",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/paging/overLimit"
+      }
+    },
+    "bodyLimit": {
+      "value": "256KiB",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/bodyLimit"
+      }
+    },
+    "batch.maxIds": {
+      "value": 25,
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/batch/maxIds"
+      }
+    },
+    "batch.bodyLimit": {
+      "value": "64KiB",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/batch/bodyLimit"
+      }
+    },
+    "cache.families": {
+      "value": {
+        "brief": {
+          "maxAge": "30s",
+          "sharedMaxAge": "120s",
+          "staleWhileRevalidate": "15s",
+          "mustRevalidate": true
+        },
+        "pinned": {
+          "maxAge": "3600s",
+          "immutable": true
+        }
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/cache/families"
+      }
+    },
+    "cache.sensitiveElsewhere": {
+      "value": "refuse",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/cache/sensitiveElsewhere"
+      }
+    },
+    "restrictedInput": {
+      "value": "strip",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/restrictedInput"
+      }
+    },
+    "outputEnums": {
+      "value": "open",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/outputEnums"
+      }
+    },
+    "pathVersion": {
+      "value": "none",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/pathVersion"
+      }
+    },
+    "query.lists": {
+      "value": "comma",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/query/lists"
+      }
+    },
+    "query.objects": {
+      "value": "deepObject",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/query/objects"
+      }
+    },
+    "query.unknownKeys": {
+      "value": {
+        "ignore": "Gateways add tracking parameters."
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/query/unknownKeys"
+      }
+    },
+    "input.unknownKeys": {
+      "value": {
+        "ignore": "Older clients send fields this version dropped."
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/input/unknownKeys"
+      }
+    },
+    "int64": {
+      "value": "number",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/int64"
+      }
+    },
+    "deprecation.header": {
+      "value": "X-Deprecated",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/deprecation/header"
+      }
+    },
+    "deprecation.sunsetHeader": {
+      "value": "X-Sunset-On",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/deprecation/sunsetHeader"
+      }
+    },
+    "deprecation.successorRel": {
+      "value": "latest-version",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/deprecation/successorRel"
+      }
+    },
+    "operationIds.order": {
+      "value": "nounVerb",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/operationIds/order"
+      }
+    },
+    "operationIds.case": {
+      "value": "snake",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/operationIds/case"
+      }
+    },
+    "urls": {
+      "value": "absolute",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/urls"
+      }
+    },
+    "errors.pattern": {
+      "value": "^err\\.[a-z_]+$",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/errors/pattern"
+      }
+    },
+    "errors.reach": {
+      "value": "resource",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/errors/reach"
+      }
+    },
+    "errors.derived": {
+      "value": {
+        "schemaInvalid": {
+          "code": "err.bad_input",
+          "params": {
+            "issues": {
+              "$each": "$issues",
+              "$as": {
+                "pointer": "$item.pointer",
+                "rule": "$item.rule"
+              }
+            }
+          }
+        },
+        "unauthenticated": "err.unauthenticated",
+        "forbidden": "err.forbidden",
+        "csrfInvalid": "err.csrf_invalid",
+        "sortKeyForbidden": "err.sort_key_forbidden",
+        "notFound": "err.missing",
+        "stateConflict": "err.conflict",
+        "idempotencyInProgress": "err.idempotency_running",
+        "preconditionFailed": "err.precondition_failed",
+        "idempotencyKeyReused": "err.idempotency_reused",
+        "preconditionRequired": "err.precondition_required",
+        "gone": "err.gone",
+        "payloadTooLarge": "err.too_large",
+        "unsupportedMediaType": "err.media_type",
+        "rateLimited": "err.slow_down",
+        "undeclaredStatus": "err.internal",
+        "upstreamUnavailable": "err.upstream_down",
+        "serviceUnavailable": "err.unavailable",
+        "upstreamTimeout": "err.upstream_timeout",
+        "deadlineExceeded": "err.deadline"
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/errors/derived"
+      }
+    },
+    "ops.create.status": {
+      "value": 200,
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/ops/create/status"
+      }
+    },
+    "ops.update.method": {
+      "value": "put",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/ops/update/method"
+      }
+    },
+    "ops.batch.path": {
+      "value": "lookup",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/ops/batch/path"
+      }
+    }
+  },
+  "formats": {
+    "bare": {
+      "id": "bare",
+      "origin": {
+        "layer": "core",
+        "pointer": "/formats/bare"
+      },
+      "media": "application/json",
+      "absent": "omit",
+      "success": {
+        "item": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "table": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "list": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "page": {
+          "body": {
+            "kind": "slot",
+            "slot": "items",
+            "path": []
+          },
+          "headers": []
+        }
+      },
+      "meta": {},
+      "error": {
+        "media": "application/problem+json",
+        "body": {
+          "kind": "object",
+          "members": [
+            {
+              "name": {
+                "kind": "text",
+                "text": "type"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "code",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "title"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "title",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "status"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "status",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "detail"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "detail",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "instance"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "instance",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "code"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "code",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "nature"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "nature",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "traceId"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "traceId",
+                "path": []
+              }
+            }
+          ],
+          "merge": "params"
+        },
+        "headers": []
+      }
+    },
+    "house": {
+      "id": "house",
+      "origin": {
+        "layer": "api",
+        "pointer": "/formats/house"
+      },
+      "media": "application/json",
+      "absent": "null",
+      "success": {
+        "item": {
+          "body": {
+            "kind": "object",
+            "members": [
+              {
+                "name": {
+                  "kind": "text",
+                  "text": "data"
+                },
+                "value": {
+                  "kind": "slot",
+                  "slot": "payload",
+                  "path": []
+                }
+              },
+              {
+                "name": {
+                  "kind": "text",
+                  "text": "meta"
+                },
+                "value": {
+                  "kind": "slot",
+                  "slot": "meta",
+                  "path": []
+                }
+              }
+            ]
+          },
+          "headers": []
+        },
+        "table": {
+          "body": {
+            "kind": "object",
+            "members": [
+              {
+                "name": {
+                  "kind": "text",
+                  "text": "data"
+                },
+                "value": {
+                  "kind": "slot",
+                  "slot": "payload",
+                  "path": []
+                }
+              },
+              {
+                "name": {
+                  "kind": "text",
+                  "text": "meta"
+                },
+                "value": {
+                  "kind": "slot",
+                  "slot": "meta",
+                  "path": []
+                }
+              }
+            ]
+          },
+          "headers": []
+        },
+        "list": {
+          "body": {
+            "kind": "object",
+            "members": [
+              {
+                "name": {
+                  "kind": "text",
+                  "text": "data"
+                },
+                "value": {
+                  "kind": "slot",
+                  "slot": "payload",
+                  "path": []
+                }
+              },
+              {
+                "name": {
+                  "kind": "text",
+                  "text": "meta"
+                },
+                "value": {
+                  "kind": "slot",
+                  "slot": "meta",
+                  "path": []
+                }
+              }
+            ]
+          },
+          "headers": []
+        },
+        "page": {
+          "body": {
+            "kind": "object",
+            "members": [
+              {
+                "name": {
+                  "kind": "text",
+                  "text": "data"
+                },
+                "value": {
+                  "kind": "slot",
+                  "slot": "items",
+                  "path": []
+                }
+              },
+              {
+                "name": {
+                  "kind": "text",
+                  "text": "meta"
+                },
+                "value": {
+                  "kind": "slot",
+                  "slot": "meta",
+                  "path": []
+                }
+              }
+            ]
+          },
+          "headers": []
+        }
+      },
+      "meta": {
+        "servedAt": {
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "format": "date-time",
+            "refinements": {}
+          },
+          "fill": "now"
+        }
+      },
+      "error": {
+        "media": "application/json",
+        "body": {
+          "kind": "object",
+          "members": [
+            {
+              "name": {
+                "kind": "text",
+                "text": "error"
+              },
+              "value": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "code"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "code",
+                      "path": []
+                    }
+                  },
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "nature"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "nature",
+                      "path": []
+                    }
+                  },
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "params"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "params",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "headers": []
+      }
+    }
+  },
+  "pagings": {
+    "pages": {
+      "id": "pages",
+      "origin": {
+        "layer": "api",
+        "pointer": "/pagings/pages"
+      },
+      "position": "page",
+      "absent": "omit",
+      "request": [
+        {
+          "role": "page",
+          "in": "query",
+          "name": "p",
+          "base": 1
+        },
+        {
+          "role": "limit",
+          "in": "query",
+          "name": "per"
+        },
+        {
+          "role": "sort",
+          "in": "query",
+          "name": "order",
+          "style": "pair"
+        }
+      ],
+      "response": {
+        "meta": [
+          {
+            "name": "page",
+            "value": {
+              "kind": "slot",
+              "slot": "page",
+              "path": []
+            }
+          },
+          {
+            "name": "lastPage",
+            "value": {
+              "kind": "slot",
+              "slot": "totalPages",
+              "path": []
+            }
+          },
+          {
+            "name": "perPage",
+            "value": {
+              "kind": "slot",
+              "slot": "limit",
+              "path": []
+            }
+          },
+          {
+            "name": "total",
+            "value": {
+              "kind": "slot",
+              "slot": "total",
+              "path": []
+            }
+          }
+        ],
+        "headers": [],
+        "links": []
+      },
+      "handlerResult": [
+        "total"
+      ]
+    }
+  },
+  "operations": [
+    {
+      "kind": "httpOperation",
+      "id": "entries_list",
+      "name": {
+        "segments": [
+          "entries",
+          "list"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "op": "list",
+      "resource": {
+        "type": "entries",
+        "idProperty": "entryId"
+      },
+      "method": "get",
+      "safe": true,
+      "path": "/entries",
+      "params": {
+        "path": [],
+        "query": [
+          {
+            "name": "filter",
+            "type": {
+              "kind": "ref",
+              "schema": "EntryFilter"
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/entries/ops/list/query/filter"
+            },
+            "wire": {
+              "kind": "object",
+              "style": "deepObject",
+              "explode": true,
+              "brackets": false
+            }
+          },
+          {
+            "name": "kinds",
+            "type": {
+              "kind": "array",
+              "items": {
+                "kind": "enum",
+                "enum": "EntryKind"
+              },
+              "maxItems": 2
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/entries/ops/list/query/kinds"
+            },
+            "wire": {
+              "kind": "list",
+              "style": "form",
+              "explode": false,
+              "brackets": false
+            }
+          }
+        ],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "ignore",
+        "reason": "Gateways add tracking parameters.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/conventions/query/unknownKeys"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Entry"
+          },
+          "shape": "page",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/entries/item"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/formats/house"
+              }
+            ]
+          }
+        }
+      ],
+      "paging": {
+        "style": "pages",
+        "maxLimit": 40,
+        "defaultLimit": 20,
+        "overLimit": "clamp",
+        "sortKeys": [
+          {
+            "key": "postedAt",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/entries/ops/list/sortable/0"
+            }
+          },
+          {
+            "key": "amount",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/entries/ops/list/sortable/1"
+            }
+          }
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/conventions/paging/default"
+        }
+      },
+      "format": "house",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/entries/ops/list"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "entry_create",
+      "name": {
+        "segments": [
+          "entry",
+          "create"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "op": "create",
+      "resource": {
+        "type": "entries",
+        "idProperty": "entryId"
+      },
+      "method": "post",
+      "safe": false,
+      "path": "/entries",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "ignore",
+        "reason": "Gateways add tracking parameters.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/conventions/query/unknownKeys"
+        }
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "CreateEntry"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/entries/ops/create/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Entry"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/entries/item"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/formats/house"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "house",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/entries/ops/create"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "entries_batch_get",
+      "name": {
+        "segments": [
+          "entries",
+          "batch",
+          "get"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "op": "batch",
+      "resource": {
+        "type": "entries",
+        "idProperty": "entryId"
+      },
+      "method": "post",
+      "safe": true,
+      "path": "/entries/lookup",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "ignore",
+        "reason": "Gateways add tracking parameters.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/conventions/query/unknownKeys"
+        }
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "EntriesBatchGetInput"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/entries/ops/batch"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Entry"
+          },
+          "shape": "table",
+          "headers": [],
+          "derivedFrom": {
+            "derivation": "batch.read",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/entries/ops/batch"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "house",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/entries/ops/batch"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "entry_get",
+      "name": {
+        "segments": [
+          "entry",
+          "get"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "op": "get",
+      "resource": {
+        "type": "entries",
+        "idParam": "entryId",
+        "idProperty": "entryId"
+      },
+      "method": "get",
+      "safe": true,
+      "path": "/entries/{entryId}",
+      "params": {
+        "path": [
+          {
+            "name": "entryId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/entries/id/entryId"
+            }
+          }
+        ],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "ignore",
+        "reason": "Gateways add tracking parameters.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/conventions/query/unknownKeys"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Entry"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/entries/item"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/formats/house"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "house",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/entries/ops/get"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "entry_update",
+      "name": {
+        "segments": [
+          "entry",
+          "update"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "op": "update",
+      "resource": {
+        "type": "entries",
+        "idParam": "entryId",
+        "idProperty": "entryId"
+      },
+      "method": "put",
+      "safe": false,
+      "path": "/entries/{entryId}",
+      "params": {
+        "path": [
+          {
+            "name": "entryId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/entries/id/entryId"
+            }
+          }
+        ],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "ignore",
+        "reason": "Gateways add tracking parameters.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/conventions/query/unknownKeys"
+        }
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "ReplaceEntry"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/entries/ops/update/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Entry"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/entries/item"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/formats/house"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "house",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/entries/ops/update"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "entry_delete",
+      "name": {
+        "segments": [
+          "entry",
+          "delete"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "op": "delete",
+      "resource": {
+        "type": "entries",
+        "idParam": "entryId",
+        "idProperty": "entryId"
+      },
+      "method": "delete",
+      "safe": false,
+      "path": "/entries/{entryId}",
+      "params": {
+        "path": [
+          {
+            "name": "entryId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/entries/id/entryId"
+            }
+          }
+        ],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "ignore",
+        "reason": "Gateways add tracking parameters.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/conventions/query/unknownKeys"
+        }
+      },
+      "responses": [
+        {
+          "status": 204,
+          "shape": "empty",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/entries/ops/delete"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/formats/house"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "house",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/entries/ops/delete"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "entry_closing_balance",
+      "name": {
+        "segments": [
+          "entry",
+          "closing",
+          "balance"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "resource": {
+        "type": "entries",
+        "idParam": "entryId",
+        "idProperty": "entryId"
+      },
+      "method": "get",
+      "safe": true,
+      "path": "/entries/{entryId}/closing_balance",
+      "params": {
+        "path": [
+          {
+            "name": "entryId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/entries/id/entryId"
+            }
+          }
+        ],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "ignore",
+        "reason": "Gateways add tracking parameters.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/conventions/query/unknownKeys"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Entry"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/entries/member/routes/closing_balance/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/formats/house"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "house",
+      "examples": {},
+      "deprecated": {
+        "since": "2026-01-01",
+        "sunset": "2027-01-01",
+        "successor": {
+          "kind": "httpOperation",
+          "api": "ledger",
+          "id": "entry_get"
+        },
+        "successorRel": "latest-version",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/entries/member/routes/closing_balance/deprecated"
+        }
+      },
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/entries/member/routes/closing_balance"
+      }
+    }
+  ],
+  "api": {
+    "id": "ledger",
+    "name": {
+      "segments": [
+        "ledger"
+      ],
+      "role": "schema"
+    },
+    "version": {
+      "kind": "path",
+      "number": 2
+    },
+    "kind": "product",
+    "pathVersion": {
+      "value": "none",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/pathVersion"
+      }
+    },
+    "maturity": "provisional",
+    "compat": {
+      "policy": "none"
+    },
+    "surfaces": {
+      "app": {
+        "name": {
+          "segments": [
+            "app"
+          ],
+          "role": "schema"
+        },
+        "prefix": "",
+        "pathVersion": "none",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app"
+        }
+      }
+    },
+    "documents": {},
+    "docs": {
+      "summary": "Entries kept by a bookkeeping product."
+    },
+    "extensions": {},
+    "origin": {
+      "layer": "api",
+      "pointer": "/api"
+    }
+  },
+  "lint": {
+    "rules": {},
+    "allows": []
+  }
+}

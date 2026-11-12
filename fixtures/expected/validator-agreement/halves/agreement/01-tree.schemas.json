@@ -1,0 +1,2192 @@
+{
+  "schemas": {
+    "ApiSchemaInvalidParams": {
+      "kind": "object",
+      "id": "ApiSchemaInvalidParams",
+      "name": {
+        "segments": [
+          "api",
+          "schema",
+          "invalid"
+        ],
+        "role": "params"
+      },
+      "directions": [
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.schema_invalid/params"
+      },
+      "properties": [
+        {
+          "name": "issues",
+          "type": {
+            "kind": "array",
+            "items": {
+              "kind": "ref",
+              "schema": "ApiSchemaInvalidIssue"
+            }
+          },
+          "optional": false,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.schema_invalid/params/issues"
+          },
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {}
+        }
+      ]
+    },
+    "ApiForbiddenParams": {
+      "kind": "object",
+      "id": "ApiForbiddenParams",
+      "name": {
+        "segments": [
+          "api",
+          "forbidden"
+        ],
+        "role": "params"
+      },
+      "directions": [
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.forbidden/params"
+      },
+      "properties": [
+        {
+          "name": "pointer",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "optional": true,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.forbidden/params/pointer"
+          },
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {}
+        }
+      ]
+    },
+    "ApiSortKeyForbiddenParams": {
+      "kind": "object",
+      "id": "ApiSortKeyForbiddenParams",
+      "name": {
+        "segments": [
+          "api",
+          "sort",
+          "key",
+          "forbidden"
+        ],
+        "role": "params"
+      },
+      "directions": [
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.sort_key_forbidden/params"
+      },
+      "properties": [
+        {
+          "name": "key",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "optional": false,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.sort_key_forbidden/params/key"
+          },
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {}
+        }
+      ]
+    },
+    "ApiPayloadTooLargeParams": {
+      "kind": "object",
+      "id": "ApiPayloadTooLargeParams",
+      "name": {
+        "segments": [
+          "api",
+          "payload",
+          "too",
+          "large"
+        ],
+        "role": "params"
+      },
+      "directions": [
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.payload_too_large/params"
+      },
+      "properties": [
+        {
+          "name": "limitBytes",
+          "type": {
+            "kind": "scalar",
+            "type": "integer",
+            "refinements": {
+              "minimum": "0"
+            }
+          },
+          "optional": true,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.payload_too_large/params/limitBytes"
+          },
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {}
+        }
+      ]
+    },
+    "ApiRateLimitedParams": {
+      "kind": "object",
+      "id": "ApiRateLimitedParams",
+      "name": {
+        "segments": [
+          "api",
+          "rate",
+          "limited"
+        ],
+        "role": "params"
+      },
+      "directions": [
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.rate_limited/params"
+      },
+      "properties": [
+        {
+          "name": "retryAfterMs",
+          "type": {
+            "kind": "scalar",
+            "type": "integer",
+            "refinements": {
+              "minimum": "0",
+              "maximum": "9007199254740991"
+            }
+          },
+          "optional": true,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.rate_limited/params/retryAfterMs"
+          },
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {}
+        }
+      ]
+    },
+    "ApiSchemaInvalidIssue": {
+      "kind": "object",
+      "id": "ApiSchemaInvalidIssue",
+      "name": {
+        "segments": [
+          "api",
+          "schema",
+          "invalid",
+          "issue"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.schema_invalid/params/issues/items"
+      },
+      "properties": [
+        {
+          "name": "in",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {
+              "pattern": {
+                "source": "^(?:path|query|header|body)$",
+                "normalized": "^(?:path|query|header|body)$"
+              }
+            }
+          },
+          "optional": false,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.schema_invalid/params/issues/items/properties/in"
+          },
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {}
+        },
+        {
+          "name": "pointer",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "optional": false,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.schema_invalid/params/issues/items/properties/pointer"
+          },
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {}
+        },
+        {
+          "name": "rule",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "optional": false,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.schema_invalid/params/issues/items/properties/rule"
+          },
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {}
+        }
+      ]
+    },
+    "ApiEmptyBody": {
+      "kind": "object",
+      "id": "ApiEmptyBody",
+      "name": {
+        "segments": [
+          "api",
+          "empty",
+          "body"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "input"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/schemas/ApiEmptyBody"
+      },
+      "properties": []
+    },
+    "NoticeCancelled": {
+      "kind": "object",
+      "properties": [],
+      "id": "NoticeCancelled",
+      "name": {
+        "segments": [
+          "notice",
+          "cancelled"
+        ],
+        "role": "variant"
+      },
+      "directions": [
+        "input",
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/Notice/oneOf/cancelled"
+      }
+    },
+    "Notice": {
+      "kind": "union",
+      "tag": {
+        "in": "body",
+        "property": "kind"
+      },
+      "variants": [
+        {
+          "tag": "assigned",
+          "schema": "NoticeAssigned"
+        },
+        {
+          "tag": "cancelled",
+          "schema": "NoticeCancelled"
+        },
+        {
+          "tag": "done",
+          "schema": "NoticeDone"
+        }
+      ],
+      "id": "Notice",
+      "name": {
+        "segments": [
+          "notice"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "input",
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/Notice"
+      }
+    },
+    "NoticeAssigned": {
+      "kind": "object",
+      "properties": [
+        {
+          "name": "taskId",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "format": "uuid",
+            "refinements": {}
+          },
+          "optional": false,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/NoticeAssigned/properties/taskId"
+          }
+        },
+        {
+          "name": "assignee",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "format": "uuid",
+            "refinements": {}
+          },
+          "optional": false,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/NoticeAssigned/properties/assignee"
+          }
+        }
+      ],
+      "id": "NoticeAssigned",
+      "name": {
+        "segments": [
+          "notice",
+          "assigned"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "input",
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/NoticeAssigned"
+      }
+    },
+    "NoticeDone": {
+      "kind": "object",
+      "properties": [
+        {
+          "name": "taskId",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "format": "uuid",
+            "refinements": {}
+          },
+          "optional": false,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/NoticeDone/properties/taskId"
+          }
+        }
+      ],
+      "id": "NoticeDone",
+      "name": {
+        "segments": [
+          "notice",
+          "done"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "input",
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/NoticeDone"
+      }
+    },
+    "StrictKeys": {
+      "kind": "object",
+      "properties": [
+        {
+          "name": "label",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "optional": false,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/StrictKeys/properties/label"
+          }
+        },
+        {
+          "name": "child",
+          "type": {
+            "kind": "ref",
+            "schema": "StrictChild"
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/StrictKeys/properties/child"
+          }
+        }
+      ],
+      "id": "StrictKeys",
+      "name": {
+        "segments": [
+          "strict",
+          "keys"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "input",
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/StrictKeys"
+      }
+    },
+    "StrictChild": {
+      "kind": "object",
+      "properties": [
+        {
+          "name": "name",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "optional": false,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/StrictChild/properties/name"
+          }
+        }
+      ],
+      "id": "StrictChild",
+      "name": {
+        "segments": [
+          "strict",
+          "child"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "input",
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/StrictChild"
+      }
+    },
+    "SubtreeKeys": {
+      "kind": "object",
+      "properties": [
+        {
+          "name": "label",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "optional": false,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/SubtreeKeys/properties/label"
+          }
+        },
+        {
+          "name": "inner",
+          "type": {
+            "kind": "ref",
+            "schema": "SubtreeInner",
+            "unknownKeys": {
+              "policy": "ignore",
+              "reason": "Only the inner object comes from a sender that adds fields.",
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/SubtreeKeys/properties/inner/unknownKeys"
+              }
+            }
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/SubtreeKeys/properties/inner"
+          }
+        }
+      ],
+      "id": "SubtreeKeys",
+      "name": {
+        "segments": [
+          "subtree",
+          "keys"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "input",
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/SubtreeKeys"
+      }
+    },
+    "SubtreeInner": {
+      "kind": "object",
+      "properties": [
+        {
+          "name": "name",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "optional": false,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/SubtreeInner/properties/name"
+          }
+        }
+      ],
+      "id": "SubtreeInner",
+      "name": {
+        "segments": [
+          "subtree",
+          "inner"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "input",
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/SubtreeInner"
+      }
+    },
+    "IgnoreKeys": {
+      "kind": "object",
+      "properties": [
+        {
+          "name": "label",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "optional": false,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/IgnoreKeys/properties/label"
+          }
+        },
+        {
+          "name": "child",
+          "type": {
+            "kind": "ref",
+            "schema": "IgnoreChild"
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/IgnoreKeys/properties/child"
+          }
+        }
+      ],
+      "id": "IgnoreKeys",
+      "name": {
+        "segments": [
+          "ignore",
+          "keys"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "input",
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/IgnoreKeys"
+      }
+    },
+    "IgnoreChild": {
+      "kind": "object",
+      "properties": [
+        {
+          "name": "name",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "optional": false,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/IgnoreChild/properties/name"
+          }
+        }
+      ],
+      "id": "IgnoreChild",
+      "name": {
+        "segments": [
+          "ignore",
+          "child"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "input",
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/IgnoreChild"
+      }
+    },
+    "KeepKeys": {
+      "kind": "object",
+      "properties": [
+        {
+          "name": "label",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "optional": false,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/KeepKeys/properties/label"
+          }
+        },
+        {
+          "name": "child",
+          "type": {
+            "kind": "ref",
+            "schema": "KeepChild"
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/KeepKeys/properties/child"
+          }
+        }
+      ],
+      "id": "KeepKeys",
+      "name": {
+        "segments": [
+          "keep",
+          "keys"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "input",
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/KeepKeys"
+      }
+    },
+    "KeepChild": {
+      "kind": "object",
+      "properties": [
+        {
+          "name": "name",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "optional": false,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/KeepChild/properties/name"
+          }
+        }
+      ],
+      "id": "KeepChild",
+      "name": {
+        "segments": [
+          "keep",
+          "child"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "input",
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/KeepChild"
+      }
+    },
+    "Profile": {
+      "kind": "object",
+      "properties": [
+        {
+          "name": "name",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {
+              "minLength": 1
+            }
+          },
+          "optional": false,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Profile/properties/name"
+          }
+        },
+        {
+          "name": "nickname",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {
+              "minLength": 1
+            }
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Profile/properties/nickname"
+          }
+        }
+      ],
+      "id": "Profile",
+      "name": {
+        "segments": [
+          "profile"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "input",
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/Profile"
+      }
+    },
+    "PatchArticle": {
+      "kind": "object",
+      "properties": [
+        {
+          "name": "title",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {
+              "minLength": 1
+            }
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/PatchArticle/properties/title"
+          }
+        },
+        {
+          "name": "publishOn",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "format": "date",
+            "refinements": {}
+          },
+          "optional": true,
+          "nullable": true,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/PatchArticle/properties/publishOn"
+          }
+        }
+      ],
+      "id": "PatchArticle",
+      "name": {
+        "segments": [
+          "patch",
+          "article"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "input",
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/PatchArticle"
+      }
+    },
+    "Receipt": {
+      "kind": "object",
+      "properties": [
+        {
+          "name": "note",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "optional": false,
+          "nullable": true,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Receipt/properties/note"
+          }
+        }
+      ],
+      "id": "Receipt",
+      "name": {
+        "segments": [
+          "receipt"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "input",
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/Receipt"
+      }
+    },
+    "Labelled": {
+      "kind": "object",
+      "properties": [
+        {
+          "name": "label",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {
+              "minLength": 1,
+              "maxLength": 3
+            }
+          },
+          "optional": false,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Labelled/properties/label"
+          }
+        }
+      ],
+      "id": "Labelled",
+      "name": {
+        "segments": [
+          "labelled"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "input",
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/Labelled"
+      }
+    },
+    "Point": {
+      "kind": "object",
+      "properties": [
+        {
+          "name": "left",
+          "type": {
+            "kind": "scalar",
+            "type": "integer",
+            "refinements": {}
+          },
+          "optional": false,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Point/properties/left"
+          }
+        },
+        {
+          "name": "top",
+          "type": {
+            "kind": "scalar",
+            "type": "integer",
+            "refinements": {}
+          },
+          "optional": false,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Point/properties/top"
+          }
+        }
+      ],
+      "id": "Point",
+      "name": {
+        "segments": [
+          "point"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "input",
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/Point"
+      }
+    },
+    "Quantity": {
+      "kind": "object",
+      "properties": [
+        {
+          "name": "count",
+          "type": {
+            "kind": "scalar",
+            "type": "integer",
+            "refinements": {}
+          },
+          "optional": false,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Quantity/properties/count"
+          }
+        }
+      ],
+      "id": "Quantity",
+      "name": {
+        "segments": [
+          "quantity"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "input",
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/Quantity"
+      }
+    },
+    "Percent": {
+      "kind": "object",
+      "properties": [
+        {
+          "name": "value",
+          "type": {
+            "kind": "scalar",
+            "type": "integer",
+            "refinements": {
+              "minimum": "0",
+              "maximum": "100"
+            }
+          },
+          "optional": false,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Percent/properties/value"
+          }
+        }
+      ],
+      "id": "Percent",
+      "name": {
+        "segments": [
+          "percent"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "input",
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/Percent"
+      }
+    },
+    "Bounds": {
+      "kind": "object",
+      "properties": [
+        {
+          "name": "aboveZero",
+          "type": {
+            "kind": "scalar",
+            "type": "integer",
+            "refinements": {
+              "exclusiveMinimum": "0"
+            }
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Bounds/properties/aboveZero"
+          }
+        },
+        {
+          "name": "belowHundred",
+          "type": {
+            "kind": "scalar",
+            "type": "integer",
+            "refinements": {
+              "exclusiveMaximum": "100"
+            }
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Bounds/properties/belowHundred"
+          }
+        },
+        {
+          "name": "step",
+          "type": {
+            "kind": "scalar",
+            "type": "integer",
+            "refinements": {
+              "multipleOf": "5"
+            }
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Bounds/properties/step"
+          }
+        },
+        {
+          "name": "tenth",
+          "type": {
+            "kind": "scalar",
+            "type": "integer",
+            "refinements": {
+              "multipleOf": "0.1"
+            }
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Bounds/properties/tenth"
+          }
+        },
+        {
+          "name": "hundredth",
+          "type": {
+            "kind": "scalar",
+            "type": "integer",
+            "refinements": {
+              "multipleOf": "0.01"
+            }
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Bounds/properties/hundredth"
+          }
+        },
+        {
+          "name": "seventh",
+          "type": {
+            "kind": "scalar",
+            "type": "integer",
+            "refinements": {
+              "multipleOf": "0.07"
+            }
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Bounds/properties/seventh"
+          }
+        },
+        {
+          "name": "hundredThousandth",
+          "type": {
+            "kind": "scalar",
+            "type": "integer",
+            "refinements": {
+              "multipleOf": "0.00001"
+            }
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Bounds/properties/hundredThousandth"
+          }
+        },
+        {
+          "name": "fraction",
+          "type": {
+            "kind": "scalar",
+            "type": "number",
+            "refinements": {
+              "exclusiveMinimum": "0",
+              "exclusiveMaximum": "1"
+            }
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Bounds/properties/fraction"
+          }
+        },
+        {
+          "name": "plain",
+          "type": {
+            "kind": "scalar",
+            "type": "number",
+            "refinements": {}
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Bounds/properties/plain"
+          }
+        }
+      ],
+      "id": "Bounds",
+      "name": {
+        "segments": [
+          "bounds"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "input",
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/Bounds"
+      }
+    },
+    "Instant": {
+      "kind": "object",
+      "properties": [
+        {
+          "name": "at",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "format": "date-time",
+            "refinements": {}
+          },
+          "optional": false,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Instant/properties/at"
+          }
+        }
+      ],
+      "id": "Instant",
+      "name": {
+        "segments": [
+          "instant"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "input",
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/Instant"
+      }
+    },
+    "Day": {
+      "kind": "object",
+      "properties": [
+        {
+          "name": "day",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "format": "date",
+            "refinements": {}
+          },
+          "optional": false,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Day/properties/day"
+          }
+        }
+      ],
+      "id": "Day",
+      "name": {
+        "segments": [
+          "day"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "input",
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/Day"
+      }
+    },
+    "Envelope": {
+      "kind": "object",
+      "properties": [
+        {
+          "name": "id",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "optional": false,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Envelope/properties/id"
+          }
+        },
+        {
+          "name": "data",
+          "type": {
+            "kind": "opaque",
+            "reason": "The sender's object depends on the event type.",
+            "origin": {
+              "layer": "api",
+              "pointer": "/schemas/Envelope/properties/data"
+            }
+          },
+          "optional": false,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Envelope/properties/data"
+          }
+        }
+      ],
+      "id": "Envelope",
+      "name": {
+        "segments": [
+          "envelope"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "input",
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/Envelope"
+      }
+    },
+    "OptionalEnvelope": {
+      "kind": "object",
+      "properties": [
+        {
+          "name": "data",
+          "type": {
+            "kind": "opaque",
+            "reason": "The sender's object depends on the event type.",
+            "origin": {
+              "layer": "api",
+              "pointer": "/schemas/OptionalEnvelope/properties/data"
+            }
+          },
+          "optional": false,
+          "nullable": true,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/OptionalEnvelope/properties/data"
+          }
+        }
+      ],
+      "id": "OptionalEnvelope",
+      "name": {
+        "segments": [
+          "optional",
+          "envelope"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "input",
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/OptionalEnvelope"
+      }
+    },
+    "OpaqueItems": {
+      "kind": "object",
+      "properties": [
+        {
+          "name": "items",
+          "type": {
+            "kind": "array",
+            "items": {
+              "kind": "opaque",
+              "reason": "The sender's values depend on the event type.",
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/OpaqueItems/properties/items/items"
+              }
+            }
+          },
+          "optional": false,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/OpaqueItems/properties/items"
+          }
+        }
+      ],
+      "id": "OpaqueItems",
+      "name": {
+        "segments": [
+          "opaque",
+          "items"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "input",
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/OpaqueItems"
+      }
+    },
+    "Member": {
+      "kind": "object",
+      "properties": [
+        {
+          "name": "role",
+          "type": {
+            "kind": "enum",
+            "enum": "Role"
+          },
+          "optional": false,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Member/properties/role"
+          }
+        }
+      ],
+      "id": "Member",
+      "name": {
+        "segments": [
+          "member"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "input",
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/Member"
+      }
+    },
+    "Owner": {
+      "kind": "object",
+      "properties": [
+        {
+          "name": "role",
+          "type": {
+            "kind": "enum",
+            "enum": "Role",
+            "narrowedTo": {
+              "values": [
+                "owner"
+              ],
+              "reason": "Only owners reach this use."
+            }
+          },
+          "optional": false,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Owner/properties/role"
+          }
+        }
+      ],
+      "id": "Owner",
+      "name": {
+        "segments": [
+          "owner"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "input",
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/Owner"
+      }
+    },
+    "Formats": {
+      "kind": "object",
+      "properties": [
+        {
+          "name": "email",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "format": "email",
+            "refinements": {}
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Formats/properties/email"
+          }
+        },
+        {
+          "name": "uri",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "format": "uri",
+            "refinements": {}
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Formats/properties/uri"
+          }
+        },
+        {
+          "name": "uriReference",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "format": "uri-reference",
+            "refinements": {}
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Formats/properties/uriReference"
+          }
+        },
+        {
+          "name": "id",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "format": "uuid",
+            "refinements": {}
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Formats/properties/id"
+          }
+        },
+        {
+          "name": "big",
+          "type": {
+            "kind": "scalar",
+            "type": "integer",
+            "format": "int64",
+            "refinements": {}
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Formats/properties/big"
+          }
+        },
+        {
+          "name": "amount",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "format": "decimal",
+            "refinements": {
+              "minimum": "0"
+            }
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Formats/properties/amount"
+          }
+        }
+      ],
+      "id": "Formats",
+      "name": {
+        "segments": [
+          "formats"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "input",
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/Formats"
+      }
+    },
+    "Patterns": {
+      "kind": "object",
+      "properties": [
+        {
+          "name": "dot",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {
+              "pattern": {
+                "source": "^a.b$",
+                "normalized": "^a[^\\u000A\\u000D\\u0085\\u2028-\\u2029]b$"
+              }
+            }
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Patterns/properties/dot"
+          }
+        },
+        {
+          "name": "space",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {
+              "pattern": {
+                "source": "^a\\sb$",
+                "normalized": "^a[\\u0009-\\u000D ]b$"
+              }
+            }
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Patterns/properties/space"
+          }
+        },
+        {
+          "name": "end",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {
+              "pattern": {
+                "source": "^abc$",
+                "normalized": "^abc$"
+              }
+            }
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Patterns/properties/end"
+          }
+        },
+        {
+          "name": "dash",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {
+              "pattern": {
+                "source": "^[a\\-z]+$",
+                "normalized": "^[\\-az]+$"
+              }
+            }
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Patterns/properties/dash"
+          }
+        },
+        {
+          "name": "brace",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {
+              "pattern": {
+                "source": "^a\\{2\\}$",
+                "normalized": "^a\\{2\\}$"
+              }
+            }
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Patterns/properties/brace"
+          }
+        }
+      ],
+      "id": "Patterns",
+      "name": {
+        "segments": [
+          "patterns"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "input",
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/Patterns"
+      }
+    },
+    "Comment": {
+      "kind": "object",
+      "properties": [
+        {
+          "name": "text",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "optional": false,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Comment/properties/text"
+          }
+        },
+        {
+          "name": "replies",
+          "type": {
+            "kind": "array",
+            "items": {
+              "kind": "ref",
+              "schema": "Comment"
+            }
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Comment/properties/replies"
+          }
+        }
+      ],
+      "id": "Comment",
+      "name": {
+        "segments": [
+          "comment"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "input",
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/Comment"
+      }
+    },
+    "Counts": {
+      "kind": "map",
+      "keys": {
+        "kind": "scalar",
+        "type": "string",
+        "refinements": {
+          "pattern": {
+            "source": "^[a-z]+$",
+            "normalized": "^[a-z]+$"
+          }
+        }
+      },
+      "values": {
+        "kind": "scalar",
+        "type": "integer",
+        "refinements": {
+          "minimum": "0"
+        }
+      },
+      "id": "Counts",
+      "name": {
+        "segments": [
+          "counts"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "input",
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/Counts"
+      }
+    }
+  },
+  "enums": {
+    "Role": {
+      "id": "Role",
+      "name": {
+        "segments": [
+          "role"
+        ],
+        "role": "schema"
+      },
+      "values": [
+        "owner",
+        "editor",
+        "viewer"
+      ],
+      "localReason": "Roles are local to this contract.",
+      "directions": [
+        "input",
+        "output"
+      ],
+      "docs": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/enums/Role"
+      }
+    }
+  }
+}

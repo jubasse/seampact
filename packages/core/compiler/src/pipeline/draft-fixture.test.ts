@@ -11,6 +11,7 @@ import {
   type DraftFixtureApi,
   draftFixture,
   draftFixtureApply,
+  draftFixtureDelta,
   draftFixtureHalves,
   draftFixtureSchemaService,
   draftFixtureSchemaTables,
@@ -326,6 +327,34 @@ describe("draft fixtures", () => {
     expect(() => draftFixtureApply(draft, { operations: { listTasks: {} } })).toThrow(
       /operations\.listTasks names no element/,
     );
+  });
+
+  test("draftFixtureDelta is the inverse of draftFixtureApply and refuses what it cannot say", () => {
+    const before = createDraftIR();
+
+    draftFixtureApply(before, { operations: [{ id: "getTask", params: { path: [] } }] });
+
+    const after = structuredClone(before);
+    const members = {
+      operations: { getTask: { safe: true, params: { path: [{ name: "taskId" }] } } },
+    };
+
+    draftFixtureApply(after, members);
+    expect(draftFixtureDelta(before, after)).toEqual(members);
+    expect(draftFixtureDelta(after, after)).toEqual({});
+
+    const grown = structuredClone(after);
+    const grownMembers = {
+      operations: { getTask: { summary: "x" }, listTasks: { id: "listTasks", safe: true } },
+    };
+
+    draftFixtureApply(grown, grownMembers);
+    expect(draftFixtureDelta(after, grown)).toEqual(grownMembers);
+
+    const replaced = structuredClone(after);
+
+    Reflect.set(replaced.operations[0] ?? {}, "safe", false);
+    expect(() => draftFixtureDelta(after, replaced)).toThrow(/operations\.0\.safe was replaced/);
   });
 
   test.each(APIS)("%s: every origin resolves in its api's side table, but a core one", (api) => {

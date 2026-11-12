@@ -1,0 +1,32 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "shop",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/derive/error-example",
+          "message": "the example of error 'tasks.locked' does not fit its params: 7 is not a string",
+          "fix": "correct the example to fit the params",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/tasks/member/routes/assign/examples/locked/value/lockedBy"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/derive/error-unknown",
+          "message": "the example names error code 'tasks.gone', which no layer or node declares and which is no default code",
+          "fix": "declare 'tasks.gone' with a status in 'errors', or name a declared code",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/tasks/member/routes/assign/examples/missing/error"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

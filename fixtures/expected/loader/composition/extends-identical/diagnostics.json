@@ -1,0 +1,24 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/declaration-twice",
+      "message": "'api.forbidden' (errors) is declared by both 'base' (base.yaml) and 'api' (api.yaml), and a declaration is never overridden, even when the two are identical",
+      "fix": "remove the copy",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/5/3"
+      },
+      "related": [
+        {
+          "origin": {
+            "layer": "api",
+            "pointer": "/~load/base.yaml/2/3"
+          },
+          "message": "first declared here"
+        }
+      ]
+    }
+  ],
+  "apis": []
+}

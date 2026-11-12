@@ -1,0 +1,32 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "catalogues",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/derive/error-unknown",
+          "message": "error code 'api.rights_version_stale' is listed here, but no layer or node declares it and it is no default code",
+          "fix": "declare 'api.rights_version_stale' with a status in 'errors', or list a declared code",
+          "origin": {
+            "layer": "api",
+            "pointer": "/identities/operator/headers/rightsVersion/stale"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/derive/error-unknown",
+          "message": "error code 'api.unavailable' is listed here, but no layer or node declares it and it is no default code",
+          "fix": "declare 'api.unavailable' with a status in 'errors', or list a declared code",
+          "origin": {
+            "layer": "api",
+            "pointer": "/identities/service/errors/0"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

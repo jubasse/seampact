@@ -1,0 +1,1025 @@
+{
+  "api": {
+    "compat": {
+      "policy": "none"
+    },
+    "docs": {},
+    "documents": {},
+    "extensions": {},
+    "id": "shop",
+    "kind": "product",
+    "maturity": "experimental",
+    "name": {
+      "role": "schema",
+      "segments": [
+        "shop"
+      ]
+    },
+    "origin": {
+      "layer": "api",
+      "pointer": "/api"
+    },
+    "pathVersion": {
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/version"
+      },
+      "value": "prefix"
+    },
+    "surfaces": {
+      "app": {
+        "name": {
+          "role": "schema",
+          "segments": [
+            "app"
+          ]
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app"
+        },
+        "pathVersion": "prefix",
+        "prefix": "/v1"
+      }
+    },
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "wire": {
+      "int64": "string",
+      "outputEnums": "enum",
+      "urls": "relative"
+    }
+  },
+  "buckets": {},
+  "conventions": {
+    "errors.derived": {
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/errors/derived"
+      },
+      "value": {
+        "notFound": "pack.not_found",
+        "rateLimited": "shop.slow_down",
+        "schemaInvalid": {
+          "code": "shop.invalid",
+          "params": {
+            "problems": {
+              "$as": {
+                "at": "$item.pointer"
+              },
+              "$each": "$issues"
+            }
+          }
+        },
+        "sortKeyForbidden": {
+          "code": "shop.sort_denied",
+          "params": {
+            "detail": "sort key ${key} is not allowed"
+          }
+        }
+      }
+    },
+    "rateLimit.header": {
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/rateLimit/header"
+      },
+      "value": "Retry-After"
+    },
+    "rateLimit.param": {
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/rateLimit/param"
+      },
+      "value": "retryAfterMs"
+    },
+    "rateLimit.unit": {
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/rateLimit/unit"
+      },
+      "value": "s"
+    }
+  },
+  "enums": {},
+  "errors": {
+    "api.internal": {
+      "code": "api.internal",
+      "default": "undeclaredStatus",
+      "docs": {},
+      "family": "api",
+      "http": {
+        "status": 500
+      },
+      "nature": "failed",
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.internal"
+      }
+    },
+    "members.gone": {
+      "code": "members.gone",
+      "docs": {},
+      "family": "members",
+      "http": {
+        "status": 404
+      },
+      "nature": "refused",
+      "origin": {
+        "layer": "api",
+        "pointer": "/errors/members.gone"
+      },
+      "title": "The member left."
+    },
+    "members.not_found": {
+      "code": "members.not_found",
+      "docs": {},
+      "family": "members",
+      "http": {
+        "status": 404
+      },
+      "nature": "refused",
+      "origin": {
+        "layer": "api",
+        "pointer": "/errors/members.not_found"
+      }
+    },
+    "shop.invalid": {
+      "code": "shop.invalid",
+      "docs": {},
+      "family": "shop",
+      "http": {
+        "status": 400
+      },
+      "nature": "refused",
+      "origin": {
+        "layer": "api",
+        "pointer": "/errors/shop.invalid"
+      },
+      "params": "ShopInvalidParams"
+    }
+  },
+  "extensionKeys": {},
+  "features": [],
+  "formats": {
+    "bare": {
+      "absent": "omit",
+      "error": {
+        "body": {
+          "kind": "object",
+          "members": [
+            {
+              "name": {
+                "kind": "text",
+                "text": "type"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "code"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "title"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "title"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "status"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "status"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "detail"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "detail"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "instance"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "instance"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "code"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "code"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "nature"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "nature"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "traceId"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "traceId"
+              }
+            }
+          ],
+          "merge": "params"
+        },
+        "headers": [],
+        "media": "application/problem+json"
+      },
+      "id": "bare",
+      "media": "application/json",
+      "meta": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/formats/bare"
+      },
+      "success": {
+        "item": {
+          "body": {
+            "kind": "slot",
+            "path": [],
+            "slot": "payload"
+          },
+          "headers": []
+        },
+        "list": {
+          "body": {
+            "kind": "slot",
+            "path": [],
+            "slot": "payload"
+          },
+          "headers": []
+        },
+        "page": {
+          "body": {
+            "kind": "slot",
+            "path": [],
+            "slot": "items"
+          },
+          "headers": []
+        },
+        "table": {
+          "body": {
+            "kind": "slot",
+            "path": [],
+            "slot": "payload"
+          },
+          "headers": []
+        }
+      }
+    }
+  },
+  "headers": {},
+  "identities": {},
+  "irRevision": 6,
+  "irVersion": 1,
+  "kinds": [
+    "httpOperation"
+  ],
+  "lint": {
+    "allows": [],
+    "rules": {}
+  },
+  "natures": {},
+  "operations": [
+    {
+      "access": {
+        "kind": "public",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        },
+        "reason": "The fixture checks role bindings only."
+      },
+      "bindings": [],
+      "callerKinds": [
+        "anonymous"
+      ],
+      "docs": {},
+      "errors": [
+        {
+          "code": "shop.invalid",
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/members/ops/get"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/schemaInvalid"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "problems"
+                    },
+                    "value": {
+                      "as": {
+                        "kind": "object",
+                        "members": [
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "at"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "path": [
+                                "pointer"
+                              ],
+                              "slot": "item"
+                            }
+                          }
+                        ]
+                      },
+                      "kind": "each",
+                      "of": "issues"
+                    }
+                  }
+                ]
+              },
+              "role": "schemaInvalid"
+            }
+          ]
+        },
+        {
+          "code": "members.not_found",
+          "derivedFrom": {
+            "derivation": "member.notFound",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/members/ops/get"
+              },
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/members/member/errorRoles/notFound"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "notFound"
+            }
+          ]
+        },
+        {
+          "code": "api.internal",
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/members/ops/get"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ]
+        }
+      ],
+      "examples": {},
+      "extensions": {},
+      "features": [],
+      "fieldRights": [],
+      "format": "bare",
+      "id": "getUser",
+      "internal": false,
+      "kind": "httpOperation",
+      "maturity": {
+        "level": "experimental",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        },
+        "source": "api"
+      },
+      "method": "get",
+      "name": {
+        "role": "operation",
+        "segments": [
+          "get",
+          "user"
+        ]
+      },
+      "op": "get",
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/members/ops/get"
+      },
+      "params": {
+        "header": [],
+        "path": [
+          {
+            "name": "userId",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/members/id/userId"
+            },
+            "required": true,
+            "type": {
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "query": []
+      },
+      "path": "/v1/members/{userId}",
+      "principalRequires": [],
+      "requires": [],
+      "resource": {
+        "idParam": "userId",
+        "idProperty": "userId",
+        "type": "members"
+      },
+      "responses": [
+        {
+          "body": {
+            "kind": "ref",
+            "schema": "Member"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          },
+          "headers": [],
+          "media": "application/json",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/members/item"
+          },
+          "shape": "item",
+          "status": 200
+        }
+      ],
+      "safe": true,
+      "scopes": [],
+      "surface": "app",
+      "tags": [],
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "upstream": []
+    },
+    {
+      "access": {
+        "kind": "public",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        },
+        "reason": "The fixture checks role bindings only."
+      },
+      "bindings": [],
+      "callerKinds": [
+        "anonymous"
+      ],
+      "docs": {},
+      "errors": [
+        {
+          "code": "shop.invalid",
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/members/member/routes/history"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/schemaInvalid"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "problems"
+                    },
+                    "value": {
+                      "as": {
+                        "kind": "object",
+                        "members": [
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "at"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "path": [
+                                "pointer"
+                              ],
+                              "slot": "item"
+                            }
+                          }
+                        ]
+                      },
+                      "kind": "each",
+                      "of": "issues"
+                    }
+                  }
+                ]
+              },
+              "role": "schemaInvalid"
+            }
+          ]
+        },
+        {
+          "code": "members.gone",
+          "derivedFrom": {
+            "derivation": "member.notFound",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/members/member/routes/history"
+              },
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/members/member/routes/history/errorRoles/notFound"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "notFound"
+            }
+          ]
+        },
+        {
+          "code": "api.internal",
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/members/member/routes/history"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ]
+        }
+      ],
+      "examples": {},
+      "extensions": {},
+      "features": [],
+      "fieldRights": [],
+      "format": "bare",
+      "id": "historyUser",
+      "internal": false,
+      "kind": "httpOperation",
+      "maturity": {
+        "level": "experimental",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        },
+        "source": "api"
+      },
+      "method": "get",
+      "name": {
+        "role": "operation",
+        "segments": [
+          "history",
+          "user"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/members/member/routes/history"
+      },
+      "params": {
+        "header": [],
+        "path": [
+          {
+            "name": "userId",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/members/id/userId"
+            },
+            "required": true,
+            "type": {
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "query": []
+      },
+      "path": "/v1/members/{userId}/history",
+      "principalRequires": [],
+      "requires": [],
+      "resource": {
+        "idParam": "userId",
+        "idProperty": "userId",
+        "type": "members"
+      },
+      "responses": [
+        {
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          },
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/members/member/routes/history"
+          },
+          "shape": "empty",
+          "status": 204
+        }
+      ],
+      "safe": true,
+      "scopes": [],
+      "surface": "app",
+      "tags": [],
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "upstream": []
+    },
+    {
+      "access": {
+        "kind": "public",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        },
+        "reason": "The fixture checks role bindings only."
+      },
+      "bindings": [],
+      "callerKinds": [
+        "anonymous"
+      ],
+      "docs": {},
+      "errors": [
+        {
+          "code": "shop.invalid",
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/members/ops/list"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/schemaInvalid"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "problems"
+                    },
+                    "value": {
+                      "as": {
+                        "kind": "object",
+                        "members": [
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "at"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "path": [
+                                "pointer"
+                              ],
+                              "slot": "item"
+                            }
+                          }
+                        ]
+                      },
+                      "kind": "each",
+                      "of": "issues"
+                    }
+                  }
+                ]
+              },
+              "role": "schemaInvalid"
+            }
+          ]
+        },
+        {
+          "code": "api.internal",
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/members/ops/list"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ]
+        }
+      ],
+      "examples": {},
+      "extensions": {},
+      "features": [],
+      "fieldRights": [],
+      "format": "bare",
+      "id": "listMembers",
+      "internal": false,
+      "kind": "httpOperation",
+      "maturity": {
+        "level": "experimental",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        },
+        "source": "api"
+      },
+      "method": "get",
+      "name": {
+        "role": "operation",
+        "segments": [
+          "list",
+          "members"
+        ]
+      },
+      "op": "list",
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/members/ops/list"
+      },
+      "paging": {
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/members/ops/list/paging"
+        },
+        "overLimit": "reject",
+        "sortKeys": []
+      },
+      "params": {
+        "header": [],
+        "path": [],
+        "query": []
+      },
+      "path": "/v1/members",
+      "principalRequires": [],
+      "requires": [],
+      "resource": {
+        "idProperty": "userId",
+        "type": "members"
+      },
+      "responses": [
+        {
+          "body": {
+            "kind": "ref",
+            "schema": "Member"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          },
+          "headers": [],
+          "media": "application/json",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/members/item"
+          },
+          "shape": "list",
+          "status": 200
+        }
+      ],
+      "safe": true,
+      "scopes": [],
+      "surface": "app",
+      "tags": [],
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "upstream": []
+    }
+  ],
+  "packs": [
+    {
+      "name": "errors-pack",
+      "version": "1.0.0"
+    }
+  ],
+  "pagings": {},
+  "rights": {},
+  "rules": {},
+  "scalars": {},
+  "schemas": {
+    "Member": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "Member",
+      "kind": "object",
+      "name": {
+        "role": "schema",
+        "segments": [
+          "member"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/Member"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "userId",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Member/properties/userId"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "ShopInvalidParams": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "ShopInvalidParams",
+      "kind": "object",
+      "name": {
+        "role": "params",
+        "segments": [
+          "shop",
+          "invalid"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/errors/shop.invalid/params"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "problems",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "api",
+            "pointer": "/errors/shop.invalid/params/problems"
+          },
+          "sensitive": false,
+          "type": {
+            "items": {
+              "kind": "ref",
+              "schema": "ShopInvalidParamsProblemsItem"
+            },
+            "kind": "array"
+          }
+        }
+      ]
+    },
+    "ShopInvalidParamsProblemsItem": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "ShopInvalidParamsProblemsItem",
+      "kind": "object",
+      "name": {
+        "role": "item",
+        "segments": [
+          "shop",
+          "invalid",
+          "params",
+          "problems"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/errors/shop.invalid/params/problems/items"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "at",
+          "nullable": false,
+          "optional": true,
+          "origin": {
+            "layer": "api",
+            "pointer": "/errors/shop.invalid/params/problems/items/properties/at"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        }
+      ]
+    }
+  },
+  "schemes": {},
+  "scopes": {},
+  "services": {}
+}

@@ -1,0 +1,1985 @@
+{
+  "formats": {
+    "bare": {
+      "id": "bare",
+      "origin": {
+        "layer": "core",
+        "pointer": "/formats/bare"
+      },
+      "media": "application/json",
+      "absent": "omit",
+      "success": {
+        "item": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "table": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "list": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "page": {
+          "body": {
+            "kind": "slot",
+            "slot": "items",
+            "path": []
+          },
+          "headers": []
+        }
+      },
+      "meta": {},
+      "error": {
+        "media": "application/problem+json",
+        "body": {
+          "kind": "object",
+          "members": [
+            {
+              "name": {
+                "kind": "text",
+                "text": "type"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "code",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "title"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "title",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "status"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "status",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "detail"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "detail",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "instance"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "instance",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "code"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "code",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "nature"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "nature",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "traceId"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "traceId",
+                "path": []
+              }
+            }
+          ],
+          "merge": "params"
+        },
+        "headers": []
+      }
+    }
+  },
+  "operations": [
+    {
+      "kind": "httpOperation",
+      "id": "echoNotice",
+      "name": {
+        "segments": [
+          "echo",
+          "notice"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "method": "post",
+      "safe": false,
+      "path": "/v1/echo-notice",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "Notice"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/echoNotice/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Notice"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/echoNotice/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/echoNotice"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "echoStrictKeys",
+      "name": {
+        "segments": [
+          "echo",
+          "strict",
+          "keys"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "method": "post",
+      "safe": false,
+      "path": "/v1/echo-strict-keys",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "StrictKeys"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/echoStrictKeys/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "StrictKeys"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/echoStrictKeys/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/echoStrictKeys"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "echoSubtreeKeys",
+      "name": {
+        "segments": [
+          "echo",
+          "subtree",
+          "keys"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "method": "post",
+      "safe": false,
+      "path": "/v1/echo-subtree-keys",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "SubtreeKeys"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/echoSubtreeKeys/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "SubtreeKeys"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/echoSubtreeKeys/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/echoSubtreeKeys"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "echoIgnoreKeys",
+      "name": {
+        "segments": [
+          "echo",
+          "ignore",
+          "keys"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "method": "post",
+      "safe": false,
+      "path": "/v1/echo-ignore-keys",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "IgnoreKeys",
+          "unknownKeys": {
+            "policy": "ignore",
+            "reason": "The sender adds fields without notice.",
+            "origin": {
+              "layer": "api",
+              "pointer": "/schemas/IgnoreKeys/unknownKeys"
+            }
+          }
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/echoIgnoreKeys/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "IgnoreKeys"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/echoIgnoreKeys/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/echoIgnoreKeys"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "echoKeepKeys",
+      "name": {
+        "segments": [
+          "echo",
+          "keep",
+          "keys"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "method": "post",
+      "safe": false,
+      "path": "/v1/echo-keep-keys",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "KeepKeys",
+          "unknownKeys": {
+            "policy": "keep",
+            "reason": "The handler stores what it does not read.",
+            "origin": {
+              "layer": "api",
+              "pointer": "/schemas/KeepKeys/unknownKeys"
+            }
+          }
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/echoKeepKeys/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "KeepKeys"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/echoKeepKeys/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/echoKeepKeys"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "echoProfile",
+      "name": {
+        "segments": [
+          "echo",
+          "profile"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "method": "post",
+      "safe": false,
+      "path": "/v1/echo-profile",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "Profile"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/echoProfile/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Profile"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/echoProfile/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/echoProfile"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "echoPatchArticle",
+      "name": {
+        "segments": [
+          "echo",
+          "patch",
+          "article"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "method": "post",
+      "safe": false,
+      "path": "/v1/echo-patch-article",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "PatchArticle"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/echoPatchArticle/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "PatchArticle"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/echoPatchArticle/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/echoPatchArticle"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "echoBounds",
+      "name": {
+        "segments": [
+          "echo",
+          "bounds"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "method": "post",
+      "safe": false,
+      "path": "/v1/echo-bounds",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "Bounds"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/echoBounds/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Bounds"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/echoBounds/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/echoBounds"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "echoOpaqueItems",
+      "name": {
+        "segments": [
+          "echo",
+          "opaque",
+          "items"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "method": "post",
+      "safe": false,
+      "path": "/v1/echo-opaque-items",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "OpaqueItems"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/echoOpaqueItems/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "OpaqueItems"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/echoOpaqueItems/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/echoOpaqueItems"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "echoReceipt",
+      "name": {
+        "segments": [
+          "echo",
+          "receipt"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "method": "post",
+      "safe": false,
+      "path": "/v1/echo-receipt",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "Receipt"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/echoReceipt/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Receipt"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/echoReceipt/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/echoReceipt"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "echoLabelled",
+      "name": {
+        "segments": [
+          "echo",
+          "labelled"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "method": "post",
+      "safe": false,
+      "path": "/v1/echo-labelled",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "Labelled"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/echoLabelled/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Labelled"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/echoLabelled/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/echoLabelled"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "echoTags",
+      "name": {
+        "segments": [
+          "echo",
+          "tags"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "method": "post",
+      "safe": false,
+      "path": "/v1/echo-tags",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "array",
+          "items": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "maxItems": 3
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/echoTags/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "array",
+            "items": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "maxItems": 3
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/echoTags/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/echoTags"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "echoPoint",
+      "name": {
+        "segments": [
+          "echo",
+          "point"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "method": "post",
+      "safe": false,
+      "path": "/v1/echo-point",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "Point"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/echoPoint/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Point"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/echoPoint/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/echoPoint"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "echoQuantity",
+      "name": {
+        "segments": [
+          "echo",
+          "quantity"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "method": "post",
+      "safe": false,
+      "path": "/v1/echo-quantity",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "Quantity"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/echoQuantity/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Quantity"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/echoQuantity/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/echoQuantity"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "echoPercent",
+      "name": {
+        "segments": [
+          "echo",
+          "percent"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "method": "post",
+      "safe": false,
+      "path": "/v1/echo-percent",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "Percent"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/echoPercent/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Percent"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/echoPercent/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/echoPercent"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "echoInstant",
+      "name": {
+        "segments": [
+          "echo",
+          "instant"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "method": "post",
+      "safe": false,
+      "path": "/v1/echo-instant",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "Instant"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/echoInstant/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Instant"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/echoInstant/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/echoInstant"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "echoDay",
+      "name": {
+        "segments": [
+          "echo",
+          "day"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "method": "post",
+      "safe": false,
+      "path": "/v1/echo-day",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "Day"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/echoDay/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Day"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/echoDay/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/echoDay"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "echoEnvelope",
+      "name": {
+        "segments": [
+          "echo",
+          "envelope"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "method": "post",
+      "safe": false,
+      "path": "/v1/echo-envelope",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "Envelope"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/echoEnvelope/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Envelope"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/echoEnvelope/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/echoEnvelope"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "echoOptionalEnvelope",
+      "name": {
+        "segments": [
+          "echo",
+          "optional",
+          "envelope"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "method": "post",
+      "safe": false,
+      "path": "/v1/echo-optional-envelope",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "OptionalEnvelope"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/echoOptionalEnvelope/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "OptionalEnvelope"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/echoOptionalEnvelope/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/echoOptionalEnvelope"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "echoMember",
+      "name": {
+        "segments": [
+          "echo",
+          "member"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "method": "post",
+      "safe": false,
+      "path": "/v1/echo-member",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "Member"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/echoMember/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Member"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/echoMember/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/echoMember"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "echoOwner",
+      "name": {
+        "segments": [
+          "echo",
+          "owner"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "method": "post",
+      "safe": false,
+      "path": "/v1/echo-owner",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "Owner"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/echoOwner/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Owner"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/echoOwner/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/echoOwner"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "echoFormats",
+      "name": {
+        "segments": [
+          "echo",
+          "formats"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "method": "post",
+      "safe": false,
+      "path": "/v1/echo-formats",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "Formats"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/echoFormats/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Formats"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/echoFormats/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/echoFormats"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "echoPatterns",
+      "name": {
+        "segments": [
+          "echo",
+          "patterns"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "method": "post",
+      "safe": false,
+      "path": "/v1/echo-patterns",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "Patterns"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/echoPatterns/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Patterns"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/echoPatterns/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/echoPatterns"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "echoComment",
+      "name": {
+        "segments": [
+          "echo",
+          "comment"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "method": "post",
+      "safe": false,
+      "path": "/v1/echo-comment",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "Comment"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/echoComment/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Comment"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/echoComment/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/echoComment"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "echoCounts",
+      "name": {
+        "segments": [
+          "echo",
+          "counts"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "method": "post",
+      "safe": false,
+      "path": "/v1/echo-counts",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "Counts"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/echoCounts/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Counts"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/echoCounts/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/echoCounts"
+      }
+    }
+  ],
+  "api": {
+    "id": "agreement",
+    "name": {
+      "segments": [
+        "agreement"
+      ],
+      "role": "schema"
+    },
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "kind": "product",
+    "pathVersion": {
+      "value": "prefix",
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/version"
+      }
+    },
+    "maturity": "provisional",
+    "compat": {
+      "policy": "none"
+    },
+    "surfaces": {
+      "app": {
+        "name": {
+          "segments": [
+            "app"
+          ],
+          "role": "schema"
+        },
+        "prefix": "/v1",
+        "pathVersion": "prefix",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app"
+        }
+      }
+    },
+    "documents": {},
+    "docs": {
+      "summary": "Payloads that every validator target must accept or refuse alike."
+    },
+    "extensions": {},
+    "origin": {
+      "layer": "api",
+      "pointer": "/api"
+    }
+  },
+  "lint": {
+    "rules": {},
+    "allows": []
+  }
+}

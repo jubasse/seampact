@@ -1,0 +1,82 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/yaml-boolean",
+      "message": "plain 'yes' is read as a boolean by YAML 1.1 parsers, or is a boolean not in lowercase (P1)",
+      "fix": "quote it ('yes'), or write true or false",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/3/4"
+      },
+      "related": []
+    },
+    {
+      "severity": "error",
+      "rule": "seampact/load/yaml-boolean",
+      "message": "plain 'on' is read as a boolean by YAML 1.1 parsers, or is a boolean not in lowercase (P1)",
+      "fix": "quote it ('on'), or write true or false",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/4/4"
+      },
+      "related": []
+    },
+    {
+      "severity": "error",
+      "rule": "seampact/load/yaml-boolean",
+      "message": "plain 'off' is read as a boolean by YAML 1.1 parsers, or is a boolean not in lowercase (P1)",
+      "fix": "quote it ('off'), or write true or false",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/5/4"
+      },
+      "related": []
+    },
+    {
+      "severity": "error",
+      "rule": "seampact/load/yaml-boolean",
+      "message": "plain 'y' is read as a boolean by YAML 1.1 parsers, or is a boolean not in lowercase (P1)",
+      "fix": "quote it ('y'), or write true or false",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/6/4"
+      },
+      "related": []
+    },
+    {
+      "severity": "error",
+      "rule": "seampact/load/yaml-boolean",
+      "message": "plain 'n' is read as a boolean by YAML 1.1 parsers, or is a boolean not in lowercase (P1)",
+      "fix": "quote it ('n'), or write true or false",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/7/4"
+      },
+      "related": []
+    },
+    {
+      "severity": "error",
+      "rule": "seampact/load/yaml-boolean",
+      "message": "plain 'Yes' is read as a boolean by YAML 1.1 parsers, or is a boolean not in lowercase (P1)",
+      "fix": "quote it ('Yes'), or write true or false",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/8/4"
+      },
+      "related": []
+    },
+    {
+      "severity": "error",
+      "rule": "seampact/load/yaml-boolean",
+      "message": "plain 'OFF' is read as a boolean by YAML 1.1 parsers, or is a boolean not in lowercase (P1)",
+      "fix": "quote it ('OFF'), or write true or false",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/9/4"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "tasks",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/validate/missing-keyword",
+          "message": "'api' needs 'version'.",
+          "fix": "Add 'version'.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/api"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

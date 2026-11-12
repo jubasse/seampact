@@ -314,6 +314,7 @@ In pipeline order (ADR 0006 section 1).
 - `scripts/golden`: Golden checker, the scale fixture generator and their tests (scripts/golden).
 - `scripts/hooks`: The git pre-commit and pre-push hooks installed by pnpm install.
 - `scripts/ir-models`: Writes or checks the native IR models of the targets.
+- `scripts/oracle`: Expected outputs of every fixture and the differential checks of the Rust port: the oracle CLI (scripts/oracle).
 - `scripts/package-rules`: Checks the package roles, dependency rules and namespaces of the npm, Gradle and Composer manifests.
 - `scripts/release`: Release scripts of `release.yml`: the version stamp and its check, the npm packing with its content check, the idempotent publish to npm, the local registry of the rehearsal, and the check of the binaries against `SHA256SUMS`; `jvm/` holds the Maven Central and Gradle Plugin Portal side, and `registry-proof/` the consumers that install a release from the registries.
 - `scripts/skills`: Writes or checks the skills folder, whose references are generated from docs/.

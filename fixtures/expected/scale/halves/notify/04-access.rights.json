@@ -1,0 +1,162 @@
+{
+  "rights": {
+    "roles": {
+      "id": "roles",
+      "params": "RolesParams",
+      "subject": {
+        "kind": "scope",
+        "scope": "account"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/rights/roles"
+      }
+    }
+  },
+  "rules": {
+    "throttle": {
+      "id": "throttle",
+      "takesBucket": true,
+      "errors": [
+        "api.rate_limited"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/rules/throttle"
+      }
+    }
+  },
+  "scopes": {
+    "account": {
+      "id": "account",
+      "idSchema": {
+        "kind": "scalar",
+        "type": "string",
+        "format": "uuid",
+        "refinements": {}
+      },
+      "errors": [
+        "api.not_found"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/scopes/account"
+      }
+    }
+  },
+  "buckets": {
+    "write": {
+      "id": "write",
+      "key": [
+        {
+          "in": "principal",
+          "name": "userId"
+        }
+      ],
+      "limit": 60,
+      "windowMs": 60000,
+      "origin": {
+        "layer": "shared",
+        "pointer": "/buckets/write"
+      }
+    }
+  },
+  "operations": {
+    "listTemplates": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "createTemplate": {
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "throttle",
+          "entry": "writeThrottle",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates/ops/create/requires/0"
+          },
+          "bucket": "write"
+        }
+      ],
+      "fieldRights": []
+    },
+    "getTemplate": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "updateTemplate": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "deleteTemplate": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "publishTemplate": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "listDeliveries": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "createDelivery": {
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "throttle",
+          "entry": "writeThrottle",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries/ops/create/requires/0"
+          },
+          "bucket": "write"
+        }
+      ],
+      "fieldRights": []
+    },
+    "getDelivery": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "updateDelivery": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "deleteDelivery": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "retryDelivery": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "dispatch": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    }
+  }
+}

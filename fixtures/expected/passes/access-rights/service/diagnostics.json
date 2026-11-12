@@ -1,0 +1,29 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "billing",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/caller-right",
+          "message": "route 'reindex' of the service api does not require the caller right 'callerService'",
+          "fix": "add { right: callerService } to the route's requires or an ancestor's",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/maintenance/routes/reindex"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/api/caller/right"
+              },
+              "message": "the caller right is set here"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,254 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "refused",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/api-version",
+          "message": "The api version beta is a label, but the surface app puts a version number in its paths.",
+          "fix": "Write an integer version, or set pathVersion: none on every surface (or in conventions).",
+          "origin": {
+            "layer": "api",
+            "pointer": "/api/version"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/path-version",
+          "message": "The prefix /v2/app of the surface app holds the literal version segment v2; the version is held once, on the api.",
+          "fix": "Write {version} instead of v2.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/prefix"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/id-property",
+          "message": "The item Note of the collection notes has no property noteId to hold the member id.",
+          "fix": "Set idProperty to the item property that holds the id, or add that property to the item.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/notes/id/noteId"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/op-input",
+          "message": "The create op createNote has no input; the item schema holds fields a client never sends.",
+          "fix": "Declare input on the create op.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/notes/ops/0"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/collection-id",
+          "message": "The collection logs declares no id, so the operation at /surfaces/app/routes/logs/ops/0 in its member scope has no member path.",
+          "fix": "Declare id on logs: its member id path parameter and schema.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/logs"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/op-item",
+          "message": "The get op of drafts answers its item, but drafts declares no item.",
+          "fix": "Declare item on drafts, or give the op an output.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/drafts/ops/0"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/body-limit",
+          "message": "The body limit 99999999999999999999MiB is larger than any size the compiler can check.",
+          "fix": "Write a smaller bodyLimit, at most 8589934591MiB.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/upload/bodyLimit"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/opaque-position",
+          "message": "The query field payload of raw is an opaque value, which has no text form.",
+          "fix": "Give it a schema with a text form, or move it into the body.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/raw/query/payload"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/opaque-position",
+          "message": "The query field payloads of batch is an opaque value, which has no text form.",
+          "fix": "Give it a schema with a text form, or move it into the body.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/batch/query/payloads"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/opaque-position",
+          "message": "The request header X-File of attached is a file, which has no text form.",
+          "fix": "Give it a schema with a text form, or move it into the body.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/attached/headers/X-File"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/param-unique",
+          "message": "The query field itemId of shadowed has the name of its path parameter, which frameworks merging both read as one value.",
+          "fix": "Rename one of the two.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/shadowed/query/itemId?"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/shadowed/pathParams/itemId"
+              },
+              "message": "the path parameter"
+            }
+          ]
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/path-segment",
+          "message": "The path /rooted written for rooted starts with /; a path is relative segments.",
+          "fix": "Write the path as segments separated by /, without / at either end, ., .., ?, # or %.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/rooted/path"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/responses-output",
+          "message": "The route both writes both responses and output; responses replaces output.",
+          "fix": "Move the output schema into a responses entry, or remove responses.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/both/output"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/no-content-body",
+          "message": "The 204 response of emptied has a body, which a 204 No Content never carries.",
+          "fix": "Answer the body with 200, or remove the body.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/emptied/responses/204"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/fields-schema",
+          "message": "The fields at /surfaces/app/routes/listed/query name Id, which is not an object schema, so it has no fields.",
+          "fix": "Name an object schema, or write the fields as a map.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/listed/query"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/path-param",
+          "message": "The path /vbeta/v2/app/x/{missing} of misplaced holds {missing}, which no pathParams or id declares.",
+          "fix": "Declare missing in pathParams.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/misplaced/path"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/route-unique",
+          "message": "The operation twice answers GET /vbeta/v2/app/twice, which a router cannot tell from GET /vbeta/v2/app/twice of again.",
+          "fix": "Change the path or the method of one of the two routes.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/twice"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/again"
+              },
+              "message": "the operation again"
+            }
+          ]
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/param-unique",
+          "message": "The request header x-a of twice is declared twice.",
+          "fix": "Remove one of the two declarations.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/twice/headers/x-a"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/twice/headers/X-A"
+              },
+              "message": "the first declaration"
+            }
+          ]
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/union-header",
+          "message": "The request header X-GitHub-Event of hook is the tag of its input union, which adds it.",
+          "fix": "Remove the header; the union's discriminator adds it.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/hook/headers/X-GitHub-Event"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/redirect-body",
+          "message": "The 301 response of moved is a redirect, which has no body.",
+          "fix": "Remove the body; the compiler adds the Location header.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/moved/responses/301/body"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

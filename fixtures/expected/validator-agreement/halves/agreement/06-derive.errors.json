@@ -1,0 +1,2891 @@
+{
+  "errors": {
+    "api.schema_invalid": {
+      "code": "api.schema_invalid",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 400
+      },
+      "params": "ApiSchemaInvalidParams",
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.schema_invalid"
+      },
+      "default": "schemaInvalid"
+    },
+    "api.unauthenticated": {
+      "code": "api.unauthenticated",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 401
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.unauthenticated"
+      },
+      "default": "unauthenticated"
+    },
+    "api.forbidden": {
+      "code": "api.forbidden",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 403
+      },
+      "params": "ApiForbiddenParams",
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.forbidden"
+      },
+      "default": "forbidden"
+    },
+    "api.csrf_invalid": {
+      "code": "api.csrf_invalid",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 403
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.csrf_invalid"
+      },
+      "default": "csrfInvalid"
+    },
+    "api.sort_key_forbidden": {
+      "code": "api.sort_key_forbidden",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 403
+      },
+      "params": "ApiSortKeyForbiddenParams",
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.sort_key_forbidden"
+      },
+      "default": "sortKeyForbidden"
+    },
+    "api.not_found": {
+      "code": "api.not_found",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 404
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.not_found"
+      },
+      "default": "notFound"
+    },
+    "state.conflict": {
+      "code": "state.conflict",
+      "family": "state",
+      "nature": "refused",
+      "http": {
+        "status": 409
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/state.conflict"
+      },
+      "default": "stateConflict"
+    },
+    "api.idempotency_in_progress": {
+      "code": "api.idempotency_in_progress",
+      "family": "api",
+      "nature": "unavailable",
+      "http": {
+        "status": 409
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.idempotency_in_progress"
+      },
+      "default": "idempotencyInProgress"
+    },
+    "api.precondition_failed": {
+      "code": "api.precondition_failed",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 412
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.precondition_failed"
+      },
+      "default": "preconditionFailed"
+    },
+    "api.idempotency_key_reused": {
+      "code": "api.idempotency_key_reused",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 422
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.idempotency_key_reused"
+      },
+      "default": "idempotencyKeyReused"
+    },
+    "api.precondition_required": {
+      "code": "api.precondition_required",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 428
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.precondition_required"
+      },
+      "default": "preconditionRequired"
+    },
+    "api.cursor_too_old": {
+      "code": "api.cursor_too_old",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 410
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.cursor_too_old"
+      },
+      "default": "gone"
+    },
+    "api.payload_too_large": {
+      "code": "api.payload_too_large",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 413
+      },
+      "params": "ApiPayloadTooLargeParams",
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.payload_too_large"
+      },
+      "default": "payloadTooLarge"
+    },
+    "api.unsupported_media_type": {
+      "code": "api.unsupported_media_type",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 415
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.unsupported_media_type"
+      },
+      "default": "unsupportedMediaType"
+    },
+    "api.rate_limited": {
+      "code": "api.rate_limited",
+      "family": "api",
+      "nature": "unavailable",
+      "http": {
+        "status": 429
+      },
+      "params": "ApiRateLimitedParams",
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.rate_limited"
+      },
+      "default": "rateLimited"
+    },
+    "api.internal": {
+      "code": "api.internal",
+      "family": "api",
+      "nature": "failed",
+      "http": {
+        "status": 500
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.internal"
+      },
+      "default": "undeclaredStatus"
+    },
+    "api.upstream_unavailable": {
+      "code": "api.upstream_unavailable",
+      "family": "api",
+      "nature": "unavailable",
+      "http": {
+        "status": 502
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.upstream_unavailable"
+      },
+      "default": "upstreamUnavailable"
+    },
+    "api.service_unavailable": {
+      "code": "api.service_unavailable",
+      "family": "api",
+      "nature": "unavailable",
+      "http": {
+        "status": 503
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.service_unavailable"
+      },
+      "default": "serviceUnavailable"
+    },
+    "api.upstream_timeout": {
+      "code": "api.upstream_timeout",
+      "family": "api",
+      "nature": "unavailable",
+      "http": {
+        "status": 504
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.upstream_timeout"
+      },
+      "default": "upstreamTimeout"
+    },
+    "api.deadline_exceeded": {
+      "code": "api.deadline_exceeded",
+      "family": "api",
+      "nature": "unavailable",
+      "http": {
+        "status": 504
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.deadline_exceeded"
+      },
+      "default": "deadlineExceeded"
+    }
+  },
+  "operations": {
+    "echoNotice": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "issues",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoNotice"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.payload_too_large",
+          "roles": [
+            {
+              "role": "payloadTooLarge",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "limitBytes",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoNotice/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoNotice/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoNotice"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "echoStrictKeys": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "issues",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoStrictKeys"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.payload_too_large",
+          "roles": [
+            {
+              "role": "payloadTooLarge",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "limitBytes",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoStrictKeys/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoStrictKeys/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoStrictKeys"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "echoSubtreeKeys": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "issues",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoSubtreeKeys"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.payload_too_large",
+          "roles": [
+            {
+              "role": "payloadTooLarge",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "limitBytes",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoSubtreeKeys/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoSubtreeKeys/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoSubtreeKeys"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "echoIgnoreKeys": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "issues",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoIgnoreKeys"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.payload_too_large",
+          "roles": [
+            {
+              "role": "payloadTooLarge",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "limitBytes",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoIgnoreKeys/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoIgnoreKeys/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoIgnoreKeys"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "echoKeepKeys": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "issues",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoKeepKeys"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.payload_too_large",
+          "roles": [
+            {
+              "role": "payloadTooLarge",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "limitBytes",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoKeepKeys/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoKeepKeys/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoKeepKeys"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "echoProfile": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "issues",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoProfile"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.payload_too_large",
+          "roles": [
+            {
+              "role": "payloadTooLarge",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "limitBytes",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoProfile/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoProfile/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoProfile"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "echoPatchArticle": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "issues",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoPatchArticle"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.payload_too_large",
+          "roles": [
+            {
+              "role": "payloadTooLarge",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "limitBytes",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoPatchArticle/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoPatchArticle/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoPatchArticle"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "echoBounds": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "issues",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoBounds"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.payload_too_large",
+          "roles": [
+            {
+              "role": "payloadTooLarge",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "limitBytes",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoBounds/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoBounds/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoBounds"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "echoOpaqueItems": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "issues",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoOpaqueItems"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.payload_too_large",
+          "roles": [
+            {
+              "role": "payloadTooLarge",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "limitBytes",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoOpaqueItems/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoOpaqueItems/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoOpaqueItems"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "echoReceipt": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "issues",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoReceipt"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.payload_too_large",
+          "roles": [
+            {
+              "role": "payloadTooLarge",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "limitBytes",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoReceipt/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoReceipt/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoReceipt"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "echoLabelled": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "issues",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoLabelled"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.payload_too_large",
+          "roles": [
+            {
+              "role": "payloadTooLarge",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "limitBytes",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoLabelled/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoLabelled/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoLabelled"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "echoTags": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "issues",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoTags"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.payload_too_large",
+          "roles": [
+            {
+              "role": "payloadTooLarge",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "limitBytes",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoTags/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoTags/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoTags"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "echoPoint": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "issues",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoPoint"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.payload_too_large",
+          "roles": [
+            {
+              "role": "payloadTooLarge",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "limitBytes",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoPoint/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoPoint/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoPoint"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "echoQuantity": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "issues",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoQuantity"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.payload_too_large",
+          "roles": [
+            {
+              "role": "payloadTooLarge",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "limitBytes",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoQuantity/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoQuantity/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoQuantity"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "echoPercent": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "issues",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoPercent"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.payload_too_large",
+          "roles": [
+            {
+              "role": "payloadTooLarge",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "limitBytes",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoPercent/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoPercent/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoPercent"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "echoInstant": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "issues",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoInstant"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.payload_too_large",
+          "roles": [
+            {
+              "role": "payloadTooLarge",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "limitBytes",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoInstant/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoInstant/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoInstant"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "echoDay": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "issues",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoDay"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.payload_too_large",
+          "roles": [
+            {
+              "role": "payloadTooLarge",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "limitBytes",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoDay/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoDay/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoDay"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "echoEnvelope": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "issues",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoEnvelope"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.payload_too_large",
+          "roles": [
+            {
+              "role": "payloadTooLarge",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "limitBytes",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoEnvelope/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoEnvelope/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoEnvelope"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "echoOptionalEnvelope": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "issues",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoOptionalEnvelope"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.payload_too_large",
+          "roles": [
+            {
+              "role": "payloadTooLarge",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "limitBytes",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoOptionalEnvelope/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoOptionalEnvelope/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoOptionalEnvelope"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "echoMember": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "issues",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoMember"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.payload_too_large",
+          "roles": [
+            {
+              "role": "payloadTooLarge",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "limitBytes",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoMember/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoMember/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoMember"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "echoOwner": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "issues",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoOwner"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.payload_too_large",
+          "roles": [
+            {
+              "role": "payloadTooLarge",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "limitBytes",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoOwner/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoOwner/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoOwner"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "echoFormats": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "issues",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoFormats"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.payload_too_large",
+          "roles": [
+            {
+              "role": "payloadTooLarge",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "limitBytes",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoFormats/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoFormats/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoFormats"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "echoPatterns": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "issues",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoPatterns"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.payload_too_large",
+          "roles": [
+            {
+              "role": "payloadTooLarge",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "limitBytes",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoPatterns/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoPatterns/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoPatterns"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "echoComment": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "issues",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoComment"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.payload_too_large",
+          "roles": [
+            {
+              "role": "payloadTooLarge",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "limitBytes",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoComment/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoComment/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoComment"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "echoCounts": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "issues",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoCounts"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.payload_too_large",
+          "roles": [
+            {
+              "role": "payloadTooLarge",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "limitBytes",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoCounts/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoCounts/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/echoCounts"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

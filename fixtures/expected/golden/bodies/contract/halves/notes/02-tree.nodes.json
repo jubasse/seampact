@@ -1,0 +1,834 @@
+{
+  "conventions": {
+    "paging.default": {
+      "value": "cursor",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/paging/default"
+      }
+    },
+    "paging.maxLimit": {
+      "value": 100,
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/paging/maxLimit"
+      }
+    },
+    "idempotency.header": {
+      "value": "Idempotency-Key",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/idempotency/header"
+      }
+    },
+    "idempotency.replayHeader": {
+      "value": "Idempotency-Replayed",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/idempotency/replayHeader"
+      }
+    },
+    "idempotency.lifetime": {
+      "value": "24h",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/idempotency/lifetime"
+      }
+    },
+    "bodyLimit": {
+      "value": "1MiB",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/bodyLimit"
+      }
+    },
+    "errors.every": {
+      "value": [
+        "api.internal"
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/errors/every"
+      }
+    },
+    "errors.derived": {
+      "value": {
+        "schemaInvalid": {
+          "code": "api.schema_invalid",
+          "params": {
+            "issues": {
+              "$each": "$issues",
+              "$as": {
+                "pointer": "$item.pointer",
+                "rule": "$item.rule"
+              }
+            }
+          }
+        }
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/errors/derived"
+      }
+    }
+  },
+  "formats": {
+    "bare": {
+      "id": "bare",
+      "origin": {
+        "layer": "core",
+        "pointer": "/formats/bare"
+      },
+      "media": "application/json",
+      "absent": "omit",
+      "success": {
+        "item": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "table": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "list": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "page": {
+          "body": {
+            "kind": "slot",
+            "slot": "items",
+            "path": []
+          },
+          "headers": []
+        }
+      },
+      "meta": {},
+      "error": {
+        "media": "application/problem+json",
+        "body": {
+          "kind": "object",
+          "members": [
+            {
+              "name": {
+                "kind": "text",
+                "text": "type"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "code",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "title"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "title",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "status"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "status",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "detail"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "detail",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "instance"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "instance",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "code"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "code",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "nature"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "nature",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "traceId"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "traceId",
+                "path": []
+              }
+            }
+          ],
+          "merge": "params"
+        },
+        "headers": []
+      }
+    }
+  },
+  "pagings": {
+    "cursor": {
+      "id": "cursor",
+      "origin": {
+        "layer": "api",
+        "pointer": "/pagings/cursor"
+      },
+      "position": "cursor",
+      "absent": "omit",
+      "request": [
+        {
+          "role": "cursor",
+          "in": "query",
+          "name": "cursor"
+        },
+        {
+          "role": "limit",
+          "in": "query",
+          "name": "limit"
+        },
+        {
+          "role": "sort",
+          "in": "query",
+          "name": "sort",
+          "style": "signed"
+        }
+      ],
+      "response": {
+        "body": {
+          "kind": "slot",
+          "slot": "items",
+          "path": []
+        },
+        "meta": [],
+        "headers": [],
+        "links": [
+          {
+            "rel": "next",
+            "role": "next"
+          }
+        ]
+      },
+      "handlerResult": [
+        "nextCursor"
+      ]
+    }
+  },
+  "operations": [
+    {
+      "kind": "httpOperation",
+      "id": "getSpace",
+      "name": {
+        "segments": [
+          "get",
+          "space"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "op": "get",
+      "resource": {
+        "type": "spaces",
+        "idParam": "spaceId",
+        "idProperty": "spaceId"
+      },
+      "method": "get",
+      "safe": true,
+      "path": "/v1/spaces/{spaceId}",
+      "params": {
+        "path": [
+          {
+            "name": "spaceId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/spaces/id/spaceId"
+            }
+          }
+        ],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Space"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/spaces/item"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/spaces/ops/0"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "listNotes",
+      "name": {
+        "segments": [
+          "list",
+          "notes"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "op": "list",
+      "resource": {
+        "type": "notes",
+        "idProperty": "noteId"
+      },
+      "method": "get",
+      "safe": true,
+      "path": "/v1/spaces/{spaceId}/notes",
+      "params": {
+        "path": [
+          {
+            "name": "spaceId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/spaces/id/spaceId"
+            }
+          }
+        ],
+        "query": [
+          {
+            "name": "state",
+            "type": {
+              "kind": "enum",
+              "enum": "NoteState"
+            },
+            "required": false,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/spaces/member/routes/notes/ops/list/query/state?"
+            },
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            }
+          },
+          {
+            "name": "labels",
+            "type": {
+              "kind": "array",
+              "items": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {
+                  "maxLength": 30
+                }
+              },
+              "maxItems": 4
+            },
+            "required": false,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/spaces/member/routes/notes/ops/list/query/labels?"
+            },
+            "wire": {
+              "kind": "list",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            }
+          },
+          {
+            "name": "range",
+            "type": {
+              "kind": "ref",
+              "schema": "NoteFilter"
+            },
+            "required": false,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/spaces/member/routes/notes/ops/list/query/range?"
+            },
+            "wire": {
+              "kind": "object",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            }
+          },
+          {
+            "name": "archived",
+            "type": {
+              "kind": "scalar",
+              "type": "boolean",
+              "refinements": {}
+            },
+            "required": false,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/spaces/member/routes/notes/ops/list/query/archived?"
+            },
+            "wire": {
+              "kind": "boolean",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            }
+          },
+          {
+            "name": "minWords",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "0"
+              }
+            },
+            "required": false,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/spaces/member/routes/notes/ops/list/query/minWords?"
+            },
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            }
+          }
+        ],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Note"
+          },
+          "shape": "page",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/spaces/member/routes/notes/item"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "paging": {
+        "style": "cursor",
+        "maxLimit": 100,
+        "defaultLimit": 100,
+        "overLimit": "reject",
+        "sortKeys": [
+          {
+            "key": "createdAt",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/spaces/member/routes/notes/ops/list/sortable/0"
+            }
+          },
+          {
+            "key": "wordCount",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/spaces/member/routes/notes/ops/list/sortable/1"
+            }
+          }
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/conventions/paging/default"
+        }
+      },
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/spaces/member/routes/notes/ops/list"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "feedbackNotes",
+      "name": {
+        "segments": [
+          "feedback",
+          "notes"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "resource": {
+        "type": "notes",
+        "idProperty": "noteId"
+      },
+      "method": "post",
+      "safe": false,
+      "path": "/v1/spaces/{spaceId}/notes/feedback",
+      "params": {
+        "path": [
+          {
+            "name": "spaceId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/spaces/id/spaceId"
+            }
+          }
+        ],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/x-www-form-urlencoded",
+        "schema": {
+          "kind": "ref",
+          "schema": "Feedback"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/spaces/member/routes/notes/collection/routes/feedback/input"
+        },
+        "fields": [
+          {
+            "name": "message",
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            }
+          },
+          {
+            "name": "score",
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            }
+          },
+          {
+            "name": "subscribe",
+            "wire": {
+              "kind": "boolean",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            }
+          },
+          {
+            "name": "tags",
+            "wire": {
+              "kind": "list",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            }
+          }
+        ]
+      },
+      "responses": [
+        {
+          "status": 303,
+          "shape": "redirect",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/spaces/member/routes/notes/collection/routes/feedback/responses/303"
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/spaces/member/routes/notes/collection/routes/feedback"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "attachNotes",
+      "name": {
+        "segments": [
+          "attach",
+          "notes"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "resource": {
+        "type": "notes",
+        "idProperty": "noteId"
+      },
+      "method": "post",
+      "safe": false,
+      "path": "/v1/spaces/{spaceId}/notes/attach",
+      "params": {
+        "path": [
+          {
+            "name": "spaceId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/spaces/id/spaceId"
+            }
+          }
+        ],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "multipart/form-data",
+        "schema": {
+          "kind": "ref",
+          "schema": "AttachNotesInput"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/spaces/member/routes/notes/collection/routes/attach/input"
+        },
+        "fields": [
+          {
+            "name": "file",
+            "wire": {
+              "kind": "file"
+            }
+          },
+          {
+            "name": "caption",
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            }
+          },
+          {
+            "name": "meta",
+            "wire": {
+              "kind": "json"
+            }
+          }
+        ]
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Attachment"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/spaces/member/routes/notes/collection/routes/attach/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/spaces/member/routes/notes/collection/routes/attach"
+      }
+    }
+  ],
+  "api": {
+    "id": "notes",
+    "name": {
+      "segments": [
+        "notes"
+      ],
+      "role": "schema"
+    },
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "kind": "product",
+    "pathVersion": {
+      "value": "prefix",
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/version"
+      }
+    },
+    "maturity": "provisional",
+    "compat": {
+      "policy": "additive-only"
+    },
+    "surfaces": {
+      "app": {
+        "name": {
+          "segments": [
+            "app"
+          ],
+          "role": "schema"
+        },
+        "prefix": "/v1",
+        "pathVersion": "prefix",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app"
+        }
+      }
+    },
+    "documents": {},
+    "docs": {
+      "summary": "Notes shared inside a workspace."
+    },
+    "extensions": {},
+    "origin": {
+      "layer": "api",
+      "pointer": "/api"
+    }
+  },
+  "lint": {
+    "rules": {},
+    "allows": []
+  }
+}

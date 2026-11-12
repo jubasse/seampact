@@ -1,0 +1,486 @@
+{
+  "conventions": {
+    "idempotency.header": {
+      "value": "Idempotency-Key",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/idempotency/header"
+      }
+    },
+    "idempotency.replayHeader": {
+      "value": "Idempotency-Replayed",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/idempotency/replayHeader"
+      }
+    },
+    "idempotency.lifetime": {
+      "value": "24h",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/idempotency/lifetime"
+      }
+    },
+    "bodyLimit": {
+      "value": "1MiB",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/bodyLimit"
+      }
+    },
+    "outputEnums": {
+      "value": "open",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/outputEnums"
+      }
+    },
+    "degradedHeader": {
+      "value": "X-Degraded",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/degradedHeader"
+      }
+    },
+    "errors.every": {
+      "value": [
+        "api.internal"
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/errors/every"
+      }
+    }
+  },
+  "formats": {
+    "bare": {
+      "id": "bare",
+      "origin": {
+        "layer": "core",
+        "pointer": "/formats/bare"
+      },
+      "media": "application/json",
+      "absent": "omit",
+      "success": {
+        "item": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "table": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "list": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "page": {
+          "body": {
+            "kind": "slot",
+            "slot": "items",
+            "path": []
+          },
+          "headers": []
+        }
+      },
+      "meta": {},
+      "error": {
+        "media": "application/problem+json",
+        "body": {
+          "kind": "object",
+          "members": [
+            {
+              "name": {
+                "kind": "text",
+                "text": "type"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "code",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "title"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "title",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "status"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "status",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "detail"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "detail",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "instance"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "instance",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "code"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "code",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "nature"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "nature",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "traceId"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "traceId",
+                "path": []
+              }
+            }
+          ],
+          "merge": "params"
+        },
+        "headers": []
+      }
+    }
+  },
+  "services": {
+    "catalog": {
+      "id": "catalog",
+      "maturity": "stable",
+      "origin": {
+        "layer": "api",
+        "pointer": "/services/catalog"
+      }
+    },
+    "streaming": {
+      "id": "streaming",
+      "maturity": "provisional",
+      "origin": {
+        "layer": "api",
+        "pointer": "/services/streaming"
+      }
+    }
+  },
+  "operations": [
+    {
+      "kind": "httpOperation",
+      "id": "profileStudio",
+      "name": {
+        "segments": [
+          "profile",
+          "studio"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "resource": {
+        "type": "studios",
+        "idParam": "studioId",
+        "idProperty": "studioId"
+      },
+      "method": "patch",
+      "safe": false,
+      "path": "/v1/studios/{studioId}/profile",
+      "params": {
+        "path": [
+          {
+            "name": "studioId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/studios/id/studioId"
+            }
+          }
+        ],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "UpdateProfile"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/studios/member/routes/profile/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Profile"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/studios/member/routes/profile/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "degradable": {
+        "paths": [
+          "stats"
+        ],
+        "header": "X-Degraded",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/studios/member/routes/profile/degradable"
+        }
+      },
+      "format": "bare",
+      "examples": {},
+      "upstream": [
+        "streaming",
+        "catalog"
+      ],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {
+        "acme": {
+          "owner-team": "profiles",
+          "tier": "gold",
+          "invalidates": [
+            "profiles",
+            "studios"
+          ],
+          "rate-class": "write",
+          "audit": true,
+          "tax-basis": "exclusive",
+          "cost": 3,
+          "tags": [
+            "profile"
+          ],
+          "since": "2026-03"
+        }
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/studios/member/routes/profile"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "eventsStudio",
+      "name": {
+        "segments": [
+          "events",
+          "studio"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "resource": {
+        "type": "studios",
+        "idParam": "studioId",
+        "idProperty": "studioId"
+      },
+      "method": "post",
+      "safe": false,
+      "path": "/v1/studios/{studioId}/events",
+      "params": {
+        "path": [
+          {
+            "name": "studioId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/studios/id/studioId"
+            }
+          }
+        ],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "StreamEvent"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/studios/member/routes/events/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 204,
+          "shape": "empty",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/studios/member/routes/events/responses/204"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/studios/member/routes/events"
+      }
+    }
+  ],
+  "api": {
+    "id": "studio",
+    "name": {
+      "segments": [
+        "studio"
+      ],
+      "role": "schema"
+    },
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "kind": "product",
+    "pathVersion": {
+      "value": "prefix",
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/version"
+      }
+    },
+    "maturity": "provisional",
+    "compat": {
+      "policy": "additive-only"
+    },
+    "surfaces": {
+      "app": {
+        "name": {
+          "segments": [
+            "app"
+          ],
+          "role": "schema"
+        },
+        "prefix": "/v1",
+        "pathVersion": "prefix",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app"
+        }
+      }
+    },
+    "documents": {},
+    "docs": {
+      "summary": "Profiles and streams of a studio."
+    },
+    "extensions": {
+      "acme": {
+        "owner-team": "studio",
+        "audience": [
+          "partners",
+          "staff"
+        ]
+      }
+    },
+    "origin": {
+      "layer": "api",
+      "pointer": "/api"
+    }
+  },
+  "lint": {
+    "rules": {},
+    "allows": []
+  }
+}

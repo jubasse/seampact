@@ -1,0 +1,26 @@
+{
+  "rights": {
+    "tasks.read": {
+      "id": "tasks.read",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/tasks.read"
+      }
+    }
+  },
+  "operations": {
+    "ping": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    }
+  }
+}

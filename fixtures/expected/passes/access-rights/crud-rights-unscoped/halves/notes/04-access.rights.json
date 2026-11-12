@@ -1,0 +1,194 @@
+{
+  "rights": {
+    "notes.list": {
+      "id": "notes.list",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "pack:crud-rights",
+        "pointer": "/derive/0/declareRight"
+      },
+      "derivedFrom": {
+        "derivation": "pack.crud-rights.crud",
+        "from": [
+          {
+            "layer": "pack:crud-rights",
+            "pointer": "/derive/0/declareRight"
+          },
+          {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/notes/ops/list"
+          }
+        ]
+      }
+    },
+    "notes.create": {
+      "id": "notes.create",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "pack:crud-rights",
+        "pointer": "/derive/0/declareRight"
+      },
+      "derivedFrom": {
+        "derivation": "pack.crud-rights.crud",
+        "from": [
+          {
+            "layer": "pack:crud-rights",
+            "pointer": "/derive/0/declareRight"
+          },
+          {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/notes/ops/create"
+          }
+        ]
+      }
+    },
+    "settings.get": {
+      "id": "settings.get",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "pack:crud-rights",
+        "pointer": "/derive/0/declareRight"
+      },
+      "derivedFrom": {
+        "derivation": "pack.crud-rights.crud",
+        "from": [
+          {
+            "layer": "pack:crud-rights",
+            "pointer": "/derive/0/declareRight"
+          },
+          {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/settings/ops/get"
+          }
+        ]
+      }
+    },
+    "settings.update": {
+      "id": "settings.update",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "pack:crud-rights",
+        "pointer": "/derive/0/declareRight"
+      },
+      "derivedFrom": {
+        "derivation": "pack.crud-rights.crud",
+        "from": [
+          {
+            "layer": "pack:crud-rights",
+            "pointer": "/derive/0/declareRight"
+          },
+          {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/settings/ops/update"
+          }
+        ]
+      }
+    }
+  },
+  "operations": {
+    "listNotes": {
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "notes.list",
+          "derivedFrom": {
+            "derivation": "pack.crud-rights.crud",
+            "from": [
+              {
+                "layer": "pack:crud-rights",
+                "pointer": "/derive/0/require"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "createNote": {
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "notes.create",
+          "derivedFrom": {
+            "derivation": "pack.crud-rights.crud",
+            "from": [
+              {
+                "layer": "pack:crud-rights",
+                "pointer": "/derive/0/require"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "getSettings": {
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "settings.get",
+          "derivedFrom": {
+            "derivation": "pack.crud-rights.crud",
+            "from": [
+              {
+                "layer": "pack:crud-rights",
+                "pointer": "/derive/0/require"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "updateSettings": {
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "settings.update",
+          "derivedFrom": {
+            "derivation": "pack.crud-rights.crud",
+            "from": [
+              {
+                "layer": "pack:crud-rights",
+                "pointer": "/derive/0/require"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldRights": []
+    }
+  }
+}

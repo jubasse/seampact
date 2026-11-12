@@ -1,0 +1,16 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/file-missing",
+      "message": "file 'docs/get-task.md' named by $file does not exist",
+      "fix": "create the file, or fix the path",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/7/31"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

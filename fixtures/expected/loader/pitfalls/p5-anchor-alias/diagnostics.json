@@ -1,0 +1,27 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/yaml-anchor",
+      "message": "anchor '&base' is not allowed (P5)",
+      "fix": "use $ref to share a declaration, or extends to share a base",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/4/3"
+      },
+      "related": []
+    },
+    {
+      "severity": "error",
+      "rule": "seampact/load/yaml-anchor",
+      "message": "alias '*base' is not allowed (P5)",
+      "fix": "use $ref to share a declaration, or extends to share a base",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/5/7"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

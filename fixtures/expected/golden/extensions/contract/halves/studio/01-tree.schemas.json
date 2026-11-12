@@ -1,0 +1,1229 @@
+{
+  "schemas": {
+    "ApiSchemaInvalidParams": {
+      "kind": "object",
+      "id": "ApiSchemaInvalidParams",
+      "name": {
+        "segments": [
+          "api",
+          "schema",
+          "invalid"
+        ],
+        "role": "params"
+      },
+      "directions": [
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.schema_invalid/params"
+      },
+      "properties": [
+        {
+          "name": "issues",
+          "type": {
+            "kind": "array",
+            "items": {
+              "kind": "ref",
+              "schema": "ApiSchemaInvalidIssue"
+            }
+          },
+          "optional": false,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.schema_invalid/params/issues"
+          },
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {}
+        }
+      ]
+    },
+    "ApiForbiddenParams": {
+      "kind": "object",
+      "id": "ApiForbiddenParams",
+      "name": {
+        "segments": [
+          "api",
+          "forbidden"
+        ],
+        "role": "params"
+      },
+      "directions": [
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.forbidden/params"
+      },
+      "properties": [
+        {
+          "name": "pointer",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "optional": true,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.forbidden/params/pointer"
+          },
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {}
+        }
+      ]
+    },
+    "ApiSortKeyForbiddenParams": {
+      "kind": "object",
+      "id": "ApiSortKeyForbiddenParams",
+      "name": {
+        "segments": [
+          "api",
+          "sort",
+          "key",
+          "forbidden"
+        ],
+        "role": "params"
+      },
+      "directions": [
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.sort_key_forbidden/params"
+      },
+      "properties": [
+        {
+          "name": "key",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "optional": false,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.sort_key_forbidden/params/key"
+          },
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {}
+        }
+      ]
+    },
+    "ApiPayloadTooLargeParams": {
+      "kind": "object",
+      "id": "ApiPayloadTooLargeParams",
+      "name": {
+        "segments": [
+          "api",
+          "payload",
+          "too",
+          "large"
+        ],
+        "role": "params"
+      },
+      "directions": [
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.payload_too_large/params"
+      },
+      "properties": [
+        {
+          "name": "limitBytes",
+          "type": {
+            "kind": "scalar",
+            "type": "integer",
+            "refinements": {
+              "minimum": "0"
+            }
+          },
+          "optional": true,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.payload_too_large/params/limitBytes"
+          },
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {}
+        }
+      ]
+    },
+    "ApiRateLimitedParams": {
+      "kind": "object",
+      "id": "ApiRateLimitedParams",
+      "name": {
+        "segments": [
+          "api",
+          "rate",
+          "limited"
+        ],
+        "role": "params"
+      },
+      "directions": [
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.rate_limited/params"
+      },
+      "properties": [
+        {
+          "name": "retryAfterMs",
+          "type": {
+            "kind": "scalar",
+            "type": "integer",
+            "refinements": {
+              "minimum": "0",
+              "maximum": "9007199254740991"
+            }
+          },
+          "optional": true,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.rate_limited/params/retryAfterMs"
+          },
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {}
+        }
+      ]
+    },
+    "ApiSchemaInvalidIssue": {
+      "kind": "object",
+      "id": "ApiSchemaInvalidIssue",
+      "name": {
+        "segments": [
+          "api",
+          "schema",
+          "invalid",
+          "issue"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.schema_invalid/params/issues/items"
+      },
+      "properties": [
+        {
+          "name": "in",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {
+              "pattern": {
+                "source": "^(?:path|query|header|body)$",
+                "normalized": "^(?:path|query|header|body)$"
+              }
+            }
+          },
+          "optional": false,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.schema_invalid/params/issues/items/properties/in"
+          },
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {}
+        },
+        {
+          "name": "pointer",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "optional": false,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.schema_invalid/params/issues/items/properties/pointer"
+          },
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {}
+        },
+        {
+          "name": "rule",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "optional": false,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.schema_invalid/params/issues/items/properties/rule"
+          },
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {}
+        }
+      ]
+    },
+    "ApiEmptyBody": {
+      "kind": "object",
+      "id": "ApiEmptyBody",
+      "name": {
+        "segments": [
+          "api",
+          "empty",
+          "body"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "input"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/schemas/ApiEmptyBody"
+      },
+      "properties": []
+    },
+    "UserPrincipal": {
+      "kind": "object",
+      "properties": [
+        {
+          "name": "userId",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "format": "uuid",
+            "refinements": {}
+          },
+          "optional": false,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/UserPrincipal/properties/userId"
+          }
+        },
+        {
+          "name": "profileId",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "format": "uuid",
+            "refinements": {}
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/UserPrincipal/properties/profileId"
+          }
+        }
+      ],
+      "id": "UserPrincipal",
+      "name": {
+        "segments": [
+          "user",
+          "principal"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/UserPrincipal"
+      }
+    },
+    "ProfileStats": {
+      "kind": "object",
+      "properties": [
+        {
+          "name": "views",
+          "type": {
+            "kind": "scalar",
+            "type": "integer",
+            "refinements": {
+              "minimum": "0"
+            }
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Profile/properties/stats/properties/views"
+          }
+        }
+      ],
+      "id": "ProfileStats",
+      "name": {
+        "segments": [
+          "profile",
+          "stats"
+        ],
+        "role": "property"
+      },
+      "directions": [
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/Profile/properties/stats"
+      }
+    },
+    "Profile": {
+      "kind": "object",
+      "properties": [
+        {
+          "name": "profileId",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "format": "uuid",
+            "refinements": {}
+          },
+          "optional": false,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {
+            "acme": {
+              "column": "profile_id"
+            }
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Profile/properties/profileId"
+          }
+        },
+        {
+          "name": "displayName",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {
+              "maxLength": 80
+            }
+          },
+          "optional": false,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {
+            "acme": {
+              "searchable": true,
+              "label": "Name"
+            }
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Profile/properties/displayName"
+          }
+        },
+        {
+          "name": "email",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "format": "email",
+            "refinements": {}
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {
+            "acme": {
+              "pii": true,
+              "since": "2026-02"
+            }
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Profile/properties/email"
+          }
+        },
+        {
+          "name": "streamKey",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": true,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Profile/properties/streamKey"
+          }
+        },
+        {
+          "name": "price",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "format": "decimal",
+            "refinements": {
+              "minimum": "0",
+              "maximum": "1000",
+              "multipleOf": "0.01"
+            }
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {
+            "acme": {
+              "tax-basis": "inclusive"
+            }
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Profile/properties/price"
+          }
+        },
+        {
+          "name": "viewers",
+          "type": {
+            "kind": "scalar",
+            "type": "integer",
+            "format": "int64",
+            "refinements": {
+              "exclusiveMinimum": "-1",
+              "exclusiveMaximum": "1000000000000"
+            }
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Profile/properties/viewers"
+          }
+        },
+        {
+          "name": "state",
+          "type": {
+            "kind": "enum",
+            "enum": "StreamState"
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Profile/properties/state"
+          }
+        },
+        {
+          "name": "stats",
+          "type": {
+            "kind": "ref",
+            "schema": "ProfileStats"
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Profile/properties/stats"
+          }
+        }
+      ],
+      "id": "Profile",
+      "name": {
+        "segments": [
+          "profile"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "output"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {
+        "acme": {
+          "entity": "profile",
+          "table": "profiles",
+          "pii": true,
+          "tags": [
+            "people"
+          ],
+          "since": "2026-01"
+        }
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/Profile"
+      }
+    },
+    "UpdateProfile": {
+      "kind": "object",
+      "properties": [
+        {
+          "name": "profileId",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "format": "uuid",
+            "refinements": {}
+          },
+          "optional": false,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/UpdateProfile/properties/profileId"
+          }
+        },
+        {
+          "name": "displayName",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {
+              "maxLength": 80
+            }
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/UpdateProfile/properties/displayName"
+          }
+        }
+      ],
+      "id": "UpdateProfile",
+      "name": {
+        "segments": [
+          "update",
+          "profile"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "input"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/UpdateProfile"
+      }
+    },
+    "StreamEventStarted": {
+      "kind": "object",
+      "properties": [
+        {
+          "name": "startedAt",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "format": "date-time",
+            "refinements": {}
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/StreamEvent/oneOf/started/properties/startedAt"
+          }
+        }
+      ],
+      "id": "StreamEventStarted",
+      "name": {
+        "segments": [
+          "stream",
+          "event",
+          "started"
+        ],
+        "role": "variant"
+      },
+      "directions": [
+        "input"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/StreamEvent/oneOf/started"
+      }
+    },
+    "StreamEventStopped": {
+      "kind": "object",
+      "properties": [],
+      "id": "StreamEventStopped",
+      "name": {
+        "segments": [
+          "stream",
+          "event",
+          "stopped"
+        ],
+        "role": "variant"
+      },
+      "directions": [
+        "input"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/StreamEvent/oneOf/stopped"
+      }
+    },
+    "StreamEvent": {
+      "kind": "union",
+      "tag": {
+        "in": "header",
+        "name": "X-Stream-Event"
+      },
+      "variants": [
+        {
+          "tag": "started",
+          "schema": "StreamEventStarted"
+        },
+        {
+          "tag": "stopped",
+          "schema": "StreamEventStopped"
+        }
+      ],
+      "id": "StreamEvent",
+      "name": {
+        "segments": [
+          "stream",
+          "event"
+        ],
+        "role": "schema"
+      },
+      "directions": [
+        "input"
+      ],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/StreamEvent"
+      }
+    }
+  },
+  "enums": {
+    "Tier": {
+      "id": "Tier",
+      "name": {
+        "segments": [
+          "tier"
+        ],
+        "role": "schema"
+      },
+      "values": [
+        "gold",
+        "silver"
+      ],
+      "localReason": "Acme's support tiers.",
+      "directions": [],
+      "docs": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/enums/Tier"
+      }
+    },
+    "TaxBasis": {
+      "id": "TaxBasis",
+      "name": {
+        "segments": [
+          "tax",
+          "basis"
+        ],
+        "role": "schema"
+      },
+      "values": [
+        "inclusive",
+        "exclusive"
+      ],
+      "localReason": "Acme's tax rules.",
+      "directions": [],
+      "docs": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/enums/TaxBasis"
+      }
+    },
+    "StreamState": {
+      "id": "StreamState",
+      "name": {
+        "segments": [
+          "stream",
+          "state"
+        ],
+        "role": "schema"
+      },
+      "values": [
+        "live",
+        "ended",
+        "unknown"
+      ],
+      "localReason": "Stream states belong to this api.",
+      "fallback": "unknown",
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/enums/StreamState"
+      }
+    }
+  },
+  "extensionKeys": {
+    "acme-owner-team": {
+      "id": "acme-owner-team",
+      "prefix": "acme",
+      "key": "owner-team",
+      "schema": {
+        "kind": "scalar",
+        "type": "string",
+        "refinements": {}
+      },
+      "places": [
+        "api",
+        "operation"
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/extensions/acme/owner-team"
+      }
+    },
+    "acme-audience": {
+      "id": "acme-audience",
+      "prefix": "acme",
+      "key": "audience",
+      "schema": {
+        "kind": "array",
+        "items": {
+          "kind": "scalar",
+          "type": "string",
+          "refinements": {}
+        }
+      },
+      "places": [
+        "api"
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/extensions/acme/audience"
+      }
+    },
+    "acme-tier": {
+      "id": "acme-tier",
+      "prefix": "acme",
+      "key": "tier",
+      "schema": {
+        "kind": "enum",
+        "enum": "Tier"
+      },
+      "places": [
+        "operation",
+        "right",
+        "rule",
+        "scope"
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/extensions/acme/tier"
+      }
+    },
+    "acme-invalidates": {
+      "id": "acme-invalidates",
+      "prefix": "acme",
+      "key": "invalidates",
+      "schema": {
+        "kind": "array",
+        "items": {
+          "kind": "scalar",
+          "type": "string",
+          "refinements": {}
+        }
+      },
+      "places": [
+        "operation"
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/extensions/acme/invalidates"
+      }
+    },
+    "acme-rate-class": {
+      "id": "acme-rate-class",
+      "prefix": "acme",
+      "key": "rate-class",
+      "schema": {
+        "kind": "scalar",
+        "type": "string",
+        "refinements": {}
+      },
+      "places": [
+        "operation"
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/extensions/acme/rate-class"
+      }
+    },
+    "acme-audit": {
+      "id": "acme-audit",
+      "prefix": "acme",
+      "key": "audit",
+      "schema": {
+        "kind": "scalar",
+        "type": "boolean",
+        "refinements": {}
+      },
+      "places": [
+        "operation",
+        "rule"
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/extensions/acme/audit"
+      }
+    },
+    "acme-entity": {
+      "id": "acme-entity",
+      "prefix": "acme",
+      "key": "entity",
+      "schema": {
+        "kind": "scalar",
+        "type": "string",
+        "refinements": {}
+      },
+      "places": [
+        "schema"
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/extensions/acme/entity"
+      }
+    },
+    "acme-table": {
+      "id": "acme-table",
+      "prefix": "acme",
+      "key": "table",
+      "schema": {
+        "kind": "scalar",
+        "type": "string",
+        "refinements": {}
+      },
+      "places": [
+        "schema"
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/extensions/acme/table"
+      }
+    },
+    "acme-searchable": {
+      "id": "acme-searchable",
+      "prefix": "acme",
+      "key": "searchable",
+      "schema": {
+        "kind": "scalar",
+        "type": "boolean",
+        "refinements": {}
+      },
+      "places": [
+        "property"
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/extensions/acme/searchable"
+      }
+    },
+    "acme-column": {
+      "id": "acme-column",
+      "prefix": "acme",
+      "key": "column",
+      "schema": {
+        "kind": "scalar",
+        "type": "string",
+        "refinements": {}
+      },
+      "places": [
+        "property"
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/extensions/acme/column"
+      }
+    },
+    "acme-pii": {
+      "id": "acme-pii",
+      "prefix": "acme",
+      "key": "pii",
+      "schema": {
+        "kind": "scalar",
+        "type": "boolean",
+        "refinements": {}
+      },
+      "places": [
+        "property",
+        "schema"
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/extensions/acme/pii"
+      }
+    },
+    "acme-label": {
+      "id": "acme-label",
+      "prefix": "acme",
+      "key": "label",
+      "schema": {
+        "kind": "scalar",
+        "type": "string",
+        "refinements": {}
+      },
+      "places": [
+        "property"
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/extensions/acme/label"
+      }
+    },
+    "acme-scope-kind": {
+      "id": "acme-scope-kind",
+      "prefix": "acme",
+      "key": "scope-kind",
+      "schema": {
+        "kind": "scalar",
+        "type": "string",
+        "refinements": {}
+      },
+      "places": [
+        "scope"
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/extensions/acme/scope-kind"
+      }
+    },
+    "acme-right-group": {
+      "id": "acme-right-group",
+      "prefix": "acme",
+      "key": "right-group",
+      "schema": {
+        "kind": "scalar",
+        "type": "string",
+        "refinements": {}
+      },
+      "places": [
+        "right"
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/extensions/acme/right-group"
+      }
+    },
+    "acme-rule-window": {
+      "id": "acme-rule-window",
+      "prefix": "acme",
+      "key": "rule-window",
+      "schema": {
+        "kind": "scalar",
+        "type": "integer",
+        "refinements": {}
+      },
+      "places": [
+        "rule"
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/extensions/acme/rule-window"
+      }
+    },
+    "acme-tax-basis": {
+      "id": "acme-tax-basis",
+      "prefix": "acme",
+      "key": "tax-basis",
+      "schema": {
+        "kind": "enum",
+        "enum": "TaxBasis"
+      },
+      "places": [
+        "operation",
+        "property"
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/extensions/acme/tax-basis"
+      }
+    },
+    "acme-cost": {
+      "id": "acme-cost",
+      "prefix": "acme",
+      "key": "cost",
+      "schema": {
+        "kind": "scalar",
+        "type": "integer",
+        "refinements": {}
+      },
+      "places": [
+        "operation"
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/extensions/acme/cost"
+      }
+    },
+    "acme-tags": {
+      "id": "acme-tags",
+      "prefix": "acme",
+      "key": "tags",
+      "schema": {
+        "kind": "array",
+        "items": {
+          "kind": "scalar",
+          "type": "string",
+          "refinements": {}
+        }
+      },
+      "places": [
+        "schema",
+        "operation"
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/extensions/acme/tags"
+      }
+    },
+    "acme-since": {
+      "id": "acme-since",
+      "prefix": "acme",
+      "key": "since",
+      "schema": {
+        "kind": "scalar",
+        "type": "string",
+        "refinements": {}
+      },
+      "places": [
+        "operation",
+        "property",
+        "schema"
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/extensions/acme/since"
+      }
+    },
+    "acme-owner": {
+      "id": "acme-owner",
+      "prefix": "acme",
+      "key": "owner",
+      "schema": {
+        "kind": "scalar",
+        "type": "string",
+        "refinements": {}
+      },
+      "places": [
+        "right",
+        "scope"
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/extensions/acme/owner"
+      }
+    }
+  }
+}

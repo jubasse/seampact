@@ -1,0 +1,148 @@
+{
+  "rights": {
+    "crates.weigh": {
+      "id": "crates.weigh",
+      "subject": {
+        "kind": "resource",
+        "type": {
+          "segments": [
+            "crate"
+          ],
+          "role": "schema"
+        },
+        "idSchema": {
+          "kind": "scalar",
+          "type": "string",
+          "format": "uuid",
+          "refinements": {}
+        }
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/crates.weigh"
+      }
+    },
+    "audit": {
+      "id": "audit",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/audit"
+      }
+    },
+    "crates.inspect": {
+      "id": "crates.inspect",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/crates.inspect"
+      }
+    }
+  },
+  "operations": {
+    "listCrates": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": [
+        {
+          "schema": "Crate",
+          "pointer": "/weight",
+          "right": "crates.weigh",
+          "subject": {
+            "source": {
+              "in": "holderField",
+              "name": "crateId"
+            }
+          },
+          "direction": "output",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/schemas/Crate/properties/weight/restrictedTo"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "createCrate": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": [
+        {
+          "schema": "Crate",
+          "pointer": "/weight",
+          "right": "crates.weigh",
+          "subject": {
+            "source": {
+              "in": "holderField",
+              "name": "crateId"
+            }
+          },
+          "direction": "output",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/schemas/Crate/properties/weight/restrictedTo"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "pallet": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": [
+        {
+          "schema": "Pallet",
+          "pointer": "/code",
+          "right": "audit",
+          "direction": "output",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/schemas/Pallet/properties/code/restrictedTo"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "movement": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "stack": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    }
+  }
+}

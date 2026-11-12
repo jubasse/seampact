@@ -1,0 +1,44 @@
+{
+  "operations": {
+    "health": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "feed": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "notes": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "logout": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "tiles": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "stripe": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "clerk": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "slack": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    }
+  }
+}

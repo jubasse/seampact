@@ -1,0 +1,17 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "inventory",
+      "diagnostics": []
+    },
+    {
+      "api": "billing",
+      "diagnostics": []
+    },
+    {
+      "api": "notify",
+      "diagnostics": []
+    }
+  ]
+}

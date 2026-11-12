@@ -1,0 +1,178 @@
+{
+  "operations": {
+    "profileStudio": {
+      "params": {
+        "header": [
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "idempotency.write",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/conventions/idempotency"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "Idempotency-Replayed",
+              "type": {
+                "kind": "scalar",
+                "type": "boolean",
+                "refinements": {}
+              },
+              "required": false,
+              "derivedFrom": {
+                "derivation": "idempotency.write",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/conventions/idempotency"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "idempotency": {
+        "kind": "derived",
+        "header": "Idempotency-Key",
+        "replayHeader": "Idempotency-Replayed",
+        "lifetimeMs": 86400000,
+        "required": true,
+        "enforce": "boundary",
+        "derivedFrom": {
+          "derivation": "idempotency.write",
+          "from": [
+            {
+              "layer": "api",
+              "pointer": "/conventions/idempotency"
+            }
+          ]
+        }
+      },
+      "cache": {
+        "family": "never",
+        "anonymous": "private",
+        "vary": [],
+        "etag": false,
+        "perCallerKind": [
+          {
+            "caller": "identified",
+            "cacheControl": "no-store"
+          }
+        ],
+        "noStore": true,
+        "origin": {
+          "layer": "api",
+          "pointer": "/schemas/Profile/properties/streamKey"
+        },
+        "derivedFrom": {
+          "derivation": "cache.sensitive",
+          "from": [
+            {
+              "layer": "api",
+              "pointer": "/schemas/Profile/properties/streamKey"
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "upstream",
+        "origin": {
+          "layer": "api",
+          "pointer": "/services/streaming"
+        }
+      }
+    },
+    "eventsStudio": {
+      "params": {
+        "header": [
+          {
+            "name": "X-Stream-Event",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "union.headerTag",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/schemas/StreamEvent"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "idempotency": {
+        "kind": "exempt",
+        "reason": "An event is harmless to repeat.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/studios/member/routes/events/idempotency"
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    }
+  },
+  "api": {
+    "wire": {
+      "int64": "string",
+      "outputEnums": "open",
+      "urls": "relative"
+    }
+  }
+}

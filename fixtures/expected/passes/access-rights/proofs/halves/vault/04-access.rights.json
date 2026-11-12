@@ -1,0 +1,445 @@
+{
+  "rules": {
+    "recentAuth": {
+      "id": "recentAuth",
+      "takesBucket": false,
+      "proof": {
+        "in": "body",
+        "name": "reauthToken",
+        "schema": {
+          "kind": "scalar",
+          "type": "string",
+          "refinements": {
+            "minLength": 1,
+            "maxLength": 512
+          }
+        }
+      },
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/recentAuth"
+      }
+    },
+    "sameSession": {
+      "id": "sameSession",
+      "takesBucket": false,
+      "proof": {
+        "in": "body",
+        "name": "reauthToken",
+        "schema": {
+          "kind": "scalar",
+          "type": "string",
+          "refinements": {
+            "minLength": 1,
+            "maxLength": 512
+          }
+        }
+      },
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/sameSession"
+      }
+    },
+    "otp": {
+      "id": "otp",
+      "takesBucket": false,
+      "proof": {
+        "in": "header",
+        "name": "X-Otp",
+        "schema": {
+          "kind": "scalar",
+          "type": "string",
+          "refinements": {
+            "pattern": {
+              "source": "^[0-9]{6}$",
+              "normalized": "^[0-9]{6}$"
+            }
+          }
+        }
+      },
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/otp"
+      }
+    },
+    "throttle": {
+      "id": "throttle",
+      "takesBucket": true,
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/throttle"
+      }
+    }
+  },
+  "buckets": {
+    "perUser": {
+      "id": "perUser",
+      "key": [
+        {
+          "in": "principal",
+          "name": "userId"
+        }
+      ],
+      "limit": 60,
+      "windowMs": 60000,
+      "origin": {
+        "layer": "api",
+        "pointer": "/buckets/perUser"
+      }
+    },
+    "perEmail": {
+      "id": "perEmail",
+      "key": [
+        {
+          "in": "body",
+          "name": "email"
+        },
+        {
+          "in": "address"
+        }
+      ],
+      "limit": 5,
+      "windowMs": 900000,
+      "origin": {
+        "layer": "api",
+        "pointer": "/buckets/perEmail"
+      }
+    }
+  },
+  "operations": {
+    "updateSecret": {
+      "input": {
+        "proofs": [
+          {
+            "name": "reauthToken",
+            "schema": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {
+                "minLength": 1,
+                "maxLength": 512
+              }
+            },
+            "derivedFrom": {
+              "derivation": "rule.proof",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/secrets/ops/update/requires/0"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/rules/recentAuth/proof"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "recentAuth",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/secrets/ops/update/requires/0"
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "revealSecret": {
+      "params": {
+        "header": [
+          {
+            "name": "X-Otp",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {
+                "pattern": {
+                  "source": "^[0-9]{6}$",
+                  "normalized": "^[0-9]{6}$"
+                }
+              }
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "rule.proof",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/secrets/member/routes/reveal/requires/0"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/rules/otp/proof"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "otp",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/secrets/member/routes/reveal/requires/0"
+          }
+        },
+        {
+          "kind": "rule",
+          "rule": "recentAuth",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/secrets/member/routes/reveal/requires/1"
+          }
+        },
+        {
+          "kind": "rule",
+          "rule": "sameSession",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/secrets/member/routes/reveal/requires/2"
+          }
+        }
+      ],
+      "fieldRights": [],
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "ApiEmptyBody"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/secrets/member/routes/reveal/requires/1"
+        },
+        "rawBody": false,
+        "proofs": [
+          {
+            "name": "reauthToken",
+            "schema": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {
+                "minLength": 1,
+                "maxLength": 512
+              }
+            },
+            "derivedFrom": {
+              "derivation": "rule.proof",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/secrets/member/routes/reveal/requires/1"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/rules/recentAuth/proof"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/secrets/member/routes/reveal/requires/2"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/rules/sameSession/proof"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "shareSecret": {
+      "input": {
+        "proofs": [
+          {
+            "name": "reauthToken",
+            "schema": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {
+                "minLength": 1,
+                "maxLength": 512
+              }
+            },
+            "derivedFrom": {
+              "derivation": "rule.proof",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/secrets/member/routes/share/requires/0"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/rules/recentAuth/proof"
+                }
+              ]
+            },
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            }
+          }
+        ]
+      },
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "recentAuth",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/secrets/member/routes/share/requires/0"
+          }
+        },
+        {
+          "kind": "rule",
+          "rule": "throttle",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/secrets/member/routes/share/requires/1"
+          },
+          "bucket": "perEmail"
+        },
+        {
+          "kind": "rule",
+          "rule": "throttle",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/secrets/member/routes/share/requires/2"
+          },
+          "bucket": "perUser"
+        }
+      ],
+      "fieldRights": []
+    },
+    "events": {
+      "input": {
+        "proofs": [
+          {
+            "name": "reauthToken",
+            "schema": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {
+                "minLength": 1,
+                "maxLength": 512
+              }
+            },
+            "derivedFrom": {
+              "derivation": "rule.proof",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/hooks/routes/events/requires/0"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/rules/recentAuth/proof"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "recentAuth",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/hooks/routes/events/requires/0"
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "ping": {
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "recentAuth",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/hooks/routes/ping/requires/0"
+          }
+        }
+      ],
+      "fieldRights": [],
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "ApiEmptyBody",
+          "unknownKeys": {
+            "policy": "ignore",
+            "reason": "The sender adds event fields without notice.",
+            "derivedFrom": {
+              "derivation": "identity.unknownKeys",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/identities/hook"
+                }
+              ]
+            }
+          }
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/hooks/routes/ping/requires/0"
+        },
+        "rawBody": true,
+        "proofs": [
+          {
+            "name": "reauthToken",
+            "schema": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {
+                "minLength": 1,
+                "maxLength": 512
+              }
+            },
+            "derivedFrom": {
+              "derivation": "rule.proof",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/hooks/routes/ping/requires/0"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/rules/recentAuth/proof"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  }
+}

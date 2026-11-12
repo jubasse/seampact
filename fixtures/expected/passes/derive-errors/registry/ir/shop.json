@@ -1,0 +1,1537 @@
+{
+  "api": {
+    "compat": {
+      "policy": "none"
+    },
+    "docs": {},
+    "documents": {},
+    "extensions": {},
+    "id": "shop",
+    "kind": "product",
+    "maturity": "experimental",
+    "name": {
+      "role": "schema",
+      "segments": [
+        "shop"
+      ]
+    },
+    "origin": {
+      "layer": "api",
+      "pointer": "/api"
+    },
+    "pathVersion": {
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/version"
+      },
+      "value": "prefix"
+    },
+    "surfaces": {
+      "app": {
+        "name": {
+          "role": "schema",
+          "segments": [
+            "app"
+          ]
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app"
+        },
+        "pathVersion": "prefix",
+        "prefix": "/v1"
+      }
+    },
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "wire": {
+      "int64": "string",
+      "outputEnums": "enum",
+      "urls": "relative"
+    }
+  },
+  "buckets": {},
+  "conventions": {
+    "errors.derived": {
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/errors/derived"
+      },
+      "value": {
+        "notFound": "TASK_NOT_FOUND"
+      }
+    },
+    "errors.every": {
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/errors/every"
+      },
+      "value": [
+        "shop.failed"
+      ]
+    },
+    "rateLimit.header": {
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/rateLimit/header"
+      },
+      "value": "Retry-After"
+    },
+    "rateLimit.param": {
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/rateLimit/param"
+      },
+      "value": "retryAfterMs"
+    },
+    "rateLimit.unit": {
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/rateLimit/unit"
+      },
+      "value": "ms"
+    }
+  },
+  "enums": {},
+  "errors": {
+    "404-gone": {
+      "code": "404-gone",
+      "docs": {},
+      "http": {
+        "status": 410
+      },
+      "nature": "refused",
+      "natureName": "conflicted",
+      "origin": {
+        "layer": "pack:errors-pack",
+        "pointer": "/errors/404-gone"
+      }
+    },
+    "E1042": {
+      "code": "E1042",
+      "docs": {
+        "summary": "The index is rebuilding."
+      },
+      "http": {
+        "status": 503
+      },
+      "nature": "unavailable",
+      "origin": {
+        "layer": "base",
+        "pointer": "/errors/E1042"
+      }
+    },
+    "TASK_NOT_FOUND": {
+      "code": "TASK_NOT_FOUND",
+      "docs": {},
+      "family": "tasks",
+      "http": {
+        "status": 404
+      },
+      "nature": "refused",
+      "origin": {
+        "layer": "base",
+        "pointer": "/errors/TASK_NOT_FOUND"
+      },
+      "title": "No such task."
+    },
+    "api.internal": {
+      "code": "api.internal",
+      "default": "undeclaredStatus",
+      "docs": {},
+      "family": "api",
+      "http": {
+        "status": 500
+      },
+      "nature": "failed",
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.internal"
+      }
+    },
+    "api.rate_limited": {
+      "code": "api.rate_limited",
+      "default": "rateLimited",
+      "docs": {},
+      "example": {
+        "retryAfterMs": 1500,
+        "scope": "user"
+      },
+      "family": "api",
+      "http": {
+        "status": 429
+      },
+      "nature": "unavailable",
+      "origin": {
+        "layer": "api",
+        "pointer": "/errors/api.rate_limited"
+      },
+      "params": "ApiRateLimitedParams"
+    },
+    "api.schema_invalid": {
+      "code": "api.schema_invalid",
+      "default": "schemaInvalid",
+      "docs": {},
+      "family": "api",
+      "http": {
+        "status": 400
+      },
+      "nature": "refused",
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.schema_invalid"
+      },
+      "params": "ApiSchemaInvalidParams"
+    },
+    "members.full": {
+      "code": "members.full",
+      "docs": {},
+      "family": "members",
+      "http": {
+        "status": 409
+      },
+      "nature": "refused",
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/members/collection/errors/members.full"
+      }
+    },
+    "ping.slow": {
+      "code": "ping.slow",
+      "docs": {},
+      "family": "ping",
+      "http": {
+        "status": 504
+      },
+      "nature": "unavailable",
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/ping/errors/ping.slow"
+      }
+    },
+    "shop.failed": {
+      "code": "shop.failed",
+      "docs": {
+        "description": "Retry later or call support."
+      },
+      "family": "shop",
+      "http": {
+        "status": 500
+      },
+      "nature": "failed",
+      "origin": {
+        "layer": "api",
+        "pointer": "/errors/shop.failed"
+      },
+      "title": "The shop failed."
+    },
+    "shop.maintenance": {
+      "code": "shop.maintenance",
+      "docs": {},
+      "family": "shop",
+      "http": {
+        "status": 503
+      },
+      "nature": "unavailable",
+      "natureName": "throttled",
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/errors/shop.maintenance"
+      }
+    }
+  },
+  "extensionKeys": {},
+  "features": [],
+  "formats": {
+    "bare": {
+      "absent": "omit",
+      "error": {
+        "body": {
+          "kind": "object",
+          "members": [
+            {
+              "name": {
+                "kind": "text",
+                "text": "type"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "code"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "title"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "title"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "status"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "status"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "detail"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "detail"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "instance"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "instance"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "code"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "code"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "nature"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "nature"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "traceId"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "traceId"
+              }
+            }
+          ],
+          "merge": "params"
+        },
+        "headers": [],
+        "media": "application/problem+json"
+      },
+      "id": "bare",
+      "media": "application/json",
+      "meta": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/formats/bare"
+      },
+      "success": {
+        "item": {
+          "body": {
+            "kind": "slot",
+            "path": [],
+            "slot": "payload"
+          },
+          "headers": []
+        },
+        "list": {
+          "body": {
+            "kind": "slot",
+            "path": [],
+            "slot": "payload"
+          },
+          "headers": []
+        },
+        "page": {
+          "body": {
+            "kind": "slot",
+            "path": [],
+            "slot": "items"
+          },
+          "headers": []
+        },
+        "table": {
+          "body": {
+            "kind": "slot",
+            "path": [],
+            "slot": "payload"
+          },
+          "headers": []
+        }
+      }
+    }
+  },
+  "headers": {},
+  "identities": {},
+  "irRevision": 6,
+  "irVersion": 1,
+  "kinds": [
+    "httpOperation"
+  ],
+  "lint": {
+    "allows": [],
+    "rules": {}
+  },
+  "natures": {
+    "conflicted": {
+      "base": "refused",
+      "docs": {
+        "description": "The resource changed under the request."
+      },
+      "id": "conflicted",
+      "origin": {
+        "layer": "pack:errors-pack",
+        "pointer": "/natures/conflicted"
+      }
+    },
+    "throttled": {
+      "base": "unavailable",
+      "docs": {
+        "summary": "Too many requests; retry after the stated delay."
+      },
+      "id": "throttled",
+      "origin": {
+        "layer": "base",
+        "pointer": "/natures/throttled"
+      }
+    }
+  },
+  "operations": [
+    {
+      "access": {
+        "kind": "public",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        },
+        "reason": "The fixture checks error declarations only."
+      },
+      "bindings": [],
+      "callerKinds": [
+        "anonymous"
+      ],
+      "docs": {},
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/me/ops/0"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "issues"
+                    }
+                  }
+                ]
+              },
+              "role": "schemaInvalid"
+            }
+          ]
+        },
+        {
+          "code": "TASK_NOT_FOUND",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app"
+          }
+        },
+        {
+          "code": "api.rate_limited",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/me"
+              }
+            ]
+          },
+          "example": {
+            "retryAfterMs": 30000,
+            "scope": "user"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/me"
+          }
+        },
+        {
+          "code": "api.internal",
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/me/ops/0"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ]
+        },
+        {
+          "code": "shop.failed",
+          "derivedFrom": {
+            "derivation": "conventions.every",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/every/0"
+              }
+            ]
+          }
+        },
+        {
+          "code": "shop.maintenance",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app"
+          }
+        }
+      ],
+      "examples": {},
+      "extensions": {},
+      "features": [],
+      "fieldRights": [],
+      "format": "bare",
+      "id": "getMe",
+      "internal": false,
+      "kind": "httpOperation",
+      "maturity": {
+        "level": "experimental",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        },
+        "source": "api"
+      },
+      "method": "get",
+      "name": {
+        "role": "operation",
+        "segments": [
+          "get",
+          "me"
+        ]
+      },
+      "op": "get",
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/me/ops/0"
+      },
+      "params": {
+        "header": [],
+        "path": [],
+        "query": []
+      },
+      "path": "/v1/me",
+      "principalRequires": [],
+      "requires": [],
+      "resource": {
+        "type": "me"
+      },
+      "responses": [
+        {
+          "body": {
+            "kind": "ref",
+            "schema": "Member"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          },
+          "headers": [],
+          "media": "application/json",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/me/item"
+          },
+          "shape": "item",
+          "status": 200
+        }
+      ],
+      "safe": true,
+      "scopes": [],
+      "surface": "app",
+      "tags": [],
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "upstream": []
+    },
+    {
+      "access": {
+        "kind": "public",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        },
+        "reason": "The fixture checks error declarations only."
+      },
+      "bindings": [],
+      "callerKinds": [
+        "anonymous"
+      ],
+      "docs": {},
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/members/ops/get"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "issues"
+                    }
+                  }
+                ]
+              },
+              "role": "schemaInvalid"
+            }
+          ]
+        },
+        {
+          "code": "TASK_NOT_FOUND",
+          "derivedFrom": {
+            "derivation": "member.notFound",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app"
+              },
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/members/ops/get"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/notFound"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app"
+          },
+          "roles": [
+            {
+              "role": "notFound"
+            }
+          ]
+        },
+        {
+          "code": "members.full",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/members/member"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/members/member"
+          }
+        },
+        {
+          "code": "404-gone",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/members/member"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/members/member"
+          }
+        },
+        {
+          "code": "api.internal",
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/members/ops/get"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ]
+        },
+        {
+          "code": "shop.failed",
+          "derivedFrom": {
+            "derivation": "conventions.every",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/every/0"
+              }
+            ]
+          }
+        },
+        {
+          "code": "shop.maintenance",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app"
+          }
+        }
+      ],
+      "examples": {},
+      "extensions": {},
+      "features": [],
+      "fieldRights": [],
+      "format": "bare",
+      "id": "getUser",
+      "internal": false,
+      "kind": "httpOperation",
+      "maturity": {
+        "level": "experimental",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        },
+        "source": "api"
+      },
+      "method": "get",
+      "name": {
+        "role": "operation",
+        "segments": [
+          "get",
+          "user"
+        ]
+      },
+      "op": "get",
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/members/ops/get"
+      },
+      "params": {
+        "header": [],
+        "path": [
+          {
+            "name": "userId",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/members/id/userId"
+            },
+            "required": true,
+            "type": {
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "query": []
+      },
+      "path": "/v1/members/{userId}",
+      "principalRequires": [],
+      "requires": [],
+      "resource": {
+        "idParam": "userId",
+        "idProperty": "userId",
+        "type": "members"
+      },
+      "responses": [
+        {
+          "body": {
+            "kind": "ref",
+            "schema": "Member"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          },
+          "headers": [],
+          "media": "application/json",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/members/item"
+          },
+          "shape": "item",
+          "status": 200
+        }
+      ],
+      "safe": true,
+      "scopes": [],
+      "surface": "app",
+      "tags": [],
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "upstream": []
+    },
+    {
+      "access": {
+        "kind": "public",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        },
+        "reason": "The fixture checks error declarations only."
+      },
+      "bindings": [],
+      "callerKinds": [
+        "anonymous"
+      ],
+      "docs": {},
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/members/ops/list"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "issues"
+                    }
+                  }
+                ]
+              },
+              "role": "schemaInvalid"
+            }
+          ]
+        },
+        {
+          "code": "TASK_NOT_FOUND",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app"
+          }
+        },
+        {
+          "code": "members.full",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/members/collection"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/members/collection"
+          }
+        },
+        {
+          "code": "api.internal",
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/members/ops/list"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ]
+        },
+        {
+          "code": "shop.failed",
+          "derivedFrom": {
+            "derivation": "conventions.every",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/every/0"
+              }
+            ]
+          }
+        },
+        {
+          "code": "shop.maintenance",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app"
+          }
+        }
+      ],
+      "examples": {},
+      "extensions": {},
+      "features": [],
+      "fieldRights": [],
+      "format": "bare",
+      "id": "listMembers",
+      "internal": false,
+      "kind": "httpOperation",
+      "maturity": {
+        "level": "experimental",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        },
+        "source": "api"
+      },
+      "method": "get",
+      "name": {
+        "role": "operation",
+        "segments": [
+          "list",
+          "members"
+        ]
+      },
+      "op": "list",
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/members/ops/list"
+      },
+      "paging": {
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/members/ops/list/paging"
+        },
+        "overLimit": "reject",
+        "sortKeys": []
+      },
+      "params": {
+        "header": [],
+        "path": [],
+        "query": []
+      },
+      "path": "/v1/members",
+      "principalRequires": [],
+      "requires": [],
+      "resource": {
+        "idProperty": "userId",
+        "type": "members"
+      },
+      "responses": [
+        {
+          "body": {
+            "kind": "ref",
+            "schema": "Member"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          },
+          "headers": [],
+          "media": "application/json",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/members/item"
+          },
+          "shape": "list",
+          "status": 200
+        }
+      ],
+      "safe": true,
+      "scopes": [],
+      "surface": "app",
+      "tags": [],
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "upstream": []
+    },
+    {
+      "access": {
+        "kind": "public",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        },
+        "reason": "The fixture checks error declarations only."
+      },
+      "bindings": [],
+      "callerKinds": [
+        "anonymous"
+      ],
+      "docs": {},
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/ping"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "issues"
+                    }
+                  }
+                ]
+              },
+              "role": "schemaInvalid"
+            }
+          ]
+        },
+        {
+          "code": "TASK_NOT_FOUND",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app"
+          }
+        },
+        {
+          "code": "api.internal",
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/ping"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ]
+        },
+        {
+          "code": "shop.failed",
+          "derivedFrom": {
+            "derivation": "conventions.every",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/every/0"
+              }
+            ]
+          }
+        },
+        {
+          "code": "E1042",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/ping"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/ping"
+          }
+        },
+        {
+          "code": "shop.maintenance",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/ping"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/ping"
+          }
+        },
+        {
+          "code": "ping.slow",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/ping"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/ping"
+          }
+        }
+      ],
+      "examples": {},
+      "extensions": {},
+      "features": [],
+      "fieldRights": [],
+      "format": "bare",
+      "id": "ping",
+      "internal": false,
+      "kind": "httpOperation",
+      "maturity": {
+        "level": "experimental",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        },
+        "source": "api"
+      },
+      "method": "get",
+      "name": {
+        "role": "operation",
+        "segments": [
+          "ping"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/ping"
+      },
+      "params": {
+        "header": [],
+        "path": [],
+        "query": []
+      },
+      "path": "/v1/ping",
+      "principalRequires": [],
+      "requires": [],
+      "responses": [
+        {
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          },
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/ping"
+          },
+          "shape": "empty",
+          "status": 204
+        }
+      ],
+      "safe": true,
+      "scopes": [],
+      "surface": "app",
+      "tags": [],
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "upstream": []
+    }
+  ],
+  "packs": [
+    {
+      "name": "errors-pack",
+      "version": "1.0.0"
+    }
+  ],
+  "pagings": {},
+  "rights": {},
+  "rules": {},
+  "scalars": {},
+  "schemas": {
+    "ApiRateLimitedParams": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "ApiRateLimitedParams",
+      "kind": "object",
+      "name": {
+        "role": "params",
+        "segments": [
+          "api",
+          "rate",
+          "limited"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/errors/api.rate_limited/params"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "retryAfterMs",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "api",
+            "pointer": "/errors/api.rate_limited/params/retryAfterMs"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {
+              "minimum": "0"
+            },
+            "type": "integer"
+          }
+        },
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "scope",
+          "nullable": false,
+          "optional": true,
+          "origin": {
+            "layer": "api",
+            "pointer": "/errors/api.rate_limited/params/scope?"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "ApiSchemaInvalidIssue": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "ApiSchemaInvalidIssue",
+      "kind": "object",
+      "name": {
+        "role": "schema",
+        "segments": [
+          "api",
+          "schema",
+          "invalid",
+          "issue"
+        ]
+      },
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.schema_invalid/params/issues/items"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "in",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.schema_invalid/params/issues/items/properties/in"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {
+              "pattern": {
+                "normalized": "^(?:path|query|header|body)$",
+                "source": "^(?:path|query|header|body)$"
+              }
+            },
+            "type": "string"
+          }
+        },
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "pointer",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.schema_invalid/params/issues/items/properties/pointer"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        },
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "rule",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.schema_invalid/params/issues/items/properties/rule"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "ApiSchemaInvalidParams": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "ApiSchemaInvalidParams",
+      "kind": "object",
+      "name": {
+        "role": "params",
+        "segments": [
+          "api",
+          "schema",
+          "invalid"
+        ]
+      },
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.schema_invalid/params"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "issues",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.schema_invalid/params/issues"
+          },
+          "sensitive": false,
+          "type": {
+            "items": {
+              "kind": "ref",
+              "schema": "ApiSchemaInvalidIssue"
+            },
+            "kind": "array"
+          }
+        }
+      ]
+    },
+    "Member": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "Member",
+      "kind": "object",
+      "name": {
+        "role": "schema",
+        "segments": [
+          "member"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/Member"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "userId",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Member/properties/userId"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        }
+      ]
+    }
+  },
+  "schemes": {},
+  "scopes": {},
+  "services": {}
+}

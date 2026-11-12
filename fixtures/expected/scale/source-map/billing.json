@@ -1,0 +1,6697 @@
+{
+  "irRevision": 6,
+  "locations": {
+    "api#/api": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 9,
+      "file": "billing/api.yaml",
+      "line": 2
+    },
+    "api#/api/maturity": {
+      "column": 3,
+      "endColumn": 24,
+      "endLine": 6,
+      "file": "billing/api.yaml",
+      "line": 6
+    },
+    "api#/api/version": {
+      "column": 3,
+      "endColumn": 13,
+      "endLine": 4,
+      "file": "billing/api.yaml",
+      "line": 4
+    },
+    "api#/schemas/ApplySubscriptionInput": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 146,
+      "file": "billing/generated/schemas.yaml",
+      "line": 140
+    },
+    "api#/schemas/ApplySubscriptionInput/properties/notify": {
+      "column": 5,
+      "endColumn": 30,
+      "endLine": 145,
+      "file": "billing/generated/schemas.yaml",
+      "line": 145
+    },
+    "api#/schemas/ApplySubscriptionInput/properties/reason": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 144,
+      "file": "billing/generated/schemas.yaml",
+      "line": 144
+    },
+    "api#/schemas/ApproveRefundInput": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 74,
+      "file": "billing/generated/schemas.yaml",
+      "line": 68
+    },
+    "api#/schemas/ApproveRefundInput/properties/notify": {
+      "column": 5,
+      "endColumn": 30,
+      "endLine": 73,
+      "file": "billing/generated/schemas.yaml",
+      "line": 73
+    },
+    "api#/schemas/ApproveRefundInput/properties/reason": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 72,
+      "file": "billing/generated/schemas.yaml",
+      "line": 72
+    },
+    "api#/schemas/CancelCustomerInput": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 122,
+      "file": "billing/generated/schemas.yaml",
+      "line": 116
+    },
+    "api#/schemas/CancelCustomerInput/properties/notify": {
+      "column": 5,
+      "endColumn": 30,
+      "endLine": 121,
+      "file": "billing/generated/schemas.yaml",
+      "line": 121
+    },
+    "api#/schemas/CancelCustomerInput/properties/reason": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 120,
+      "file": "billing/generated/schemas.yaml",
+      "line": 120
+    },
+    "api#/schemas/CapturePaymentInput": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 50,
+      "file": "billing/generated/schemas.yaml",
+      "line": 44
+    },
+    "api#/schemas/CapturePaymentInput/properties/notify": {
+      "column": 5,
+      "endColumn": 30,
+      "endLine": 49,
+      "file": "billing/generated/schemas.yaml",
+      "line": 49
+    },
+    "api#/schemas/CapturePaymentInput/properties/reason": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 48,
+      "file": "billing/generated/schemas.yaml",
+      "line": 48
+    },
+    "api#/schemas/ClosePlanInput": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 170,
+      "file": "billing/generated/schemas.yaml",
+      "line": 164
+    },
+    "api#/schemas/ClosePlanInput/properties/notify": {
+      "column": 5,
+      "endColumn": 30,
+      "endLine": 169,
+      "file": "billing/generated/schemas.yaml",
+      "line": 169
+    },
+    "api#/schemas/ClosePlanInput/properties/reason": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 168,
+      "file": "billing/generated/schemas.yaml",
+      "line": 168
+    },
+    "api#/schemas/Coupon": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 183,
+      "file": "billing/generated/schemas.yaml",
+      "line": 171
+    },
+    "api#/schemas/Coupon/properties/couponId": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 175,
+      "file": "billing/generated/schemas.yaml",
+      "line": 175
+    },
+    "api#/schemas/Coupon/properties/createdAt": {
+      "column": 5,
+      "endColumn": 51,
+      "endLine": 181,
+      "file": "billing/generated/schemas.yaml",
+      "line": 181
+    },
+    "api#/schemas/Coupon/properties/detail": {
+      "column": 5,
+      "endColumn": 24,
+      "endLine": 179,
+      "file": "billing/generated/schemas.yaml",
+      "line": 179
+    },
+    "api#/schemas/Coupon/properties/extra": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 180,
+      "file": "billing/generated/schemas.yaml",
+      "line": 180
+    },
+    "api#/schemas/Coupon/properties/kind": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 178,
+      "file": "billing/generated/schemas.yaml",
+      "line": 178
+    },
+    "api#/schemas/Coupon/properties/name": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 176,
+      "file": "billing/generated/schemas.yaml",
+      "line": 176
+    },
+    "api#/schemas/Coupon/properties/state": {
+      "column": 5,
+      "endColumn": 26,
+      "endLine": 177,
+      "file": "billing/generated/schemas.yaml",
+      "line": 177
+    },
+    "api#/schemas/Coupon/properties/version": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 182,
+      "file": "billing/generated/schemas.yaml",
+      "line": 182
+    },
+    "api#/schemas/CreateCoupon": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 185,
+      "file": "billing/generated/schemas.yaml",
+      "line": 183
+    },
+    "api#/schemas/CreateCreditNote": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 203,
+      "file": "billing/generated/schemas.yaml",
+      "line": 201
+    },
+    "api#/schemas/CreateCustomer": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 113,
+      "file": "billing/generated/schemas.yaml",
+      "line": 111
+    },
+    "api#/schemas/CreateDispute": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 239,
+      "file": "billing/generated/schemas.yaml",
+      "line": 237
+    },
+    "api#/schemas/CreateInvoice": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 17,
+      "file": "billing/generated/schemas.yaml",
+      "line": 15
+    },
+    "api#/schemas/CreateLedgerEntry": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 275,
+      "file": "billing/generated/schemas.yaml",
+      "line": 273
+    },
+    "api#/schemas/CreatePayment": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 41,
+      "file": "billing/generated/schemas.yaml",
+      "line": 39
+    },
+    "api#/schemas/CreatePayout": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 221,
+      "file": "billing/generated/schemas.yaml",
+      "line": 219
+    },
+    "api#/schemas/CreatePlan": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 161,
+      "file": "billing/generated/schemas.yaml",
+      "line": 159
+    },
+    "api#/schemas/CreatePriceList": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 257,
+      "file": "billing/generated/schemas.yaml",
+      "line": 255
+    },
+    "api#/schemas/CreateReceipt": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 311,
+      "file": "billing/generated/schemas.yaml",
+      "line": 309
+    },
+    "api#/schemas/CreateRefund": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 65,
+      "file": "billing/generated/schemas.yaml",
+      "line": 63
+    },
+    "api#/schemas/CreateReminder": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 329,
+      "file": "billing/generated/schemas.yaml",
+      "line": 327
+    },
+    "api#/schemas/CreateStatement": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 293,
+      "file": "billing/generated/schemas.yaml",
+      "line": 291
+    },
+    "api#/schemas/CreateSubscription": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 137,
+      "file": "billing/generated/schemas.yaml",
+      "line": 135
+    },
+    "api#/schemas/CreateTaxRate": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 89,
+      "file": "billing/generated/schemas.yaml",
+      "line": 87
+    },
+    "api#/schemas/CreditNote": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 201,
+      "file": "billing/generated/schemas.yaml",
+      "line": 189
+    },
+    "api#/schemas/CreditNote/properties/createdAt": {
+      "column": 5,
+      "endColumn": 51,
+      "endLine": 199,
+      "file": "billing/generated/schemas.yaml",
+      "line": 199
+    },
+    "api#/schemas/CreditNote/properties/creditNoteId": {
+      "column": 5,
+      "endColumn": 31,
+      "endLine": 193,
+      "file": "billing/generated/schemas.yaml",
+      "line": 193
+    },
+    "api#/schemas/CreditNote/properties/detail": {
+      "column": 5,
+      "endColumn": 24,
+      "endLine": 197,
+      "file": "billing/generated/schemas.yaml",
+      "line": 197
+    },
+    "api#/schemas/CreditNote/properties/extra": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 198,
+      "file": "billing/generated/schemas.yaml",
+      "line": 198
+    },
+    "api#/schemas/CreditNote/properties/kind": {
+      "column": 5,
+      "endColumn": 26,
+      "endLine": 196,
+      "file": "billing/generated/schemas.yaml",
+      "line": 196
+    },
+    "api#/schemas/CreditNote/properties/name": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 194,
+      "file": "billing/generated/schemas.yaml",
+      "line": 194
+    },
+    "api#/schemas/CreditNote/properties/state": {
+      "column": 5,
+      "endColumn": 28,
+      "endLine": 195,
+      "file": "billing/generated/schemas.yaml",
+      "line": 195
+    },
+    "api#/schemas/CreditNote/properties/version": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 200,
+      "file": "billing/generated/schemas.yaml",
+      "line": 200
+    },
+    "api#/schemas/Customer": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 111,
+      "file": "billing/generated/schemas.yaml",
+      "line": 99
+    },
+    "api#/schemas/Customer/properties/createdAt": {
+      "column": 5,
+      "endColumn": 51,
+      "endLine": 109,
+      "file": "billing/generated/schemas.yaml",
+      "line": 109
+    },
+    "api#/schemas/Customer/properties/customerId": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 103,
+      "file": "billing/generated/schemas.yaml",
+      "line": 103
+    },
+    "api#/schemas/Customer/properties/detail": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 107,
+      "file": "billing/generated/schemas.yaml",
+      "line": 107
+    },
+    "api#/schemas/Customer/properties/extra": {
+      "column": 5,
+      "endColumn": 19,
+      "endLine": 108,
+      "file": "billing/generated/schemas.yaml",
+      "line": 108
+    },
+    "api#/schemas/Customer/properties/kind": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 106,
+      "file": "billing/generated/schemas.yaml",
+      "line": 106
+    },
+    "api#/schemas/Customer/properties/name": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 104,
+      "file": "billing/generated/schemas.yaml",
+      "line": 104
+    },
+    "api#/schemas/Customer/properties/state": {
+      "column": 5,
+      "endColumn": 32,
+      "endLine": 105,
+      "file": "billing/generated/schemas.yaml",
+      "line": 105
+    },
+    "api#/schemas/Customer/properties/version": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 110,
+      "file": "billing/generated/schemas.yaml",
+      "line": 110
+    },
+    "api#/schemas/Dispute": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 237,
+      "file": "billing/generated/schemas.yaml",
+      "line": 225
+    },
+    "api#/schemas/Dispute/properties/createdAt": {
+      "column": 5,
+      "endColumn": 51,
+      "endLine": 235,
+      "file": "billing/generated/schemas.yaml",
+      "line": 235
+    },
+    "api#/schemas/Dispute/properties/detail": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 233,
+      "file": "billing/generated/schemas.yaml",
+      "line": 233
+    },
+    "api#/schemas/Dispute/properties/disputeId": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 229,
+      "file": "billing/generated/schemas.yaml",
+      "line": 229
+    },
+    "api#/schemas/Dispute/properties/extra": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 234,
+      "file": "billing/generated/schemas.yaml",
+      "line": 234
+    },
+    "api#/schemas/Dispute/properties/kind": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 232,
+      "file": "billing/generated/schemas.yaml",
+      "line": 232
+    },
+    "api#/schemas/Dispute/properties/name": {
+      "column": 5,
+      "endColumn": 56,
+      "endLine": 230,
+      "file": "billing/generated/schemas.yaml",
+      "line": 230
+    },
+    "api#/schemas/Dispute/properties/state": {
+      "column": 5,
+      "endColumn": 28,
+      "endLine": 231,
+      "file": "billing/generated/schemas.yaml",
+      "line": 231
+    },
+    "api#/schemas/Dispute/properties/version": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 236,
+      "file": "billing/generated/schemas.yaml",
+      "line": 236
+    },
+    "api#/schemas/Invoice": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 15,
+      "file": "billing/generated/schemas.yaml",
+      "line": 3
+    },
+    "api#/schemas/Invoice/properties/createdAt": {
+      "column": 5,
+      "endColumn": 51,
+      "endLine": 13,
+      "file": "billing/generated/schemas.yaml",
+      "line": 13
+    },
+    "api#/schemas/Invoice/properties/detail": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 11,
+      "file": "billing/generated/schemas.yaml",
+      "line": 11
+    },
+    "api#/schemas/Invoice/properties/extra": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 12,
+      "file": "billing/generated/schemas.yaml",
+      "line": 12
+    },
+    "api#/schemas/Invoice/properties/invoiceId": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 7,
+      "file": "billing/generated/schemas.yaml",
+      "line": 7
+    },
+    "api#/schemas/Invoice/properties/kind": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 10,
+      "file": "billing/generated/schemas.yaml",
+      "line": 10
+    },
+    "api#/schemas/Invoice/properties/name": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 8,
+      "file": "billing/generated/schemas.yaml",
+      "line": 8
+    },
+    "api#/schemas/Invoice/properties/state": {
+      "column": 5,
+      "endColumn": 28,
+      "endLine": 9,
+      "file": "billing/generated/schemas.yaml",
+      "line": 9
+    },
+    "api#/schemas/Invoice/properties/version": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 14,
+      "file": "billing/generated/schemas.yaml",
+      "line": 14
+    },
+    "api#/schemas/LedgerEntry": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 273,
+      "file": "billing/generated/schemas.yaml",
+      "line": 261
+    },
+    "api#/schemas/LedgerEntry/properties/createdAt": {
+      "column": 5,
+      "endColumn": 51,
+      "endLine": 271,
+      "file": "billing/generated/schemas.yaml",
+      "line": 271
+    },
+    "api#/schemas/LedgerEntry/properties/detail": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 269,
+      "file": "billing/generated/schemas.yaml",
+      "line": 269
+    },
+    "api#/schemas/LedgerEntry/properties/extra": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 270,
+      "file": "billing/generated/schemas.yaml",
+      "line": 270
+    },
+    "api#/schemas/LedgerEntry/properties/kind": {
+      "column": 5,
+      "endColumn": 30,
+      "endLine": 268,
+      "file": "billing/generated/schemas.yaml",
+      "line": 268
+    },
+    "api#/schemas/LedgerEntry/properties/ledgerEntryId": {
+      "column": 5,
+      "endColumn": 33,
+      "endLine": 265,
+      "file": "billing/generated/schemas.yaml",
+      "line": 265
+    },
+    "api#/schemas/LedgerEntry/properties/name": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 266,
+      "file": "billing/generated/schemas.yaml",
+      "line": 266
+    },
+    "api#/schemas/LedgerEntry/properties/state": {
+      "column": 5,
+      "endColumn": 28,
+      "endLine": 267,
+      "file": "billing/generated/schemas.yaml",
+      "line": 267
+    },
+    "api#/schemas/LedgerEntry/properties/version": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 272,
+      "file": "billing/generated/schemas.yaml",
+      "line": 272
+    },
+    "api#/schemas/Payment": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 39,
+      "file": "billing/generated/schemas.yaml",
+      "line": 27
+    },
+    "api#/schemas/Payment/properties/createdAt": {
+      "column": 5,
+      "endColumn": 51,
+      "endLine": 37,
+      "file": "billing/generated/schemas.yaml",
+      "line": 37
+    },
+    "api#/schemas/Payment/properties/detail": {
+      "column": 5,
+      "endColumn": 26,
+      "endLine": 35,
+      "file": "billing/generated/schemas.yaml",
+      "line": 35
+    },
+    "api#/schemas/Payment/properties/extra": {
+      "column": 5,
+      "endColumn": 24,
+      "endLine": 36,
+      "file": "billing/generated/schemas.yaml",
+      "line": 36
+    },
+    "api#/schemas/Payment/properties/kind": {
+      "column": 5,
+      "endColumn": 31,
+      "endLine": 34,
+      "file": "billing/generated/schemas.yaml",
+      "line": 34
+    },
+    "api#/schemas/Payment/properties/name": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 32,
+      "file": "billing/generated/schemas.yaml",
+      "line": 32
+    },
+    "api#/schemas/Payment/properties/paymentId": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 31,
+      "file": "billing/generated/schemas.yaml",
+      "line": 31
+    },
+    "api#/schemas/Payment/properties/state": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 33,
+      "file": "billing/generated/schemas.yaml",
+      "line": 33
+    },
+    "api#/schemas/Payment/properties/version": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 38,
+      "file": "billing/generated/schemas.yaml",
+      "line": 38
+    },
+    "api#/schemas/PaymentEvent": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 22,
+      "file": "billing/api.yaml",
+      "line": 15
+    },
+    "api#/schemas/PaymentEvent/properties/data": {
+      "column": 7,
+      "endColumn": 93,
+      "endLine": 21,
+      "file": "billing/api.yaml",
+      "line": 21
+    },
+    "api#/schemas/PaymentEvent/properties/id": {
+      "column": 7,
+      "endColumn": 27,
+      "endLine": 19,
+      "file": "billing/api.yaml",
+      "line": 19
+    },
+    "api#/schemas/PaymentEvent/properties/type": {
+      "column": 7,
+      "endColumn": 29,
+      "endLine": 20,
+      "file": "billing/api.yaml",
+      "line": 20
+    },
+    "api#/schemas/Payout": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 219,
+      "file": "billing/generated/schemas.yaml",
+      "line": 207
+    },
+    "api#/schemas/Payout/properties/createdAt": {
+      "column": 5,
+      "endColumn": 51,
+      "endLine": 217,
+      "file": "billing/generated/schemas.yaml",
+      "line": 217
+    },
+    "api#/schemas/Payout/properties/detail": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 215,
+      "file": "billing/generated/schemas.yaml",
+      "line": 215
+    },
+    "api#/schemas/Payout/properties/extra": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 216,
+      "file": "billing/generated/schemas.yaml",
+      "line": 216
+    },
+    "api#/schemas/Payout/properties/kind": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 214,
+      "file": "billing/generated/schemas.yaml",
+      "line": 214
+    },
+    "api#/schemas/Payout/properties/name": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 212,
+      "file": "billing/generated/schemas.yaml",
+      "line": 212
+    },
+    "api#/schemas/Payout/properties/payoutId": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 211,
+      "file": "billing/generated/schemas.yaml",
+      "line": 211
+    },
+    "api#/schemas/Payout/properties/state": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 213,
+      "file": "billing/generated/schemas.yaml",
+      "line": 213
+    },
+    "api#/schemas/Payout/properties/version": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 218,
+      "file": "billing/generated/schemas.yaml",
+      "line": 218
+    },
+    "api#/schemas/Plan": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 159,
+      "file": "billing/generated/schemas.yaml",
+      "line": 147
+    },
+    "api#/schemas/Plan/properties/createdAt": {
+      "column": 5,
+      "endColumn": 51,
+      "endLine": 157,
+      "file": "billing/generated/schemas.yaml",
+      "line": 157
+    },
+    "api#/schemas/Plan/properties/detail": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 155,
+      "file": "billing/generated/schemas.yaml",
+      "line": 155
+    },
+    "api#/schemas/Plan/properties/extra": {
+      "column": 5,
+      "endColumn": 24,
+      "endLine": 156,
+      "file": "billing/generated/schemas.yaml",
+      "line": 156
+    },
+    "api#/schemas/Plan/properties/kind": {
+      "column": 5,
+      "endColumn": 26,
+      "endLine": 154,
+      "file": "billing/generated/schemas.yaml",
+      "line": 154
+    },
+    "api#/schemas/Plan/properties/name": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 152,
+      "file": "billing/generated/schemas.yaml",
+      "line": 152
+    },
+    "api#/schemas/Plan/properties/planId": {
+      "column": 5,
+      "endColumn": 19,
+      "endLine": 151,
+      "file": "billing/generated/schemas.yaml",
+      "line": 151
+    },
+    "api#/schemas/Plan/properties/state": {
+      "column": 5,
+      "endColumn": 30,
+      "endLine": 153,
+      "file": "billing/generated/schemas.yaml",
+      "line": 153
+    },
+    "api#/schemas/Plan/properties/version": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 158,
+      "file": "billing/generated/schemas.yaml",
+      "line": 158
+    },
+    "api#/schemas/PriceList": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 255,
+      "file": "billing/generated/schemas.yaml",
+      "line": 243
+    },
+    "api#/schemas/PriceList/properties/createdAt": {
+      "column": 5,
+      "endColumn": 51,
+      "endLine": 253,
+      "file": "billing/generated/schemas.yaml",
+      "line": 253
+    },
+    "api#/schemas/PriceList/properties/detail": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 251,
+      "file": "billing/generated/schemas.yaml",
+      "line": 251
+    },
+    "api#/schemas/PriceList/properties/extra": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 252,
+      "file": "billing/generated/schemas.yaml",
+      "line": 252
+    },
+    "api#/schemas/PriceList/properties/kind": {
+      "column": 5,
+      "endColumn": 31,
+      "endLine": 250,
+      "file": "billing/generated/schemas.yaml",
+      "line": 250
+    },
+    "api#/schemas/PriceList/properties/name": {
+      "column": 5,
+      "endColumn": 56,
+      "endLine": 248,
+      "file": "billing/generated/schemas.yaml",
+      "line": 248
+    },
+    "api#/schemas/PriceList/properties/priceListId": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 247,
+      "file": "billing/generated/schemas.yaml",
+      "line": 247
+    },
+    "api#/schemas/PriceList/properties/state": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 249,
+      "file": "billing/generated/schemas.yaml",
+      "line": 249
+    },
+    "api#/schemas/PriceList/properties/version": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 254,
+      "file": "billing/generated/schemas.yaml",
+      "line": 254
+    },
+    "api#/schemas/PublishTaxRateInput": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 98,
+      "file": "billing/generated/schemas.yaml",
+      "line": 92
+    },
+    "api#/schemas/PublishTaxRateInput/properties/notify": {
+      "column": 5,
+      "endColumn": 30,
+      "endLine": 97,
+      "file": "billing/generated/schemas.yaml",
+      "line": 97
+    },
+    "api#/schemas/PublishTaxRateInput/properties/reason": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 96,
+      "file": "billing/generated/schemas.yaml",
+      "line": 96
+    },
+    "api#/schemas/Receipt": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 309,
+      "file": "billing/generated/schemas.yaml",
+      "line": 297
+    },
+    "api#/schemas/Receipt/properties/createdAt": {
+      "column": 5,
+      "endColumn": 51,
+      "endLine": 307,
+      "file": "billing/generated/schemas.yaml",
+      "line": 307
+    },
+    "api#/schemas/Receipt/properties/detail": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 305,
+      "file": "billing/generated/schemas.yaml",
+      "line": 305
+    },
+    "api#/schemas/Receipt/properties/extra": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 306,
+      "file": "billing/generated/schemas.yaml",
+      "line": 306
+    },
+    "api#/schemas/Receipt/properties/kind": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 304,
+      "file": "billing/generated/schemas.yaml",
+      "line": 304
+    },
+    "api#/schemas/Receipt/properties/name": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 302,
+      "file": "billing/generated/schemas.yaml",
+      "line": 302
+    },
+    "api#/schemas/Receipt/properties/receiptId": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 301,
+      "file": "billing/generated/schemas.yaml",
+      "line": 301
+    },
+    "api#/schemas/Receipt/properties/state": {
+      "column": 5,
+      "endColumn": 32,
+      "endLine": 303,
+      "file": "billing/generated/schemas.yaml",
+      "line": 303
+    },
+    "api#/schemas/Receipt/properties/version": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 308,
+      "file": "billing/generated/schemas.yaml",
+      "line": 308
+    },
+    "api#/schemas/Refund": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 63,
+      "file": "billing/generated/schemas.yaml",
+      "line": 51
+    },
+    "api#/schemas/Refund/properties/createdAt": {
+      "column": 5,
+      "endColumn": 51,
+      "endLine": 61,
+      "file": "billing/generated/schemas.yaml",
+      "line": 61
+    },
+    "api#/schemas/Refund/properties/detail": {
+      "column": 5,
+      "endColumn": 24,
+      "endLine": 59,
+      "file": "billing/generated/schemas.yaml",
+      "line": 59
+    },
+    "api#/schemas/Refund/properties/extra": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 60,
+      "file": "billing/generated/schemas.yaml",
+      "line": 60
+    },
+    "api#/schemas/Refund/properties/kind": {
+      "column": 5,
+      "endColumn": 30,
+      "endLine": 58,
+      "file": "billing/generated/schemas.yaml",
+      "line": 58
+    },
+    "api#/schemas/Refund/properties/name": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 56,
+      "file": "billing/generated/schemas.yaml",
+      "line": 56
+    },
+    "api#/schemas/Refund/properties/refundId": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 55,
+      "file": "billing/generated/schemas.yaml",
+      "line": 55
+    },
+    "api#/schemas/Refund/properties/state": {
+      "column": 5,
+      "endColumn": 28,
+      "endLine": 57,
+      "file": "billing/generated/schemas.yaml",
+      "line": 57
+    },
+    "api#/schemas/Refund/properties/version": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 62,
+      "file": "billing/generated/schemas.yaml",
+      "line": 62
+    },
+    "api#/schemas/Reminder": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 327,
+      "file": "billing/generated/schemas.yaml",
+      "line": 315
+    },
+    "api#/schemas/Reminder/properties/createdAt": {
+      "column": 5,
+      "endColumn": 51,
+      "endLine": 325,
+      "file": "billing/generated/schemas.yaml",
+      "line": 325
+    },
+    "api#/schemas/Reminder/properties/detail": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 323,
+      "file": "billing/generated/schemas.yaml",
+      "line": 323
+    },
+    "api#/schemas/Reminder/properties/extra": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 324,
+      "file": "billing/generated/schemas.yaml",
+      "line": 324
+    },
+    "api#/schemas/Reminder/properties/kind": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 322,
+      "file": "billing/generated/schemas.yaml",
+      "line": 322
+    },
+    "api#/schemas/Reminder/properties/name": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 320,
+      "file": "billing/generated/schemas.yaml",
+      "line": 320
+    },
+    "api#/schemas/Reminder/properties/reminderId": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 319,
+      "file": "billing/generated/schemas.yaml",
+      "line": 319
+    },
+    "api#/schemas/Reminder/properties/state": {
+      "column": 5,
+      "endColumn": 31,
+      "endLine": 321,
+      "file": "billing/generated/schemas.yaml",
+      "line": 321
+    },
+    "api#/schemas/Reminder/properties/version": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 326,
+      "file": "billing/generated/schemas.yaml",
+      "line": 326
+    },
+    "api#/schemas/SendInvoiceInput": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 26,
+      "file": "billing/generated/schemas.yaml",
+      "line": 20
+    },
+    "api#/schemas/SendInvoiceInput/properties/notify": {
+      "column": 5,
+      "endColumn": 30,
+      "endLine": 25,
+      "file": "billing/generated/schemas.yaml",
+      "line": 25
+    },
+    "api#/schemas/SendInvoiceInput/properties/reason": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 24,
+      "file": "billing/generated/schemas.yaml",
+      "line": 24
+    },
+    "api#/schemas/Statement": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 291,
+      "file": "billing/generated/schemas.yaml",
+      "line": 279
+    },
+    "api#/schemas/Statement/properties/createdAt": {
+      "column": 5,
+      "endColumn": 51,
+      "endLine": 289,
+      "file": "billing/generated/schemas.yaml",
+      "line": 289
+    },
+    "api#/schemas/Statement/properties/detail": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 287,
+      "file": "billing/generated/schemas.yaml",
+      "line": 287
+    },
+    "api#/schemas/Statement/properties/extra": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 288,
+      "file": "billing/generated/schemas.yaml",
+      "line": 288
+    },
+    "api#/schemas/Statement/properties/kind": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 286,
+      "file": "billing/generated/schemas.yaml",
+      "line": 286
+    },
+    "api#/schemas/Statement/properties/name": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 284,
+      "file": "billing/generated/schemas.yaml",
+      "line": 284
+    },
+    "api#/schemas/Statement/properties/state": {
+      "column": 5,
+      "endColumn": 30,
+      "endLine": 285,
+      "file": "billing/generated/schemas.yaml",
+      "line": 285
+    },
+    "api#/schemas/Statement/properties/statementId": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 283,
+      "file": "billing/generated/schemas.yaml",
+      "line": 283
+    },
+    "api#/schemas/Statement/properties/version": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 290,
+      "file": "billing/generated/schemas.yaml",
+      "line": 290
+    },
+    "api#/schemas/Subscription": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 135,
+      "file": "billing/generated/schemas.yaml",
+      "line": 123
+    },
+    "api#/schemas/Subscription/properties/createdAt": {
+      "column": 5,
+      "endColumn": 51,
+      "endLine": 133,
+      "file": "billing/generated/schemas.yaml",
+      "line": 133
+    },
+    "api#/schemas/Subscription/properties/detail": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 131,
+      "file": "billing/generated/schemas.yaml",
+      "line": 131
+    },
+    "api#/schemas/Subscription/properties/extra": {
+      "column": 5,
+      "endColumn": 20,
+      "endLine": 132,
+      "file": "billing/generated/schemas.yaml",
+      "line": 132
+    },
+    "api#/schemas/Subscription/properties/kind": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 130,
+      "file": "billing/generated/schemas.yaml",
+      "line": 130
+    },
+    "api#/schemas/Subscription/properties/name": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 128,
+      "file": "billing/generated/schemas.yaml",
+      "line": 128
+    },
+    "api#/schemas/Subscription/properties/state": {
+      "column": 5,
+      "endColumn": 31,
+      "endLine": 129,
+      "file": "billing/generated/schemas.yaml",
+      "line": 129
+    },
+    "api#/schemas/Subscription/properties/subscriptionId": {
+      "column": 5,
+      "endColumn": 35,
+      "endLine": 127,
+      "file": "billing/generated/schemas.yaml",
+      "line": 127
+    },
+    "api#/schemas/Subscription/properties/version": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 134,
+      "file": "billing/generated/schemas.yaml",
+      "line": 134
+    },
+    "api#/schemas/TaxRate": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 87,
+      "file": "billing/generated/schemas.yaml",
+      "line": 75
+    },
+    "api#/schemas/TaxRate/properties/createdAt": {
+      "column": 5,
+      "endColumn": 51,
+      "endLine": 85,
+      "file": "billing/generated/schemas.yaml",
+      "line": 85
+    },
+    "api#/schemas/TaxRate/properties/detail": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 83,
+      "file": "billing/generated/schemas.yaml",
+      "line": 83
+    },
+    "api#/schemas/TaxRate/properties/extra": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 84,
+      "file": "billing/generated/schemas.yaml",
+      "line": 84
+    },
+    "api#/schemas/TaxRate/properties/kind": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 82,
+      "file": "billing/generated/schemas.yaml",
+      "line": 82
+    },
+    "api#/schemas/TaxRate/properties/name": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 80,
+      "file": "billing/generated/schemas.yaml",
+      "line": 80
+    },
+    "api#/schemas/TaxRate/properties/state": {
+      "column": 5,
+      "endColumn": 30,
+      "endLine": 81,
+      "file": "billing/generated/schemas.yaml",
+      "line": 81
+    },
+    "api#/schemas/TaxRate/properties/taxRateId": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 79,
+      "file": "billing/generated/schemas.yaml",
+      "line": 79
+    },
+    "api#/schemas/TaxRate/properties/version": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 86,
+      "file": "billing/generated/schemas.yaml",
+      "line": 86
+    },
+    "api#/schemas/UpdateCoupon": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 188,
+      "file": "billing/generated/schemas.yaml",
+      "line": 185
+    },
+    "api#/schemas/UpdateCreditNote": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 206,
+      "file": "billing/generated/schemas.yaml",
+      "line": 203
+    },
+    "api#/schemas/UpdateCustomer": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 116,
+      "file": "billing/generated/schemas.yaml",
+      "line": 113
+    },
+    "api#/schemas/UpdateDispute": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 242,
+      "file": "billing/generated/schemas.yaml",
+      "line": 239
+    },
+    "api#/schemas/UpdateInvoice": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 20,
+      "file": "billing/generated/schemas.yaml",
+      "line": 17
+    },
+    "api#/schemas/UpdateLedgerEntry": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 278,
+      "file": "billing/generated/schemas.yaml",
+      "line": 275
+    },
+    "api#/schemas/UpdatePayment": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 44,
+      "file": "billing/generated/schemas.yaml",
+      "line": 41
+    },
+    "api#/schemas/UpdatePayout": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 224,
+      "file": "billing/generated/schemas.yaml",
+      "line": 221
+    },
+    "api#/schemas/UpdatePlan": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 164,
+      "file": "billing/generated/schemas.yaml",
+      "line": 161
+    },
+    "api#/schemas/UpdatePriceList": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 260,
+      "file": "billing/generated/schemas.yaml",
+      "line": 257
+    },
+    "api#/schemas/UpdateReceipt": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 314,
+      "file": "billing/generated/schemas.yaml",
+      "line": 311
+    },
+    "api#/schemas/UpdateRefund": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 68,
+      "file": "billing/generated/schemas.yaml",
+      "line": 65
+    },
+    "api#/schemas/UpdateReminder": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 332,
+      "file": "billing/generated/schemas.yaml",
+      "line": 329
+    },
+    "api#/schemas/UpdateStatement": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 296,
+      "file": "billing/generated/schemas.yaml",
+      "line": 293
+    },
+    "api#/schemas/UpdateSubscription": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 140,
+      "file": "billing/generated/schemas.yaml",
+      "line": 137
+    },
+    "api#/schemas/UpdateTaxRate": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 92,
+      "file": "billing/generated/schemas.yaml",
+      "line": 89
+    },
+    "api#/surfaces/app": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 406,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 2
+    },
+    "api#/surfaces/app/identity": {
+      "column": 3,
+      "endColumn": 17,
+      "endLine": 4,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 4
+    },
+    "api#/surfaces/app/routes/accounts/id/accountId": {
+      "column": 13,
+      "endColumn": 33,
+      "endLine": 8,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 8
+    },
+    "api#/surfaces/app/routes/accounts/item": {
+      "column": 7,
+      "endColumn": 20,
+      "endLine": 9,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 9
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/coupons": {
+      "column": 11,
+      "endColumn": 1,
+      "endLine": 239,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 217
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/coupons/id/couponId": {
+      "column": 19,
+      "endColumn": 37,
+      "endLine": 219,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 219
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/coupons/item": {
+      "column": 13,
+      "endColumn": 25,
+      "endLine": 220,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 220
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/coupons/ops/create": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 237,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 232
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/coupons/ops/create/input": {
+      "column": 17,
+      "endColumn": 36,
+      "endLine": 233,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 233
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/coupons/ops/create/requires/0": {
+      "column": 28,
+      "endColumn": 41,
+      "endLine": 234,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 234
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/coupons/ops/create/requires/1": {
+      "column": 43,
+      "endColumn": 56,
+      "endLine": 234,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 234
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/coupons/ops/delete": {
+      "column": 15,
+      "endColumn": 52,
+      "endLine": 238,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 238
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/coupons/ops/delete/requires/0": {
+      "column": 36,
+      "endColumn": 49,
+      "endLine": 238,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 238
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/coupons/ops/get": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 232,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 227
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/coupons/ops/list": {
+      "column": 15,
+      "endColumn": 23,
+      "endLine": 226,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 226
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/coupons/ops/update": {
+      "column": 15,
+      "endColumn": 73,
+      "endLine": 237,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 237
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/coupons/ops/update/input": {
+      "column": 25,
+      "endColumn": 44,
+      "endLine": 237,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 237
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/coupons/ops/update/requires/0": {
+      "column": 57,
+      "endColumn": 70,
+      "endLine": 237,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 237
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/creditNotes": {
+      "column": 11,
+      "endColumn": 1,
+      "endLine": 261,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 239
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/creditNotes/id/creditNoteId": {
+      "column": 19,
+      "endColumn": 45,
+      "endLine": 241,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 241
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/creditNotes/item": {
+      "column": 13,
+      "endColumn": 29,
+      "endLine": 242,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 242
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/creditNotes/ops/create": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 259,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 254
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/creditNotes/ops/create/input": {
+      "column": 17,
+      "endColumn": 40,
+      "endLine": 255,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 255
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/creditNotes/ops/create/requires/0": {
+      "column": 28,
+      "endColumn": 41,
+      "endLine": 256,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 256
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/creditNotes/ops/create/requires/1": {
+      "column": 43,
+      "endColumn": 56,
+      "endLine": 256,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 256
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/creditNotes/ops/delete": {
+      "column": 15,
+      "endColumn": 52,
+      "endLine": 260,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 260
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/creditNotes/ops/delete/requires/0": {
+      "column": 36,
+      "endColumn": 49,
+      "endLine": 260,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 260
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/creditNotes/ops/get": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 254,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 249
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/creditNotes/ops/list": {
+      "column": 15,
+      "endColumn": 23,
+      "endLine": 248,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 248
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/creditNotes/ops/update": {
+      "column": 15,
+      "endColumn": 77,
+      "endLine": 259,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 259
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/creditNotes/ops/update/input": {
+      "column": 25,
+      "endColumn": 48,
+      "endLine": 259,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 259
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/creditNotes/ops/update/requires/0": {
+      "column": 61,
+      "endColumn": 74,
+      "endLine": 259,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 259
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/customers": {
+      "column": 11,
+      "endColumn": 1,
+      "endLine": 159,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 130
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/customers/id/customerId": {
+      "column": 19,
+      "endColumn": 41,
+      "endLine": 132,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 132
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/customers/item": {
+      "column": 13,
+      "endColumn": 27,
+      "endLine": 133,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 133
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/customers/member/routes/cancel": {
+      "column": 17,
+      "endColumn": 1,
+      "endLine": 159,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 154
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/customers/member/routes/cancel/input": {
+      "column": 19,
+      "endColumn": 45,
+      "endLine": 156,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 156
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/customers/member/routes/cancel/output": {
+      "column": 19,
+      "endColumn": 35,
+      "endLine": 157,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 157
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/customers/member/routes/cancel/requires/0": {
+      "column": 30,
+      "endColumn": 43,
+      "endLine": 158,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 158
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/customers/ops/create": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 150,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 145
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/customers/ops/create/input": {
+      "column": 17,
+      "endColumn": 38,
+      "endLine": 146,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 146
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/customers/ops/create/requires/0": {
+      "column": 28,
+      "endColumn": 41,
+      "endLine": 147,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 147
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/customers/ops/create/requires/1": {
+      "column": 43,
+      "endColumn": 56,
+      "endLine": 147,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 147
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/customers/ops/delete": {
+      "column": 15,
+      "endColumn": 52,
+      "endLine": 151,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 151
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/customers/ops/delete/requires/0": {
+      "column": 36,
+      "endColumn": 49,
+      "endLine": 151,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 151
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/customers/ops/get": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 145,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 140
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/customers/ops/list": {
+      "column": 15,
+      "endColumn": 23,
+      "endLine": 139,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 139
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/customers/ops/update": {
+      "column": 15,
+      "endColumn": 75,
+      "endLine": 150,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 150
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/customers/ops/update/input": {
+      "column": 25,
+      "endColumn": 46,
+      "endLine": 150,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 150
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/customers/ops/update/requires/0": {
+      "column": 59,
+      "endColumn": 72,
+      "endLine": 150,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 150
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/disputes": {
+      "column": 11,
+      "endColumn": 1,
+      "endLine": 305,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 283
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/disputes/id/disputeId": {
+      "column": 19,
+      "endColumn": 39,
+      "endLine": 285,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 285
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/disputes/item": {
+      "column": 13,
+      "endColumn": 26,
+      "endLine": 286,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 286
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/disputes/ops/create": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 303,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 298
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/disputes/ops/create/input": {
+      "column": 17,
+      "endColumn": 37,
+      "endLine": 299,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 299
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/disputes/ops/create/requires/0": {
+      "column": 28,
+      "endColumn": 41,
+      "endLine": 300,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 300
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/disputes/ops/create/requires/1": {
+      "column": 43,
+      "endColumn": 56,
+      "endLine": 300,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 300
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/disputes/ops/delete": {
+      "column": 15,
+      "endColumn": 52,
+      "endLine": 304,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 304
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/disputes/ops/delete/requires/0": {
+      "column": 36,
+      "endColumn": 49,
+      "endLine": 304,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 304
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/disputes/ops/get": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 298,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 293
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/disputes/ops/list": {
+      "column": 15,
+      "endColumn": 23,
+      "endLine": 292,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 292
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/disputes/ops/update": {
+      "column": 15,
+      "endColumn": 74,
+      "endLine": 303,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 303
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/disputes/ops/update/input": {
+      "column": 25,
+      "endColumn": 45,
+      "endLine": 303,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 303
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/disputes/ops/update/requires/0": {
+      "column": 58,
+      "endColumn": 71,
+      "endLine": 303,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 303
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/invoices": {
+      "column": 11,
+      "endColumn": 1,
+      "endLine": 43,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 14
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/invoices/id/invoiceId": {
+      "column": 19,
+      "endColumn": 39,
+      "endLine": 16,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 16
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/invoices/item": {
+      "column": 13,
+      "endColumn": 26,
+      "endLine": 17,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 17
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/invoices/member/routes/send": {
+      "column": 17,
+      "endColumn": 1,
+      "endLine": 43,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 38
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/invoices/member/routes/send/input": {
+      "column": 19,
+      "endColumn": 42,
+      "endLine": 40,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 40
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/invoices/member/routes/send/output": {
+      "column": 19,
+      "endColumn": 34,
+      "endLine": 41,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 41
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/invoices/member/routes/send/requires/0": {
+      "column": 30,
+      "endColumn": 43,
+      "endLine": 42,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 42
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/invoices/ops/create": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 34,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 29
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/invoices/ops/create/input": {
+      "column": 17,
+      "endColumn": 37,
+      "endLine": 30,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 30
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/invoices/ops/create/requires/0": {
+      "column": 28,
+      "endColumn": 41,
+      "endLine": 31,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 31
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/invoices/ops/create/requires/1": {
+      "column": 43,
+      "endColumn": 56,
+      "endLine": 31,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 31
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/invoices/ops/delete": {
+      "column": 15,
+      "endColumn": 52,
+      "endLine": 35,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 35
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/invoices/ops/delete/requires/0": {
+      "column": 36,
+      "endColumn": 49,
+      "endLine": 35,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 35
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/invoices/ops/get": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 29,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 24
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/invoices/ops/list": {
+      "column": 15,
+      "endColumn": 23,
+      "endLine": 23,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 23
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/invoices/ops/update": {
+      "column": 15,
+      "endColumn": 74,
+      "endLine": 34,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 34
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/invoices/ops/update/input": {
+      "column": 25,
+      "endColumn": 45,
+      "endLine": 34,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 34
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/invoices/ops/update/requires/0": {
+      "column": 58,
+      "endColumn": 71,
+      "endLine": 34,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 34
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/ledgerEntries": {
+      "column": 11,
+      "endColumn": 1,
+      "endLine": 349,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 327
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/ledgerEntries/id/ledgerEntryId": {
+      "column": 19,
+      "endColumn": 47,
+      "endLine": 329,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 329
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/ledgerEntries/item": {
+      "column": 13,
+      "endColumn": 30,
+      "endLine": 330,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 330
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/ledgerEntries/ops/create": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 347,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 342
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/ledgerEntries/ops/create/input": {
+      "column": 17,
+      "endColumn": 41,
+      "endLine": 343,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 343
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/ledgerEntries/ops/create/requires/0": {
+      "column": 28,
+      "endColumn": 41,
+      "endLine": 344,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 344
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/ledgerEntries/ops/create/requires/1": {
+      "column": 43,
+      "endColumn": 56,
+      "endLine": 344,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 344
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/ledgerEntries/ops/delete": {
+      "column": 15,
+      "endColumn": 52,
+      "endLine": 348,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 348
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/ledgerEntries/ops/delete/requires/0": {
+      "column": 36,
+      "endColumn": 49,
+      "endLine": 348,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 348
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/ledgerEntries/ops/get": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 342,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 337
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/ledgerEntries/ops/list": {
+      "column": 15,
+      "endColumn": 23,
+      "endLine": 336,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 336
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/ledgerEntries/ops/update": {
+      "column": 15,
+      "endColumn": 78,
+      "endLine": 347,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 347
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/ledgerEntries/ops/update/input": {
+      "column": 25,
+      "endColumn": 49,
+      "endLine": 347,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 347
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/ledgerEntries/ops/update/requires/0": {
+      "column": 62,
+      "endColumn": 75,
+      "endLine": 347,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 347
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/payments": {
+      "column": 11,
+      "endColumn": 1,
+      "endLine": 72,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 43
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/payments/id/paymentId": {
+      "column": 19,
+      "endColumn": 39,
+      "endLine": 45,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 45
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/payments/item": {
+      "column": 13,
+      "endColumn": 26,
+      "endLine": 46,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 46
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/payments/member/routes/capture": {
+      "column": 17,
+      "endColumn": 1,
+      "endLine": 72,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 67
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/payments/member/routes/capture/input": {
+      "column": 19,
+      "endColumn": 45,
+      "endLine": 69,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 69
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/payments/member/routes/capture/output": {
+      "column": 19,
+      "endColumn": 34,
+      "endLine": 70,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 70
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/payments/member/routes/capture/requires/0": {
+      "column": 30,
+      "endColumn": 43,
+      "endLine": 71,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 71
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/payments/ops/create": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 63,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 58
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/payments/ops/create/input": {
+      "column": 17,
+      "endColumn": 37,
+      "endLine": 59,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 59
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/payments/ops/create/requires/0": {
+      "column": 28,
+      "endColumn": 41,
+      "endLine": 60,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 60
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/payments/ops/create/requires/1": {
+      "column": 43,
+      "endColumn": 56,
+      "endLine": 60,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 60
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/payments/ops/delete": {
+      "column": 15,
+      "endColumn": 52,
+      "endLine": 64,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 64
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/payments/ops/delete/requires/0": {
+      "column": 36,
+      "endColumn": 49,
+      "endLine": 64,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 64
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/payments/ops/get": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 58,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 53
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/payments/ops/list": {
+      "column": 15,
+      "endColumn": 23,
+      "endLine": 52,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 52
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/payments/ops/update": {
+      "column": 15,
+      "endColumn": 74,
+      "endLine": 63,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 63
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/payments/ops/update/input": {
+      "column": 25,
+      "endColumn": 45,
+      "endLine": 63,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 63
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/payments/ops/update/requires/0": {
+      "column": 58,
+      "endColumn": 71,
+      "endLine": 63,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 63
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/payouts": {
+      "column": 11,
+      "endColumn": 1,
+      "endLine": 283,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 261
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/payouts/id/payoutId": {
+      "column": 19,
+      "endColumn": 37,
+      "endLine": 263,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 263
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/payouts/item": {
+      "column": 13,
+      "endColumn": 25,
+      "endLine": 264,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 264
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/payouts/ops/create": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 281,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 276
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/payouts/ops/create/input": {
+      "column": 17,
+      "endColumn": 36,
+      "endLine": 277,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 277
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/payouts/ops/create/requires/0": {
+      "column": 28,
+      "endColumn": 41,
+      "endLine": 278,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 278
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/payouts/ops/create/requires/1": {
+      "column": 43,
+      "endColumn": 56,
+      "endLine": 278,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 278
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/payouts/ops/delete": {
+      "column": 15,
+      "endColumn": 52,
+      "endLine": 282,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 282
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/payouts/ops/delete/requires/0": {
+      "column": 36,
+      "endColumn": 49,
+      "endLine": 282,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 282
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/payouts/ops/get": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 276,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 271
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/payouts/ops/list": {
+      "column": 15,
+      "endColumn": 23,
+      "endLine": 270,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 270
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/payouts/ops/update": {
+      "column": 15,
+      "endColumn": 73,
+      "endLine": 281,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 281
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/payouts/ops/update/input": {
+      "column": 25,
+      "endColumn": 44,
+      "endLine": 281,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 281
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/payouts/ops/update/requires/0": {
+      "column": 57,
+      "endColumn": 70,
+      "endLine": 281,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 281
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/plans": {
+      "column": 11,
+      "endColumn": 1,
+      "endLine": 217,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 188
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/plans/id/planId": {
+      "column": 19,
+      "endColumn": 33,
+      "endLine": 190,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 190
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/plans/item": {
+      "column": 13,
+      "endColumn": 23,
+      "endLine": 191,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 191
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/plans/member/routes/close": {
+      "column": 17,
+      "endColumn": 1,
+      "endLine": 217,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 212
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/plans/member/routes/close/input": {
+      "column": 19,
+      "endColumn": 40,
+      "endLine": 214,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 214
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/plans/member/routes/close/output": {
+      "column": 19,
+      "endColumn": 31,
+      "endLine": 215,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 215
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/plans/member/routes/close/requires/0": {
+      "column": 30,
+      "endColumn": 43,
+      "endLine": 216,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 216
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/plans/ops/create": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 208,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 203
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/plans/ops/create/input": {
+      "column": 17,
+      "endColumn": 34,
+      "endLine": 204,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 204
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/plans/ops/create/requires/0": {
+      "column": 28,
+      "endColumn": 41,
+      "endLine": 205,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 205
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/plans/ops/create/requires/1": {
+      "column": 43,
+      "endColumn": 56,
+      "endLine": 205,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 205
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/plans/ops/delete": {
+      "column": 15,
+      "endColumn": 52,
+      "endLine": 209,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 209
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/plans/ops/delete/requires/0": {
+      "column": 36,
+      "endColumn": 49,
+      "endLine": 209,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 209
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/plans/ops/get": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 203,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 198
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/plans/ops/list": {
+      "column": 15,
+      "endColumn": 23,
+      "endLine": 197,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 197
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/plans/ops/update": {
+      "column": 15,
+      "endColumn": 71,
+      "endLine": 208,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 208
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/plans/ops/update/input": {
+      "column": 25,
+      "endColumn": 42,
+      "endLine": 208,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 208
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/plans/ops/update/requires/0": {
+      "column": 55,
+      "endColumn": 68,
+      "endLine": 208,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 208
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/priceLists": {
+      "column": 11,
+      "endColumn": 1,
+      "endLine": 327,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 305
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/priceLists/id/priceListId": {
+      "column": 19,
+      "endColumn": 43,
+      "endLine": 307,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 307
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/priceLists/item": {
+      "column": 13,
+      "endColumn": 28,
+      "endLine": 308,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 308
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/priceLists/ops/create": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 325,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 320
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/priceLists/ops/create/input": {
+      "column": 17,
+      "endColumn": 39,
+      "endLine": 321,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 321
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/priceLists/ops/create/requires/0": {
+      "column": 28,
+      "endColumn": 41,
+      "endLine": 322,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 322
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/priceLists/ops/create/requires/1": {
+      "column": 43,
+      "endColumn": 56,
+      "endLine": 322,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 322
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/priceLists/ops/delete": {
+      "column": 15,
+      "endColumn": 52,
+      "endLine": 326,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 326
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/priceLists/ops/delete/requires/0": {
+      "column": 36,
+      "endColumn": 49,
+      "endLine": 326,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 326
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/priceLists/ops/get": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 320,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 315
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/priceLists/ops/list": {
+      "column": 15,
+      "endColumn": 23,
+      "endLine": 314,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 314
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/priceLists/ops/update": {
+      "column": 15,
+      "endColumn": 76,
+      "endLine": 325,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 325
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/priceLists/ops/update/input": {
+      "column": 25,
+      "endColumn": 47,
+      "endLine": 325,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 325
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/priceLists/ops/update/requires/0": {
+      "column": 60,
+      "endColumn": 73,
+      "endLine": 325,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 325
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/receipts": {
+      "column": 11,
+      "endColumn": 1,
+      "endLine": 389,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 369
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/receipts/id/receiptId": {
+      "column": 19,
+      "endColumn": 39,
+      "endLine": 371,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 371
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/receipts/item": {
+      "column": 13,
+      "endColumn": 26,
+      "endLine": 372,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 372
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/receipts/ops/create": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 387,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 382
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/receipts/ops/create/input": {
+      "column": 17,
+      "endColumn": 37,
+      "endLine": 383,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 383
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/receipts/ops/create/requires/0": {
+      "column": 28,
+      "endColumn": 41,
+      "endLine": 384,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 384
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/receipts/ops/create/requires/1": {
+      "column": 43,
+      "endColumn": 56,
+      "endLine": 384,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 384
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/receipts/ops/delete": {
+      "column": 15,
+      "endColumn": 52,
+      "endLine": 388,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 388
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/receipts/ops/delete/requires/0": {
+      "column": 36,
+      "endColumn": 49,
+      "endLine": 388,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 388
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/receipts/ops/get": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 382,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 378
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/receipts/ops/list": {
+      "column": 15,
+      "endColumn": 23,
+      "endLine": 377,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 377
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/receipts/ops/update": {
+      "column": 15,
+      "endColumn": 74,
+      "endLine": 387,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 387
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/receipts/ops/update/input": {
+      "column": 25,
+      "endColumn": 45,
+      "endLine": 387,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 387
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/receipts/ops/update/requires/0": {
+      "column": 58,
+      "endColumn": 71,
+      "endLine": 387,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 387
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/refunds": {
+      "column": 11,
+      "endColumn": 1,
+      "endLine": 101,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 72
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/refunds/id/refundId": {
+      "column": 19,
+      "endColumn": 37,
+      "endLine": 74,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 74
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/refunds/item": {
+      "column": 13,
+      "endColumn": 25,
+      "endLine": 75,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 75
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/refunds/member/routes/approve": {
+      "column": 17,
+      "endColumn": 1,
+      "endLine": 101,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 96
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/refunds/member/routes/approve/input": {
+      "column": 19,
+      "endColumn": 44,
+      "endLine": 98,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 98
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/refunds/member/routes/approve/output": {
+      "column": 19,
+      "endColumn": 33,
+      "endLine": 99,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 99
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/refunds/member/routes/approve/requires/0": {
+      "column": 30,
+      "endColumn": 43,
+      "endLine": 100,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 100
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/refunds/ops/create": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 92,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 87
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/refunds/ops/create/input": {
+      "column": 17,
+      "endColumn": 36,
+      "endLine": 88,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 88
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/refunds/ops/create/requires/0": {
+      "column": 28,
+      "endColumn": 41,
+      "endLine": 89,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 89
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/refunds/ops/create/requires/1": {
+      "column": 43,
+      "endColumn": 56,
+      "endLine": 89,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 89
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/refunds/ops/delete": {
+      "column": 15,
+      "endColumn": 52,
+      "endLine": 93,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 93
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/refunds/ops/delete/requires/0": {
+      "column": 36,
+      "endColumn": 49,
+      "endLine": 93,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 93
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/refunds/ops/get": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 87,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 82
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/refunds/ops/list": {
+      "column": 15,
+      "endColumn": 23,
+      "endLine": 81,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 81
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/refunds/ops/update": {
+      "column": 15,
+      "endColumn": 73,
+      "endLine": 92,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 92
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/refunds/ops/update/input": {
+      "column": 25,
+      "endColumn": 44,
+      "endLine": 92,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 92
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/refunds/ops/update/requires/0": {
+      "column": 57,
+      "endColumn": 70,
+      "endLine": 92,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 92
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/reminders": {
+      "column": 11,
+      "endColumn": 1,
+      "endLine": 406,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 389
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/reminders/id/reminderId": {
+      "column": 19,
+      "endColumn": 41,
+      "endLine": 391,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 391
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/reminders/item": {
+      "column": 13,
+      "endColumn": 27,
+      "endLine": 392,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 392
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/reminders/ops/create": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 404,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 399
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/reminders/ops/create/input": {
+      "column": 17,
+      "endColumn": 38,
+      "endLine": 400,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 400
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/reminders/ops/create/requires/0": {
+      "column": 28,
+      "endColumn": 41,
+      "endLine": 401,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 401
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/reminders/ops/create/requires/1": {
+      "column": 43,
+      "endColumn": 56,
+      "endLine": 401,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 401
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/reminders/ops/delete": {
+      "column": 15,
+      "endColumn": 52,
+      "endLine": 405,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 405
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/reminders/ops/delete/requires/0": {
+      "column": 36,
+      "endColumn": 49,
+      "endLine": 405,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 405
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/reminders/ops/get": {
+      "column": 15,
+      "endColumn": 22,
+      "endLine": 398,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 398
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/reminders/ops/list": {
+      "column": 15,
+      "endColumn": 23,
+      "endLine": 397,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 397
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/reminders/ops/update": {
+      "column": 15,
+      "endColumn": 75,
+      "endLine": 404,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 404
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/reminders/ops/update/input": {
+      "column": 25,
+      "endColumn": 46,
+      "endLine": 404,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 404
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/reminders/ops/update/requires/0": {
+      "column": 59,
+      "endColumn": 72,
+      "endLine": 404,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 404
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/statements": {
+      "column": 11,
+      "endColumn": 1,
+      "endLine": 369,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 349
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/statements/id/statementId": {
+      "column": 19,
+      "endColumn": 43,
+      "endLine": 351,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 351
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/statements/item": {
+      "column": 13,
+      "endColumn": 28,
+      "endLine": 352,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 352
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/statements/ops/create": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 367,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 362
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/statements/ops/create/input": {
+      "column": 17,
+      "endColumn": 39,
+      "endLine": 363,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 363
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/statements/ops/create/requires/0": {
+      "column": 28,
+      "endColumn": 41,
+      "endLine": 364,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 364
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/statements/ops/create/requires/1": {
+      "column": 43,
+      "endColumn": 56,
+      "endLine": 364,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 364
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/statements/ops/delete": {
+      "column": 15,
+      "endColumn": 52,
+      "endLine": 368,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 368
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/statements/ops/delete/requires/0": {
+      "column": 36,
+      "endColumn": 49,
+      "endLine": 368,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 368
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/statements/ops/get": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 362,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 358
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/statements/ops/list": {
+      "column": 15,
+      "endColumn": 23,
+      "endLine": 357,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 357
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/statements/ops/update": {
+      "column": 15,
+      "endColumn": 76,
+      "endLine": 367,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 367
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/statements/ops/update/input": {
+      "column": 25,
+      "endColumn": 47,
+      "endLine": 367,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 367
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/statements/ops/update/requires/0": {
+      "column": 60,
+      "endColumn": 73,
+      "endLine": 367,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 367
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/subscriptions": {
+      "column": 11,
+      "endColumn": 1,
+      "endLine": 188,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 159
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/subscriptions/id/subscriptionId": {
+      "column": 19,
+      "endColumn": 49,
+      "endLine": 161,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 161
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/subscriptions/item": {
+      "column": 13,
+      "endColumn": 31,
+      "endLine": 162,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 162
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/subscriptions/member/routes/apply": {
+      "column": 17,
+      "endColumn": 1,
+      "endLine": 188,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 183
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/subscriptions/member/routes/apply/input": {
+      "column": 19,
+      "endColumn": 48,
+      "endLine": 185,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 185
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/subscriptions/member/routes/apply/output": {
+      "column": 19,
+      "endColumn": 39,
+      "endLine": 186,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 186
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/subscriptions/member/routes/apply/requires/0": {
+      "column": 30,
+      "endColumn": 43,
+      "endLine": 187,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 187
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/subscriptions/ops/create": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 179,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 174
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/subscriptions/ops/create/input": {
+      "column": 17,
+      "endColumn": 42,
+      "endLine": 175,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 175
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/subscriptions/ops/create/requires/0": {
+      "column": 28,
+      "endColumn": 41,
+      "endLine": 176,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 176
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/subscriptions/ops/create/requires/1": {
+      "column": 43,
+      "endColumn": 56,
+      "endLine": 176,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 176
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/subscriptions/ops/delete": {
+      "column": 15,
+      "endColumn": 52,
+      "endLine": 180,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 180
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/subscriptions/ops/delete/requires/0": {
+      "column": 36,
+      "endColumn": 49,
+      "endLine": 180,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 180
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/subscriptions/ops/get": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 174,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 169
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/subscriptions/ops/list": {
+      "column": 15,
+      "endColumn": 23,
+      "endLine": 168,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 168
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/subscriptions/ops/update": {
+      "column": 15,
+      "endColumn": 79,
+      "endLine": 179,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 179
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/subscriptions/ops/update/input": {
+      "column": 25,
+      "endColumn": 50,
+      "endLine": 179,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 179
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/subscriptions/ops/update/requires/0": {
+      "column": 63,
+      "endColumn": 76,
+      "endLine": 179,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 179
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/taxRates": {
+      "column": 11,
+      "endColumn": 1,
+      "endLine": 130,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 101
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/taxRates/id/taxRateId": {
+      "column": 19,
+      "endColumn": 39,
+      "endLine": 103,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 103
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/taxRates/item": {
+      "column": 13,
+      "endColumn": 26,
+      "endLine": 104,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 104
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/taxRates/member/routes/publish": {
+      "column": 17,
+      "endColumn": 1,
+      "endLine": 130,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 125
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/taxRates/member/routes/publish/input": {
+      "column": 19,
+      "endColumn": 45,
+      "endLine": 127,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 127
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/taxRates/member/routes/publish/output": {
+      "column": 19,
+      "endColumn": 34,
+      "endLine": 128,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 128
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/taxRates/member/routes/publish/requires/0": {
+      "column": 30,
+      "endColumn": 43,
+      "endLine": 129,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 129
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/taxRates/ops/create": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 121,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 116
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/taxRates/ops/create/input": {
+      "column": 17,
+      "endColumn": 37,
+      "endLine": 117,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 117
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/taxRates/ops/create/requires/0": {
+      "column": 28,
+      "endColumn": 41,
+      "endLine": 118,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 118
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/taxRates/ops/create/requires/1": {
+      "column": 43,
+      "endColumn": 56,
+      "endLine": 118,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 118
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/taxRates/ops/delete": {
+      "column": 15,
+      "endColumn": 52,
+      "endLine": 122,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 122
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/taxRates/ops/delete/requires/0": {
+      "column": 36,
+      "endColumn": 49,
+      "endLine": 122,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 122
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/taxRates/ops/get": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 116,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 111
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/taxRates/ops/list": {
+      "column": 15,
+      "endColumn": 23,
+      "endLine": 110,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 110
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/taxRates/ops/update": {
+      "column": 15,
+      "endColumn": 74,
+      "endLine": 121,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 121
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/taxRates/ops/update/input": {
+      "column": 25,
+      "endColumn": 45,
+      "endLine": 121,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 121
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/taxRates/ops/update/requires/0": {
+      "column": 58,
+      "endColumn": 71,
+      "endLine": 121,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 121
+    },
+    "api#/surfaces/app/routes/accounts/member/scopes/account": {
+      "column": 19,
+      "endColumn": 42,
+      "endLine": 12,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 12
+    },
+    "api#/surfaces/app/routes/accounts/ops/0": {
+      "column": 13,
+      "endColumn": 17,
+      "endLine": 10,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 10
+    },
+    "api#/surfaces/app/routes/accounts/ops/1": {
+      "column": 19,
+      "endColumn": 22,
+      "endLine": 10,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 10
+    },
+    "api#/surfaces/hooks": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 415,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 406
+    },
+    "api#/surfaces/hooks/identity": {
+      "column": 3,
+      "endColumn": 20,
+      "endLine": 408,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 408
+    },
+    "api#/surfaces/hooks/routes/stripeEvents": {
+      "column": 5,
+      "endColumn": 1,
+      "endLine": 415,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 410
+    },
+    "api#/surfaces/hooks/routes/stripeEvents/input": {
+      "column": 7,
+      "endColumn": 26,
+      "endLine": 412,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 412
+    },
+    "api#/surfaces/hooks/routes/stripeEvents/responses/204": {
+      "column": 9,
+      "endColumn": 16,
+      "endLine": 414,
+      "file": "billing/generated/surfaces.yaml",
+      "line": 414
+    },
+    "shared#/buckets/write": {
+      "column": 3,
+      "endColumn": 60,
+      "endLine": 55,
+      "file": "shared/base.yaml",
+      "line": 55
+    },
+    "shared#/conventions/bodyLimit": {
+      "column": 3,
+      "endColumn": 18,
+      "endLine": 69,
+      "file": "shared/base.yaml",
+      "line": 69
+    },
+    "shared#/conventions/cache/families": {
+      "column": 12,
+      "endColumn": 50,
+      "endLine": 70,
+      "file": "shared/base.yaml",
+      "line": 70
+    },
+    "shared#/conventions/errors/derived": {
+      "column": 5,
+      "endColumn": 1,
+      "endLine": 78,
+      "file": "shared/base.yaml",
+      "line": 74
+    },
+    "shared#/conventions/errors/derived/schemaInvalid": {
+      "column": 7,
+      "endColumn": 1,
+      "endLine": 78,
+      "file": "shared/base.yaml",
+      "line": 75
+    },
+    "shared#/conventions/paging/default": {
+      "column": 13,
+      "endColumn": 28,
+      "endLine": 68,
+      "file": "shared/base.yaml",
+      "line": 68
+    },
+    "shared#/conventions/paging/maxLimit": {
+      "column": 30,
+      "endColumn": 43,
+      "endLine": 68,
+      "file": "shared/base.yaml",
+      "line": 68
+    },
+    "shared#/conventions/rateLimit/header": {
+      "column": 16,
+      "endColumn": 35,
+      "endLine": 72,
+      "file": "shared/base.yaml",
+      "line": 72
+    },
+    "shared#/conventions/rateLimit/param": {
+      "column": 37,
+      "endColumn": 56,
+      "endLine": 72,
+      "file": "shared/base.yaml",
+      "line": 72
+    },
+    "shared#/conventions/rateLimit/unit": {
+      "column": 58,
+      "endColumn": 65,
+      "endLine": 72,
+      "file": "shared/base.yaml",
+      "line": 72
+    },
+    "shared#/conventions/restrictedInput": {
+      "column": 3,
+      "endColumn": 26,
+      "endLine": 71,
+      "file": "shared/base.yaml",
+      "line": 71
+    },
+    "shared#/enums/Condition": {
+      "column": 1,
+      "endColumn": 93,
+      "endLine": 6,
+      "file": "shared/enums.yaml",
+      "line": 6
+    },
+    "shared#/enums/Currency": {
+      "column": 1,
+      "endColumn": 91,
+      "endLine": 7,
+      "file": "shared/enums.yaml",
+      "line": 7
+    },
+    "shared#/enums/Grade": {
+      "column": 1,
+      "endColumn": 74,
+      "endLine": 10,
+      "file": "shared/enums.yaml",
+      "line": 10
+    },
+    "shared#/enums/Origin": {
+      "column": 1,
+      "endColumn": 95,
+      "endLine": 9,
+      "file": "shared/enums.yaml",
+      "line": 9
+    },
+    "shared#/enums/Priority": {
+      "column": 1,
+      "endColumn": 98,
+      "endLine": 4,
+      "file": "shared/enums.yaml",
+      "line": 4
+    },
+    "shared#/enums/Rating": {
+      "column": 1,
+      "endColumn": 96,
+      "endLine": 13,
+      "file": "shared/enums.yaml",
+      "line": 13
+    },
+    "shared#/enums/Region": {
+      "column": 1,
+      "endColumn": 102,
+      "endLine": 11,
+      "file": "shared/enums.yaml",
+      "line": 11
+    },
+    "shared#/enums/Role": {
+      "column": 1,
+      "endColumn": 88,
+      "endLine": 2,
+      "file": "shared/enums.yaml",
+      "line": 2
+    },
+    "shared#/enums/Stage": {
+      "column": 1,
+      "endColumn": 88,
+      "endLine": 12,
+      "file": "shared/enums.yaml",
+      "line": 12
+    },
+    "shared#/enums/Surface": {
+      "column": 1,
+      "endColumn": 74,
+      "endLine": 3,
+      "file": "shared/enums.yaml",
+      "line": 3
+    },
+    "shared#/enums/Unit": {
+      "column": 1,
+      "endColumn": 94,
+      "endLine": 8,
+      "file": "shared/enums.yaml",
+      "line": 8
+    },
+    "shared#/enums/Visibility": {
+      "column": 1,
+      "endColumn": 98,
+      "endLine": 5,
+      "file": "shared/enums.yaml",
+      "line": 5
+    },
+    "shared#/errors/api.clock_skew": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 52,
+      "file": "shared/errors.yaml",
+      "line": 47
+    },
+    "shared#/errors/api.clock_skew/params": {
+      "column": 3,
+      "endColumn": 55,
+      "endLine": 50,
+      "file": "shared/errors.yaml",
+      "line": 50
+    },
+    "shared#/errors/api.clock_skew/params/reason": {
+      "column": 13,
+      "endColumn": 53,
+      "endLine": 50,
+      "file": "shared/errors.yaml",
+      "line": 50
+    },
+    "shared#/errors/api.filter_too_wide": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 57,
+      "file": "shared/errors.yaml",
+      "line": 52
+    },
+    "shared#/errors/api.filter_too_wide/params": {
+      "column": 3,
+      "endColumn": 29,
+      "endLine": 55,
+      "file": "shared/errors.yaml",
+      "line": 55
+    },
+    "shared#/errors/api.filter_too_wide/params/issues": {
+      "column": 13,
+      "endColumn": 27,
+      "endLine": 55,
+      "file": "shared/errors.yaml",
+      "line": 55
+    },
+    "shared#/errors/api.header_missing": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 47,
+      "file": "shared/errors.yaml",
+      "line": 42
+    },
+    "shared#/errors/api.header_missing/params": {
+      "column": 3,
+      "endColumn": 52,
+      "endLine": 45,
+      "file": "shared/errors.yaml",
+      "line": 45
+    },
+    "shared#/errors/api.header_missing/params/waitMs": {
+      "column": 13,
+      "endColumn": 50,
+      "endLine": 45,
+      "file": "shared/errors.yaml",
+      "line": 45
+    },
+    "shared#/errors/api.locale_unsupported": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 62,
+      "file": "shared/errors.yaml",
+      "line": 57
+    },
+    "shared#/errors/api.locale_unsupported/params": {
+      "column": 3,
+      "endColumn": 60,
+      "endLine": 60,
+      "file": "shared/errors.yaml",
+      "line": 60
+    },
+    "shared#/errors/api.locale_unsupported/params/currentVersion": {
+      "column": 13,
+      "endColumn": 58,
+      "endLine": 60,
+      "file": "shared/errors.yaml",
+      "line": 60
+    },
+    "shared#/errors/api.rate_limited": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 12,
+      "file": "shared/errors.yaml",
+      "line": 7
+    },
+    "shared#/errors/api.rate_limited/params": {
+      "column": 3,
+      "endColumn": 85,
+      "endLine": 10,
+      "file": "shared/errors.yaml",
+      "line": 10
+    },
+    "shared#/errors/api.rate_limited/params/retryAfterMs": {
+      "column": 13,
+      "endColumn": 83,
+      "endLine": 10,
+      "file": "shared/errors.yaml",
+      "line": 10
+    },
+    "shared#/errors/api.schema_invalid": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 7,
+      "file": "shared/errors.yaml",
+      "line": 2
+    },
+    "shared#/errors/api.schema_invalid/params": {
+      "column": 3,
+      "endColumn": 29,
+      "endLine": 5,
+      "file": "shared/errors.yaml",
+      "line": 5
+    },
+    "shared#/errors/api.schema_invalid/params/issues": {
+      "column": 13,
+      "endColumn": 27,
+      "endLine": 5,
+      "file": "shared/errors.yaml",
+      "line": 5
+    },
+    "shared#/errors/api.tenant_suspended": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 42,
+      "file": "shared/errors.yaml",
+      "line": 37
+    },
+    "shared#/errors/api.tenant_suspended/params": {
+      "column": 3,
+      "endColumn": 53,
+      "endLine": 40,
+      "file": "shared/errors.yaml",
+      "line": 40
+    },
+    "shared#/errors/api.tenant_suspended/params/field": {
+      "column": 13,
+      "endColumn": 51,
+      "endLine": 40,
+      "file": "shared/errors.yaml",
+      "line": 40
+    },
+    "shared#/errors/invoice.duplicated": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 282,
+      "file": "shared/errors.yaml",
+      "line": 277
+    },
+    "shared#/errors/invoice.duplicated/params": {
+      "column": 3,
+      "endColumn": 33,
+      "endLine": 280,
+      "file": "shared/errors.yaml",
+      "line": 280
+    },
+    "shared#/errors/invoice.duplicated/params/existingId": {
+      "column": 13,
+      "endColumn": 31,
+      "endLine": 280,
+      "file": "shared/errors.yaml",
+      "line": 280
+    },
+    "shared#/errors/invoice.expired": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 277,
+      "file": "shared/errors.yaml",
+      "line": 272
+    },
+    "shared#/errors/invoice.expired/params": {
+      "column": 3,
+      "endColumn": 61,
+      "endLine": 275,
+      "file": "shared/errors.yaml",
+      "line": 275
+    },
+    "shared#/errors/invoice.expired/params/expiredAt": {
+      "column": 13,
+      "endColumn": 59,
+      "endLine": 275,
+      "file": "shared/errors.yaml",
+      "line": 275
+    },
+    "shared#/errors/invoice.limited": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 287,
+      "file": "shared/errors.yaml",
+      "line": 282
+    },
+    "shared#/errors/invoice.limited/params": {
+      "column": 3,
+      "endColumn": 51,
+      "endLine": 285,
+      "file": "shared/errors.yaml",
+      "line": 285
+    },
+    "shared#/errors/invoice.limited/params/limit": {
+      "column": 13,
+      "endColumn": 49,
+      "endLine": 285,
+      "file": "shared/errors.yaml",
+      "line": 285
+    },
+    "shared#/errors/invoice.locked": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 272,
+      "file": "shared/errors.yaml",
+      "line": 267
+    },
+    "shared#/errors/invoice.locked/params": {
+      "column": 3,
+      "endColumn": 31,
+      "endLine": 270,
+      "file": "shared/errors.yaml",
+      "line": 270
+    },
+    "shared#/errors/invoice.locked/params/lockedBy": {
+      "column": 13,
+      "endColumn": 29,
+      "endLine": 270,
+      "file": "shared/errors.yaml",
+      "line": 270
+    },
+    "shared#/errors/invoice.mismatched": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 292,
+      "file": "shared/errors.yaml",
+      "line": 287
+    },
+    "shared#/errors/invoice.mismatched/params": {
+      "column": 3,
+      "endColumn": 53,
+      "endLine": 290,
+      "file": "shared/errors.yaml",
+      "line": 290
+    },
+    "shared#/errors/invoice.mismatched/params/field": {
+      "column": 13,
+      "endColumn": 51,
+      "endLine": 290,
+      "file": "shared/errors.yaml",
+      "line": 290
+    },
+    "shared#/errors/invoice.missing": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 267,
+      "file": "shared/errors.yaml",
+      "line": 262
+    },
+    "shared#/errors/invoice.missing/params": {
+      "column": 3,
+      "endColumn": 54,
+      "endLine": 265,
+      "file": "shared/errors.yaml",
+      "line": 265
+    },
+    "shared#/errors/invoice.missing/params/target": {
+      "column": 13,
+      "endColumn": 52,
+      "endLine": 265,
+      "file": "shared/errors.yaml",
+      "line": 265
+    },
+    "shared#/errors/invoice.outdated": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 312,
+      "file": "shared/errors.yaml",
+      "line": 307
+    },
+    "shared#/errors/invoice.outdated/params": {
+      "column": 3,
+      "endColumn": 60,
+      "endLine": 310,
+      "file": "shared/errors.yaml",
+      "line": 310
+    },
+    "shared#/errors/invoice.outdated/params/currentVersion": {
+      "column": 13,
+      "endColumn": 58,
+      "endLine": 310,
+      "file": "shared/errors.yaml",
+      "line": 310
+    },
+    "shared#/errors/invoice.rejected": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 307,
+      "file": "shared/errors.yaml",
+      "line": 302
+    },
+    "shared#/errors/invoice.rejected/params": {
+      "column": 3,
+      "endColumn": 29,
+      "endLine": 305,
+      "file": "shared/errors.yaml",
+      "line": 305
+    },
+    "shared#/errors/invoice.rejected/params/issues": {
+      "column": 13,
+      "endColumn": 27,
+      "endLine": 305,
+      "file": "shared/errors.yaml",
+      "line": 305
+    },
+    "shared#/errors/invoice.suspended": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 302,
+      "file": "shared/errors.yaml",
+      "line": 297
+    },
+    "shared#/errors/invoice.suspended/params": {
+      "column": 3,
+      "endColumn": 55,
+      "endLine": 300,
+      "file": "shared/errors.yaml",
+      "line": 300
+    },
+    "shared#/errors/invoice.suspended/params/reason": {
+      "column": 13,
+      "endColumn": 53,
+      "endLine": 300,
+      "file": "shared/errors.yaml",
+      "line": 300
+    },
+    "shared#/errors/invoice.unavailable": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 297,
+      "file": "shared/errors.yaml",
+      "line": 292
+    },
+    "shared#/errors/invoice.unavailable/params": {
+      "column": 3,
+      "endColumn": 52,
+      "endLine": 295,
+      "file": "shared/errors.yaml",
+      "line": 295
+    },
+    "shared#/errors/invoice.unavailable/params/waitMs": {
+      "column": 13,
+      "endColumn": 50,
+      "endLine": 295,
+      "file": "shared/errors.yaml",
+      "line": 295
+    },
+    "shared#/errors/payment.duplicated": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 332,
+      "file": "shared/errors.yaml",
+      "line": 327
+    },
+    "shared#/errors/payment.duplicated/params": {
+      "column": 3,
+      "endColumn": 33,
+      "endLine": 330,
+      "file": "shared/errors.yaml",
+      "line": 330
+    },
+    "shared#/errors/payment.duplicated/params/existingId": {
+      "column": 13,
+      "endColumn": 31,
+      "endLine": 330,
+      "file": "shared/errors.yaml",
+      "line": 330
+    },
+    "shared#/errors/payment.expired": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 327,
+      "file": "shared/errors.yaml",
+      "line": 322
+    },
+    "shared#/errors/payment.expired/params": {
+      "column": 3,
+      "endColumn": 61,
+      "endLine": 325,
+      "file": "shared/errors.yaml",
+      "line": 325
+    },
+    "shared#/errors/payment.expired/params/expiredAt": {
+      "column": 13,
+      "endColumn": 59,
+      "endLine": 325,
+      "file": "shared/errors.yaml",
+      "line": 325
+    },
+    "shared#/errors/payment.limited": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 337,
+      "file": "shared/errors.yaml",
+      "line": 332
+    },
+    "shared#/errors/payment.limited/params": {
+      "column": 3,
+      "endColumn": 51,
+      "endLine": 335,
+      "file": "shared/errors.yaml",
+      "line": 335
+    },
+    "shared#/errors/payment.limited/params/limit": {
+      "column": 13,
+      "endColumn": 49,
+      "endLine": 335,
+      "file": "shared/errors.yaml",
+      "line": 335
+    },
+    "shared#/errors/payment.locked": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 322,
+      "file": "shared/errors.yaml",
+      "line": 317
+    },
+    "shared#/errors/payment.locked/params": {
+      "column": 3,
+      "endColumn": 31,
+      "endLine": 320,
+      "file": "shared/errors.yaml",
+      "line": 320
+    },
+    "shared#/errors/payment.locked/params/lockedBy": {
+      "column": 13,
+      "endColumn": 29,
+      "endLine": 320,
+      "file": "shared/errors.yaml",
+      "line": 320
+    },
+    "shared#/errors/payment.mismatched": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 342,
+      "file": "shared/errors.yaml",
+      "line": 337
+    },
+    "shared#/errors/payment.mismatched/params": {
+      "column": 3,
+      "endColumn": 53,
+      "endLine": 340,
+      "file": "shared/errors.yaml",
+      "line": 340
+    },
+    "shared#/errors/payment.mismatched/params/field": {
+      "column": 13,
+      "endColumn": 51,
+      "endLine": 340,
+      "file": "shared/errors.yaml",
+      "line": 340
+    },
+    "shared#/errors/payment.missing": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 317,
+      "file": "shared/errors.yaml",
+      "line": 312
+    },
+    "shared#/errors/payment.missing/params": {
+      "column": 3,
+      "endColumn": 54,
+      "endLine": 315,
+      "file": "shared/errors.yaml",
+      "line": 315
+    },
+    "shared#/errors/payment.missing/params/target": {
+      "column": 13,
+      "endColumn": 52,
+      "endLine": 315,
+      "file": "shared/errors.yaml",
+      "line": 315
+    },
+    "shared#/errors/payment.outdated": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 362,
+      "file": "shared/errors.yaml",
+      "line": 357
+    },
+    "shared#/errors/payment.outdated/params": {
+      "column": 3,
+      "endColumn": 60,
+      "endLine": 360,
+      "file": "shared/errors.yaml",
+      "line": 360
+    },
+    "shared#/errors/payment.outdated/params/currentVersion": {
+      "column": 13,
+      "endColumn": 58,
+      "endLine": 360,
+      "file": "shared/errors.yaml",
+      "line": 360
+    },
+    "shared#/errors/payment.rejected": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 357,
+      "file": "shared/errors.yaml",
+      "line": 352
+    },
+    "shared#/errors/payment.rejected/params": {
+      "column": 3,
+      "endColumn": 29,
+      "endLine": 355,
+      "file": "shared/errors.yaml",
+      "line": 355
+    },
+    "shared#/errors/payment.rejected/params/issues": {
+      "column": 13,
+      "endColumn": 27,
+      "endLine": 355,
+      "file": "shared/errors.yaml",
+      "line": 355
+    },
+    "shared#/errors/payment.suspended": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 352,
+      "file": "shared/errors.yaml",
+      "line": 347
+    },
+    "shared#/errors/payment.suspended/params": {
+      "column": 3,
+      "endColumn": 55,
+      "endLine": 350,
+      "file": "shared/errors.yaml",
+      "line": 350
+    },
+    "shared#/errors/payment.suspended/params/reason": {
+      "column": 13,
+      "endColumn": 53,
+      "endLine": 350,
+      "file": "shared/errors.yaml",
+      "line": 350
+    },
+    "shared#/errors/payment.unavailable": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 347,
+      "file": "shared/errors.yaml",
+      "line": 342
+    },
+    "shared#/errors/payment.unavailable/params": {
+      "column": 3,
+      "endColumn": 52,
+      "endLine": 345,
+      "file": "shared/errors.yaml",
+      "line": 345
+    },
+    "shared#/errors/payment.unavailable/params/waitMs": {
+      "column": 13,
+      "endColumn": 50,
+      "endLine": 345,
+      "file": "shared/errors.yaml",
+      "line": 345
+    },
+    "shared#/errors/refund.duplicated": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 382,
+      "file": "shared/errors.yaml",
+      "line": 377
+    },
+    "shared#/errors/refund.duplicated/params": {
+      "column": 3,
+      "endColumn": 33,
+      "endLine": 380,
+      "file": "shared/errors.yaml",
+      "line": 380
+    },
+    "shared#/errors/refund.duplicated/params/existingId": {
+      "column": 13,
+      "endColumn": 31,
+      "endLine": 380,
+      "file": "shared/errors.yaml",
+      "line": 380
+    },
+    "shared#/errors/refund.expired": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 377,
+      "file": "shared/errors.yaml",
+      "line": 372
+    },
+    "shared#/errors/refund.expired/params": {
+      "column": 3,
+      "endColumn": 61,
+      "endLine": 375,
+      "file": "shared/errors.yaml",
+      "line": 375
+    },
+    "shared#/errors/refund.expired/params/expiredAt": {
+      "column": 13,
+      "endColumn": 59,
+      "endLine": 375,
+      "file": "shared/errors.yaml",
+      "line": 375
+    },
+    "shared#/errors/refund.limited": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 387,
+      "file": "shared/errors.yaml",
+      "line": 382
+    },
+    "shared#/errors/refund.limited/params": {
+      "column": 3,
+      "endColumn": 51,
+      "endLine": 385,
+      "file": "shared/errors.yaml",
+      "line": 385
+    },
+    "shared#/errors/refund.limited/params/limit": {
+      "column": 13,
+      "endColumn": 49,
+      "endLine": 385,
+      "file": "shared/errors.yaml",
+      "line": 385
+    },
+    "shared#/errors/refund.locked": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 372,
+      "file": "shared/errors.yaml",
+      "line": 367
+    },
+    "shared#/errors/refund.locked/params": {
+      "column": 3,
+      "endColumn": 31,
+      "endLine": 370,
+      "file": "shared/errors.yaml",
+      "line": 370
+    },
+    "shared#/errors/refund.locked/params/lockedBy": {
+      "column": 13,
+      "endColumn": 29,
+      "endLine": 370,
+      "file": "shared/errors.yaml",
+      "line": 370
+    },
+    "shared#/errors/refund.mismatched": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 392,
+      "file": "shared/errors.yaml",
+      "line": 387
+    },
+    "shared#/errors/refund.mismatched/params": {
+      "column": 3,
+      "endColumn": 53,
+      "endLine": 390,
+      "file": "shared/errors.yaml",
+      "line": 390
+    },
+    "shared#/errors/refund.mismatched/params/field": {
+      "column": 13,
+      "endColumn": 51,
+      "endLine": 390,
+      "file": "shared/errors.yaml",
+      "line": 390
+    },
+    "shared#/errors/refund.missing": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 367,
+      "file": "shared/errors.yaml",
+      "line": 362
+    },
+    "shared#/errors/refund.missing/params": {
+      "column": 3,
+      "endColumn": 54,
+      "endLine": 365,
+      "file": "shared/errors.yaml",
+      "line": 365
+    },
+    "shared#/errors/refund.missing/params/target": {
+      "column": 13,
+      "endColumn": 52,
+      "endLine": 365,
+      "file": "shared/errors.yaml",
+      "line": 365
+    },
+    "shared#/errors/refund.outdated": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 412,
+      "file": "shared/errors.yaml",
+      "line": 407
+    },
+    "shared#/errors/refund.outdated/params": {
+      "column": 3,
+      "endColumn": 60,
+      "endLine": 410,
+      "file": "shared/errors.yaml",
+      "line": 410
+    },
+    "shared#/errors/refund.outdated/params/currentVersion": {
+      "column": 13,
+      "endColumn": 58,
+      "endLine": 410,
+      "file": "shared/errors.yaml",
+      "line": 410
+    },
+    "shared#/errors/refund.rejected": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 407,
+      "file": "shared/errors.yaml",
+      "line": 402
+    },
+    "shared#/errors/refund.rejected/params": {
+      "column": 3,
+      "endColumn": 29,
+      "endLine": 405,
+      "file": "shared/errors.yaml",
+      "line": 405
+    },
+    "shared#/errors/refund.rejected/params/issues": {
+      "column": 13,
+      "endColumn": 27,
+      "endLine": 405,
+      "file": "shared/errors.yaml",
+      "line": 405
+    },
+    "shared#/errors/refund.suspended": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 402,
+      "file": "shared/errors.yaml",
+      "line": 397
+    },
+    "shared#/errors/refund.suspended/params": {
+      "column": 3,
+      "endColumn": 55,
+      "endLine": 400,
+      "file": "shared/errors.yaml",
+      "line": 400
+    },
+    "shared#/errors/refund.suspended/params/reason": {
+      "column": 13,
+      "endColumn": 53,
+      "endLine": 400,
+      "file": "shared/errors.yaml",
+      "line": 400
+    },
+    "shared#/errors/refund.unavailable": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 397,
+      "file": "shared/errors.yaml",
+      "line": 392
+    },
+    "shared#/errors/refund.unavailable/params": {
+      "column": 3,
+      "endColumn": 52,
+      "endLine": 395,
+      "file": "shared/errors.yaml",
+      "line": 395
+    },
+    "shared#/errors/refund.unavailable/params/waitMs": {
+      "column": 13,
+      "endColumn": 50,
+      "endLine": 395,
+      "file": "shared/errors.yaml",
+      "line": 395
+    },
+    "shared#/errors/tax.duplicated": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 432,
+      "file": "shared/errors.yaml",
+      "line": 427
+    },
+    "shared#/errors/tax.duplicated/params": {
+      "column": 3,
+      "endColumn": 33,
+      "endLine": 430,
+      "file": "shared/errors.yaml",
+      "line": 430
+    },
+    "shared#/errors/tax.duplicated/params/existingId": {
+      "column": 13,
+      "endColumn": 31,
+      "endLine": 430,
+      "file": "shared/errors.yaml",
+      "line": 430
+    },
+    "shared#/errors/tax.expired": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 427,
+      "file": "shared/errors.yaml",
+      "line": 422
+    },
+    "shared#/errors/tax.expired/params": {
+      "column": 3,
+      "endColumn": 61,
+      "endLine": 425,
+      "file": "shared/errors.yaml",
+      "line": 425
+    },
+    "shared#/errors/tax.expired/params/expiredAt": {
+      "column": 13,
+      "endColumn": 59,
+      "endLine": 425,
+      "file": "shared/errors.yaml",
+      "line": 425
+    },
+    "shared#/errors/tax.limited": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 437,
+      "file": "shared/errors.yaml",
+      "line": 432
+    },
+    "shared#/errors/tax.limited/params": {
+      "column": 3,
+      "endColumn": 51,
+      "endLine": 435,
+      "file": "shared/errors.yaml",
+      "line": 435
+    },
+    "shared#/errors/tax.limited/params/limit": {
+      "column": 13,
+      "endColumn": 49,
+      "endLine": 435,
+      "file": "shared/errors.yaml",
+      "line": 435
+    },
+    "shared#/errors/tax.locked": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 422,
+      "file": "shared/errors.yaml",
+      "line": 417
+    },
+    "shared#/errors/tax.locked/params": {
+      "column": 3,
+      "endColumn": 31,
+      "endLine": 420,
+      "file": "shared/errors.yaml",
+      "line": 420
+    },
+    "shared#/errors/tax.locked/params/lockedBy": {
+      "column": 13,
+      "endColumn": 29,
+      "endLine": 420,
+      "file": "shared/errors.yaml",
+      "line": 420
+    },
+    "shared#/errors/tax.mismatched": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 442,
+      "file": "shared/errors.yaml",
+      "line": 437
+    },
+    "shared#/errors/tax.mismatched/params": {
+      "column": 3,
+      "endColumn": 53,
+      "endLine": 440,
+      "file": "shared/errors.yaml",
+      "line": 440
+    },
+    "shared#/errors/tax.mismatched/params/field": {
+      "column": 13,
+      "endColumn": 51,
+      "endLine": 440,
+      "file": "shared/errors.yaml",
+      "line": 440
+    },
+    "shared#/errors/tax.missing": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 417,
+      "file": "shared/errors.yaml",
+      "line": 412
+    },
+    "shared#/errors/tax.missing/params": {
+      "column": 3,
+      "endColumn": 54,
+      "endLine": 415,
+      "file": "shared/errors.yaml",
+      "line": 415
+    },
+    "shared#/errors/tax.missing/params/target": {
+      "column": 13,
+      "endColumn": 52,
+      "endLine": 415,
+      "file": "shared/errors.yaml",
+      "line": 415
+    },
+    "shared#/errors/tax.outdated": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 462,
+      "file": "shared/errors.yaml",
+      "line": 457
+    },
+    "shared#/errors/tax.outdated/params": {
+      "column": 3,
+      "endColumn": 60,
+      "endLine": 460,
+      "file": "shared/errors.yaml",
+      "line": 460
+    },
+    "shared#/errors/tax.outdated/params/currentVersion": {
+      "column": 13,
+      "endColumn": 58,
+      "endLine": 460,
+      "file": "shared/errors.yaml",
+      "line": 460
+    },
+    "shared#/errors/tax.rejected": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 457,
+      "file": "shared/errors.yaml",
+      "line": 452
+    },
+    "shared#/errors/tax.rejected/params": {
+      "column": 3,
+      "endColumn": 29,
+      "endLine": 455,
+      "file": "shared/errors.yaml",
+      "line": 455
+    },
+    "shared#/errors/tax.rejected/params/issues": {
+      "column": 13,
+      "endColumn": 27,
+      "endLine": 455,
+      "file": "shared/errors.yaml",
+      "line": 455
+    },
+    "shared#/errors/tax.suspended": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 452,
+      "file": "shared/errors.yaml",
+      "line": 447
+    },
+    "shared#/errors/tax.suspended/params": {
+      "column": 3,
+      "endColumn": 55,
+      "endLine": 450,
+      "file": "shared/errors.yaml",
+      "line": 450
+    },
+    "shared#/errors/tax.suspended/params/reason": {
+      "column": 13,
+      "endColumn": 53,
+      "endLine": 450,
+      "file": "shared/errors.yaml",
+      "line": 450
+    },
+    "shared#/errors/tax.unavailable": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 447,
+      "file": "shared/errors.yaml",
+      "line": 442
+    },
+    "shared#/errors/tax.unavailable/params": {
+      "column": 3,
+      "endColumn": 52,
+      "endLine": 445,
+      "file": "shared/errors.yaml",
+      "line": 445
+    },
+    "shared#/errors/tax.unavailable/params/waitMs": {
+      "column": 13,
+      "endColumn": 50,
+      "endLine": 445,
+      "file": "shared/errors.yaml",
+      "line": 445
+    },
+    "shared#/headers/actorSurface": {
+      "column": 3,
+      "endColumn": 79,
+      "endLine": 20,
+      "file": "shared/base.yaml",
+      "line": 20
+    },
+    "shared#/headers/deadline": {
+      "column": 3,
+      "endColumn": 66,
+      "endLine": 18,
+      "file": "shared/base.yaml",
+      "line": 18
+    },
+    "shared#/headers/trace": {
+      "column": 3,
+      "endColumn": 68,
+      "endLine": 19,
+      "file": "shared/base.yaml",
+      "line": 19
+    },
+    "shared#/identities/partner": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 36,
+      "file": "shared/base.yaml",
+      "line": 33
+    },
+    "shared#/identities/service": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 33,
+      "file": "shared/base.yaml",
+      "line": 26
+    },
+    "shared#/identities/service/headers/actorSurface": {
+      "column": 7,
+      "endColumn": 79,
+      "endLine": 32,
+      "file": "shared/base.yaml",
+      "line": 32
+    },
+    "shared#/identities/service/headers/deadline": {
+      "column": 7,
+      "endColumn": 45,
+      "endLine": 30,
+      "file": "shared/base.yaml",
+      "line": 30
+    },
+    "shared#/identities/service/headers/trace": {
+      "column": 7,
+      "endColumn": 26,
+      "endLine": 31,
+      "file": "shared/base.yaml",
+      "line": 31
+    },
+    "shared#/identities/user": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 26,
+      "file": "shared/base.yaml",
+      "line": 23
+    },
+    "shared#/identities/webhook": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 40,
+      "file": "shared/base.yaml",
+      "line": 36
+    },
+    "shared#/pagings/cursor": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 66,
+      "file": "shared/base.yaml",
+      "line": 58
+    },
+    "shared#/rights/roles": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 48,
+      "file": "shared/base.yaml",
+      "line": 45
+    },
+    "shared#/rights/roles/params": {
+      "column": 5,
+      "endColumn": 77,
+      "endLine": 46,
+      "file": "shared/base.yaml",
+      "line": 46
+    },
+    "shared#/rights/roles/params/allowed": {
+      "column": 15,
+      "endColumn": 75,
+      "endLine": 46,
+      "file": "shared/base.yaml",
+      "line": 46
+    },
+    "shared#/rules/throttle": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 53,
+      "file": "shared/base.yaml",
+      "line": 50
+    },
+    "shared#/schemas/Account": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 10,
+      "file": "shared/schemas.yaml",
+      "line": 4
+    },
+    "shared#/schemas/Account/properties/accountId": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 8,
+      "file": "shared/schemas.yaml",
+      "line": 8
+    },
+    "shared#/schemas/Account/properties/name": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 9,
+      "file": "shared/schemas.yaml",
+      "line": 9
+    },
+    "shared#/schemas/BondedCount": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 369,
+      "file": "shared/values.yaml",
+      "line": 362
+    },
+    "shared#/schemas/BondedCount/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 366,
+      "file": "shared/values.yaml",
+      "line": 366
+    },
+    "shared#/schemas/BondedCount/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 368,
+      "file": "shared/values.yaml",
+      "line": 368
+    },
+    "shared#/schemas/BondedCount/properties/stage": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 367,
+      "file": "shared/values.yaml",
+      "line": 367
+    },
+    "shared#/schemas/BondedLimit": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 392,
+      "file": "shared/values.yaml",
+      "line": 384
+    },
+    "shared#/schemas/BondedLimit/properties/inner": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 391,
+      "file": "shared/values.yaml",
+      "line": 391
+    },
+    "shared#/schemas/BondedLimit/properties/label": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 388,
+      "file": "shared/values.yaml",
+      "line": 388
+    },
+    "shared#/schemas/BondedLimit/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 390,
+      "file": "shared/values.yaml",
+      "line": 390
+    },
+    "shared#/schemas/BondedLimit/properties/visibility": {
+      "column": 5,
+      "endColumn": 37,
+      "endLine": 389,
+      "file": "shared/values.yaml",
+      "line": 389
+    },
+    "shared#/schemas/BondedMargin": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 407,
+      "file": "shared/values.yaml",
+      "line": 399
+    },
+    "shared#/schemas/BondedMargin/properties/currency": {
+      "column": 5,
+      "endColumn": 33,
+      "endLine": 404,
+      "file": "shared/values.yaml",
+      "line": 404
+    },
+    "shared#/schemas/BondedMargin/properties/inner": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 406,
+      "file": "shared/values.yaml",
+      "line": 406
+    },
+    "shared#/schemas/BondedMargin/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 403,
+      "file": "shared/values.yaml",
+      "line": 403
+    },
+    "shared#/schemas/BondedMargin/properties/quantity": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 405,
+      "file": "shared/values.yaml",
+      "line": 405
+    },
+    "shared#/schemas/BondedRate": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 384,
+      "file": "shared/values.yaml",
+      "line": 377
+    },
+    "shared#/schemas/BondedRate/properties/label": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 381,
+      "file": "shared/values.yaml",
+      "line": 381
+    },
+    "shared#/schemas/BondedRate/properties/priority": {
+      "column": 5,
+      "endColumn": 33,
+      "endLine": 382,
+      "file": "shared/values.yaml",
+      "line": 382
+    },
+    "shared#/schemas/BondedRate/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 383,
+      "file": "shared/values.yaml",
+      "line": 383
+    },
+    "shared#/schemas/BondedSpan": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 362,
+      "file": "shared/values.yaml",
+      "line": 354
+    },
+    "shared#/schemas/BondedSpan/properties/inner": {
+      "column": 5,
+      "endColumn": 24,
+      "endLine": 361,
+      "file": "shared/values.yaml",
+      "line": 361
+    },
+    "shared#/schemas/BondedSpan/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 358,
+      "file": "shared/values.yaml",
+      "line": 358
+    },
+    "shared#/schemas/BondedSpan/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 360,
+      "file": "shared/values.yaml",
+      "line": 360
+    },
+    "shared#/schemas/BondedSpan/properties/region": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 359,
+      "file": "shared/values.yaml",
+      "line": 359
+    },
+    "shared#/schemas/BondedTally": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 399,
+      "file": "shared/values.yaml",
+      "line": 392
+    },
+    "shared#/schemas/BondedTally/properties/condition": {
+      "column": 5,
+      "endColumn": 35,
+      "endLine": 397,
+      "file": "shared/values.yaml",
+      "line": 397
+    },
+    "shared#/schemas/BondedTally/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 396,
+      "file": "shared/values.yaml",
+      "line": 396
+    },
+    "shared#/schemas/BondedTally/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 398,
+      "file": "shared/values.yaml",
+      "line": 398
+    },
+    "shared#/schemas/BondedVolume": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 354,
+      "file": "shared/values.yaml",
+      "line": 347
+    },
+    "shared#/schemas/BondedVolume/properties/grade": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 352,
+      "file": "shared/values.yaml",
+      "line": 352
+    },
+    "shared#/schemas/BondedVolume/properties/label": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 351,
+      "file": "shared/values.yaml",
+      "line": 351
+    },
+    "shared#/schemas/BondedVolume/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 353,
+      "file": "shared/values.yaml",
+      "line": 353
+    },
+    "shared#/schemas/BondedWeight": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 347,
+      "file": "shared/values.yaml",
+      "line": 339
+    },
+    "shared#/schemas/BondedWeight/properties/inner": {
+      "column": 5,
+      "endColumn": 24,
+      "endLine": 346,
+      "file": "shared/values.yaml",
+      "line": 346
+    },
+    "shared#/schemas/BondedWeight/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 343,
+      "file": "shared/values.yaml",
+      "line": 343
+    },
+    "shared#/schemas/BondedWeight/properties/origin": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 344,
+      "file": "shared/values.yaml",
+      "line": 344
+    },
+    "shared#/schemas/BondedWeight/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 345,
+      "file": "shared/values.yaml",
+      "line": 345
+    },
+    "shared#/schemas/BondedWindow": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 377,
+      "file": "shared/values.yaml",
+      "line": 369
+    },
+    "shared#/schemas/BondedWindow/properties/inner": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 376,
+      "file": "shared/values.yaml",
+      "line": 376
+    },
+    "shared#/schemas/BondedWindow/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 373,
+      "file": "shared/values.yaml",
+      "line": 373
+    },
+    "shared#/schemas/BondedWindow/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 375,
+      "file": "shared/values.yaml",
+      "line": 375
+    },
+    "shared#/schemas/BondedWindow/properties/rating": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 374,
+      "file": "shared/values.yaml",
+      "line": 374
+    },
+    "shared#/schemas/BulkLimit": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 527,
+      "file": "shared/values.yaml",
+      "line": 519
+    },
+    "shared#/schemas/BulkLimit/properties/inner": {
+      "column": 5,
+      "endColumn": 20,
+      "endLine": 526,
+      "file": "shared/values.yaml",
+      "line": 526
+    },
+    "shared#/schemas/BulkLimit/properties/label": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 523,
+      "file": "shared/values.yaml",
+      "line": 523
+    },
+    "shared#/schemas/BulkLimit/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 525,
+      "file": "shared/values.yaml",
+      "line": 525
+    },
+    "shared#/schemas/BulkLimit/properties/rating": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 524,
+      "file": "shared/values.yaml",
+      "line": 524
+    },
+    "shared#/schemas/BulkMargin": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 542,
+      "file": "shared/values.yaml",
+      "line": 534
+    },
+    "shared#/schemas/BulkMargin/properties/inner": {
+      "column": 5,
+      "endColumn": 21,
+      "endLine": 541,
+      "file": "shared/values.yaml",
+      "line": 541
+    },
+    "shared#/schemas/BulkMargin/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 538,
+      "file": "shared/values.yaml",
+      "line": 538
+    },
+    "shared#/schemas/BulkMargin/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 540,
+      "file": "shared/values.yaml",
+      "line": 540
+    },
+    "shared#/schemas/BulkMargin/properties/visibility": {
+      "column": 5,
+      "endColumn": 37,
+      "endLine": 539,
+      "file": "shared/values.yaml",
+      "line": 539
+    },
+    "shared#/schemas/BulkRate": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 519,
+      "file": "shared/values.yaml",
+      "line": 512
+    },
+    "shared#/schemas/BulkRate/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 516,
+      "file": "shared/values.yaml",
+      "line": 516
+    },
+    "shared#/schemas/BulkRate/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 518,
+      "file": "shared/values.yaml",
+      "line": 518
+    },
+    "shared#/schemas/BulkRate/properties/stage": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 517,
+      "file": "shared/values.yaml",
+      "line": 517
+    },
+    "shared#/schemas/BulkTally": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 534,
+      "file": "shared/values.yaml",
+      "line": 527
+    },
+    "shared#/schemas/BulkTally/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 531,
+      "file": "shared/values.yaml",
+      "line": 531
+    },
+    "shared#/schemas/BulkTally/properties/priority": {
+      "column": 5,
+      "endColumn": 33,
+      "endLine": 532,
+      "file": "shared/values.yaml",
+      "line": 532
+    },
+    "shared#/schemas/BulkTally/properties/quantity": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 533,
+      "file": "shared/values.yaml",
+      "line": 533
+    },
+    "shared#/schemas/ChilledVolume": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 422,
+      "file": "shared/values.yaml",
+      "line": 414
+    },
+    "shared#/schemas/ChilledVolume/properties/inner": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 421,
+      "file": "shared/values.yaml",
+      "line": 421
+    },
+    "shared#/schemas/ChilledVolume/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 418,
+      "file": "shared/values.yaml",
+      "line": 418
+    },
+    "shared#/schemas/ChilledVolume/properties/origin": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 419,
+      "file": "shared/values.yaml",
+      "line": 419
+    },
+    "shared#/schemas/ChilledVolume/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 420,
+      "file": "shared/values.yaml",
+      "line": 420
+    },
+    "shared#/schemas/ChilledWeight": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 414,
+      "file": "shared/values.yaml",
+      "line": 407
+    },
+    "shared#/schemas/ChilledWeight/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 411,
+      "file": "shared/values.yaml",
+      "line": 411
+    },
+    "shared#/schemas/ChilledWeight/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 413,
+      "file": "shared/values.yaml",
+      "line": 413
+    },
+    "shared#/schemas/ChilledWeight/properties/unit": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 412,
+      "file": "shared/values.yaml",
+      "line": 412
+    },
+    "shared#/schemas/FragileCount": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 572,
+      "file": "shared/values.yaml",
+      "line": 564
+    },
+    "shared#/schemas/FragileCount/properties/inner": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 571,
+      "file": "shared/values.yaml",
+      "line": 571
+    },
+    "shared#/schemas/FragileCount/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 568,
+      "file": "shared/values.yaml",
+      "line": 568
+    },
+    "shared#/schemas/FragileCount/properties/origin": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 569,
+      "file": "shared/values.yaml",
+      "line": 569
+    },
+    "shared#/schemas/FragileCount/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 570,
+      "file": "shared/values.yaml",
+      "line": 570
+    },
+    "shared#/schemas/FragileSpan": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 564,
+      "file": "shared/values.yaml",
+      "line": 557
+    },
+    "shared#/schemas/FragileSpan/properties/label": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 561,
+      "file": "shared/values.yaml",
+      "line": 561
+    },
+    "shared#/schemas/FragileSpan/properties/quantity": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 563,
+      "file": "shared/values.yaml",
+      "line": 563
+    },
+    "shared#/schemas/FragileSpan/properties/unit": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 562,
+      "file": "shared/values.yaml",
+      "line": 562
+    },
+    "shared#/schemas/FragileVolume": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 557,
+      "file": "shared/values.yaml",
+      "line": 549
+    },
+    "shared#/schemas/FragileVolume/properties/currency": {
+      "column": 5,
+      "endColumn": 33,
+      "endLine": 554,
+      "file": "shared/values.yaml",
+      "line": 554
+    },
+    "shared#/schemas/FragileVolume/properties/inner": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 556,
+      "file": "shared/values.yaml",
+      "line": 556
+    },
+    "shared#/schemas/FragileVolume/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 553,
+      "file": "shared/values.yaml",
+      "line": 553
+    },
+    "shared#/schemas/FragileVolume/properties/quantity": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 555,
+      "file": "shared/values.yaml",
+      "line": 555
+    },
+    "shared#/schemas/FragileWeight": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 549,
+      "file": "shared/values.yaml",
+      "line": 542
+    },
+    "shared#/schemas/FragileWeight/properties/condition": {
+      "column": 5,
+      "endColumn": 35,
+      "endLine": 547,
+      "file": "shared/values.yaml",
+      "line": 547
+    },
+    "shared#/schemas/FragileWeight/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 546,
+      "file": "shared/values.yaml",
+      "line": 546
+    },
+    "shared#/schemas/FragileWeight/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 548,
+      "file": "shared/values.yaml",
+      "line": 548
+    },
+    "shared#/schemas/GrossCount": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 32,
+      "file": "shared/values.yaml",
+      "line": 24
+    },
+    "shared#/schemas/GrossCount/properties/currency": {
+      "column": 5,
+      "endColumn": 33,
+      "endLine": 29,
+      "file": "shared/values.yaml",
+      "line": 29
+    },
+    "shared#/schemas/GrossCount/properties/inner": {
+      "column": 5,
+      "endColumn": 21,
+      "endLine": 31,
+      "file": "shared/values.yaml",
+      "line": 31
+    },
+    "shared#/schemas/GrossCount/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 28,
+      "file": "shared/values.yaml",
+      "line": 28
+    },
+    "shared#/schemas/GrossCount/properties/quantity": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 30,
+      "file": "shared/values.yaml",
+      "line": 30
+    },
+    "shared#/schemas/GrossLimit": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 54,
+      "file": "shared/values.yaml",
+      "line": 47
+    },
+    "shared#/schemas/GrossLimit/properties/grade": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 52,
+      "file": "shared/values.yaml",
+      "line": 52
+    },
+    "shared#/schemas/GrossLimit/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 51,
+      "file": "shared/values.yaml",
+      "line": 51
+    },
+    "shared#/schemas/GrossLimit/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 53,
+      "file": "shared/values.yaml",
+      "line": 53
+    },
+    "shared#/schemas/GrossMargin": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 69,
+      "file": "shared/values.yaml",
+      "line": 62
+    },
+    "shared#/schemas/GrossMargin/properties/label": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 66,
+      "file": "shared/values.yaml",
+      "line": 66
+    },
+    "shared#/schemas/GrossMargin/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 68,
+      "file": "shared/values.yaml",
+      "line": 68
+    },
+    "shared#/schemas/GrossMargin/properties/stage": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 67,
+      "file": "shared/values.yaml",
+      "line": 67
+    },
+    "shared#/schemas/GrossRate": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 47,
+      "file": "shared/values.yaml",
+      "line": 39
+    },
+    "shared#/schemas/GrossRate/properties/inner": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 46,
+      "file": "shared/values.yaml",
+      "line": 46
+    },
+    "shared#/schemas/GrossRate/properties/label": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 43,
+      "file": "shared/values.yaml",
+      "line": 43
+    },
+    "shared#/schemas/GrossRate/properties/origin": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 44,
+      "file": "shared/values.yaml",
+      "line": 44
+    },
+    "shared#/schemas/GrossRate/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 45,
+      "file": "shared/values.yaml",
+      "line": 45
+    },
+    "shared#/schemas/GrossSpan": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 24,
+      "file": "shared/values.yaml",
+      "line": 17
+    },
+    "shared#/schemas/GrossSpan/properties/condition": {
+      "column": 5,
+      "endColumn": 35,
+      "endLine": 22,
+      "file": "shared/values.yaml",
+      "line": 22
+    },
+    "shared#/schemas/GrossSpan/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 21,
+      "file": "shared/values.yaml",
+      "line": 21
+    },
+    "shared#/schemas/GrossSpan/properties/quantity": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 23,
+      "file": "shared/values.yaml",
+      "line": 23
+    },
+    "shared#/schemas/GrossTally": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 62,
+      "file": "shared/values.yaml",
+      "line": 54
+    },
+    "shared#/schemas/GrossTally/properties/inner": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 61,
+      "file": "shared/values.yaml",
+      "line": 61
+    },
+    "shared#/schemas/GrossTally/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 58,
+      "file": "shared/values.yaml",
+      "line": 58
+    },
+    "shared#/schemas/GrossTally/properties/quantity": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 60,
+      "file": "shared/values.yaml",
+      "line": 60
+    },
+    "shared#/schemas/GrossTally/properties/region": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 59,
+      "file": "shared/values.yaml",
+      "line": 59
+    },
+    "shared#/schemas/GrossVolume": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 17,
+      "file": "shared/values.yaml",
+      "line": 9
+    },
+    "shared#/schemas/GrossVolume/properties/inner": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 16,
+      "file": "shared/values.yaml",
+      "line": 16
+    },
+    "shared#/schemas/GrossVolume/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 13,
+      "file": "shared/values.yaml",
+      "line": 13
+    },
+    "shared#/schemas/GrossVolume/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 15,
+      "file": "shared/values.yaml",
+      "line": 15
+    },
+    "shared#/schemas/GrossVolume/properties/visibility": {
+      "column": 5,
+      "endColumn": 37,
+      "endLine": 14,
+      "file": "shared/values.yaml",
+      "line": 14
+    },
+    "shared#/schemas/GrossWeight": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 9,
+      "file": "shared/values.yaml",
+      "line": 2
+    },
+    "shared#/schemas/GrossWeight/properties/label": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 6,
+      "file": "shared/values.yaml",
+      "line": 6
+    },
+    "shared#/schemas/GrossWeight/properties/priority": {
+      "column": 5,
+      "endColumn": 33,
+      "endLine": 7,
+      "file": "shared/values.yaml",
+      "line": 7
+    },
+    "shared#/schemas/GrossWeight/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 8,
+      "file": "shared/values.yaml",
+      "line": 8
+    },
+    "shared#/schemas/GrossWindow": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 39,
+      "file": "shared/values.yaml",
+      "line": 32
+    },
+    "shared#/schemas/GrossWindow/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 36,
+      "file": "shared/values.yaml",
+      "line": 36
+    },
+    "shared#/schemas/GrossWindow/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 38,
+      "file": "shared/values.yaml",
+      "line": 38
+    },
+    "shared#/schemas/GrossWindow/properties/unit": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 37,
+      "file": "shared/values.yaml",
+      "line": 37
+    },
+    "shared#/schemas/Issues/items": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 32,
+      "file": "shared/schemas.yaml",
+      "line": 28
+    },
+    "shared#/schemas/Issues/items/properties/pointer": {
+      "column": 19,
+      "endColumn": 44,
+      "endLine": 31,
+      "file": "shared/schemas.yaml",
+      "line": 31
+    },
+    "shared#/schemas/Issues/items/properties/rule": {
+      "column": 46,
+      "endColumn": 68,
+      "endLine": 31,
+      "file": "shared/schemas.yaml",
+      "line": 31
+    },
+    "shared#/schemas/LooseCount": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 234,
+      "file": "shared/values.yaml",
+      "line": 227
+    },
+    "shared#/schemas/LooseCount/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 231,
+      "file": "shared/values.yaml",
+      "line": 231
+    },
+    "shared#/schemas/LooseCount/properties/priority": {
+      "column": 5,
+      "endColumn": 33,
+      "endLine": 232,
+      "file": "shared/values.yaml",
+      "line": 232
+    },
+    "shared#/schemas/LooseCount/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 233,
+      "file": "shared/values.yaml",
+      "line": 233
+    },
+    "shared#/schemas/LooseLimit": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 257,
+      "file": "shared/values.yaml",
+      "line": 249
+    },
+    "shared#/schemas/LooseLimit/properties/currency": {
+      "column": 5,
+      "endColumn": 33,
+      "endLine": 254,
+      "file": "shared/values.yaml",
+      "line": 254
+    },
+    "shared#/schemas/LooseLimit/properties/inner": {
+      "column": 5,
+      "endColumn": 21,
+      "endLine": 256,
+      "file": "shared/values.yaml",
+      "line": 256
+    },
+    "shared#/schemas/LooseLimit/properties/label": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 253,
+      "file": "shared/values.yaml",
+      "line": 253
+    },
+    "shared#/schemas/LooseLimit/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 255,
+      "file": "shared/values.yaml",
+      "line": 255
+    },
+    "shared#/schemas/LooseMargin": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 272,
+      "file": "shared/values.yaml",
+      "line": 264
+    },
+    "shared#/schemas/LooseMargin/properties/inner": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 271,
+      "file": "shared/values.yaml",
+      "line": 271
+    },
+    "shared#/schemas/LooseMargin/properties/label": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 268,
+      "file": "shared/values.yaml",
+      "line": 268
+    },
+    "shared#/schemas/LooseMargin/properties/origin": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 269,
+      "file": "shared/values.yaml",
+      "line": 269
+    },
+    "shared#/schemas/LooseMargin/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 270,
+      "file": "shared/values.yaml",
+      "line": 270
+    },
+    "shared#/schemas/LooseRate": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 249,
+      "file": "shared/values.yaml",
+      "line": 242
+    },
+    "shared#/schemas/LooseRate/properties/condition": {
+      "column": 5,
+      "endColumn": 35,
+      "endLine": 247,
+      "file": "shared/values.yaml",
+      "line": 247
+    },
+    "shared#/schemas/LooseRate/properties/label": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 246,
+      "file": "shared/values.yaml",
+      "line": 246
+    },
+    "shared#/schemas/LooseRate/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 248,
+      "file": "shared/values.yaml",
+      "line": 248
+    },
+    "shared#/schemas/LooseSpan": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 227,
+      "file": "shared/values.yaml",
+      "line": 219
+    },
+    "shared#/schemas/LooseSpan/properties/inner": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 226,
+      "file": "shared/values.yaml",
+      "line": 226
+    },
+    "shared#/schemas/LooseSpan/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 223,
+      "file": "shared/values.yaml",
+      "line": 223
+    },
+    "shared#/schemas/LooseSpan/properties/quantity": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 225,
+      "file": "shared/values.yaml",
+      "line": 225
+    },
+    "shared#/schemas/LooseSpan/properties/rating": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 224,
+      "file": "shared/values.yaml",
+      "line": 224
+    },
+    "shared#/schemas/LooseTally": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 264,
+      "file": "shared/values.yaml",
+      "line": 257
+    },
+    "shared#/schemas/LooseTally/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 261,
+      "file": "shared/values.yaml",
+      "line": 261
+    },
+    "shared#/schemas/LooseTally/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 263,
+      "file": "shared/values.yaml",
+      "line": 263
+    },
+    "shared#/schemas/LooseTally/properties/unit": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 262,
+      "file": "shared/values.yaml",
+      "line": 262
+    },
+    "shared#/schemas/LooseVolume": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 219,
+      "file": "shared/values.yaml",
+      "line": 212
+    },
+    "shared#/schemas/LooseVolume/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 216,
+      "file": "shared/values.yaml",
+      "line": 216
+    },
+    "shared#/schemas/LooseVolume/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 218,
+      "file": "shared/values.yaml",
+      "line": 218
+    },
+    "shared#/schemas/LooseVolume/properties/stage": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 217,
+      "file": "shared/values.yaml",
+      "line": 217
+    },
+    "shared#/schemas/LooseWeight": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 212,
+      "file": "shared/values.yaml",
+      "line": 204
+    },
+    "shared#/schemas/LooseWeight/properties/inner": {
+      "column": 5,
+      "endColumn": 24,
+      "endLine": 211,
+      "file": "shared/values.yaml",
+      "line": 211
+    },
+    "shared#/schemas/LooseWeight/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 208,
+      "file": "shared/values.yaml",
+      "line": 208
+    },
+    "shared#/schemas/LooseWeight/properties/quantity": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 210,
+      "file": "shared/values.yaml",
+      "line": 210
+    },
+    "shared#/schemas/LooseWeight/properties/region": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 209,
+      "file": "shared/values.yaml",
+      "line": 209
+    },
+    "shared#/schemas/LooseWindow": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 242,
+      "file": "shared/values.yaml",
+      "line": 234
+    },
+    "shared#/schemas/LooseWindow/properties/inner": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 241,
+      "file": "shared/values.yaml",
+      "line": 241
+    },
+    "shared#/schemas/LooseWindow/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 238,
+      "file": "shared/values.yaml",
+      "line": 238
+    },
+    "shared#/schemas/LooseWindow/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 240,
+      "file": "shared/values.yaml",
+      "line": 240
+    },
+    "shared#/schemas/LooseWindow/properties/visibility": {
+      "column": 5,
+      "endColumn": 37,
+      "endLine": 239,
+      "file": "shared/values.yaml",
+      "line": 239
+    },
+    "shared#/schemas/NetCount": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 99,
+      "file": "shared/values.yaml",
+      "line": 92
+    },
+    "shared#/schemas/NetCount/properties/condition": {
+      "column": 5,
+      "endColumn": 35,
+      "endLine": 97,
+      "file": "shared/values.yaml",
+      "line": 97
+    },
+    "shared#/schemas/NetCount/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 96,
+      "file": "shared/values.yaml",
+      "line": 96
+    },
+    "shared#/schemas/NetCount/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 98,
+      "file": "shared/values.yaml",
+      "line": 98
+    },
+    "shared#/schemas/NetLimit": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 122,
+      "file": "shared/values.yaml",
+      "line": 114
+    },
+    "shared#/schemas/NetLimit/properties/inner": {
+      "column": 5,
+      "endColumn": 19,
+      "endLine": 121,
+      "file": "shared/values.yaml",
+      "line": 121
+    },
+    "shared#/schemas/NetLimit/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 118,
+      "file": "shared/values.yaml",
+      "line": 118
+    },
+    "shared#/schemas/NetLimit/properties/origin": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 119,
+      "file": "shared/values.yaml",
+      "line": 119
+    },
+    "shared#/schemas/NetLimit/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 120,
+      "file": "shared/values.yaml",
+      "line": 120
+    },
+    "shared#/schemas/NetMargin": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 137,
+      "file": "shared/values.yaml",
+      "line": 129
+    },
+    "shared#/schemas/NetMargin/properties/inner": {
+      "column": 5,
+      "endColumn": 20,
+      "endLine": 136,
+      "file": "shared/values.yaml",
+      "line": 136
+    },
+    "shared#/schemas/NetMargin/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 133,
+      "file": "shared/values.yaml",
+      "line": 133
+    },
+    "shared#/schemas/NetMargin/properties/quantity": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 135,
+      "file": "shared/values.yaml",
+      "line": 135
+    },
+    "shared#/schemas/NetMargin/properties/region": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 134,
+      "file": "shared/values.yaml",
+      "line": 134
+    },
+    "shared#/schemas/NetRate": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 114,
+      "file": "shared/values.yaml",
+      "line": 107
+    },
+    "shared#/schemas/NetRate/properties/label": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 111,
+      "file": "shared/values.yaml",
+      "line": 111
+    },
+    "shared#/schemas/NetRate/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 113,
+      "file": "shared/values.yaml",
+      "line": 113
+    },
+    "shared#/schemas/NetRate/properties/unit": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 112,
+      "file": "shared/values.yaml",
+      "line": 112
+    },
+    "shared#/schemas/NetSpan": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 92,
+      "file": "shared/values.yaml",
+      "line": 84
+    },
+    "shared#/schemas/NetSpan/properties/inner": {
+      "column": 5,
+      "endColumn": 21,
+      "endLine": 91,
+      "file": "shared/values.yaml",
+      "line": 91
+    },
+    "shared#/schemas/NetSpan/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 88,
+      "file": "shared/values.yaml",
+      "line": 88
+    },
+    "shared#/schemas/NetSpan/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 90,
+      "file": "shared/values.yaml",
+      "line": 90
+    },
+    "shared#/schemas/NetSpan/properties/visibility": {
+      "column": 5,
+      "endColumn": 37,
+      "endLine": 89,
+      "file": "shared/values.yaml",
+      "line": 89
+    },
+    "shared#/schemas/NetTally": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 129,
+      "file": "shared/values.yaml",
+      "line": 122
+    },
+    "shared#/schemas/NetTally/properties/grade": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 127,
+      "file": "shared/values.yaml",
+      "line": 127
+    },
+    "shared#/schemas/NetTally/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 126,
+      "file": "shared/values.yaml",
+      "line": 126
+    },
+    "shared#/schemas/NetTally/properties/quantity": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 128,
+      "file": "shared/values.yaml",
+      "line": 128
+    },
+    "shared#/schemas/NetVolume": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 84,
+      "file": "shared/values.yaml",
+      "line": 77
+    },
+    "shared#/schemas/NetVolume/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 81,
+      "file": "shared/values.yaml",
+      "line": 81
+    },
+    "shared#/schemas/NetVolume/properties/priority": {
+      "column": 5,
+      "endColumn": 33,
+      "endLine": 82,
+      "file": "shared/values.yaml",
+      "line": 82
+    },
+    "shared#/schemas/NetVolume/properties/quantity": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 83,
+      "file": "shared/values.yaml",
+      "line": 83
+    },
+    "shared#/schemas/NetWeight": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 77,
+      "file": "shared/values.yaml",
+      "line": 69
+    },
+    "shared#/schemas/NetWeight/properties/inner": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 76,
+      "file": "shared/values.yaml",
+      "line": 76
+    },
+    "shared#/schemas/NetWeight/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 73,
+      "file": "shared/values.yaml",
+      "line": 73
+    },
+    "shared#/schemas/NetWeight/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 75,
+      "file": "shared/values.yaml",
+      "line": 75
+    },
+    "shared#/schemas/NetWeight/properties/rating": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 74,
+      "file": "shared/values.yaml",
+      "line": 74
+    },
+    "shared#/schemas/NetWindow": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 107,
+      "file": "shared/values.yaml",
+      "line": 99
+    },
+    "shared#/schemas/NetWindow/properties/currency": {
+      "column": 5,
+      "endColumn": 33,
+      "endLine": 104,
+      "file": "shared/values.yaml",
+      "line": 104
+    },
+    "shared#/schemas/NetWindow/properties/inner": {
+      "column": 5,
+      "endColumn": 20,
+      "endLine": 106,
+      "file": "shared/values.yaml",
+      "line": 106
+    },
+    "shared#/schemas/NetWindow/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 103,
+      "file": "shared/values.yaml",
+      "line": 103
+    },
+    "shared#/schemas/NetWindow/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 105,
+      "file": "shared/values.yaml",
+      "line": 105
+    },
+    "shared#/schemas/PackedCount": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 167,
+      "file": "shared/values.yaml",
+      "line": 159
+    },
+    "shared#/schemas/PackedCount/properties/inner": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 166,
+      "file": "shared/values.yaml",
+      "line": 166
+    },
+    "shared#/schemas/PackedCount/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 163,
+      "file": "shared/values.yaml",
+      "line": 163
+    },
+    "shared#/schemas/PackedCount/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 165,
+      "file": "shared/values.yaml",
+      "line": 165
+    },
+    "shared#/schemas/PackedCount/properties/visibility": {
+      "column": 5,
+      "endColumn": 37,
+      "endLine": 164,
+      "file": "shared/values.yaml",
+      "line": 164
+    },
+    "shared#/schemas/PackedLimit": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 189,
+      "file": "shared/values.yaml",
+      "line": 182
+    },
+    "shared#/schemas/PackedLimit/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 186,
+      "file": "shared/values.yaml",
+      "line": 186
+    },
+    "shared#/schemas/PackedLimit/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 188,
+      "file": "shared/values.yaml",
+      "line": 188
+    },
+    "shared#/schemas/PackedLimit/properties/unit": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 187,
+      "file": "shared/values.yaml",
+      "line": 187
+    },
+    "shared#/schemas/PackedMargin": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 204,
+      "file": "shared/values.yaml",
+      "line": 197
+    },
+    "shared#/schemas/PackedMargin/properties/grade": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 202,
+      "file": "shared/values.yaml",
+      "line": 202
+    },
+    "shared#/schemas/PackedMargin/properties/label": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 201,
+      "file": "shared/values.yaml",
+      "line": 201
+    },
+    "shared#/schemas/PackedMargin/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 203,
+      "file": "shared/values.yaml",
+      "line": 203
+    },
+    "shared#/schemas/PackedRate": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 182,
+      "file": "shared/values.yaml",
+      "line": 174
+    },
+    "shared#/schemas/PackedRate/properties/currency": {
+      "column": 5,
+      "endColumn": 33,
+      "endLine": 179,
+      "file": "shared/values.yaml",
+      "line": 179
+    },
+    "shared#/schemas/PackedRate/properties/inner": {
+      "column": 5,
+      "endColumn": 24,
+      "endLine": 181,
+      "file": "shared/values.yaml",
+      "line": 181
+    },
+    "shared#/schemas/PackedRate/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 178,
+      "file": "shared/values.yaml",
+      "line": 178
+    },
+    "shared#/schemas/PackedRate/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 180,
+      "file": "shared/values.yaml",
+      "line": 180
+    },
+    "shared#/schemas/PackedSpan": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 159,
+      "file": "shared/values.yaml",
+      "line": 152
+    },
+    "shared#/schemas/PackedSpan/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 156,
+      "file": "shared/values.yaml",
+      "line": 156
+    },
+    "shared#/schemas/PackedSpan/properties/priority": {
+      "column": 5,
+      "endColumn": 33,
+      "endLine": 157,
+      "file": "shared/values.yaml",
+      "line": 157
+    },
+    "shared#/schemas/PackedSpan/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 158,
+      "file": "shared/values.yaml",
+      "line": 158
+    },
+    "shared#/schemas/PackedTally": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 197,
+      "file": "shared/values.yaml",
+      "line": 189
+    },
+    "shared#/schemas/PackedTally/properties/inner": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 196,
+      "file": "shared/values.yaml",
+      "line": 196
+    },
+    "shared#/schemas/PackedTally/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 193,
+      "file": "shared/values.yaml",
+      "line": 193
+    },
+    "shared#/schemas/PackedTally/properties/origin": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 194,
+      "file": "shared/values.yaml",
+      "line": 194
+    },
+    "shared#/schemas/PackedTally/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 195,
+      "file": "shared/values.yaml",
+      "line": 195
+    },
+    "shared#/schemas/PackedVolume": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 152,
+      "file": "shared/values.yaml",
+      "line": 144
+    },
+    "shared#/schemas/PackedVolume/properties/inner": {
+      "column": 5,
+      "endColumn": 24,
+      "endLine": 151,
+      "file": "shared/values.yaml",
+      "line": 151
+    },
+    "shared#/schemas/PackedVolume/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 148,
+      "file": "shared/values.yaml",
+      "line": 148
+    },
+    "shared#/schemas/PackedVolume/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 150,
+      "file": "shared/values.yaml",
+      "line": 150
+    },
+    "shared#/schemas/PackedVolume/properties/rating": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 149,
+      "file": "shared/values.yaml",
+      "line": 149
+    },
+    "shared#/schemas/PackedWeight": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 144,
+      "file": "shared/values.yaml",
+      "line": 137
+    },
+    "shared#/schemas/PackedWeight/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 141,
+      "file": "shared/values.yaml",
+      "line": 141
+    },
+    "shared#/schemas/PackedWeight/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 143,
+      "file": "shared/values.yaml",
+      "line": 143
+    },
+    "shared#/schemas/PackedWeight/properties/stage": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 142,
+      "file": "shared/values.yaml",
+      "line": 142
+    },
+    "shared#/schemas/PackedWindow": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 174,
+      "file": "shared/values.yaml",
+      "line": 167
+    },
+    "shared#/schemas/PackedWindow/properties/condition": {
+      "column": 5,
+      "endColumn": 35,
+      "endLine": 172,
+      "file": "shared/values.yaml",
+      "line": 172
+    },
+    "shared#/schemas/PackedWindow/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 171,
+      "file": "shared/values.yaml",
+      "line": 171
+    },
+    "shared#/schemas/PackedWindow/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 173,
+      "file": "shared/values.yaml",
+      "line": 173
+    },
+    "shared#/schemas/PartnerPrincipal": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 22,
+      "file": "shared/schemas.yaml",
+      "line": 18
+    },
+    "shared#/schemas/PartnerPrincipal/properties/partnerId": {
+      "column": 17,
+      "endColumn": 58,
+      "endLine": 21,
+      "file": "shared/schemas.yaml",
+      "line": 21
+    },
+    "shared#/schemas/SealedCount": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 302,
+      "file": "shared/values.yaml",
+      "line": 294
+    },
+    "shared#/schemas/SealedCount/properties/inner": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 301,
+      "file": "shared/values.yaml",
+      "line": 301
+    },
+    "shared#/schemas/SealedCount/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 298,
+      "file": "shared/values.yaml",
+      "line": 298
+    },
+    "shared#/schemas/SealedCount/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 300,
+      "file": "shared/values.yaml",
+      "line": 300
+    },
+    "shared#/schemas/SealedCount/properties/rating": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 299,
+      "file": "shared/values.yaml",
+      "line": 299
+    },
+    "shared#/schemas/SealedLimit": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 324,
+      "file": "shared/values.yaml",
+      "line": 317
+    },
+    "shared#/schemas/SealedLimit/properties/condition": {
+      "column": 5,
+      "endColumn": 35,
+      "endLine": 322,
+      "file": "shared/values.yaml",
+      "line": 322
+    },
+    "shared#/schemas/SealedLimit/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 321,
+      "file": "shared/values.yaml",
+      "line": 321
+    },
+    "shared#/schemas/SealedLimit/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 323,
+      "file": "shared/values.yaml",
+      "line": 323
+    },
+    "shared#/schemas/SealedMargin": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 339,
+      "file": "shared/values.yaml",
+      "line": 332
+    },
+    "shared#/schemas/SealedMargin/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 336,
+      "file": "shared/values.yaml",
+      "line": 336
+    },
+    "shared#/schemas/SealedMargin/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 338,
+      "file": "shared/values.yaml",
+      "line": 338
+    },
+    "shared#/schemas/SealedMargin/properties/unit": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 337,
+      "file": "shared/values.yaml",
+      "line": 337
+    },
+    "shared#/schemas/SealedRate": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 317,
+      "file": "shared/values.yaml",
+      "line": 309
+    },
+    "shared#/schemas/SealedRate/properties/inner": {
+      "column": 5,
+      "endColumn": 24,
+      "endLine": 316,
+      "file": "shared/values.yaml",
+      "line": 316
+    },
+    "shared#/schemas/SealedRate/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 313,
+      "file": "shared/values.yaml",
+      "line": 313
+    },
+    "shared#/schemas/SealedRate/properties/quantity": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 315,
+      "file": "shared/values.yaml",
+      "line": 315
+    },
+    "shared#/schemas/SealedRate/properties/visibility": {
+      "column": 5,
+      "endColumn": 37,
+      "endLine": 314,
+      "file": "shared/values.yaml",
+      "line": 314
+    },
+    "shared#/schemas/SealedSpan": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 294,
+      "file": "shared/values.yaml",
+      "line": 287
+    },
+    "shared#/schemas/SealedSpan/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 291,
+      "file": "shared/values.yaml",
+      "line": 291
+    },
+    "shared#/schemas/SealedSpan/properties/quantity": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 293,
+      "file": "shared/values.yaml",
+      "line": 293
+    },
+    "shared#/schemas/SealedSpan/properties/stage": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 292,
+      "file": "shared/values.yaml",
+      "line": 292
+    },
+    "shared#/schemas/SealedTally": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 332,
+      "file": "shared/values.yaml",
+      "line": 324
+    },
+    "shared#/schemas/SealedTally/properties/currency": {
+      "column": 5,
+      "endColumn": 33,
+      "endLine": 329,
+      "file": "shared/values.yaml",
+      "line": 329
+    },
+    "shared#/schemas/SealedTally/properties/inner": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 331,
+      "file": "shared/values.yaml",
+      "line": 331
+    },
+    "shared#/schemas/SealedTally/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 328,
+      "file": "shared/values.yaml",
+      "line": 328
+    },
+    "shared#/schemas/SealedTally/properties/quantity": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 330,
+      "file": "shared/values.yaml",
+      "line": 330
+    },
+    "shared#/schemas/SealedVolume": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 287,
+      "file": "shared/values.yaml",
+      "line": 279
+    },
+    "shared#/schemas/SealedVolume/properties/inner": {
+      "column": 5,
+      "endColumn": 24,
+      "endLine": 286,
+      "file": "shared/values.yaml",
+      "line": 286
+    },
+    "shared#/schemas/SealedVolume/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 283,
+      "file": "shared/values.yaml",
+      "line": 283
+    },
+    "shared#/schemas/SealedVolume/properties/quantity": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 285,
+      "file": "shared/values.yaml",
+      "line": 285
+    },
+    "shared#/schemas/SealedVolume/properties/region": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 284,
+      "file": "shared/values.yaml",
+      "line": 284
+    },
+    "shared#/schemas/SealedWeight": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 279,
+      "file": "shared/values.yaml",
+      "line": 272
+    },
+    "shared#/schemas/SealedWeight/properties/grade": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 277,
+      "file": "shared/values.yaml",
+      "line": 277
+    },
+    "shared#/schemas/SealedWeight/properties/label": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 276,
+      "file": "shared/values.yaml",
+      "line": 276
+    },
+    "shared#/schemas/SealedWeight/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 278,
+      "file": "shared/values.yaml",
+      "line": 278
+    },
+    "shared#/schemas/SealedWindow": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 309,
+      "file": "shared/values.yaml",
+      "line": 302
+    },
+    "shared#/schemas/SealedWindow/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 306,
+      "file": "shared/values.yaml",
+      "line": 306
+    },
+    "shared#/schemas/SealedWindow/properties/priority": {
+      "column": 5,
+      "endColumn": 33,
+      "endLine": 307,
+      "file": "shared/values.yaml",
+      "line": 307
+    },
+    "shared#/schemas/SealedWindow/properties/quantity": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 308,
+      "file": "shared/values.yaml",
+      "line": 308
+    },
+    "shared#/schemas/ServicePrincipal": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 18,
+      "file": "shared/schemas.yaml",
+      "line": 14
+    },
+    "shared#/schemas/ServicePrincipal/properties/service": {
+      "column": 17,
+      "endColumn": 43,
+      "endLine": 17,
+      "file": "shared/schemas.yaml",
+      "line": 17
+    },
+    "shared#/schemas/ServicePrincipal/properties/userId": {
+      "column": 45,
+      "endColumn": 59,
+      "endLine": 17,
+      "file": "shared/schemas.yaml",
+      "line": 17
+    },
+    "shared#/schemas/UserPrincipal": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 14,
+      "file": "shared/schemas.yaml",
+      "line": 10
+    },
+    "shared#/schemas/UserPrincipal/properties/userId": {
+      "column": 17,
+      "endColumn": 31,
+      "endLine": 13,
+      "file": "shared/schemas.yaml",
+      "line": 13
+    },
+    "shared#/schemas/WebhookCaller": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 26,
+      "file": "shared/schemas.yaml",
+      "line": 22
+    },
+    "shared#/schemas/WebhookCaller/properties/account": {
+      "column": 17,
+      "endColumn": 42,
+      "endLine": 25,
+      "file": "shared/schemas.yaml",
+      "line": 25
+    },
+    "shared#/schemes/bearer": {
+      "column": 3,
+      "endColumn": 27,
+      "endLine": 5,
+      "file": "shared/base.yaml",
+      "line": 5
+    },
+    "shared#/schemes/csrfToken": {
+      "column": 3,
+      "endColumn": 50,
+      "endLine": 4,
+      "file": "shared/base.yaml",
+      "line": 4
+    },
+    "shared#/schemes/internalToken": {
+      "column": 3,
+      "endColumn": 53,
+      "endLine": 6,
+      "file": "shared/base.yaml",
+      "line": 6
+    },
+    "shared#/schemes/sessionCookie": {
+      "column": 3,
+      "endColumn": 73,
+      "endLine": 3,
+      "file": "shared/base.yaml",
+      "line": 3
+    },
+    "shared#/schemes/webhookSignature": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 16,
+      "file": "shared/base.yaml",
+      "line": 7
+    },
+    "shared#/scopes/account": {
+      "column": 3,
+      "endColumn": 54,
+      "endLine": 42,
+      "file": "shared/base.yaml",
+      "line": 42
+    }
+  }
+}

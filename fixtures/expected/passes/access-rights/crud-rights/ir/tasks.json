@@ -1,0 +1,3049 @@
+{
+  "api": {
+    "compat": {
+      "policy": "none"
+    },
+    "docs": {},
+    "documents": {},
+    "extensions": {},
+    "id": "tasks",
+    "kind": "product",
+    "maturity": "experimental",
+    "name": {
+      "role": "schema",
+      "segments": [
+        "tasks"
+      ]
+    },
+    "origin": {
+      "layer": "api",
+      "pointer": "/api"
+    },
+    "pathVersion": {
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/version"
+      },
+      "value": "prefix"
+    },
+    "surfaces": {
+      "app": {
+        "name": {
+          "role": "schema",
+          "segments": [
+            "app"
+          ]
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app"
+        },
+        "pathVersion": "prefix",
+        "prefix": "/v1"
+      }
+    },
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "wire": {
+      "int64": "string",
+      "outputEnums": "enum",
+      "urls": "relative"
+    }
+  },
+  "buckets": {
+    "perUser": {
+      "id": "perUser",
+      "key": [
+        {
+          "in": "principal",
+          "name": "userId"
+        }
+      ],
+      "limit": 60,
+      "origin": {
+        "layer": "pack:crud-rights",
+        "pointer": "/buckets/perUser"
+      },
+      "windowMs": 60000
+    }
+  },
+  "conventions": {},
+  "enums": {},
+  "errors": {
+    "api.forbidden": {
+      "code": "api.forbidden",
+      "default": "forbidden",
+      "docs": {},
+      "family": "api",
+      "http": {
+        "status": 403
+      },
+      "nature": "refused",
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.forbidden"
+      },
+      "params": "ApiForbiddenParams"
+    },
+    "api.internal": {
+      "code": "api.internal",
+      "default": "undeclaredStatus",
+      "docs": {},
+      "family": "api",
+      "http": {
+        "status": 500
+      },
+      "nature": "failed",
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.internal"
+      }
+    },
+    "api.not_found": {
+      "code": "api.not_found",
+      "default": "notFound",
+      "docs": {},
+      "family": "api",
+      "http": {
+        "status": 404
+      },
+      "nature": "refused",
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.not_found"
+      }
+    },
+    "api.payload_too_large": {
+      "code": "api.payload_too_large",
+      "default": "payloadTooLarge",
+      "docs": {},
+      "family": "api",
+      "http": {
+        "status": 413
+      },
+      "nature": "refused",
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.payload_too_large"
+      },
+      "params": "ApiPayloadTooLargeParams"
+    },
+    "api.rate_limited": {
+      "code": "api.rate_limited",
+      "default": "rateLimited",
+      "docs": {},
+      "family": "api",
+      "http": {
+        "status": 429
+      },
+      "nature": "unavailable",
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.rate_limited"
+      },
+      "params": "ApiRateLimitedParams"
+    },
+    "api.schema_invalid": {
+      "code": "api.schema_invalid",
+      "default": "schemaInvalid",
+      "docs": {},
+      "family": "api",
+      "http": {
+        "status": 400
+      },
+      "nature": "refused",
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.schema_invalid"
+      },
+      "params": "ApiSchemaInvalidParams"
+    },
+    "api.unauthenticated": {
+      "code": "api.unauthenticated",
+      "default": "unauthenticated",
+      "docs": {},
+      "family": "api",
+      "http": {
+        "status": 401
+      },
+      "nature": "refused",
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.unauthenticated"
+      }
+    },
+    "api.unsupported_media_type": {
+      "code": "api.unsupported_media_type",
+      "default": "unsupportedMediaType",
+      "docs": {},
+      "family": "api",
+      "http": {
+        "status": 415
+      },
+      "nature": "refused",
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.unsupported_media_type"
+      }
+    }
+  },
+  "extensionKeys": {},
+  "features": [],
+  "formats": {
+    "bare": {
+      "absent": "omit",
+      "error": {
+        "body": {
+          "kind": "object",
+          "members": [
+            {
+              "name": {
+                "kind": "text",
+                "text": "type"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "code"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "title"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "title"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "status"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "status"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "detail"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "detail"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "instance"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "instance"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "code"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "code"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "nature"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "nature"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "traceId"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "traceId"
+              }
+            }
+          ],
+          "merge": "params"
+        },
+        "headers": [],
+        "media": "application/problem+json"
+      },
+      "id": "bare",
+      "media": "application/json",
+      "meta": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/formats/bare"
+      },
+      "success": {
+        "item": {
+          "body": {
+            "kind": "slot",
+            "path": [],
+            "slot": "payload"
+          },
+          "headers": []
+        },
+        "list": {
+          "body": {
+            "kind": "slot",
+            "path": [],
+            "slot": "payload"
+          },
+          "headers": []
+        },
+        "page": {
+          "body": {
+            "kind": "slot",
+            "path": [],
+            "slot": "items"
+          },
+          "headers": []
+        },
+        "table": {
+          "body": {
+            "kind": "slot",
+            "path": [],
+            "slot": "payload"
+          },
+          "headers": []
+        }
+      }
+    }
+  },
+  "headers": {},
+  "identities": {
+    "user": {
+      "docs": {},
+      "errors": [],
+      "extensions": {},
+      "headers": [],
+      "id": "user",
+      "kind": "credential",
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/user"
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "UserPrincipal"
+      },
+      "schemes": {
+        "optionalRead": [],
+        "read": [
+          "bearer"
+        ],
+        "write": [
+          "bearer"
+        ]
+      }
+    }
+  },
+  "irRevision": 6,
+  "irVersion": 1,
+  "kinds": [
+    "httpOperation"
+  ],
+  "lint": {
+    "allows": [],
+    "rules": {}
+  },
+  "natures": {},
+  "operations": [
+    {
+      "access": {
+        "identity": "user",
+        "kind": "identity",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        },
+        "schemes": [
+          "bearer"
+        ]
+      },
+      "bindings": [],
+      "callerKinds": [
+        "identified"
+      ],
+      "docs": {},
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/archive"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "issues"
+                    }
+                  }
+                ]
+              },
+              "role": "schemaInvalid"
+            }
+          ]
+        },
+        {
+          "code": "api.unauthenticated",
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ]
+        },
+        {
+          "code": "api.forbidden",
+          "derivedFrom": {
+            "derivation": "requirement.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/requires/0"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.not_found",
+          "derivedFrom": {
+            "derivation": "member.notFound",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/archive"
+              },
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "notFound"
+            }
+          ]
+        },
+        {
+          "code": "api.rate_limited",
+          "derivedFrom": {
+            "derivation": "requirement.errors",
+            "from": [
+              {
+                "layer": "pack:crud-rights",
+                "pointer": "/derive/1/require"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.internal",
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/archive"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ]
+        }
+      ],
+      "examples": {},
+      "extensions": {},
+      "features": [],
+      "fieldRights": [],
+      "format": "bare",
+      "id": "archiveTask",
+      "internal": false,
+      "kind": "httpOperation",
+      "maturity": {
+        "level": "experimental",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        },
+        "source": "api"
+      },
+      "method": "post",
+      "name": {
+        "role": "operation",
+        "segments": [
+          "archive",
+          "task"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/archive"
+      },
+      "params": {
+        "header": [
+          {
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            },
+            "name": "Authorization",
+            "required": true,
+            "type": {
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "path": [
+          {
+            "name": "channelId",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/id/channelId"
+            },
+            "required": true,
+            "type": {
+              "format": "uuid",
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          },
+          {
+            "name": "taskId",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/member/routes/tasks/id/taskId"
+            },
+            "required": true,
+            "type": {
+              "format": "uuid",
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "query": []
+      },
+      "path": "/v1/channels/{channelId}/tasks/{taskId}/archive",
+      "principalRequires": [],
+      "requires": [
+        {
+          "bucket": "perUser",
+          "derivedFrom": {
+            "derivation": "pack.crud-rights.writes",
+            "from": [
+              {
+                "layer": "pack:crud-rights",
+                "pointer": "/derive/1/require"
+              }
+            ]
+          },
+          "kind": "rule",
+          "rule": "throttle"
+        },
+        {
+          "kind": "right",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/requires/0"
+          },
+          "right": "channels.member",
+          "subject": {
+            "defaulted": true,
+            "source": {
+              "in": "scope",
+              "name": "channel"
+            }
+          }
+        }
+      ],
+      "resource": {
+        "idParam": "taskId",
+        "idProperty": "taskId",
+        "type": "tasks"
+      },
+      "responses": [
+        {
+          "body": {
+            "kind": "ref",
+            "schema": "Task"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          },
+          "headers": [],
+          "media": "application/json",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/archive/output"
+          },
+          "shape": "item",
+          "status": 200
+        }
+      ],
+      "safe": false,
+      "scopes": [
+        {
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+          },
+          "scope": "channel",
+          "source": {
+            "in": "path",
+            "name": "channelId"
+          }
+        }
+      ],
+      "surface": "app",
+      "tags": [],
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "upstream": []
+    },
+    {
+      "access": {
+        "identity": "user",
+        "kind": "identity",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        },
+        "schemes": [
+          "bearer"
+        ]
+      },
+      "bindings": [],
+      "callerKinds": [
+        "identified"
+      ],
+      "docs": {},
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/create"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "issues"
+                    }
+                  }
+                ]
+              },
+              "role": "schemaInvalid"
+            }
+          ]
+        },
+        {
+          "code": "api.unauthenticated",
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ]
+        },
+        {
+          "code": "api.forbidden",
+          "derivedFrom": {
+            "derivation": "requirement.errors",
+            "from": [
+              {
+                "layer": "pack:crud-rights",
+                "pointer": "/derive/0/require"
+              },
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/requires/0"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.not_found",
+          "derivedFrom": {
+            "derivation": "scope.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.payload_too_large",
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/create/input"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "limitBytes"
+                    }
+                  }
+                ]
+              },
+              "role": "payloadTooLarge"
+            }
+          ]
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/create/input"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ]
+        },
+        {
+          "code": "api.rate_limited",
+          "derivedFrom": {
+            "derivation": "requirement.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/create/requires/0"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.internal",
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/create"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ]
+        }
+      ],
+      "examples": {},
+      "extensions": {},
+      "features": [],
+      "fieldRights": [],
+      "format": "bare",
+      "id": "createTask",
+      "input": {
+        "bodyLimitBytes": 1048576,
+        "media": "application/json",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/create/input"
+        },
+        "rawBody": false,
+        "schema": {
+          "kind": "ref",
+          "schema": "CreateTask"
+        }
+      },
+      "internal": false,
+      "kind": "httpOperation",
+      "maturity": {
+        "level": "experimental",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        },
+        "source": "api"
+      },
+      "method": "post",
+      "name": {
+        "role": "operation",
+        "segments": [
+          "create",
+          "task"
+        ]
+      },
+      "op": "create",
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/create"
+      },
+      "params": {
+        "header": [
+          {
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            },
+            "name": "Authorization",
+            "required": true,
+            "type": {
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "path": [
+          {
+            "name": "channelId",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/id/channelId"
+            },
+            "required": true,
+            "type": {
+              "format": "uuid",
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "query": []
+      },
+      "path": "/v1/channels/{channelId}/tasks",
+      "principalRequires": [],
+      "requires": [
+        {
+          "derivedFrom": {
+            "derivation": "pack.crud-rights.crud",
+            "from": [
+              {
+                "layer": "pack:crud-rights",
+                "pointer": "/derive/0/require"
+              }
+            ]
+          },
+          "kind": "right",
+          "right": "tasks.create",
+          "subject": {
+            "defaulted": true,
+            "source": {
+              "in": "scope",
+              "name": "channel"
+            }
+          }
+        },
+        {
+          "kind": "right",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/requires/0"
+          },
+          "right": "channels.member",
+          "subject": {
+            "defaulted": true,
+            "source": {
+              "in": "scope",
+              "name": "channel"
+            }
+          }
+        },
+        {
+          "bucket": "perUser",
+          "kind": "rule",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/create/requires/0"
+          },
+          "rule": "throttle"
+        }
+      ],
+      "resource": {
+        "idProperty": "taskId",
+        "type": "tasks"
+      },
+      "responses": [
+        {
+          "body": {
+            "kind": "ref",
+            "schema": "Task"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          },
+          "headers": [],
+          "media": "application/json",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/item"
+          },
+          "shape": "item",
+          "status": 201
+        }
+      ],
+      "safe": false,
+      "scopes": [
+        {
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+          },
+          "scope": "channel",
+          "source": {
+            "in": "path",
+            "name": "channelId"
+          }
+        }
+      ],
+      "surface": "app",
+      "tags": [],
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "upstream": []
+    },
+    {
+      "access": {
+        "identity": "user",
+        "kind": "identity",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        },
+        "schemes": [
+          "bearer"
+        ]
+      },
+      "bindings": [],
+      "callerKinds": [
+        "identified"
+      ],
+      "docs": {},
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/ops/0"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "issues"
+                    }
+                  }
+                ]
+              },
+              "role": "schemaInvalid"
+            }
+          ]
+        },
+        {
+          "code": "api.unauthenticated",
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ]
+        },
+        {
+          "code": "api.forbidden",
+          "derivedFrom": {
+            "derivation": "requirement.errors",
+            "from": [
+              {
+                "layer": "pack:crud-rights",
+                "pointer": "/derive/0/require"
+              },
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/requires/0"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.not_found",
+          "derivedFrom": {
+            "derivation": "scope.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.internal",
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/ops/0"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ]
+        }
+      ],
+      "examples": {},
+      "extensions": {},
+      "features": [],
+      "fieldRights": [],
+      "format": "bare",
+      "id": "getChannel",
+      "internal": false,
+      "kind": "httpOperation",
+      "maturity": {
+        "level": "experimental",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        },
+        "source": "api"
+      },
+      "method": "get",
+      "name": {
+        "role": "operation",
+        "segments": [
+          "get",
+          "channel"
+        ]
+      },
+      "op": "get",
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/channels/ops/0"
+      },
+      "params": {
+        "header": [
+          {
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            },
+            "name": "Authorization",
+            "required": true,
+            "type": {
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "path": [
+          {
+            "name": "channelId",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/id/channelId"
+            },
+            "required": true,
+            "type": {
+              "format": "uuid",
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "query": []
+      },
+      "path": "/v1/channels/{channelId}",
+      "principalRequires": [],
+      "requires": [
+        {
+          "derivedFrom": {
+            "derivation": "pack.crud-rights.crud",
+            "from": [
+              {
+                "layer": "pack:crud-rights",
+                "pointer": "/derive/0/require"
+              }
+            ]
+          },
+          "kind": "right",
+          "right": "channels.get",
+          "subject": {
+            "defaulted": true,
+            "source": {
+              "in": "path",
+              "name": "channelId"
+            }
+          }
+        },
+        {
+          "kind": "right",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/requires/0"
+          },
+          "right": "channels.member",
+          "subject": {
+            "defaulted": true,
+            "source": {
+              "in": "scope",
+              "name": "channel"
+            }
+          }
+        }
+      ],
+      "resource": {
+        "idParam": "channelId",
+        "idProperty": "channelId",
+        "type": "channels"
+      },
+      "responses": [
+        {
+          "body": {
+            "kind": "ref",
+            "schema": "Channel"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          },
+          "headers": [],
+          "media": "application/json",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/item"
+          },
+          "shape": "item",
+          "status": 200
+        }
+      ],
+      "safe": true,
+      "scopes": [
+        {
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+          },
+          "scope": "channel",
+          "source": {
+            "in": "path",
+            "name": "channelId"
+          }
+        }
+      ],
+      "surface": "app",
+      "tags": [],
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "upstream": []
+    },
+    {
+      "access": {
+        "identity": "user",
+        "kind": "identity",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        },
+        "schemes": [
+          "bearer"
+        ]
+      },
+      "bindings": [],
+      "callerKinds": [
+        "identified"
+      ],
+      "docs": {},
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/batch"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "issues"
+                    }
+                  }
+                ]
+              },
+              "role": "schemaInvalid"
+            }
+          ]
+        },
+        {
+          "code": "api.unauthenticated",
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ]
+        },
+        {
+          "code": "api.forbidden",
+          "derivedFrom": {
+            "derivation": "requirement.errors",
+            "from": [
+              {
+                "layer": "pack:crud-rights",
+                "pointer": "/derive/0/require"
+              },
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/requires/0"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.not_found",
+          "derivedFrom": {
+            "derivation": "scope.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.payload_too_large",
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/batch"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "limitBytes"
+                    }
+                  }
+                ]
+              },
+              "role": "payloadTooLarge"
+            }
+          ]
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/batch"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ]
+        },
+        {
+          "code": "api.internal",
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/batch"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ]
+        }
+      ],
+      "examples": {},
+      "extensions": {},
+      "features": [],
+      "fieldRights": [],
+      "format": "bare",
+      "id": "getTasksBatch",
+      "input": {
+        "bodyLimitBytes": 1048576,
+        "media": "application/json",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/batch"
+        },
+        "rawBody": false,
+        "schema": {
+          "kind": "ref",
+          "schema": "GetTasksBatchInput"
+        }
+      },
+      "internal": false,
+      "kind": "httpOperation",
+      "maturity": {
+        "level": "experimental",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        },
+        "source": "api"
+      },
+      "method": "post",
+      "name": {
+        "role": "operation",
+        "segments": [
+          "get",
+          "tasks",
+          "batch"
+        ]
+      },
+      "op": "batch",
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/batch"
+      },
+      "params": {
+        "header": [
+          {
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            },
+            "name": "Authorization",
+            "required": true,
+            "type": {
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "path": [
+          {
+            "name": "channelId",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/id/channelId"
+            },
+            "required": true,
+            "type": {
+              "format": "uuid",
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "query": []
+      },
+      "path": "/v1/channels/{channelId}/tasks/batch",
+      "principalRequires": [],
+      "requires": [
+        {
+          "derivedFrom": {
+            "derivation": "pack.crud-rights.crud",
+            "from": [
+              {
+                "layer": "pack:crud-rights",
+                "pointer": "/derive/0/require"
+              }
+            ]
+          },
+          "kind": "right",
+          "right": "tasks.batch",
+          "subject": {
+            "defaulted": true,
+            "source": {
+              "in": "scope",
+              "name": "channel"
+            }
+          }
+        },
+        {
+          "kind": "right",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/requires/0"
+          },
+          "right": "channels.member",
+          "subject": {
+            "defaulted": true,
+            "source": {
+              "in": "scope",
+              "name": "channel"
+            }
+          }
+        }
+      ],
+      "resource": {
+        "idProperty": "taskId",
+        "type": "tasks"
+      },
+      "responses": [
+        {
+          "body": {
+            "kind": "ref",
+            "schema": "Task"
+          },
+          "derivedFrom": {
+            "derivation": "batch.read",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/batch"
+              }
+            ]
+          },
+          "headers": [],
+          "media": "application/json",
+          "shape": "table",
+          "status": 200
+        }
+      ],
+      "safe": true,
+      "scopes": [
+        {
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+          },
+          "scope": "channel",
+          "source": {
+            "in": "path",
+            "name": "channelId"
+          }
+        }
+      ],
+      "surface": "app",
+      "tags": [],
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "upstream": []
+    },
+    {
+      "access": {
+        "identity": "user",
+        "kind": "identity",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        },
+        "schemes": [
+          "bearer"
+        ]
+      },
+      "bindings": [],
+      "callerKinds": [
+        "identified"
+      ],
+      "docs": {},
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/list"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "issues"
+                    }
+                  }
+                ]
+              },
+              "role": "schemaInvalid"
+            }
+          ]
+        },
+        {
+          "code": "api.unauthenticated",
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ]
+        },
+        {
+          "code": "api.forbidden",
+          "derivedFrom": {
+            "derivation": "requirement.errors",
+            "from": [
+              {
+                "layer": "pack:crud-rights",
+                "pointer": "/derive/0/require"
+              },
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/requires/0"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.not_found",
+          "derivedFrom": {
+            "derivation": "scope.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.internal",
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/list"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ]
+        }
+      ],
+      "examples": {},
+      "extensions": {},
+      "features": [],
+      "fieldRights": [],
+      "format": "bare",
+      "id": "listTasks",
+      "internal": false,
+      "kind": "httpOperation",
+      "maturity": {
+        "level": "experimental",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        },
+        "source": "api"
+      },
+      "method": "get",
+      "name": {
+        "role": "operation",
+        "segments": [
+          "list",
+          "tasks"
+        ]
+      },
+      "op": "list",
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/list"
+      },
+      "paging": {
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/list/paging"
+        },
+        "overLimit": "reject",
+        "sortKeys": []
+      },
+      "params": {
+        "header": [
+          {
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            },
+            "name": "Authorization",
+            "required": true,
+            "type": {
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "path": [
+          {
+            "name": "channelId",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/id/channelId"
+            },
+            "required": true,
+            "type": {
+              "format": "uuid",
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "query": []
+      },
+      "path": "/v1/channels/{channelId}/tasks",
+      "principalRequires": [],
+      "requires": [
+        {
+          "derivedFrom": {
+            "derivation": "pack.crud-rights.crud",
+            "from": [
+              {
+                "layer": "pack:crud-rights",
+                "pointer": "/derive/0/require"
+              }
+            ]
+          },
+          "kind": "right",
+          "right": "tasks.list",
+          "subject": {
+            "defaulted": true,
+            "source": {
+              "in": "scope",
+              "name": "channel"
+            }
+          }
+        },
+        {
+          "kind": "right",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/requires/0"
+          },
+          "right": "channels.member",
+          "subject": {
+            "defaulted": true,
+            "source": {
+              "in": "scope",
+              "name": "channel"
+            }
+          }
+        }
+      ],
+      "resource": {
+        "idProperty": "taskId",
+        "type": "tasks"
+      },
+      "responses": [
+        {
+          "body": {
+            "kind": "ref",
+            "schema": "Task"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          },
+          "headers": [],
+          "media": "application/json",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/item"
+          },
+          "shape": "list",
+          "status": 200
+        }
+      ],
+      "safe": true,
+      "scopes": [
+        {
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+          },
+          "scope": "channel",
+          "source": {
+            "in": "path",
+            "name": "channelId"
+          }
+        }
+      ],
+      "surface": "app",
+      "tags": [],
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "upstream": []
+    },
+    {
+      "access": {
+        "identity": "user",
+        "kind": "identity",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        },
+        "schemes": [
+          "bearer"
+        ]
+      },
+      "bindings": [],
+      "callerKinds": [
+        "identified"
+      ],
+      "docs": {},
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/update"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "issues"
+                    }
+                  }
+                ]
+              },
+              "role": "schemaInvalid"
+            }
+          ]
+        },
+        {
+          "code": "api.unauthenticated",
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ]
+        },
+        {
+          "code": "api.forbidden",
+          "derivedFrom": {
+            "derivation": "requirement.errors",
+            "from": [
+              {
+                "layer": "pack:crud-rights",
+                "pointer": "/derive/0/require"
+              },
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/requires/0"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.not_found",
+          "derivedFrom": {
+            "derivation": "member.notFound",
+            "from": [
+              {
+                "layer": "pack:crud-rights",
+                "pointer": "/derive/0/require"
+              },
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/update"
+              },
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "notFound"
+            }
+          ]
+        },
+        {
+          "code": "api.payload_too_large",
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/update/input"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "limitBytes"
+                    }
+                  }
+                ]
+              },
+              "role": "payloadTooLarge"
+            }
+          ]
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/update/input"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ]
+        },
+        {
+          "code": "api.rate_limited",
+          "derivedFrom": {
+            "derivation": "requirement.errors",
+            "from": [
+              {
+                "layer": "pack:crud-rights",
+                "pointer": "/derive/1/require"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.internal",
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/update"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ]
+        }
+      ],
+      "examples": {},
+      "extensions": {},
+      "features": [],
+      "fieldRights": [],
+      "format": "bare",
+      "id": "updateTask",
+      "input": {
+        "bodyLimitBytes": 1048576,
+        "media": "application/json",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/update/input"
+        },
+        "rawBody": false,
+        "schema": {
+          "kind": "ref",
+          "schema": "CreateTask"
+        }
+      },
+      "internal": false,
+      "kind": "httpOperation",
+      "maturity": {
+        "level": "experimental",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        },
+        "source": "api"
+      },
+      "method": "patch",
+      "name": {
+        "role": "operation",
+        "segments": [
+          "update",
+          "task"
+        ]
+      },
+      "op": "update",
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/update"
+      },
+      "params": {
+        "header": [
+          {
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            },
+            "name": "Authorization",
+            "required": true,
+            "type": {
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "path": [
+          {
+            "name": "channelId",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/id/channelId"
+            },
+            "required": true,
+            "type": {
+              "format": "uuid",
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          },
+          {
+            "name": "taskId",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/member/routes/tasks/id/taskId"
+            },
+            "required": true,
+            "type": {
+              "format": "uuid",
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "query": []
+      },
+      "path": "/v1/channels/{channelId}/tasks/{taskId}",
+      "principalRequires": [],
+      "requires": [
+        {
+          "derivedFrom": {
+            "derivation": "pack.crud-rights.crud",
+            "from": [
+              {
+                "layer": "pack:crud-rights",
+                "pointer": "/derive/0/require"
+              }
+            ]
+          },
+          "kind": "right",
+          "right": "tasks.update",
+          "subject": {
+            "defaulted": true,
+            "source": {
+              "in": "path",
+              "name": "taskId"
+            }
+          }
+        },
+        {
+          "bucket": "perUser",
+          "derivedFrom": {
+            "derivation": "pack.crud-rights.writes",
+            "from": [
+              {
+                "layer": "pack:crud-rights",
+                "pointer": "/derive/1/require"
+              }
+            ]
+          },
+          "kind": "rule",
+          "rule": "throttle"
+        },
+        {
+          "kind": "right",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/requires/0"
+          },
+          "right": "channels.member",
+          "subject": {
+            "defaulted": true,
+            "source": {
+              "in": "scope",
+              "name": "channel"
+            }
+          }
+        }
+      ],
+      "resource": {
+        "idParam": "taskId",
+        "idProperty": "taskId",
+        "type": "tasks"
+      },
+      "responses": [
+        {
+          "body": {
+            "kind": "ref",
+            "schema": "Task"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          },
+          "headers": [],
+          "media": "application/json",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/item"
+          },
+          "shape": "item",
+          "status": 200
+        }
+      ],
+      "safe": false,
+      "scopes": [
+        {
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+          },
+          "scope": "channel",
+          "source": {
+            "in": "path",
+            "name": "channelId"
+          }
+        }
+      ],
+      "surface": "app",
+      "tags": [],
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "upstream": []
+    }
+  ],
+  "packs": [
+    {
+      "name": "crud-rights",
+      "version": "1.0.0"
+    }
+  ],
+  "pagings": {},
+  "rights": {
+    "channels.get": {
+      "derivedFrom": {
+        "derivation": "pack.crud-rights.crud",
+        "from": [
+          {
+            "layer": "pack:crud-rights",
+            "pointer": "/derive/0/declareRight"
+          },
+          {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/ops/0"
+          }
+        ]
+      },
+      "docs": {},
+      "errors": [
+        "api.forbidden"
+      ],
+      "extensions": {},
+      "id": "channels.get",
+      "origin": {
+        "layer": "pack:crud-rights",
+        "pointer": "/derive/0/declareRight"
+      },
+      "subject": {
+        "idSchema": {
+          "format": "uuid",
+          "kind": "scalar",
+          "refinements": {},
+          "type": "string"
+        },
+        "kind": "resource",
+        "type": {
+          "role": "schema",
+          "segments": [
+            "channel"
+          ]
+        }
+      }
+    },
+    "channels.member": {
+      "docs": {},
+      "errors": [
+        "api.forbidden"
+      ],
+      "extensions": {},
+      "id": "channels.member",
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/channels.member"
+      },
+      "subject": {
+        "kind": "scope",
+        "scope": "channel"
+      }
+    },
+    "tasks.batch": {
+      "derivedFrom": {
+        "derivation": "pack.crud-rights.crud",
+        "from": [
+          {
+            "layer": "pack:crud-rights",
+            "pointer": "/derive/0/declareRight"
+          },
+          {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/batch"
+          }
+        ]
+      },
+      "docs": {},
+      "errors": [
+        "api.forbidden"
+      ],
+      "extensions": {},
+      "id": "tasks.batch",
+      "origin": {
+        "layer": "pack:crud-rights",
+        "pointer": "/derive/0/declareRight"
+      },
+      "subject": {
+        "kind": "scope",
+        "scope": "channel"
+      }
+    },
+    "tasks.create": {
+      "derivedFrom": {
+        "derivation": "pack.crud-rights.crud",
+        "from": [
+          {
+            "layer": "pack:crud-rights",
+            "pointer": "/derive/0/declareRight"
+          },
+          {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/create"
+          }
+        ]
+      },
+      "docs": {},
+      "errors": [
+        "api.forbidden"
+      ],
+      "extensions": {},
+      "id": "tasks.create",
+      "origin": {
+        "layer": "pack:crud-rights",
+        "pointer": "/derive/0/declareRight"
+      },
+      "subject": {
+        "kind": "scope",
+        "scope": "channel"
+      }
+    },
+    "tasks.list": {
+      "derivedFrom": {
+        "derivation": "pack.crud-rights.crud",
+        "from": [
+          {
+            "layer": "pack:crud-rights",
+            "pointer": "/derive/0/declareRight"
+          },
+          {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/list"
+          }
+        ]
+      },
+      "docs": {},
+      "errors": [
+        "api.forbidden"
+      ],
+      "extensions": {},
+      "id": "tasks.list",
+      "origin": {
+        "layer": "pack:crud-rights",
+        "pointer": "/derive/0/declareRight"
+      },
+      "subject": {
+        "kind": "scope",
+        "scope": "channel"
+      }
+    },
+    "tasks.update": {
+      "docs": {},
+      "errors": [
+        "api.forbidden",
+        "api.not_found"
+      ],
+      "extensions": {},
+      "id": "tasks.update",
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/tasks.update"
+      },
+      "subject": {
+        "idSchema": {
+          "format": "uuid",
+          "kind": "scalar",
+          "refinements": {},
+          "type": "string"
+        },
+        "kind": "resource",
+        "type": {
+          "role": "schema",
+          "segments": [
+            "task"
+          ]
+        }
+      }
+    }
+  },
+  "rules": {
+    "throttle": {
+      "docs": {},
+      "errors": [
+        "api.rate_limited"
+      ],
+      "extensions": {},
+      "id": "throttle",
+      "origin": {
+        "layer": "pack:crud-rights",
+        "pointer": "/rules/throttle"
+      },
+      "takesBucket": true
+    }
+  },
+  "scalars": {},
+  "schemas": {
+    "ApiForbiddenParams": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "ApiForbiddenParams",
+      "kind": "object",
+      "name": {
+        "role": "params",
+        "segments": [
+          "api",
+          "forbidden"
+        ]
+      },
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.forbidden/params"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "pointer",
+          "nullable": false,
+          "optional": true,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.forbidden/params/pointer"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "ApiPayloadTooLargeParams": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "ApiPayloadTooLargeParams",
+      "kind": "object",
+      "name": {
+        "role": "params",
+        "segments": [
+          "api",
+          "payload",
+          "too",
+          "large"
+        ]
+      },
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.payload_too_large/params"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "limitBytes",
+          "nullable": false,
+          "optional": true,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.payload_too_large/params/limitBytes"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {
+              "minimum": "0"
+            },
+            "type": "integer"
+          }
+        }
+      ]
+    },
+    "ApiRateLimitedParams": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "ApiRateLimitedParams",
+      "kind": "object",
+      "name": {
+        "role": "params",
+        "segments": [
+          "api",
+          "rate",
+          "limited"
+        ]
+      },
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.rate_limited/params"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "retryAfterMs",
+          "nullable": false,
+          "optional": true,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.rate_limited/params/retryAfterMs"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {
+              "maximum": "9007199254740991",
+              "minimum": "0"
+            },
+            "type": "integer"
+          }
+        }
+      ]
+    },
+    "ApiSchemaInvalidIssue": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "ApiSchemaInvalidIssue",
+      "kind": "object",
+      "name": {
+        "role": "schema",
+        "segments": [
+          "api",
+          "schema",
+          "invalid",
+          "issue"
+        ]
+      },
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.schema_invalid/params/issues/items"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "in",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.schema_invalid/params/issues/items/properties/in"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {
+              "pattern": {
+                "normalized": "^(?:path|query|header|body)$",
+                "source": "^(?:path|query|header|body)$"
+              }
+            },
+            "type": "string"
+          }
+        },
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "pointer",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.schema_invalid/params/issues/items/properties/pointer"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        },
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "rule",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.schema_invalid/params/issues/items/properties/rule"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "ApiSchemaInvalidParams": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "ApiSchemaInvalidParams",
+      "kind": "object",
+      "name": {
+        "role": "params",
+        "segments": [
+          "api",
+          "schema",
+          "invalid"
+        ]
+      },
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.schema_invalid/params"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "issues",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.schema_invalid/params/issues"
+          },
+          "sensitive": false,
+          "type": {
+            "items": {
+              "kind": "ref",
+              "schema": "ApiSchemaInvalidIssue"
+            },
+            "kind": "array"
+          }
+        }
+      ]
+    },
+    "Channel": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "Channel",
+      "kind": "object",
+      "name": {
+        "role": "schema",
+        "segments": [
+          "channel"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/Channel"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "channelId",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Channel/properties/channelId"
+          },
+          "sensitive": false,
+          "type": {
+            "format": "uuid",
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "CreateTask": {
+      "directions": [
+        "input"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "CreateTask",
+      "kind": "object",
+      "name": {
+        "role": "schema",
+        "segments": [
+          "create",
+          "task"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/CreateTask"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "title",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/CreateTask/properties/title"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "GetTasksBatchInput": {
+      "directions": [
+        "input"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "GetTasksBatchInput",
+      "kind": "object",
+      "name": {
+        "role": "input",
+        "segments": [
+          "get",
+          "tasks",
+          "batch"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/batch"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "derivedFrom": {
+            "derivation": "batch.read",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/batch"
+              }
+            ]
+          },
+          "docs": {},
+          "extensions": {},
+          "name": "ids",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/batch/maxIds"
+          },
+          "sensitive": false,
+          "type": {
+            "items": {
+              "format": "uuid",
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            },
+            "kind": "array",
+            "maxItems": 100
+          }
+        }
+      ]
+    },
+    "Task": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "Task",
+      "kind": "object",
+      "name": {
+        "role": "schema",
+        "segments": [
+          "task"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/Task"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "taskId",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Task/properties/taskId"
+          },
+          "sensitive": false,
+          "type": {
+            "format": "uuid",
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        },
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "title",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Task/properties/title"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "UserPrincipal": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "UserPrincipal",
+      "kind": "object",
+      "name": {
+        "role": "schema",
+        "segments": [
+          "user",
+          "principal"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/UserPrincipal"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "userId",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/UserPrincipal/properties/userId"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        }
+      ]
+    }
+  },
+  "schemes": {
+    "bearer": {
+      "id": "bearer",
+      "kind": "bearer",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/bearer"
+      }
+    }
+  },
+  "scopes": {
+    "channel": {
+      "docs": {},
+      "errors": [
+        "api.not_found"
+      ],
+      "extensions": {},
+      "id": "channel",
+      "idSchema": {
+        "format": "uuid",
+        "kind": "scalar",
+        "refinements": {},
+        "type": "string"
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/scopes/channel"
+      }
+    }
+  },
+  "services": {}
+}

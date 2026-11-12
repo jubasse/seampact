@@ -1,0 +1,129 @@
+{
+  "operations": {
+    "echoNotice": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "echoStrictKeys": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "echoSubtreeKeys": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "echoIgnoreKeys": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "echoKeepKeys": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "echoProfile": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "echoPatchArticle": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "echoBounds": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "echoOpaqueItems": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "echoReceipt": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "echoLabelled": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "echoTags": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "echoPoint": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "echoQuantity": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "echoPercent": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "echoInstant": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "echoDay": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "echoEnvelope": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "echoOptionalEnvelope": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "echoMember": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "echoOwner": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "echoFormats": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "echoPatterns": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "echoComment": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "echoCounts": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    }
+  }
+}

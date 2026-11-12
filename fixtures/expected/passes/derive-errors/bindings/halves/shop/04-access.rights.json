@@ -1,0 +1,19 @@
+{
+  "operations": {
+    "listMembers": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "getUser": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "historyUser": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    }
+  }
+}

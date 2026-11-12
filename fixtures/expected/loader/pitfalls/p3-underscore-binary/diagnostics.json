@@ -1,0 +1,27 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/yaml-ambiguous-scalar",
+      "message": "plain '1_000' is a number or a timestamp for YAML 1.1 and a string for YAML 1.2 (P3)",
+      "fix": "quote it ('1_000')",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/3/4"
+      },
+      "related": []
+    },
+    {
+      "severity": "error",
+      "rule": "seampact/load/yaml-ambiguous-scalar",
+      "message": "plain '0b101' is a number or a timestamp for YAML 1.1 and a string for YAML 1.2 (P3)",
+      "fix": "quote it ('0b101')",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/4/4"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}
