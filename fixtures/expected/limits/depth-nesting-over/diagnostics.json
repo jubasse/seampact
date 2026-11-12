@@ -1,0 +1,16 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/too-deep",
+      "message": "the contract nests deeper than 256 levels here, counted through $include and $file",
+      "fix": "flatten the nesting; a contract never needs this depth",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/3/4202"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

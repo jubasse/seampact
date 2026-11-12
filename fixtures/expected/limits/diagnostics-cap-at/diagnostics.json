@@ -1,0 +1,2210 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S000/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S001/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S002/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S003/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S004/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S005/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S006/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S007/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S008/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S009/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S010/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S011/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S012/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S013/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S014/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S015/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S016/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S017/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S018/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S019/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S020/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S021/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S022/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S023/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S024/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S025/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S026/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S027/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S028/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S029/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S030/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S031/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S032/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S033/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S034/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S035/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S036/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S037/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S038/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S039/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S040/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S041/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S042/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S043/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S044/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S045/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S046/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S047/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S048/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S049/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S050/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S051/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S052/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S053/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S054/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S055/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S056/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S057/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S058/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S059/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S060/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S061/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S062/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S063/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S064/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S065/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S066/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S067/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S068/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S069/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S070/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S071/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S072/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S073/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S074/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S075/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S076/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S077/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S078/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S079/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S080/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S081/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S082/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S083/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S084/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S085/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S086/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S087/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S088/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S089/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S090/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S091/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S092/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S093/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S094/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S095/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S096/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S097/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S098/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S099/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S100/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S101/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S102/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S103/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S104/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S105/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S106/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S107/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S108/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S109/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S110/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S111/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S112/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S113/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S114/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S115/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S116/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S117/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S118/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S119/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S120/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S121/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S122/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S123/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S124/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S125/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S126/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S127/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S128/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S129/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S130/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S131/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S132/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S133/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S134/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S135/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S136/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S137/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S138/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S139/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S140/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S141/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S142/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S143/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S144/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S145/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S146/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S147/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S148/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S149/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S150/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S151/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S152/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S153/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S154/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S155/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S156/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S157/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S158/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S159/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S160/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S161/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S162/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S163/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S164/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S165/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S166/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S167/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S168/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S169/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S170/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S171/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S172/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S173/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S174/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S175/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S176/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S177/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S178/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S179/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S180/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S181/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S182/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S183/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S184/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S185/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S186/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S187/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S188/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S189/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S190/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S191/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S192/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S193/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S194/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S195/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S196/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S197/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S198/minLength"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/invalid-value",
+          "message": "'minLength' must be >= 0.",
+          "fix": "Change 'minLength' so that it must be >= 0.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S199/minLength"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

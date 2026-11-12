@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/pattern",
+          "message": "the pattern is not portable: a repetition count above 1000 is not portable",
+          "fix": "rewrite it in the portable subset of ADR 0003 section 9",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Id/pattern"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}
