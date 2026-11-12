@@ -1,0 +1,158 @@
+{
+  "operations": {
+    "copyDocs": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "experimental",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        }
+      }
+    },
+    "copyHomeDocs": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "experimental",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        }
+      }
+    },
+    "getDoc": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "experimental",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        }
+      }
+    },
+    "updateDoc": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "experimental",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        }
+      }
+    }
+  },
+  "api": {
+    "wire": {
+      "int64": "string",
+      "outputEnums": "enum",
+      "urls": "relative"
+    }
+  }
+}

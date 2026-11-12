@@ -1,0 +1,24 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/include-cycle",
+      "message": "$include cycle (P8): a.yaml -> b.yaml -> a.yaml",
+      "fix": "break the cycle by removing one $include of it",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/b.yaml/2/13"
+      },
+      "related": [
+        {
+          "origin": {
+            "layer": "api",
+            "pointer": "/~load/a.yaml/2/13"
+          },
+          "message": "'b.yaml' is included here"
+        }
+      ]
+    }
+  ],
+  "apis": []
+}

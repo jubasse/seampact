@@ -1,0 +1,335 @@
+{
+  "operations": {
+    "health": {
+      "maturity": {
+        "level": "experimental",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        }
+      }
+    },
+    "feed": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/feed/access"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Device-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/feed/access"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/deviceToken"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "experimental",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        }
+      }
+    },
+    "notes": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/identities/viewer_or_device"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "experimental",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        }
+      }
+    },
+    "logout": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "experimental",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        }
+      }
+    },
+    "tiles": {
+      "params": {
+        "query": [
+          {
+            "name": "key",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/partner/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/mapsKey"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "experimental",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        }
+      }
+    },
+    "stripe": {
+      "params": {
+        "header": [
+          {
+            "name": "Stripe-Signature",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/hooks/routes/stripe/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/stripeSignature"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "experimental",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        }
+      }
+    },
+    "clerk": {
+      "params": {
+        "header": [
+          {
+            "name": "svix-signature",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/hooks/routes/clerk/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/clerkWebhook"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "experimental",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        }
+      }
+    },
+    "slack": {
+      "params": {
+        "header": [
+          {
+            "name": "X-Slack-Signature",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/hooks/routes/slack/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/slackSignature"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "experimental",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        }
+      }
+    }
+  },
+  "api": {
+    "wire": {
+      "int64": "string",
+      "outputEnums": "enum",
+      "urls": "relative"
+    }
+  }
+}

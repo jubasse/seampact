@@ -1,0 +1,439 @@
+{
+  "packs": [
+    {
+      "name": "@seampact/pack-crud-rights",
+      "version": "1.1.0"
+    }
+  ],
+  "conventions": {
+    "paging.default": {
+      "value": "cursor",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/paging/default"
+      }
+    },
+    "paging.maxLimit": {
+      "value": 100,
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/paging/maxLimit"
+      }
+    },
+    "idempotency.header": {
+      "value": "Idempotency-Key",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/idempotency/header"
+      }
+    },
+    "idempotency.replayHeader": {
+      "value": "Idempotency-Replayed",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/idempotency/replayHeader"
+      }
+    },
+    "idempotency.lifetime": {
+      "value": "24h",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/idempotency/lifetime"
+      }
+    },
+    "bodyLimit": {
+      "value": "1MiB",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/bodyLimit"
+      }
+    },
+    "batch.maxIds": {
+      "value": 200,
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/batch/maxIds"
+      }
+    },
+    "batch.bodyLimit": {
+      "value": "2MiB",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/batch/bodyLimit"
+      }
+    },
+    "cache.families": {
+      "value": {
+        "minute": "60s",
+        "hour": "3600s"
+      },
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/cache/families"
+      }
+    },
+    "restrictedInput": {
+      "value": "reject",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/restrictedInput"
+      }
+    },
+    "rateLimit.header": {
+      "value": "Retry-After",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/rateLimit/header"
+      }
+    },
+    "rateLimit.param": {
+      "value": "retryAfterMs",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/rateLimit/param"
+      }
+    },
+    "rateLimit.unit": {
+      "value": "s",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/rateLimit/unit"
+      }
+    },
+    "errors.every": {
+      "value": [
+        "api.internal"
+      ],
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/errors/every"
+      }
+    },
+    "errors.derived": {
+      "value": {
+        "schemaInvalid": {
+          "code": "api.schema_invalid",
+          "params": {
+            "issues": {
+              "$each": "$issues",
+              "$as": {
+                "pointer": "$item.pointer",
+                "rule": "$item.rule"
+              }
+            }
+          }
+        }
+      },
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/errors/derived"
+      }
+    }
+  },
+  "formats": {
+    "bare": {
+      "id": "bare",
+      "origin": {
+        "layer": "core",
+        "pointer": "/formats/bare"
+      },
+      "media": "application/json",
+      "absent": "omit",
+      "success": {
+        "item": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "table": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "list": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "page": {
+          "body": {
+            "kind": "slot",
+            "slot": "items",
+            "path": []
+          },
+          "headers": []
+        }
+      },
+      "meta": {},
+      "error": {
+        "media": "application/problem+json",
+        "body": {
+          "kind": "object",
+          "members": [
+            {
+              "name": {
+                "kind": "text",
+                "text": "type"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "code",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "title"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "title",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "status"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "status",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "detail"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "detail",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "instance"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "instance",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "code"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "code",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "nature"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "nature",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "traceId"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "traceId",
+                "path": []
+              }
+            }
+          ],
+          "merge": "params"
+        },
+        "headers": []
+      }
+    }
+  },
+  "pagings": {
+    "cursor": {
+      "id": "cursor",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/pagings/cursor"
+      },
+      "position": "cursor",
+      "absent": "omit",
+      "request": [
+        {
+          "role": "cursor",
+          "in": "query",
+          "name": "cursor"
+        },
+        {
+          "role": "limit",
+          "in": "query",
+          "name": "limit"
+        },
+        {
+          "role": "sort",
+          "in": "query",
+          "name": "sort",
+          "style": "signed"
+        }
+      ],
+      "response": {
+        "body": {
+          "kind": "slot",
+          "slot": "items",
+          "path": []
+        },
+        "meta": [],
+        "headers": [],
+        "links": [
+          {
+            "rel": "next",
+            "role": "next"
+          }
+        ]
+      },
+      "handlerResult": [
+        "nextCursor"
+      ]
+    }
+  },
+  "operations": [
+    {
+      "kind": "httpOperation",
+      "id": "status",
+      "name": {
+        "segments": [
+          "status"
+        ],
+        "role": "operation"
+      },
+      "surface": "devices",
+      "method": "get",
+      "safe": true,
+      "path": "/devices/v1/status",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "DeviceStatus"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/devices/routes/status/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/devices/routes/status"
+      }
+    }
+  ],
+  "api": {
+    "id": "tasksDevices",
+    "name": {
+      "segments": [
+        "tasks",
+        "devices"
+      ],
+      "role": "schema"
+    },
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "kind": "product",
+    "pathVersion": {
+      "value": "prefix",
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/version"
+      }
+    },
+    "maturity": "provisional",
+    "compat": {
+      "policy": "none"
+    },
+    "surfaces": {
+      "devices": {
+        "name": {
+          "segments": [
+            "devices"
+          ],
+          "role": "schema"
+        },
+        "prefix": "/devices/v1",
+        "pathVersion": "prefix",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/devices"
+        }
+      }
+    },
+    "documents": {},
+    "docs": {
+      "summary": "The status a paired wall display reads."
+    },
+    "extensions": {},
+    "origin": {
+      "layer": "api",
+      "pointer": "/api"
+    }
+  },
+  "lint": {
+    "rules": {},
+    "allows": []
+  }
+}

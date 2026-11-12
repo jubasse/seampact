@@ -1,0 +1,49 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/path-escape",
+      "message": "path '../outside.yaml' of $include leaves the workspace root",
+      "fix": "move the file inside the workspace, or add a workspace.yaml at or above every file the contract reads",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/4/18"
+      },
+      "related": []
+    },
+    {
+      "severity": "error",
+      "rule": "seampact/load/path-absolute",
+      "message": "path '/etc/hosts' of $include is absolute",
+      "fix": "write a path relative to this file, starting with ./ or ../",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/5/18"
+      },
+      "related": []
+    },
+    {
+      "severity": "error",
+      "rule": "seampact/load/path-backslash",
+      "message": "path '.\\\\x.yaml' of $include uses a backslash",
+      "fix": "write the path with forward slashes",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/6/18"
+      },
+      "related": []
+    },
+    {
+      "severity": "error",
+      "rule": "seampact/load/path-case",
+      "message": "path './Parts/task.yaml' of $include differs in case from the file on disk, 'parts/task.yaml'",
+      "fix": "write the path as 'parts/task.yaml'; compilation must not depend on the file system's case rules",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/7/18"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

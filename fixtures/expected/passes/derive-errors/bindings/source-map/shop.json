@@ -1,0 +1,187 @@
+{
+  "irRevision": 6,
+  "locations": {
+    "api#/api": {
+      "column": 1,
+      "endColumn": 47,
+      "endLine": 4,
+      "file": "api.yaml",
+      "line": 4
+    },
+    "api#/api/version": {
+      "column": 20,
+      "endColumn": 30,
+      "endLine": 4,
+      "file": "api.yaml",
+      "line": 4
+    },
+    "api#/conventions/errors/derived": {
+      "column": 5,
+      "endColumn": 1,
+      "endLine": 16,
+      "file": "api.yaml",
+      "line": 10
+    },
+    "api#/conventions/errors/derived/schemaInvalid": {
+      "column": 7,
+      "endColumn": 1,
+      "endLine": 14,
+      "file": "api.yaml",
+      "line": 11
+    },
+    "api#/conventions/rateLimit/header": {
+      "column": 16,
+      "endColumn": 35,
+      "endLine": 8,
+      "file": "api.yaml",
+      "line": 8
+    },
+    "api#/conventions/rateLimit/param": {
+      "column": 37,
+      "endColumn": 56,
+      "endLine": 8,
+      "file": "api.yaml",
+      "line": 8
+    },
+    "api#/conventions/rateLimit/unit": {
+      "column": 58,
+      "endColumn": 65,
+      "endLine": 8,
+      "file": "api.yaml",
+      "line": 8
+    },
+    "api#/errors/members.gone": {
+      "column": 3,
+      "endColumn": 57,
+      "endLine": 24,
+      "file": "api.yaml",
+      "line": 24
+    },
+    "api#/errors/members.not_found": {
+      "column": 3,
+      "endColumn": 37,
+      "endLine": 23,
+      "file": "api.yaml",
+      "line": 23
+    },
+    "api#/errors/shop.invalid": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 21,
+      "file": "api.yaml",
+      "line": 18
+    },
+    "api#/errors/shop.invalid/params": {
+      "column": 5,
+      "endColumn": 105,
+      "endLine": 20,
+      "file": "api.yaml",
+      "line": 20
+    },
+    "api#/errors/shop.invalid/params/problems": {
+      "column": 15,
+      "endColumn": 103,
+      "endLine": 20,
+      "file": "api.yaml",
+      "line": 20
+    },
+    "api#/errors/shop.invalid/params/problems/items": {
+      "column": 40,
+      "endColumn": 101,
+      "endLine": 20,
+      "file": "api.yaml",
+      "line": 20
+    },
+    "api#/errors/shop.invalid/params/problems/items/properties/at": {
+      "column": 77,
+      "endColumn": 97,
+      "endLine": 20,
+      "file": "api.yaml",
+      "line": 20
+    },
+    "api#/schemas/Member": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 33,
+      "file": "api.yaml",
+      "line": 28
+    },
+    "api#/schemas/Member/properties/userId": {
+      "column": 7,
+      "endColumn": 21,
+      "endLine": 32,
+      "file": "api.yaml",
+      "line": 32
+    },
+    "api#/surfaces/app": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 52,
+      "file": "api.yaml",
+      "line": 35
+    },
+    "api#/surfaces/app/access": {
+      "column": 5,
+      "endColumn": 63,
+      "endLine": 37,
+      "file": "api.yaml",
+      "line": 37
+    },
+    "api#/surfaces/app/routes/members/id/userId": {
+      "column": 15,
+      "endColumn": 29,
+      "endLine": 41,
+      "file": "api.yaml",
+      "line": 41
+    },
+    "api#/surfaces/app/routes/members/item": {
+      "column": 9,
+      "endColumn": 21,
+      "endLine": 42,
+      "file": "api.yaml",
+      "line": 42
+    },
+    "api#/surfaces/app/routes/members/member/errorRoles/notFound": {
+      "column": 13,
+      "endColumn": 40,
+      "endLine": 46,
+      "file": "api.yaml",
+      "line": 46
+    },
+    "api#/surfaces/app/routes/members/member/routes/history": {
+      "column": 13,
+      "endColumn": 1,
+      "endLine": 52,
+      "file": "api.yaml",
+      "line": 48
+    },
+    "api#/surfaces/app/routes/members/member/routes/history/errorRoles/notFound": {
+      "column": 17,
+      "endColumn": 49,
+      "endLine": 51,
+      "file": "api.yaml",
+      "line": 51
+    },
+    "api#/surfaces/app/routes/members/ops/get": {
+      "column": 40,
+      "endColumn": 47,
+      "endLine": 43,
+      "file": "api.yaml",
+      "line": 43
+    },
+    "api#/surfaces/app/routes/members/ops/list": {
+      "column": 16,
+      "endColumn": 38,
+      "endLine": 43,
+      "file": "api.yaml",
+      "line": 43
+    },
+    "api#/surfaces/app/routes/members/ops/list/paging": {
+      "column": 24,
+      "endColumn": 36,
+      "endLine": 43,
+      "file": "api.yaml",
+      "line": 43
+    }
+  }
+}

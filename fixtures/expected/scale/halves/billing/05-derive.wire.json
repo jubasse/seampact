@@ -1,0 +1,6094 @@
+{
+  "operations": {
+    "listAccounts": {
+      "params": {
+        "query": [
+          {
+            "name": "cursor",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "1",
+                "maximum": "100"
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          }
+        ],
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "Link",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": false,
+              "derivedFrom": {
+                "derivation": "paging.params",
+                "from": [
+                  {
+                    "layer": "shared",
+                    "pointer": "/conventions/paging/default"
+                  },
+                  {
+                    "layer": "shared",
+                    "pointer": "/pagings/cursor"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "getAccount": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "listInvoices": {
+      "params": {
+        "query": [
+          {
+            "name": "cursor",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "1",
+                "maximum": "100"
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          }
+        ],
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "Link",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": false,
+              "derivedFrom": {
+                "derivation": "paging.params",
+                "from": [
+                  {
+                    "layer": "shared",
+                    "pointer": "/conventions/paging/default"
+                  },
+                  {
+                    "layer": "shared",
+                    "pointer": "/pagings/cursor"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "createInvoice": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "getInvoice": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "updateInvoice": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "deleteInvoice": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "sendInvoice": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "listPayments": {
+      "params": {
+        "query": [
+          {
+            "name": "cursor",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "1",
+                "maximum": "100"
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          }
+        ],
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "Link",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": false,
+              "derivedFrom": {
+                "derivation": "paging.params",
+                "from": [
+                  {
+                    "layer": "shared",
+                    "pointer": "/conventions/paging/default"
+                  },
+                  {
+                    "layer": "shared",
+                    "pointer": "/pagings/cursor"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "createPayment": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "getPayment": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "updatePayment": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "deletePayment": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "capturePayment": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "listRefunds": {
+      "params": {
+        "query": [
+          {
+            "name": "cursor",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "1",
+                "maximum": "100"
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          }
+        ],
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "Link",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": false,
+              "derivedFrom": {
+                "derivation": "paging.params",
+                "from": [
+                  {
+                    "layer": "shared",
+                    "pointer": "/conventions/paging/default"
+                  },
+                  {
+                    "layer": "shared",
+                    "pointer": "/pagings/cursor"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "createRefund": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "getRefund": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "updateRefund": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "deleteRefund": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "approveRefund": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "listTaxRates": {
+      "params": {
+        "query": [
+          {
+            "name": "cursor",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "1",
+                "maximum": "100"
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          }
+        ],
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "Link",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": false,
+              "derivedFrom": {
+                "derivation": "paging.params",
+                "from": [
+                  {
+                    "layer": "shared",
+                    "pointer": "/conventions/paging/default"
+                  },
+                  {
+                    "layer": "shared",
+                    "pointer": "/pagings/cursor"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "createTaxRate": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "getTaxRate": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "updateTaxRate": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "deleteTaxRate": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "publishTaxRate": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "listCustomers": {
+      "params": {
+        "query": [
+          {
+            "name": "cursor",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "1",
+                "maximum": "100"
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          }
+        ],
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "Link",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": false,
+              "derivedFrom": {
+                "derivation": "paging.params",
+                "from": [
+                  {
+                    "layer": "shared",
+                    "pointer": "/conventions/paging/default"
+                  },
+                  {
+                    "layer": "shared",
+                    "pointer": "/pagings/cursor"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "createCustomer": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "getCustomer": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "updateCustomer": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "deleteCustomer": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "cancelCustomer": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "listSubscriptions": {
+      "params": {
+        "query": [
+          {
+            "name": "cursor",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "1",
+                "maximum": "100"
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          }
+        ],
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "Link",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": false,
+              "derivedFrom": {
+                "derivation": "paging.params",
+                "from": [
+                  {
+                    "layer": "shared",
+                    "pointer": "/conventions/paging/default"
+                  },
+                  {
+                    "layer": "shared",
+                    "pointer": "/pagings/cursor"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "createSubscription": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "getSubscription": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "updateSubscription": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "deleteSubscription": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "applySubscription": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "listPlans": {
+      "params": {
+        "query": [
+          {
+            "name": "cursor",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "1",
+                "maximum": "100"
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          }
+        ],
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "Link",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": false,
+              "derivedFrom": {
+                "derivation": "paging.params",
+                "from": [
+                  {
+                    "layer": "shared",
+                    "pointer": "/conventions/paging/default"
+                  },
+                  {
+                    "layer": "shared",
+                    "pointer": "/pagings/cursor"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "createPlan": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "getPlan": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "updatePlan": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "deletePlan": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "closePlan": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "listCoupons": {
+      "params": {
+        "query": [
+          {
+            "name": "cursor",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "1",
+                "maximum": "100"
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          }
+        ],
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "Link",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": false,
+              "derivedFrom": {
+                "derivation": "paging.params",
+                "from": [
+                  {
+                    "layer": "shared",
+                    "pointer": "/conventions/paging/default"
+                  },
+                  {
+                    "layer": "shared",
+                    "pointer": "/pagings/cursor"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "createCoupon": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "getCoupon": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "updateCoupon": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "deleteCoupon": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "listCreditNotes": {
+      "params": {
+        "query": [
+          {
+            "name": "cursor",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "1",
+                "maximum": "100"
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          }
+        ],
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "Link",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": false,
+              "derivedFrom": {
+                "derivation": "paging.params",
+                "from": [
+                  {
+                    "layer": "shared",
+                    "pointer": "/conventions/paging/default"
+                  },
+                  {
+                    "layer": "shared",
+                    "pointer": "/pagings/cursor"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "createCreditNote": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "getCreditNote": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "updateCreditNote": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "deleteCreditNote": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "listPayouts": {
+      "params": {
+        "query": [
+          {
+            "name": "cursor",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "1",
+                "maximum": "100"
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          }
+        ],
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "Link",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": false,
+              "derivedFrom": {
+                "derivation": "paging.params",
+                "from": [
+                  {
+                    "layer": "shared",
+                    "pointer": "/conventions/paging/default"
+                  },
+                  {
+                    "layer": "shared",
+                    "pointer": "/pagings/cursor"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "createPayout": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "getPayout": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "updatePayout": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "deletePayout": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "listDisputes": {
+      "params": {
+        "query": [
+          {
+            "name": "cursor",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "1",
+                "maximum": "100"
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          }
+        ],
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "Link",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": false,
+              "derivedFrom": {
+                "derivation": "paging.params",
+                "from": [
+                  {
+                    "layer": "shared",
+                    "pointer": "/conventions/paging/default"
+                  },
+                  {
+                    "layer": "shared",
+                    "pointer": "/pagings/cursor"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "createDispute": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "getDispute": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "updateDispute": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "deleteDispute": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "listPriceLists": {
+      "params": {
+        "query": [
+          {
+            "name": "cursor",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "1",
+                "maximum": "100"
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          }
+        ],
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "Link",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": false,
+              "derivedFrom": {
+                "derivation": "paging.params",
+                "from": [
+                  {
+                    "layer": "shared",
+                    "pointer": "/conventions/paging/default"
+                  },
+                  {
+                    "layer": "shared",
+                    "pointer": "/pagings/cursor"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "createPriceList": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "getPriceList": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "updatePriceList": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "deletePriceList": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "listLedgerEntries": {
+      "params": {
+        "query": [
+          {
+            "name": "cursor",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "1",
+                "maximum": "100"
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          }
+        ],
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "Link",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": false,
+              "derivedFrom": {
+                "derivation": "paging.params",
+                "from": [
+                  {
+                    "layer": "shared",
+                    "pointer": "/conventions/paging/default"
+                  },
+                  {
+                    "layer": "shared",
+                    "pointer": "/pagings/cursor"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "createLedgerEntry": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "getLedgerEntry": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "updateLedgerEntry": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "deleteLedgerEntry": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "listStatements": {
+      "params": {
+        "query": [
+          {
+            "name": "cursor",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "1",
+                "maximum": "100"
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          }
+        ],
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "Link",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": false,
+              "derivedFrom": {
+                "derivation": "paging.params",
+                "from": [
+                  {
+                    "layer": "shared",
+                    "pointer": "/conventions/paging/default"
+                  },
+                  {
+                    "layer": "shared",
+                    "pointer": "/pagings/cursor"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "createStatement": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "getStatement": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "updateStatement": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "deleteStatement": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "listReceipts": {
+      "params": {
+        "query": [
+          {
+            "name": "cursor",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "1",
+                "maximum": "100"
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          }
+        ],
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "Link",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": false,
+              "derivedFrom": {
+                "derivation": "paging.params",
+                "from": [
+                  {
+                    "layer": "shared",
+                    "pointer": "/conventions/paging/default"
+                  },
+                  {
+                    "layer": "shared",
+                    "pointer": "/pagings/cursor"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "createReceipt": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "getReceipt": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "updateReceipt": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "deleteReceipt": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "listReminders": {
+      "params": {
+        "query": [
+          {
+            "name": "cursor",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "1",
+                "maximum": "100"
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          }
+        ],
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "Link",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": false,
+              "derivedFrom": {
+                "derivation": "paging.params",
+                "from": [
+                  {
+                    "layer": "shared",
+                    "pointer": "/conventions/paging/default"
+                  },
+                  {
+                    "layer": "shared",
+                    "pointer": "/pagings/cursor"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "createReminder": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "getReminder": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "updateReminder": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "deleteReminder": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/user"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "stripeEvents": {
+      "params": {
+        "header": [
+          {
+            "name": "X-Signature",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/hooks/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/webhookSignature"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    }
+  },
+  "api": {
+    "wire": {
+      "int64": "string",
+      "outputEnums": "enum",
+      "urls": "relative"
+    }
+  }
+}

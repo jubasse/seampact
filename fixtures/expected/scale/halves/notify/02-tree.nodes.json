@@ -1,0 +1,1414 @@
+{
+  "conventions": {
+    "paging.default": {
+      "value": "cursor",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/paging/default"
+      }
+    },
+    "paging.maxLimit": {
+      "value": 100,
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/paging/maxLimit"
+      }
+    },
+    "bodyLimit": {
+      "value": "1MiB",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/bodyLimit"
+      }
+    },
+    "cache.families": {
+      "value": {
+        "minute": "60s",
+        "hour": "3600s"
+      },
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/cache/families"
+      }
+    },
+    "restrictedInput": {
+      "value": "reject",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/restrictedInput"
+      }
+    },
+    "rateLimit.header": {
+      "value": "Retry-After",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/rateLimit/header"
+      }
+    },
+    "rateLimit.param": {
+      "value": "retryAfterMs",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/rateLimit/param"
+      }
+    },
+    "rateLimit.unit": {
+      "value": "s",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/rateLimit/unit"
+      }
+    },
+    "errors.derived": {
+      "value": {
+        "schemaInvalid": {
+          "code": "api.schema_invalid",
+          "params": {
+            "issues": {
+              "$each": "$issues",
+              "$as": {
+                "pointer": "$item.pointer",
+                "rule": "$item.rule"
+              }
+            }
+          }
+        }
+      },
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/errors/derived"
+      }
+    }
+  },
+  "formats": {
+    "bare": {
+      "id": "bare",
+      "origin": {
+        "layer": "core",
+        "pointer": "/formats/bare"
+      },
+      "media": "application/json",
+      "absent": "omit",
+      "success": {
+        "item": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "table": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "list": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "page": {
+          "body": {
+            "kind": "slot",
+            "slot": "items",
+            "path": []
+          },
+          "headers": []
+        }
+      },
+      "meta": {},
+      "error": {
+        "media": "application/problem+json",
+        "body": {
+          "kind": "object",
+          "members": [
+            {
+              "name": {
+                "kind": "text",
+                "text": "type"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "code",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "title"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "title",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "status"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "status",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "detail"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "detail",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "instance"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "instance",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "code"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "code",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "nature"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "nature",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "traceId"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "traceId",
+                "path": []
+              }
+            }
+          ],
+          "merge": "params"
+        },
+        "headers": []
+      }
+    }
+  },
+  "pagings": {
+    "cursor": {
+      "id": "cursor",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/pagings/cursor"
+      },
+      "position": "cursor",
+      "absent": "omit",
+      "request": [
+        {
+          "role": "cursor",
+          "in": "query",
+          "name": "cursor"
+        },
+        {
+          "role": "limit",
+          "in": "query",
+          "name": "limit"
+        },
+        {
+          "role": "sort",
+          "in": "query",
+          "name": "sort",
+          "style": "signed"
+        }
+      ],
+      "response": {
+        "body": {
+          "kind": "slot",
+          "slot": "items",
+          "path": []
+        },
+        "meta": [],
+        "headers": [],
+        "links": [
+          {
+            "rel": "next",
+            "role": "next"
+          }
+        ]
+      },
+      "handlerResult": [
+        "nextCursor"
+      ]
+    }
+  },
+  "operations": [
+    {
+      "kind": "httpOperation",
+      "id": "listTemplates",
+      "name": {
+        "segments": [
+          "list",
+          "templates"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "op": "list",
+      "resource": {
+        "type": "templates",
+        "idProperty": "templateId"
+      },
+      "method": "get",
+      "safe": true,
+      "path": "/v1/templates",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Template"
+          },
+          "shape": "page",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates/item"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "paging": {
+        "style": "cursor",
+        "maxLimit": 50,
+        "defaultLimit": 50,
+        "overLimit": "reject",
+        "sortKeys": [
+          {
+            "key": "createdAt",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/templates/ops/list/sortable/0"
+            }
+          }
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/templates/ops/list/paging"
+        }
+      },
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/templates/ops/list"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "createTemplate",
+      "name": {
+        "segments": [
+          "create",
+          "template"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "op": "create",
+      "resource": {
+        "type": "templates",
+        "idProperty": "templateId"
+      },
+      "method": "post",
+      "safe": false,
+      "path": "/v1/templates",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "CreateTemplate"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/templates/ops/create/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 201,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Template"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates/item"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {
+        "minimal": {
+          "request": true,
+          "value": {
+            "name": "Welcome note",
+            "state": "eur",
+            "kind": "a"
+          }
+        }
+      },
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/templates/ops/create"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "getTemplate",
+      "name": {
+        "segments": [
+          "get",
+          "template"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "op": "get",
+      "resource": {
+        "type": "templates",
+        "idParam": "templateId",
+        "idProperty": "templateId"
+      },
+      "method": "get",
+      "safe": true,
+      "path": "/v1/templates/{templateId}",
+      "params": {
+        "path": [
+          {
+            "name": "templateId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/templates/id/templateId"
+            }
+          }
+        ],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Template"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates/item"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/templates/ops/get"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "updateTemplate",
+      "name": {
+        "segments": [
+          "update",
+          "template"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "op": "update",
+      "resource": {
+        "type": "templates",
+        "idParam": "templateId",
+        "idProperty": "templateId"
+      },
+      "method": "patch",
+      "safe": false,
+      "path": "/v1/templates/{templateId}",
+      "params": {
+        "path": [
+          {
+            "name": "templateId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/templates/id/templateId"
+            }
+          }
+        ],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "UpdateTemplate"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/templates/ops/update/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Template"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates/item"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/templates/ops/update"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "deleteTemplate",
+      "name": {
+        "segments": [
+          "delete",
+          "template"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "op": "delete",
+      "resource": {
+        "type": "templates",
+        "idParam": "templateId",
+        "idProperty": "templateId"
+      },
+      "method": "delete",
+      "safe": false,
+      "path": "/v1/templates/{templateId}",
+      "params": {
+        "path": [
+          {
+            "name": "templateId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/templates/id/templateId"
+            }
+          }
+        ],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "responses": [
+        {
+          "status": 204,
+          "shape": "empty",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates/ops/delete"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/templates/ops/delete"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "publishTemplate",
+      "name": {
+        "segments": [
+          "publish",
+          "template"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "resource": {
+        "type": "templates",
+        "idParam": "templateId",
+        "idProperty": "templateId"
+      },
+      "method": "post",
+      "safe": false,
+      "path": "/v1/templates/{templateId}/publish",
+      "params": {
+        "path": [
+          {
+            "name": "templateId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/templates/id/templateId"
+            }
+          }
+        ],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "PublishTemplateInput"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/templates/member/routes/publish/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Template"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates/member/routes/publish/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/templates/member/routes/publish"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "listDeliveries",
+      "name": {
+        "segments": [
+          "list",
+          "deliveries"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "op": "list",
+      "resource": {
+        "type": "deliveries",
+        "idProperty": "deliveryId"
+      },
+      "method": "get",
+      "safe": true,
+      "path": "/v1/deliveries",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Delivery"
+          },
+          "shape": "page",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries/item"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "paging": {
+        "style": "cursor",
+        "maxLimit": 100,
+        "defaultLimit": 100,
+        "overLimit": "reject",
+        "sortKeys": [
+          {
+            "key": "createdAt",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/deliveries/ops/list/sortable/0"
+            }
+          }
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/deliveries/ops/list/paging"
+        }
+      },
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/deliveries/ops/list"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "createDelivery",
+      "name": {
+        "segments": [
+          "create",
+          "delivery"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "op": "create",
+      "resource": {
+        "type": "deliveries",
+        "idProperty": "deliveryId"
+      },
+      "method": "post",
+      "safe": false,
+      "path": "/v1/deliveries",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "CreateDelivery"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/deliveries/ops/create/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 201,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Delivery"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries/item"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {
+        "minimal": {
+          "request": true,
+          "value": {
+            "name": "Evening batch",
+            "state": "piece",
+            "kind": "north"
+          }
+        }
+      },
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/deliveries/ops/create"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "getDelivery",
+      "name": {
+        "segments": [
+          "get",
+          "delivery"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "op": "get",
+      "resource": {
+        "type": "deliveries",
+        "idParam": "deliveryId",
+        "idProperty": "deliveryId"
+      },
+      "method": "get",
+      "safe": true,
+      "path": "/v1/deliveries/{deliveryId}",
+      "params": {
+        "path": [
+          {
+            "name": "deliveryId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/deliveries/id/deliveryId"
+            }
+          }
+        ],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Delivery"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries/item"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/deliveries/ops/get"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "updateDelivery",
+      "name": {
+        "segments": [
+          "update",
+          "delivery"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "op": "update",
+      "resource": {
+        "type": "deliveries",
+        "idParam": "deliveryId",
+        "idProperty": "deliveryId"
+      },
+      "method": "patch",
+      "safe": false,
+      "path": "/v1/deliveries/{deliveryId}",
+      "params": {
+        "path": [
+          {
+            "name": "deliveryId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/deliveries/id/deliveryId"
+            }
+          }
+        ],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "UpdateDelivery"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/deliveries/ops/update/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Delivery"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries/item"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/deliveries/ops/update"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "deleteDelivery",
+      "name": {
+        "segments": [
+          "delete",
+          "delivery"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "op": "delete",
+      "resource": {
+        "type": "deliveries",
+        "idParam": "deliveryId",
+        "idProperty": "deliveryId"
+      },
+      "method": "delete",
+      "safe": false,
+      "path": "/v1/deliveries/{deliveryId}",
+      "params": {
+        "path": [
+          {
+            "name": "deliveryId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/deliveries/id/deliveryId"
+            }
+          }
+        ],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "responses": [
+        {
+          "status": 204,
+          "shape": "empty",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries/ops/delete"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/deliveries/ops/delete"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "retryDelivery",
+      "name": {
+        "segments": [
+          "retry",
+          "delivery"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "resource": {
+        "type": "deliveries",
+        "idParam": "deliveryId",
+        "idProperty": "deliveryId"
+      },
+      "method": "post",
+      "safe": false,
+      "path": "/v1/deliveries/{deliveryId}/retry",
+      "params": {
+        "path": [
+          {
+            "name": "deliveryId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/deliveries/id/deliveryId"
+            }
+          }
+        ],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "RetryDeliveryInput"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/deliveries/member/routes/retry/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Delivery"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries/member/routes/retry/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/deliveries/member/routes/retry"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "dispatch",
+      "name": {
+        "segments": [
+          "dispatch"
+        ],
+        "role": "operation"
+      },
+      "surface": "internal",
+      "method": "post",
+      "safe": false,
+      "path": "/internal/v1/dispatch",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "DispatchInput"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/internal/routes/dispatch/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 204,
+          "shape": "empty",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/internal/routes/dispatch/responses/204"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/internal/routes/dispatch"
+      }
+    }
+  ],
+  "api": {
+    "id": "notify",
+    "name": {
+      "segments": [
+        "notify"
+      ],
+      "role": "schema"
+    },
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "kind": "product",
+    "pathVersion": {
+      "value": "prefix",
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/version"
+      }
+    },
+    "maturity": "provisional",
+    "compat": {
+      "policy": "additive-only"
+    },
+    "surfaces": {
+      "app": {
+        "name": {
+          "segments": [
+            "app"
+          ],
+          "role": "schema"
+        },
+        "prefix": "/v1",
+        "pathVersion": "prefix",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app"
+        }
+      },
+      "internal": {
+        "name": {
+          "segments": [
+            "internal"
+          ],
+          "role": "schema"
+        },
+        "prefix": "/internal/v1",
+        "pathVersion": "prefix",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/internal"
+        }
+      }
+    },
+    "documents": {},
+    "docs": {
+      "summary": "Templates and the deliveries made from them."
+    },
+    "extensions": {},
+    "origin": {
+      "layer": "api",
+      "pointer": "/api"
+    }
+  },
+  "lint": {
+    "rules": {},
+    "allows": []
+  }
+}

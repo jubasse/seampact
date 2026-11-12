@@ -1,0 +1,171 @@
+{
+  "rights": {
+    "notes.read": {
+      "id": "notes.read",
+      "subject": {
+        "kind": "scope",
+        "scope": "space"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/notes.read"
+      }
+    },
+    "notes.seeWordCount": {
+      "id": "notes.seeWordCount",
+      "subject": {
+        "kind": "scope",
+        "scope": "space"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/notes.seeWordCount"
+      }
+    }
+  },
+  "scopes": {
+    "space": {
+      "id": "space",
+      "idSchema": {
+        "kind": "scalar",
+        "type": "string",
+        "format": "uuid",
+        "refinements": {}
+      },
+      "errors": [
+        "api.not_found"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/scopes/space"
+      }
+    }
+  },
+  "operations": {
+    "getSpace": {
+      "scopes": [
+        {
+          "scope": "space",
+          "source": {
+            "in": "path",
+            "name": "spaceId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/spaces/member/scopes/space"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    },
+    "listNotes": {
+      "paging": {
+        "sortKeys": {
+          "1": {
+            "right": "notes.seeWordCount",
+            "subject": {
+              "source": {
+                "in": "scope",
+                "name": "space"
+              }
+            },
+            "derivedFrom": {
+              "derivation": "sortKey.restricted",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/schemas/Note/properties/wordCount/restrictedTo"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "scopes": [
+        {
+          "scope": "space",
+          "source": {
+            "in": "path",
+            "name": "spaceId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/spaces/member/scopes/space"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": [
+        {
+          "schema": "Note",
+          "pointer": "/wordCount",
+          "right": "notes.seeWordCount",
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "space"
+            }
+          },
+          "direction": "output",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/schemas/Note/properties/wordCount/restrictedTo"
+              }
+            ]
+          }
+        }
+      ],
+      "filteredBy": "notes.read"
+    },
+    "feedbackNotes": {
+      "scopes": [
+        {
+          "scope": "space",
+          "source": {
+            "in": "path",
+            "name": "spaceId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/spaces/member/scopes/space"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    },
+    "attachNotes": {
+      "scopes": [
+        {
+          "scope": "space",
+          "source": {
+            "in": "path",
+            "name": "spaceId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/spaces/member/scopes/space"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    }
+  }
+}

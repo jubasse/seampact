@@ -1,0 +1,38 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/data-null",
+      "message": "null is written '~' here; in a data position it must be written null",
+      "fix": "write null",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/9/36"
+      },
+      "related": []
+    },
+    {
+      "severity": "error",
+      "rule": "seampact/load/data-null",
+      "message": "null is written 'Null' here; in a data position it must be written null",
+      "fix": "write null",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/10/36"
+      },
+      "related": []
+    },
+    {
+      "severity": "error",
+      "rule": "seampact/load/data-null",
+      "message": "null is written '' here; in a data position it must be written null",
+      "fix": "write null",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/13/19"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

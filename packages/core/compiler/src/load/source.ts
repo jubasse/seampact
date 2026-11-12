@@ -11,7 +11,7 @@ import {
   Scalar,
 } from "yaml";
 import { LOAD_MAX_DEPTH, LOAD_MAX_FILE_BYTES } from "./limits.js";
-import { checkCase, isInside, resolveAuthoredPath } from "./paths.js";
+import { checkCase, isInside, type PathProblemRule, resolveAuthoredPath } from "./paths.js";
 import type { LoadReader } from "./reader.js";
 import type { Reporter, SiteLocation } from "./report.js";
 import { loadScalarPitfall } from "./scalars.js";
@@ -186,7 +186,9 @@ export class FileStore {
       } as const;
       const [message, fix] = problems[r];
 
-      this.reporter.report({ rule: `path-${r}`, message, fix, at });
+      const rule: PathProblemRule = `path-${r}`;
+
+      this.reporter.report({ rule, message, fix, at });
 
       return undefined;
     }

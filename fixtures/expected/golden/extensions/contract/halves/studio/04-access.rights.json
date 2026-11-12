@@ -1,0 +1,189 @@
+{
+  "rights": {
+    "streams.manage": {
+      "id": "streams.manage",
+      "subject": {
+        "kind": "scope",
+        "scope": "studio"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {
+        "acme": {
+          "tier": "gold",
+          "right-group": "streams",
+          "owner": "video"
+        }
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/streams.manage"
+      }
+    }
+  },
+  "rules": {
+    "recentAuth": {
+      "id": "recentAuth",
+      "takesBucket": false,
+      "proof": {
+        "in": "body",
+        "name": "reauthToken",
+        "schema": {
+          "kind": "scalar",
+          "type": "string",
+          "refinements": {
+            "minLength": 1,
+            "maxLength": 512
+          }
+        }
+      },
+      "errors": [
+        "api.reauthentication_required"
+      ],
+      "docs": {},
+      "extensions": {
+        "acme": {
+          "tier": "silver",
+          "audit": true,
+          "rule-window": 300
+        }
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/recentAuth"
+      }
+    }
+  },
+  "scopes": {
+    "studio": {
+      "id": "studio",
+      "idSchema": {
+        "kind": "scalar",
+        "type": "string",
+        "format": "uuid",
+        "refinements": {}
+      },
+      "errors": [
+        "api.not_found"
+      ],
+      "docs": {},
+      "extensions": {
+        "acme": {
+          "tier": "gold",
+          "scope-kind": "tenant",
+          "owner": "platform"
+        }
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/scopes/studio"
+      }
+    }
+  },
+  "operations": {
+    "profileStudio": {
+      "input": {
+        "proofs": [
+          {
+            "name": "reauthToken",
+            "schema": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {
+                "minLength": 1,
+                "maxLength": 512
+              }
+            },
+            "derivedFrom": {
+              "derivation": "rule.proof",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/studios/member/routes/profile/requires/1"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/rules/recentAuth/proof"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "scopes": [
+        {
+          "scope": "studio",
+          "source": {
+            "in": "path",
+            "name": "studioId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/studios/member/scopes/studio"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "streams.manage",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/studios/member/routes/profile/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "studio"
+            },
+            "defaulted": true
+          }
+        },
+        {
+          "kind": "rule",
+          "rule": "recentAuth",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/studios/member/routes/profile/requires/1"
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "eventsStudio": {
+      "scopes": [
+        {
+          "scope": "studio",
+          "source": {
+            "in": "path",
+            "name": "studioId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/studios/member/scopes/studio"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "streams.manage",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/studios/member/routes/events/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "studio"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    }
+  }
+}

@@ -116,7 +116,9 @@ export function draftFixture(api: DraftFixtureApi, stage: DraftFixtureStage): Dr
 /**
  * Adds a half's members to a draft (a guarded one in the ownership test): an absent member is set, an object is
  * merged member by member, a list is appended to, and an object over a list names the elements it merges into,
- * by operation id under `operations` and by index elsewhere. A member already set is never replaced: that throws.
+ * by operation id under `operations` and by index elsewhere; a key that names no element yet is appended when it
+ * is the next index (or, under `operations`, the id the new element carries). A member already set is never
+ * replaced: that throws.
  */
 export function draftFixtureApply(draft: object, members: JsonObject): void {
   mergeObject(draft, members, "");
@@ -163,6 +165,11 @@ function mergeList(list: unknown[], value: JsonValue, path: string): void {
   for (const [key, members] of Object.entries(value)) {
     const element = path === OPERATIONS ? operationById(list, key) : list[Number(key)];
 
+    if (element === undefined && isNextElement(list, path, key, members)) {
+      list.push(members);
+      continue;
+    }
+
     if (!isObject(element) || !isJsonObject(members))
       throw new Error(
         `draftFixtureApply: ${join(path, key)} names no element to merge an object into`,
@@ -171,8 +178,152 @@ function mergeList(list: unknown[], value: JsonValue, path: string): void {
   }
 }
 
+// A key naming no element yet: the next index of a list, or under `operations` the id the new element carries.
+const isNextElement = (list: unknown[], path: string, key: string, members: JsonValue): boolean =>
+  path === OPERATIONS ? isJsonObject(members) && members.id === key : key === String(list.length);
+
 const operationById = (operations: unknown[], id: string): unknown =>
   operations.find((operation) => isObject(operation) && Reflect.get(operation, "id") === id);
+
+/**
+ * The members a half wrote, in the convention `draftFixtureApply` reads (its inverse): `before` is the draft
+ * before the half, `after` the draft after it. An absent member is written whole, an object is described member by
+ * member, a list that grew is the appended items, and a list whose elements changed is an object keyed by
+ * operation id under `operations` and by index elsewhere; when it also grew, the new elements are keyed the same way
+ * (the next index, or their own id). A change the convention cannot say (a member replaced or removed) throws with
+ * its path.
+ */
+export function draftFixtureDelta(before: object, after: object): JsonObject {
+  const delta = objectDelta(before, after, "");
+
+  return delta === undefined ? {} : delta;
+}
+
+function objectDelta(before: object, after: object, path: string): JsonObject | undefined {
+  const delta: JsonObject = {};
+
+  for (const key of Object.keys(before))
+    if (!Object.hasOwn(after, key))
+      throw new Error(
+        `draftFixtureDelta: ${join(path, key)} was removed; a half adds members only`,
+      );
+
+  for (const [key, member] of Object.entries(after)) {
+    const at = join(path, key);
+    const present: unknown = Reflect.get(before, key);
+
+    if (!Object.hasOwn(before, key)) {
+      setMember(delta, key, jsonOf(member, at));
+      continue;
+    }
+
+    const change = memberDelta(present, member, at);
+
+    if (change !== undefined) setMember(delta, key, change);
+  }
+
+  return Object.keys(delta).length === 0 ? undefined : delta;
+}
+
+// Defined, not assigned, as `draftFixtureApply` does: a `__proto__` key stays a member.
+function setMember(target: JsonObject, key: string, value: JsonValue): void {
+  Object.defineProperty(target, key, {
+    value,
+    writable: true,
+    enumerable: true,
+    configurable: true,
+  });
+}
+
+function memberDelta(before: unknown, after: unknown, path: string): JsonValue | undefined {
+  if (Array.isArray(before) && Array.isArray(after)) return listDelta(before, after, path);
+
+  if (isObject(before) && isObject(after) && !Array.isArray(before) && !Array.isArray(after))
+    return objectDelta(before, after, path);
+
+  if (JSON.stringify(before) === JSON.stringify(after)) return undefined;
+
+  throw new Error(
+    `draftFixtureDelta: ${path} was replaced; a half adds members, never replaces one`,
+  );
+}
+
+function listDelta(before: unknown[], after: unknown[], path: string): JsonValue | undefined {
+  const edits: JsonObject = {};
+
+  before.forEach((element, index) => {
+    const change = elementDelta(element, after[index], path, index);
+
+    if (change === undefined) return;
+
+    setMember(
+      edits,
+      path === OPERATIONS ? operationIdOf(element, path, index) : String(index),
+      change,
+    );
+  });
+
+  if (after.length < before.length)
+    throw new Error(`draftFixtureDelta: ${path} lost elements; a half adds members only`);
+
+  const appended = after.slice(before.length);
+
+  if (appended.length > 0 && Object.keys(edits).length === 0) return jsonOf(appended, path);
+
+  // Edits and appended elements together: an object, the appended elements keyed as the next elements.
+  appended.forEach((element, offset) => {
+    const index = before.length + offset;
+
+    setMember(
+      edits,
+      path === OPERATIONS ? operationIdOf(element, path, index) : String(index),
+      jsonOf(element, path),
+    );
+  });
+
+  return Object.keys(edits).length === 0 ? undefined : edits;
+}
+
+function elementDelta(
+  before: unknown,
+  after: unknown,
+  path: string,
+  index: number,
+): JsonObject | undefined {
+  if (!isObject(before) || !isObject(after) || Array.isArray(before) || Array.isArray(after)) {
+    if (JSON.stringify(before) === JSON.stringify(after)) return undefined;
+
+    throw new Error(`draftFixtureDelta: ${join(path, String(index))} was replaced`);
+  }
+
+  return objectDelta(before, after, join(path, String(index)));
+}
+
+function operationIdOf(element: unknown, path: string, index: number): string {
+  const id = isObject(element) ? Reflect.get(element, "id") : undefined;
+
+  if (typeof id !== "string")
+    throw new Error(`draftFixtureDelta: ${join(path, String(index))} has no operation id`);
+
+  return id;
+}
+
+const isJsonValue = (value: unknown): value is JsonValue => {
+  if (value === null || ["boolean", "number", "string"].includes(typeof value)) return true;
+
+  if (Array.isArray(value)) return value.every(isJsonValue);
+
+  return isObject(value) && Object.values(value).every(isJsonValue);
+};
+
+// A written value is JSON by the draft's own form (`draft-schema.ts`); the round trip also copies it.
+function jsonOf(value: unknown, path: string): JsonValue {
+  const copy: unknown = JSON.parse(JSON.stringify(value) ?? "null");
+
+  if (!isJsonValue(copy)) throw new Error(`draftFixtureDelta: ${path} is no JSON`);
+
+  return copy;
+}
 
 /** A raw-tree position whose schema the fixture service answers, and where the fixtures write its use. */
 export interface DraftFixtureSchemaUse {

@@ -1,0 +1,24 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/name-not-visible",
+      "message": "'Owner' is used in 'base.yaml' but declared only in 'api.yaml' (layer 'api'), which 'base' does not build on",
+      "fix": "move the declaration into the shared file or the base",
+      "origin": {
+        "layer": "base",
+        "pointer": "/~load/base.yaml/5/22"
+      },
+      "related": [
+        {
+          "origin": {
+            "layer": "base",
+            "pointer": "/~load/api.yaml/5/3"
+          },
+          "message": "declared here"
+        }
+      ]
+    }
+  ],
+  "apis": []
+}

@@ -1,0 +1,158 @@
+{
+  "schemes": {
+    "bearer": {
+      "id": "bearer",
+      "kind": "bearer",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/bearer"
+      }
+    }
+  },
+  "identities": {
+    "user": {
+      "id": "user",
+      "kind": "credential",
+      "schemes": {
+        "read": [
+          "bearer"
+        ],
+        "write": [
+          "bearer"
+        ],
+        "optionalRead": []
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "UserPrincipal"
+      },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/user"
+      }
+    }
+  },
+  "operations": {
+    "getChannel": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "listTasks": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "createTask": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "getTasksBatch": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "updateTask": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "archiveTask": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    }
+  }
+}

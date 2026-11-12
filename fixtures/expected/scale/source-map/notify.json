@@ -1,0 +1,1573 @@
+{
+  "irRevision": 6,
+  "locations": {
+    "api#/api": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 9,
+      "file": "notify/api.yaml",
+      "line": 2
+    },
+    "api#/api/maturity": {
+      "column": 3,
+      "endColumn": 24,
+      "endLine": 6,
+      "file": "notify/api.yaml",
+      "line": 6
+    },
+    "api#/api/version": {
+      "column": 3,
+      "endColumn": 13,
+      "endLine": 4,
+      "file": "notify/api.yaml",
+      "line": 4
+    },
+    "api#/schemas/CreateDelivery": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 39,
+      "file": "notify/schemas.yaml",
+      "line": 37
+    },
+    "api#/schemas/CreateTemplate": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 17,
+      "file": "notify/schemas.yaml",
+      "line": 15
+    },
+    "api#/schemas/Delivery": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 37,
+      "file": "notify/schemas.yaml",
+      "line": 25
+    },
+    "api#/schemas/Delivery/properties/createdAt": {
+      "column": 5,
+      "endColumn": 51,
+      "endLine": 35,
+      "file": "notify/schemas.yaml",
+      "line": 35
+    },
+    "api#/schemas/Delivery/properties/deliveryId": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 29,
+      "file": "notify/schemas.yaml",
+      "line": 29
+    },
+    "api#/schemas/Delivery/properties/detail": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 33,
+      "file": "notify/schemas.yaml",
+      "line": 33
+    },
+    "api#/schemas/Delivery/properties/extra": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 34,
+      "file": "notify/schemas.yaml",
+      "line": 34
+    },
+    "api#/schemas/Delivery/properties/kind": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 32,
+      "file": "notify/schemas.yaml",
+      "line": 32
+    },
+    "api#/schemas/Delivery/properties/name": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 30,
+      "file": "notify/schemas.yaml",
+      "line": 30
+    },
+    "api#/schemas/Delivery/properties/state": {
+      "column": 5,
+      "endColumn": 26,
+      "endLine": 31,
+      "file": "notify/schemas.yaml",
+      "line": 31
+    },
+    "api#/schemas/Delivery/properties/version": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 36,
+      "file": "notify/schemas.yaml",
+      "line": 36
+    },
+    "api#/schemas/DispatchInput": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 49,
+      "file": "notify/schemas.yaml",
+      "line": 45
+    },
+    "api#/schemas/DispatchInput/properties/deliveryId": {
+      "column": 17,
+      "endColumn": 39,
+      "endLine": 48,
+      "file": "notify/schemas.yaml",
+      "line": 48
+    },
+    "api#/schemas/PublishTemplateInput": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 24,
+      "file": "notify/schemas.yaml",
+      "line": 20
+    },
+    "api#/schemas/PublishTemplateInput/properties/audience": {
+      "column": 17,
+      "endColumn": 47,
+      "endLine": 23,
+      "file": "notify/schemas.yaml",
+      "line": 23
+    },
+    "api#/schemas/RetryDeliveryInput": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 45,
+      "file": "notify/schemas.yaml",
+      "line": 42
+    },
+    "api#/schemas/RetryDeliveryInput/properties/delayMs": {
+      "column": 17,
+      "endColumn": 73,
+      "endLine": 44,
+      "file": "notify/schemas.yaml",
+      "line": 44
+    },
+    "api#/schemas/Template": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 15,
+      "file": "notify/schemas.yaml",
+      "line": 3
+    },
+    "api#/schemas/Template/properties/createdAt": {
+      "column": 5,
+      "endColumn": 51,
+      "endLine": 13,
+      "file": "notify/schemas.yaml",
+      "line": 13
+    },
+    "api#/schemas/Template/properties/detail": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 11,
+      "file": "notify/schemas.yaml",
+      "line": 11
+    },
+    "api#/schemas/Template/properties/extra": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 12,
+      "file": "notify/schemas.yaml",
+      "line": 12
+    },
+    "api#/schemas/Template/properties/kind": {
+      "column": 5,
+      "endColumn": 26,
+      "endLine": 10,
+      "file": "notify/schemas.yaml",
+      "line": 10
+    },
+    "api#/schemas/Template/properties/name": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 8,
+      "file": "notify/schemas.yaml",
+      "line": 8
+    },
+    "api#/schemas/Template/properties/state": {
+      "column": 5,
+      "endColumn": 30,
+      "endLine": 9,
+      "file": "notify/schemas.yaml",
+      "line": 9
+    },
+    "api#/schemas/Template/properties/templateId": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 7,
+      "file": "notify/schemas.yaml",
+      "line": 7
+    },
+    "api#/schemas/Template/properties/version": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 14,
+      "file": "notify/schemas.yaml",
+      "line": 14
+    },
+    "api#/schemas/UpdateDelivery": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 42,
+      "file": "notify/schemas.yaml",
+      "line": 39
+    },
+    "api#/schemas/UpdateTemplate": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 20,
+      "file": "notify/schemas.yaml",
+      "line": 17
+    },
+    "api#/surfaces/app": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 87,
+      "file": "notify/api.yaml",
+      "line": 17
+    },
+    "api#/surfaces/app/identity": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 19,
+      "file": "notify/api.yaml",
+      "line": 19
+    },
+    "api#/surfaces/app/routes/deliveries": {
+      "column": 7,
+      "endColumn": 1,
+      "endLine": 87,
+      "file": "notify/api.yaml",
+      "line": 54
+    },
+    "api#/surfaces/app/routes/deliveries/id/deliveryId": {
+      "column": 15,
+      "endColumn": 37,
+      "endLine": 56,
+      "file": "notify/api.yaml",
+      "line": 56
+    },
+    "api#/surfaces/app/routes/deliveries/item": {
+      "column": 9,
+      "endColumn": 23,
+      "endLine": 57,
+      "file": "notify/api.yaml",
+      "line": 57
+    },
+    "api#/surfaces/app/routes/deliveries/member/routes/retry": {
+      "column": 13,
+      "endColumn": 1,
+      "endLine": 87,
+      "file": "notify/api.yaml",
+      "line": 83
+    },
+    "api#/surfaces/app/routes/deliveries/member/routes/retry/input": {
+      "column": 15,
+      "endColumn": 40,
+      "endLine": 85,
+      "file": "notify/api.yaml",
+      "line": 85
+    },
+    "api#/surfaces/app/routes/deliveries/member/routes/retry/output": {
+      "column": 15,
+      "endColumn": 31,
+      "endLine": 86,
+      "file": "notify/api.yaml",
+      "line": 86
+    },
+    "api#/surfaces/app/routes/deliveries/ops/create": {
+      "column": 11,
+      "endColumn": 1,
+      "endLine": 79,
+      "file": "notify/api.yaml",
+      "line": 74
+    },
+    "api#/surfaces/app/routes/deliveries/ops/create/input": {
+      "column": 13,
+      "endColumn": 34,
+      "endLine": 75,
+      "file": "notify/api.yaml",
+      "line": 75
+    },
+    "api#/surfaces/app/routes/deliveries/ops/create/requires/0": {
+      "column": 24,
+      "endColumn": 37,
+      "endLine": 76,
+      "file": "notify/api.yaml",
+      "line": 76
+    },
+    "api#/surfaces/app/routes/deliveries/ops/delete": {
+      "column": 11,
+      "endColumn": 21,
+      "endLine": 80,
+      "file": "notify/api.yaml",
+      "line": 80
+    },
+    "api#/surfaces/app/routes/deliveries/ops/get": {
+      "column": 11,
+      "endColumn": 18,
+      "endLine": 73,
+      "file": "notify/api.yaml",
+      "line": 73
+    },
+    "api#/surfaces/app/routes/deliveries/ops/list": {
+      "column": 11,
+      "endColumn": 1,
+      "endLine": 73,
+      "file": "notify/api.yaml",
+      "line": 70
+    },
+    "api#/surfaces/app/routes/deliveries/ops/list/paging": {
+      "column": 13,
+      "endColumn": 50,
+      "endLine": 71,
+      "file": "notify/api.yaml",
+      "line": 71
+    },
+    "api#/surfaces/app/routes/deliveries/ops/list/sortable/0": {
+      "column": 24,
+      "endColumn": 33,
+      "endLine": 72,
+      "file": "notify/api.yaml",
+      "line": 72
+    },
+    "api#/surfaces/app/routes/deliveries/ops/update": {
+      "column": 11,
+      "endColumn": 44,
+      "endLine": 79,
+      "file": "notify/api.yaml",
+      "line": 79
+    },
+    "api#/surfaces/app/routes/deliveries/ops/update/input": {
+      "column": 21,
+      "endColumn": 42,
+      "endLine": 79,
+      "file": "notify/api.yaml",
+      "line": 79
+    },
+    "api#/surfaces/app/routes/templates": {
+      "column": 7,
+      "endColumn": 1,
+      "endLine": 54,
+      "file": "notify/api.yaml",
+      "line": 21
+    },
+    "api#/surfaces/app/routes/templates/id/templateId": {
+      "column": 15,
+      "endColumn": 37,
+      "endLine": 23,
+      "file": "notify/api.yaml",
+      "line": 23
+    },
+    "api#/surfaces/app/routes/templates/item": {
+      "column": 9,
+      "endColumn": 23,
+      "endLine": 24,
+      "file": "notify/api.yaml",
+      "line": 24
+    },
+    "api#/surfaces/app/routes/templates/member/routes/publish": {
+      "column": 13,
+      "endColumn": 1,
+      "endLine": 54,
+      "file": "notify/api.yaml",
+      "line": 50
+    },
+    "api#/surfaces/app/routes/templates/member/routes/publish/input": {
+      "column": 15,
+      "endColumn": 42,
+      "endLine": 52,
+      "file": "notify/api.yaml",
+      "line": 52
+    },
+    "api#/surfaces/app/routes/templates/member/routes/publish/output": {
+      "column": 15,
+      "endColumn": 31,
+      "endLine": 53,
+      "file": "notify/api.yaml",
+      "line": 53
+    },
+    "api#/surfaces/app/routes/templates/ops/create": {
+      "column": 11,
+      "endColumn": 1,
+      "endLine": 46,
+      "file": "notify/api.yaml",
+      "line": 41
+    },
+    "api#/surfaces/app/routes/templates/ops/create/input": {
+      "column": 13,
+      "endColumn": 34,
+      "endLine": 42,
+      "file": "notify/api.yaml",
+      "line": 42
+    },
+    "api#/surfaces/app/routes/templates/ops/create/requires/0": {
+      "column": 24,
+      "endColumn": 37,
+      "endLine": 43,
+      "file": "notify/api.yaml",
+      "line": 43
+    },
+    "api#/surfaces/app/routes/templates/ops/delete": {
+      "column": 11,
+      "endColumn": 21,
+      "endLine": 47,
+      "file": "notify/api.yaml",
+      "line": 47
+    },
+    "api#/surfaces/app/routes/templates/ops/get": {
+      "column": 11,
+      "endColumn": 60,
+      "endLine": 40,
+      "file": "notify/api.yaml",
+      "line": 40
+    },
+    "api#/surfaces/app/routes/templates/ops/get/cache": {
+      "column": 18,
+      "endColumn": 58,
+      "endLine": 40,
+      "file": "notify/api.yaml",
+      "line": 40
+    },
+    "api#/surfaces/app/routes/templates/ops/list": {
+      "column": 11,
+      "endColumn": 1,
+      "endLine": 40,
+      "file": "notify/api.yaml",
+      "line": 37
+    },
+    "api#/surfaces/app/routes/templates/ops/list/paging": {
+      "column": 13,
+      "endColumn": 49,
+      "endLine": 38,
+      "file": "notify/api.yaml",
+      "line": 38
+    },
+    "api#/surfaces/app/routes/templates/ops/list/sortable/0": {
+      "column": 24,
+      "endColumn": 33,
+      "endLine": 39,
+      "file": "notify/api.yaml",
+      "line": 39
+    },
+    "api#/surfaces/app/routes/templates/ops/update": {
+      "column": 11,
+      "endColumn": 44,
+      "endLine": 46,
+      "file": "notify/api.yaml",
+      "line": 46
+    },
+    "api#/surfaces/app/routes/templates/ops/update/input": {
+      "column": 21,
+      "endColumn": 42,
+      "endLine": 46,
+      "file": "notify/api.yaml",
+      "line": 46
+    },
+    "api#/surfaces/internal": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 96,
+      "file": "notify/api.yaml",
+      "line": 87
+    },
+    "api#/surfaces/internal/identity": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 89,
+      "file": "notify/api.yaml",
+      "line": 89
+    },
+    "api#/surfaces/internal/routes/dispatch": {
+      "column": 7,
+      "endColumn": 1,
+      "endLine": 96,
+      "file": "notify/api.yaml",
+      "line": 91
+    },
+    "api#/surfaces/internal/routes/dispatch/input": {
+      "column": 9,
+      "endColumn": 29,
+      "endLine": 93,
+      "file": "notify/api.yaml",
+      "line": 93
+    },
+    "api#/surfaces/internal/routes/dispatch/responses/204": {
+      "column": 11,
+      "endColumn": 18,
+      "endLine": 95,
+      "file": "notify/api.yaml",
+      "line": 95
+    },
+    "shared#/buckets/write": {
+      "column": 3,
+      "endColumn": 60,
+      "endLine": 55,
+      "file": "shared/base.yaml",
+      "line": 55
+    },
+    "shared#/conventions/bodyLimit": {
+      "column": 3,
+      "endColumn": 18,
+      "endLine": 69,
+      "file": "shared/base.yaml",
+      "line": 69
+    },
+    "shared#/conventions/cache/families": {
+      "column": 12,
+      "endColumn": 50,
+      "endLine": 70,
+      "file": "shared/base.yaml",
+      "line": 70
+    },
+    "shared#/conventions/cache/families/minute": {
+      "column": 24,
+      "endColumn": 35,
+      "endLine": 70,
+      "file": "shared/base.yaml",
+      "line": 70
+    },
+    "shared#/conventions/errors/derived": {
+      "column": 5,
+      "endColumn": 1,
+      "endLine": 78,
+      "file": "shared/base.yaml",
+      "line": 74
+    },
+    "shared#/conventions/errors/derived/schemaInvalid": {
+      "column": 7,
+      "endColumn": 1,
+      "endLine": 78,
+      "file": "shared/base.yaml",
+      "line": 75
+    },
+    "shared#/conventions/paging/default": {
+      "column": 13,
+      "endColumn": 28,
+      "endLine": 68,
+      "file": "shared/base.yaml",
+      "line": 68
+    },
+    "shared#/conventions/paging/maxLimit": {
+      "column": 30,
+      "endColumn": 43,
+      "endLine": 68,
+      "file": "shared/base.yaml",
+      "line": 68
+    },
+    "shared#/conventions/rateLimit/header": {
+      "column": 16,
+      "endColumn": 35,
+      "endLine": 72,
+      "file": "shared/base.yaml",
+      "line": 72
+    },
+    "shared#/conventions/rateLimit/param": {
+      "column": 37,
+      "endColumn": 56,
+      "endLine": 72,
+      "file": "shared/base.yaml",
+      "line": 72
+    },
+    "shared#/conventions/rateLimit/unit": {
+      "column": 58,
+      "endColumn": 65,
+      "endLine": 72,
+      "file": "shared/base.yaml",
+      "line": 72
+    },
+    "shared#/conventions/restrictedInput": {
+      "column": 3,
+      "endColumn": 26,
+      "endLine": 71,
+      "file": "shared/base.yaml",
+      "line": 71
+    },
+    "shared#/enums/Condition": {
+      "column": 1,
+      "endColumn": 93,
+      "endLine": 6,
+      "file": "shared/enums.yaml",
+      "line": 6
+    },
+    "shared#/enums/Currency": {
+      "column": 1,
+      "endColumn": 91,
+      "endLine": 7,
+      "file": "shared/enums.yaml",
+      "line": 7
+    },
+    "shared#/enums/Grade": {
+      "column": 1,
+      "endColumn": 74,
+      "endLine": 10,
+      "file": "shared/enums.yaml",
+      "line": 10
+    },
+    "shared#/enums/Priority": {
+      "column": 1,
+      "endColumn": 98,
+      "endLine": 4,
+      "file": "shared/enums.yaml",
+      "line": 4
+    },
+    "shared#/enums/Rating": {
+      "column": 1,
+      "endColumn": 96,
+      "endLine": 13,
+      "file": "shared/enums.yaml",
+      "line": 13
+    },
+    "shared#/enums/Region": {
+      "column": 1,
+      "endColumn": 102,
+      "endLine": 11,
+      "file": "shared/enums.yaml",
+      "line": 11
+    },
+    "shared#/enums/Stage": {
+      "column": 1,
+      "endColumn": 88,
+      "endLine": 12,
+      "file": "shared/enums.yaml",
+      "line": 12
+    },
+    "shared#/enums/Surface": {
+      "column": 1,
+      "endColumn": 74,
+      "endLine": 3,
+      "file": "shared/enums.yaml",
+      "line": 3
+    },
+    "shared#/enums/Unit": {
+      "column": 1,
+      "endColumn": 94,
+      "endLine": 8,
+      "file": "shared/enums.yaml",
+      "line": 8
+    },
+    "shared#/enums/Visibility": {
+      "column": 1,
+      "endColumn": 98,
+      "endLine": 5,
+      "file": "shared/enums.yaml",
+      "line": 5
+    },
+    "shared#/errors/api.rate_limited": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 12,
+      "file": "shared/errors.yaml",
+      "line": 7
+    },
+    "shared#/errors/api.rate_limited/params": {
+      "column": 3,
+      "endColumn": 85,
+      "endLine": 10,
+      "file": "shared/errors.yaml",
+      "line": 10
+    },
+    "shared#/errors/api.rate_limited/params/retryAfterMs": {
+      "column": 13,
+      "endColumn": 83,
+      "endLine": 10,
+      "file": "shared/errors.yaml",
+      "line": 10
+    },
+    "shared#/errors/api.schema_invalid": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 7,
+      "file": "shared/errors.yaml",
+      "line": 2
+    },
+    "shared#/errors/api.schema_invalid/params": {
+      "column": 3,
+      "endColumn": 29,
+      "endLine": 5,
+      "file": "shared/errors.yaml",
+      "line": 5
+    },
+    "shared#/errors/api.schema_invalid/params/issues": {
+      "column": 13,
+      "endColumn": 27,
+      "endLine": 5,
+      "file": "shared/errors.yaml",
+      "line": 5
+    },
+    "shared#/errors/delivery.duplicated": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 532,
+      "file": "shared/errors.yaml",
+      "line": 527
+    },
+    "shared#/errors/delivery.duplicated/params": {
+      "column": 3,
+      "endColumn": 33,
+      "endLine": 530,
+      "file": "shared/errors.yaml",
+      "line": 530
+    },
+    "shared#/errors/delivery.duplicated/params/existingId": {
+      "column": 13,
+      "endColumn": 31,
+      "endLine": 530,
+      "file": "shared/errors.yaml",
+      "line": 530
+    },
+    "shared#/errors/delivery.expired": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 527,
+      "file": "shared/errors.yaml",
+      "line": 522
+    },
+    "shared#/errors/delivery.expired/params": {
+      "column": 3,
+      "endColumn": 61,
+      "endLine": 525,
+      "file": "shared/errors.yaml",
+      "line": 525
+    },
+    "shared#/errors/delivery.expired/params/expiredAt": {
+      "column": 13,
+      "endColumn": 59,
+      "endLine": 525,
+      "file": "shared/errors.yaml",
+      "line": 525
+    },
+    "shared#/errors/delivery.limited": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 537,
+      "file": "shared/errors.yaml",
+      "line": 532
+    },
+    "shared#/errors/delivery.limited/params": {
+      "column": 3,
+      "endColumn": 51,
+      "endLine": 535,
+      "file": "shared/errors.yaml",
+      "line": 535
+    },
+    "shared#/errors/delivery.limited/params/limit": {
+      "column": 13,
+      "endColumn": 49,
+      "endLine": 535,
+      "file": "shared/errors.yaml",
+      "line": 535
+    },
+    "shared#/errors/delivery.locked": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 522,
+      "file": "shared/errors.yaml",
+      "line": 517
+    },
+    "shared#/errors/delivery.locked/params": {
+      "column": 3,
+      "endColumn": 31,
+      "endLine": 520,
+      "file": "shared/errors.yaml",
+      "line": 520
+    },
+    "shared#/errors/delivery.locked/params/lockedBy": {
+      "column": 13,
+      "endColumn": 29,
+      "endLine": 520,
+      "file": "shared/errors.yaml",
+      "line": 520
+    },
+    "shared#/errors/delivery.mismatched": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 542,
+      "file": "shared/errors.yaml",
+      "line": 537
+    },
+    "shared#/errors/delivery.mismatched/params": {
+      "column": 3,
+      "endColumn": 53,
+      "endLine": 540,
+      "file": "shared/errors.yaml",
+      "line": 540
+    },
+    "shared#/errors/delivery.mismatched/params/field": {
+      "column": 13,
+      "endColumn": 51,
+      "endLine": 540,
+      "file": "shared/errors.yaml",
+      "line": 540
+    },
+    "shared#/errors/delivery.missing": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 517,
+      "file": "shared/errors.yaml",
+      "line": 512
+    },
+    "shared#/errors/delivery.missing/params": {
+      "column": 3,
+      "endColumn": 54,
+      "endLine": 515,
+      "file": "shared/errors.yaml",
+      "line": 515
+    },
+    "shared#/errors/delivery.missing/params/target": {
+      "column": 13,
+      "endColumn": 52,
+      "endLine": 515,
+      "file": "shared/errors.yaml",
+      "line": 515
+    },
+    "shared#/errors/delivery.outdated": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 562,
+      "file": "shared/errors.yaml",
+      "line": 557
+    },
+    "shared#/errors/delivery.outdated/params": {
+      "column": 3,
+      "endColumn": 60,
+      "endLine": 560,
+      "file": "shared/errors.yaml",
+      "line": 560
+    },
+    "shared#/errors/delivery.outdated/params/currentVersion": {
+      "column": 13,
+      "endColumn": 58,
+      "endLine": 560,
+      "file": "shared/errors.yaml",
+      "line": 560
+    },
+    "shared#/errors/delivery.rejected": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 557,
+      "file": "shared/errors.yaml",
+      "line": 552
+    },
+    "shared#/errors/delivery.rejected/params": {
+      "column": 3,
+      "endColumn": 29,
+      "endLine": 555,
+      "file": "shared/errors.yaml",
+      "line": 555
+    },
+    "shared#/errors/delivery.rejected/params/issues": {
+      "column": 13,
+      "endColumn": 27,
+      "endLine": 555,
+      "file": "shared/errors.yaml",
+      "line": 555
+    },
+    "shared#/errors/delivery.suspended": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 552,
+      "file": "shared/errors.yaml",
+      "line": 547
+    },
+    "shared#/errors/delivery.suspended/params": {
+      "column": 3,
+      "endColumn": 55,
+      "endLine": 550,
+      "file": "shared/errors.yaml",
+      "line": 550
+    },
+    "shared#/errors/delivery.suspended/params/reason": {
+      "column": 13,
+      "endColumn": 53,
+      "endLine": 550,
+      "file": "shared/errors.yaml",
+      "line": 550
+    },
+    "shared#/errors/delivery.unavailable": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 547,
+      "file": "shared/errors.yaml",
+      "line": 542
+    },
+    "shared#/errors/delivery.unavailable/params": {
+      "column": 3,
+      "endColumn": 52,
+      "endLine": 545,
+      "file": "shared/errors.yaml",
+      "line": 545
+    },
+    "shared#/errors/delivery.unavailable/params/waitMs": {
+      "column": 13,
+      "endColumn": 50,
+      "endLine": 545,
+      "file": "shared/errors.yaml",
+      "line": 545
+    },
+    "shared#/errors/template.duplicated": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 482,
+      "file": "shared/errors.yaml",
+      "line": 477
+    },
+    "shared#/errors/template.duplicated/params": {
+      "column": 3,
+      "endColumn": 33,
+      "endLine": 480,
+      "file": "shared/errors.yaml",
+      "line": 480
+    },
+    "shared#/errors/template.duplicated/params/existingId": {
+      "column": 13,
+      "endColumn": 31,
+      "endLine": 480,
+      "file": "shared/errors.yaml",
+      "line": 480
+    },
+    "shared#/errors/template.expired": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 477,
+      "file": "shared/errors.yaml",
+      "line": 472
+    },
+    "shared#/errors/template.expired/params": {
+      "column": 3,
+      "endColumn": 61,
+      "endLine": 475,
+      "file": "shared/errors.yaml",
+      "line": 475
+    },
+    "shared#/errors/template.expired/params/expiredAt": {
+      "column": 13,
+      "endColumn": 59,
+      "endLine": 475,
+      "file": "shared/errors.yaml",
+      "line": 475
+    },
+    "shared#/errors/template.limited": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 487,
+      "file": "shared/errors.yaml",
+      "line": 482
+    },
+    "shared#/errors/template.limited/params": {
+      "column": 3,
+      "endColumn": 51,
+      "endLine": 485,
+      "file": "shared/errors.yaml",
+      "line": 485
+    },
+    "shared#/errors/template.limited/params/limit": {
+      "column": 13,
+      "endColumn": 49,
+      "endLine": 485,
+      "file": "shared/errors.yaml",
+      "line": 485
+    },
+    "shared#/errors/template.locked": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 472,
+      "file": "shared/errors.yaml",
+      "line": 467
+    },
+    "shared#/errors/template.locked/params": {
+      "column": 3,
+      "endColumn": 31,
+      "endLine": 470,
+      "file": "shared/errors.yaml",
+      "line": 470
+    },
+    "shared#/errors/template.locked/params/lockedBy": {
+      "column": 13,
+      "endColumn": 29,
+      "endLine": 470,
+      "file": "shared/errors.yaml",
+      "line": 470
+    },
+    "shared#/errors/template.mismatched": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 492,
+      "file": "shared/errors.yaml",
+      "line": 487
+    },
+    "shared#/errors/template.mismatched/params": {
+      "column": 3,
+      "endColumn": 53,
+      "endLine": 490,
+      "file": "shared/errors.yaml",
+      "line": 490
+    },
+    "shared#/errors/template.mismatched/params/field": {
+      "column": 13,
+      "endColumn": 51,
+      "endLine": 490,
+      "file": "shared/errors.yaml",
+      "line": 490
+    },
+    "shared#/errors/template.missing": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 467,
+      "file": "shared/errors.yaml",
+      "line": 462
+    },
+    "shared#/errors/template.missing/params": {
+      "column": 3,
+      "endColumn": 54,
+      "endLine": 465,
+      "file": "shared/errors.yaml",
+      "line": 465
+    },
+    "shared#/errors/template.missing/params/target": {
+      "column": 13,
+      "endColumn": 52,
+      "endLine": 465,
+      "file": "shared/errors.yaml",
+      "line": 465
+    },
+    "shared#/errors/template.outdated": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 512,
+      "file": "shared/errors.yaml",
+      "line": 507
+    },
+    "shared#/errors/template.outdated/params": {
+      "column": 3,
+      "endColumn": 60,
+      "endLine": 510,
+      "file": "shared/errors.yaml",
+      "line": 510
+    },
+    "shared#/errors/template.outdated/params/currentVersion": {
+      "column": 13,
+      "endColumn": 58,
+      "endLine": 510,
+      "file": "shared/errors.yaml",
+      "line": 510
+    },
+    "shared#/errors/template.rejected": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 507,
+      "file": "shared/errors.yaml",
+      "line": 502
+    },
+    "shared#/errors/template.rejected/params": {
+      "column": 3,
+      "endColumn": 29,
+      "endLine": 505,
+      "file": "shared/errors.yaml",
+      "line": 505
+    },
+    "shared#/errors/template.rejected/params/issues": {
+      "column": 13,
+      "endColumn": 27,
+      "endLine": 505,
+      "file": "shared/errors.yaml",
+      "line": 505
+    },
+    "shared#/errors/template.suspended": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 502,
+      "file": "shared/errors.yaml",
+      "line": 497
+    },
+    "shared#/errors/template.suspended/params": {
+      "column": 3,
+      "endColumn": 55,
+      "endLine": 500,
+      "file": "shared/errors.yaml",
+      "line": 500
+    },
+    "shared#/errors/template.suspended/params/reason": {
+      "column": 13,
+      "endColumn": 53,
+      "endLine": 500,
+      "file": "shared/errors.yaml",
+      "line": 500
+    },
+    "shared#/errors/template.unavailable": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 497,
+      "file": "shared/errors.yaml",
+      "line": 492
+    },
+    "shared#/errors/template.unavailable/params": {
+      "column": 3,
+      "endColumn": 52,
+      "endLine": 495,
+      "file": "shared/errors.yaml",
+      "line": 495
+    },
+    "shared#/errors/template.unavailable/params/waitMs": {
+      "column": 13,
+      "endColumn": 50,
+      "endLine": 495,
+      "file": "shared/errors.yaml",
+      "line": 495
+    },
+    "shared#/headers/actorSurface": {
+      "column": 3,
+      "endColumn": 79,
+      "endLine": 20,
+      "file": "shared/base.yaml",
+      "line": 20
+    },
+    "shared#/headers/deadline": {
+      "column": 3,
+      "endColumn": 66,
+      "endLine": 18,
+      "file": "shared/base.yaml",
+      "line": 18
+    },
+    "shared#/headers/trace": {
+      "column": 3,
+      "endColumn": 68,
+      "endLine": 19,
+      "file": "shared/base.yaml",
+      "line": 19
+    },
+    "shared#/identities/partner": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 36,
+      "file": "shared/base.yaml",
+      "line": 33
+    },
+    "shared#/identities/service": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 33,
+      "file": "shared/base.yaml",
+      "line": 26
+    },
+    "shared#/identities/service/headers/actorSurface": {
+      "column": 7,
+      "endColumn": 79,
+      "endLine": 32,
+      "file": "shared/base.yaml",
+      "line": 32
+    },
+    "shared#/identities/service/headers/deadline": {
+      "column": 7,
+      "endColumn": 45,
+      "endLine": 30,
+      "file": "shared/base.yaml",
+      "line": 30
+    },
+    "shared#/identities/service/headers/trace": {
+      "column": 7,
+      "endColumn": 26,
+      "endLine": 31,
+      "file": "shared/base.yaml",
+      "line": 31
+    },
+    "shared#/identities/user": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 26,
+      "file": "shared/base.yaml",
+      "line": 23
+    },
+    "shared#/identities/webhook": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 40,
+      "file": "shared/base.yaml",
+      "line": 36
+    },
+    "shared#/pagings/cursor": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 66,
+      "file": "shared/base.yaml",
+      "line": 58
+    },
+    "shared#/rules/throttle": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 53,
+      "file": "shared/base.yaml",
+      "line": 50
+    },
+    "shared#/schemas/BulkWeight": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 482,
+      "file": "shared/values.yaml",
+      "line": 474
+    },
+    "shared#/schemas/BulkWeight/properties/currency": {
+      "column": 5,
+      "endColumn": 33,
+      "endLine": 479,
+      "file": "shared/values.yaml",
+      "line": 479
+    },
+    "shared#/schemas/BulkWeight/properties/inner": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 481,
+      "file": "shared/values.yaml",
+      "line": 481
+    },
+    "shared#/schemas/BulkWeight/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 478,
+      "file": "shared/values.yaml",
+      "line": 478
+    },
+    "shared#/schemas/BulkWeight/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 480,
+      "file": "shared/values.yaml",
+      "line": 480
+    },
+    "shared#/schemas/ChilledCount": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 437,
+      "file": "shared/values.yaml",
+      "line": 429
+    },
+    "shared#/schemas/ChilledCount/properties/inner": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 436,
+      "file": "shared/values.yaml",
+      "line": 436
+    },
+    "shared#/schemas/ChilledCount/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 433,
+      "file": "shared/values.yaml",
+      "line": 433
+    },
+    "shared#/schemas/ChilledCount/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 435,
+      "file": "shared/values.yaml",
+      "line": 435
+    },
+    "shared#/schemas/ChilledCount/properties/region": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 434,
+      "file": "shared/values.yaml",
+      "line": 434
+    },
+    "shared#/schemas/ChilledLimit": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 459,
+      "file": "shared/values.yaml",
+      "line": 452
+    },
+    "shared#/schemas/ChilledLimit/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 456,
+      "file": "shared/values.yaml",
+      "line": 456
+    },
+    "shared#/schemas/ChilledLimit/properties/priority": {
+      "column": 5,
+      "endColumn": 33,
+      "endLine": 457,
+      "file": "shared/values.yaml",
+      "line": 457
+    },
+    "shared#/schemas/ChilledLimit/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 458,
+      "file": "shared/values.yaml",
+      "line": 458
+    },
+    "shared#/schemas/ChilledMargin": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 474,
+      "file": "shared/values.yaml",
+      "line": 467
+    },
+    "shared#/schemas/ChilledMargin/properties/condition": {
+      "column": 5,
+      "endColumn": 35,
+      "endLine": 472,
+      "file": "shared/values.yaml",
+      "line": 472
+    },
+    "shared#/schemas/ChilledMargin/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 471,
+      "file": "shared/values.yaml",
+      "line": 471
+    },
+    "shared#/schemas/ChilledMargin/properties/quantity": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 473,
+      "file": "shared/values.yaml",
+      "line": 473
+    },
+    "shared#/schemas/ChilledRate": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 452,
+      "file": "shared/values.yaml",
+      "line": 444
+    },
+    "shared#/schemas/ChilledRate/properties/inner": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 451,
+      "file": "shared/values.yaml",
+      "line": 451
+    },
+    "shared#/schemas/ChilledRate/properties/label": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 448,
+      "file": "shared/values.yaml",
+      "line": 448
+    },
+    "shared#/schemas/ChilledRate/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 450,
+      "file": "shared/values.yaml",
+      "line": 450
+    },
+    "shared#/schemas/ChilledRate/properties/rating": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 449,
+      "file": "shared/values.yaml",
+      "line": 449
+    },
+    "shared#/schemas/ChilledSpan": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 429,
+      "file": "shared/values.yaml",
+      "line": 422
+    },
+    "shared#/schemas/ChilledSpan/properties/grade": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 427,
+      "file": "shared/values.yaml",
+      "line": 427
+    },
+    "shared#/schemas/ChilledSpan/properties/label": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 426,
+      "file": "shared/values.yaml",
+      "line": 426
+    },
+    "shared#/schemas/ChilledSpan/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 428,
+      "file": "shared/values.yaml",
+      "line": 428
+    },
+    "shared#/schemas/ChilledTally": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 467,
+      "file": "shared/values.yaml",
+      "line": 459
+    },
+    "shared#/schemas/ChilledTally/properties/inner": {
+      "column": 5,
+      "endColumn": 24,
+      "endLine": 466,
+      "file": "shared/values.yaml",
+      "line": 466
+    },
+    "shared#/schemas/ChilledTally/properties/label": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 463,
+      "file": "shared/values.yaml",
+      "line": 463
+    },
+    "shared#/schemas/ChilledTally/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 465,
+      "file": "shared/values.yaml",
+      "line": 465
+    },
+    "shared#/schemas/ChilledTally/properties/visibility": {
+      "column": 5,
+      "endColumn": 37,
+      "endLine": 464,
+      "file": "shared/values.yaml",
+      "line": 464
+    },
+    "shared#/schemas/ChilledWindow": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 444,
+      "file": "shared/values.yaml",
+      "line": 437
+    },
+    "shared#/schemas/ChilledWindow/properties/label": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 441,
+      "file": "shared/values.yaml",
+      "line": 441
+    },
+    "shared#/schemas/ChilledWindow/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 443,
+      "file": "shared/values.yaml",
+      "line": 443
+    },
+    "shared#/schemas/ChilledWindow/properties/stage": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 442,
+      "file": "shared/values.yaml",
+      "line": 442
+    },
+    "shared#/schemas/Issues/items": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 32,
+      "file": "shared/schemas.yaml",
+      "line": 28
+    },
+    "shared#/schemas/Issues/items/properties/pointer": {
+      "column": 19,
+      "endColumn": 44,
+      "endLine": 31,
+      "file": "shared/schemas.yaml",
+      "line": 31
+    },
+    "shared#/schemas/Issues/items/properties/rule": {
+      "column": 46,
+      "endColumn": 68,
+      "endLine": 31,
+      "file": "shared/schemas.yaml",
+      "line": 31
+    },
+    "shared#/schemas/PartnerPrincipal": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 22,
+      "file": "shared/schemas.yaml",
+      "line": 18
+    },
+    "shared#/schemas/PartnerPrincipal/properties/partnerId": {
+      "column": 17,
+      "endColumn": 58,
+      "endLine": 21,
+      "file": "shared/schemas.yaml",
+      "line": 21
+    },
+    "shared#/schemas/ServicePrincipal": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 18,
+      "file": "shared/schemas.yaml",
+      "line": 14
+    },
+    "shared#/schemas/ServicePrincipal/properties/service": {
+      "column": 17,
+      "endColumn": 43,
+      "endLine": 17,
+      "file": "shared/schemas.yaml",
+      "line": 17
+    },
+    "shared#/schemas/ServicePrincipal/properties/userId": {
+      "column": 45,
+      "endColumn": 59,
+      "endLine": 17,
+      "file": "shared/schemas.yaml",
+      "line": 17
+    },
+    "shared#/schemas/UserPrincipal": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 14,
+      "file": "shared/schemas.yaml",
+      "line": 10
+    },
+    "shared#/schemas/UserPrincipal/properties/userId": {
+      "column": 17,
+      "endColumn": 31,
+      "endLine": 13,
+      "file": "shared/schemas.yaml",
+      "line": 13
+    },
+    "shared#/schemas/WebhookCaller": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 26,
+      "file": "shared/schemas.yaml",
+      "line": 22
+    },
+    "shared#/schemas/WebhookCaller/properties/account": {
+      "column": 17,
+      "endColumn": 42,
+      "endLine": 25,
+      "file": "shared/schemas.yaml",
+      "line": 25
+    },
+    "shared#/schemes/bearer": {
+      "column": 3,
+      "endColumn": 27,
+      "endLine": 5,
+      "file": "shared/base.yaml",
+      "line": 5
+    },
+    "shared#/schemes/csrfToken": {
+      "column": 3,
+      "endColumn": 50,
+      "endLine": 4,
+      "file": "shared/base.yaml",
+      "line": 4
+    },
+    "shared#/schemes/internalToken": {
+      "column": 3,
+      "endColumn": 53,
+      "endLine": 6,
+      "file": "shared/base.yaml",
+      "line": 6
+    },
+    "shared#/schemes/sessionCookie": {
+      "column": 3,
+      "endColumn": 73,
+      "endLine": 3,
+      "file": "shared/base.yaml",
+      "line": 3
+    },
+    "shared#/schemes/webhookSignature": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 16,
+      "file": "shared/base.yaml",
+      "line": 7
+    }
+  }
+}

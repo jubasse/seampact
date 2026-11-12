@@ -1,0 +1,64 @@
+{
+  "operations": {
+    "listTasks": {
+      "access": {
+        "kind": "public",
+        "reason": "Tasks are public.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "getTask": {
+      "access": {
+        "kind": "public",
+        "reason": "Tasks are public.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "listComments": {
+      "access": {
+        "kind": "public",
+        "reason": "Tasks are public.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "getComment": {
+      "access": {
+        "kind": "public",
+        "reason": "Tasks are public.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    }
+  }
+}

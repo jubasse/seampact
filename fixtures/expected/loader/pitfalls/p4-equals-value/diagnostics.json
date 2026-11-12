@@ -1,0 +1,27 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/yaml-reserved-scalar",
+      "message": "plain '=' is a YAML 1.1 value or merge key (P4)",
+      "fix": "quote it ('=')",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/3/4"
+      },
+      "related": []
+    },
+    {
+      "severity": "error",
+      "rule": "seampact/load/yaml-reserved-scalar",
+      "message": "plain '<<' is a YAML 1.1 value or merge key (P4)",
+      "fix": "quote it ('<<')",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/4/4"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

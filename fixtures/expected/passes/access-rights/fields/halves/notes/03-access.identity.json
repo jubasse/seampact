@@ -1,0 +1,137 @@
+{
+  "schemes": {
+    "bearer": {
+      "id": "bearer",
+      "kind": "bearer",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/bearer"
+      }
+    }
+  },
+  "identities": {
+    "member": {
+      "id": "member",
+      "kind": "credential",
+      "schemes": {
+        "read": [
+          "bearer"
+        ],
+        "write": [
+          "bearer"
+        ],
+        "optionalRead": []
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "Member"
+      },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/member"
+      }
+    }
+  },
+  "operations": {
+    "listNotes": {
+      "access": {
+        "kind": "identity",
+        "identity": "member",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "createNote": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "member",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "feedNotes": {
+      "access": {
+        "kind": "identity",
+        "identity": "member",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "byLabelNotes": {
+      "access": {
+        "kind": "identity",
+        "identity": "member",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "updateNote": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "member",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    }
+  }
+}

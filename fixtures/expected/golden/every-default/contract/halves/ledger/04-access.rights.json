@@ -1,0 +1,39 @@
+{
+  "operations": {
+    "entries_list": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "entry_create": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "entries_batch_get": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "entry_get": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "entry_update": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "entry_delete": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "entry_closing_balance": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    }
+  }
+}

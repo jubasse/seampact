@@ -1,0 +1,397 @@
+{
+  "irRevision": 6,
+  "locations": {
+    "api#/api": {
+      "column": 1,
+      "endColumn": 33,
+      "endLine": 6,
+      "file": "api.yaml",
+      "line": 6
+    },
+    "api#/api/version": {
+      "column": 21,
+      "endColumn": 31,
+      "endLine": 6,
+      "file": "api.yaml",
+      "line": 6
+    },
+    "api#/buckets/perEmail": {
+      "column": 3,
+      "endColumn": 66,
+      "endLine": 66,
+      "file": "api.yaml",
+      "line": 66
+    },
+    "api#/buckets/perUser": {
+      "column": 3,
+      "endColumn": 62,
+      "endLine": 65,
+      "file": "api.yaml",
+      "line": 65
+    },
+    "api#/identities/hook": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 29,
+      "file": "api.yaml",
+      "line": 24
+    },
+    "api#/identities/user": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 24,
+      "file": "api.yaml",
+      "line": 21
+    },
+    "api#/rules/otp": {
+      "column": 3,
+      "endColumn": 63,
+      "endLine": 61,
+      "file": "api.yaml",
+      "line": 61
+    },
+    "api#/rules/otp/proof": {
+      "column": 10,
+      "endColumn": 61,
+      "endLine": 61,
+      "file": "api.yaml",
+      "line": 61
+    },
+    "api#/rules/recentAuth": {
+      "column": 3,
+      "endColumn": 78,
+      "endLine": 59,
+      "file": "api.yaml",
+      "line": 59
+    },
+    "api#/rules/recentAuth/proof": {
+      "column": 17,
+      "endColumn": 76,
+      "endLine": 59,
+      "file": "api.yaml",
+      "line": 59
+    },
+    "api#/rules/sameSession": {
+      "column": 3,
+      "endColumn": 79,
+      "endLine": 60,
+      "file": "api.yaml",
+      "line": 60
+    },
+    "api#/rules/sameSession/proof": {
+      "column": 18,
+      "endColumn": 77,
+      "endLine": 60,
+      "file": "api.yaml",
+      "line": 60
+    },
+    "api#/rules/throttle": {
+      "column": 3,
+      "endColumn": 29,
+      "endLine": 62,
+      "file": "api.yaml",
+      "line": 62
+    },
+    "api#/schemas/HookCaller": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 57,
+      "file": "api.yaml",
+      "line": 53
+    },
+    "api#/schemas/HookCaller/properties/account": {
+      "column": 19,
+      "endColumn": 44,
+      "endLine": 56,
+      "file": "api.yaml",
+      "line": 56
+    },
+    "api#/schemas/HookEvent": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 49,
+      "file": "api.yaml",
+      "line": 45
+    },
+    "api#/schemas/HookEvent/properties/kind": {
+      "column": 19,
+      "endColumn": 41,
+      "endLine": 48,
+      "file": "api.yaml",
+      "line": 48
+    },
+    "api#/schemas/Secret": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 38,
+      "file": "api.yaml",
+      "line": 34
+    },
+    "api#/schemas/Secret/properties/label": {
+      "column": 39,
+      "endColumn": 62,
+      "endLine": 37,
+      "file": "api.yaml",
+      "line": 37
+    },
+    "api#/schemas/Secret/properties/secretId": {
+      "column": 19,
+      "endColumn": 37,
+      "endLine": 37,
+      "file": "api.yaml",
+      "line": 37
+    },
+    "api#/schemas/ShareForm": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 45,
+      "file": "api.yaml",
+      "line": 41
+    },
+    "api#/schemas/ShareForm/properties/email": {
+      "column": 19,
+      "endColumn": 42,
+      "endLine": 44,
+      "file": "api.yaml",
+      "line": 44
+    },
+    "api#/schemas/ShareForm/properties/note": {
+      "column": 44,
+      "endColumn": 66,
+      "endLine": 44,
+      "file": "api.yaml",
+      "line": 44
+    },
+    "api#/schemas/UpdateSecret": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 41,
+      "file": "api.yaml",
+      "line": 38
+    },
+    "api#/schemas/UpdateSecret/properties/label": {
+      "column": 19,
+      "endColumn": 42,
+      "endLine": 40,
+      "file": "api.yaml",
+      "line": 40
+    },
+    "api#/schemas/UserPrincipal": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 53,
+      "file": "api.yaml",
+      "line": 49
+    },
+    "api#/schemas/UserPrincipal/properties/userId": {
+      "column": 19,
+      "endColumn": 43,
+      "endLine": 52,
+      "file": "api.yaml",
+      "line": 52
+    },
+    "api#/schemes/bearer": {
+      "column": 3,
+      "endColumn": 27,
+      "endLine": 9,
+      "file": "api.yaml",
+      "line": 9
+    },
+    "api#/schemes/hookSignature": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 19,
+      "file": "api.yaml",
+      "line": 10
+    },
+    "api#/surfaces/app": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 96,
+      "file": "api.yaml",
+      "line": 69
+    },
+    "api#/surfaces/app/identity": {
+      "column": 5,
+      "endColumn": 19,
+      "endLine": 71,
+      "file": "api.yaml",
+      "line": 71
+    },
+    "api#/surfaces/app/routes/secrets/id/secretId": {
+      "column": 15,
+      "endColumn": 33,
+      "endLine": 75,
+      "file": "api.yaml",
+      "line": 75
+    },
+    "api#/surfaces/app/routes/secrets/item": {
+      "column": 9,
+      "endColumn": 21,
+      "endLine": 76,
+      "file": "api.yaml",
+      "line": 76
+    },
+    "api#/surfaces/app/routes/secrets/member/routes/reveal": {
+      "column": 13,
+      "endColumn": 1,
+      "endLine": 86,
+      "file": "api.yaml",
+      "line": 81
+    },
+    "api#/surfaces/app/routes/secrets/member/routes/reveal/requires/0": {
+      "column": 26,
+      "endColumn": 39,
+      "endLine": 83,
+      "file": "api.yaml",
+      "line": 83
+    },
+    "api#/surfaces/app/routes/secrets/member/routes/reveal/requires/1": {
+      "column": 41,
+      "endColumn": 61,
+      "endLine": 83,
+      "file": "api.yaml",
+      "line": 83
+    },
+    "api#/surfaces/app/routes/secrets/member/routes/reveal/requires/2": {
+      "column": 63,
+      "endColumn": 84,
+      "endLine": 83,
+      "file": "api.yaml",
+      "line": 83
+    },
+    "api#/surfaces/app/routes/secrets/member/routes/reveal/responses/204": {
+      "column": 17,
+      "endColumn": 24,
+      "endLine": 85,
+      "file": "api.yaml",
+      "line": 85
+    },
+    "api#/surfaces/app/routes/secrets/member/routes/share": {
+      "column": 13,
+      "endColumn": 1,
+      "endLine": 96,
+      "file": "api.yaml",
+      "line": 86
+    },
+    "api#/surfaces/app/routes/secrets/member/routes/share/input": {
+      "column": 15,
+      "endColumn": 31,
+      "endLine": 89,
+      "file": "api.yaml",
+      "line": 89
+    },
+    "api#/surfaces/app/routes/secrets/member/routes/share/requires/0": {
+      "column": 19,
+      "endColumn": 39,
+      "endLine": 91,
+      "file": "api.yaml",
+      "line": 91
+    },
+    "api#/surfaces/app/routes/secrets/member/routes/share/requires/1": {
+      "column": 19,
+      "endColumn": 55,
+      "endLine": 92,
+      "file": "api.yaml",
+      "line": 92
+    },
+    "api#/surfaces/app/routes/secrets/member/routes/share/requires/2": {
+      "column": 19,
+      "endColumn": 54,
+      "endLine": 93,
+      "file": "api.yaml",
+      "line": 93
+    },
+    "api#/surfaces/app/routes/secrets/member/routes/share/responses/204": {
+      "column": 17,
+      "endColumn": 24,
+      "endLine": 95,
+      "file": "api.yaml",
+      "line": 95
+    },
+    "api#/surfaces/app/routes/secrets/ops/update": {
+      "column": 11,
+      "endColumn": 76,
+      "endLine": 78,
+      "file": "api.yaml",
+      "line": 78
+    },
+    "api#/surfaces/app/routes/secrets/ops/update/input": {
+      "column": 21,
+      "endColumn": 40,
+      "endLine": 78,
+      "file": "api.yaml",
+      "line": 78
+    },
+    "api#/surfaces/app/routes/secrets/ops/update/requires/0": {
+      "column": 53,
+      "endColumn": 73,
+      "endLine": 78,
+      "file": "api.yaml",
+      "line": 78
+    },
+    "api#/surfaces/hooks": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 111,
+      "file": "api.yaml",
+      "line": 96
+    },
+    "api#/surfaces/hooks/identity": {
+      "column": 5,
+      "endColumn": 19,
+      "endLine": 98,
+      "file": "api.yaml",
+      "line": 98
+    },
+    "api#/surfaces/hooks/routes/events": {
+      "column": 7,
+      "endColumn": 1,
+      "endLine": 106,
+      "file": "api.yaml",
+      "line": 100
+    },
+    "api#/surfaces/hooks/routes/events/input": {
+      "column": 9,
+      "endColumn": 25,
+      "endLine": 102,
+      "file": "api.yaml",
+      "line": 102
+    },
+    "api#/surfaces/hooks/routes/events/requires/0": {
+      "column": 20,
+      "endColumn": 40,
+      "endLine": 103,
+      "file": "api.yaml",
+      "line": 103
+    },
+    "api#/surfaces/hooks/routes/events/responses/204": {
+      "column": 11,
+      "endColumn": 18,
+      "endLine": 105,
+      "file": "api.yaml",
+      "line": 105
+    },
+    "api#/surfaces/hooks/routes/ping": {
+      "column": 7,
+      "endColumn": 1,
+      "endLine": 111,
+      "file": "api.yaml",
+      "line": 106
+    },
+    "api#/surfaces/hooks/routes/ping/requires/0": {
+      "column": 20,
+      "endColumn": 40,
+      "endLine": 108,
+      "file": "api.yaml",
+      "line": 108
+    },
+    "api#/surfaces/hooks/routes/ping/responses/204": {
+      "column": 11,
+      "endColumn": 18,
+      "endLine": 110,
+      "file": "api.yaml",
+      "line": 110
+    }
+  }
+}

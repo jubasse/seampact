@@ -1,0 +1,16 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/pack-not-data",
+      "message": "the pack file 'packs/house.yaml' holds 'surfaces', which is not a pack key; a pack is data only",
+      "fix": "keep to the keys of a pack (pack, the catalogues, conventions, formats, extensions, lint, derive)",
+      "origin": {
+        "layer": "pack:house",
+        "pointer": "/~load/packs~1house.yaml/2/1"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

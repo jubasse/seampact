@@ -1,0 +1,1570 @@
+{
+  "errors": {
+    "err.bad_input": {
+      "code": "err.bad_input",
+      "family": "err",
+      "nature": "refused",
+      "http": {
+        "status": 400
+      },
+      "params": "ErrBadInputParams",
+      "example": {
+        "issues": [
+          {
+            "pointer": "/title",
+            "rule": "minLength"
+          }
+        ]
+      },
+      "docs": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/errors/err.bad_input"
+      }
+    },
+    "err.unauthenticated": {
+      "code": "err.unauthenticated",
+      "family": "err",
+      "nature": "refused",
+      "http": {
+        "status": 401
+      },
+      "docs": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/errors/err.unauthenticated"
+      }
+    },
+    "err.forbidden": {
+      "code": "err.forbidden",
+      "family": "err",
+      "nature": "refused",
+      "http": {
+        "status": 403
+      },
+      "params": "ErrForbiddenParams",
+      "docs": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/errors/err.forbidden"
+      }
+    },
+    "err.csrf_invalid": {
+      "code": "err.csrf_invalid",
+      "family": "err",
+      "nature": "refused",
+      "http": {
+        "status": 403
+      },
+      "docs": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/errors/err.csrf_invalid"
+      }
+    },
+    "err.sort_key_forbidden": {
+      "code": "err.sort_key_forbidden",
+      "family": "err",
+      "nature": "refused",
+      "http": {
+        "status": 403
+      },
+      "params": "ErrSortKeyForbiddenParams",
+      "example": {
+        "key": "amount"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/errors/err.sort_key_forbidden"
+      }
+    },
+    "err.missing": {
+      "code": "err.missing",
+      "family": "err",
+      "nature": "refused",
+      "http": {
+        "status": 404
+      },
+      "docs": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/errors/err.missing"
+      }
+    },
+    "err.conflict": {
+      "code": "err.conflict",
+      "family": "err",
+      "nature": "refused",
+      "http": {
+        "status": 409
+      },
+      "docs": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/errors/err.conflict"
+      }
+    },
+    "err.idempotency_running": {
+      "code": "err.idempotency_running",
+      "family": "err",
+      "nature": "refused",
+      "http": {
+        "status": 409
+      },
+      "docs": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/errors/err.idempotency_running"
+      }
+    },
+    "err.precondition_failed": {
+      "code": "err.precondition_failed",
+      "family": "err",
+      "nature": "refused",
+      "http": {
+        "status": 412
+      },
+      "docs": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/errors/err.precondition_failed"
+      }
+    },
+    "err.idempotency_reused": {
+      "code": "err.idempotency_reused",
+      "family": "err",
+      "nature": "refused",
+      "http": {
+        "status": 422
+      },
+      "docs": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/errors/err.idempotency_reused"
+      }
+    },
+    "err.precondition_required": {
+      "code": "err.precondition_required",
+      "family": "err",
+      "nature": "refused",
+      "http": {
+        "status": 428
+      },
+      "docs": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/errors/err.precondition_required"
+      }
+    },
+    "err.gone": {
+      "code": "err.gone",
+      "family": "err",
+      "nature": "refused",
+      "http": {
+        "status": 410
+      },
+      "docs": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/errors/err.gone"
+      }
+    },
+    "err.too_large": {
+      "code": "err.too_large",
+      "family": "err",
+      "nature": "refused",
+      "http": {
+        "status": 413
+      },
+      "docs": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/errors/err.too_large"
+      }
+    },
+    "err.media_type": {
+      "code": "err.media_type",
+      "family": "err",
+      "nature": "refused",
+      "http": {
+        "status": 415
+      },
+      "docs": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/errors/err.media_type"
+      }
+    },
+    "err.slow_down": {
+      "code": "err.slow_down",
+      "family": "err",
+      "nature": "unavailable",
+      "http": {
+        "status": 429
+      },
+      "docs": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/errors/err.slow_down"
+      }
+    },
+    "err.internal": {
+      "code": "err.internal",
+      "family": "err",
+      "nature": "failed",
+      "http": {
+        "status": 500
+      },
+      "docs": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/errors/err.internal"
+      }
+    },
+    "err.upstream_down": {
+      "code": "err.upstream_down",
+      "family": "err",
+      "nature": "unavailable",
+      "http": {
+        "status": 502
+      },
+      "docs": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/errors/err.upstream_down"
+      }
+    },
+    "err.unavailable": {
+      "code": "err.unavailable",
+      "family": "err",
+      "nature": "unavailable",
+      "http": {
+        "status": 503
+      },
+      "docs": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/errors/err.unavailable"
+      }
+    },
+    "err.upstream_timeout": {
+      "code": "err.upstream_timeout",
+      "family": "err",
+      "nature": "unavailable",
+      "http": {
+        "status": 504
+      },
+      "docs": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/errors/err.upstream_timeout"
+      }
+    },
+    "err.deadline": {
+      "code": "err.deadline",
+      "family": "err",
+      "nature": "unavailable",
+      "http": {
+        "status": 504
+      },
+      "docs": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/errors/err.deadline"
+      }
+    },
+    "api.schema_invalid": {
+      "code": "api.schema_invalid",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 400
+      },
+      "params": "ApiSchemaInvalidParams",
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.schema_invalid"
+      },
+      "default": "schemaInvalid"
+    },
+    "api.unauthenticated": {
+      "code": "api.unauthenticated",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 401
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.unauthenticated"
+      },
+      "default": "unauthenticated"
+    },
+    "api.forbidden": {
+      "code": "api.forbidden",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 403
+      },
+      "params": "ApiForbiddenParams",
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.forbidden"
+      },
+      "default": "forbidden"
+    },
+    "api.csrf_invalid": {
+      "code": "api.csrf_invalid",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 403
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.csrf_invalid"
+      },
+      "default": "csrfInvalid"
+    },
+    "api.sort_key_forbidden": {
+      "code": "api.sort_key_forbidden",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 403
+      },
+      "params": "ApiSortKeyForbiddenParams",
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.sort_key_forbidden"
+      },
+      "default": "sortKeyForbidden"
+    },
+    "api.not_found": {
+      "code": "api.not_found",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 404
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.not_found"
+      },
+      "default": "notFound"
+    },
+    "state.conflict": {
+      "code": "state.conflict",
+      "family": "state",
+      "nature": "refused",
+      "http": {
+        "status": 409
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/state.conflict"
+      },
+      "default": "stateConflict"
+    },
+    "api.idempotency_in_progress": {
+      "code": "api.idempotency_in_progress",
+      "family": "api",
+      "nature": "unavailable",
+      "http": {
+        "status": 409
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.idempotency_in_progress"
+      },
+      "default": "idempotencyInProgress"
+    },
+    "api.precondition_failed": {
+      "code": "api.precondition_failed",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 412
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.precondition_failed"
+      },
+      "default": "preconditionFailed"
+    },
+    "api.idempotency_key_reused": {
+      "code": "api.idempotency_key_reused",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 422
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.idempotency_key_reused"
+      },
+      "default": "idempotencyKeyReused"
+    },
+    "api.precondition_required": {
+      "code": "api.precondition_required",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 428
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.precondition_required"
+      },
+      "default": "preconditionRequired"
+    },
+    "api.cursor_too_old": {
+      "code": "api.cursor_too_old",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 410
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.cursor_too_old"
+      },
+      "default": "gone"
+    },
+    "api.payload_too_large": {
+      "code": "api.payload_too_large",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 413
+      },
+      "params": "ApiPayloadTooLargeParams",
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.payload_too_large"
+      },
+      "default": "payloadTooLarge"
+    },
+    "api.unsupported_media_type": {
+      "code": "api.unsupported_media_type",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 415
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.unsupported_media_type"
+      },
+      "default": "unsupportedMediaType"
+    },
+    "api.rate_limited": {
+      "code": "api.rate_limited",
+      "family": "api",
+      "nature": "unavailable",
+      "http": {
+        "status": 429
+      },
+      "params": "ApiRateLimitedParams",
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.rate_limited"
+      },
+      "default": "rateLimited"
+    },
+    "api.internal": {
+      "code": "api.internal",
+      "family": "api",
+      "nature": "failed",
+      "http": {
+        "status": 500
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.internal"
+      },
+      "default": "undeclaredStatus"
+    },
+    "api.upstream_unavailable": {
+      "code": "api.upstream_unavailable",
+      "family": "api",
+      "nature": "unavailable",
+      "http": {
+        "status": 502
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.upstream_unavailable"
+      },
+      "default": "upstreamUnavailable"
+    },
+    "api.service_unavailable": {
+      "code": "api.service_unavailable",
+      "family": "api",
+      "nature": "unavailable",
+      "http": {
+        "status": 503
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.service_unavailable"
+      },
+      "default": "serviceUnavailable"
+    },
+    "api.upstream_timeout": {
+      "code": "api.upstream_timeout",
+      "family": "api",
+      "nature": "unavailable",
+      "http": {
+        "status": 504
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.upstream_timeout"
+      },
+      "default": "upstreamTimeout"
+    },
+    "api.deadline_exceeded": {
+      "code": "api.deadline_exceeded",
+      "family": "api",
+      "nature": "unavailable",
+      "http": {
+        "status": 504
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.deadline_exceeded"
+      },
+      "default": "deadlineExceeded"
+    }
+  },
+  "operations": {
+    "entries_list": {
+      "errors": [
+        {
+          "code": "err.bad_input",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "each",
+                      "of": "issues",
+                      "as": {
+                        "kind": "object",
+                        "members": [
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "pointer"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "pointer"
+                              ]
+                            }
+                          },
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "rule"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "rule"
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/conventions/paging/default"
+              },
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/entries/ops/list"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/schemaInvalid"
+              }
+            ]
+          }
+        },
+        {
+          "code": "err.unauthenticated",
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/unauthenticated"
+              }
+            ]
+          }
+        },
+        {
+          "code": "err.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/entries/ops/list"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/undeclaredStatus"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "entry_create": {
+      "errors": [
+        {
+          "code": "err.bad_input",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "each",
+                      "of": "issues",
+                      "as": {
+                        "kind": "object",
+                        "members": [
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "pointer"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "pointer"
+                              ]
+                            }
+                          },
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "rule"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "rule"
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/entries/ops/create"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/schemaInvalid"
+              }
+            ]
+          }
+        },
+        {
+          "code": "err.unauthenticated",
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/unauthenticated"
+              }
+            ]
+          }
+        },
+        {
+          "code": "err.too_large",
+          "roles": [
+            {
+              "role": "payloadTooLarge"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/entries/ops/create/input"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/payloadTooLarge"
+              }
+            ]
+          }
+        },
+        {
+          "code": "err.media_type",
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/entries/ops/create/input"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/unsupportedMediaType"
+              }
+            ]
+          }
+        },
+        {
+          "code": "err.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/entries/ops/create"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/undeclaredStatus"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "entries_batch_get": {
+      "errors": [
+        {
+          "code": "err.bad_input",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "each",
+                      "of": "issues",
+                      "as": {
+                        "kind": "object",
+                        "members": [
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "pointer"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "pointer"
+                              ]
+                            }
+                          },
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "rule"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "rule"
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/entries/ops/batch"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/schemaInvalid"
+              }
+            ]
+          }
+        },
+        {
+          "code": "err.unauthenticated",
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/unauthenticated"
+              }
+            ]
+          }
+        },
+        {
+          "code": "err.too_large",
+          "roles": [
+            {
+              "role": "payloadTooLarge"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/entries/ops/batch"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/payloadTooLarge"
+              }
+            ]
+          }
+        },
+        {
+          "code": "err.media_type",
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/entries/ops/batch"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/unsupportedMediaType"
+              }
+            ]
+          }
+        },
+        {
+          "code": "err.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/entries/ops/batch"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/undeclaredStatus"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "entry_get": {
+      "errors": [
+        {
+          "code": "err.bad_input",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "each",
+                      "of": "issues",
+                      "as": {
+                        "kind": "object",
+                        "members": [
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "pointer"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "pointer"
+                              ]
+                            }
+                          },
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "rule"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "rule"
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/entries/ops/get"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/schemaInvalid"
+              }
+            ]
+          }
+        },
+        {
+          "code": "err.unauthenticated",
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/unauthenticated"
+              }
+            ]
+          }
+        },
+        {
+          "code": "err.missing",
+          "roles": [
+            {
+              "role": "notFound"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "member.notFound",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/entries/ops/get"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/notFound"
+              }
+            ]
+          }
+        },
+        {
+          "code": "err.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/entries/ops/get"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/undeclaredStatus"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "entry_update": {
+      "errors": [
+        {
+          "code": "err.bad_input",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "each",
+                      "of": "issues",
+                      "as": {
+                        "kind": "object",
+                        "members": [
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "pointer"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "pointer"
+                              ]
+                            }
+                          },
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "rule"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "rule"
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/entries/ops/update"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/schemaInvalid"
+              }
+            ]
+          }
+        },
+        {
+          "code": "err.unauthenticated",
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/unauthenticated"
+              }
+            ]
+          }
+        },
+        {
+          "code": "err.missing",
+          "roles": [
+            {
+              "role": "notFound"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "member.notFound",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/entries/ops/update"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/notFound"
+              }
+            ]
+          }
+        },
+        {
+          "code": "err.too_large",
+          "roles": [
+            {
+              "role": "payloadTooLarge"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/entries/ops/update/input"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/payloadTooLarge"
+              }
+            ]
+          }
+        },
+        {
+          "code": "err.media_type",
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/entries/ops/update/input"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/unsupportedMediaType"
+              }
+            ]
+          }
+        },
+        {
+          "code": "err.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/entries/ops/update"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/undeclaredStatus"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "entry_delete": {
+      "errors": [
+        {
+          "code": "err.bad_input",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "each",
+                      "of": "issues",
+                      "as": {
+                        "kind": "object",
+                        "members": [
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "pointer"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "pointer"
+                              ]
+                            }
+                          },
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "rule"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "rule"
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/entries/ops/delete"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/schemaInvalid"
+              }
+            ]
+          }
+        },
+        {
+          "code": "err.unauthenticated",
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/unauthenticated"
+              }
+            ]
+          }
+        },
+        {
+          "code": "err.missing",
+          "roles": [
+            {
+              "role": "notFound"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "member.notFound",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/entries/ops/delete"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/notFound"
+              }
+            ]
+          }
+        },
+        {
+          "code": "err.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/entries/ops/delete"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/undeclaredStatus"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "entry_closing_balance": {
+      "errors": [
+        {
+          "code": "err.bad_input",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "each",
+                      "of": "issues",
+                      "as": {
+                        "kind": "object",
+                        "members": [
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "pointer"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "pointer"
+                              ]
+                            }
+                          },
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "rule"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "rule"
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/entries/member/routes/closing_balance"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/schemaInvalid"
+              }
+            ]
+          }
+        },
+        {
+          "code": "err.unauthenticated",
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/unauthenticated"
+              }
+            ]
+          }
+        },
+        {
+          "code": "err.missing",
+          "roles": [
+            {
+              "role": "notFound"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "member.notFound",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/entries/member/routes/closing_balance"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/notFound"
+              }
+            ]
+          }
+        },
+        {
+          "code": "err.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/entries/member/routes/closing_balance"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/undeclaredStatus"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

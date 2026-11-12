@@ -1,0 +1,27 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/yaml-tag",
+      "message": "tag '!!str' is not allowed (P9)",
+      "fix": "remove the tag; no tags are read, quote the value if it is a string",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/3/10"
+      },
+      "related": []
+    },
+    {
+      "severity": "error",
+      "rule": "seampact/load/yaml-tag",
+      "message": "tag '!custom' is not allowed (P9)",
+      "fix": "remove the tag; no tags are read, quote the value if it is a string",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/4/12"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

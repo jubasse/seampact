@@ -1,0 +1,327 @@
+{
+  "operations": {
+    "getSpace": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "listNotes": {
+      "params": {
+        "query": [
+          {
+            "name": "cursor",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "1",
+                "maximum": "100"
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          },
+          {
+            "name": "sort",
+            "type": {
+              "kind": "array",
+              "items": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {
+                  "pattern": {
+                    "source": "^(?:createdAt|-createdAt|wordCount|-wordCount)$",
+                    "normalized": "^(?:createdAt|-createdAt|wordCount|-wordCount)$"
+                  }
+                }
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "list",
+              "style": "form",
+              "explode": false,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          }
+        ],
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "Link",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": false,
+              "derivedFrom": {
+                "derivation": "paging.params",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/conventions/paging/default"
+                  },
+                  {
+                    "layer": "api",
+                    "pointer": "/pagings/cursor"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "feedbackNotes": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "Location",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "format": "uri-reference",
+                "refinements": {}
+              },
+              "required": true,
+              "derivedFrom": {
+                "derivation": "redirect.location",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/spaces/member/routes/notes/collection/routes/feedback/responses/303"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "idempotency": {
+        "kind": "exempt",
+        "reason": "A feedback form is harmless to repeat.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/spaces/member/routes/notes/collection/routes/feedback/idempotency"
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "attachNotes": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 26214400
+      },
+      "idempotency": {
+        "kind": "exempt",
+        "reason": "An upload is harmless to repeat.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/spaces/member/routes/notes/collection/routes/attach/idempotency"
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    }
+  },
+  "api": {
+    "wire": {
+      "int64": "string",
+      "outputEnums": "enum",
+      "urls": "relative"
+    }
+  }
+}

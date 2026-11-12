@@ -1,0 +1,24 @@
+{
+  "operations": {
+    "listMembers": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "getUser": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "getMe": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "ping": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    }
+  }
+}

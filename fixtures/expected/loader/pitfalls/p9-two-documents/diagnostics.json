@@ -1,0 +1,16 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/yaml-document",
+      "message": "the file holds more than one YAML document",
+      "fix": "one document per file; remove the extra '---'",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/3/1"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

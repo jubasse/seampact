@@ -1,0 +1,63 @@
+{
+  "rights": {
+    "notes.annotate": {
+      "id": "notes.annotate",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/notes.annotate"
+      }
+    }
+  },
+  "operations": {
+    "listNotes": {
+      "paging": {
+        "sortKeys": {
+          "1": {
+            "right": "notes.annotate"
+          }
+        }
+      },
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "updateNote": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "listChanges": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "drafts": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "jobs": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "stripe": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "github": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    }
+  }
+}

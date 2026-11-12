@@ -1,0 +1,142 @@
+{
+  "schemes": {
+    "sessionCookie": {
+      "id": "sessionCookie",
+      "kind": "cookie",
+      "name": "__Host-studio",
+      "csrf": "csrfToken",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/sessionCookie"
+      }
+    },
+    "csrfToken": {
+      "id": "csrfToken",
+      "kind": "header",
+      "name": "X-Csrf-Token",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/csrfToken"
+      }
+    }
+  },
+  "identities": {
+    "user": {
+      "id": "user",
+      "kind": "credential",
+      "schemes": {
+        "read": [
+          "sessionCookie"
+        ],
+        "write": [
+          "sessionCookie"
+        ],
+        "optionalRead": []
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "UserPrincipal"
+      },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/user"
+      }
+    }
+  },
+  "operations": {
+    "profileStudio": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "api",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "api",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [
+        {
+          "field": "profileId",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/studios/member/routes/profile/principal/requires/0"
+          }
+        }
+      ],
+      "bindings": [
+        {
+          "from": {
+            "in": "body",
+            "name": "profileId"
+          },
+          "to": {
+            "in": "principal",
+            "name": "profileId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/studios/member/routes/profile/bindings/body.profileId"
+          }
+        }
+      ]
+    },
+    "eventsStudio": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "exempt",
+        "reason": "Stream events come from the studio's own encoder.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/studios/member/routes/events/csrf"
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    }
+  }
+}

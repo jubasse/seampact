@@ -1,0 +1,64 @@
+{
+  "operations": {
+    "listMembers": {
+      "access": {
+        "kind": "public",
+        "reason": "The fixture checks error declarations only.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "getUser": {
+      "access": {
+        "kind": "public",
+        "reason": "The fixture checks error declarations only.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "getMe": {
+      "access": {
+        "kind": "public",
+        "reason": "The fixture checks error declarations only.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "ping": {
+      "access": {
+        "kind": "public",
+        "reason": "The fixture checks error declarations only.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    }
+  }
+}
