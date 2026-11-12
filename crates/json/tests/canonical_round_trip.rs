@@ -1,12 +1,12 @@
-//! The canonical writer reproduces every committed IR and source map, and keeps the value of
-//! every IR example.
+//! The canonical writer reproduces every committed IR and source map and keeps the value of
+//! every IR example; the indented writer reproduces every diagnostics and pass-half file.
 
 mod support;
 
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use seampact_json::{JsonValue, canonical_document};
+use seampact_json::{JsonValue, canonical_document, indented_json};
 use support::{files_under, repository_root};
 
 /// The expected outputs of every fixture, written by the TypeScript canonical writer.
@@ -105,6 +105,49 @@ fn every_ir_example_keeps_its_value_and_its_canonical_text_is_stable() {
     );
     assert_eq!(
         display_paths(&changed_files),
+        Vec::<String>::new(),
+        "of {} files",
+        files.len()
+    );
+}
+
+/// Whether `path` is a `diagnostics.json` or a pass-half file of a fixture's expected outputs.
+fn is_diagnostics_or_half(path: &Path) -> bool {
+    let is_diagnostics = path
+        .file_name()
+        .is_some_and(|name| name == "diagnostics.json");
+    let is_half = path
+        .extension()
+        .is_some_and(|extension| extension == "json")
+        && path
+            .ancestors()
+            .any(|ancestor| ancestor.file_name().is_some_and(|name| name == "halves"));
+
+    is_diagnostics || is_half
+}
+
+#[test]
+fn every_expected_diagnostics_and_half_file_is_rewritten_byte_identical() {
+    let files = files_under(
+        &repository_root().join(EXPECTED_OUTPUTS_DIRECTORY),
+        &is_diagnostics_or_half,
+    )
+    .unwrap();
+    let mismatched_files: Vec<&PathBuf> = files
+        .iter()
+        .filter(|path| {
+            let (original_text, value) = read_value(path).unwrap();
+
+            indented_json(&value) != original_text
+        })
+        .collect();
+
+    assert!(
+        !files.is_empty(),
+        "no diagnostics or half file under {EXPECTED_OUTPUTS_DIRECTORY}"
+    );
+    assert_eq!(
+        display_paths(&mismatched_files),
         Vec::<String>::new(),
         "of {} files",
         files.len()
