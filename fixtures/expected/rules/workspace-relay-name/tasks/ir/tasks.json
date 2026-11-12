@@ -11,7 +11,9 @@
     "maturity": "experimental",
     "name": {
       "role": "schema",
-      "segments": ["tasks"]
+      "segments": [
+        "tasks"
+      ]
     },
     "origin": {
       "layer": "api",
@@ -28,7 +30,9 @@
       "app": {
         "name": {
           "role": "schema",
-          "segments": ["app"]
+          "segments": [
+            "app"
+          ]
         },
         "origin": {
           "layer": "api",
@@ -232,7 +236,9 @@
   "identities": {},
   "irRevision": 6,
   "irVersion": 1,
-  "kinds": ["httpOperation"],
+  "kinds": [
+    "httpOperation"
+  ],
   "lint": {
     "allows": [],
     "rules": {}
@@ -249,7 +255,9 @@
         "reason": "Open."
       },
       "bindings": [],
-      "callerKinds": ["anonymous"],
+      "callerKinds": [
+        "anonymous"
+      ],
       "docs": {},
       "errors": [
         {
@@ -322,7 +330,10 @@
       "method": "get",
       "name": {
         "role": "operation",
-        "segments": ["get", "task"]
+        "segments": [
+          "get",
+          "task"
+        ]
       },
       "origin": {
         "layer": "api",
@@ -378,7 +389,9 @@
   "scalars": {},
   "schemas": {
     "ApiSchemaInvalidIssue": {
-      "directions": ["output"],
+      "directions": [
+        "output"
+      ],
       "docs": {},
       "examples": [],
       "extensions": {},
@@ -386,7 +399,12 @@
       "kind": "object",
       "name": {
         "role": "schema",
-        "segments": ["api", "schema", "invalid", "issue"]
+        "segments": [
+          "api",
+          "schema",
+          "invalid",
+          "issue"
+        ]
       },
       "origin": {
         "layer": "core",
@@ -455,7 +473,9 @@
       ]
     },
     "ApiSchemaInvalidParams": {
-      "directions": ["output"],
+      "directions": [
+        "output"
+      ],
       "docs": {},
       "examples": [],
       "extensions": {},
@@ -463,7 +483,11 @@
       "kind": "object",
       "name": {
         "role": "params",
-        "segments": ["api", "schema", "invalid"]
+        "segments": [
+          "api",
+          "schema",
+          "invalid"
+        ]
       },
       "origin": {
         "layer": "core",
@@ -493,7 +517,9 @@
       ]
     },
     "Note": {
-      "directions": ["output"],
+      "directions": [
+        "output"
+      ],
       "docs": {},
       "examples": [],
       "extensions": {},
@@ -501,7 +527,9 @@
       "kind": "object",
       "name": {
         "role": "schema",
-        "segments": ["note"]
+        "segments": [
+          "note"
+        ]
       },
       "origin": {
         "layer": "api",

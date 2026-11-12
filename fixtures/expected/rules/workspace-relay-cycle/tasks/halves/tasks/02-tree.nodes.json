@@ -148,7 +148,10 @@
       "kind": "httpOperation",
       "id": "getTask",
       "name": {
-        "segments": ["get", "task"],
+        "segments": [
+          "get",
+          "task"
+        ],
         "role": "operation"
       },
       "surface": "app",
@@ -176,7 +179,9 @@
   "api": {
     "id": "tasks",
     "name": {
-      "segments": ["tasks"],
+      "segments": [
+        "tasks"
+      ],
       "role": "schema"
     },
     "version": {
@@ -198,7 +203,9 @@
     "surfaces": {
       "app": {
         "name": {
-          "segments": ["app"],
+          "segments": [
+            "app"
+          ],
           "role": "schema"
         },
         "prefix": "/v1",

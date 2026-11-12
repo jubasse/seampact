@@ -14,8 +14,12 @@
       "id": "service",
       "kind": "credential",
       "schemes": {
-        "read": ["internalToken"],
-        "write": ["internalToken"],
+        "read": [
+          "internalToken"
+        ],
+        "write": [
+          "internalToken"
+        ],
         "optionalRead": []
       },
       "principal": {
@@ -35,8 +39,12 @@
       "id": "other",
       "kind": "credential",
       "schemes": {
-        "read": ["internalToken"],
-        "write": ["internalToken"],
+        "read": [
+          "internalToken"
+        ],
+        "write": [
+          "internalToken"
+        ],
         "optionalRead": []
       },
       "principal": {

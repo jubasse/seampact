@@ -234,7 +234,9 @@
       "kind": "httpOperation",
       "id": "partial",
       "name": {
-        "segments": ["partial"],
+        "segments": [
+          "partial"
+        ],
         "role": "operation"
       },
       "surface": "app",
@@ -275,7 +277,9 @@
         }
       ],
       "degradable": {
-        "paths": ["text"],
+        "paths": [
+          "text"
+        ],
         "origin": {
           "layer": "api",
           "pointer": "/surfaces/app/routes/partial/degradable"
@@ -297,7 +301,9 @@
   "api": {
     "id": "t",
     "name": {
-      "segments": ["t"],
+      "segments": [
+        "t"
+      ],
       "role": "schema"
     },
     "version": {
@@ -319,7 +325,9 @@
     "surfaces": {
       "app": {
         "name": {
-          "segments": ["app"],
+          "segments": [
+            "app"
+          ],
           "role": "schema"
         },
         "prefix": "/v1",

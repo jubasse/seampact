@@ -234,7 +234,10 @@
       "kind": "httpOperation",
       "id": "getKeyed",
       "name": {
-        "segments": ["get", "keyed"],
+        "segments": [
+          "get",
+          "keyed"
+        ],
         "role": "operation"
       },
       "surface": "app",
@@ -304,7 +307,9 @@
       "kind": "httpOperation",
       "id": "unkeyed",
       "name": {
-        "segments": ["unkeyed"],
+        "segments": [
+          "unkeyed"
+        ],
         "role": "operation"
       },
       "surface": "app",
@@ -374,7 +379,9 @@
   "api": {
     "id": "t",
     "name": {
-      "segments": ["t"],
+      "segments": [
+        "t"
+      ],
       "role": "schema"
     },
     "version": {
@@ -396,7 +403,9 @@
     "surfaces": {
       "app": {
         "name": {
-          "segments": ["app"],
+          "segments": [
+            "app"
+          ],
           "role": "schema"
         },
         "prefix": "/v1",

@@ -4,10 +4,16 @@
       "kind": "object",
       "id": "ApiSchemaInvalidParams",
       "name": {
-        "segments": ["api", "schema", "invalid"],
+        "segments": [
+          "api",
+          "schema",
+          "invalid"
+        ],
         "role": "params"
       },
-      "directions": ["output"],
+      "directions": [
+        "output"
+      ],
       "examples": [],
       "docs": {},
       "extensions": {},
@@ -42,10 +48,15 @@
       "kind": "object",
       "id": "ApiForbiddenParams",
       "name": {
-        "segments": ["api", "forbidden"],
+        "segments": [
+          "api",
+          "forbidden"
+        ],
         "role": "params"
       },
-      "directions": ["output"],
+      "directions": [
+        "output"
+      ],
       "examples": [],
       "docs": {},
       "extensions": {},
@@ -78,10 +89,17 @@
       "kind": "object",
       "id": "ApiSortKeyForbiddenParams",
       "name": {
-        "segments": ["api", "sort", "key", "forbidden"],
+        "segments": [
+          "api",
+          "sort",
+          "key",
+          "forbidden"
+        ],
         "role": "params"
       },
-      "directions": ["output"],
+      "directions": [
+        "output"
+      ],
       "examples": [],
       "docs": {},
       "extensions": {},
@@ -114,10 +132,17 @@
       "kind": "object",
       "id": "ApiPayloadTooLargeParams",
       "name": {
-        "segments": ["api", "payload", "too", "large"],
+        "segments": [
+          "api",
+          "payload",
+          "too",
+          "large"
+        ],
         "role": "params"
       },
-      "directions": ["output"],
+      "directions": [
+        "output"
+      ],
       "examples": [],
       "docs": {},
       "extensions": {},
@@ -152,10 +177,16 @@
       "kind": "object",
       "id": "ApiRateLimitedParams",
       "name": {
-        "segments": ["api", "rate", "limited"],
+        "segments": [
+          "api",
+          "rate",
+          "limited"
+        ],
         "role": "params"
       },
-      "directions": ["output"],
+      "directions": [
+        "output"
+      ],
       "examples": [],
       "docs": {},
       "extensions": {},
@@ -191,10 +222,17 @@
       "kind": "object",
       "id": "ApiSchemaInvalidIssue",
       "name": {
-        "segments": ["api", "schema", "invalid", "issue"],
+        "segments": [
+          "api",
+          "schema",
+          "invalid",
+          "issue"
+        ],
         "role": "schema"
       },
-      "directions": ["output"],
+      "directions": [
+        "output"
+      ],
       "examples": [],
       "docs": {},
       "extensions": {},
@@ -268,10 +306,16 @@
       "kind": "object",
       "id": "ApiEmptyBody",
       "name": {
-        "segments": ["api", "empty", "body"],
+        "segments": [
+          "api",
+          "empty",
+          "body"
+        ],
         "role": "schema"
       },
-      "directions": ["input"],
+      "directions": [
+        "input"
+      ],
       "examples": [],
       "docs": {},
       "extensions": {},
@@ -305,7 +349,9 @@
       ],
       "id": "Note",
       "name": {
-        "segments": ["note"],
+        "segments": [
+          "note"
+        ],
         "role": "schema"
       },
       "directions": [],
@@ -359,10 +405,14 @@
       ],
       "id": "Key",
       "name": {
-        "segments": ["key"],
+        "segments": [
+          "key"
+        ],
         "role": "schema"
       },
-      "directions": ["output"],
+      "directions": [
+        "output"
+      ],
       "examples": [],
       "docs": {},
       "extensions": {},

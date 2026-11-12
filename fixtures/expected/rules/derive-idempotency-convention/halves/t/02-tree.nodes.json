@@ -157,7 +157,9 @@
       "kind": "httpOperation",
       "id": "save",
       "name": {
-        "segments": ["save"],
+        "segments": [
+          "save"
+        ],
         "role": "operation"
       },
       "surface": "app",
@@ -213,7 +215,9 @@
   "api": {
     "id": "t",
     "name": {
-      "segments": ["t"],
+      "segments": [
+        "t"
+      ],
       "role": "schema"
     },
     "version": {
@@ -235,7 +239,9 @@
     "surfaces": {
       "app": {
         "name": {
-          "segments": ["app"],
+          "segments": [
+            "app"
+          ],
           "role": "schema"
         },
         "prefix": "/v1",

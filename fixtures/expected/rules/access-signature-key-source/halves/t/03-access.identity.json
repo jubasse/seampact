@@ -48,13 +48,17 @@
       "access": {
         "kind": "identity",
         "identity": "hook",
-        "schemes": ["sig"],
+        "schemes": [
+          "sig"
+        ],
         "origin": {
           "layer": "api",
           "pointer": "/surfaces/app/identity"
         }
       },
-      "callerKinds": ["identified"],
+      "callerKinds": [
+        "identified"
+      ],
       "principalRequires": [],
       "bindings": []
     }

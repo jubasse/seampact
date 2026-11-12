@@ -15,7 +15,9 @@
       "kind": "credential",
       "schemes": {
         "read": [],
-        "write": ["bearer"],
+        "write": [
+          "bearer"
+        ],
         "optionalRead": []
       },
       "principal": {

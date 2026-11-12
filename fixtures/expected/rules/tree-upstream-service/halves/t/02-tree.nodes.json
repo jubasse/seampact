@@ -234,7 +234,9 @@
       "kind": "httpOperation",
       "id": "up",
       "name": {
-        "segments": ["up"],
+        "segments": [
+          "up"
+        ],
         "role": "operation"
       },
       "surface": "app",
@@ -276,7 +278,9 @@
       ],
       "format": "bare",
       "examples": {},
-      "upstream": ["ledger"],
+      "upstream": [
+        "ledger"
+      ],
       "internal": false,
       "tags": [],
       "docs": {},
@@ -290,7 +294,9 @@
   "api": {
     "id": "t",
     "name": {
-      "segments": ["t"],
+      "segments": [
+        "t"
+      ],
       "role": "schema"
     },
     "version": {
@@ -312,7 +318,9 @@
     "surfaces": {
       "app": {
         "name": {
-          "segments": ["app"],
+          "segments": [
+            "app"
+          ],
           "role": "schema"
         },
         "prefix": "/v1",

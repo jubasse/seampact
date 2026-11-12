@@ -14,8 +14,12 @@
       "id": "user",
       "kind": "credential",
       "schemes": {
-        "read": ["bearer"],
-        "write": ["bearer"],
+        "read": [
+          "bearer"
+        ],
+        "write": [
+          "bearer"
+        ],
         "optionalRead": []
       },
       "principal": {
@@ -37,13 +41,17 @@
       "access": {
         "kind": "identity",
         "identity": "user",
-        "schemes": ["bearer"],
+        "schemes": [
+          "bearer"
+        ],
         "origin": {
           "layer": "api",
           "pointer": "/surfaces/app/identity"
         }
       },
-      "callerKinds": ["identified"],
+      "callerKinds": [
+        "identified"
+      ],
       "principalRequires": [],
       "bindings": [
         {

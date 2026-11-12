@@ -14,8 +14,12 @@
       "id": "user",
       "kind": "credential",
       "schemes": {
-        "read": ["bearer"],
-        "write": ["bearer"],
+        "read": [
+          "bearer"
+        ],
+        "write": [
+          "bearer"
+        ],
         "optionalRead": []
       },
       "principal": {

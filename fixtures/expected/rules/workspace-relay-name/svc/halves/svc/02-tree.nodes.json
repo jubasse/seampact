@@ -148,7 +148,9 @@
       "kind": "httpOperation",
       "id": "fetch",
       "name": {
-        "segments": ["fetch"],
+        "segments": [
+          "fetch"
+        ],
         "role": "operation"
       },
       "surface": "internal",
@@ -176,7 +178,9 @@
   "api": {
     "id": "svc",
     "name": {
-      "segments": ["svc"],
+      "segments": [
+        "svc"
+      ],
       "role": "schema"
     },
     "version": {
@@ -202,7 +206,9 @@
     "surfaces": {
       "internal": {
         "name": {
-          "segments": ["internal"],
+          "segments": [
+            "internal"
+          ],
           "role": "schema"
         },
         "prefix": "/internal/v1",
