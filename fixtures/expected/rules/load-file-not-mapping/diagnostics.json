@@ -1,0 +1,16 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/file-not-mapping",
+      "message": "the file does not hold a mapping at its top level",
+      "fix": "write the file as a mapping of keys",
+      "origin": {
+        "layer": "base",
+        "pointer": "/~load/b.yaml/1/1"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

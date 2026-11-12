@@ -1,0 +1,24 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/pack-name-clash",
+      "message": "two packs are named 'same'",
+      "fix": "give each pack its own name",
+      "origin": {
+        "layer": "pack:same",
+        "pointer": "/~load/q.yaml/1/9"
+      },
+      "related": [
+        {
+          "origin": {
+            "layer": "pack:same",
+            "pointer": "/~load/p.yaml/1/9"
+          },
+          "message": "also named here"
+        }
+      ]
+    }
+  ],
+  "apis": []
+}

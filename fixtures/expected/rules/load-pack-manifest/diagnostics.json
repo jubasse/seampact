@@ -1,0 +1,16 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/pack-manifest",
+      "message": "the pack file 'p.yaml' has no manifest with a name and a version",
+      "fix": "start the pack with pack: { name: <name>, version: <semver>, extends: [] }",
+      "origin": {
+        "layer": "pack:./p.yaml",
+        "pointer": "/~load/p.yaml/1/1"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

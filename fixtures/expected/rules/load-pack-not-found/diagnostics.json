@@ -1,0 +1,16 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/pack-not-found",
+      "message": "the package '@acme/absent' named in packs is not installed at or above the workspace root",
+      "fix": "install @acme/absent, or write the pack as a path (./packs/absent.yaml)",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/2/9"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

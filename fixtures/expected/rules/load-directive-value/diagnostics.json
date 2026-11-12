@@ -1,0 +1,16 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/directive-value",
+      "message": "$file takes a path",
+      "fix": "write $file: ./docs/text.md",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/3/37"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

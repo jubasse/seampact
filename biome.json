@@ -11,8 +11,8 @@
       "!pnpm-lock.yaml",
       "!.changeset/*.md",
       "!php/**/composer.lock",
-      "!fixtures/rules/load-yaml-syntax/**",
-      "!fixtures/rules/load-workspace-shape/**"
+      "!fixtures/rules/load-yaml-syntax",
+      "!fixtures/rules/load-workspace-shape"
     ]
   },
   "formatter": {
@@ -21,10 +21,10 @@
     "lineWidth": 100,
     "includes": [
       "**",
-      "!packages/core/spec/schemas/authoring/**",
+      "!packages/core/spec/schemas/authoring",
       "!packages/core/spec/src/authoring/grammar.snapshot.json",
-      "!fixtures/golden/**",
-      "!fixtures/expected/**"
+      "!fixtures/golden",
+      "!fixtures/expected"
     ]
   },
   "linter": {

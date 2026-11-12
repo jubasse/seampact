@@ -1,0 +1,16 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/pack-name",
+      "message": "'not a name' is neither a path (starting with ./ or ../) nor a package name",
+      "fix": "write a package name such as @seampact/pack-crud-rights, or a path such as ./packs/house.yaml",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/2/9"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

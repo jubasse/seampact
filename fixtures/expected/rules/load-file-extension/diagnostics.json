@@ -1,0 +1,16 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/file-extension",
+      "message": "$file reads .md, .txt, .json and .yaml files, not 'd.bin'",
+      "fix": "use one of those extensions",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/3/44"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

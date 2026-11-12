@@ -1,0 +1,16 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/ref-file-shape",
+      "message": "'s.yaml' declares 2 elements, and a $ref without a pointer needs exactly one",
+      "fix": "add the element's name: $ref: ./schemas/task.yaml#/Task",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/3/14"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

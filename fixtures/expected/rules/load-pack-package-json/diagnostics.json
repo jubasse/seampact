@@ -1,0 +1,16 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/pack-package",
+      "message": "'node_modules/@acme/p/package.json' is not valid JSON",
+      "fix": "fix the package.json",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/2/9"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

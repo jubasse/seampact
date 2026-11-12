@@ -1,0 +1,16 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/directive-siblings",
+      "message": "$file replaces the value that holds it, so it cannot sit beside other keys",
+      "fix": "keep $file alone in its mapping",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/3/37"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

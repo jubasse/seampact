@@ -1,0 +1,16 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/pack-name-mismatch",
+      "message": "the pack manifest names the pack 'other', and it is the package '@acme/p'",
+      "fix": "name the pack as its package",
+      "origin": {
+        "layer": "pack:other",
+        "pointer": "/~load/node_modules~1@acme~1p~1pack.yaml/1/9"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

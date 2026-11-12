@@ -203,7 +203,9 @@
   "seampact/load/api-name-mismatch": [
     "rules/load-api-name-mismatch"
   ],
-  "seampact/load/base-extends": [],
+  "seampact/load/base-extends": [
+    "rules/load-base-extends"
+  ],
   "seampact/load/data-null": [
     "loader/pitfalls/data-null"
   ],
@@ -211,21 +213,33 @@
     "loader/composition/extends-conflict",
     "loader/composition/extends-identical"
   ],
-  "seampact/load/directive-siblings": [],
-  "seampact/load/directive-value": [],
+  "seampact/load/directive-siblings": [
+    "rules/load-directive-siblings"
+  ],
+  "seampact/load/directive-value": [
+    "rules/load-directive-value"
+  ],
   "seampact/load/duplicate-key": [
     "loader/pitfalls/p7-duplicate-include",
     "loader/pitfalls/p7-duplicate-inline"
   ],
   "seampact/load/expansion-limit": [],
-  "seampact/load/extends-cycle": [],
-  "seampact/load/extends-shape": [],
-  "seampact/load/file-extension": [],
+  "seampact/load/extends-cycle": [
+    "rules/load-extends-cycle"
+  ],
+  "seampact/load/extends-shape": [
+    "rules/load-extends-shape"
+  ],
+  "seampact/load/file-extension": [
+    "rules/load-file-extension"
+  ],
   "seampact/load/file-invalid": [],
   "seampact/load/file-missing": [
     "loader/composition/file-missing"
   ],
-  "seampact/load/file-not-mapping": [],
+  "seampact/load/file-not-mapping": [
+    "rules/load-file-not-mapping"
+  ],
   "seampact/load/file-too-large": [],
   "seampact/load/include-cycle": [
     "loader/pitfalls/p8-include-cycle"
@@ -236,7 +250,9 @@
   "seampact/load/include-shape": [
     "rules/load-include-shape"
   ],
-  "seampact/load/include-under-routes": [],
+  "seampact/load/include-under-routes": [
+    "rules/load-include-under-routes"
+  ],
   "seampact/load/key-not-scalar": [
     "rules/load-key-not-scalar"
   ],
@@ -246,17 +262,35 @@
   "seampact/load/pack-cycle": [
     "loader/composition/pack-cycle"
   ],
-  "seampact/load/pack-manifest": [],
-  "seampact/load/pack-name": [],
-  "seampact/load/pack-name-clash": [],
-  "seampact/load/pack-name-mismatch": [],
+  "seampact/load/pack-manifest": [
+    "rules/load-pack-manifest"
+  ],
+  "seampact/load/pack-name": [
+    "rules/load-pack-name-bare",
+    "rules/load-pack-name-hash"
+  ],
+  "seampact/load/pack-name-clash": [
+    "rules/load-pack-name-clash"
+  ],
+  "seampact/load/pack-name-mismatch": [
+    "rules/load-pack-name-mismatch"
+  ],
   "seampact/load/pack-not-data": [
     "loader/composition/pack-not-data"
   ],
-  "seampact/load/pack-not-found": [],
-  "seampact/load/pack-package": [],
-  "seampact/load/pack-shape": [],
-  "seampact/load/pack-version-mismatch": [],
+  "seampact/load/pack-not-found": [
+    "rules/load-pack-not-found"
+  ],
+  "seampact/load/pack-package": [
+    "rules/load-pack-package",
+    "rules/load-pack-package-json"
+  ],
+  "seampact/load/pack-shape": [
+    "rules/load-pack-shape"
+  ],
+  "seampact/load/pack-version-mismatch": [
+    "rules/load-pack-version-mismatch"
+  ],
   "seampact/load/path-absolute": [
     "loader/composition/paths-refused"
   ],
@@ -270,20 +304,31 @@
   "seampact/load/path-escape": [
     "loader/composition/paths-refused"
   ],
-  "seampact/load/ref-file-shape": [],
-  "seampact/load/ref-fragment": [],
+  "seampact/load/ref-file-shape": [
+    "rules/load-ref-file-shape",
+    "rules/load-ref-file-shape-count"
+  ],
+  "seampact/load/ref-fragment": [
+    "rules/load-ref-fragment"
+  ],
   "seampact/load/ref-pointer": [
     "rules/load-ref-pointer"
   ],
-  "seampact/load/reserved-key": [],
+  "seampact/load/reserved-key": [
+    "rules/load-reserved-key"
+  ],
   "seampact/load/scalar-type": [
+    "rules/load-pack-shape",
     "rules/load-scalar-type"
   ],
   "seampact/load/too-deep": [
     "limits/depth-include-over",
     "limits/depth-nesting-over"
   ],
-  "seampact/load/workspace-shape": [],
+  "seampact/load/workspace-shape": [
+    "rules/load-workspace-shape",
+    "rules/load-yaml-syntax"
+  ],
   "seampact/load/yaml-ambiguous-scalar": [
     "loader/pitfalls/p3-date-timestamp",
     "loader/pitfalls/p3-sexagesimal",
@@ -312,7 +357,9 @@
   "seampact/load/yaml-reserved-scalar": [
     "loader/pitfalls/p4-equals-value"
   ],
-  "seampact/load/yaml-syntax": [],
+  "seampact/load/yaml-syntax": [
+    "rules/load-yaml-syntax"
+  ],
   "seampact/load/yaml-tag": [
     "loader/pitfalls/p9-tag"
   ],
