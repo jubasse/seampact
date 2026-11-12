@@ -9,8 +9,8 @@ General idiom comes from `rust-best-practices` and `rust-review`. This skill lis
 
 ## Stricter than the general guide
 
-- No `unwrap`, `expect`, `panic!`, `unreachable!`, `todo!`, `unimplemented!` or indexing that can panic (`clippy::indexing_slicing`) outside tests, even for invariants: a broken invariant is an internal diagnostic with its own exit code. Lock poisoning and "cannot happen" branches included. No silent fallback or placeholder value (`unwrap_or_default`, `unwrap_or(Ordering::Equal)`); a fallible lookup returns `Result`, never a forced total type.
-- No `anyhow` anywhere, binaries included. Libraries: one `thiserror` enum per crate for environment failures; user faults are diagnostics, never errors.
+- No `unwrap`, `expect`, `panic!`, `unreachable!`, `todo!`, `unimplemented!` or indexing that can panic (`clippy::indexing_slicing`) outside tests, even for invariants: a broken invariant is an internal diagnostic with its own exit code. Lock poisoning and "cannot happen" branches included. No silent fallback or placeholder value the TypeScript does not have (`unwrap_or_default`, `unwrap_or(Ordering::Equal)`); a TypeScript `?? x` ports as `unwrap_or(x)`. `clippy::indexing_slicing` and `clippy::string_slice` are denied, and `map[&key]` is banned by review (use `.get`). A fallible lookup returns `Result`, never a forced total type.
+- `anyhow` only in the CLI binary crate and `xtask`. Libraries: one `thiserror` enum per crate for environment failures; user faults are diagnostics, never errors.
 - `unsafe_code = "forbid"` in every crate; no exception without a user decision.
 - `#[allow]` and `#[expect]` need `reason = "..."`; the workspace allow list is short and lives in the root `Cargo.toml`.
 - `print!`, `println!`, `eprintln!` only in the CLI output module.
