@@ -1,77 +1,73 @@
-//! The oracle step: compares the Rust compiler's outputs with `fixtures/expected/`.
+//! The oracle task: the harness of `seampact-oracle` run with the compiler subject.
 
-use std::path::Path;
+use camino::Utf8Path;
+use seampact_json::JsonValue;
+use seampact_oracle::{
+    Compilation, Fixture, HalfInput, OracleError, OracleSubject, RuleIdRegistry, Selection,
+    SubjectAnswer, Verdict, run_oracle,
+};
 
 use crate::outcome::StepOutcome;
 
 const ORACLE_STEP: &str = "oracle";
 
-/// The manifest whose presence means the oracle has something to compare.
-const COMPILER_MANIFEST: &str = "crates/compiler/Cargo.toml";
+/// The subject of a workspace with no compiler crate: every answer is not ported.
+struct NothingPortedSubject;
 
-/// Runs the oracle harness.
-///
-/// There is nothing to compare until the compiler crate lands; once its manifest exists and no
-/// harness does, the step fails instead of passing silently.
-pub fn run_oracle(workspace_root: &Path) -> StepOutcome {
-    if workspace_root.join(COMPILER_MANIFEST).exists() {
-        return StepOutcome::FailedWithReason {
-            step: ORACLE_STEP,
-            reason: "compiler crate present but no oracle harness",
-        };
+impl OracleSubject for NothingPortedSubject {
+    fn compile(&self, _fixture: &Fixture) -> SubjectAnswer<Compilation> {
+        SubjectAnswer::NotPorted
     }
 
-    StepOutcome::NotRun {
-        step: ORACLE_STEP,
-        reason: "no Rust compiler crate yet",
+    fn run_half(
+        &self,
+        _fixture: &Fixture,
+        _api: &str,
+        _half: &str,
+        _input: &HalfInput<'_>,
+    ) -> SubjectAnswer<JsonValue> {
+        SubjectAnswer::NotPorted
+    }
+
+    fn rule_id_registry(&self) -> RuleIdRegistry {
+        RuleIdRegistry::empty()
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use std::fs;
+/// The compiler the oracle checks: the one place a compiler crate plugs its subject in.
+fn compiler_subject() -> impl OracleSubject {
+    NothingPortedSubject
+}
 
-    use super::*;
+/// Runs the oracle on `selection` and gives its verdict.
+///
+/// # Errors
+///
+/// A usage error when the selection matches nothing; otherwise when a repository file cannot be
+/// read or is invalid.
+pub fn run_oracle_task(
+    workspace_root: &Utf8Path,
+    selection: &Selection,
+) -> Result<Verdict, OracleError> {
+    run_oracle(workspace_root, selection, &compiler_subject())
+}
 
-    fn scratch_workspace(name: &str) -> std::path::PathBuf {
-        let directory =
-            std::env::temp_dir().join(format!("xtask-oracle-{name}-{}", std::process::id()));
+/// The oracle step of the gate: every fixture, the verdict printed, then the step's outcome.
+pub fn oracle_gate_step(workspace_root: &Utf8Path) -> StepOutcome {
+    match run_oracle_task(workspace_root, &Selection::default()) {
+        Ok(verdict) => {
+            println!("{verdict}");
 
-        fs::create_dir_all(&directory).unwrap();
+            if verdict.passed() {
+                StepOutcome::Passed { step: ORACLE_STEP }
+            } else {
+                StepOutcome::Failed { step: ORACLE_STEP }
+            }
+        }
+        Err(error) => {
+            eprintln!("{ORACLE_STEP}: {error}");
 
-        directory
-    }
-
-    #[test]
-    fn oracle_is_not_run_without_a_compiler_crate() {
-        let workspace = scratch_workspace("absent");
-
-        let outcome = run_oracle(&workspace);
-
-        fs::remove_dir_all(&workspace).unwrap();
-
-        assert_eq!(
-            outcome.to_string(),
-            "oracle: not run: no Rust compiler crate yet"
-        );
-        assert!(!outcome.is_failure());
-    }
-
-    #[test]
-    fn oracle_fails_once_the_compiler_crate_exists_without_a_harness() {
-        let workspace = scratch_workspace("present");
-
-        fs::create_dir_all(workspace.join("crates/compiler")).unwrap();
-        fs::write(workspace.join(COMPILER_MANIFEST), "").unwrap();
-
-        let outcome = run_oracle(&workspace);
-
-        fs::remove_dir_all(&workspace).unwrap();
-
-        assert_eq!(
-            outcome.to_string(),
-            "oracle: failed: compiler crate present but no oracle harness"
-        );
-        assert!(outcome.is_failure());
+            StepOutcome::Failed { step: ORACLE_STEP }
+        }
     }
 }

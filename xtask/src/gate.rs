@@ -1,9 +1,10 @@
 //! The local gate of the Rust port (PORTING.md section 8), step by step.
 
-use std::path::Path;
 use std::process::Command;
 
-use crate::oracle::run_oracle;
+use camino::Utf8Path;
+
+use crate::oracle::oracle_gate_step;
 use crate::outcome::StepOutcome;
 
 /// One gate step that runs a command from the workspace root.
@@ -59,18 +60,18 @@ const COMMAND_STEPS: &[CommandStep] = &[
 /// Runs every gate step, the oracle last, and returns their outcomes in run order.
 ///
 /// A failed step does not stop the gate, so one run reports every step.
-pub fn run_gate(workspace_root: &Path) -> Vec<StepOutcome> {
+pub fn run_gate(workspace_root: &Utf8Path) -> Vec<StepOutcome> {
     let mut outcomes: Vec<StepOutcome> = COMMAND_STEPS
         .iter()
         .map(|step| run_command_step(step, workspace_root))
         .collect();
 
-    outcomes.push(run_oracle(workspace_root));
+    outcomes.push(oracle_gate_step(workspace_root));
 
     outcomes
 }
 
-fn run_command_step(step: &CommandStep, workspace_root: &Path) -> StepOutcome {
+fn run_command_step(step: &CommandStep, workspace_root: &Utf8Path) -> StepOutcome {
     let status = Command::new(step.program)
         .args(step.arguments)
         .current_dir(workspace_root)

@@ -10,7 +10,7 @@ use std::fs;
 use camino::{Utf8Path, Utf8PathBuf};
 use seampact_json::JsonValue;
 use seampact_oracle::{
-    Compilation, CompiledApi, DIAGNOSTICS_FILE, Fixture, OracleSubject, RuleIdRegistry,
+    Compilation, CompiledApi, DIAGNOSTICS_FILE, Fixture, HalfInput, OracleSubject, RuleIdRegistry,
     SubjectAnswer, expected_directory_of,
 };
 
@@ -100,7 +100,7 @@ impl OracleSubject for ExpectedFilesSubject {
         fixture: &Fixture,
         api: &str,
         half: &str,
-        _input: Option<&JsonValue>,
+        _input: &HalfInput<'_>,
     ) -> SubjectAnswer<JsonValue> {
         let name = self.half_file_name(fixture, api, half);
         let text = self.expected_text(fixture, &name).unwrap();

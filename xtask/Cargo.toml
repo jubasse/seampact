@@ -9,6 +9,9 @@ publish.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+camino.workspace = true
+seampact-json.workspace = true
+seampact-oracle.workspace = true
 
 [lints]
 workspace = true

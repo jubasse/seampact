@@ -4,10 +4,12 @@
 
 mod support;
 
+use std::cell::RefCell;
+
 use seampact_json::JsonValue;
 use seampact_oracle::{
-    Compilation, Fixture, FixtureGlob, OracleSubject, RuleIdRegistry, Selection, SubjectAnswer,
-    run_oracle,
+    Compilation, Fixture, FixtureGlob, HalfInput, OracleSubject, RuleIdRegistry, Selection,
+    SubjectAnswer, run_oracle,
 };
 use support::{ExpectedFilesSubject, repository_root, unchanged};
 
@@ -27,7 +29,7 @@ impl OracleSubject for NothingPorted {
         _fixture: &Fixture,
         _api: &str,
         _half: &str,
-        _input: Option<&JsonValue>,
+        _input: &HalfInput<'_>,
     ) -> SubjectAnswer<JsonValue> {
         SubjectAnswer::NotPorted
     }
@@ -168,4 +170,103 @@ fn a_glob_matching_no_fixture_and_an_unknown_half_are_usage_errors() {
 
         assert!(error.is_usage(), "{error}");
     }
+}
+
+/// What one `run_half` call received: the api, the half, the halves before it, and the other
+/// apis with their delta counts.
+type HalfCall = (String, String, Vec<String>, Vec<(String, usize)>);
+
+/// A subject that records the input of every half it is asked to run.
+struct HalfInputRecorder {
+    calls: RefCell<Vec<HalfCall>>,
+    previous_deltas: RefCell<Vec<JsonValue>>,
+}
+
+impl OracleSubject for HalfInputRecorder {
+    fn compile(&self, _fixture: &Fixture) -> SubjectAnswer<Compilation> {
+        SubjectAnswer::NotPorted
+    }
+
+    fn run_half(
+        &self,
+        _fixture: &Fixture,
+        api: &str,
+        half: &str,
+        input: &HalfInput<'_>,
+    ) -> SubjectAnswer<JsonValue> {
+        let halves_before = input
+            .deltas_before
+            .iter()
+            .map(|expected| expected.half.clone())
+            .collect();
+        let other_apis = input
+            .other_apis
+            .iter()
+            .map(|other| (other.api.to_owned(), other.deltas.len()))
+            .collect();
+
+        if let Some(previous) = input.deltas_before.last() {
+            self.previous_deltas
+                .borrow_mut()
+                .push(previous.delta.clone());
+        }
+
+        self.calls
+            .borrow_mut()
+            .push((api.to_owned(), half.to_owned(), halves_before, other_apis));
+
+        SubjectAnswer::NotPorted
+    }
+
+    fn rule_id_registry(&self) -> RuleIdRegistry {
+        RuleIdRegistry::empty()
+    }
+}
+
+#[test]
+fn a_half_starts_from_the_expected_halves_before_it_and_the_other_apis_deltas() {
+    let subject = HalfInputRecorder {
+        calls: RefCell::new(Vec::new()),
+        previous_deltas: RefCell::new(Vec::new()),
+    };
+    let selection = Selection {
+        fixture_glob: Some(FixtureGlob::new("scale")),
+        half: Some("access.identity".to_owned()),
+    };
+
+    let verdict = run_oracle(&repository_root(), &selection, &subject).unwrap();
+    let calls = subject.calls.borrow();
+    let scale_calls: Vec<&HalfCall> = calls.iter().take(3).collect();
+
+    assert_eq!(verdict.not_ported, verdict.fixtures);
+    assert_eq!(
+        scale_calls,
+        ["billing", "inventory", "notify"]
+            .map(|api| {
+                let other_apis = ["billing", "inventory", "notify"]
+                    .into_iter()
+                    .filter(|other| *other != api)
+                    .map(|other| (other.to_owned(), 6))
+                    .collect();
+
+                (
+                    api.to_owned(),
+                    "access.identity".to_owned(),
+                    vec!["tree.schemas".to_owned(), "tree.nodes".to_owned()],
+                    other_apis,
+                )
+            })
+            .iter()
+            .collect::<Vec<_>>()
+    );
+
+    let billing_tree_nodes = std::fs::read_to_string(
+        repository_root().join("fixtures/expected/scale/halves/billing/02-tree.nodes.json"),
+    )
+    .unwrap();
+
+    assert_eq!(
+        subject.previous_deltas.borrow().first(),
+        Some(&serde_json::from_str::<JsonValue>(&billing_tree_nodes).unwrap())
+    );
 }

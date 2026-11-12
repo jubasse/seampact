@@ -18,7 +18,8 @@ use crate::matcher::{ComparedFile, DifferenceLedger, MatchOutcome};
 use crate::rule_ids::check_rule_ids;
 use crate::verdict::{FirstFailure, Verdict};
 use crate::{
-    ExcludedFixtures, Fixture, FixtureGlob, OracleError, OracleSubject, OutputFile, SubjectAnswer,
+    ApiDeltas, ExcludedFixtures, ExpectedDelta, Fixture, FixtureGlob, HalfInput, OracleError,
+    OracleSubject, OutputFile, SubjectAnswer,
 };
 
 /// What a run compares.
@@ -183,6 +184,28 @@ fn tree_problems(
     Ok(problems)
 }
 
+/// The expected deltas of one api in run order, and the file name of each.
+#[derive(Debug, Default)]
+struct NamedDeltas {
+    names: Vec<String>,
+    deltas: Vec<ExpectedDelta>,
+}
+
+impl NamedDeltas {
+    fn push(&mut self, name: String, delta: ExpectedDelta) {
+        self.names.push(name);
+        self.deltas.push(delta);
+    }
+
+    fn iter(&self) -> impl Iterator<Item = (&String, &ExpectedDelta)> {
+        self.names.iter().zip(&self.deltas)
+    }
+
+    fn get(&self, range: std::ops::RangeTo<usize>) -> Option<&[ExpectedDelta]> {
+        self.deltas.get(range)
+    }
+}
+
 /// The state of one run.
 struct Run<'run> {
     repository_root: &'run Utf8Path,
@@ -286,50 +309,82 @@ impl Run<'_> {
         expected_files: &ExpectedFiles,
         tally: &mut FixtureTally,
     ) -> Result<(), OracleError> {
-        let mut previous_delta_by_api: IndexMap<String, JsonValue> = IndexMap::new();
+        let deltas_by_api = self.expected_deltas_by_api(fixture, expected_files)?;
+
+        for (api, deltas) in &deltas_by_api {
+            let other_apis: Vec<ApiDeltas<'_>> = deltas_by_api
+                .iter()
+                .filter(|(other_api, _)| *other_api != api)
+                .map(|(other_api, other_deltas)| ApiDeltas {
+                    api: other_api,
+                    deltas: &other_deltas.deltas,
+                })
+                .collect();
+
+            for (position, (name, expected)) in deltas.iter().enumerate() {
+                let is_selected = self
+                    .selection
+                    .half
+                    .as_ref()
+                    .is_none_or(|selected| *selected == expected.half);
+
+                if !is_selected {
+                    continue;
+                }
+
+                let input = HalfInput {
+                    deltas_before: deltas.get(..position).unwrap_or_default(),
+                    other_apis: other_apis.clone(),
+                };
+
+                let SubjectAnswer::Ported(delta) =
+                    self.subject.run_half(fixture, api, &expected.half, &input)
+                else {
+                    continue;
+                };
+
+                let expected_text = expected_files.get(name).map(String::as_str);
+                let actual_text = indented_json(&delta);
+
+                self.compare_file(fixture, name, expected_text, Some(&actual_text), tally)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// The expected deltas of each api with expected halves, in run order, keyed by api in file
+    /// name order; each delta beside its file name.
+    fn expected_deltas_by_api(
+        &self,
+        fixture: &Fixture,
+        expected_files: &ExpectedFiles,
+    ) -> Result<IndexMap<String, NamedDeltas>, OracleError> {
+        let mut deltas_by_api: IndexMap<String, NamedDeltas> = IndexMap::new();
 
         for (name, expected_text) in expected_files {
-            let Some(half_file) = OutputFile::of(name).filter(|file| file.half.is_some()) else {
+            let Some(OutputFile {
+                api: Some(api),
+                half: Some(half),
+                ..
+            }) = OutputFile::of(name)
+            else {
                 continue;
             };
 
-            let (Some(api), Some(half)) = (&half_file.api, &half_file.half) else {
-                continue;
-            };
-
-            let expected_delta: JsonValue =
+            let delta: JsonValue =
                 serde_json::from_str(expected_text).map_err(|source| OracleError::Json {
                     path: self.expected_path(fixture, name),
                     source,
                 })?;
 
-            let is_selected = self
-                .selection
-                .half
-                .as_ref()
-                .is_none_or(|selected| selected == half);
-
-            if is_selected {
-                let input = previous_delta_by_api.get(api);
-                let answer = self.subject.run_half(fixture, api, half, input);
-
-                if let SubjectAnswer::Ported(delta) = answer {
-                    let actual_text = indented_json(&delta);
-
-                    self.compare_file(
-                        fixture,
-                        name,
-                        Some(expected_text),
-                        Some(&actual_text),
-                        tally,
-                    )?;
-                }
-            }
-
-            previous_delta_by_api.insert(api.clone(), expected_delta);
+            deltas_by_api
+                .entry(api)
+                .or_default()
+                .push(name.clone(), ExpectedDelta { half, delta });
         }
 
-        Ok(())
+        Ok(deltas_by_api)
     }
 
     fn expected_path(&self, fixture: &Fixture, name: &str) -> camino::Utf8PathBuf {

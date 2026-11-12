@@ -34,6 +34,37 @@ pub struct Compilation {
     pub apis: Vec<CompiledApi>,
 }
 
+/// The expected delta one pass half wrote, read from `halves/<api>/<NN>-<half>.json`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExpectedDelta {
+    /// The half, the `<half>` of the file name.
+    pub half: String,
+    /// The members the half wrote, in the convention of
+    /// `packages/core/compiler/src/pipeline/draft-fixture.ts`.
+    pub delta: JsonValue,
+}
+
+/// The expected deltas of one api of the fixture, in run order.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ApiDeltas<'input> {
+    /// The api name.
+    pub api: &'input str,
+    /// Its expected deltas, in run order.
+    pub deltas: &'input [ExpectedDelta],
+}
+
+/// What a pass half starts from, read from the expected halves rather than from the subject's
+/// own earlier halves, so one half is checked alone.
+#[derive(Debug, Clone, PartialEq)]
+pub struct HalfInput<'input> {
+    /// The expected deltas of the halves before this one in the same api, in run order: applied
+    /// to a new draft they give the draft the half starts from; the last is the half before it.
+    pub deltas_before: &'input [ExpectedDelta],
+    /// The expected deltas of every other api of the fixture that has expected halves, in file
+    /// name order: the subject takes the apis this one relays, by its own relay order.
+    pub other_apis: Vec<ApiDeltas<'input>>,
+}
+
 /// The compiler the oracle checks.
 ///
 /// `cargo xtask oracle` plugs one in; every answer may be [`SubjectAnswer::NotPorted`] while its
@@ -45,13 +76,14 @@ pub trait OracleSubject {
     /// Runs one pass half of `api` in `fixture` and gives the delta it wrote, in the convention of
     /// `packages/core/compiler/src/pipeline/draft-fixture.ts`.
     ///
-    /// `input` is the expected delta of the half before it for that api, `None` for the first one.
+    /// `input` holds the expected deltas the half starts from: those of the halves before it in
+    /// `api`, and those of the other apis, the relayed ones among them.
     fn run_half(
         &self,
         fixture: &Fixture,
         api: &str,
         half: &str,
-        input: Option<&JsonValue>,
+        input: &HalfInput<'_>,
     ) -> SubjectAnswer<JsonValue>;
 
     /// The rule ids each ported stage declares, and whether every stage is ported.

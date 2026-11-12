@@ -40,6 +40,8 @@ pub use rule_ids::{
     rule_id_check,
 };
 pub use run::{Selection, run_oracle};
-pub use subject::{Compilation, CompiledApi, OracleSubject, SubjectAnswer};
+pub use subject::{
+    ApiDeltas, Compilation, CompiledApi, ExpectedDelta, HalfInput, OracleSubject, SubjectAnswer,
+};
 pub use verdict::{FirstFailure, Verdict};
 pub use yaml_value::yaml_to_json;
