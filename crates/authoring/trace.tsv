@@ -1,6 +1,6 @@
 src/raw_tree.rs#entry_location_key	packages/core/compiler/src/raw-tree.ts#entryLocationKey
 src/layer.rs#kind	packages/core/compiler/src/raw-tree.ts#layerKindOf
-src/layer.rs#schema_kind_of	packages/core/compiler/src/raw-tree.ts#schemaKindOf
+src/layer.rs#schema_kind	packages/core/compiler/src/raw-tree.ts#schemaKindOf
 src/markers.rs#from_title	packages/core/spec/src/authoring/markers.ts#isMarker
 src/keywords.rs#schema_keyword	packages/core/spec/src/authoring/keywords.ts#schemaKeyword
 tests/grammar_schemas.rs#grammar_keywords	packages/core/spec/src/authoring/grammar.ts#grammarKeywords

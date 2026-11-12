@@ -1,5 +1,6 @@
 //! The titles the authoring schemas write: markers the validate stage reports by, editor-only
-//! titles and the data mark, with the names no map of the grammar admits as a key.
+//! titles and the data mark, with the names no map of the grammar admits as a key and the
+//! pattern of an extension key.
 
 /// A title that marks a definition whose failures the validate stage reports by their own rule.
 ///

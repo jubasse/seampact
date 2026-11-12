@@ -83,7 +83,7 @@ impl LayerKind {
 impl FileLayer {
     /// The authoring schema the layer's document is read and validated as.
     #[must_use]
-    pub fn schema_kind_of(&self) -> LayerSchemaKind {
+    pub fn schema_kind(&self) -> LayerSchemaKind {
         match self {
             Self::Workspace => LayerSchemaKind::Workspace,
             Self::Api(layer) => layer.kind().schema_kind(),
@@ -117,6 +117,7 @@ impl From<ApiLayer> for FileLayer {
     }
 }
 
+// The text is spelled once, by the IR layer; the clone of a pack name is the cost of that.
 impl fmt::Display for ApiLayer {
     /// The layer id as an origin writes it: `api`, `shared`, `base` or `pack:<name>`.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -158,7 +159,7 @@ mod tests {
         ];
 
         for (layer, schema_kind) in expected {
-            assert_eq!(layer.schema_kind_of(), schema_kind, "{layer}");
+            assert_eq!(layer.schema_kind(), schema_kind, "{layer}");
         }
     }
 
