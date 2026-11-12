@@ -1,0 +1,29 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/name-collision",
+          "message": "the properties 'user_id' and 'userId' give the same identifier",
+          "fix": "rename one, or set a 'codeName'",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/A/properties/user_id"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/A/properties/userId"
+              },
+              "message": "'userId' is here"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

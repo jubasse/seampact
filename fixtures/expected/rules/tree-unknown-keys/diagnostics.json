@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/unknown-keys",
+          "message": "'unknownKeys' acts on the declared keys of an object or a union, and this schema is neither",
+          "fix": "remove 'unknownKeys' here, or set it on the object that holds this value",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Labels/unknownKeys"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

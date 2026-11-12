@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/required-unknown",
+          "message": "'body' is required but is no property the derived object keeps",
+          "fix": "keep the property, or remove it from 'required'",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/NotKept/required"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}
