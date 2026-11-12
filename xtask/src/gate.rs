@@ -45,8 +45,9 @@ const COMMAND_STEPS: &[CommandStep] = &[
     },
     CommandStep {
         name: "machete",
-        program: "cargo",
-        arguments: &["machete"],
+        // Started as `cargo machete` under `cargo run`, it reads `machete` as a path to scan.
+        program: "cargo-machete",
+        arguments: &[],
     },
     CommandStep {
         name: "trace",

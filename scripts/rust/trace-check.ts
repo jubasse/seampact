@@ -13,12 +13,12 @@ function main(): number {
   for (const problem of problems) console.error(problem);
 
   if (problems.length > 0) {
-    console.error(`trace: ${problems.length} problem(s) in ${CRATES_DIR}/*/${TRACE_FILE}`);
+    console.error(`trace-check: ${problems.length} problem(s) in ${CRATES_DIR}/*/${TRACE_FILE}`);
 
     return EXIT_FAILED;
   }
 
-  console.error("trace: ok");
+  console.error("trace-check: ok");
 
   return EXIT_OK;
 }

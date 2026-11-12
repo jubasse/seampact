@@ -74,7 +74,7 @@ where
 mod tests {
     use super::*;
     use indexmap::IndexMap;
-    use serde_json::{Map, Value, json};
+    use serde_json::{Value, json};
 
     #[test]
     fn canonical_decimal_keys_are_array_indices() {
@@ -143,7 +143,7 @@ mod tests {
             panic!("json! of an object literal gives an object");
         };
 
-        reorder_in_js_key_order::<Map<String, Value>, _, _>(&mut object);
+        reorder_in_js_key_order(&mut object);
 
         // JSON.stringify({ b: 1, 404: 2, a: 3, 200: 4 })
         assert_eq!(

@@ -28,10 +28,10 @@ fn main() -> ExitCode {
 }
 
 fn run() -> anyhow::Result<ExitCode> {
-    let task: Vec<String> = std::env::args().skip(1).collect();
+    let arguments: Vec<String> = std::env::args().skip(1).collect();
     let workspace_root = workspace_root()?;
 
-    let outcomes = match task.as_slice() {
+    let outcomes = match arguments.as_slice() {
         [name] if name == "gate" => gate::run_gate(&workspace_root),
         [name] if name == "oracle" => vec![oracle::run_oracle()],
         _ => {
