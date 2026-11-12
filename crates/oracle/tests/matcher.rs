@@ -4,7 +4,7 @@
 
 use seampact_oracle::{
     Applies, ComparedFile, Difference, DifferenceChange, DifferenceLedger, MatchOutcome, Mismatch,
-    OutputFile, OutputKind, value_mismatches,
+    MismatchKind, OutputFile, OutputKind, value_mismatches,
 };
 use serde_json::Value;
 
@@ -180,4 +180,28 @@ fn an_entry_is_stale_only_when_a_file_in_its_scope_was_compared_and_it_matched_n
     ledger.take(compared, &only_mismatch("[0, 1]", "[0, 2]"));
 
     assert_eq!(ledger.stale_ids(), vec!["in-scope"]);
+}
+
+#[test]
+fn a_missing_or_extra_whole_file_is_accepted_by_no_entry() {
+    for (change, kind) in [
+        (DifferenceChange::Removed, MismatchKind::Removed),
+        (DifferenceChange::Added, MismatchKind::Added),
+    ] {
+        let whole_file = Mismatch {
+            pointer: Some(String::new()),
+            kind,
+            expected: Some(number("{}")),
+            actual: Some(number("{}")),
+        };
+
+        assert_eq!(
+            outcome(
+                vec![difference("root", "big-integers/**", "", change)],
+                FIXTURE,
+                &whole_file
+            ),
+            MatchOutcome::Unmatched
+        );
+    }
 }

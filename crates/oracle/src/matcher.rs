@@ -128,6 +128,10 @@ pub fn entry_matches(
         return false;
     };
 
+    if is_whole_file_only_on_one_side(mismatch_pointer, mismatch.kind) {
+        return false;
+    }
+
     let from_matches = difference.from.is_none() || difference.from == mismatch.expected;
     let to_matches = difference.to.is_none() || difference.to == mismatch.actual;
 
@@ -136,6 +140,12 @@ pub fn entry_matches(
         && change_matches(difference.change, mismatch)
         && from_matches
         && to_matches
+}
+
+/// A missing or extra whole file is a mismatch at the root: no entry accepts it, whatever pointer
+/// the schema lets it name.
+fn is_whole_file_only_on_one_side(mismatch_pointer: &str, kind: MismatchKind) -> bool {
+    mismatch_pointer.is_empty() && matches!(kind, MismatchKind::Added | MismatchKind::Removed)
 }
 
 /// Whether a pointer matches an entry's pointer segment by segment, `*` matching any one segment.
