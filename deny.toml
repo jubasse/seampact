@@ -1,9 +1,11 @@
 [graph]
 all-features = true
-# The five release platforms (ADR 0031); wasm-only dependencies stay out of the graph.
+# The release platforms (ADR 0031: static musl on Linux) and the gnu triples of dev hosts; wasm-only dependencies stay out of the graph.
 targets = [
     "x86_64-unknown-linux-gnu",
+    "x86_64-unknown-linux-musl",
     "aarch64-unknown-linux-gnu",
+    "aarch64-unknown-linux-musl",
     "x86_64-apple-darwin",
     "aarch64-apple-darwin",
     "x86_64-pc-windows-msvc",
@@ -25,8 +27,6 @@ allow = [
     "ISC",
     "Unicode-3.0",
     "Zlib",
-    # webpki-roots, through jsonschema's default HTTP resolver.
-    "CDLA-Permissive-2.0",
     # libfuzzer-sys.
     "NCSA",
 ]
@@ -70,7 +70,12 @@ deny = [
     { crate = "icu_collator" },
     { crate = "icu_casemap" },
     { crate = "icu_segmenter" },
-    # icu_normalizer and icu_properties are left out: idna (through url, under jsonschema) needs them.
+    # idna is gone with jsonschema's default features.
+    { crate = "icu_normalizer" },
+    { crate = "icu_properties" },
+    # Network and C builds: the compiler reads local files only.
+    { crate = "reqwest", reason = "network and C builds: the compiler reads local files only" },
+    { crate = "aws-lc-sys", reason = "network and C builds: the compiler reads local files only" },
 ]
 
 [sources]

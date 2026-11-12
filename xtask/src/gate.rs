@@ -36,7 +36,7 @@ const COMMAND_STEPS: &[CommandStep] = &[
     CommandStep {
         name: "nextest",
         program: "cargo",
-        arguments: &["nextest", "run", "--workspace"],
+        arguments: &["nextest", "run", "--workspace", "--run-ignored", "all"],
     },
     CommandStep {
         name: "deny",
@@ -65,7 +65,7 @@ pub fn run_gate(workspace_root: &Path) -> Vec<StepOutcome> {
         .map(|step| run_command_step(step, workspace_root))
         .collect();
 
-    outcomes.push(run_oracle());
+    outcomes.push(run_oracle(workspace_root));
 
     outcomes
 }

@@ -11,5 +11,7 @@
 mod key_order;
 mod utf16_order;
 
-pub use key_order::{MAX_ARRAY_INDEX, is_array_index, js_key_order, reorder_in_js_key_order};
+pub use key_order::{
+    InsertionOrderedMap, MAX_ARRAY_INDEX, array_index_value, js_key_order, reorder_in_js_key_order,
+};
 pub use utf16_order::{Utf16Key, cmp_utf16};

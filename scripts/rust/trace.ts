@@ -4,6 +4,7 @@ import ts from "typescript";
 
 export const CRATES_DIR = "crates";
 export const TRACE_FILE = "trace.tsv";
+export const XTASK_DIR = "xtask";
 
 const NOT_PORTED = "-";
 const SKIP_PREFIX = "skip: ";
@@ -25,8 +26,10 @@ interface TraceLine {
 
 /**
  * The functions of a TypeScript file, as the trace names them: top-level function
- * declarations, top-level consts bound to an arrow or a function expression, and class
- * methods as `Class.method`. Nested closures are not listed.
+ * declarations, top-level consts bound to an arrow or a function expression (also behind
+ * `satisfies`, `as` or parentheses), the methods of an object literal bound to a top-level
+ * const as `const.method`, and class members as `Class.member` (methods, constructors,
+ * accessors and function-valued properties). Nested closures are not listed.
  */
 export function listTypeScriptFunctions(fileName: string, source: string): string[] {
   const sourceFile = ts.createSourceFile(fileName, source, ts.ScriptTarget.Latest, false);
@@ -43,7 +46,7 @@ export function listTypeScriptFunctions(fileName: string, source: string): strin
     }
 
     if (ts.isVariableStatement(statement)) {
-      names.push(...functionConstNames(statement));
+      names.push(...functionConstNames(sourceFile, statement));
     }
 
     if (ts.isClassDeclaration(statement) && statement.name !== undefined) {
@@ -54,19 +57,44 @@ export function listTypeScriptFunctions(fileName: string, source: string): strin
   return names;
 }
 
-function functionConstNames(statement: ts.VariableStatement): string[] {
+function functionConstNames(sourceFile: ts.SourceFile, statement: ts.VariableStatement): string[] {
   const names: string[] = [];
 
   for (const declaration of statement.declarationList.declarations) {
-    const initializer = declaration.initializer;
-    const isFunction =
-      initializer !== undefined &&
-      (ts.isArrowFunction(initializer) || ts.isFunctionExpression(initializer));
+    if (!ts.isIdentifier(declaration.name) || declaration.initializer === undefined) continue;
 
-    if (isFunction && ts.isIdentifier(declaration.name)) names.push(declaration.name.text);
+    const initializer = unwrapExpression(declaration.initializer);
+
+    if (isFunctionValue(initializer)) names.push(declaration.name.text);
+
+    if (ts.isObjectLiteralExpression(initializer)) {
+      names.push(...memberNames(sourceFile, declaration.name.text, initializer.properties));
+    }
   }
 
   return names;
+}
+
+function unwrapExpression(expression: ts.Expression): ts.Expression {
+  let current = expression;
+
+  while (
+    ts.isParenthesizedExpression(current) ||
+    ts.isSatisfiesExpression(current) ||
+    ts.isAsExpression(current)
+  ) {
+    current = current.expression;
+  }
+
+  return current;
+}
+
+function isFunctionValue(expression: ts.Expression | undefined): boolean {
+  if (expression === undefined) return false;
+
+  const unwrapped = unwrapExpression(expression);
+
+  return ts.isArrowFunction(unwrapped) || ts.isFunctionExpression(unwrapped);
 }
 
 function classMethodNames(
@@ -74,36 +102,60 @@ function classMethodNames(
   className: string,
   declaration: ts.ClassDeclaration,
 ): string[] {
-  const names: string[] = [];
-
-  for (const member of declaration.members) {
-    if (!ts.isMethodDeclaration(member) || member.body === undefined) continue;
-
-    const methodName =
-      ts.isIdentifier(member.name) || ts.isPrivateIdentifier(member.name)
-        ? member.name.text
-        : member.name.getText(sourceFile);
-
-    names.push(`${className}.${methodName}`);
-  }
-
-  return names;
+  return memberNames(sourceFile, className, declaration.members);
 }
 
-/** The problems of every `crates/<crate>/trace.tsv` under `root`, each naming its file and line. */
+/** `Owner.member` for each member with a body or a function value; a get and a set count once. */
+function memberNames(
+  sourceFile: ts.SourceFile,
+  owner: string,
+  members: ts.NodeArray<ts.ClassElement | ts.ObjectLiteralElementLike>,
+): string[] {
+  const names = new Set<string>();
+
+  for (const member of members) {
+    if (ts.isConstructorDeclaration(member)) {
+      if (member.body !== undefined) names.add(`${owner}.constructor`);
+
+      continue;
+    }
+
+    const hasBody =
+      (ts.isMethodDeclaration(member) ||
+        ts.isGetAccessorDeclaration(member) ||
+        ts.isSetAccessorDeclaration(member)) &&
+      member.body !== undefined;
+    const hasFunctionValue =
+      (ts.isPropertyDeclaration(member) || ts.isPropertyAssignment(member)) &&
+      isFunctionValue(member.initializer);
+
+    if (!hasBody && !hasFunctionValue) continue;
+
+    const memberName = member.name;
+
+    if (memberName === undefined) continue;
+
+    names.add(
+      `${owner}.${ts.isIdentifier(memberName) || ts.isPrivateIdentifier(memberName) ? memberName.text : memberName.getText(sourceFile)}`,
+    );
+  }
+
+  return [...names];
+}
+
+/** The problems of every `crates/<crate>/trace.tsv` and of `xtask/trace.tsv` under `root`. */
 export function checkTraces(root: string): string[] {
   const cratesRoot = join(root, CRATES_DIR);
-
-  if (!existsSync(cratesRoot)) return [];
-
+  const crateNames = existsSync(cratesRoot)
+    ? readdirSync(cratesRoot, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => entry.name)
+        .sort()
+    : [];
+  const directories = [...crateNames.map((name) => join(CRATES_DIR, name)), XTASK_DIR];
   const problems: string[] = [];
-  const crateNames = readdirSync(cratesRoot, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-    .sort();
 
-  for (const crateName of crateNames) {
-    const crateDirectory = join(CRATES_DIR, crateName);
+  for (const crateDirectory of directories) {
     const tracePath = join(root, crateDirectory, TRACE_FILE);
 
     if (!existsSync(tracePath)) continue;
@@ -151,7 +203,8 @@ function parseTraceLine(text: string, lineNumber: number): TraceLine | string {
       : "malformed line: expected `<rust path>\\t<ts file>#<function>`";
   }
 
-  const separator = typeScriptReference.lastIndexOf(FUNCTION_SEPARATOR);
+  // The first `#` splits: a private member is `Class.#name`.
+  const separator = typeScriptReference.indexOf(FUNCTION_SEPARATOR);
 
   if (rustPath === "" || separator <= 0 || separator === typeScriptReference.length - 1) {
     return "malformed line: expected `<rust path>\\t<ts file>#<function>`";
@@ -193,10 +246,11 @@ function checkRustTarget(root: string, crateDirectory: string, line: TraceLine):
 
 /**
  * A Rust path is `<file relative to the crate>#<function>`, such as `src/load/reader.rs#read_file`;
- * the function is found by its `fn <name>` declaration in that file.
+ * the function is found by its `fn <name>` declaration at the start of a line of that file.
  */
 function missingRustItem(root: string, crateDirectory: string, rustPath: string): string[] {
-  const separator = rustPath.lastIndexOf(FUNCTION_SEPARATOR);
+  // The first `#` splits: a raw identifier is `r#type`.
+  const separator = rustPath.indexOf(FUNCTION_SEPARATOR);
 
   if (separator <= 0) {
     return [`Rust path \`${rustPath}\` is not \`<file relative to the crate>#<function>\``];
@@ -209,7 +263,10 @@ function missingRustItem(root: string, crateDirectory: string, rustPath: string)
   if (!existsSync(absoluteFile))
     return [`Rust file \`${crateDirectory}/${rustFile}\` does not exist`];
 
-  const declaration = new RegExp(`\\bfn\\s+${escapeRegExp(rustFunction)}\\s*[(<]`);
+  const declaration = new RegExp(
+    `^\\s*(?:pub(?:\\([^)]*\\))?\\s+)?(?:const\\s+)?(?:async\\s+)?fn\\s+${escapeRegExp(rustFunction)}\\s*[(<]`,
+    "m",
+  );
 
   if (!declaration.test(readFileSync(absoluteFile, "utf8"))) {
     return [

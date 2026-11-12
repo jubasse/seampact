@@ -1,5 +1,11 @@
 //! Workspace tasks of the Rust port, run as `cargo xtask <task>` from anywhere in the workspace.
 
+#![expect(
+    clippy::print_stdout,
+    clippy::print_stderr,
+    reason = "xtask reports gate steps on the terminal"
+)]
+
 mod gate;
 mod oracle;
 mod outcome;
@@ -33,7 +39,7 @@ fn run() -> anyhow::Result<ExitCode> {
 
     let outcomes = match arguments.as_slice() {
         [name] if name == "gate" => gate::run_gate(&workspace_root),
-        [name] if name == "oracle" => vec![oracle::run_oracle()],
+        [name] if name == "oracle" => vec![oracle::run_oracle(&workspace_root)],
         _ => {
             eprintln!("{USAGE}");
 

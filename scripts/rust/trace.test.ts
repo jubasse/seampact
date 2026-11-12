@@ -59,6 +59,33 @@ describe("listTypeScriptFunctions", () => {
     ]);
   });
 
+  it("lists constructors, accessors, properties, private members, wrapped arrows and object methods", () => {
+    const source = [
+      "export class Sink {",
+      "  constructor(private readonly name: string) { this.name = name; }",
+      "  get size(): number { return 1; }",
+      "  set size(value: number) { void value; }",
+      "  handle = (value: number) => value;",
+      "  label = 'plain';",
+      "  #emitAt(line: number): number { return line; }",
+      "}",
+      "export const wrapped = ((name: string) => name) satisfies (name: string) => string;",
+      "export const cast = (() => 1) as () => number;",
+      "export const rules = { check() { return 1; }, run: () => 2, name: 'x' };",
+    ].join("\n");
+
+    expect(listTypeScriptFunctions("sink.ts", source)).toEqual([
+      "Sink.constructor",
+      "Sink.size",
+      "Sink.handle",
+      "Sink.#emitAt",
+      "wrapped",
+      "cast",
+      "rules.check",
+      "rules.run",
+    ]);
+  });
+
   it("lists an overloaded function once", () => {
     const source =
       "function pick(a: string): string;\nfunction pick(a: number): number;\nfunction pick(a: unknown) { return a; }";
@@ -159,6 +186,41 @@ describe("checkTraces", () => {
 
     expect(checkTraces(repositoryWithTrace(trace))).toEqual([
       "crates/load/trace.tsv:4: `packages/core/load.ts#load` is traced twice",
+    ]);
+  });
+
+  it("accepts a private member, whose reference holds two `#`", () => {
+    const root = repositoryWith({
+      "packages/sink.ts": "export class Sink { #emitAt(line: number): number { return line; } }",
+      "crates/diff/src/lib.rs": "fn emit_at(line: u32) -> u32 { line }\n",
+      "crates/diff/trace.tsv": "src/lib.rs#emit_at\tpackages/sink.ts#Sink.#emitAt\n",
+    });
+
+    expect(checkTraces(root)).toEqual([]);
+  });
+
+  it("fails on a Rust function named only in a comment", () => {
+    const root = repositoryWith({
+      "packages/a.ts": "export function emitAt() {}",
+      "crates/diff/src/lib.rs": "// fn emit_at(line: u32)\n",
+      "crates/diff/trace.tsv": "src/lib.rs#emit_at\tpackages/a.ts#emitAt\n",
+    });
+
+    expect(checkTraces(root)).toEqual([
+      "crates/diff/trace.tsv:1: Rust function `emit_at` is not declared in `crates/diff/src/lib.rs`",
+    ]);
+  });
+
+  it("checks the trace of xtask", () => {
+    const root = repositoryWith({
+      "scripts/a.ts": "export function gate() {}",
+      "xtask/src/gate.rs": "pub fn run_gate() {}\n",
+      "xtask/trace.tsv":
+        "src/gate.rs#run_gate\tscripts/a.ts#gate\n-\tscripts/a.ts#other\tskip: x\n",
+    });
+
+    expect(checkTraces(root)).toEqual([
+      "xtask/trace.tsv:2: `scripts/a.ts` has no function `other`",
     ]);
   });
 });

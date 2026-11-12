@@ -17,7 +17,7 @@ enum KeyRank {
 
 impl KeyRank {
     fn of(key: &str) -> Self {
-        is_array_index(key).map_or(Self::Named, Self::ArrayIndex)
+        array_index_value(key).map_or(Self::Named, Self::ArrayIndex)
     }
 }
 
@@ -26,7 +26,7 @@ impl KeyRank {
 /// An array index is the canonical decimal text of an integer from 0 to [`MAX_ARRAY_INDEX`]:
 /// `"01"`, `"-1"`, `"+1"`, `"1.0"`, `""` and `"4294967295"` are not.
 #[must_use]
-pub fn is_array_index(key: &str) -> Option<u32> {
+pub fn array_index_value(key: &str) -> Option<u32> {
     let has_only_digits = !key.is_empty() && key.bytes().all(|byte| byte.is_ascii_digit());
     let has_leading_zero = key.len() > 1 && key.starts_with('0');
 
@@ -59,15 +59,42 @@ where
 /// Reorders an insertion-ordered map in place into JavaScript key order.
 ///
 /// Works on `serde_json::Map` (built with `preserve_order`) and `IndexMap<String, _>`, so
-/// that iterating or serialising the map gives the order JavaScript would.
-pub fn reorder_in_js_key_order<M, K, V>(map: &mut M)
-where
-    M: Default + IntoIterator<Item = (K, V)> + Extend<(K, V)>,
-    K: AsRef<str>,
-{
-    let entries = std::mem::take(map);
+/// that iterating the map gives the order JavaScript would. It orders one object; the
+/// canonical writer applies it to each object it writes.
+pub fn reorder_in_js_key_order<M: InsertionOrderedMap>(map: &mut M) {
+    map.reorder_entries_in_js_key_order();
+}
 
-    map.extend(js_key_order(entries));
+/// A map that iterates in insertion order, so that reordering it is visible.
+///
+/// Sealed: a `BTreeMap` or a `HashMap` would silently stay in byte or random order.
+pub trait InsertionOrderedMap: private::Sealed {
+    #[doc(hidden)]
+    fn reorder_entries_in_js_key_order(&mut self);
+}
+
+mod private {
+    pub trait Sealed {}
+
+    impl<V, S> Sealed for indexmap::IndexMap<String, V, S> {}
+
+    impl Sealed for serde_json::Map<String, serde_json::Value> {}
+}
+
+impl<V, S> InsertionOrderedMap for indexmap::IndexMap<String, V, S> {
+    fn reorder_entries_in_js_key_order(&mut self) {
+        self.sort_by(|left_key, _, right_key, _| {
+            KeyRank::of(left_key).cmp(&KeyRank::of(right_key))
+        });
+    }
+}
+
+impl InsertionOrderedMap for serde_json::Map<String, serde_json::Value> {
+    fn reorder_entries_in_js_key_order(&mut self) {
+        let entries = std::mem::take(self);
+
+        self.extend(js_key_order(entries));
+    }
 }
 
 #[cfg(test)]
@@ -78,9 +105,9 @@ mod tests {
 
     #[test]
     fn canonical_decimal_keys_are_array_indices() {
-        assert_eq!(is_array_index("0"), Some(0));
-        assert_eq!(is_array_index("200"), Some(200));
-        assert_eq!(is_array_index("4294967294"), Some(MAX_ARRAY_INDEX));
+        assert_eq!(array_index_value("0"), Some(0));
+        assert_eq!(array_index_value("200"), Some(200));
+        assert_eq!(array_index_value("4294967294"), Some(MAX_ARRAY_INDEX));
     }
 
     #[test]
@@ -97,7 +124,7 @@ mod tests {
             "1e3",
             "\u{661}",
         ] {
-            assert_eq!(is_array_index(key), None, "key {key:?}");
+            assert_eq!(array_index_value(key), None, "key {key:?}");
         }
     }
 
@@ -124,6 +151,49 @@ mod tests {
     }
 
     #[test]
+    fn named_keys_keep_insertion_order_beyond_short_slices() {
+        // std's unstable sort is an insertion sort on short slices, so only a long input
+        // tells a stable sort from an unstable one.
+        let named: Vec<String> = (0..64)
+            .map(|number| format!("key{:02}", 63 - number))
+            .collect();
+        let entries: Vec<(String, ())> = named
+            .iter()
+            .enumerate()
+            .flat_map(|(position, name)| [(name.clone(), ()), ((100 - position).to_string(), ())])
+            .collect();
+
+        let named_in_order: Vec<String> = js_key_order(entries)
+            .map(|(key, ())| key)
+            .filter(|key| array_index_value(key).is_none())
+            .collect();
+
+        assert_eq!(named_in_order, named);
+    }
+
+    #[test]
+    fn index_map_keeps_named_keys_in_insertion_order_beyond_short_slices() {
+        let named: Vec<String> = (0..64)
+            .map(|number| format!("key{:02}", 63 - number))
+            .collect();
+        let mut map: IndexMap<String, ()> = named
+            .iter()
+            .enumerate()
+            .flat_map(|(position, name)| [(name.clone(), ()), ((100 - position).to_string(), ())])
+            .collect();
+
+        reorder_in_js_key_order(&mut map);
+
+        let named_in_order: Vec<String> = map
+            .keys()
+            .filter(|key| array_index_value(key).is_none())
+            .cloned()
+            .collect();
+
+        assert_eq!(named_in_order, named);
+    }
+
+    #[test]
     fn reorders_an_index_map_in_place() {
         let mut statuses: IndexMap<String, u32> = [("b", 1), ("404", 2), ("a", 3), ("200", 4)]
             .map(|(key, value)| (key.to_owned(), value))
@@ -138,14 +208,14 @@ mod tests {
     }
 
     #[test]
-    fn reordered_json_map_serialises_like_json_stringify() {
+    fn reordered_json_map_serialises_in_js_key_order() {
         let Value::Object(mut object) = json!({ "b": 1, "404": 2, "a": 3, "200": 4 }) else {
             panic!("json! of an object literal gives an object");
         };
 
         reorder_in_js_key_order(&mut object);
 
-        // JSON.stringify({ b: 1, 404: 2, a: 3, 200: 4 })
+        // One object: JSON.stringify also reorders nested objects, which the canonical writer does.
         assert_eq!(
             serde_json::to_string(&object).unwrap(),
             r#"{"200":4,"404":2,"b":1,"a":3}"#

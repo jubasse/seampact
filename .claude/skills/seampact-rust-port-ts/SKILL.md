@@ -20,7 +20,7 @@ The brief gives: the TypeScript files to port, the target crate and its designed
 5. Tests: list the behaviours of the TypeScript tests the brief names, write Rust tests of them (section 6), then edge-value tests for each section 2 row the module touches. Run `cargo nextest run -p <crate>`.
 6. Oracle loop on the fixture subset (section 4): read the first mismatch only, fix, repeat. Three loops on the same mismatch: stop and hand back with the mismatch and what you tried (restart rule).
 7. Commit each green step with named files only (section 7).
-8. Gate on the branch rebased on develop (section 8), the trace check, then the oracle on every fixture. Invoke `rust-review` on your diff before hand-back and fix what it finds, unless `seampact-rust` or PORTING.md says otherwise.
+8. Gate on the branch rebased on `feat/rust-core` (section 8), the trace check, then the oracle on every fixture. Invoke `rust-review` on your diff before hand-back and fix what it finds, unless `seampact-rust` or PORTING.md says otherwise.
 
 ## Port brief
 
