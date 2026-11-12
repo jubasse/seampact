@@ -101,7 +101,7 @@ impl JsonNumber {
         }
     }
 
-    fn finite_value(&self) -> FiniteNumber {
+    pub(crate) fn finite_value(&self) -> FiniteNumber {
         match &self.0 {
             Repr::Finite(number) => *number,
             Repr::ExactInteger { rounded, .. } => *rounded,
@@ -230,6 +230,24 @@ mod tests {
         assert_eq!(number("9007199254740993"), number("9007199254740992"));
         assert!(
             (number("9007199254740993").to_f64() - 9_007_199_254_740_992.0).abs() < f64::EPSILON
+        );
+    }
+
+    #[test]
+    fn exact_integers_hash_as_their_rounded_value() {
+        use std::hash::{DefaultHasher, Hash, Hasher};
+
+        let hash_of = |number: JsonNumber| {
+            let mut hasher = DefaultHasher::new();
+
+            number.hash(&mut hasher);
+
+            hasher.finish()
+        };
+
+        assert_eq!(
+            hash_of(number("9007199254740993")),
+            hash_of(number("9007199254740992"))
         );
     }
 

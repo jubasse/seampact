@@ -6,6 +6,7 @@ use serde::de::Error as _;
 use serde::ser::{SerializeMap, SerializeSeq};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
+use crate::error::quoted_in_error;
 use crate::{JsonError, JsonNumber, JsonObject, escape_pointer};
 
 /// The integers [`JsonValue`]'s `Serialize` writes as JSON integers: up to 2^53 in magnitude.
@@ -83,7 +84,7 @@ fn json_number_at(number: &serde_json::Number, pointer: &str) -> Result<JsonNumb
     let text = number.as_str();
 
     JsonNumber::from_json_text(text).ok_or_else(|| JsonError::NumberOutOfRange {
-        text: text.to_owned(),
+        text: quoted_in_error(text),
         pointer: pointer.to_owned(),
     })
 }

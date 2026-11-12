@@ -5,6 +5,7 @@ use std::ops::RangeInclusive;
 use serde::de::Error as _;
 use serde::{Deserialize, Deserializer};
 
+use crate::error::quoted_in_error;
 use crate::{JsonError, JsonNumber, JsonValue, canonical_json};
 
 /// The largest integer JavaScript holds exactly, `Number.MAX_SAFE_INTEGER` (2^53 - 1).
@@ -30,7 +31,7 @@ pub fn js_integer_in_range(
     number
         .integer_within(&allowed)
         .ok_or_else(|| JsonError::NotAnIntegerInRange {
-            found: number.to_string(),
+            found: quoted_in_error(&number.to_string()),
             allowed,
         })
 }
@@ -49,6 +50,8 @@ pub fn js_integer<'de, D, const MIN: i64, const MAX: i64>(deserializer: D) -> Re
 where
     D: Deserializer<'de>,
 {
+    const { assert!(MIN <= MAX, "the integer range is inverted") };
+
     let value = JsonValue::deserialize(deserializer)?;
 
     js_integer_of_value(&value, MIN..=MAX).map_err(D::Error::custom)
@@ -71,7 +74,7 @@ where
 fn js_integer_of_value(value: &JsonValue, allowed: RangeInclusive<i64>) -> Result<i64, JsonError> {
     let JsonValue::Number(number) = value else {
         return Err(JsonError::NotAnIntegerInRange {
-            found: canonical_json(value),
+            found: quoted_in_error(&canonical_json(value)),
             allowed: safe_part_of(allowed),
         });
     };

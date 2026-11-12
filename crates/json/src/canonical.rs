@@ -2,7 +2,7 @@
 
 use seampact_js::{cmp_utf16, js_key_order};
 
-use crate::{JsonObject, JsonValue};
+use crate::{JsonNumber, JsonObject, JsonValue};
 
 /// The indentation of one nesting level in a canonical document.
 const INDENT: &str = "  ";
@@ -26,6 +26,23 @@ enum MemberOrder {
     Utf16RebuiltAsObject,
 }
 
+/// Which text a number is written as.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum NumberText {
+    /// The number as written: an integer above 2^53 keeps its exact digits.
+    Written,
+    /// The ECMAScript text of the `f64` JavaScript holds: an integer above 2^53 is rounded.
+    AsJavaScriptHolds,
+}
+
+/// Everything that distinguishes one canonical writer from the other.
+#[derive(Debug, Clone, Copy)]
+struct Format {
+    layout: Layout,
+    order: MemberOrder,
+    numbers: NumberText,
+}
+
 /// The IR file text of a value: every object's members sorted by the UTF-16 code units of their
 /// names, two-space indentation, LF line endings and a final newline.
 ///
@@ -37,7 +54,13 @@ enum MemberOrder {
 pub fn canonical_document(value: &JsonValue) -> String {
     let mut text = String::new();
 
-    write_value(&mut text, value, Layout::Indented, MemberOrder::Utf16, "");
+    let format = Format {
+        layout: Layout::Indented,
+        order: MemberOrder::Utf16,
+        numbers: NumberText::Written,
+    };
+
+    write_value(&mut text, value, format, "");
     text.push('\n');
 
     text
@@ -47,19 +70,21 @@ pub fn canonical_document(value: &JsonValue) -> String {
 /// one: `JSON.stringify` of the value with every object's keys sorted.
 ///
 /// Keys sort by UTF-16 code units, then the rebuilt object lists array-index keys (`"10"`, `"9"`)
-/// first in ascending value, as JavaScript does. Use it as a comparison or lookup key, never as
+/// first in ascending value, as JavaScript does. Numbers are written as the `f64` JavaScript
+/// holds, so an integer above 2^53 is rounded, as `canonicalJson` did: values that are equal
+/// (`==`) have one key. Use it as a comparison or lookup key, never as
 /// file bytes: [`canonical_document`] writes those.
 #[must_use]
 pub fn canonical_json(value: &JsonValue) -> String {
     let mut text = String::new();
 
-    write_value(
-        &mut text,
-        value,
-        Layout::Compact,
-        MemberOrder::Utf16RebuiltAsObject,
-        "",
-    );
+    let format = Format {
+        layout: Layout::Compact,
+        order: MemberOrder::Utf16RebuiltAsObject,
+        numbers: NumberText::AsJavaScriptHolds,
+    };
+
+    write_value(&mut text, value, format, "");
 
     text
 }
@@ -94,30 +119,25 @@ fn write_unicode_escape(output: &mut String, character: char) {
     output.push_str(&format!("\\u{:04x}", u32::from(character)));
 }
 
-fn write_value(
-    output: &mut String,
-    value: &JsonValue,
-    layout: Layout,
-    order: MemberOrder,
-    indent: &str,
-) {
-    match value {
-        JsonValue::Null => output.push_str("null"),
-        JsonValue::Bool(flag) => output.push_str(if *flag { "true" } else { "false" }),
-        JsonValue::Number(number) => output.push_str(&number.to_string()),
-        JsonValue::String(text) => write_json_string(output, text),
-        JsonValue::Array(items) => write_array(output, items, layout, order, indent),
-        JsonValue::Object(members) => write_object(output, members, layout, order, indent),
+fn write_number(output: &mut String, number: &JsonNumber, numbers: NumberText) {
+    match numbers {
+        NumberText::Written => output.push_str(&number.to_string()),
+        NumberText::AsJavaScriptHolds => output.push_str(&number.finite_value().to_string()),
     }
 }
 
-fn write_array(
-    output: &mut String,
-    items: &[JsonValue],
-    layout: Layout,
-    order: MemberOrder,
-    indent: &str,
-) {
+fn write_value(output: &mut String, value: &JsonValue, format: Format, indent: &str) {
+    match value {
+        JsonValue::Null => output.push_str("null"),
+        JsonValue::Bool(flag) => output.push_str(if *flag { "true" } else { "false" }),
+        JsonValue::Number(number) => write_number(output, number, format.numbers),
+        JsonValue::String(text) => write_json_string(output, text),
+        JsonValue::Array(items) => write_array(output, items, format, indent),
+        JsonValue::Object(members) => write_object(output, members, format, indent),
+    }
+}
+
+fn write_array(output: &mut String, items: &[JsonValue], format: Format, indent: &str) {
     if items.is_empty() {
         output.push_str("[]");
 
@@ -129,21 +149,15 @@ fn write_array(
     output.push('[');
 
     for (position, item) in items.iter().enumerate() {
-        write_separator(output, layout, position, &inner_indent);
-        write_value(output, item, layout, order, &inner_indent);
+        write_separator(output, format.layout, position, &inner_indent);
+        write_value(output, item, format, &inner_indent);
     }
 
-    write_closing_line(output, layout, indent);
+    write_closing_line(output, format.layout, indent);
     output.push(']');
 }
 
-fn write_object(
-    output: &mut String,
-    members: &JsonObject,
-    layout: Layout,
-    order: MemberOrder,
-    indent: &str,
-) {
+fn write_object(output: &mut String, members: &JsonObject, format: Format, indent: &str) {
     if members.is_empty() {
         output.push_str("{}");
 
@@ -151,21 +165,24 @@ fn write_object(
     }
 
     let inner_indent = format!("{indent}{INDENT}");
-    let name_separator = match layout {
+    let name_separator = match format.layout {
         Layout::Compact => ":",
         Layout::Indented => ": ",
     };
 
     output.push('{');
 
-    for (position, (name, member)) in ordered_members(members, order).into_iter().enumerate() {
-        write_separator(output, layout, position, &inner_indent);
+    for (position, (name, member)) in ordered_members(members, format.order)
+        .into_iter()
+        .enumerate()
+    {
+        write_separator(output, format.layout, position, &inner_indent);
         write_json_string(output, name);
         output.push_str(name_separator);
-        write_value(output, member, layout, order, &inner_indent);
+        write_value(output, member, format, &inner_indent);
     }
 
-    write_closing_line(output, layout, indent);
+    write_closing_line(output, format.layout, indent);
     output.push('}');
 }
 
@@ -283,6 +300,17 @@ mod tests {
             document,
             "[\n  0,\n  1e+21,\n  1e-7,\n  1e-17,\n  404,\n  9007199254740993\n]\n"
         );
+    }
+
+    #[test]
+    fn values_equal_as_javascript_have_one_comparison_key() {
+        let exact = value("[9007199254740993]");
+        let rounded = value("[9007199254740992]");
+
+        assert_eq!(exact, rounded);
+        assert_eq!(canonical_json(&exact), canonical_json(&rounded));
+        assert_eq!(canonical_json(&exact), "[9007199254740992]");
+        assert_ne!(canonical_document(&exact), canonical_document(&rounded));
     }
 
     #[test]

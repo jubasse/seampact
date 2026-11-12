@@ -16,13 +16,6 @@ const EXPECTED_OUTPUTS_DIRECTORY: &str = "fixtures/expected";
 const IR_EXAMPLES_DIRECTORY: &str = "packages/core/spec/schemas/ir/examples";
 
 /// Whether `path` is a `.json` file directly inside a directory named `parent_name`.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "each test crate compiles this module; the schema test does not use it"
-    )
-)]
 fn is_json_in(path: &Path, parent_name: &str) -> bool {
     let has_json_extension = path
         .extension()
