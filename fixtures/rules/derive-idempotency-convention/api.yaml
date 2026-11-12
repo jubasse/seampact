@@ -1,0 +1,10 @@
+api: { name: t, version: 1, kind: product }
+schemas:
+  Note: { type: object, required: [noteId], properties: { noteId: { type: string } } }
+  Key: { type: object, required: [keyId, secret], properties: { keyId: { type: string }, secret: { type: string, sensitive: true } } }
+conventions: { idempotency: { header: Idempotency-Key } }
+surfaces:
+  app:
+    access: { public: Open. }
+    routes:
+      save: { method: post, output: Note }

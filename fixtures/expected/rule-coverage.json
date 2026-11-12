@@ -1,6 +1,10 @@
 {
-  "seampact/access/access-schemes": [],
-  "seampact/access/binding-conflict": [],
+  "seampact/access/access-schemes": [
+    "rules/access-access-schemes"
+  ],
+  "seampact/access/binding-conflict": [
+    "rules/access-binding-conflict"
+  ],
   "seampact/access/binding-source": [
     "rules/access-binding-source"
   ],
@@ -54,7 +58,9 @@
   "seampact/access/header-use": [
     "rules/access-header-use"
   ],
-  "seampact/access/identity-member": [],
+  "seampact/access/identity-member": [
+    "rules/access-identity-member"
+  ],
   "seampact/access/identity-reference": [
     "golden/pack-api-platform/contract/tasks-optional-auth",
     "golden/pack-api-platform/contract/tasks-paging",
@@ -90,7 +96,9 @@
   "seampact/access/pack-template": [
     "passes/access-rights/refused"
   ],
-  "seampact/access/principal": [],
+  "seampact/access/principal": [
+    "rules/access-principal"
+  ],
   "seampact/access/principal-field": [
     "rules/access-principal-field"
   ],
@@ -136,11 +144,15 @@
   "seampact/access/scheme-kind": [
     "rules/access-scheme-kind"
   ],
-  "seampact/access/scheme-member": [],
+  "seampact/access/scheme-member": [
+    "rules/access-scheme-member"
+  ],
   "seampact/access/scheme-query-field": [
     "rules/access-scheme-query-field"
   ],
-  "seampact/access/scheme-reference": [],
+  "seampact/access/scheme-reference": [
+    "rules/access-scheme-reference"
+  ],
   "seampact/access/scope-nesting": [
     "passes/access-rights/refused"
   ],
@@ -159,14 +171,24 @@
   "seampact/access/service-identity": [
     "rules/access-service-identity"
   ],
-  "seampact/access/signature-key": [],
+  "seampact/access/signature-key": [
+    "rules/access-signature-key"
+  ],
   "seampact/access/signature-key-source": [
     "rules/access-signature-key-source"
   ],
-  "seampact/access/signature-template": [],
-  "seampact/access/signature-tolerance": [],
-  "seampact/access/signature-verify": [],
-  "seampact/access/signed-access": [],
+  "seampact/access/signature-template": [
+    "rules/access-signature-template"
+  ],
+  "seampact/access/signature-tolerance": [
+    "rules/access-signature-tolerance"
+  ],
+  "seampact/access/signature-verify": [
+    "rules/access-signature-verify"
+  ],
+  "seampact/access/signed-access": [
+    "rules/access-signed-access"
+  ],
   "seampact/access/signed-input": [
     "passes/access-rights/proofs-refused"
   ],
@@ -176,10 +198,18 @@
   "seampact/derive/bucket-limits": [
     "passes/access-rights/catalogues"
   ],
-  "seampact/derive/cache-family": [],
-  "seampact/derive/cache-freshness": [],
-  "seampact/derive/cache-method": [],
-  "seampact/derive/cache-sensitive": [],
+  "seampact/derive/cache-family": [
+    "rules/derive-cache-family"
+  ],
+  "seampact/derive/cache-freshness": [
+    "rules/derive-cache-freshness"
+  ],
+  "seampact/derive/cache-method": [
+    "rules/derive-cache-method"
+  ],
+  "seampact/derive/cache-sensitive": [
+    "rules/derive-cache-sensitive"
+  ],
   "seampact/derive/cache-sensitive-elsewhere": [],
   "seampact/derive/derived-name-collision": [],
   "seampact/derive/error-default": [],
@@ -204,8 +234,12 @@
     "passes/derive-errors/operations",
     "passes/derive-errors/registry-refused"
   ],
-  "seampact/derive/idempotency-convention": [],
-  "seampact/derive/idempotency-exempt-unused": [],
+  "seampact/derive/idempotency-convention": [
+    "rules/derive-idempotency-convention"
+  ],
+  "seampact/derive/idempotency-exempt-unused": [
+    "rules/derive-idempotency-exempt-unused"
+  ],
   "seampact/derive/nature-base": [
     "passes/derive-errors/registry-refused"
   ],

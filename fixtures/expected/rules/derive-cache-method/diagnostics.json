@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/derive/cache-method",
+          "message": "operation 'save' is a POST route and declares cache, which applies to GET routes only",
+          "fix": "Remove cache from the route, or declare it on a GET route.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/save/cache"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

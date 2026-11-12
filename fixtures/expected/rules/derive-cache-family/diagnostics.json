@@ -1,0 +1,29 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/derive/cache-family",
+          "message": "cache names the family 'nowhere', which conventions.cache.families does not declare",
+          "fix": "Name a family declared in conventions.cache.families with its maxAge, or freshness: never.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/read/cache"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/read"
+              },
+              "message": "a route it reaches"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
