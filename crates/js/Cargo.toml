@@ -1,6 +1,6 @@
 [package]
 name = "seampact-js"
-description = "JavaScript semantics the Rust port shares: UTF-16 string order and object key order."
+description = "JavaScript semantics the Rust port shares: UTF-16 string order, object key order and number text."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -9,6 +9,7 @@ publish.workspace = true
 
 [dependencies]
 indexmap.workspace = true
+ryu-js.workspace = true
 serde_json.workspace = true
 
 [dev-dependencies]
