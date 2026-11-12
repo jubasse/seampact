@@ -1,0 +1,20 @@
+[package]
+name = "seampact-diagnostics"
+description = "The diagnostic type, its sink, order and printed form, and the internal error of the Rust port."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+indexmap.workspace = true
+seampact-js = { path = "../js" }
+seampact-span = { path = "../span" }
+
+[dev-dependencies]
+regress.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true
