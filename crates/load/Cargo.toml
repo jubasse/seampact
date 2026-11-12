@@ -18,5 +18,10 @@ seampact-json.workspace = true
 seampact-span.workspace = true
 thiserror.workspace = true
 
+[dev-dependencies]
+regress.workspace = true
+serde_json.workspace = true
+tempfile.workspace = true
+
 [lints]
 workspace = true

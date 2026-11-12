@@ -41,6 +41,7 @@ tar = "0.4.46"
 sha2 = "0.11.1"
 # Tests and benchmarks.
 insta = "1.49.0"
+tempfile = "3.27.0"
 snapbox = "1.2.2"
 libtest-mimic = "0.8.2"
 proptest = "1.12.0"
