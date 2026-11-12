@@ -11,7 +11,9 @@ use seampact_oracle::{
     Compilation, Fixture, FixtureGlob, HalfInput, OracleSubject, RuleIdRegistry, Selection,
     SubjectAnswer, run_oracle,
 };
-use support::{ExpectedFilesSubject, repository_root, unchanged};
+use support::{
+    ExpectedFilesSubject, SCRATCH_FIXTURE, repository_root, scratch_repository, unchanged,
+};
 
 /// A fixture whose expected diagnostics hold an error with a message.
 const FIXTURE_WITH_DIAGNOSTICS: &str = "scale/notify";
@@ -219,7 +221,7 @@ fn a_glob_matching_no_fixture_and_an_unknown_half_are_usage_errors() {
 
 /// What one `run_half` call received: the api, the half, the halves before it, and the other
 /// apis with their delta counts.
-type HalfCall = (String, String, Vec<String>, Vec<(String, usize)>);
+type HalfCall = (String, String, Vec<String>, Vec<(String, usize, bool)>);
 
 /// A subject that records the input of every half it is asked to run.
 struct HalfInputRecorder {
@@ -247,7 +249,13 @@ impl OracleSubject for HalfInputRecorder {
         let other_apis = input
             .other_apis
             .iter()
-            .map(|other| (other.api.to_owned(), other.deltas.len()))
+            .map(|other| {
+                (
+                    other.api.to_owned(),
+                    other.deltas.len(),
+                    other.expected_ir.is_some(),
+                )
+            })
             .collect();
 
         if let Some(previous) = input.deltas_before.last() {
@@ -291,7 +299,7 @@ fn a_half_starts_from_the_expected_halves_before_it_and_the_other_apis_deltas() 
                 let other_apis = ["billing", "inventory", "notify"]
                     .into_iter()
                     .filter(|other| *other != api)
-                    .map(|other| (other.to_owned(), 6))
+                    .map(|other| (other.to_owned(), 6, true))
                     .collect();
 
                 (
@@ -313,5 +321,106 @@ fn a_half_starts_from_the_expected_halves_before_it_and_the_other_apis_deltas() 
     assert_eq!(
         subject.previous_deltas.borrow().first(),
         Some(&serde_json::from_str::<JsonValue>(&billing_tree_nodes).unwrap())
+    );
+}
+
+/// A subject that breaks on every fixture and every half.
+struct AlwaysBreaks;
+
+impl OracleSubject for AlwaysBreaks {
+    fn compile(&self, _fixture: &Fixture) -> SubjectAnswer<Compilation> {
+        SubjectAnswer::InternalError {
+            message: "the tree stage broke".to_owned(),
+        }
+    }
+
+    fn run_half(
+        &self,
+        _fixture: &Fixture,
+        _api: &str,
+        _half: &str,
+        _input: &HalfInput<'_>,
+    ) -> SubjectAnswer<JsonValue> {
+        SubjectAnswer::InternalError {
+            message: "the half broke".to_owned(),
+        }
+    }
+
+    fn rule_id_registry(&self) -> RuleIdRegistry {
+        RuleIdRegistry::empty()
+    }
+}
+
+#[test]
+fn an_internal_error_of_the_subject_fails_the_run_naming_the_fixture() {
+    let selection = Selection {
+        fixture_glob: Some(FixtureGlob::new(FIXTURE_WITH_DIAGNOSTICS)),
+        half: None,
+    };
+
+    let verdict = run_oracle(&repository_root(), &selection, &AlwaysBreaks).unwrap();
+
+    assert!(!verdict.passed(), "{verdict}");
+    assert_eq!(verdict.differing, 1);
+    assert_eq!(
+        verdict.problems.first().map(String::as_str),
+        Some("internal error in scale/notify: the tree stage broke")
+    );
+}
+
+#[test]
+fn an_internal_error_of_a_half_names_the_fixture_the_api_and_the_half() {
+    let selection = Selection {
+        fixture_glob: Some(FixtureGlob::new("scale")),
+        half: Some("tree.nodes".to_owned()),
+    };
+
+    let verdict = run_oracle(&repository_root(), &selection, &AlwaysBreaks).unwrap();
+
+    assert!(!verdict.passed(), "{verdict}");
+    assert_eq!(
+        verdict.problems.first().map(String::as_str),
+        Some("internal error in scale (api billing, half tree.nodes): the half broke")
+    );
+}
+
+#[test]
+fn an_expected_file_that_is_no_json_fails_the_run_naming_the_fixture_and_the_file() {
+    let root = scratch_repository(
+        "lone-surrogate",
+        &[("diagnostics.json", r#"{ "workspace": ["\ud800"] }"#)],
+    );
+
+    let error = run_oracle(&root, &Selection::default(), &NothingPorted).unwrap_err();
+    let message = error.to_string();
+
+    assert!(!error.is_usage(), "{message}");
+    assert!(
+        message.contains(&format!("{SCRATCH_FIXTURE}/diagnostics.json")),
+        "{message}"
+    );
+}
+
+#[test]
+fn an_expected_file_under_halves_with_no_half_name_is_a_problem() {
+    let root = scratch_repository(
+        "misnamed-half",
+        &[
+            ("diagnostics.json", "{}"),
+            ("halves/one/01-tree.nodes.json", "{}"),
+            ("halves/one/notes.json", "{}"),
+            ("halves/stray.json", "{}"),
+        ],
+    );
+
+    let verdict = run_oracle(&root, &Selection::default(), &NothingPorted).unwrap();
+
+    assert!(!verdict.passed(), "{verdict}");
+    assert_eq!(
+        verdict.problems,
+        [
+            "expected/one/halves/one/notes.json is not named halves/<api>/<NN>-<half>.json: rename or delete it",
+            "expected/one/halves/stray.json is not named halves/<api>/<NN>-<half>.json: rename or delete it"
+        ]
     );
 }

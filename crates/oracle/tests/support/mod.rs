@@ -117,3 +117,50 @@ impl OracleSubject for ExpectedFilesSubject {
 pub fn unchanged(_name: &str, text: &str) -> String {
     text.to_owned()
 }
+
+/// The fixture of a scratch repository.
+pub const SCRATCH_FIXTURE: &str = "one";
+
+/// A scratch repository with one fixture and no intended difference, holding `expected_files`
+/// under `fixtures/expected/one/`; the differences schema is the repository's own.
+pub fn scratch_repository(name: &str, expected_files: &[(&str, &str)]) -> Utf8PathBuf {
+    let root = scratch_directory(name);
+    let schema_file = "scripts/oracle/differences.schema.json";
+
+    let mut files = vec![
+        (schema_file.to_owned(), read_repository_file(schema_file)),
+        (
+            "scripts/oracle/excluded.json".to_owned(),
+            r#"{ "fixtures": {}, "halves": {} }"#.to_owned(),
+        ),
+        ("fixtures/one/api.yaml".to_owned(), "api: one\n".to_owned()),
+        (
+            "fixtures/expected/differences.yaml".to_owned(),
+            "version: 1\ndifferences: []\n".to_owned(),
+        ),
+        (
+            "fixtures/expected/rule-coverage.json".to_owned(),
+            "{}".to_owned(),
+        ),
+    ];
+
+    for (file, text) in expected_files {
+        files.push((
+            format!("fixtures/expected/{SCRATCH_FIXTURE}/{file}"),
+            (*text).to_owned(),
+        ));
+    }
+
+    for (file, text) in files {
+        let path = root.join(file);
+
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(path, text).unwrap();
+    }
+
+    root
+}
+
+fn read_repository_file(file: &str) -> String {
+    fs::read_to_string(repository_root().join(file)).unwrap()
+}

@@ -13,7 +13,8 @@ use crate::compare::{
 };
 use crate::differences::{DIFFERENCES_FILE, read_differences};
 use crate::expected::{
-    DIAGNOSTICS_FILE, ExpectedFiles, expected_fixture_paths, read_expected_files,
+    DIAGNOSTICS_FILE, ExpectedFiles, expected_directory_of, expected_fixture_paths,
+    read_expected_files,
 };
 use crate::fixtures::{discover_fixtures, read_excluded};
 use crate::matcher::{ComparedFile, DifferenceLedger, MatchOutcome};
@@ -121,13 +122,26 @@ fn selected_fixtures(
     Ok(selected)
 }
 
+/// The expected files of each fixture, every one checked to be JSON: a file no reader can parse
+/// fails the run whatever the subject has ported.
 fn expected_files_of(
     repository_root: &Utf8Path,
     fixtures: &[Fixture],
 ) -> Result<Vec<ExpectedFiles>, OracleError> {
     fixtures
         .iter()
-        .map(|fixture| read_expected_files(repository_root, fixture))
+        .map(|fixture| {
+            let expected_files = read_expected_files(repository_root, fixture)?;
+
+            for (name, text) in &expected_files {
+                serde_json::from_str::<Value>(text).map_err(|source| OracleError::Json {
+                    path: expected_directory_of(repository_root, fixture).join(name),
+                    source,
+                })?;
+            }
+
+            Ok(expected_files)
+        })
         .collect()
 }
 
@@ -194,18 +208,40 @@ struct NamedDeltas {
     deltas: Vec<ExpectedDelta>,
 }
 
+/// One expected delta with its file name and the deltas before it in the same api.
+struct DeltaStep<'deltas> {
+    name: &'deltas str,
+    expected: &'deltas ExpectedDelta,
+    before: &'deltas [ExpectedDelta],
+}
+
 impl NamedDeltas {
     fn push(&mut self, name: String, delta: ExpectedDelta) {
         self.names.push(name);
         self.deltas.push(delta);
     }
 
-    fn iter(&self) -> impl Iterator<Item = (&String, &ExpectedDelta)> {
-        self.names.iter().zip(&self.deltas)
-    }
+    /// Every delta in run order, each with the ones before it.
+    fn steps(&self) -> Vec<DeltaStep<'_>> {
+        let mut steps = Vec::new();
+        let mut remaining_deltas = self.deltas.as_slice();
+        let mut remaining_names = self.names.as_slice();
 
-    fn get(&self, range: std::ops::RangeTo<usize>) -> Option<&[ExpectedDelta]> {
-        self.deltas.get(range)
+        while let (Some((expected, before)), Some((name, earlier_names))) =
+            (remaining_deltas.split_last(), remaining_names.split_last())
+        {
+            steps.push(DeltaStep {
+                name,
+                expected,
+                before,
+            });
+            remaining_deltas = before;
+            remaining_names = earlier_names;
+        }
+
+        steps.reverse();
+
+        steps
     }
 }
 
@@ -234,6 +270,8 @@ impl Run<'_> {
     ) -> Result<(), OracleError> {
         let mut tally = FixtureTally::default();
 
+        self.report_misnamed_half_files(fixture, expected_files);
+
         if self.selection.half.is_none() {
             self.compare_compilation(fixture, expected_files, &mut tally)?;
         }
@@ -255,14 +293,35 @@ impl Run<'_> {
         Ok(())
     }
 
+    /// A file under `halves/` that is not `halves/<api>/<NN>-<half>.json` is compared by no path:
+    /// it is a problem, never dropped.
+    fn report_misnamed_half_files(&mut self, fixture: &Fixture, expected_files: &ExpectedFiles) {
+        let misnamed_files = expected_files
+            .keys()
+            .filter(|name| name.starts_with(HALVES_PREFIX) && OutputFile::of(name).is_none());
+
+        for name in misnamed_files {
+            self.verdict.problems.push(format!(
+                "expected/{}/{name} is not named halves/<api>/<NN>-<half>.json: rename or delete it",
+                fixture.path
+            ));
+        }
+    }
+
     fn compare_compilation(
         &mut self,
         fixture: &Fixture,
         expected_files: &ExpectedFiles,
         tally: &mut FixtureTally,
     ) -> Result<(), OracleError> {
-        let SubjectAnswer::Ported(compilation) = self.subject.compile(fixture) else {
-            return Ok(());
+        let compilation = match self.subject.compile(fixture) {
+            SubjectAnswer::Ported(compilation) => compilation,
+            SubjectAnswer::NotPorted => return Ok(()),
+            SubjectAnswer::InternalError { message } => {
+                self.note_internal_error(&fixture.path, &message, tally);
+
+                return Ok(());
+            }
         };
 
         let mut actual_files: IndexMap<String, String> = IndexMap::new();
@@ -321,10 +380,18 @@ impl Run<'_> {
                 .map(|(other_api, other_deltas)| ApiDeltas {
                     api: other_api,
                     deltas: &other_deltas.deltas,
+                    expected_ir: expected_files
+                        .get(&format!("ir/{other_api}.json"))
+                        .map(String::as_str),
                 })
                 .collect();
 
-            for (position, (name, expected)) in deltas.iter().enumerate() {
+            for DeltaStep {
+                name,
+                expected,
+                before,
+            } in deltas.steps()
+            {
                 let is_selected = self
                     .selection
                     .half
@@ -336,14 +403,20 @@ impl Run<'_> {
                 }
 
                 let input = HalfInput {
-                    deltas_before: deltas.get(..position).unwrap_or_default(),
+                    deltas_before: before,
                     other_apis: other_apis.clone(),
                 };
 
-                let SubjectAnswer::Ported(delta) =
-                    self.subject.run_half(fixture, api, &expected.half, &input)
-                else {
-                    continue;
+                let delta = match self.subject.run_half(fixture, api, &expected.half, &input) {
+                    SubjectAnswer::Ported(delta) => delta,
+                    SubjectAnswer::NotPorted => continue,
+                    SubjectAnswer::InternalError { message } => {
+                        let at = format!("{} (api {api}, half {})", fixture.path, expected.half);
+
+                        self.note_internal_error(&at, &message, tally);
+
+                        continue;
+                    }
                 };
 
                 let expected_text = expected_files.get(name).map(String::as_str);
@@ -391,7 +464,7 @@ impl Run<'_> {
     }
 
     fn expected_path(&self, fixture: &Fixture, name: &str) -> camino::Utf8PathBuf {
-        crate::expected::expected_directory_of(self.repository_root, fixture).join(name)
+        expected_directory_of(self.repository_root, fixture).join(name)
     }
 
     fn compare_file(
@@ -465,6 +538,16 @@ impl Run<'_> {
         }
 
         Ok(())
+    }
+
+    /// Fails the run on a subject's internal error, as a problem naming where it happened.
+    fn note_internal_error(&mut self, at: &str, message: &str, tally: &mut FixtureTally) {
+        self.verdict
+            .problems
+            .push(format!("internal error in {at}: {message}"));
+
+        tally.compared_files += 1;
+        tally.failing_files += 1;
     }
 
     /// Keeps the first failure of the run only.

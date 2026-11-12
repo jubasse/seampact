@@ -140,6 +140,46 @@ fn applies_takes_an_optional_api_and_half_and_refuses_a_star_inside_a_pointer_se
 }
 
 #[test]
+fn it_refuses_an_api_or_a_half_on_an_output_that_has_none() {
+    let applies = |output: &str, member: &str| {
+        let mut applies = json!({ "fixtures": ["x"], "output": output, "pointer": "/a" });
+
+        applies[member] = json!("tasks");
+
+        applies
+    };
+
+    assert_eq!(
+        problems(&[entry(&json!({ "applies": applies("diagnostics", "api") }))]),
+        ["big-integers-exact: output diagnostics has no api: remove applies.api"]
+    );
+
+    for output in ["diagnostics", "ir", "source-map"] {
+        assert_eq!(
+            problems(&[entry(&json!({ "applies": applies(output, "half") }))]),
+            [format!(
+                "big-integers-exact: output {output} has no half: remove applies.half"
+            )]
+        );
+    }
+
+    for output in ["ir", "source-map", "halves", "openapi"] {
+        assert_eq!(
+            problems(&[entry(&json!({ "applies": applies(output, "api") }))]),
+            Vec::<String>::new(),
+            "{output}"
+        );
+    }
+
+    assert_eq!(
+        problems(&[entry(&json!({
+            "applies": { "fixtures": ["x"], "output": "generated", "path": "**", "api": "tasks", "half": "tree" }
+        }))]),
+        Vec::<String>::new()
+    );
+}
+
+#[test]
 fn it_refuses_a_decision_path_that_climbs_out_of_docs() {
     assert_eq!(
         problems(&[entry(&json!({ "decision": "docs/../package.json.md#a" }))]),

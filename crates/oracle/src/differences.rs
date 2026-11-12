@@ -17,6 +17,12 @@ pub const DIFFERENCES_FILE: &str = "fixtures/expected/differences.yaml";
 /// The schema of the differences file, relative to the repository root.
 const SCHEMA_FILE: &str = "scripts/oracle/differences.schema.json";
 
+/// The outputs whose files carry no api: an entry for them names none.
+const OUTPUTS_WITHOUT_API: [&str; 1] = ["diagnostics"];
+
+/// The outputs whose files carry no half: an entry for them names none.
+const OUTPUTS_WITHOUT_HALF: [&str; 3] = ["diagnostics", "ir", "source-map"];
+
 /// The kind of an intended difference.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -133,11 +139,13 @@ pub fn differences_problems(
     let mut seen_ids = HashSet::new();
 
     for entry in entries {
-        let id = entry.get("id").and_then(Value::as_str).unwrap_or_default();
-        let decision = entry
-            .get("decision")
-            .and_then(Value::as_str)
-            .unwrap_or_default();
+        let (Some(id), Some(decision)) =
+            (string_member(entry, "id"), string_member(entry, "decision"))
+        else {
+            problems.push(format!("{entry}: an entry needs a string id and decision"));
+
+            continue;
+        };
 
         if !seen_ids.insert(id) {
             problems.push(format!("{id}: the id is used twice"));
@@ -146,9 +154,41 @@ pub fn differences_problems(
         if let Some(problem) = anchor_problem(repository_root, id, decision)? {
             problems.push(problem);
         }
+
+        problems.extend(scope_problems(id, entry));
     }
 
     Ok(problems)
+}
+
+fn string_member<'document>(entry: &'document Value, name: &str) -> Option<&'document str> {
+    entry.get(name).and_then(Value::as_str)
+}
+
+/// An entry names an api or a half on an output whose files have none, so it could never match.
+fn scope_problems(id: &str, entry: &Value) -> Vec<String> {
+    let Some(applies) = entry.get("applies") else {
+        return Vec::new();
+    };
+    let Some(output) = string_member(applies, "output") else {
+        return Vec::new();
+    };
+
+    let mut problems = Vec::new();
+
+    if applies.get("api").is_some() && OUTPUTS_WITHOUT_API.contains(&output) {
+        problems.push(format!(
+            "{id}: output {output} has no api: remove applies.api"
+        ));
+    }
+
+    if applies.get("half").is_some() && OUTPUTS_WITHOUT_HALF.contains(&output) {
+        problems.push(format!(
+            "{id}: output {output} has no half: remove applies.half"
+        ));
+    }
+
+    problems
 }
 
 fn schema_problems(

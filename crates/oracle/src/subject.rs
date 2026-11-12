@@ -4,13 +4,19 @@ use seampact_json::JsonValue;
 
 use crate::{Fixture, RuleIdRegistry};
 
-/// A subject's answer: the output, or that the stage producing it is not ported yet.
+/// A subject's answer: the output, that the stage producing it is not ported yet, or that it failed.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SubjectAnswer<Output> {
     /// The subject produced the output; the oracle compares it.
     Ported(Output),
     /// The subject cannot produce the output yet; the oracle skips it and never fails on it.
     NotPorted,
+    /// The subject broke on an input it should handle; the run fails and the verdict names the
+    /// fixture, the api and the half.
+    InternalError {
+        /// What failed, as the subject reports it.
+        message: String,
+    },
 }
 
 /// What compiling one api gave: the bytes the IR writer emits, when it emitted them.
@@ -51,6 +57,9 @@ pub struct ApiDeltas<'input> {
     pub api: &'input str,
     /// Its expected deltas, in run order.
     pub deltas: &'input [ExpectedDelta],
+    /// The text of its expected `ir/<api>.json`, when the fixture has one: a half that relays
+    /// the api reads its finalized IR from here.
+    pub expected_ir: Option<&'input str>,
 }
 
 /// What a pass half starts from, read from the expected halves rather than from the subject's
@@ -71,13 +80,17 @@ pub struct HalfInput<'input> {
 /// stage is not ported.
 pub trait OracleSubject {
     /// Compiles `fixture` from its entry file.
+    ///
+    /// The subject takes the `imports` option from the fixture, as `scripts/oracle/compiler.ts`
+    /// does.
     fn compile(&self, fixture: &Fixture) -> SubjectAnswer<Compilation>;
 
     /// Runs one pass half of `api` in `fixture` and gives the delta it wrote, in the convention of
     /// `packages/core/compiler/src/pipeline/draft-fixture.ts`.
     ///
     /// `input` holds the expected deltas the half starts from: those of the halves before it in
-    /// `api`, and those of the other apis, the relayed ones among them.
+    /// `api`, and those of the other apis, the relayed ones among them. The subject takes the
+    /// `imports` option from the fixture, as `scripts/oracle/compiler.ts` does.
     fn run_half(
         &self,
         fixture: &Fixture,

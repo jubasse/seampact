@@ -129,7 +129,7 @@ fn walk(
 ) -> Result<(), OracleError> {
     if let Some(entry) = entry_of(directory) {
         found_fixtures.push(Fixture {
-            path: relative_path(directory, fixtures_root),
+            path: relative_path(directory, fixtures_root)?,
             directory: directory.to_owned(),
             entry: entry.to_owned(),
         });
@@ -147,13 +147,25 @@ fn walk(
 }
 
 /// The `/`-separated path of `path` below `root`.
-pub(crate) fn relative_path(path: &Utf8Path, root: &Utf8Path) -> String {
-    path.strip_prefix(root)
-        .unwrap_or(path)
+pub(crate) fn relative_path(path: &Utf8Path, root: &Utf8Path) -> Result<String, OracleError> {
+    let below = path.strip_prefix(root).map_err(|_| OracleError::Shape {
+        path: path.to_owned(),
+        problem: format!("is not below {root}"),
+    })?;
+
+    Ok(below
         .components()
         .map(|component| component.as_str())
         .collect::<Vec<_>>()
-        .join("/")
+        .join("/"))
+}
+
+/// The last component of a path read from a directory.
+pub(crate) fn file_name_of(path: &Utf8Path) -> Result<&str, OracleError> {
+    path.file_name().ok_or_else(|| OracleError::Shape {
+        path: path.to_owned(),
+        problem: "has no file name".to_owned(),
+    })
 }
 
 /// The directories directly inside `directory`, in no particular order.
@@ -205,7 +217,7 @@ fn refuse_colliding_names(fixtures: &[Fixture]) -> Result<(), OracleError> {
             continue;
         };
 
-        let first_segment = below.split('/').next().unwrap_or_default();
+        let first_segment = below.split_once('/').map_or(below, |(first, _)| first);
 
         if OWN_EXPECTED_ENTRIES.contains(&first_segment) {
             return Err(OracleError::CollidingFixture {

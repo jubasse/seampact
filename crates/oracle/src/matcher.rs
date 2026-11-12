@@ -157,19 +157,22 @@ fn change_matches(change: DifferenceChange, mismatch: &Mismatch) -> bool {
         .pointer
         .as_deref()
         .map(pointer_segments)
-        .and_then(|segments| segments.last().cloned())
-        .unwrap_or_default();
+        .and_then(|segments| segments.last().cloned());
+    let last_segment_is = |names: &[&str]| {
+        last_segment
+            .as_deref()
+            .is_some_and(|segment| names.contains(&segment))
+    };
 
     match change {
         DifferenceChange::Value => mismatch.kind == MismatchKind::Value,
         DifferenceChange::Added => mismatch.kind == MismatchKind::Added,
         DifferenceChange::Removed => mismatch.kind == MismatchKind::Removed,
         DifferenceChange::Message => {
-            mismatch.kind == MismatchKind::Value
-                && MESSAGE_SEGMENTS.contains(&last_segment.as_str())
+            mismatch.kind == MismatchKind::Value && last_segment_is(&MESSAGE_SEGMENTS)
         }
         DifferenceChange::CodeRenamed => {
-            mismatch.kind == MismatchKind::Value && CODE_SEGMENTS.contains(&last_segment.as_str())
+            mismatch.kind == MismatchKind::Value && last_segment_is(&CODE_SEGMENTS)
         }
         DifferenceChange::Format => false,
     }

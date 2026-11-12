@@ -1,9 +1,9 @@
 //! The rule ids the stages declare, held against the keys of `fixtures/expected/rule-coverage.json`.
 
-use std::collections::BTreeSet;
-
 use camino::Utf8Path;
+use indexmap::IndexSet;
 use seampact_diagnostics::RuleId;
+use seampact_js::cmp_utf16;
 use serde_json::Value;
 
 use crate::OracleError;
@@ -78,7 +78,7 @@ pub fn check_rule_ids(
     Ok(rule_id_check(registry, &coverage_keys))
 }
 
-fn coverage_keys(repository_root: &Utf8Path) -> Result<BTreeSet<String>, OracleError> {
+fn coverage_keys(repository_root: &Utf8Path) -> Result<IndexSet<String>, OracleError> {
     let path = repository_root.join(RULE_COVERAGE_FILE);
     let coverage: Value =
         serde_json::from_str(&read_text(&path)?).map_err(|source| OracleError::Json {
@@ -93,19 +93,26 @@ fn coverage_keys(repository_root: &Utf8Path) -> Result<BTreeSet<String>, OracleE
         });
     };
 
-    Ok(members.into_iter().map(|(rule_id, _)| rule_id).collect())
+    let mut rule_ids: Vec<String> = members.into_iter().map(|(rule_id, _)| rule_id).collect();
+
+    rule_ids.sort_by(|left, right| cmp_utf16(left, right));
+
+    Ok(rule_ids.into_iter().collect())
 }
 
 /// Holds the registry against a set of coverage keys.
 #[must_use]
-pub fn rule_id_check(registry: &RuleIdRegistry, coverage_keys: &BTreeSet<String>) -> RuleIdCheck {
-    let declared_ids: BTreeSet<&str> = registry
+pub fn rule_id_check(registry: &RuleIdRegistry, coverage_keys: &IndexSet<String>) -> RuleIdCheck {
+    let declared_ids: IndexSet<&str> = registry
         .stages
         .iter()
         .flat_map(|stage| stage.rule_ids.iter().map(RuleId::as_str))
         .collect();
+    let mut declared_in_order: Vec<&str> = declared_ids.iter().copied().collect();
 
-    let mut problems: Vec<String> = declared_ids
+    declared_in_order.sort_by(|left, right| cmp_utf16(left, right));
+
+    let mut problems: Vec<String> = declared_in_order
         .iter()
         .filter(|rule_id| !coverage_keys.contains(**rule_id))
         .map(|rule_id| format!("rule id {rule_id} is no key of {RULE_COVERAGE_FILE}"))
@@ -144,7 +151,7 @@ mod tests {
         RuleId::from_static("seampact/load/path-escpe"),
     ];
 
-    fn keys() -> BTreeSet<String> {
+    fn keys() -> IndexSet<String> {
         ["seampact/load/path-empty", "seampact/tree/default-value"]
             .map(str::to_owned)
             .into()

@@ -6,7 +6,8 @@ use indexmap::IndexMap;
 use seampact_js::cmp_utf16;
 
 use crate::fixtures::{
-    EXPECTED_DIRECTORY, OWN_EXPECTED_ENTRIES, child_directories, child_entries, read_text,
+    EXPECTED_DIRECTORY, OWN_EXPECTED_ENTRIES, child_directories, child_entries, file_name_of,
+    read_text,
 };
 use crate::{Fixture, OracleError};
 
@@ -86,9 +87,10 @@ impl OutputFile {
 
 /// The `<half>` of `<NN>-<half>.json`.
 fn half_of_file_name(file_name: &str) -> Option<&str> {
-    let (_, half) = file_name.strip_suffix(JSON_EXTENSION)?.split_once('-')?;
+    let (position, half) = file_name.strip_suffix(JSON_EXTENSION)?.split_once('-')?;
+    let is_position = !position.is_empty() && position.chars().all(|digit| digit.is_ascii_digit());
 
-    Some(half)
+    is_position.then_some(half)
 }
 
 /// The expected directory of a fixture.
@@ -143,7 +145,7 @@ fn files_below(
     }
 
     for child in child_entries(path)? {
-        let child_name = format!("{name}/{}", child.file_name().unwrap_or_default());
+        let child_name = format!("{name}/{}", file_name_of(&child)?);
 
         files_below(&child, &child_name, found_names)?;
     }
@@ -180,7 +182,7 @@ fn collect_expected_fixture_paths(
     }
 
     for child in child_directories(directory)? {
-        let name = child.file_name().unwrap_or_default();
+        let name = file_name_of(&child)?;
 
         if OWN_EXPECTED_ENTRIES.contains(&name) {
             continue;
