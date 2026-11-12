@@ -40,7 +40,7 @@ Each row is a known trap. Use the shared helper named in the row, never a local 
 | a sort comparator that is not a total order still returns some order | `sort_by` may panic on an inconsistent comparator | write total comparators (tie-break on a unique key) |
 | the `yaml` package resolves plain scalars (`yes`, `0x10`, `.inf`, `~`) by its schema | another YAML crate resolves them differently | the loader keeps the TS resolution, checked by the loader fixtures |
 | `x \| 0`, `>>>`, `<<`: 32-bit integer arithmetic | 64-bit and overflow panics in debug | use `i32`/`u32` with wrapping operations where the TS relied on it |
-| exceptions thrown and caught for control flow | panics are bugs | a TS `throw` caught by the caller becomes a `Result`; a TS `throw` that ended the run becomes an internal diagnostic |
+| exceptions thrown and caught for control flow | panics are bugs | a TS `throw` caught by the caller becomes a `Result`; a TS `throw` that ended the run becomes an `InternalError` |
 | `Date`, `Math.random`, environment reads in pure code | | none in the compiler and generators: output depends only on input |
 | `a[i]` out of range gives `undefined` | slice and `Vec` indexing panic | `.get(i)` with `?` or `let ... else`; `clippy::indexing_slicing` and `clippy::string_slice` (`&s[a..b]`) are denied in `[workspace.lints]`, and `map[&key]` (map `Index`, which panics) is banned by review: use `.get` |
 | a fallible lookup (`throw` on a bad list or role) | a stub returning a total type (`bool`) forces a made-up answer | a total answer type is never forced on a fallible operation: a fallible lookup returns `Result` |
@@ -49,9 +49,9 @@ Each row is a known trap. Use the shared helper named in the row, never a local 
 
 - User diagnostics go to the diagnostic sink with their rule id, severity, message, fix and file position; never as `Err`.
 - Environment failures (I/O, network, a bad bundle) are typed errors per crate (`thiserror`), never `Box<dyn Error>` across crates.
-- A bug is an internal diagnostic with its own exit code: no `unwrap`, `expect`, `panic!`, indexing or silent fallback (a default the TypeScript does not have: `unwrap_or_default`, `unwrap_or(Ordering::Equal)`, `pop().map_or(default, ..)`) outside tests; a TypeScript `?? x` ports as `unwrap_or(x)`, and no placeholder value for a branch that cannot happen: match the shape (`[only]` slice patterns, `let ... else`) or report the internal diagnostic.
+- A bug is an `InternalError` returned with `?`, printed by the CLI, exit 3, never a diagnostic in a sink: no `unwrap`, `expect`, `panic!`, indexing or silent fallback (a default the TypeScript does not have: `unwrap_or_default`, `unwrap_or(Ordering::Equal)`, `pop().map_or(default, ..)`) outside tests; a TypeScript `?? x` ports as `unwrap_or(x)`, and no placeholder value for a branch that cannot happen: match the shape (`[only]` slice patterns, `let ... else`) or return the `InternalError`.
 - An input the TypeScript always had (a schema file of the bundle, a spec table) is a typed environment error when missing, never an empty reading.
-- Messages and fixes come from the rule catalogue; the text is part of the output the oracle compares.
+- Messages and fixes come from the stage's message functions ([spans and diagnostics note](docs/maintainers/rust-design/spans-and-diagnostics.md), section 5); the text is part of the output the oracle compares.
 
 ## 4. The oracle loop
 

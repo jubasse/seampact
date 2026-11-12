@@ -303,8 +303,10 @@ In pipeline order (ADR 0006 section 1).
 
 ### `crates`
 
+- `crates/diagnostics`: Diagnostics of the Rust port: the diagnostic type, its sink, sort order and printed form, and the internal error with its exit code.
 - `crates/js`: JavaScript semantics shared by every port lane: UTF-16 string order, JavaScript object key order and ECMAScript number text.
 - `crates/json`: JSON values as JavaScript holds them, their canonical text (IR, source map and OpenAPI bytes), the JS-integer reader and the JSON Pointer escape.
+- `crates/span`: Source spans of the Rust port: file ids, byte ranges, the file table and the conversion to line and UTF-16 column.
 
 ### `scripts`
 
