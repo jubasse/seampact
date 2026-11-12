@@ -1,0 +1,27 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/workspace-shape",
+      "message": "the entry file is neither a workspace (workspace:) nor an api (api:)",
+      "fix": "start the file with workspace: or api:",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/1/1"
+      },
+      "related": []
+    },
+    {
+      "severity": "error",
+      "rule": "seampact/load/yaml-syntax",
+      "message": "YAML syntax error: Flow map in block collection must be sufficiently indented and end with a }",
+      "fix": "fix the YAML syntax at this position",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/4/1"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}
