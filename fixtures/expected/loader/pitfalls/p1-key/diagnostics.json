@@ -1,0 +1,16 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/yaml-boolean",
+      "message": "plain 'no' is read as a boolean by YAML 1.1 parsers, or is a boolean not in lowercase (P1)",
+      "fix": "quote it ('no'), or write true or false",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/4/3"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

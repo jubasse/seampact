@@ -1,0 +1,306 @@
+{
+  "irRevision": 6,
+  "locations": {
+    "api#/api": {
+      "column": 1,
+      "endColumn": 34,
+      "endLine": 5,
+      "file": "api.yaml",
+      "line": 5
+    },
+    "api#/api/version": {
+      "column": 22,
+      "endColumn": 32,
+      "endLine": 5,
+      "file": "api.yaml",
+      "line": 5
+    },
+    "api#/buckets/perMember": {
+      "column": 3,
+      "endColumn": 67,
+      "endLine": 46,
+      "file": "api.yaml",
+      "line": 46
+    },
+    "api#/identities/member": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 14,
+      "file": "api.yaml",
+      "line": 11
+    },
+    "api#/rights/docs.copy": {
+      "column": 3,
+      "endColumn": 55,
+      "endLine": 40,
+      "file": "api.yaml",
+      "line": 40
+    },
+    "api#/rights/docs.edit": {
+      "column": 3,
+      "endColumn": 55,
+      "endLine": 39,
+      "file": "api.yaml",
+      "line": 39
+    },
+    "api#/rights/orgMember": {
+      "column": 3,
+      "endColumn": 41,
+      "endLine": 35,
+      "file": "api.yaml",
+      "line": 35
+    },
+    "api#/rights/projectRole": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 39,
+      "file": "api.yaml",
+      "line": 36
+    },
+    "api#/rights/projectRole/params": {
+      "column": 5,
+      "endColumn": 39,
+      "endLine": 37,
+      "file": "api.yaml",
+      "line": 37
+    },
+    "api#/rights/projectRole/params/role": {
+      "column": 15,
+      "endColumn": 37,
+      "endLine": 37,
+      "file": "api.yaml",
+      "line": 37
+    },
+    "api#/rules/throttle": {
+      "column": 3,
+      "endColumn": 57,
+      "endLine": 43,
+      "file": "api.yaml",
+      "line": 43
+    },
+    "api#/schemas/Doc": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 24,
+      "file": "api.yaml",
+      "line": 20
+    },
+    "api#/schemas/Doc/properties/docId": {
+      "column": 19,
+      "endColumn": 31,
+      "endLine": 23,
+      "file": "api.yaml",
+      "line": 23
+    },
+    "api#/schemas/Doc/properties/title": {
+      "column": 33,
+      "endColumn": 56,
+      "endLine": 23,
+      "file": "api.yaml",
+      "line": 23
+    },
+    "api#/schemas/MemberPrincipal": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 28,
+      "file": "api.yaml",
+      "line": 24
+    },
+    "api#/schemas/MemberPrincipal/properties/homeDoc": {
+      "column": 47,
+      "endColumn": 61,
+      "endLine": 27,
+      "file": "api.yaml",
+      "line": 27
+    },
+    "api#/schemas/MemberPrincipal/properties/memberId": {
+      "column": 19,
+      "endColumn": 45,
+      "endLine": 27,
+      "file": "api.yaml",
+      "line": 27
+    },
+    "api#/schemes/bearer": {
+      "column": 3,
+      "endColumn": 27,
+      "endLine": 8,
+      "file": "api.yaml",
+      "line": 8
+    },
+    "api#/scopes/board": {
+      "column": 3,
+      "endColumn": 42,
+      "endLine": 32,
+      "file": "api.yaml",
+      "line": 32
+    },
+    "api#/scopes/org": {
+      "column": 3,
+      "endColumn": 46,
+      "endLine": 30,
+      "file": "api.yaml",
+      "line": 30
+    },
+    "api#/scopes/project": {
+      "column": 3,
+      "endColumn": 67,
+      "endLine": 31,
+      "file": "api.yaml",
+      "line": 31
+    },
+    "api#/surfaces/app": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 85,
+      "file": "api.yaml",
+      "line": 52
+    },
+    "api#/surfaces/app/identity": {
+      "column": 5,
+      "endColumn": 21,
+      "endLine": 54,
+      "file": "api.yaml",
+      "line": 54
+    },
+    "api#/surfaces/app/requires/0": {
+      "column": 16,
+      "endColumn": 36,
+      "endLine": 56,
+      "file": "api.yaml",
+      "line": 56
+    },
+    "api#/surfaces/app/routes/projects/id/projectId": {
+      "column": 15,
+      "endColumn": 35,
+      "endLine": 60,
+      "file": "api.yaml",
+      "line": 60
+    },
+    "api#/surfaces/app/routes/projects/member/requires/0": {
+      "column": 22,
+      "endColumn": 28,
+      "endLine": 63,
+      "file": "api.yaml",
+      "line": 63
+    },
+    "api#/surfaces/app/routes/projects/member/routes/docs/collection/routes/copy": {
+      "column": 19,
+      "endColumn": 1,
+      "endLine": 81,
+      "file": "api.yaml",
+      "line": 76
+    },
+    "api#/surfaces/app/routes/projects/member/routes/docs/collection/routes/copy/headers/X-Source-Doc": {
+      "column": 32,
+      "endColumn": 51,
+      "endLine": 78,
+      "file": "api.yaml",
+      "line": 78
+    },
+    "api#/surfaces/app/routes/projects/member/routes/docs/collection/routes/copy/output": {
+      "column": 21,
+      "endColumn": 32,
+      "endLine": 80,
+      "file": "api.yaml",
+      "line": 80
+    },
+    "api#/surfaces/app/routes/projects/member/routes/docs/collection/routes/copy/requires/0": {
+      "column": 32,
+      "endColumn": 82,
+      "endLine": 79,
+      "file": "api.yaml",
+      "line": 79
+    },
+    "api#/surfaces/app/routes/projects/member/routes/docs/collection/routes/copyHome": {
+      "column": 19,
+      "endColumn": 1,
+      "endLine": 85,
+      "file": "api.yaml",
+      "line": 81
+    },
+    "api#/surfaces/app/routes/projects/member/routes/docs/collection/routes/copyHome/output": {
+      "column": 21,
+      "endColumn": 32,
+      "endLine": 84,
+      "file": "api.yaml",
+      "line": 84
+    },
+    "api#/surfaces/app/routes/projects/member/routes/docs/collection/routes/copyHome/requires/0": {
+      "column": 32,
+      "endColumn": 80,
+      "endLine": 83,
+      "file": "api.yaml",
+      "line": 83
+    },
+    "api#/surfaces/app/routes/projects/member/routes/docs/id/docId": {
+      "column": 21,
+      "endColumn": 33,
+      "endLine": 67,
+      "file": "api.yaml",
+      "line": 67
+    },
+    "api#/surfaces/app/routes/projects/member/routes/docs/item": {
+      "column": 15,
+      "endColumn": 24,
+      "endLine": 68,
+      "file": "api.yaml",
+      "line": 68
+    },
+    "api#/surfaces/app/routes/projects/member/routes/docs/ops/get": {
+      "column": 17,
+      "endColumn": 24,
+      "endLine": 70,
+      "file": "api.yaml",
+      "line": 70
+    },
+    "api#/surfaces/app/routes/projects/member/routes/docs/ops/update": {
+      "column": 17,
+      "endColumn": 1,
+      "endLine": 74,
+      "file": "api.yaml",
+      "line": 71
+    },
+    "api#/surfaces/app/routes/projects/member/routes/docs/ops/update/input": {
+      "column": 19,
+      "endColumn": 29,
+      "endLine": 72,
+      "file": "api.yaml",
+      "line": 72
+    },
+    "api#/surfaces/app/routes/projects/member/routes/docs/ops/update/requires/0": {
+      "column": 30,
+      "endColumn": 67,
+      "endLine": 73,
+      "file": "api.yaml",
+      "line": 73
+    },
+    "api#/surfaces/app/routes/projects/member/routes/docs/ops/update/requires/1": {
+      "column": 69,
+      "endColumn": 89,
+      "endLine": 73,
+      "file": "api.yaml",
+      "line": 73
+    },
+    "api#/surfaces/app/routes/projects/member/scopes/board": {
+      "column": 21,
+      "endColumn": 36,
+      "endLine": 62,
+      "file": "api.yaml",
+      "line": 62
+    },
+    "api#/surfaces/app/routes/projects/member/scopes/project": {
+      "column": 38,
+      "endColumn": 61,
+      "endLine": 62,
+      "file": "api.yaml",
+      "line": 62
+    },
+    "api#/surfaces/app/scopes/org": {
+      "column": 15,
+      "endColumn": 29,
+      "endLine": 55,
+      "file": "api.yaml",
+      "line": 55
+    }
+  }
+}

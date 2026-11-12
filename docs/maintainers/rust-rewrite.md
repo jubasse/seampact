@@ -58,7 +58,7 @@ For maintainers and contributors. This page covers why seampact's compiler and g
 
 ## How the port is checked
 
-- **The TypeScript compiler is the oracle.** A one-shot run writes each fixture's expected IR and diagnostics beside the fixture. A data-driven Rust harness runs one test per fixture against them, with no Node.js in the gate. The corpus then stays as the Rust regression suite.
+- **The TypeScript compiler is the oracle.** `node scripts/oracle/cli.ts write` compiles every fixture and writes its expected diagnostics, IR, source map and per-half deltas under `fixtures/expected/`; `check` compares, `coverage` lists the diagnostic rules no fixture triggers ([tool README](../../scripts/oracle/README.md)). A data-driven Rust harness runs one test per fixture against them, with no Node.js in the gate. The corpus then stays as the Rust regression suite.
 - **The pipeline can be dumped after each pass half**, so the halves port and check in parallel.
 - **Generated code is compared token by token** (whitespace aside) during the port. The formatting change lands once per language family, after parity.
 - **A refusal parity harness** compares the (code, pointer) refusals of the old generators across families, over the golden IRs.

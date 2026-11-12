@@ -1,0 +1,29 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "notes",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/derive/role-datum",
+          "message": "role 'forbidden' requires the datum 'pointer' on operation 'createNote', which has a rejected restricted input field, but no param of 'notes.denied' receives it",
+          "fix": "add a param 'pointer' to 'notes.denied', or bind it with params: { pointer: $pointer }",
+          "origin": {
+            "layer": "api",
+            "pointer": "/conventions/errors/derived/forbidden"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/notes/ops/create"
+              },
+              "message": "operation 'createNote' is declared here"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

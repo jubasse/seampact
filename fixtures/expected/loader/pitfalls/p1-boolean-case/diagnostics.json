@@ -1,0 +1,38 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/yaml-boolean",
+      "message": "plain 'True' is read as a boolean by YAML 1.1 parsers, or is a boolean not in lowercase (P1)",
+      "fix": "quote it ('True'), or write true or false",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/3/4"
+      },
+      "related": []
+    },
+    {
+      "severity": "error",
+      "rule": "seampact/load/yaml-boolean",
+      "message": "plain 'FALSE' is read as a boolean by YAML 1.1 parsers, or is a boolean not in lowercase (P1)",
+      "fix": "quote it ('FALSE'), or write true or false",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/4/4"
+      },
+      "related": []
+    },
+    {
+      "severity": "error",
+      "rule": "seampact/load/yaml-boolean",
+      "message": "plain 'TRUE' is read as a boolean by YAML 1.1 parsers, or is a boolean not in lowercase (P1)",
+      "fix": "quote it ('TRUE'), or write true or false",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/5/4"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

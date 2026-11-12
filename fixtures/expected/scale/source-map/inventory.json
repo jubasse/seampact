@@ -1,0 +1,6970 @@
+{
+  "irRevision": 6,
+  "locations": {
+    "api#/api": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 12,
+      "file": "inventory/api.yaml",
+      "line": 2
+    },
+    "api#/api/maturity": {
+      "column": 3,
+      "endColumn": 24,
+      "endLine": 6,
+      "file": "inventory/api.yaml",
+      "line": 6
+    },
+    "api#/api/version": {
+      "column": 3,
+      "endColumn": 13,
+      "endLine": 4,
+      "file": "inventory/api.yaml",
+      "line": 4
+    },
+    "api#/schemas/Adjustment": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 249,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 237
+    },
+    "api#/schemas/Adjustment/properties/adjustmentId": {
+      "column": 5,
+      "endColumn": 31,
+      "endLine": 241,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 241
+    },
+    "api#/schemas/Adjustment/properties/createdAt": {
+      "column": 5,
+      "endColumn": 51,
+      "endLine": 247,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 247
+    },
+    "api#/schemas/Adjustment/properties/detail": {
+      "column": 5,
+      "endColumn": 21,
+      "endLine": 245,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 245
+    },
+    "api#/schemas/Adjustment/properties/extra": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 246,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 246
+    },
+    "api#/schemas/Adjustment/properties/kind": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 244,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 244
+    },
+    "api#/schemas/Adjustment/properties/name": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 242,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 242
+    },
+    "api#/schemas/Adjustment/properties/state": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 243,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 243
+    },
+    "api#/schemas/Adjustment/properties/version": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 248,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 248
+    },
+    "api#/schemas/Bin": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 33,
+      "file": "inventory/schemas.yaml",
+      "line": 21
+    },
+    "api#/schemas/Bin/properties/binId": {
+      "column": 5,
+      "endColumn": 17,
+      "endLine": 25,
+      "file": "inventory/schemas.yaml",
+      "line": 25
+    },
+    "api#/schemas/Bin/properties/createdAt": {
+      "column": 5,
+      "endColumn": 51,
+      "endLine": 31,
+      "file": "inventory/schemas.yaml",
+      "line": 31
+    },
+    "api#/schemas/Bin/properties/detail": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 29,
+      "file": "inventory/schemas.yaml",
+      "line": 29
+    },
+    "api#/schemas/Bin/properties/extra": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 30,
+      "file": "inventory/schemas.yaml",
+      "line": 30
+    },
+    "api#/schemas/Bin/properties/kind": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 28,
+      "file": "inventory/schemas.yaml",
+      "line": 28
+    },
+    "api#/schemas/Bin/properties/name": {
+      "column": 5,
+      "endColumn": 56,
+      "endLine": 26,
+      "file": "inventory/schemas.yaml",
+      "line": 26
+    },
+    "api#/schemas/Bin/properties/state": {
+      "column": 5,
+      "endColumn": 32,
+      "endLine": 27,
+      "file": "inventory/schemas.yaml",
+      "line": 27
+    },
+    "api#/schemas/Bin/properties/version": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 32,
+      "file": "inventory/schemas.yaml",
+      "line": 32
+    },
+    "api#/schemas/Carrier": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 105,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 93
+    },
+    "api#/schemas/Carrier/properties/carrierId": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 97,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 97
+    },
+    "api#/schemas/Carrier/properties/createdAt": {
+      "column": 5,
+      "endColumn": 51,
+      "endLine": 103,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 103
+    },
+    "api#/schemas/Carrier/properties/detail": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 101,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 101
+    },
+    "api#/schemas/Carrier/properties/extra": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 102,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 102
+    },
+    "api#/schemas/Carrier/properties/kind": {
+      "column": 5,
+      "endColumn": 31,
+      "endLine": 100,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 100
+    },
+    "api#/schemas/Carrier/properties/name": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 98,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 98
+    },
+    "api#/schemas/Carrier/properties/state": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 99,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 99
+    },
+    "api#/schemas/Carrier/properties/version": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 104,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 104
+    },
+    "api#/schemas/Crate": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 39,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 27
+    },
+    "api#/schemas/Crate/properties/crateId": {
+      "column": 5,
+      "endColumn": 21,
+      "endLine": 31,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 31
+    },
+    "api#/schemas/Crate/properties/createdAt": {
+      "column": 5,
+      "endColumn": 51,
+      "endLine": 37,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 37
+    },
+    "api#/schemas/Crate/properties/detail": {
+      "column": 5,
+      "endColumn": 24,
+      "endLine": 35,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 35
+    },
+    "api#/schemas/Crate/properties/extra": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 36,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 36
+    },
+    "api#/schemas/Crate/properties/kind": {
+      "column": 5,
+      "endColumn": 26,
+      "endLine": 34,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 34
+    },
+    "api#/schemas/Crate/properties/name": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 32,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 32
+    },
+    "api#/schemas/Crate/properties/state": {
+      "column": 5,
+      "endColumn": 28,
+      "endLine": 33,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 33
+    },
+    "api#/schemas/Crate/properties/version": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 38,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 38
+    },
+    "api#/schemas/CreateAdjustment": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 251,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 249
+    },
+    "api#/schemas/CreateBin": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 35,
+      "file": "inventory/schemas.yaml",
+      "line": 33
+    },
+    "api#/schemas/CreateCarrier": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 107,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 105
+    },
+    "api#/schemas/CreateCrate": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 41,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 39
+    },
+    "api#/schemas/CreateDockDoor": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 125,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 123
+    },
+    "api#/schemas/CreateForklift": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 143,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 141
+    },
+    "api#/schemas/CreateLabel": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 179,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 177
+    },
+    "api#/schemas/CreateLot": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 65,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 63
+    },
+    "api#/schemas/CreatePallet": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 17,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 15
+    },
+    "api#/schemas/CreatePickList": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 233,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 231
+    },
+    "api#/schemas/CreateProduct": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 53,
+      "file": "inventory/schemas.yaml",
+      "line": 51
+    },
+    "api#/schemas/CreateReturnOrder": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 215,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 213
+    },
+    "api#/schemas/CreateShipment": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 81,
+      "file": "inventory/schemas.yaml",
+      "line": 79
+    },
+    "api#/schemas/CreateStockCount": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 197,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 195
+    },
+    "api#/schemas/CreateSupplier": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 89,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 87
+    },
+    "api#/schemas/CreateWarehouse": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 17,
+      "file": "inventory/schemas.yaml",
+      "line": 15
+    },
+    "api#/schemas/CreateZone": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 161,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 159
+    },
+    "api#/schemas/DispatchShipmentInput": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 88,
+      "file": "inventory/schemas.yaml",
+      "line": 84
+    },
+    "api#/schemas/DispatchShipmentInput/properties/carrierNote": {
+      "column": 17,
+      "endColumn": 76,
+      "endLine": 87,
+      "file": "inventory/schemas.yaml",
+      "line": 87
+    },
+    "api#/schemas/DockDoor": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 123,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 111
+    },
+    "api#/schemas/DockDoor/properties/createdAt": {
+      "column": 5,
+      "endColumn": 51,
+      "endLine": 121,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 121
+    },
+    "api#/schemas/DockDoor/properties/detail": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 119,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 119
+    },
+    "api#/schemas/DockDoor/properties/dockDoorId": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 115,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 115
+    },
+    "api#/schemas/DockDoor/properties/extra": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 120,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 120
+    },
+    "api#/schemas/DockDoor/properties/kind": {
+      "column": 5,
+      "endColumn": 30,
+      "endLine": 118,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 118
+    },
+    "api#/schemas/DockDoor/properties/name": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 116,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 116
+    },
+    "api#/schemas/DockDoor/properties/state": {
+      "column": 5,
+      "endColumn": 28,
+      "endLine": 117,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 117
+    },
+    "api#/schemas/DockDoor/properties/version": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 122,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 122
+    },
+    "api#/schemas/Forklift": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 141,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 129
+    },
+    "api#/schemas/Forklift/properties/createdAt": {
+      "column": 5,
+      "endColumn": 51,
+      "endLine": 139,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 139
+    },
+    "api#/schemas/Forklift/properties/detail": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 137,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 137
+    },
+    "api#/schemas/Forklift/properties/extra": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 138,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 138
+    },
+    "api#/schemas/Forklift/properties/forkliftId": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 133,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 133
+    },
+    "api#/schemas/Forklift/properties/kind": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 136,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 136
+    },
+    "api#/schemas/Forklift/properties/name": {
+      "column": 5,
+      "endColumn": 56,
+      "endLine": 134,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 134
+    },
+    "api#/schemas/Forklift/properties/state": {
+      "column": 5,
+      "endColumn": 30,
+      "endLine": 135,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 135
+    },
+    "api#/schemas/Forklift/properties/version": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 140,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 140
+    },
+    "api#/schemas/InspectCrateInput": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 50,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 44
+    },
+    "api#/schemas/InspectCrateInput/properties/notify": {
+      "column": 5,
+      "endColumn": 30,
+      "endLine": 49,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 49
+    },
+    "api#/schemas/InspectCrateInput/properties/reason": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 48,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 48
+    },
+    "api#/schemas/Label": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 177,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 165
+    },
+    "api#/schemas/Label/properties/createdAt": {
+      "column": 5,
+      "endColumn": 51,
+      "endLine": 175,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 175
+    },
+    "api#/schemas/Label/properties/detail": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 173,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 173
+    },
+    "api#/schemas/Label/properties/extra": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 174,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 174
+    },
+    "api#/schemas/Label/properties/kind": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 172,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 172
+    },
+    "api#/schemas/Label/properties/labelId": {
+      "column": 5,
+      "endColumn": 21,
+      "endLine": 169,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 169
+    },
+    "api#/schemas/Label/properties/name": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 170,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 170
+    },
+    "api#/schemas/Label/properties/state": {
+      "column": 5,
+      "endColumn": 31,
+      "endLine": 171,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 171
+    },
+    "api#/schemas/Label/properties/version": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 176,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 176
+    },
+    "api#/schemas/Lot": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 63,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 51
+    },
+    "api#/schemas/Lot/properties/createdAt": {
+      "column": 5,
+      "endColumn": 51,
+      "endLine": 61,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 61
+    },
+    "api#/schemas/Lot/properties/detail": {
+      "column": 5,
+      "endColumn": 24,
+      "endLine": 59,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 59
+    },
+    "api#/schemas/Lot/properties/extra": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 60,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 60
+    },
+    "api#/schemas/Lot/properties/kind": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 58,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 58
+    },
+    "api#/schemas/Lot/properties/lotId": {
+      "column": 5,
+      "endColumn": 17,
+      "endLine": 55,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 55
+    },
+    "api#/schemas/Lot/properties/name": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 56,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 56
+    },
+    "api#/schemas/Lot/properties/state": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 57,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 57
+    },
+    "api#/schemas/Lot/properties/version": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 62,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 62
+    },
+    "api#/schemas/Pallet": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 15,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 3
+    },
+    "api#/schemas/Pallet/properties/createdAt": {
+      "column": 5,
+      "endColumn": 51,
+      "endLine": 13,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 13
+    },
+    "api#/schemas/Pallet/properties/detail": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 11,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 11
+    },
+    "api#/schemas/Pallet/properties/extra": {
+      "column": 5,
+      "endColumn": 24,
+      "endLine": 12,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 12
+    },
+    "api#/schemas/Pallet/properties/kind": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 10,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 10
+    },
+    "api#/schemas/Pallet/properties/name": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 8,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 8
+    },
+    "api#/schemas/Pallet/properties/palletId": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 7,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 7
+    },
+    "api#/schemas/Pallet/properties/state": {
+      "column": 5,
+      "endColumn": 26,
+      "endLine": 9,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 9
+    },
+    "api#/schemas/Pallet/properties/version": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 14,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 14
+    },
+    "api#/schemas/PickList": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 231,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 219
+    },
+    "api#/schemas/PickList/properties/createdAt": {
+      "column": 5,
+      "endColumn": 51,
+      "endLine": 229,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 229
+    },
+    "api#/schemas/PickList/properties/detail": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 227,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 227
+    },
+    "api#/schemas/PickList/properties/extra": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 228,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 228
+    },
+    "api#/schemas/PickList/properties/kind": {
+      "column": 5,
+      "endColumn": 26,
+      "endLine": 226,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 226
+    },
+    "api#/schemas/PickList/properties/name": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 224,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 224
+    },
+    "api#/schemas/PickList/properties/pickListId": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 223,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 223
+    },
+    "api#/schemas/PickList/properties/state": {
+      "column": 5,
+      "endColumn": 28,
+      "endLine": 225,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 225
+    },
+    "api#/schemas/PickList/properties/version": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 230,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 230
+    },
+    "api#/schemas/Product": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 51,
+      "file": "inventory/schemas.yaml",
+      "line": 39
+    },
+    "api#/schemas/Product/properties/createdAt": {
+      "column": 5,
+      "endColumn": 51,
+      "endLine": 49,
+      "file": "inventory/schemas.yaml",
+      "line": 49
+    },
+    "api#/schemas/Product/properties/detail": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 47,
+      "file": "inventory/schemas.yaml",
+      "line": 47
+    },
+    "api#/schemas/Product/properties/extra": {
+      "column": 5,
+      "endColumn": 19,
+      "endLine": 48,
+      "file": "inventory/schemas.yaml",
+      "line": 48
+    },
+    "api#/schemas/Product/properties/kind": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 46,
+      "file": "inventory/schemas.yaml",
+      "line": 46
+    },
+    "api#/schemas/Product/properties/name": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 44,
+      "file": "inventory/schemas.yaml",
+      "line": 44
+    },
+    "api#/schemas/Product/properties/productId": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 43,
+      "file": "inventory/schemas.yaml",
+      "line": 43
+    },
+    "api#/schemas/Product/properties/state": {
+      "column": 5,
+      "endColumn": 31,
+      "endLine": 45,
+      "file": "inventory/schemas.yaml",
+      "line": 45
+    },
+    "api#/schemas/Product/properties/version": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 50,
+      "file": "inventory/schemas.yaml",
+      "line": 50
+    },
+    "api#/schemas/QuarantineLotInput": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 74,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 68
+    },
+    "api#/schemas/QuarantineLotInput/properties/notify": {
+      "column": 5,
+      "endColumn": 30,
+      "endLine": 73,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 73
+    },
+    "api#/schemas/QuarantineLotInput/properties/reason": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 72,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 72
+    },
+    "api#/schemas/ReleaseProductInput": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 66,
+      "file": "inventory/schemas.yaml",
+      "line": 62
+    },
+    "api#/schemas/ReleaseProductInput/properties/quantity": {
+      "column": 17,
+      "endColumn": 72,
+      "endLine": 65,
+      "file": "inventory/schemas.yaml",
+      "line": 65
+    },
+    "api#/schemas/ReserveProductInput": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 62,
+      "file": "inventory/schemas.yaml",
+      "line": 56
+    },
+    "api#/schemas/ReserveProductInput/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 60,
+      "file": "inventory/schemas.yaml",
+      "line": 60
+    },
+    "api#/schemas/ReserveProductInput/properties/reason": {
+      "column": 5,
+      "endColumn": 45,
+      "endLine": 61,
+      "file": "inventory/schemas.yaml",
+      "line": 61
+    },
+    "api#/schemas/ReturnOrder": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 213,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 201
+    },
+    "api#/schemas/ReturnOrder/properties/createdAt": {
+      "column": 5,
+      "endColumn": 51,
+      "endLine": 211,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 211
+    },
+    "api#/schemas/ReturnOrder/properties/detail": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 209,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 209
+    },
+    "api#/schemas/ReturnOrder/properties/extra": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 210,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 210
+    },
+    "api#/schemas/ReturnOrder/properties/kind": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 208,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 208
+    },
+    "api#/schemas/ReturnOrder/properties/name": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 206,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 206
+    },
+    "api#/schemas/ReturnOrder/properties/returnOrderId": {
+      "column": 5,
+      "endColumn": 33,
+      "endLine": 205,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 205
+    },
+    "api#/schemas/ReturnOrder/properties/state": {
+      "column": 5,
+      "endColumn": 26,
+      "endLine": 207,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 207
+    },
+    "api#/schemas/ReturnOrder/properties/version": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 212,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 212
+    },
+    "api#/schemas/SealPalletInput": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 26,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 20
+    },
+    "api#/schemas/SealPalletInput/properties/notify": {
+      "column": 5,
+      "endColumn": 30,
+      "endLine": 25,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 25
+    },
+    "api#/schemas/SealPalletInput/properties/reason": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 24,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 24
+    },
+    "api#/schemas/Shipment": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 79,
+      "file": "inventory/schemas.yaml",
+      "line": 67
+    },
+    "api#/schemas/Shipment/properties/createdAt": {
+      "column": 5,
+      "endColumn": 51,
+      "endLine": 77,
+      "file": "inventory/schemas.yaml",
+      "line": 77
+    },
+    "api#/schemas/Shipment/properties/detail": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 75,
+      "file": "inventory/schemas.yaml",
+      "line": 75
+    },
+    "api#/schemas/Shipment/properties/extra": {
+      "column": 5,
+      "endColumn": 20,
+      "endLine": 76,
+      "file": "inventory/schemas.yaml",
+      "line": 76
+    },
+    "api#/schemas/Shipment/properties/kind": {
+      "column": 5,
+      "endColumn": 26,
+      "endLine": 74,
+      "file": "inventory/schemas.yaml",
+      "line": 74
+    },
+    "api#/schemas/Shipment/properties/name": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 72,
+      "file": "inventory/schemas.yaml",
+      "line": 72
+    },
+    "api#/schemas/Shipment/properties/shipmentId": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 71,
+      "file": "inventory/schemas.yaml",
+      "line": 71
+    },
+    "api#/schemas/Shipment/properties/state": {
+      "column": 5,
+      "endColumn": 30,
+      "endLine": 73,
+      "file": "inventory/schemas.yaml",
+      "line": 73
+    },
+    "api#/schemas/Shipment/properties/version": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 78,
+      "file": "inventory/schemas.yaml",
+      "line": 78
+    },
+    "api#/schemas/StockCount": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 195,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 183
+    },
+    "api#/schemas/StockCount/properties/createdAt": {
+      "column": 5,
+      "endColumn": 51,
+      "endLine": 193,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 193
+    },
+    "api#/schemas/StockCount/properties/detail": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 191,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 191
+    },
+    "api#/schemas/StockCount/properties/extra": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 192,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 192
+    },
+    "api#/schemas/StockCount/properties/kind": {
+      "column": 5,
+      "endColumn": 26,
+      "endLine": 190,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 190
+    },
+    "api#/schemas/StockCount/properties/name": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 188,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 188
+    },
+    "api#/schemas/StockCount/properties/state": {
+      "column": 5,
+      "endColumn": 30,
+      "endLine": 189,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 189
+    },
+    "api#/schemas/StockCount/properties/stockCountId": {
+      "column": 5,
+      "endColumn": 31,
+      "endLine": 187,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 187
+    },
+    "api#/schemas/StockCount/properties/version": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 194,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 194
+    },
+    "api#/schemas/Supplier": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 87,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 75
+    },
+    "api#/schemas/Supplier/properties/createdAt": {
+      "column": 5,
+      "endColumn": 51,
+      "endLine": 85,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 85
+    },
+    "api#/schemas/Supplier/properties/detail": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 83,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 83
+    },
+    "api#/schemas/Supplier/properties/extra": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 84,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 84
+    },
+    "api#/schemas/Supplier/properties/kind": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 82,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 82
+    },
+    "api#/schemas/Supplier/properties/name": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 80,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 80
+    },
+    "api#/schemas/Supplier/properties/state": {
+      "column": 5,
+      "endColumn": 28,
+      "endLine": 81,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 81
+    },
+    "api#/schemas/Supplier/properties/supplierId": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 79,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 79
+    },
+    "api#/schemas/Supplier/properties/version": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 86,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 86
+    },
+    "api#/schemas/UpdateAdjustment": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 254,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 251
+    },
+    "api#/schemas/UpdateBin": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 38,
+      "file": "inventory/schemas.yaml",
+      "line": 35
+    },
+    "api#/schemas/UpdateCarrier": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 110,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 107
+    },
+    "api#/schemas/UpdateCrate": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 44,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 41
+    },
+    "api#/schemas/UpdateDockDoor": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 128,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 125
+    },
+    "api#/schemas/UpdateForklift": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 146,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 143
+    },
+    "api#/schemas/UpdateLabel": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 182,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 179
+    },
+    "api#/schemas/UpdateLot": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 68,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 65
+    },
+    "api#/schemas/UpdatePallet": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 20,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 17
+    },
+    "api#/schemas/UpdatePickList": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 236,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 233
+    },
+    "api#/schemas/UpdateProduct": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 56,
+      "file": "inventory/schemas.yaml",
+      "line": 53
+    },
+    "api#/schemas/UpdateReturnOrder": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 218,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 215
+    },
+    "api#/schemas/UpdateShipment": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 84,
+      "file": "inventory/schemas.yaml",
+      "line": 81
+    },
+    "api#/schemas/UpdateStockCount": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 200,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 197
+    },
+    "api#/schemas/UpdateSupplier": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 92,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 89
+    },
+    "api#/schemas/UpdateWarehouse": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 20,
+      "file": "inventory/schemas.yaml",
+      "line": 17
+    },
+    "api#/schemas/UpdateZone": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 164,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 161
+    },
+    "api#/schemas/Warehouse": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 15,
+      "file": "inventory/schemas.yaml",
+      "line": 3
+    },
+    "api#/schemas/Warehouse/properties/createdAt": {
+      "column": 5,
+      "endColumn": 51,
+      "endLine": 13,
+      "file": "inventory/schemas.yaml",
+      "line": 13
+    },
+    "api#/schemas/Warehouse/properties/detail": {
+      "column": 5,
+      "endColumn": 24,
+      "endLine": 11,
+      "file": "inventory/schemas.yaml",
+      "line": 11
+    },
+    "api#/schemas/Warehouse/properties/extra": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 12,
+      "file": "inventory/schemas.yaml",
+      "line": 12
+    },
+    "api#/schemas/Warehouse/properties/kind": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 10,
+      "file": "inventory/schemas.yaml",
+      "line": 10
+    },
+    "api#/schemas/Warehouse/properties/name": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 8,
+      "file": "inventory/schemas.yaml",
+      "line": 8
+    },
+    "api#/schemas/Warehouse/properties/state": {
+      "column": 5,
+      "endColumn": 30,
+      "endLine": 9,
+      "file": "inventory/schemas.yaml",
+      "line": 9
+    },
+    "api#/schemas/Warehouse/properties/version": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 14,
+      "file": "inventory/schemas.yaml",
+      "line": 14
+    },
+    "api#/schemas/Warehouse/properties/warehouseId": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 7,
+      "file": "inventory/schemas.yaml",
+      "line": 7
+    },
+    "api#/schemas/Zone": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 159,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 147
+    },
+    "api#/schemas/Zone/properties/createdAt": {
+      "column": 5,
+      "endColumn": 51,
+      "endLine": 157,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 157
+    },
+    "api#/schemas/Zone/properties/detail": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 155,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 155
+    },
+    "api#/schemas/Zone/properties/extra": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 156,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 156
+    },
+    "api#/schemas/Zone/properties/kind": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 154,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 154
+    },
+    "api#/schemas/Zone/properties/name": {
+      "column": 5,
+      "endColumn": 56,
+      "endLine": 152,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 152
+    },
+    "api#/schemas/Zone/properties/state": {
+      "column": 5,
+      "endColumn": 32,
+      "endLine": 153,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 153
+    },
+    "api#/schemas/Zone/properties/version": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 158,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 158
+    },
+    "api#/schemas/Zone/properties/zoneId": {
+      "column": 5,
+      "endColumn": 19,
+      "endLine": 151,
+      "file": "inventory/generated/schemas.yaml",
+      "line": 151
+    },
+    "api#/surfaces/app": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 122,
+      "file": "inventory/api.yaml",
+      "line": 21
+    },
+    "api#/surfaces/app/identity": {
+      "column": 5,
+      "endColumn": 19,
+      "endLine": 23,
+      "file": "inventory/api.yaml",
+      "line": 23
+    },
+    "api#/surfaces/app/routes/accounts/id/accountId": {
+      "column": 15,
+      "endColumn": 35,
+      "endLine": 27,
+      "file": "inventory/api.yaml",
+      "line": 27
+    },
+    "api#/surfaces/app/routes/accounts/item": {
+      "column": 9,
+      "endColumn": 22,
+      "endLine": 28,
+      "file": "inventory/api.yaml",
+      "line": 28
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/products/id/productId": {
+      "column": 21,
+      "endColumn": 41,
+      "endLine": 73,
+      "file": "inventory/api.yaml",
+      "line": 73
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/products/item": {
+      "column": 15,
+      "endColumn": 28,
+      "endLine": 74,
+      "file": "inventory/api.yaml",
+      "line": 74
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/products/member/routes/release": {
+      "column": 19,
+      "endColumn": 1,
+      "endLine": 99,
+      "file": "inventory/api.yaml",
+      "line": 94
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/products/member/routes/release/input": {
+      "column": 21,
+      "endColumn": 47,
+      "endLine": 97,
+      "file": "inventory/api.yaml",
+      "line": 97
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/products/member/routes/release/output": {
+      "column": 21,
+      "endColumn": 36,
+      "endLine": 98,
+      "file": "inventory/api.yaml",
+      "line": 98
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/products/member/routes/release/requires/0": {
+      "column": 32,
+      "endColumn": 45,
+      "endLine": 96,
+      "file": "inventory/api.yaml",
+      "line": 96
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/products/member/routes/reserve": {
+      "column": 19,
+      "endColumn": 1,
+      "endLine": 94,
+      "file": "inventory/api.yaml",
+      "line": 89
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/products/member/routes/reserve/input": {
+      "column": 21,
+      "endColumn": 47,
+      "endLine": 92,
+      "file": "inventory/api.yaml",
+      "line": 92
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/products/member/routes/reserve/output": {
+      "column": 21,
+      "endColumn": 36,
+      "endLine": 93,
+      "file": "inventory/api.yaml",
+      "line": 93
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/products/member/routes/reserve/requires/0": {
+      "column": 32,
+      "endColumn": 45,
+      "endLine": 91,
+      "file": "inventory/api.yaml",
+      "line": 91
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/products/ops/create": {
+      "column": 17,
+      "endColumn": 1,
+      "endLine": 85,
+      "file": "inventory/api.yaml",
+      "line": 80
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/products/ops/create/input": {
+      "column": 19,
+      "endColumn": 39,
+      "endLine": 81,
+      "file": "inventory/api.yaml",
+      "line": 81
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/products/ops/create/requires/0": {
+      "column": 30,
+      "endColumn": 43,
+      "endLine": 82,
+      "file": "inventory/api.yaml",
+      "line": 82
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/products/ops/create/requires/1": {
+      "column": 45,
+      "endColumn": 58,
+      "endLine": 82,
+      "file": "inventory/api.yaml",
+      "line": 82
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/products/ops/delete": {
+      "column": 17,
+      "endColumn": 54,
+      "endLine": 86,
+      "file": "inventory/api.yaml",
+      "line": 86
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/products/ops/delete/requires/0": {
+      "column": 38,
+      "endColumn": 51,
+      "endLine": 86,
+      "file": "inventory/api.yaml",
+      "line": 86
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/products/ops/get": {
+      "column": 17,
+      "endColumn": 64,
+      "endLine": 79,
+      "file": "inventory/api.yaml",
+      "line": 79
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/products/ops/get/cache": {
+      "column": 24,
+      "endColumn": 62,
+      "endLine": 79,
+      "file": "inventory/api.yaml",
+      "line": 79
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/products/ops/list": {
+      "column": 17,
+      "endColumn": 1,
+      "endLine": 79,
+      "file": "inventory/api.yaml",
+      "line": 76
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/products/ops/list/paging": {
+      "column": 19,
+      "endColumn": 55,
+      "endLine": 77,
+      "file": "inventory/api.yaml",
+      "line": 77
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/products/ops/list/sortable/0": {
+      "column": 30,
+      "endColumn": 39,
+      "endLine": 78,
+      "file": "inventory/api.yaml",
+      "line": 78
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/products/ops/update": {
+      "column": 17,
+      "endColumn": 76,
+      "endLine": 85,
+      "file": "inventory/api.yaml",
+      "line": 85
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/products/ops/update/input": {
+      "column": 27,
+      "endColumn": 47,
+      "endLine": 85,
+      "file": "inventory/api.yaml",
+      "line": 85
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/products/ops/update/requires/0": {
+      "column": 60,
+      "endColumn": 73,
+      "endLine": 85,
+      "file": "inventory/api.yaml",
+      "line": 85
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/shipments/id/shipmentId": {
+      "column": 21,
+      "endColumn": 43,
+      "endLine": 101,
+      "file": "inventory/api.yaml",
+      "line": 101
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/shipments/item": {
+      "column": 15,
+      "endColumn": 29,
+      "endLine": 102,
+      "file": "inventory/api.yaml",
+      "line": 102
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/shipments/member/routes/dispatch": {
+      "column": 19,
+      "endColumn": 1,
+      "endLine": 122,
+      "file": "inventory/api.yaml",
+      "line": 117
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/shipments/member/routes/dispatch/input": {
+      "column": 21,
+      "endColumn": 49,
+      "endLine": 120,
+      "file": "inventory/api.yaml",
+      "line": 120
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/shipments/member/routes/dispatch/output": {
+      "column": 21,
+      "endColumn": 37,
+      "endLine": 121,
+      "file": "inventory/api.yaml",
+      "line": 121
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/shipments/member/routes/dispatch/requires/0": {
+      "column": 32,
+      "endColumn": 45,
+      "endLine": 119,
+      "file": "inventory/api.yaml",
+      "line": 119
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/shipments/ops/create": {
+      "column": 17,
+      "endColumn": 1,
+      "endLine": 113,
+      "file": "inventory/api.yaml",
+      "line": 108
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/shipments/ops/create/input": {
+      "column": 19,
+      "endColumn": 40,
+      "endLine": 109,
+      "file": "inventory/api.yaml",
+      "line": 109
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/shipments/ops/create/requires/0": {
+      "column": 30,
+      "endColumn": 43,
+      "endLine": 110,
+      "file": "inventory/api.yaml",
+      "line": 110
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/shipments/ops/create/requires/1": {
+      "column": 45,
+      "endColumn": 58,
+      "endLine": 110,
+      "file": "inventory/api.yaml",
+      "line": 110
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/shipments/ops/delete": {
+      "column": 17,
+      "endColumn": 54,
+      "endLine": 114,
+      "file": "inventory/api.yaml",
+      "line": 114
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/shipments/ops/delete/requires/0": {
+      "column": 38,
+      "endColumn": 51,
+      "endLine": 114,
+      "file": "inventory/api.yaml",
+      "line": 114
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/shipments/ops/get": {
+      "column": 17,
+      "endColumn": 24,
+      "endLine": 107,
+      "file": "inventory/api.yaml",
+      "line": 107
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/shipments/ops/list": {
+      "column": 17,
+      "endColumn": 1,
+      "endLine": 107,
+      "file": "inventory/api.yaml",
+      "line": 104
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/shipments/ops/list/paging": {
+      "column": 19,
+      "endColumn": 55,
+      "endLine": 105,
+      "file": "inventory/api.yaml",
+      "line": 105
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/shipments/ops/list/sortable/0": {
+      "column": 30,
+      "endColumn": 39,
+      "endLine": 106,
+      "file": "inventory/api.yaml",
+      "line": 106
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/shipments/ops/update": {
+      "column": 17,
+      "endColumn": 77,
+      "endLine": 113,
+      "file": "inventory/api.yaml",
+      "line": 113
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/shipments/ops/update/input": {
+      "column": 27,
+      "endColumn": 48,
+      "endLine": 113,
+      "file": "inventory/api.yaml",
+      "line": 113
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/shipments/ops/update/requires/0": {
+      "column": 61,
+      "endColumn": 74,
+      "endLine": 113,
+      "file": "inventory/api.yaml",
+      "line": 113
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/warehouses": {
+      "column": 13,
+      "endColumn": 1,
+      "endLine": 71,
+      "file": "inventory/api.yaml",
+      "line": 33
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/warehouses/collection/routes/bins": {
+      "column": 19,
+      "endColumn": 1,
+      "endLine": 71,
+      "file": "inventory/api.yaml",
+      "line": 54
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/warehouses/collection/routes/bins/id/binId": {
+      "column": 27,
+      "endColumn": 39,
+      "endLine": 56,
+      "file": "inventory/api.yaml",
+      "line": 56
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/warehouses/collection/routes/bins/item": {
+      "column": 21,
+      "endColumn": 30,
+      "endLine": 57,
+      "file": "inventory/api.yaml",
+      "line": 57
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/warehouses/collection/routes/bins/ops/create": {
+      "column": 23,
+      "endColumn": 1,
+      "endLine": 69,
+      "file": "inventory/api.yaml",
+      "line": 64
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/warehouses/collection/routes/bins/ops/create/input": {
+      "column": 25,
+      "endColumn": 41,
+      "endLine": 65,
+      "file": "inventory/api.yaml",
+      "line": 65
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/warehouses/collection/routes/bins/ops/create/requires/0": {
+      "column": 36,
+      "endColumn": 49,
+      "endLine": 66,
+      "file": "inventory/api.yaml",
+      "line": 66
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/warehouses/collection/routes/bins/ops/create/requires/1": {
+      "column": 51,
+      "endColumn": 64,
+      "endLine": 66,
+      "file": "inventory/api.yaml",
+      "line": 66
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/warehouses/collection/routes/bins/ops/delete": {
+      "column": 23,
+      "endColumn": 60,
+      "endLine": 70,
+      "file": "inventory/api.yaml",
+      "line": 70
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/warehouses/collection/routes/bins/ops/delete/requires/0": {
+      "column": 44,
+      "endColumn": 57,
+      "endLine": 70,
+      "file": "inventory/api.yaml",
+      "line": 70
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/warehouses/collection/routes/bins/ops/get": {
+      "column": 23,
+      "endColumn": 30,
+      "endLine": 63,
+      "file": "inventory/api.yaml",
+      "line": 63
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/warehouses/collection/routes/bins/ops/list": {
+      "column": 23,
+      "endColumn": 70,
+      "endLine": 62,
+      "file": "inventory/api.yaml",
+      "line": 62
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/warehouses/collection/routes/bins/ops/list/paging": {
+      "column": 31,
+      "endColumn": 68,
+      "endLine": 62,
+      "file": "inventory/api.yaml",
+      "line": 62
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/warehouses/collection/routes/bins/ops/update": {
+      "column": 23,
+      "endColumn": 78,
+      "endLine": 69,
+      "file": "inventory/api.yaml",
+      "line": 69
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/warehouses/collection/routes/bins/ops/update/input": {
+      "column": 33,
+      "endColumn": 49,
+      "endLine": 69,
+      "file": "inventory/api.yaml",
+      "line": 69
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/warehouses/collection/routes/bins/ops/update/requires/0": {
+      "column": 62,
+      "endColumn": 75,
+      "endLine": 69,
+      "file": "inventory/api.yaml",
+      "line": 69
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/warehouses/id/warehouseId": {
+      "column": 21,
+      "endColumn": 45,
+      "endLine": 35,
+      "file": "inventory/api.yaml",
+      "line": 35
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/warehouses/item": {
+      "column": 15,
+      "endColumn": 30,
+      "endLine": 36,
+      "file": "inventory/api.yaml",
+      "line": 36
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/warehouses/ops/create": {
+      "column": 17,
+      "endColumn": 1,
+      "endLine": 50,
+      "file": "inventory/api.yaml",
+      "line": 45
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/warehouses/ops/create/input": {
+      "column": 19,
+      "endColumn": 41,
+      "endLine": 46,
+      "file": "inventory/api.yaml",
+      "line": 46
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/warehouses/ops/create/requires/0": {
+      "column": 30,
+      "endColumn": 43,
+      "endLine": 47,
+      "file": "inventory/api.yaml",
+      "line": 47
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/warehouses/ops/create/requires/1": {
+      "column": 45,
+      "endColumn": 58,
+      "endLine": 47,
+      "file": "inventory/api.yaml",
+      "line": 47
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/warehouses/ops/delete": {
+      "column": 17,
+      "endColumn": 54,
+      "endLine": 51,
+      "file": "inventory/api.yaml",
+      "line": 51
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/warehouses/ops/delete/requires/0": {
+      "column": 38,
+      "endColumn": 51,
+      "endLine": 51,
+      "file": "inventory/api.yaml",
+      "line": 51
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/warehouses/ops/get": {
+      "column": 17,
+      "endColumn": 66,
+      "endLine": 44,
+      "file": "inventory/api.yaml",
+      "line": 44
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/warehouses/ops/get/cache": {
+      "column": 24,
+      "endColumn": 64,
+      "endLine": 44,
+      "file": "inventory/api.yaml",
+      "line": 44
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/warehouses/ops/list": {
+      "column": 17,
+      "endColumn": 1,
+      "endLine": 44,
+      "file": "inventory/api.yaml",
+      "line": 41
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/warehouses/ops/list/paging": {
+      "column": 19,
+      "endColumn": 55,
+      "endLine": 42,
+      "file": "inventory/api.yaml",
+      "line": 42
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/warehouses/ops/list/sortable/0": {
+      "column": 30,
+      "endColumn": 39,
+      "endLine": 43,
+      "file": "inventory/api.yaml",
+      "line": 43
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/warehouses/ops/update": {
+      "column": 17,
+      "endColumn": 78,
+      "endLine": 50,
+      "file": "inventory/api.yaml",
+      "line": 50
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/warehouses/ops/update/input": {
+      "column": 27,
+      "endColumn": 49,
+      "endLine": 50,
+      "file": "inventory/api.yaml",
+      "line": 50
+    },
+    "api#/surfaces/app/routes/accounts/member/routes/warehouses/ops/update/requires/0": {
+      "column": 62,
+      "endColumn": 75,
+      "endLine": 50,
+      "file": "inventory/api.yaml",
+      "line": 50
+    },
+    "api#/surfaces/app/routes/accounts/member/scopes/account": {
+      "column": 21,
+      "endColumn": 44,
+      "endLine": 31,
+      "file": "inventory/api.yaml",
+      "line": 31
+    },
+    "api#/surfaces/app/routes/accounts/ops/0": {
+      "column": 15,
+      "endColumn": 19,
+      "endLine": 29,
+      "file": "inventory/api.yaml",
+      "line": 29
+    },
+    "api#/surfaces/bulk": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 325,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 2
+    },
+    "api#/surfaces/bulk/identity": {
+      "column": 3,
+      "endColumn": 17,
+      "endLine": 4,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 4
+    },
+    "api#/surfaces/bulk/routes/tenants/id/accountId": {
+      "column": 13,
+      "endColumn": 33,
+      "endLine": 8,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 8
+    },
+    "api#/surfaces/bulk/routes/tenants/item": {
+      "column": 7,
+      "endColumn": 20,
+      "endLine": 9,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 9
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/adjustments": {
+      "column": 11,
+      "endColumn": 1,
+      "endLine": 325,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 303
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/adjustments/id/adjustmentId": {
+      "column": 19,
+      "endColumn": 45,
+      "endLine": 305,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 305
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/adjustments/item": {
+      "column": 13,
+      "endColumn": 29,
+      "endLine": 306,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 306
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/adjustments/ops/create": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 323,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 318
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/adjustments/ops/create/input": {
+      "column": 17,
+      "endColumn": 40,
+      "endLine": 319,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 319
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/adjustments/ops/create/requires/0": {
+      "column": 28,
+      "endColumn": 41,
+      "endLine": 320,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 320
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/adjustments/ops/create/requires/1": {
+      "column": 43,
+      "endColumn": 56,
+      "endLine": 320,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 320
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/adjustments/ops/delete": {
+      "column": 15,
+      "endColumn": 52,
+      "endLine": 324,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 324
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/adjustments/ops/delete/requires/0": {
+      "column": 36,
+      "endColumn": 49,
+      "endLine": 324,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 324
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/adjustments/ops/get": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 318,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 313
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/adjustments/ops/list": {
+      "column": 15,
+      "endColumn": 23,
+      "endLine": 312,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 312
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/adjustments/ops/update": {
+      "column": 15,
+      "endColumn": 77,
+      "endLine": 323,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 323
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/adjustments/ops/update/input": {
+      "column": 25,
+      "endColumn": 48,
+      "endLine": 323,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 323
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/adjustments/ops/update/requires/0": {
+      "column": 61,
+      "endColumn": 74,
+      "endLine": 323,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 323
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/carriers": {
+      "column": 11,
+      "endColumn": 1,
+      "endLine": 149,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 127
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/carriers/id/carrierId": {
+      "column": 19,
+      "endColumn": 39,
+      "endLine": 129,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 129
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/carriers/item": {
+      "column": 13,
+      "endColumn": 26,
+      "endLine": 130,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 130
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/carriers/ops/create": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 147,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 142
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/carriers/ops/create/input": {
+      "column": 17,
+      "endColumn": 37,
+      "endLine": 143,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 143
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/carriers/ops/create/requires/0": {
+      "column": 28,
+      "endColumn": 41,
+      "endLine": 144,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 144
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/carriers/ops/create/requires/1": {
+      "column": 43,
+      "endColumn": 56,
+      "endLine": 144,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 144
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/carriers/ops/delete": {
+      "column": 15,
+      "endColumn": 52,
+      "endLine": 148,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 148
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/carriers/ops/delete/requires/0": {
+      "column": 36,
+      "endColumn": 49,
+      "endLine": 148,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 148
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/carriers/ops/get": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 142,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 137
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/carriers/ops/list": {
+      "column": 15,
+      "endColumn": 23,
+      "endLine": 136,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 136
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/carriers/ops/update": {
+      "column": 15,
+      "endColumn": 74,
+      "endLine": 147,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 147
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/carriers/ops/update/input": {
+      "column": 25,
+      "endColumn": 45,
+      "endLine": 147,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 147
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/carriers/ops/update/requires/0": {
+      "column": 58,
+      "endColumn": 71,
+      "endLine": 147,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 147
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/crates": {
+      "column": 11,
+      "endColumn": 1,
+      "endLine": 76,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 45
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/crates/id/crateId": {
+      "column": 19,
+      "endColumn": 35,
+      "endLine": 47,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 47
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/crates/item": {
+      "column": 13,
+      "endColumn": 24,
+      "endLine": 48,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 48
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/crates/member/routes/inspect": {
+      "column": 17,
+      "endColumn": 1,
+      "endLine": 76,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 71
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/crates/member/routes/inspect/input": {
+      "column": 19,
+      "endColumn": 43,
+      "endLine": 73,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 73
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/crates/member/routes/inspect/output": {
+      "column": 19,
+      "endColumn": 32,
+      "endLine": 74,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 74
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/crates/member/routes/inspect/requires/0": {
+      "column": 30,
+      "endColumn": 43,
+      "endLine": 75,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 75
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/crates/ops/create": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 67,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 62
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/crates/ops/create/input": {
+      "column": 17,
+      "endColumn": 35,
+      "endLine": 63,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 63
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/crates/ops/create/requires/0": {
+      "column": 28,
+      "endColumn": 41,
+      "endLine": 64,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 64
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/crates/ops/create/requires/1": {
+      "column": 43,
+      "endColumn": 56,
+      "endLine": 64,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 64
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/crates/ops/delete": {
+      "column": 15,
+      "endColumn": 52,
+      "endLine": 68,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 68
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/crates/ops/delete/requires/0": {
+      "column": 36,
+      "endColumn": 49,
+      "endLine": 68,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 68
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/crates/ops/get": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 62,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 56
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/crates/ops/list": {
+      "column": 15,
+      "endColumn": 23,
+      "endLine": 55,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 55
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/crates/ops/update": {
+      "column": 15,
+      "endColumn": 72,
+      "endLine": 67,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 67
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/crates/ops/update/input": {
+      "column": 25,
+      "endColumn": 43,
+      "endLine": 67,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 67
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/crates/ops/update/requires/0": {
+      "column": 56,
+      "endColumn": 69,
+      "endLine": 67,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 67
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/dockDoors": {
+      "column": 11,
+      "endColumn": 1,
+      "endLine": 171,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 149
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/dockDoors/id/dockDoorId": {
+      "column": 19,
+      "endColumn": 41,
+      "endLine": 151,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 151
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/dockDoors/item": {
+      "column": 13,
+      "endColumn": 27,
+      "endLine": 152,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 152
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/dockDoors/ops/create": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 169,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 164
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/dockDoors/ops/create/input": {
+      "column": 17,
+      "endColumn": 38,
+      "endLine": 165,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 165
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/dockDoors/ops/create/requires/0": {
+      "column": 28,
+      "endColumn": 41,
+      "endLine": 166,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 166
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/dockDoors/ops/create/requires/1": {
+      "column": 43,
+      "endColumn": 56,
+      "endLine": 166,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 166
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/dockDoors/ops/delete": {
+      "column": 15,
+      "endColumn": 52,
+      "endLine": 170,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 170
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/dockDoors/ops/delete/requires/0": {
+      "column": 36,
+      "endColumn": 49,
+      "endLine": 170,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 170
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/dockDoors/ops/get": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 164,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 159
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/dockDoors/ops/list": {
+      "column": 15,
+      "endColumn": 23,
+      "endLine": 158,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 158
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/dockDoors/ops/update": {
+      "column": 15,
+      "endColumn": 75,
+      "endLine": 169,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 169
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/dockDoors/ops/update/input": {
+      "column": 25,
+      "endColumn": 46,
+      "endLine": 169,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 169
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/dockDoors/ops/update/requires/0": {
+      "column": 59,
+      "endColumn": 72,
+      "endLine": 169,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 169
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/forklifts": {
+      "column": 11,
+      "endColumn": 1,
+      "endLine": 193,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 171
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/forklifts/id/forkliftId": {
+      "column": 19,
+      "endColumn": 41,
+      "endLine": 173,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 173
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/forklifts/item": {
+      "column": 13,
+      "endColumn": 27,
+      "endLine": 174,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 174
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/forklifts/ops/create": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 191,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 186
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/forklifts/ops/create/input": {
+      "column": 17,
+      "endColumn": 38,
+      "endLine": 187,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 187
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/forklifts/ops/create/requires/0": {
+      "column": 28,
+      "endColumn": 41,
+      "endLine": 188,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 188
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/forklifts/ops/create/requires/1": {
+      "column": 43,
+      "endColumn": 56,
+      "endLine": 188,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 188
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/forklifts/ops/delete": {
+      "column": 15,
+      "endColumn": 52,
+      "endLine": 192,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 192
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/forklifts/ops/delete/requires/0": {
+      "column": 36,
+      "endColumn": 49,
+      "endLine": 192,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 192
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/forklifts/ops/get": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 186,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 181
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/forklifts/ops/list": {
+      "column": 15,
+      "endColumn": 23,
+      "endLine": 180,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 180
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/forklifts/ops/update": {
+      "column": 15,
+      "endColumn": 75,
+      "endLine": 191,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 191
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/forklifts/ops/update/input": {
+      "column": 25,
+      "endColumn": 46,
+      "endLine": 191,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 191
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/forklifts/ops/update/requires/0": {
+      "column": 59,
+      "endColumn": 72,
+      "endLine": 191,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 191
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/labels": {
+      "column": 11,
+      "endColumn": 1,
+      "endLine": 237,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 215
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/labels/id/labelId": {
+      "column": 19,
+      "endColumn": 35,
+      "endLine": 217,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 217
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/labels/item": {
+      "column": 13,
+      "endColumn": 24,
+      "endLine": 218,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 218
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/labels/ops/create": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 235,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 230
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/labels/ops/create/input": {
+      "column": 17,
+      "endColumn": 35,
+      "endLine": 231,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 231
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/labels/ops/create/requires/0": {
+      "column": 28,
+      "endColumn": 41,
+      "endLine": 232,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 232
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/labels/ops/create/requires/1": {
+      "column": 43,
+      "endColumn": 56,
+      "endLine": 232,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 232
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/labels/ops/delete": {
+      "column": 15,
+      "endColumn": 52,
+      "endLine": 236,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 236
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/labels/ops/delete/requires/0": {
+      "column": 36,
+      "endColumn": 49,
+      "endLine": 236,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 236
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/labels/ops/get": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 230,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 225
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/labels/ops/list": {
+      "column": 15,
+      "endColumn": 23,
+      "endLine": 224,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 224
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/labels/ops/update": {
+      "column": 15,
+      "endColumn": 72,
+      "endLine": 235,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 235
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/labels/ops/update/input": {
+      "column": 25,
+      "endColumn": 43,
+      "endLine": 235,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 235
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/labels/ops/update/requires/0": {
+      "column": 56,
+      "endColumn": 69,
+      "endLine": 235,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 235
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/lots": {
+      "column": 11,
+      "endColumn": 1,
+      "endLine": 105,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 76
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/lots/id/lotId": {
+      "column": 19,
+      "endColumn": 31,
+      "endLine": 78,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 78
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/lots/item": {
+      "column": 13,
+      "endColumn": 22,
+      "endLine": 79,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 79
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/lots/member/routes/quarantine": {
+      "column": 17,
+      "endColumn": 1,
+      "endLine": 105,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 100
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/lots/member/routes/quarantine/input": {
+      "column": 19,
+      "endColumn": 44,
+      "endLine": 102,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 102
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/lots/member/routes/quarantine/output": {
+      "column": 19,
+      "endColumn": 30,
+      "endLine": 103,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 103
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/lots/member/routes/quarantine/requires/0": {
+      "column": 30,
+      "endColumn": 43,
+      "endLine": 104,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 104
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/lots/ops/create": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 96,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 91
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/lots/ops/create/input": {
+      "column": 17,
+      "endColumn": 33,
+      "endLine": 92,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 92
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/lots/ops/create/requires/0": {
+      "column": 28,
+      "endColumn": 41,
+      "endLine": 93,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 93
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/lots/ops/create/requires/1": {
+      "column": 43,
+      "endColumn": 56,
+      "endLine": 93,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 93
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/lots/ops/delete": {
+      "column": 15,
+      "endColumn": 52,
+      "endLine": 97,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 97
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/lots/ops/delete/requires/0": {
+      "column": 36,
+      "endColumn": 49,
+      "endLine": 97,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 97
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/lots/ops/get": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 91,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 86
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/lots/ops/list": {
+      "column": 15,
+      "endColumn": 23,
+      "endLine": 85,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 85
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/lots/ops/update": {
+      "column": 15,
+      "endColumn": 70,
+      "endLine": 96,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 96
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/lots/ops/update/input": {
+      "column": 25,
+      "endColumn": 41,
+      "endLine": 96,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 96
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/lots/ops/update/requires/0": {
+      "column": 54,
+      "endColumn": 67,
+      "endLine": 96,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 96
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/pallets": {
+      "column": 11,
+      "endColumn": 1,
+      "endLine": 45,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 14
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/pallets/id/palletId": {
+      "column": 19,
+      "endColumn": 37,
+      "endLine": 16,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 16
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/pallets/item": {
+      "column": 13,
+      "endColumn": 25,
+      "endLine": 17,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 17
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/pallets/member/routes/seal": {
+      "column": 17,
+      "endColumn": 1,
+      "endLine": 45,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 40
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/pallets/member/routes/seal/input": {
+      "column": 19,
+      "endColumn": 41,
+      "endLine": 42,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 42
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/pallets/member/routes/seal/output": {
+      "column": 19,
+      "endColumn": 33,
+      "endLine": 43,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 43
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/pallets/member/routes/seal/requires/0": {
+      "column": 30,
+      "endColumn": 43,
+      "endLine": 44,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 44
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/pallets/ops/create": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 36,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 31
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/pallets/ops/create/input": {
+      "column": 17,
+      "endColumn": 36,
+      "endLine": 32,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 32
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/pallets/ops/create/requires/0": {
+      "column": 28,
+      "endColumn": 41,
+      "endLine": 33,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 33
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/pallets/ops/create/requires/1": {
+      "column": 43,
+      "endColumn": 56,
+      "endLine": 33,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 33
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/pallets/ops/delete": {
+      "column": 15,
+      "endColumn": 52,
+      "endLine": 37,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 37
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/pallets/ops/delete/requires/0": {
+      "column": 36,
+      "endColumn": 49,
+      "endLine": 37,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 37
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/pallets/ops/get": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 31,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 25
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/pallets/ops/list": {
+      "column": 15,
+      "endColumn": 23,
+      "endLine": 24,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 24
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/pallets/ops/update": {
+      "column": 15,
+      "endColumn": 73,
+      "endLine": 36,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 36
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/pallets/ops/update/input": {
+      "column": 25,
+      "endColumn": 44,
+      "endLine": 36,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 36
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/pallets/ops/update/requires/0": {
+      "column": 57,
+      "endColumn": 70,
+      "endLine": 36,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 36
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/pickLists": {
+      "column": 11,
+      "endColumn": 1,
+      "endLine": 303,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 281
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/pickLists/id/pickListId": {
+      "column": 19,
+      "endColumn": 41,
+      "endLine": 283,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 283
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/pickLists/item": {
+      "column": 13,
+      "endColumn": 27,
+      "endLine": 284,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 284
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/pickLists/ops/create": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 301,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 296
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/pickLists/ops/create/input": {
+      "column": 17,
+      "endColumn": 38,
+      "endLine": 297,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 297
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/pickLists/ops/create/requires/0": {
+      "column": 28,
+      "endColumn": 41,
+      "endLine": 298,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 298
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/pickLists/ops/create/requires/1": {
+      "column": 43,
+      "endColumn": 56,
+      "endLine": 298,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 298
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/pickLists/ops/delete": {
+      "column": 15,
+      "endColumn": 52,
+      "endLine": 302,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 302
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/pickLists/ops/delete/requires/0": {
+      "column": 36,
+      "endColumn": 49,
+      "endLine": 302,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 302
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/pickLists/ops/get": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 296,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 291
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/pickLists/ops/list": {
+      "column": 15,
+      "endColumn": 23,
+      "endLine": 290,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 290
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/pickLists/ops/update": {
+      "column": 15,
+      "endColumn": 75,
+      "endLine": 301,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 301
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/pickLists/ops/update/input": {
+      "column": 25,
+      "endColumn": 46,
+      "endLine": 301,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 301
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/pickLists/ops/update/requires/0": {
+      "column": 59,
+      "endColumn": 72,
+      "endLine": 301,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 301
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/returnOrders": {
+      "column": 11,
+      "endColumn": 1,
+      "endLine": 281,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 259
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/returnOrders/id/returnOrderId": {
+      "column": 19,
+      "endColumn": 47,
+      "endLine": 261,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 261
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/returnOrders/item": {
+      "column": 13,
+      "endColumn": 30,
+      "endLine": 262,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 262
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/returnOrders/ops/create": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 279,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 274
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/returnOrders/ops/create/input": {
+      "column": 17,
+      "endColumn": 41,
+      "endLine": 275,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 275
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/returnOrders/ops/create/requires/0": {
+      "column": 28,
+      "endColumn": 41,
+      "endLine": 276,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 276
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/returnOrders/ops/create/requires/1": {
+      "column": 43,
+      "endColumn": 56,
+      "endLine": 276,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 276
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/returnOrders/ops/delete": {
+      "column": 15,
+      "endColumn": 52,
+      "endLine": 280,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 280
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/returnOrders/ops/delete/requires/0": {
+      "column": 36,
+      "endColumn": 49,
+      "endLine": 280,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 280
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/returnOrders/ops/get": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 274,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 269
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/returnOrders/ops/list": {
+      "column": 15,
+      "endColumn": 23,
+      "endLine": 268,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 268
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/returnOrders/ops/update": {
+      "column": 15,
+      "endColumn": 78,
+      "endLine": 279,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 279
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/returnOrders/ops/update/input": {
+      "column": 25,
+      "endColumn": 49,
+      "endLine": 279,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 279
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/returnOrders/ops/update/requires/0": {
+      "column": 62,
+      "endColumn": 75,
+      "endLine": 279,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 279
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/stockCounts": {
+      "column": 11,
+      "endColumn": 1,
+      "endLine": 259,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 237
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/stockCounts/id/stockCountId": {
+      "column": 19,
+      "endColumn": 45,
+      "endLine": 239,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 239
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/stockCounts/item": {
+      "column": 13,
+      "endColumn": 29,
+      "endLine": 240,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 240
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/stockCounts/ops/create": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 257,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 252
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/stockCounts/ops/create/input": {
+      "column": 17,
+      "endColumn": 40,
+      "endLine": 253,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 253
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/stockCounts/ops/create/requires/0": {
+      "column": 28,
+      "endColumn": 41,
+      "endLine": 254,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 254
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/stockCounts/ops/create/requires/1": {
+      "column": 43,
+      "endColumn": 56,
+      "endLine": 254,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 254
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/stockCounts/ops/delete": {
+      "column": 15,
+      "endColumn": 52,
+      "endLine": 258,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 258
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/stockCounts/ops/delete/requires/0": {
+      "column": 36,
+      "endColumn": 49,
+      "endLine": 258,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 258
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/stockCounts/ops/get": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 252,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 247
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/stockCounts/ops/list": {
+      "column": 15,
+      "endColumn": 23,
+      "endLine": 246,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 246
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/stockCounts/ops/update": {
+      "column": 15,
+      "endColumn": 77,
+      "endLine": 257,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 257
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/stockCounts/ops/update/input": {
+      "column": 25,
+      "endColumn": 48,
+      "endLine": 257,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 257
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/stockCounts/ops/update/requires/0": {
+      "column": 61,
+      "endColumn": 74,
+      "endLine": 257,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 257
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/suppliers": {
+      "column": 11,
+      "endColumn": 1,
+      "endLine": 127,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 105
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/suppliers/id/supplierId": {
+      "column": 19,
+      "endColumn": 41,
+      "endLine": 107,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 107
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/suppliers/item": {
+      "column": 13,
+      "endColumn": 27,
+      "endLine": 108,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 108
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/suppliers/ops/create": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 125,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 120
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/suppliers/ops/create/input": {
+      "column": 17,
+      "endColumn": 38,
+      "endLine": 121,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 121
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/suppliers/ops/create/requires/0": {
+      "column": 28,
+      "endColumn": 41,
+      "endLine": 122,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 122
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/suppliers/ops/create/requires/1": {
+      "column": 43,
+      "endColumn": 56,
+      "endLine": 122,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 122
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/suppliers/ops/delete": {
+      "column": 15,
+      "endColumn": 52,
+      "endLine": 126,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 126
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/suppliers/ops/delete/requires/0": {
+      "column": 36,
+      "endColumn": 49,
+      "endLine": 126,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 126
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/suppliers/ops/get": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 120,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 115
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/suppliers/ops/list": {
+      "column": 15,
+      "endColumn": 23,
+      "endLine": 114,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 114
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/suppliers/ops/update": {
+      "column": 15,
+      "endColumn": 75,
+      "endLine": 125,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 125
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/suppliers/ops/update/input": {
+      "column": 25,
+      "endColumn": 46,
+      "endLine": 125,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 125
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/suppliers/ops/update/requires/0": {
+      "column": 59,
+      "endColumn": 72,
+      "endLine": 125,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 125
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/zones": {
+      "column": 11,
+      "endColumn": 1,
+      "endLine": 215,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 193
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/zones/id/zoneId": {
+      "column": 19,
+      "endColumn": 33,
+      "endLine": 195,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 195
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/zones/item": {
+      "column": 13,
+      "endColumn": 23,
+      "endLine": 196,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 196
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/zones/ops/create": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 213,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 208
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/zones/ops/create/input": {
+      "column": 17,
+      "endColumn": 34,
+      "endLine": 209,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 209
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/zones/ops/create/requires/0": {
+      "column": 28,
+      "endColumn": 41,
+      "endLine": 210,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 210
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/zones/ops/create/requires/1": {
+      "column": 43,
+      "endColumn": 56,
+      "endLine": 210,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 210
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/zones/ops/delete": {
+      "column": 15,
+      "endColumn": 52,
+      "endLine": 214,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 214
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/zones/ops/delete/requires/0": {
+      "column": 36,
+      "endColumn": 49,
+      "endLine": 214,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 214
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/zones/ops/get": {
+      "column": 15,
+      "endColumn": 1,
+      "endLine": 208,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 203
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/zones/ops/list": {
+      "column": 15,
+      "endColumn": 23,
+      "endLine": 202,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 202
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/zones/ops/update": {
+      "column": 15,
+      "endColumn": 71,
+      "endLine": 213,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 213
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/zones/ops/update/input": {
+      "column": 25,
+      "endColumn": 42,
+      "endLine": 213,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 213
+    },
+    "api#/surfaces/bulk/routes/tenants/member/routes/zones/ops/update/requires/0": {
+      "column": 55,
+      "endColumn": 68,
+      "endLine": 213,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 213
+    },
+    "api#/surfaces/bulk/routes/tenants/member/scopes/account": {
+      "column": 19,
+      "endColumn": 42,
+      "endLine": 12,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 12
+    },
+    "api#/surfaces/bulk/routes/tenants/ops/0": {
+      "column": 13,
+      "endColumn": 16,
+      "endLine": 10,
+      "file": "inventory/generated/surfaces.yaml",
+      "line": 10
+    },
+    "shared#/buckets/write": {
+      "column": 3,
+      "endColumn": 60,
+      "endLine": 55,
+      "file": "shared/base.yaml",
+      "line": 55
+    },
+    "shared#/conventions/bodyLimit": {
+      "column": 3,
+      "endColumn": 18,
+      "endLine": 69,
+      "file": "shared/base.yaml",
+      "line": 69
+    },
+    "shared#/conventions/cache/families": {
+      "column": 12,
+      "endColumn": 50,
+      "endLine": 70,
+      "file": "shared/base.yaml",
+      "line": 70
+    },
+    "shared#/conventions/cache/families/hour": {
+      "column": 37,
+      "endColumn": 48,
+      "endLine": 70,
+      "file": "shared/base.yaml",
+      "line": 70
+    },
+    "shared#/conventions/cache/families/minute": {
+      "column": 24,
+      "endColumn": 35,
+      "endLine": 70,
+      "file": "shared/base.yaml",
+      "line": 70
+    },
+    "shared#/conventions/errors/derived": {
+      "column": 5,
+      "endColumn": 1,
+      "endLine": 78,
+      "file": "shared/base.yaml",
+      "line": 74
+    },
+    "shared#/conventions/errors/derived/schemaInvalid": {
+      "column": 7,
+      "endColumn": 1,
+      "endLine": 78,
+      "file": "shared/base.yaml",
+      "line": 75
+    },
+    "shared#/conventions/paging/default": {
+      "column": 13,
+      "endColumn": 28,
+      "endLine": 68,
+      "file": "shared/base.yaml",
+      "line": 68
+    },
+    "shared#/conventions/paging/maxLimit": {
+      "column": 30,
+      "endColumn": 43,
+      "endLine": 68,
+      "file": "shared/base.yaml",
+      "line": 68
+    },
+    "shared#/conventions/rateLimit/header": {
+      "column": 16,
+      "endColumn": 35,
+      "endLine": 72,
+      "file": "shared/base.yaml",
+      "line": 72
+    },
+    "shared#/conventions/rateLimit/param": {
+      "column": 37,
+      "endColumn": 56,
+      "endLine": 72,
+      "file": "shared/base.yaml",
+      "line": 72
+    },
+    "shared#/conventions/rateLimit/unit": {
+      "column": 58,
+      "endColumn": 65,
+      "endLine": 72,
+      "file": "shared/base.yaml",
+      "line": 72
+    },
+    "shared#/conventions/restrictedInput": {
+      "column": 3,
+      "endColumn": 26,
+      "endLine": 71,
+      "file": "shared/base.yaml",
+      "line": 71
+    },
+    "shared#/enums/Condition": {
+      "column": 1,
+      "endColumn": 93,
+      "endLine": 6,
+      "file": "shared/enums.yaml",
+      "line": 6
+    },
+    "shared#/enums/Currency": {
+      "column": 1,
+      "endColumn": 91,
+      "endLine": 7,
+      "file": "shared/enums.yaml",
+      "line": 7
+    },
+    "shared#/enums/Grade": {
+      "column": 1,
+      "endColumn": 74,
+      "endLine": 10,
+      "file": "shared/enums.yaml",
+      "line": 10
+    },
+    "shared#/enums/Origin": {
+      "column": 1,
+      "endColumn": 95,
+      "endLine": 9,
+      "file": "shared/enums.yaml",
+      "line": 9
+    },
+    "shared#/enums/Priority": {
+      "column": 1,
+      "endColumn": 98,
+      "endLine": 4,
+      "file": "shared/enums.yaml",
+      "line": 4
+    },
+    "shared#/enums/Rating": {
+      "column": 1,
+      "endColumn": 96,
+      "endLine": 13,
+      "file": "shared/enums.yaml",
+      "line": 13
+    },
+    "shared#/enums/Region": {
+      "column": 1,
+      "endColumn": 102,
+      "endLine": 11,
+      "file": "shared/enums.yaml",
+      "line": 11
+    },
+    "shared#/enums/Role": {
+      "column": 1,
+      "endColumn": 88,
+      "endLine": 2,
+      "file": "shared/enums.yaml",
+      "line": 2
+    },
+    "shared#/enums/Stage": {
+      "column": 1,
+      "endColumn": 88,
+      "endLine": 12,
+      "file": "shared/enums.yaml",
+      "line": 12
+    },
+    "shared#/enums/Surface": {
+      "column": 1,
+      "endColumn": 74,
+      "endLine": 3,
+      "file": "shared/enums.yaml",
+      "line": 3
+    },
+    "shared#/enums/Unit": {
+      "column": 1,
+      "endColumn": 94,
+      "endLine": 8,
+      "file": "shared/enums.yaml",
+      "line": 8
+    },
+    "shared#/enums/Visibility": {
+      "column": 1,
+      "endColumn": 98,
+      "endLine": 5,
+      "file": "shared/enums.yaml",
+      "line": 5
+    },
+    "shared#/errors/api.client_outdated": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 32,
+      "file": "shared/errors.yaml",
+      "line": 27
+    },
+    "shared#/errors/api.client_outdated/params": {
+      "column": 3,
+      "endColumn": 33,
+      "endLine": 30,
+      "file": "shared/errors.yaml",
+      "line": 30
+    },
+    "shared#/errors/api.client_outdated/params/existingId": {
+      "column": 13,
+      "endColumn": 31,
+      "endLine": 30,
+      "file": "shared/errors.yaml",
+      "line": 30
+    },
+    "shared#/errors/api.feature_disabled": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 37,
+      "file": "shared/errors.yaml",
+      "line": 32
+    },
+    "shared#/errors/api.feature_disabled/params": {
+      "column": 3,
+      "endColumn": 51,
+      "endLine": 35,
+      "file": "shared/errors.yaml",
+      "line": 35
+    },
+    "shared#/errors/api.feature_disabled/params/limit": {
+      "column": 13,
+      "endColumn": 49,
+      "endLine": 35,
+      "file": "shared/errors.yaml",
+      "line": 35
+    },
+    "shared#/errors/api.maintenance_window": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 22,
+      "file": "shared/errors.yaml",
+      "line": 17
+    },
+    "shared#/errors/api.maintenance_window/params": {
+      "column": 3,
+      "endColumn": 31,
+      "endLine": 20,
+      "file": "shared/errors.yaml",
+      "line": 20
+    },
+    "shared#/errors/api.maintenance_window/params/lockedBy": {
+      "column": 13,
+      "endColumn": 29,
+      "endLine": 20,
+      "file": "shared/errors.yaml",
+      "line": 20
+    },
+    "shared#/errors/api.quota_exhausted": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 17,
+      "file": "shared/errors.yaml",
+      "line": 12
+    },
+    "shared#/errors/api.quota_exhausted/params": {
+      "column": 3,
+      "endColumn": 54,
+      "endLine": 15,
+      "file": "shared/errors.yaml",
+      "line": 15
+    },
+    "shared#/errors/api.quota_exhausted/params/target": {
+      "column": 13,
+      "endColumn": 52,
+      "endLine": 15,
+      "file": "shared/errors.yaml",
+      "line": 15
+    },
+    "shared#/errors/api.rate_limited": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 12,
+      "file": "shared/errors.yaml",
+      "line": 7
+    },
+    "shared#/errors/api.rate_limited/params": {
+      "column": 3,
+      "endColumn": 85,
+      "endLine": 10,
+      "file": "shared/errors.yaml",
+      "line": 10
+    },
+    "shared#/errors/api.rate_limited/params/retryAfterMs": {
+      "column": 13,
+      "endColumn": 83,
+      "endLine": 10,
+      "file": "shared/errors.yaml",
+      "line": 10
+    },
+    "shared#/errors/api.region_unavailable": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 27,
+      "file": "shared/errors.yaml",
+      "line": 22
+    },
+    "shared#/errors/api.region_unavailable/params": {
+      "column": 3,
+      "endColumn": 61,
+      "endLine": 25,
+      "file": "shared/errors.yaml",
+      "line": 25
+    },
+    "shared#/errors/api.region_unavailable/params/expiredAt": {
+      "column": 13,
+      "endColumn": 59,
+      "endLine": 25,
+      "file": "shared/errors.yaml",
+      "line": 25
+    },
+    "shared#/errors/api.schema_invalid": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 7,
+      "file": "shared/errors.yaml",
+      "line": 2
+    },
+    "shared#/errors/api.schema_invalid/params": {
+      "column": 3,
+      "endColumn": 29,
+      "endLine": 5,
+      "file": "shared/errors.yaml",
+      "line": 5
+    },
+    "shared#/errors/api.schema_invalid/params/issues": {
+      "column": 13,
+      "endColumn": 27,
+      "endLine": 5,
+      "file": "shared/errors.yaml",
+      "line": 5
+    },
+    "shared#/errors/shelf.duplicated": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 132,
+      "file": "shared/errors.yaml",
+      "line": 127
+    },
+    "shared#/errors/shelf.duplicated/params": {
+      "column": 3,
+      "endColumn": 33,
+      "endLine": 130,
+      "file": "shared/errors.yaml",
+      "line": 130
+    },
+    "shared#/errors/shelf.duplicated/params/existingId": {
+      "column": 13,
+      "endColumn": 31,
+      "endLine": 130,
+      "file": "shared/errors.yaml",
+      "line": 130
+    },
+    "shared#/errors/shelf.expired": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 127,
+      "file": "shared/errors.yaml",
+      "line": 122
+    },
+    "shared#/errors/shelf.expired/params": {
+      "column": 3,
+      "endColumn": 61,
+      "endLine": 125,
+      "file": "shared/errors.yaml",
+      "line": 125
+    },
+    "shared#/errors/shelf.expired/params/expiredAt": {
+      "column": 13,
+      "endColumn": 59,
+      "endLine": 125,
+      "file": "shared/errors.yaml",
+      "line": 125
+    },
+    "shared#/errors/shelf.limited": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 137,
+      "file": "shared/errors.yaml",
+      "line": 132
+    },
+    "shared#/errors/shelf.limited/params": {
+      "column": 3,
+      "endColumn": 51,
+      "endLine": 135,
+      "file": "shared/errors.yaml",
+      "line": 135
+    },
+    "shared#/errors/shelf.limited/params/limit": {
+      "column": 13,
+      "endColumn": 49,
+      "endLine": 135,
+      "file": "shared/errors.yaml",
+      "line": 135
+    },
+    "shared#/errors/shelf.locked": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 122,
+      "file": "shared/errors.yaml",
+      "line": 117
+    },
+    "shared#/errors/shelf.locked/params": {
+      "column": 3,
+      "endColumn": 31,
+      "endLine": 120,
+      "file": "shared/errors.yaml",
+      "line": 120
+    },
+    "shared#/errors/shelf.locked/params/lockedBy": {
+      "column": 13,
+      "endColumn": 29,
+      "endLine": 120,
+      "file": "shared/errors.yaml",
+      "line": 120
+    },
+    "shared#/errors/shelf.mismatched": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 142,
+      "file": "shared/errors.yaml",
+      "line": 137
+    },
+    "shared#/errors/shelf.mismatched/params": {
+      "column": 3,
+      "endColumn": 53,
+      "endLine": 140,
+      "file": "shared/errors.yaml",
+      "line": 140
+    },
+    "shared#/errors/shelf.mismatched/params/field": {
+      "column": 13,
+      "endColumn": 51,
+      "endLine": 140,
+      "file": "shared/errors.yaml",
+      "line": 140
+    },
+    "shared#/errors/shelf.missing": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 117,
+      "file": "shared/errors.yaml",
+      "line": 112
+    },
+    "shared#/errors/shelf.missing/params": {
+      "column": 3,
+      "endColumn": 54,
+      "endLine": 115,
+      "file": "shared/errors.yaml",
+      "line": 115
+    },
+    "shared#/errors/shelf.missing/params/target": {
+      "column": 13,
+      "endColumn": 52,
+      "endLine": 115,
+      "file": "shared/errors.yaml",
+      "line": 115
+    },
+    "shared#/errors/shelf.outdated": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 162,
+      "file": "shared/errors.yaml",
+      "line": 157
+    },
+    "shared#/errors/shelf.outdated/params": {
+      "column": 3,
+      "endColumn": 60,
+      "endLine": 160,
+      "file": "shared/errors.yaml",
+      "line": 160
+    },
+    "shared#/errors/shelf.outdated/params/currentVersion": {
+      "column": 13,
+      "endColumn": 58,
+      "endLine": 160,
+      "file": "shared/errors.yaml",
+      "line": 160
+    },
+    "shared#/errors/shelf.rejected": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 157,
+      "file": "shared/errors.yaml",
+      "line": 152
+    },
+    "shared#/errors/shelf.rejected/params": {
+      "column": 3,
+      "endColumn": 29,
+      "endLine": 155,
+      "file": "shared/errors.yaml",
+      "line": 155
+    },
+    "shared#/errors/shelf.rejected/params/issues": {
+      "column": 13,
+      "endColumn": 27,
+      "endLine": 155,
+      "file": "shared/errors.yaml",
+      "line": 155
+    },
+    "shared#/errors/shelf.suspended": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 152,
+      "file": "shared/errors.yaml",
+      "line": 147
+    },
+    "shared#/errors/shelf.suspended/params": {
+      "column": 3,
+      "endColumn": 55,
+      "endLine": 150,
+      "file": "shared/errors.yaml",
+      "line": 150
+    },
+    "shared#/errors/shelf.suspended/params/reason": {
+      "column": 13,
+      "endColumn": 53,
+      "endLine": 150,
+      "file": "shared/errors.yaml",
+      "line": 150
+    },
+    "shared#/errors/shelf.unavailable": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 147,
+      "file": "shared/errors.yaml",
+      "line": 142
+    },
+    "shared#/errors/shelf.unavailable/params": {
+      "column": 3,
+      "endColumn": 52,
+      "endLine": 145,
+      "file": "shared/errors.yaml",
+      "line": 145
+    },
+    "shared#/errors/shelf.unavailable/params/waitMs": {
+      "column": 13,
+      "endColumn": 50,
+      "endLine": 145,
+      "file": "shared/errors.yaml",
+      "line": 145
+    },
+    "shared#/errors/stock.duplicated": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 82,
+      "file": "shared/errors.yaml",
+      "line": 77
+    },
+    "shared#/errors/stock.duplicated/params": {
+      "column": 3,
+      "endColumn": 33,
+      "endLine": 80,
+      "file": "shared/errors.yaml",
+      "line": 80
+    },
+    "shared#/errors/stock.duplicated/params/existingId": {
+      "column": 13,
+      "endColumn": 31,
+      "endLine": 80,
+      "file": "shared/errors.yaml",
+      "line": 80
+    },
+    "shared#/errors/stock.expired": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 77,
+      "file": "shared/errors.yaml",
+      "line": 72
+    },
+    "shared#/errors/stock.expired/params": {
+      "column": 3,
+      "endColumn": 61,
+      "endLine": 75,
+      "file": "shared/errors.yaml",
+      "line": 75
+    },
+    "shared#/errors/stock.expired/params/expiredAt": {
+      "column": 13,
+      "endColumn": 59,
+      "endLine": 75,
+      "file": "shared/errors.yaml",
+      "line": 75
+    },
+    "shared#/errors/stock.limited": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 87,
+      "file": "shared/errors.yaml",
+      "line": 82
+    },
+    "shared#/errors/stock.limited/params": {
+      "column": 3,
+      "endColumn": 51,
+      "endLine": 85,
+      "file": "shared/errors.yaml",
+      "line": 85
+    },
+    "shared#/errors/stock.limited/params/limit": {
+      "column": 13,
+      "endColumn": 49,
+      "endLine": 85,
+      "file": "shared/errors.yaml",
+      "line": 85
+    },
+    "shared#/errors/stock.locked": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 72,
+      "file": "shared/errors.yaml",
+      "line": 67
+    },
+    "shared#/errors/stock.locked/params": {
+      "column": 3,
+      "endColumn": 31,
+      "endLine": 70,
+      "file": "shared/errors.yaml",
+      "line": 70
+    },
+    "shared#/errors/stock.locked/params/lockedBy": {
+      "column": 13,
+      "endColumn": 29,
+      "endLine": 70,
+      "file": "shared/errors.yaml",
+      "line": 70
+    },
+    "shared#/errors/stock.mismatched": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 92,
+      "file": "shared/errors.yaml",
+      "line": 87
+    },
+    "shared#/errors/stock.mismatched/params": {
+      "column": 3,
+      "endColumn": 53,
+      "endLine": 90,
+      "file": "shared/errors.yaml",
+      "line": 90
+    },
+    "shared#/errors/stock.mismatched/params/field": {
+      "column": 13,
+      "endColumn": 51,
+      "endLine": 90,
+      "file": "shared/errors.yaml",
+      "line": 90
+    },
+    "shared#/errors/stock.missing": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 67,
+      "file": "shared/errors.yaml",
+      "line": 62
+    },
+    "shared#/errors/stock.missing/params": {
+      "column": 3,
+      "endColumn": 54,
+      "endLine": 65,
+      "file": "shared/errors.yaml",
+      "line": 65
+    },
+    "shared#/errors/stock.missing/params/target": {
+      "column": 13,
+      "endColumn": 52,
+      "endLine": 65,
+      "file": "shared/errors.yaml",
+      "line": 65
+    },
+    "shared#/errors/stock.outdated": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 112,
+      "file": "shared/errors.yaml",
+      "line": 107
+    },
+    "shared#/errors/stock.outdated/params": {
+      "column": 3,
+      "endColumn": 60,
+      "endLine": 110,
+      "file": "shared/errors.yaml",
+      "line": 110
+    },
+    "shared#/errors/stock.outdated/params/currentVersion": {
+      "column": 13,
+      "endColumn": 58,
+      "endLine": 110,
+      "file": "shared/errors.yaml",
+      "line": 110
+    },
+    "shared#/errors/stock.rejected": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 107,
+      "file": "shared/errors.yaml",
+      "line": 102
+    },
+    "shared#/errors/stock.rejected/params": {
+      "column": 3,
+      "endColumn": 29,
+      "endLine": 105,
+      "file": "shared/errors.yaml",
+      "line": 105
+    },
+    "shared#/errors/stock.rejected/params/issues": {
+      "column": 13,
+      "endColumn": 27,
+      "endLine": 105,
+      "file": "shared/errors.yaml",
+      "line": 105
+    },
+    "shared#/errors/stock.suspended": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 102,
+      "file": "shared/errors.yaml",
+      "line": 97
+    },
+    "shared#/errors/stock.suspended/params": {
+      "column": 3,
+      "endColumn": 55,
+      "endLine": 100,
+      "file": "shared/errors.yaml",
+      "line": 100
+    },
+    "shared#/errors/stock.suspended/params/reason": {
+      "column": 13,
+      "endColumn": 53,
+      "endLine": 100,
+      "file": "shared/errors.yaml",
+      "line": 100
+    },
+    "shared#/errors/stock.unavailable": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 97,
+      "file": "shared/errors.yaml",
+      "line": 92
+    },
+    "shared#/errors/stock.unavailable/params": {
+      "column": 3,
+      "endColumn": 52,
+      "endLine": 95,
+      "file": "shared/errors.yaml",
+      "line": 95
+    },
+    "shared#/errors/stock.unavailable/params/waitMs": {
+      "column": 13,
+      "endColumn": 50,
+      "endLine": 95,
+      "file": "shared/errors.yaml",
+      "line": 95
+    },
+    "shared#/errors/supplier.duplicated": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 182,
+      "file": "shared/errors.yaml",
+      "line": 177
+    },
+    "shared#/errors/supplier.duplicated/params": {
+      "column": 3,
+      "endColumn": 33,
+      "endLine": 180,
+      "file": "shared/errors.yaml",
+      "line": 180
+    },
+    "shared#/errors/supplier.duplicated/params/existingId": {
+      "column": 13,
+      "endColumn": 31,
+      "endLine": 180,
+      "file": "shared/errors.yaml",
+      "line": 180
+    },
+    "shared#/errors/supplier.expired": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 177,
+      "file": "shared/errors.yaml",
+      "line": 172
+    },
+    "shared#/errors/supplier.expired/params": {
+      "column": 3,
+      "endColumn": 61,
+      "endLine": 175,
+      "file": "shared/errors.yaml",
+      "line": 175
+    },
+    "shared#/errors/supplier.expired/params/expiredAt": {
+      "column": 13,
+      "endColumn": 59,
+      "endLine": 175,
+      "file": "shared/errors.yaml",
+      "line": 175
+    },
+    "shared#/errors/supplier.limited": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 187,
+      "file": "shared/errors.yaml",
+      "line": 182
+    },
+    "shared#/errors/supplier.limited/params": {
+      "column": 3,
+      "endColumn": 51,
+      "endLine": 185,
+      "file": "shared/errors.yaml",
+      "line": 185
+    },
+    "shared#/errors/supplier.limited/params/limit": {
+      "column": 13,
+      "endColumn": 49,
+      "endLine": 185,
+      "file": "shared/errors.yaml",
+      "line": 185
+    },
+    "shared#/errors/supplier.locked": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 172,
+      "file": "shared/errors.yaml",
+      "line": 167
+    },
+    "shared#/errors/supplier.locked/params": {
+      "column": 3,
+      "endColumn": 31,
+      "endLine": 170,
+      "file": "shared/errors.yaml",
+      "line": 170
+    },
+    "shared#/errors/supplier.locked/params/lockedBy": {
+      "column": 13,
+      "endColumn": 29,
+      "endLine": 170,
+      "file": "shared/errors.yaml",
+      "line": 170
+    },
+    "shared#/errors/supplier.mismatched": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 192,
+      "file": "shared/errors.yaml",
+      "line": 187
+    },
+    "shared#/errors/supplier.mismatched/params": {
+      "column": 3,
+      "endColumn": 53,
+      "endLine": 190,
+      "file": "shared/errors.yaml",
+      "line": 190
+    },
+    "shared#/errors/supplier.mismatched/params/field": {
+      "column": 13,
+      "endColumn": 51,
+      "endLine": 190,
+      "file": "shared/errors.yaml",
+      "line": 190
+    },
+    "shared#/errors/supplier.missing": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 167,
+      "file": "shared/errors.yaml",
+      "line": 162
+    },
+    "shared#/errors/supplier.missing/params": {
+      "column": 3,
+      "endColumn": 54,
+      "endLine": 165,
+      "file": "shared/errors.yaml",
+      "line": 165
+    },
+    "shared#/errors/supplier.missing/params/target": {
+      "column": 13,
+      "endColumn": 52,
+      "endLine": 165,
+      "file": "shared/errors.yaml",
+      "line": 165
+    },
+    "shared#/errors/supplier.outdated": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 212,
+      "file": "shared/errors.yaml",
+      "line": 207
+    },
+    "shared#/errors/supplier.outdated/params": {
+      "column": 3,
+      "endColumn": 60,
+      "endLine": 210,
+      "file": "shared/errors.yaml",
+      "line": 210
+    },
+    "shared#/errors/supplier.outdated/params/currentVersion": {
+      "column": 13,
+      "endColumn": 58,
+      "endLine": 210,
+      "file": "shared/errors.yaml",
+      "line": 210
+    },
+    "shared#/errors/supplier.rejected": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 207,
+      "file": "shared/errors.yaml",
+      "line": 202
+    },
+    "shared#/errors/supplier.rejected/params": {
+      "column": 3,
+      "endColumn": 29,
+      "endLine": 205,
+      "file": "shared/errors.yaml",
+      "line": 205
+    },
+    "shared#/errors/supplier.rejected/params/issues": {
+      "column": 13,
+      "endColumn": 27,
+      "endLine": 205,
+      "file": "shared/errors.yaml",
+      "line": 205
+    },
+    "shared#/errors/supplier.suspended": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 202,
+      "file": "shared/errors.yaml",
+      "line": 197
+    },
+    "shared#/errors/supplier.suspended/params": {
+      "column": 3,
+      "endColumn": 55,
+      "endLine": 200,
+      "file": "shared/errors.yaml",
+      "line": 200
+    },
+    "shared#/errors/supplier.suspended/params/reason": {
+      "column": 13,
+      "endColumn": 53,
+      "endLine": 200,
+      "file": "shared/errors.yaml",
+      "line": 200
+    },
+    "shared#/errors/supplier.unavailable": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 197,
+      "file": "shared/errors.yaml",
+      "line": 192
+    },
+    "shared#/errors/supplier.unavailable/params": {
+      "column": 3,
+      "endColumn": 52,
+      "endLine": 195,
+      "file": "shared/errors.yaml",
+      "line": 195
+    },
+    "shared#/errors/supplier.unavailable/params/waitMs": {
+      "column": 13,
+      "endColumn": 50,
+      "endLine": 195,
+      "file": "shared/errors.yaml",
+      "line": 195
+    },
+    "shared#/errors/transfer.duplicated": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 232,
+      "file": "shared/errors.yaml",
+      "line": 227
+    },
+    "shared#/errors/transfer.duplicated/params": {
+      "column": 3,
+      "endColumn": 33,
+      "endLine": 230,
+      "file": "shared/errors.yaml",
+      "line": 230
+    },
+    "shared#/errors/transfer.duplicated/params/existingId": {
+      "column": 13,
+      "endColumn": 31,
+      "endLine": 230,
+      "file": "shared/errors.yaml",
+      "line": 230
+    },
+    "shared#/errors/transfer.expired": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 227,
+      "file": "shared/errors.yaml",
+      "line": 222
+    },
+    "shared#/errors/transfer.expired/params": {
+      "column": 3,
+      "endColumn": 61,
+      "endLine": 225,
+      "file": "shared/errors.yaml",
+      "line": 225
+    },
+    "shared#/errors/transfer.expired/params/expiredAt": {
+      "column": 13,
+      "endColumn": 59,
+      "endLine": 225,
+      "file": "shared/errors.yaml",
+      "line": 225
+    },
+    "shared#/errors/transfer.limited": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 237,
+      "file": "shared/errors.yaml",
+      "line": 232
+    },
+    "shared#/errors/transfer.limited/params": {
+      "column": 3,
+      "endColumn": 51,
+      "endLine": 235,
+      "file": "shared/errors.yaml",
+      "line": 235
+    },
+    "shared#/errors/transfer.limited/params/limit": {
+      "column": 13,
+      "endColumn": 49,
+      "endLine": 235,
+      "file": "shared/errors.yaml",
+      "line": 235
+    },
+    "shared#/errors/transfer.locked": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 222,
+      "file": "shared/errors.yaml",
+      "line": 217
+    },
+    "shared#/errors/transfer.locked/params": {
+      "column": 3,
+      "endColumn": 31,
+      "endLine": 220,
+      "file": "shared/errors.yaml",
+      "line": 220
+    },
+    "shared#/errors/transfer.locked/params/lockedBy": {
+      "column": 13,
+      "endColumn": 29,
+      "endLine": 220,
+      "file": "shared/errors.yaml",
+      "line": 220
+    },
+    "shared#/errors/transfer.mismatched": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 242,
+      "file": "shared/errors.yaml",
+      "line": 237
+    },
+    "shared#/errors/transfer.mismatched/params": {
+      "column": 3,
+      "endColumn": 53,
+      "endLine": 240,
+      "file": "shared/errors.yaml",
+      "line": 240
+    },
+    "shared#/errors/transfer.mismatched/params/field": {
+      "column": 13,
+      "endColumn": 51,
+      "endLine": 240,
+      "file": "shared/errors.yaml",
+      "line": 240
+    },
+    "shared#/errors/transfer.missing": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 217,
+      "file": "shared/errors.yaml",
+      "line": 212
+    },
+    "shared#/errors/transfer.missing/params": {
+      "column": 3,
+      "endColumn": 54,
+      "endLine": 215,
+      "file": "shared/errors.yaml",
+      "line": 215
+    },
+    "shared#/errors/transfer.missing/params/target": {
+      "column": 13,
+      "endColumn": 52,
+      "endLine": 215,
+      "file": "shared/errors.yaml",
+      "line": 215
+    },
+    "shared#/errors/transfer.outdated": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 262,
+      "file": "shared/errors.yaml",
+      "line": 257
+    },
+    "shared#/errors/transfer.outdated/params": {
+      "column": 3,
+      "endColumn": 60,
+      "endLine": 260,
+      "file": "shared/errors.yaml",
+      "line": 260
+    },
+    "shared#/errors/transfer.outdated/params/currentVersion": {
+      "column": 13,
+      "endColumn": 58,
+      "endLine": 260,
+      "file": "shared/errors.yaml",
+      "line": 260
+    },
+    "shared#/errors/transfer.rejected": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 257,
+      "file": "shared/errors.yaml",
+      "line": 252
+    },
+    "shared#/errors/transfer.rejected/params": {
+      "column": 3,
+      "endColumn": 29,
+      "endLine": 255,
+      "file": "shared/errors.yaml",
+      "line": 255
+    },
+    "shared#/errors/transfer.rejected/params/issues": {
+      "column": 13,
+      "endColumn": 27,
+      "endLine": 255,
+      "file": "shared/errors.yaml",
+      "line": 255
+    },
+    "shared#/errors/transfer.suspended": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 252,
+      "file": "shared/errors.yaml",
+      "line": 247
+    },
+    "shared#/errors/transfer.suspended/params": {
+      "column": 3,
+      "endColumn": 55,
+      "endLine": 250,
+      "file": "shared/errors.yaml",
+      "line": 250
+    },
+    "shared#/errors/transfer.suspended/params/reason": {
+      "column": 13,
+      "endColumn": 53,
+      "endLine": 250,
+      "file": "shared/errors.yaml",
+      "line": 250
+    },
+    "shared#/errors/transfer.unavailable": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 247,
+      "file": "shared/errors.yaml",
+      "line": 242
+    },
+    "shared#/errors/transfer.unavailable/params": {
+      "column": 3,
+      "endColumn": 52,
+      "endLine": 245,
+      "file": "shared/errors.yaml",
+      "line": 245
+    },
+    "shared#/errors/transfer.unavailable/params/waitMs": {
+      "column": 13,
+      "endColumn": 50,
+      "endLine": 245,
+      "file": "shared/errors.yaml",
+      "line": 245
+    },
+    "shared#/headers/actorSurface": {
+      "column": 3,
+      "endColumn": 79,
+      "endLine": 20,
+      "file": "shared/base.yaml",
+      "line": 20
+    },
+    "shared#/headers/deadline": {
+      "column": 3,
+      "endColumn": 66,
+      "endLine": 18,
+      "file": "shared/base.yaml",
+      "line": 18
+    },
+    "shared#/headers/trace": {
+      "column": 3,
+      "endColumn": 68,
+      "endLine": 19,
+      "file": "shared/base.yaml",
+      "line": 19
+    },
+    "shared#/identities/partner": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 36,
+      "file": "shared/base.yaml",
+      "line": 33
+    },
+    "shared#/identities/service": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 33,
+      "file": "shared/base.yaml",
+      "line": 26
+    },
+    "shared#/identities/service/headers/actorSurface": {
+      "column": 7,
+      "endColumn": 79,
+      "endLine": 32,
+      "file": "shared/base.yaml",
+      "line": 32
+    },
+    "shared#/identities/service/headers/deadline": {
+      "column": 7,
+      "endColumn": 45,
+      "endLine": 30,
+      "file": "shared/base.yaml",
+      "line": 30
+    },
+    "shared#/identities/service/headers/trace": {
+      "column": 7,
+      "endColumn": 26,
+      "endLine": 31,
+      "file": "shared/base.yaml",
+      "line": 31
+    },
+    "shared#/identities/user": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 26,
+      "file": "shared/base.yaml",
+      "line": 23
+    },
+    "shared#/identities/webhook": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 40,
+      "file": "shared/base.yaml",
+      "line": 36
+    },
+    "shared#/pagings/cursor": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 66,
+      "file": "shared/base.yaml",
+      "line": 58
+    },
+    "shared#/rights/roles": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 48,
+      "file": "shared/base.yaml",
+      "line": 45
+    },
+    "shared#/rights/roles/params": {
+      "column": 5,
+      "endColumn": 77,
+      "endLine": 46,
+      "file": "shared/base.yaml",
+      "line": 46
+    },
+    "shared#/rights/roles/params/allowed": {
+      "column": 15,
+      "endColumn": 75,
+      "endLine": 46,
+      "file": "shared/base.yaml",
+      "line": 46
+    },
+    "shared#/rules/throttle": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 53,
+      "file": "shared/base.yaml",
+      "line": 50
+    },
+    "shared#/schemas/Account": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 10,
+      "file": "shared/schemas.yaml",
+      "line": 4
+    },
+    "shared#/schemas/Account/properties/accountId": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 8,
+      "file": "shared/schemas.yaml",
+      "line": 8
+    },
+    "shared#/schemas/Account/properties/name": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 9,
+      "file": "shared/schemas.yaml",
+      "line": 9
+    },
+    "shared#/schemas/BondedCount": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 369,
+      "file": "shared/values.yaml",
+      "line": 362
+    },
+    "shared#/schemas/BondedCount/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 366,
+      "file": "shared/values.yaml",
+      "line": 366
+    },
+    "shared#/schemas/BondedCount/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 368,
+      "file": "shared/values.yaml",
+      "line": 368
+    },
+    "shared#/schemas/BondedCount/properties/stage": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 367,
+      "file": "shared/values.yaml",
+      "line": 367
+    },
+    "shared#/schemas/BondedLimit": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 392,
+      "file": "shared/values.yaml",
+      "line": 384
+    },
+    "shared#/schemas/BondedLimit/properties/inner": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 391,
+      "file": "shared/values.yaml",
+      "line": 391
+    },
+    "shared#/schemas/BondedLimit/properties/label": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 388,
+      "file": "shared/values.yaml",
+      "line": 388
+    },
+    "shared#/schemas/BondedLimit/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 390,
+      "file": "shared/values.yaml",
+      "line": 390
+    },
+    "shared#/schemas/BondedLimit/properties/visibility": {
+      "column": 5,
+      "endColumn": 37,
+      "endLine": 389,
+      "file": "shared/values.yaml",
+      "line": 389
+    },
+    "shared#/schemas/BondedMargin": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 407,
+      "file": "shared/values.yaml",
+      "line": 399
+    },
+    "shared#/schemas/BondedMargin/properties/currency": {
+      "column": 5,
+      "endColumn": 33,
+      "endLine": 404,
+      "file": "shared/values.yaml",
+      "line": 404
+    },
+    "shared#/schemas/BondedMargin/properties/inner": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 406,
+      "file": "shared/values.yaml",
+      "line": 406
+    },
+    "shared#/schemas/BondedMargin/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 403,
+      "file": "shared/values.yaml",
+      "line": 403
+    },
+    "shared#/schemas/BondedMargin/properties/quantity": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 405,
+      "file": "shared/values.yaml",
+      "line": 405
+    },
+    "shared#/schemas/BondedRate": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 384,
+      "file": "shared/values.yaml",
+      "line": 377
+    },
+    "shared#/schemas/BondedRate/properties/label": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 381,
+      "file": "shared/values.yaml",
+      "line": 381
+    },
+    "shared#/schemas/BondedRate/properties/priority": {
+      "column": 5,
+      "endColumn": 33,
+      "endLine": 382,
+      "file": "shared/values.yaml",
+      "line": 382
+    },
+    "shared#/schemas/BondedRate/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 383,
+      "file": "shared/values.yaml",
+      "line": 383
+    },
+    "shared#/schemas/BondedSpan": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 362,
+      "file": "shared/values.yaml",
+      "line": 354
+    },
+    "shared#/schemas/BondedSpan/properties/inner": {
+      "column": 5,
+      "endColumn": 24,
+      "endLine": 361,
+      "file": "shared/values.yaml",
+      "line": 361
+    },
+    "shared#/schemas/BondedSpan/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 358,
+      "file": "shared/values.yaml",
+      "line": 358
+    },
+    "shared#/schemas/BondedSpan/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 360,
+      "file": "shared/values.yaml",
+      "line": 360
+    },
+    "shared#/schemas/BondedSpan/properties/region": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 359,
+      "file": "shared/values.yaml",
+      "line": 359
+    },
+    "shared#/schemas/BondedTally": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 399,
+      "file": "shared/values.yaml",
+      "line": 392
+    },
+    "shared#/schemas/BondedTally/properties/condition": {
+      "column": 5,
+      "endColumn": 35,
+      "endLine": 397,
+      "file": "shared/values.yaml",
+      "line": 397
+    },
+    "shared#/schemas/BondedTally/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 396,
+      "file": "shared/values.yaml",
+      "line": 396
+    },
+    "shared#/schemas/BondedTally/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 398,
+      "file": "shared/values.yaml",
+      "line": 398
+    },
+    "shared#/schemas/BondedVolume": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 354,
+      "file": "shared/values.yaml",
+      "line": 347
+    },
+    "shared#/schemas/BondedVolume/properties/grade": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 352,
+      "file": "shared/values.yaml",
+      "line": 352
+    },
+    "shared#/schemas/BondedVolume/properties/label": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 351,
+      "file": "shared/values.yaml",
+      "line": 351
+    },
+    "shared#/schemas/BondedVolume/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 353,
+      "file": "shared/values.yaml",
+      "line": 353
+    },
+    "shared#/schemas/BondedWeight": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 347,
+      "file": "shared/values.yaml",
+      "line": 339
+    },
+    "shared#/schemas/BondedWeight/properties/inner": {
+      "column": 5,
+      "endColumn": 24,
+      "endLine": 346,
+      "file": "shared/values.yaml",
+      "line": 346
+    },
+    "shared#/schemas/BondedWeight/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 343,
+      "file": "shared/values.yaml",
+      "line": 343
+    },
+    "shared#/schemas/BondedWeight/properties/origin": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 344,
+      "file": "shared/values.yaml",
+      "line": 344
+    },
+    "shared#/schemas/BondedWeight/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 345,
+      "file": "shared/values.yaml",
+      "line": 345
+    },
+    "shared#/schemas/BondedWindow": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 377,
+      "file": "shared/values.yaml",
+      "line": 369
+    },
+    "shared#/schemas/BondedWindow/properties/inner": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 376,
+      "file": "shared/values.yaml",
+      "line": 376
+    },
+    "shared#/schemas/BondedWindow/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 373,
+      "file": "shared/values.yaml",
+      "line": 373
+    },
+    "shared#/schemas/BondedWindow/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 375,
+      "file": "shared/values.yaml",
+      "line": 375
+    },
+    "shared#/schemas/BondedWindow/properties/rating": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 374,
+      "file": "shared/values.yaml",
+      "line": 374
+    },
+    "shared#/schemas/BulkCount": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 504,
+      "file": "shared/values.yaml",
+      "line": 497
+    },
+    "shared#/schemas/BulkCount/properties/grade": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 502,
+      "file": "shared/values.yaml",
+      "line": 502
+    },
+    "shared#/schemas/BulkCount/properties/label": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 501,
+      "file": "shared/values.yaml",
+      "line": 501
+    },
+    "shared#/schemas/BulkCount/properties/quantity": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 503,
+      "file": "shared/values.yaml",
+      "line": 503
+    },
+    "shared#/schemas/BulkSpan": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 497,
+      "file": "shared/values.yaml",
+      "line": 489
+    },
+    "shared#/schemas/BulkSpan/properties/inner": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 496,
+      "file": "shared/values.yaml",
+      "line": 496
+    },
+    "shared#/schemas/BulkSpan/properties/label": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 493,
+      "file": "shared/values.yaml",
+      "line": 493
+    },
+    "shared#/schemas/BulkSpan/properties/origin": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 494,
+      "file": "shared/values.yaml",
+      "line": 494
+    },
+    "shared#/schemas/BulkSpan/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 495,
+      "file": "shared/values.yaml",
+      "line": 495
+    },
+    "shared#/schemas/BulkVolume": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 489,
+      "file": "shared/values.yaml",
+      "line": 482
+    },
+    "shared#/schemas/BulkVolume/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 486,
+      "file": "shared/values.yaml",
+      "line": 486
+    },
+    "shared#/schemas/BulkVolume/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 488,
+      "file": "shared/values.yaml",
+      "line": 488
+    },
+    "shared#/schemas/BulkVolume/properties/unit": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 487,
+      "file": "shared/values.yaml",
+      "line": 487
+    },
+    "shared#/schemas/BulkWeight": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 482,
+      "file": "shared/values.yaml",
+      "line": 474
+    },
+    "shared#/schemas/BulkWeight/properties/currency": {
+      "column": 5,
+      "endColumn": 33,
+      "endLine": 479,
+      "file": "shared/values.yaml",
+      "line": 479
+    },
+    "shared#/schemas/BulkWeight/properties/inner": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 481,
+      "file": "shared/values.yaml",
+      "line": 481
+    },
+    "shared#/schemas/BulkWeight/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 478,
+      "file": "shared/values.yaml",
+      "line": 478
+    },
+    "shared#/schemas/BulkWeight/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 480,
+      "file": "shared/values.yaml",
+      "line": 480
+    },
+    "shared#/schemas/BulkWindow": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 512,
+      "file": "shared/values.yaml",
+      "line": 504
+    },
+    "shared#/schemas/BulkWindow/properties/inner": {
+      "column": 5,
+      "endColumn": 21,
+      "endLine": 511,
+      "file": "shared/values.yaml",
+      "line": 511
+    },
+    "shared#/schemas/BulkWindow/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 508,
+      "file": "shared/values.yaml",
+      "line": 508
+    },
+    "shared#/schemas/BulkWindow/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 510,
+      "file": "shared/values.yaml",
+      "line": 510
+    },
+    "shared#/schemas/BulkWindow/properties/region": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 509,
+      "file": "shared/values.yaml",
+      "line": 509
+    },
+    "shared#/schemas/ChilledCount": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 437,
+      "file": "shared/values.yaml",
+      "line": 429
+    },
+    "shared#/schemas/ChilledCount/properties/inner": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 436,
+      "file": "shared/values.yaml",
+      "line": 436
+    },
+    "shared#/schemas/ChilledCount/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 433,
+      "file": "shared/values.yaml",
+      "line": 433
+    },
+    "shared#/schemas/ChilledCount/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 435,
+      "file": "shared/values.yaml",
+      "line": 435
+    },
+    "shared#/schemas/ChilledCount/properties/region": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 434,
+      "file": "shared/values.yaml",
+      "line": 434
+    },
+    "shared#/schemas/ChilledLimit": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 459,
+      "file": "shared/values.yaml",
+      "line": 452
+    },
+    "shared#/schemas/ChilledLimit/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 456,
+      "file": "shared/values.yaml",
+      "line": 456
+    },
+    "shared#/schemas/ChilledLimit/properties/priority": {
+      "column": 5,
+      "endColumn": 33,
+      "endLine": 457,
+      "file": "shared/values.yaml",
+      "line": 457
+    },
+    "shared#/schemas/ChilledLimit/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 458,
+      "file": "shared/values.yaml",
+      "line": 458
+    },
+    "shared#/schemas/ChilledMargin": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 474,
+      "file": "shared/values.yaml",
+      "line": 467
+    },
+    "shared#/schemas/ChilledMargin/properties/condition": {
+      "column": 5,
+      "endColumn": 35,
+      "endLine": 472,
+      "file": "shared/values.yaml",
+      "line": 472
+    },
+    "shared#/schemas/ChilledMargin/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 471,
+      "file": "shared/values.yaml",
+      "line": 471
+    },
+    "shared#/schemas/ChilledMargin/properties/quantity": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 473,
+      "file": "shared/values.yaml",
+      "line": 473
+    },
+    "shared#/schemas/ChilledRate": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 452,
+      "file": "shared/values.yaml",
+      "line": 444
+    },
+    "shared#/schemas/ChilledRate/properties/inner": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 451,
+      "file": "shared/values.yaml",
+      "line": 451
+    },
+    "shared#/schemas/ChilledRate/properties/label": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 448,
+      "file": "shared/values.yaml",
+      "line": 448
+    },
+    "shared#/schemas/ChilledRate/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 450,
+      "file": "shared/values.yaml",
+      "line": 450
+    },
+    "shared#/schemas/ChilledRate/properties/rating": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 449,
+      "file": "shared/values.yaml",
+      "line": 449
+    },
+    "shared#/schemas/ChilledSpan": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 429,
+      "file": "shared/values.yaml",
+      "line": 422
+    },
+    "shared#/schemas/ChilledSpan/properties/grade": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 427,
+      "file": "shared/values.yaml",
+      "line": 427
+    },
+    "shared#/schemas/ChilledSpan/properties/label": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 426,
+      "file": "shared/values.yaml",
+      "line": 426
+    },
+    "shared#/schemas/ChilledSpan/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 428,
+      "file": "shared/values.yaml",
+      "line": 428
+    },
+    "shared#/schemas/ChilledTally": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 467,
+      "file": "shared/values.yaml",
+      "line": 459
+    },
+    "shared#/schemas/ChilledTally/properties/inner": {
+      "column": 5,
+      "endColumn": 24,
+      "endLine": 466,
+      "file": "shared/values.yaml",
+      "line": 466
+    },
+    "shared#/schemas/ChilledTally/properties/label": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 463,
+      "file": "shared/values.yaml",
+      "line": 463
+    },
+    "shared#/schemas/ChilledTally/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 465,
+      "file": "shared/values.yaml",
+      "line": 465
+    },
+    "shared#/schemas/ChilledTally/properties/visibility": {
+      "column": 5,
+      "endColumn": 37,
+      "endLine": 464,
+      "file": "shared/values.yaml",
+      "line": 464
+    },
+    "shared#/schemas/ChilledVolume": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 422,
+      "file": "shared/values.yaml",
+      "line": 414
+    },
+    "shared#/schemas/ChilledVolume/properties/inner": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 421,
+      "file": "shared/values.yaml",
+      "line": 421
+    },
+    "shared#/schemas/ChilledVolume/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 418,
+      "file": "shared/values.yaml",
+      "line": 418
+    },
+    "shared#/schemas/ChilledVolume/properties/origin": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 419,
+      "file": "shared/values.yaml",
+      "line": 419
+    },
+    "shared#/schemas/ChilledVolume/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 420,
+      "file": "shared/values.yaml",
+      "line": 420
+    },
+    "shared#/schemas/ChilledWeight": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 414,
+      "file": "shared/values.yaml",
+      "line": 407
+    },
+    "shared#/schemas/ChilledWeight/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 411,
+      "file": "shared/values.yaml",
+      "line": 411
+    },
+    "shared#/schemas/ChilledWeight/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 413,
+      "file": "shared/values.yaml",
+      "line": 413
+    },
+    "shared#/schemas/ChilledWeight/properties/unit": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 412,
+      "file": "shared/values.yaml",
+      "line": 412
+    },
+    "shared#/schemas/ChilledWindow": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 444,
+      "file": "shared/values.yaml",
+      "line": 437
+    },
+    "shared#/schemas/ChilledWindow/properties/label": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 441,
+      "file": "shared/values.yaml",
+      "line": 441
+    },
+    "shared#/schemas/ChilledWindow/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 443,
+      "file": "shared/values.yaml",
+      "line": 443
+    },
+    "shared#/schemas/ChilledWindow/properties/stage": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 442,
+      "file": "shared/values.yaml",
+      "line": 442
+    },
+    "shared#/schemas/GrossCount": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 32,
+      "file": "shared/values.yaml",
+      "line": 24
+    },
+    "shared#/schemas/GrossCount/properties/currency": {
+      "column": 5,
+      "endColumn": 33,
+      "endLine": 29,
+      "file": "shared/values.yaml",
+      "line": 29
+    },
+    "shared#/schemas/GrossCount/properties/inner": {
+      "column": 5,
+      "endColumn": 21,
+      "endLine": 31,
+      "file": "shared/values.yaml",
+      "line": 31
+    },
+    "shared#/schemas/GrossCount/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 28,
+      "file": "shared/values.yaml",
+      "line": 28
+    },
+    "shared#/schemas/GrossCount/properties/quantity": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 30,
+      "file": "shared/values.yaml",
+      "line": 30
+    },
+    "shared#/schemas/GrossLimit": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 54,
+      "file": "shared/values.yaml",
+      "line": 47
+    },
+    "shared#/schemas/GrossLimit/properties/grade": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 52,
+      "file": "shared/values.yaml",
+      "line": 52
+    },
+    "shared#/schemas/GrossLimit/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 51,
+      "file": "shared/values.yaml",
+      "line": 51
+    },
+    "shared#/schemas/GrossLimit/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 53,
+      "file": "shared/values.yaml",
+      "line": 53
+    },
+    "shared#/schemas/GrossMargin": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 69,
+      "file": "shared/values.yaml",
+      "line": 62
+    },
+    "shared#/schemas/GrossMargin/properties/label": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 66,
+      "file": "shared/values.yaml",
+      "line": 66
+    },
+    "shared#/schemas/GrossMargin/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 68,
+      "file": "shared/values.yaml",
+      "line": 68
+    },
+    "shared#/schemas/GrossMargin/properties/stage": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 67,
+      "file": "shared/values.yaml",
+      "line": 67
+    },
+    "shared#/schemas/GrossRate": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 47,
+      "file": "shared/values.yaml",
+      "line": 39
+    },
+    "shared#/schemas/GrossRate/properties/inner": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 46,
+      "file": "shared/values.yaml",
+      "line": 46
+    },
+    "shared#/schemas/GrossRate/properties/label": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 43,
+      "file": "shared/values.yaml",
+      "line": 43
+    },
+    "shared#/schemas/GrossRate/properties/origin": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 44,
+      "file": "shared/values.yaml",
+      "line": 44
+    },
+    "shared#/schemas/GrossRate/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 45,
+      "file": "shared/values.yaml",
+      "line": 45
+    },
+    "shared#/schemas/GrossSpan": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 24,
+      "file": "shared/values.yaml",
+      "line": 17
+    },
+    "shared#/schemas/GrossSpan/properties/condition": {
+      "column": 5,
+      "endColumn": 35,
+      "endLine": 22,
+      "file": "shared/values.yaml",
+      "line": 22
+    },
+    "shared#/schemas/GrossSpan/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 21,
+      "file": "shared/values.yaml",
+      "line": 21
+    },
+    "shared#/schemas/GrossSpan/properties/quantity": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 23,
+      "file": "shared/values.yaml",
+      "line": 23
+    },
+    "shared#/schemas/GrossTally": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 62,
+      "file": "shared/values.yaml",
+      "line": 54
+    },
+    "shared#/schemas/GrossTally/properties/inner": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 61,
+      "file": "shared/values.yaml",
+      "line": 61
+    },
+    "shared#/schemas/GrossTally/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 58,
+      "file": "shared/values.yaml",
+      "line": 58
+    },
+    "shared#/schemas/GrossTally/properties/quantity": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 60,
+      "file": "shared/values.yaml",
+      "line": 60
+    },
+    "shared#/schemas/GrossTally/properties/region": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 59,
+      "file": "shared/values.yaml",
+      "line": 59
+    },
+    "shared#/schemas/GrossVolume": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 17,
+      "file": "shared/values.yaml",
+      "line": 9
+    },
+    "shared#/schemas/GrossVolume/properties/inner": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 16,
+      "file": "shared/values.yaml",
+      "line": 16
+    },
+    "shared#/schemas/GrossVolume/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 13,
+      "file": "shared/values.yaml",
+      "line": 13
+    },
+    "shared#/schemas/GrossVolume/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 15,
+      "file": "shared/values.yaml",
+      "line": 15
+    },
+    "shared#/schemas/GrossVolume/properties/visibility": {
+      "column": 5,
+      "endColumn": 37,
+      "endLine": 14,
+      "file": "shared/values.yaml",
+      "line": 14
+    },
+    "shared#/schemas/GrossWeight": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 9,
+      "file": "shared/values.yaml",
+      "line": 2
+    },
+    "shared#/schemas/GrossWeight/properties/label": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 6,
+      "file": "shared/values.yaml",
+      "line": 6
+    },
+    "shared#/schemas/GrossWeight/properties/priority": {
+      "column": 5,
+      "endColumn": 33,
+      "endLine": 7,
+      "file": "shared/values.yaml",
+      "line": 7
+    },
+    "shared#/schemas/GrossWeight/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 8,
+      "file": "shared/values.yaml",
+      "line": 8
+    },
+    "shared#/schemas/GrossWindow": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 39,
+      "file": "shared/values.yaml",
+      "line": 32
+    },
+    "shared#/schemas/GrossWindow/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 36,
+      "file": "shared/values.yaml",
+      "line": 36
+    },
+    "shared#/schemas/GrossWindow/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 38,
+      "file": "shared/values.yaml",
+      "line": 38
+    },
+    "shared#/schemas/GrossWindow/properties/unit": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 37,
+      "file": "shared/values.yaml",
+      "line": 37
+    },
+    "shared#/schemas/Issues/items": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 32,
+      "file": "shared/schemas.yaml",
+      "line": 28
+    },
+    "shared#/schemas/Issues/items/properties/pointer": {
+      "column": 19,
+      "endColumn": 44,
+      "endLine": 31,
+      "file": "shared/schemas.yaml",
+      "line": 31
+    },
+    "shared#/schemas/Issues/items/properties/rule": {
+      "column": 46,
+      "endColumn": 68,
+      "endLine": 31,
+      "file": "shared/schemas.yaml",
+      "line": 31
+    },
+    "shared#/schemas/LooseCount": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 234,
+      "file": "shared/values.yaml",
+      "line": 227
+    },
+    "shared#/schemas/LooseCount/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 231,
+      "file": "shared/values.yaml",
+      "line": 231
+    },
+    "shared#/schemas/LooseCount/properties/priority": {
+      "column": 5,
+      "endColumn": 33,
+      "endLine": 232,
+      "file": "shared/values.yaml",
+      "line": 232
+    },
+    "shared#/schemas/LooseCount/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 233,
+      "file": "shared/values.yaml",
+      "line": 233
+    },
+    "shared#/schemas/LooseLimit": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 257,
+      "file": "shared/values.yaml",
+      "line": 249
+    },
+    "shared#/schemas/LooseLimit/properties/currency": {
+      "column": 5,
+      "endColumn": 33,
+      "endLine": 254,
+      "file": "shared/values.yaml",
+      "line": 254
+    },
+    "shared#/schemas/LooseLimit/properties/inner": {
+      "column": 5,
+      "endColumn": 21,
+      "endLine": 256,
+      "file": "shared/values.yaml",
+      "line": 256
+    },
+    "shared#/schemas/LooseLimit/properties/label": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 253,
+      "file": "shared/values.yaml",
+      "line": 253
+    },
+    "shared#/schemas/LooseLimit/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 255,
+      "file": "shared/values.yaml",
+      "line": 255
+    },
+    "shared#/schemas/LooseMargin": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 272,
+      "file": "shared/values.yaml",
+      "line": 264
+    },
+    "shared#/schemas/LooseMargin/properties/inner": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 271,
+      "file": "shared/values.yaml",
+      "line": 271
+    },
+    "shared#/schemas/LooseMargin/properties/label": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 268,
+      "file": "shared/values.yaml",
+      "line": 268
+    },
+    "shared#/schemas/LooseMargin/properties/origin": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 269,
+      "file": "shared/values.yaml",
+      "line": 269
+    },
+    "shared#/schemas/LooseMargin/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 270,
+      "file": "shared/values.yaml",
+      "line": 270
+    },
+    "shared#/schemas/LooseRate": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 249,
+      "file": "shared/values.yaml",
+      "line": 242
+    },
+    "shared#/schemas/LooseRate/properties/condition": {
+      "column": 5,
+      "endColumn": 35,
+      "endLine": 247,
+      "file": "shared/values.yaml",
+      "line": 247
+    },
+    "shared#/schemas/LooseRate/properties/label": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 246,
+      "file": "shared/values.yaml",
+      "line": 246
+    },
+    "shared#/schemas/LooseRate/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 248,
+      "file": "shared/values.yaml",
+      "line": 248
+    },
+    "shared#/schemas/LooseSpan": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 227,
+      "file": "shared/values.yaml",
+      "line": 219
+    },
+    "shared#/schemas/LooseSpan/properties/inner": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 226,
+      "file": "shared/values.yaml",
+      "line": 226
+    },
+    "shared#/schemas/LooseSpan/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 223,
+      "file": "shared/values.yaml",
+      "line": 223
+    },
+    "shared#/schemas/LooseSpan/properties/quantity": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 225,
+      "file": "shared/values.yaml",
+      "line": 225
+    },
+    "shared#/schemas/LooseSpan/properties/rating": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 224,
+      "file": "shared/values.yaml",
+      "line": 224
+    },
+    "shared#/schemas/LooseTally": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 264,
+      "file": "shared/values.yaml",
+      "line": 257
+    },
+    "shared#/schemas/LooseTally/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 261,
+      "file": "shared/values.yaml",
+      "line": 261
+    },
+    "shared#/schemas/LooseTally/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 263,
+      "file": "shared/values.yaml",
+      "line": 263
+    },
+    "shared#/schemas/LooseTally/properties/unit": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 262,
+      "file": "shared/values.yaml",
+      "line": 262
+    },
+    "shared#/schemas/LooseVolume": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 219,
+      "file": "shared/values.yaml",
+      "line": 212
+    },
+    "shared#/schemas/LooseVolume/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 216,
+      "file": "shared/values.yaml",
+      "line": 216
+    },
+    "shared#/schemas/LooseVolume/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 218,
+      "file": "shared/values.yaml",
+      "line": 218
+    },
+    "shared#/schemas/LooseVolume/properties/stage": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 217,
+      "file": "shared/values.yaml",
+      "line": 217
+    },
+    "shared#/schemas/LooseWeight": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 212,
+      "file": "shared/values.yaml",
+      "line": 204
+    },
+    "shared#/schemas/LooseWeight/properties/inner": {
+      "column": 5,
+      "endColumn": 24,
+      "endLine": 211,
+      "file": "shared/values.yaml",
+      "line": 211
+    },
+    "shared#/schemas/LooseWeight/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 208,
+      "file": "shared/values.yaml",
+      "line": 208
+    },
+    "shared#/schemas/LooseWeight/properties/quantity": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 210,
+      "file": "shared/values.yaml",
+      "line": 210
+    },
+    "shared#/schemas/LooseWeight/properties/region": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 209,
+      "file": "shared/values.yaml",
+      "line": 209
+    },
+    "shared#/schemas/LooseWindow": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 242,
+      "file": "shared/values.yaml",
+      "line": 234
+    },
+    "shared#/schemas/LooseWindow/properties/inner": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 241,
+      "file": "shared/values.yaml",
+      "line": 241
+    },
+    "shared#/schemas/LooseWindow/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 238,
+      "file": "shared/values.yaml",
+      "line": 238
+    },
+    "shared#/schemas/LooseWindow/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 240,
+      "file": "shared/values.yaml",
+      "line": 240
+    },
+    "shared#/schemas/LooseWindow/properties/visibility": {
+      "column": 5,
+      "endColumn": 37,
+      "endLine": 239,
+      "file": "shared/values.yaml",
+      "line": 239
+    },
+    "shared#/schemas/NetCount": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 99,
+      "file": "shared/values.yaml",
+      "line": 92
+    },
+    "shared#/schemas/NetCount/properties/condition": {
+      "column": 5,
+      "endColumn": 35,
+      "endLine": 97,
+      "file": "shared/values.yaml",
+      "line": 97
+    },
+    "shared#/schemas/NetCount/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 96,
+      "file": "shared/values.yaml",
+      "line": 96
+    },
+    "shared#/schemas/NetCount/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 98,
+      "file": "shared/values.yaml",
+      "line": 98
+    },
+    "shared#/schemas/NetLimit": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 122,
+      "file": "shared/values.yaml",
+      "line": 114
+    },
+    "shared#/schemas/NetLimit/properties/inner": {
+      "column": 5,
+      "endColumn": 19,
+      "endLine": 121,
+      "file": "shared/values.yaml",
+      "line": 121
+    },
+    "shared#/schemas/NetLimit/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 118,
+      "file": "shared/values.yaml",
+      "line": 118
+    },
+    "shared#/schemas/NetLimit/properties/origin": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 119,
+      "file": "shared/values.yaml",
+      "line": 119
+    },
+    "shared#/schemas/NetLimit/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 120,
+      "file": "shared/values.yaml",
+      "line": 120
+    },
+    "shared#/schemas/NetMargin": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 137,
+      "file": "shared/values.yaml",
+      "line": 129
+    },
+    "shared#/schemas/NetMargin/properties/inner": {
+      "column": 5,
+      "endColumn": 20,
+      "endLine": 136,
+      "file": "shared/values.yaml",
+      "line": 136
+    },
+    "shared#/schemas/NetMargin/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 133,
+      "file": "shared/values.yaml",
+      "line": 133
+    },
+    "shared#/schemas/NetMargin/properties/quantity": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 135,
+      "file": "shared/values.yaml",
+      "line": 135
+    },
+    "shared#/schemas/NetMargin/properties/region": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 134,
+      "file": "shared/values.yaml",
+      "line": 134
+    },
+    "shared#/schemas/NetRate": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 114,
+      "file": "shared/values.yaml",
+      "line": 107
+    },
+    "shared#/schemas/NetRate/properties/label": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 111,
+      "file": "shared/values.yaml",
+      "line": 111
+    },
+    "shared#/schemas/NetRate/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 113,
+      "file": "shared/values.yaml",
+      "line": 113
+    },
+    "shared#/schemas/NetRate/properties/unit": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 112,
+      "file": "shared/values.yaml",
+      "line": 112
+    },
+    "shared#/schemas/NetSpan": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 92,
+      "file": "shared/values.yaml",
+      "line": 84
+    },
+    "shared#/schemas/NetSpan/properties/inner": {
+      "column": 5,
+      "endColumn": 21,
+      "endLine": 91,
+      "file": "shared/values.yaml",
+      "line": 91
+    },
+    "shared#/schemas/NetSpan/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 88,
+      "file": "shared/values.yaml",
+      "line": 88
+    },
+    "shared#/schemas/NetSpan/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 90,
+      "file": "shared/values.yaml",
+      "line": 90
+    },
+    "shared#/schemas/NetSpan/properties/visibility": {
+      "column": 5,
+      "endColumn": 37,
+      "endLine": 89,
+      "file": "shared/values.yaml",
+      "line": 89
+    },
+    "shared#/schemas/NetTally": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 129,
+      "file": "shared/values.yaml",
+      "line": 122
+    },
+    "shared#/schemas/NetTally/properties/grade": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 127,
+      "file": "shared/values.yaml",
+      "line": 127
+    },
+    "shared#/schemas/NetTally/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 126,
+      "file": "shared/values.yaml",
+      "line": 126
+    },
+    "shared#/schemas/NetTally/properties/quantity": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 128,
+      "file": "shared/values.yaml",
+      "line": 128
+    },
+    "shared#/schemas/NetVolume": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 84,
+      "file": "shared/values.yaml",
+      "line": 77
+    },
+    "shared#/schemas/NetVolume/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 81,
+      "file": "shared/values.yaml",
+      "line": 81
+    },
+    "shared#/schemas/NetVolume/properties/priority": {
+      "column": 5,
+      "endColumn": 33,
+      "endLine": 82,
+      "file": "shared/values.yaml",
+      "line": 82
+    },
+    "shared#/schemas/NetVolume/properties/quantity": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 83,
+      "file": "shared/values.yaml",
+      "line": 83
+    },
+    "shared#/schemas/NetWeight": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 77,
+      "file": "shared/values.yaml",
+      "line": 69
+    },
+    "shared#/schemas/NetWeight/properties/inner": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 76,
+      "file": "shared/values.yaml",
+      "line": 76
+    },
+    "shared#/schemas/NetWeight/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 73,
+      "file": "shared/values.yaml",
+      "line": 73
+    },
+    "shared#/schemas/NetWeight/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 75,
+      "file": "shared/values.yaml",
+      "line": 75
+    },
+    "shared#/schemas/NetWeight/properties/rating": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 74,
+      "file": "shared/values.yaml",
+      "line": 74
+    },
+    "shared#/schemas/NetWindow": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 107,
+      "file": "shared/values.yaml",
+      "line": 99
+    },
+    "shared#/schemas/NetWindow/properties/currency": {
+      "column": 5,
+      "endColumn": 33,
+      "endLine": 104,
+      "file": "shared/values.yaml",
+      "line": 104
+    },
+    "shared#/schemas/NetWindow/properties/inner": {
+      "column": 5,
+      "endColumn": 20,
+      "endLine": 106,
+      "file": "shared/values.yaml",
+      "line": 106
+    },
+    "shared#/schemas/NetWindow/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 103,
+      "file": "shared/values.yaml",
+      "line": 103
+    },
+    "shared#/schemas/NetWindow/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 105,
+      "file": "shared/values.yaml",
+      "line": 105
+    },
+    "shared#/schemas/PackedCount": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 167,
+      "file": "shared/values.yaml",
+      "line": 159
+    },
+    "shared#/schemas/PackedCount/properties/inner": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 166,
+      "file": "shared/values.yaml",
+      "line": 166
+    },
+    "shared#/schemas/PackedCount/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 163,
+      "file": "shared/values.yaml",
+      "line": 163
+    },
+    "shared#/schemas/PackedCount/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 165,
+      "file": "shared/values.yaml",
+      "line": 165
+    },
+    "shared#/schemas/PackedCount/properties/visibility": {
+      "column": 5,
+      "endColumn": 37,
+      "endLine": 164,
+      "file": "shared/values.yaml",
+      "line": 164
+    },
+    "shared#/schemas/PackedLimit": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 189,
+      "file": "shared/values.yaml",
+      "line": 182
+    },
+    "shared#/schemas/PackedLimit/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 186,
+      "file": "shared/values.yaml",
+      "line": 186
+    },
+    "shared#/schemas/PackedLimit/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 188,
+      "file": "shared/values.yaml",
+      "line": 188
+    },
+    "shared#/schemas/PackedLimit/properties/unit": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 187,
+      "file": "shared/values.yaml",
+      "line": 187
+    },
+    "shared#/schemas/PackedMargin": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 204,
+      "file": "shared/values.yaml",
+      "line": 197
+    },
+    "shared#/schemas/PackedMargin/properties/grade": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 202,
+      "file": "shared/values.yaml",
+      "line": 202
+    },
+    "shared#/schemas/PackedMargin/properties/label": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 201,
+      "file": "shared/values.yaml",
+      "line": 201
+    },
+    "shared#/schemas/PackedMargin/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 203,
+      "file": "shared/values.yaml",
+      "line": 203
+    },
+    "shared#/schemas/PackedRate": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 182,
+      "file": "shared/values.yaml",
+      "line": 174
+    },
+    "shared#/schemas/PackedRate/properties/currency": {
+      "column": 5,
+      "endColumn": 33,
+      "endLine": 179,
+      "file": "shared/values.yaml",
+      "line": 179
+    },
+    "shared#/schemas/PackedRate/properties/inner": {
+      "column": 5,
+      "endColumn": 24,
+      "endLine": 181,
+      "file": "shared/values.yaml",
+      "line": 181
+    },
+    "shared#/schemas/PackedRate/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 178,
+      "file": "shared/values.yaml",
+      "line": 178
+    },
+    "shared#/schemas/PackedRate/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 180,
+      "file": "shared/values.yaml",
+      "line": 180
+    },
+    "shared#/schemas/PackedSpan": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 159,
+      "file": "shared/values.yaml",
+      "line": 152
+    },
+    "shared#/schemas/PackedSpan/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 156,
+      "file": "shared/values.yaml",
+      "line": 156
+    },
+    "shared#/schemas/PackedSpan/properties/priority": {
+      "column": 5,
+      "endColumn": 33,
+      "endLine": 157,
+      "file": "shared/values.yaml",
+      "line": 157
+    },
+    "shared#/schemas/PackedSpan/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 158,
+      "file": "shared/values.yaml",
+      "line": 158
+    },
+    "shared#/schemas/PackedTally": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 197,
+      "file": "shared/values.yaml",
+      "line": 189
+    },
+    "shared#/schemas/PackedTally/properties/inner": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 196,
+      "file": "shared/values.yaml",
+      "line": 196
+    },
+    "shared#/schemas/PackedTally/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 193,
+      "file": "shared/values.yaml",
+      "line": 193
+    },
+    "shared#/schemas/PackedTally/properties/origin": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 194,
+      "file": "shared/values.yaml",
+      "line": 194
+    },
+    "shared#/schemas/PackedTally/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 195,
+      "file": "shared/values.yaml",
+      "line": 195
+    },
+    "shared#/schemas/PackedVolume": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 152,
+      "file": "shared/values.yaml",
+      "line": 144
+    },
+    "shared#/schemas/PackedVolume/properties/inner": {
+      "column": 5,
+      "endColumn": 24,
+      "endLine": 151,
+      "file": "shared/values.yaml",
+      "line": 151
+    },
+    "shared#/schemas/PackedVolume/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 148,
+      "file": "shared/values.yaml",
+      "line": 148
+    },
+    "shared#/schemas/PackedVolume/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 150,
+      "file": "shared/values.yaml",
+      "line": 150
+    },
+    "shared#/schemas/PackedVolume/properties/rating": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 149,
+      "file": "shared/values.yaml",
+      "line": 149
+    },
+    "shared#/schemas/PackedWeight": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 144,
+      "file": "shared/values.yaml",
+      "line": 137
+    },
+    "shared#/schemas/PackedWeight/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 141,
+      "file": "shared/values.yaml",
+      "line": 141
+    },
+    "shared#/schemas/PackedWeight/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 143,
+      "file": "shared/values.yaml",
+      "line": 143
+    },
+    "shared#/schemas/PackedWeight/properties/stage": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 142,
+      "file": "shared/values.yaml",
+      "line": 142
+    },
+    "shared#/schemas/PackedWindow": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 174,
+      "file": "shared/values.yaml",
+      "line": 167
+    },
+    "shared#/schemas/PackedWindow/properties/condition": {
+      "column": 5,
+      "endColumn": 35,
+      "endLine": 172,
+      "file": "shared/values.yaml",
+      "line": 172
+    },
+    "shared#/schemas/PackedWindow/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 171,
+      "file": "shared/values.yaml",
+      "line": 171
+    },
+    "shared#/schemas/PackedWindow/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 173,
+      "file": "shared/values.yaml",
+      "line": 173
+    },
+    "shared#/schemas/PartnerPrincipal": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 22,
+      "file": "shared/schemas.yaml",
+      "line": 18
+    },
+    "shared#/schemas/PartnerPrincipal/properties/partnerId": {
+      "column": 17,
+      "endColumn": 58,
+      "endLine": 21,
+      "file": "shared/schemas.yaml",
+      "line": 21
+    },
+    "shared#/schemas/SealedCount": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 302,
+      "file": "shared/values.yaml",
+      "line": 294
+    },
+    "shared#/schemas/SealedCount/properties/inner": {
+      "column": 5,
+      "endColumn": 22,
+      "endLine": 301,
+      "file": "shared/values.yaml",
+      "line": 301
+    },
+    "shared#/schemas/SealedCount/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 298,
+      "file": "shared/values.yaml",
+      "line": 298
+    },
+    "shared#/schemas/SealedCount/properties/quantity": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 300,
+      "file": "shared/values.yaml",
+      "line": 300
+    },
+    "shared#/schemas/SealedCount/properties/rating": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 299,
+      "file": "shared/values.yaml",
+      "line": 299
+    },
+    "shared#/schemas/SealedLimit": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 324,
+      "file": "shared/values.yaml",
+      "line": 317
+    },
+    "shared#/schemas/SealedLimit/properties/condition": {
+      "column": 5,
+      "endColumn": 35,
+      "endLine": 322,
+      "file": "shared/values.yaml",
+      "line": 322
+    },
+    "shared#/schemas/SealedLimit/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 321,
+      "file": "shared/values.yaml",
+      "line": 321
+    },
+    "shared#/schemas/SealedLimit/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 323,
+      "file": "shared/values.yaml",
+      "line": 323
+    },
+    "shared#/schemas/SealedMargin": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 339,
+      "file": "shared/values.yaml",
+      "line": 332
+    },
+    "shared#/schemas/SealedMargin/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 336,
+      "file": "shared/values.yaml",
+      "line": 336
+    },
+    "shared#/schemas/SealedMargin/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 338,
+      "file": "shared/values.yaml",
+      "line": 338
+    },
+    "shared#/schemas/SealedMargin/properties/unit": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 337,
+      "file": "shared/values.yaml",
+      "line": 337
+    },
+    "shared#/schemas/SealedRate": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 317,
+      "file": "shared/values.yaml",
+      "line": 309
+    },
+    "shared#/schemas/SealedRate/properties/inner": {
+      "column": 5,
+      "endColumn": 24,
+      "endLine": 316,
+      "file": "shared/values.yaml",
+      "line": 316
+    },
+    "shared#/schemas/SealedRate/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 313,
+      "file": "shared/values.yaml",
+      "line": 313
+    },
+    "shared#/schemas/SealedRate/properties/quantity": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 315,
+      "file": "shared/values.yaml",
+      "line": 315
+    },
+    "shared#/schemas/SealedRate/properties/visibility": {
+      "column": 5,
+      "endColumn": 37,
+      "endLine": 314,
+      "file": "shared/values.yaml",
+      "line": 314
+    },
+    "shared#/schemas/SealedSpan": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 294,
+      "file": "shared/values.yaml",
+      "line": 287
+    },
+    "shared#/schemas/SealedSpan/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 291,
+      "file": "shared/values.yaml",
+      "line": 291
+    },
+    "shared#/schemas/SealedSpan/properties/quantity": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 293,
+      "file": "shared/values.yaml",
+      "line": 293
+    },
+    "shared#/schemas/SealedSpan/properties/stage": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 292,
+      "file": "shared/values.yaml",
+      "line": 292
+    },
+    "shared#/schemas/SealedTally": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 332,
+      "file": "shared/values.yaml",
+      "line": 324
+    },
+    "shared#/schemas/SealedTally/properties/currency": {
+      "column": 5,
+      "endColumn": 33,
+      "endLine": 329,
+      "file": "shared/values.yaml",
+      "line": 329
+    },
+    "shared#/schemas/SealedTally/properties/inner": {
+      "column": 5,
+      "endColumn": 23,
+      "endLine": 331,
+      "file": "shared/values.yaml",
+      "line": 331
+    },
+    "shared#/schemas/SealedTally/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 328,
+      "file": "shared/values.yaml",
+      "line": 328
+    },
+    "shared#/schemas/SealedTally/properties/quantity": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 330,
+      "file": "shared/values.yaml",
+      "line": 330
+    },
+    "shared#/schemas/SealedVolume": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 287,
+      "file": "shared/values.yaml",
+      "line": 279
+    },
+    "shared#/schemas/SealedVolume/properties/inner": {
+      "column": 5,
+      "endColumn": 24,
+      "endLine": 286,
+      "file": "shared/values.yaml",
+      "line": 286
+    },
+    "shared#/schemas/SealedVolume/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 283,
+      "file": "shared/values.yaml",
+      "line": 283
+    },
+    "shared#/schemas/SealedVolume/properties/quantity": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 285,
+      "file": "shared/values.yaml",
+      "line": 285
+    },
+    "shared#/schemas/SealedVolume/properties/region": {
+      "column": 5,
+      "endColumn": 29,
+      "endLine": 284,
+      "file": "shared/values.yaml",
+      "line": 284
+    },
+    "shared#/schemas/SealedWeight": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 279,
+      "file": "shared/values.yaml",
+      "line": 272
+    },
+    "shared#/schemas/SealedWeight/properties/grade": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 277,
+      "file": "shared/values.yaml",
+      "line": 277
+    },
+    "shared#/schemas/SealedWeight/properties/label": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 276,
+      "file": "shared/values.yaml",
+      "line": 276
+    },
+    "shared#/schemas/SealedWeight/properties/quantity": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 278,
+      "file": "shared/values.yaml",
+      "line": 278
+    },
+    "shared#/schemas/SealedWindow": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 309,
+      "file": "shared/values.yaml",
+      "line": 302
+    },
+    "shared#/schemas/SealedWindow/properties/label": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 306,
+      "file": "shared/values.yaml",
+      "line": 306
+    },
+    "shared#/schemas/SealedWindow/properties/priority": {
+      "column": 5,
+      "endColumn": 33,
+      "endLine": 307,
+      "file": "shared/values.yaml",
+      "line": 307
+    },
+    "shared#/schemas/SealedWindow/properties/quantity": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 308,
+      "file": "shared/values.yaml",
+      "line": 308
+    },
+    "shared#/schemas/ServicePrincipal": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 18,
+      "file": "shared/schemas.yaml",
+      "line": 14
+    },
+    "shared#/schemas/ServicePrincipal/properties/service": {
+      "column": 17,
+      "endColumn": 43,
+      "endLine": 17,
+      "file": "shared/schemas.yaml",
+      "line": 17
+    },
+    "shared#/schemas/ServicePrincipal/properties/userId": {
+      "column": 45,
+      "endColumn": 59,
+      "endLine": 17,
+      "file": "shared/schemas.yaml",
+      "line": 17
+    },
+    "shared#/schemas/UserPrincipal": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 14,
+      "file": "shared/schemas.yaml",
+      "line": 10
+    },
+    "shared#/schemas/UserPrincipal/properties/userId": {
+      "column": 17,
+      "endColumn": 31,
+      "endLine": 13,
+      "file": "shared/schemas.yaml",
+      "line": 13
+    },
+    "shared#/schemas/WebhookCaller": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 26,
+      "file": "shared/schemas.yaml",
+      "line": 22
+    },
+    "shared#/schemas/WebhookCaller/properties/account": {
+      "column": 17,
+      "endColumn": 42,
+      "endLine": 25,
+      "file": "shared/schemas.yaml",
+      "line": 25
+    },
+    "shared#/schemes/bearer": {
+      "column": 3,
+      "endColumn": 27,
+      "endLine": 5,
+      "file": "shared/base.yaml",
+      "line": 5
+    },
+    "shared#/schemes/csrfToken": {
+      "column": 3,
+      "endColumn": 50,
+      "endLine": 4,
+      "file": "shared/base.yaml",
+      "line": 4
+    },
+    "shared#/schemes/internalToken": {
+      "column": 3,
+      "endColumn": 53,
+      "endLine": 6,
+      "file": "shared/base.yaml",
+      "line": 6
+    },
+    "shared#/schemes/sessionCookie": {
+      "column": 3,
+      "endColumn": 73,
+      "endLine": 3,
+      "file": "shared/base.yaml",
+      "line": 3
+    },
+    "shared#/schemes/webhookSignature": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 16,
+      "file": "shared/base.yaml",
+      "line": 7
+    },
+    "shared#/scopes/account": {
+      "column": 3,
+      "endColumn": 54,
+      "endLine": 42,
+      "file": "shared/base.yaml",
+      "line": 42
+    }
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "shop",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/derive/role-code",
+          "message": "role 'notFound' is bound to 'shop.missing', which no layer or node declares and which is no default code",
+          "fix": "declare 'shop.missing' in 'errors', or bind the role to a registered code",
+          "origin": {
+            "layer": "api",
+            "pointer": "/conventions/errors/derived/notFound"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/derive/role-datum",
+          "message": "role 'sortKeyForbidden' requires the datum 'key', which no param of 'shop.sort_denied' receives",
+          "fix": "add a param 'key' to 'shop.sort_denied', or bind it with params: { key: $key }",
+          "origin": {
+            "layer": "api",
+            "pointer": "/conventions/errors/derived/sortKeyForbidden"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/derive/role-datum",
+          "message": "role 'rateLimited' requires the datum 'retryAfterMs', which no param of 'api.rate_limited' receives",
+          "fix": "add a param 'retryAfterMs' to 'api.rate_limited', or bind it with params: { retryAfterMs: $retryAfterMs }",
+          "origin": {
+            "layer": "api",
+            "pointer": "/errors/api.rate_limited"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/derive/role-code",
+          "message": "role 'forbidden' is bound to 'shop.denied', which no layer or node declares and which is no default code",
+          "fix": "declare 'shop.denied' in 'errors', or bind the role to a registered code",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/errorRoles/forbidden"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

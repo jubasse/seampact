@@ -1,0 +1,31 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/pack-cycle",
+      "message": "pack extends cycle (P8): packs/a.yaml -> packs/b.yaml -> packs/a.yaml",
+      "fix": "break the cycle by removing one extends of it",
+      "origin": {
+        "layer": "pack:a",
+        "pointer": "/~load/packs~1a.yaml/1/1"
+      },
+      "related": [
+        {
+          "origin": {
+            "layer": "pack:a",
+            "pointer": "/~load/packs~1a.yaml/1/34"
+          },
+          "message": "'a' extends from here"
+        },
+        {
+          "origin": {
+            "layer": "pack:a",
+            "pointer": "/~load/packs~1b.yaml/1/34"
+          },
+          "message": "'b' extends from here"
+        }
+      ]
+    }
+  ],
+  "apis": []
+}

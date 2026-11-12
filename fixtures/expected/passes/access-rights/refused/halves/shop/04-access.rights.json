@@ -1,0 +1,199 @@
+{
+  "rights": {
+    "items.read": {
+      "id": "items.read",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/items.read"
+      }
+    },
+    "items.edit": {
+      "id": "items.edit",
+      "subject": {
+        "kind": "resource",
+        "type": {
+          "segments": [
+            "item"
+          ],
+          "role": "schema"
+        },
+        "idSchema": {
+          "kind": "scalar",
+          "type": "string",
+          "format": "uuid",
+          "refinements": {}
+        }
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/items.edit"
+      }
+    },
+    "staff": {
+      "id": "staff",
+      "params": "StaffParams",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/staff"
+      }
+    }
+  },
+  "rules": {
+    "throttle": {
+      "id": "throttle",
+      "takesBucket": true,
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/throttle"
+      }
+    }
+  },
+  "scopes": {
+    "shop": {
+      "id": "shop",
+      "idSchema": {
+        "kind": "scalar",
+        "type": "string",
+        "format": "uuid",
+        "refinements": {}
+      },
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/scopes/shop"
+      }
+    },
+    "aisle": {
+      "id": "aisle",
+      "idSchema": {
+        "kind": "scalar",
+        "type": "string",
+        "format": "uuid",
+        "refinements": {}
+      },
+      "within": "shop",
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/scopes/aisle"
+      }
+    }
+  },
+  "buckets": {
+    "perUser": {
+      "id": "perUser",
+      "key": [
+        {
+          "in": "principal",
+          "name": "userId"
+        }
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/buckets/perUser"
+      }
+    }
+  },
+  "operations": {
+    "health": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "listBrands": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "listItems": {
+      "scopes": [
+        {
+          "scope": "aisle",
+          "source": {
+            "in": "resolver"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/shops/scopes/aisle"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "items.read",
+          "derivedFrom": {
+            "derivation": "pack.odd.reads",
+            "from": [
+              {
+                "layer": "pack:odd",
+                "pointer": "/derive/0/require"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "restockItem": {
+      "scopes": [
+        {
+          "scope": "aisle",
+          "source": {
+            "in": "resolver"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/shops/scopes/aisle"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "items.edit",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/shops/member/routes/items/member/routes/restock/requires/6"
+          },
+          "subject": {
+            "source": {
+              "in": "path",
+              "name": "itemId"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    }
+  }
+}

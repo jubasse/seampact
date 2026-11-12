@@ -1,0 +1,438 @@
+{
+  "formats": {
+    "bare": {
+      "id": "bare",
+      "origin": {
+        "layer": "core",
+        "pointer": "/formats/bare"
+      },
+      "media": "application/json",
+      "absent": "omit",
+      "success": {
+        "item": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "table": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "list": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "page": {
+          "body": {
+            "kind": "slot",
+            "slot": "items",
+            "path": []
+          },
+          "headers": []
+        }
+      },
+      "meta": {},
+      "error": {
+        "media": "application/problem+json",
+        "body": {
+          "kind": "object",
+          "members": [
+            {
+              "name": {
+                "kind": "text",
+                "text": "type"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "code",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "title"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "title",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "status"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "status",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "detail"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "detail",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "instance"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "instance",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "code"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "code",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "nature"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "nature",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "traceId"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "traceId",
+                "path": []
+              }
+            }
+          ],
+          "merge": "params"
+        },
+        "headers": []
+      }
+    }
+  },
+  "operations": [
+    {
+      "kind": "httpOperation",
+      "id": "getArticle",
+      "name": {
+        "segments": [
+          "get",
+          "article"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "op": "get",
+      "resource": {
+        "type": "articles",
+        "idParam": "articleId",
+        "idProperty": "articleId"
+      },
+      "method": "get",
+      "safe": true,
+      "path": "/v1/articles/{articleId}",
+      "params": {
+        "path": [
+          {
+            "name": "articleId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/articles/id/articleId"
+            }
+          }
+        ],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Article"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/articles/item"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/articles/ops/get"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "previewArticle",
+      "name": {
+        "segments": [
+          "preview",
+          "article"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "resource": {
+        "type": "articles",
+        "idParam": "articleId",
+        "idProperty": "articleId"
+      },
+      "method": "get",
+      "safe": true,
+      "path": "/v1/articles/{articleId}/preview",
+      "params": {
+        "path": [
+          {
+            "name": "articleId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/articles/id/articleId"
+            }
+          }
+        ],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Article"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/articles/member/routes/preview/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/articles/member/routes/preview"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "publishArticle",
+      "name": {
+        "segments": [
+          "publish",
+          "article"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "resource": {
+        "type": "articles",
+        "idParam": "articleId",
+        "idProperty": "articleId"
+      },
+      "method": "post",
+      "safe": false,
+      "path": "/v1/articles/{articleId}/publish",
+      "params": {
+        "path": [
+          {
+            "name": "articleId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/articles/id/articleId"
+            }
+          }
+        ],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Article"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/articles/member/routes/publish/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/articles/member/routes/publish"
+      }
+    }
+  ],
+  "api": {
+    "id": "blog",
+    "name": {
+      "segments": [
+        "blog"
+      ],
+      "role": "schema"
+    },
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "kind": "product",
+    "pathVersion": {
+      "value": "prefix",
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/version"
+      }
+    },
+    "maturity": "experimental",
+    "compat": {
+      "policy": "none"
+    },
+    "surfaces": {
+      "app": {
+        "name": {
+          "segments": [
+            "app"
+          ],
+          "role": "schema"
+        },
+        "prefix": "/v1",
+        "pathVersion": "prefix",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app"
+        }
+      }
+    },
+    "documents": {},
+    "docs": {},
+    "extensions": {},
+    "origin": {
+      "layer": "api",
+      "pointer": "/api"
+    }
+  },
+  "lint": {
+    "rules": {},
+    "allows": []
+  }
+}

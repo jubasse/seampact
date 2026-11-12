@@ -464,7 +464,9 @@ function boundOf(literal: string | undefined): TreeSchemasDecimal | undefined {
   return literal === undefined ? undefined : treeSchemasDecimalOf(literal);
 }
 
-const WRITTEN_RULE: Readonly<Record<TreeSchemasWrittenValue, string>> = {
+type TreeSchemasWrittenRule = "example-value" | "default-value" | "extension-value";
+
+const WRITTEN_RULE: Readonly<Record<TreeSchemasWrittenValue, TreeSchemasWrittenRule>> = {
   example: "example-value",
   default: "default-value",
   extension: "extension-value",

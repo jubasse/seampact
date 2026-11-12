@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/oracle/differences.schema.json",
+  "title": "Intended differences between the TS oracle and the Rust port",
+  "description": "The Rust harness accepts a mismatch against the expected outputs only when exactly one entry matches it. One mismatch: the harness walks the TS and the Rust JSON values together, and a mismatch is one JSON pointer where they differ, a scalar that differs (value), a member or array element only in the Rust output (added) or only in the TS output (removed); arrays compare by position, a length difference giving added or removed at each extra index; objects compare by member name; numbers compare by their text token, so integers above 2^53 compare exactly. For generated output, one mismatch is one file whose token streams differ (whitespace aside) or a file present on one side only. An entry matches a mismatch when all hold: the fixture path (relative to fixtures/) matches a glob of applies.fixtures; applies.output is the mismatch's output; applies.api and applies.half, when present, equal the api and the half of the file; applies.pointer matches the mismatch pointer segment by segment, or for generated applies.path matches the file path; change is the mismatch's kind (message needs the pointer's last segment to be message or fix, code-renamed needs rule, code or id); from, when present, equals the TS value and to, when present equals the Rust value (JSON equality, numbers by token). A mismatch matched by no entry fails, and one matched by two or more entries fails as ambiguous. An entry that matches no mismatch in the whole run is stale and fails the gate. The TS check ignores this file: TS is the from side.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "differences"],
+  "properties": {
+    "version": { "const": 1 },
+    "differences": {
+      "description": "The listed differences; empty until the port finds one.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/Difference" }
+    }
+  },
+  "$defs": {
+    "Difference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "reason", "decision", "applies", "change"],
+      "properties": {
+        "id": {
+          "description": "Kebab-case and unique in the file.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+        },
+        "reason": {
+          "description": "Why the Rust output differs, one sentence.",
+          "type": "string",
+          "minLength": 1
+        },
+        "decision": {
+          "description": "A committed doc and an anchor in it, `docs/...md#anchor`: the decision that allows the difference.",
+          "type": "string",
+          "pattern": "^docs/[^#\\s]+\\.md#[A-Za-z0-9_-]+$"
+        },
+        "applies": { "$ref": "#/$defs/Applies" },
+        "change": {
+          "description": "The kind of difference. `format` applies to generated output only.",
+          "enum": ["value", "added", "removed", "message", "code-renamed", "format"]
+        },
+        "from": { "description": "The TS output, when the change has one." },
+        "to": { "description": "The Rust output, when the change has one." }
+      },
+      "if": {
+        "type": "object",
+        "properties": { "change": { "const": "format" } },
+        "required": ["change"]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "applies": { "type": "object", "properties": { "output": { "const": "generated" } } }
+        }
+      }
+    },
+    "Applies": {
+      "description": "Which mismatches an entry matches: a fixture glob, an output, and a pointer (a path for generated files).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fixtures", "output"],
+      "properties": {
+        "fixtures": {
+          "description": "Globs over fixture paths relative to fixtures/, no prefix: `*` matches within one path segment, `**` any number of segments, `dir/**` matches dir and everything under it, and a glob without glob characters matches that path only. A mismatch in a fixture matching any of them is in scope.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "output": {
+          "description": "The expected output the mismatch is in.",
+          "enum": ["ir", "diagnostics", "source-map", "halves", "openapi", "generated"]
+        },
+        "api": {
+          "description": "The api the file belongs to (the file name of ir/<api>.json, source-map/<api>.json, halves/<api>/...); any api when absent.",
+          "type": "string",
+          "minLength": 1
+        },
+        "half": {
+          "description": "The pass half the file belongs to (the <half> of halves/<api>/<NN>-<half>.json); any half when absent.",
+          "type": "string",
+          "minLength": 1
+        },
+        "pointer": {
+          "description": "A JSON Pointer into the output, matched segment by segment; a segment that is exactly `*` matches any one segment, a `*` inside a segment or `**` is refused. For every output but generated.",
+          "type": "string",
+          "pattern": "^(/([^/*]*|\\*))*$"
+        },
+        "path": {
+          "description": "A glob over the generated file's path (same glob rules as applies.fixtures), for generated output.",
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "if": {
+        "type": "object",
+        "properties": { "output": { "const": "generated" } },
+        "required": ["output"]
+      },
+      "then": { "type": "object", "required": ["path"], "not": { "required": ["pointer"] } },
+      "else": { "type": "object", "required": ["pointer"], "not": { "required": ["path"] } }
+    }
+  }
+}

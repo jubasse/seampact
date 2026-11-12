@@ -1,0 +1,32 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "shop",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/derive/error-unknown",
+          "message": "error code 'api.reauthentication_required' is listed here, but no layer or node declares it and it is no default code",
+          "fix": "declare 'api.reauthentication_required' with a status in 'errors', or list a declared code",
+          "origin": {
+            "layer": "api",
+            "pointer": "/rules/recentAuth/errors/0"
+          },
+          "related": []
+        },
+        {
+          "severity": "warning",
+          "rule": "seampact/derive/bucket-limits",
+          "message": "The bucket 'perUser' sets no limit and window, so the server binds them.",
+          "fix": "Set limit and window on the bucket 'perUser', or bind them in the server.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/buckets/perUser"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

@@ -47,6 +47,9 @@ export function isInside(boundary: string, file: string): boolean {
 
 export type PathProblem = "absolute" | "backslash" | "escape" | "empty";
 
+/** The rule id each path problem is reported under, written out so the rule ids can be listed from the sources. */
+export type PathProblemRule = "path-absolute" | "path-backslash" | "path-escape" | "path-empty";
+
 export interface ResolvedPath {
   path: string;
   fragment: string | undefined;

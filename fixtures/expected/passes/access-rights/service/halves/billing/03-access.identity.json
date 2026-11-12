@@ -1,0 +1,80 @@
+{
+  "schemes": {
+    "internalToken": {
+      "id": "internalToken",
+      "kind": "bearer",
+      "bearer": {
+        "format": "jwt"
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/internalToken"
+      }
+    }
+  },
+  "identities": {
+    "service": {
+      "id": "service",
+      "kind": "credential",
+      "schemes": {
+        "read": [
+          "internalToken"
+        ],
+        "write": [
+          "internalToken"
+        ],
+        "optionalRead": []
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "ServicePrincipal"
+      },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/service"
+      }
+    }
+  },
+  "operations": {
+    "invoices": {
+      "access": {
+        "kind": "identity",
+        "identity": "service",
+        "schemes": [
+          "internalToken"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/caller/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "reindex": {
+      "access": {
+        "kind": "identity",
+        "identity": "service",
+        "schemes": [
+          "internalToken"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/caller/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    }
+  }
+}

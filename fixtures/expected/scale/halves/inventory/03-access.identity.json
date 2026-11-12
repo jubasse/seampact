@@ -1,0 +1,3081 @@
+{
+  "schemes": {
+    "sessionCookie": {
+      "id": "sessionCookie",
+      "kind": "cookie",
+      "name": "__Host-session",
+      "csrf": "csrfToken",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/schemes/sessionCookie"
+      }
+    },
+    "csrfToken": {
+      "id": "csrfToken",
+      "kind": "header",
+      "name": "X-Csrf-Token",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/schemes/csrfToken"
+      }
+    },
+    "bearer": {
+      "id": "bearer",
+      "kind": "bearer",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/schemes/bearer"
+      }
+    },
+    "internalToken": {
+      "id": "internalToken",
+      "kind": "bearer",
+      "bearer": {
+        "format": "jwt"
+      },
+      "origin": {
+        "layer": "shared",
+        "pointer": "/schemes/internalToken"
+      }
+    },
+    "webhookSignature": {
+      "id": "webhookSignature",
+      "kind": "signature",
+      "name": "X-Signature",
+      "signature": {
+        "verify": "template",
+        "format": "t={ts},v1={sig}",
+        "algorithm": "hmac-sha256",
+        "payload": "{ts}.{rawBody}",
+        "encoding": "hex",
+        "toleranceMs": 300000,
+        "key": {
+          "kind": "value",
+          "value": "webhook"
+        }
+      },
+      "origin": {
+        "layer": "shared",
+        "pointer": "/schemes/webhookSignature"
+      }
+    }
+  },
+  "headers": {
+    "deadline": {
+      "id": "deadline",
+      "semantic": "deadline",
+      "name": "X-Deadline",
+      "in": "request",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/headers/deadline"
+      }
+    },
+    "trace": {
+      "id": "trace",
+      "semantic": "traceContext",
+      "name": "traceparent",
+      "in": "request",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/headers/trace"
+      }
+    },
+    "actorSurface": {
+      "id": "actorSurface",
+      "semantic": "actorSurface",
+      "name": "X-Actor-Surface",
+      "in": "request",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/headers/actorSurface"
+      }
+    }
+  },
+  "identities": {
+    "user": {
+      "id": "user",
+      "kind": "credential",
+      "schemes": {
+        "read": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "write": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "optionalRead": []
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "UserPrincipal"
+      },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/identities/user"
+      }
+    },
+    "service": {
+      "id": "service",
+      "kind": "credential",
+      "schemes": {
+        "read": [
+          "internalToken"
+        ],
+        "write": [
+          "internalToken"
+        ],
+        "optionalRead": []
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "ServicePrincipal"
+      },
+      "errors": [],
+      "headers": [
+        {
+          "header": "deadline",
+          "for": "all",
+          "required": true,
+          "origin": {
+            "layer": "shared",
+            "pointer": "/identities/service/headers/deadline"
+          }
+        },
+        {
+          "header": "trace",
+          "for": "all",
+          "required": false,
+          "origin": {
+            "layer": "shared",
+            "pointer": "/identities/service/headers/trace"
+          }
+        },
+        {
+          "header": "actorSurface",
+          "for": "writes",
+          "required": true,
+          "schema": {
+            "kind": "enum",
+            "enum": "Surface"
+          },
+          "origin": {
+            "layer": "shared",
+            "pointer": "/identities/service/headers/actorSurface"
+          }
+        }
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/identities/service"
+      }
+    },
+    "partner": {
+      "id": "partner",
+      "kind": "credential",
+      "schemes": {
+        "read": [
+          "bearer"
+        ],
+        "write": [
+          "bearer"
+        ],
+        "optionalRead": []
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "PartnerPrincipal"
+      },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/identities/partner"
+      }
+    },
+    "webhook": {
+      "id": "webhook",
+      "kind": "signed",
+      "signed": "webhookSignature",
+      "principal": {
+        "kind": "schema",
+        "schema": "WebhookCaller"
+      },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/identities/webhook"
+      }
+    }
+  },
+  "operations": {
+    "listAccounts": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "listWarehouses": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "createWarehouse": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "listBins": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "createBin": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "getBin": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "updateBin": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "deleteBin": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "getWarehouse": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "updateWarehouse": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "deleteWarehouse": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "listProducts": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "createProduct": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "getProduct": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "updateProduct": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "deleteProduct": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "reserveProduct": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "releaseProduct": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "listShipments": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "createShipment": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "getShipment": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "updateShipment": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "deleteShipment": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "dispatchShipment": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "getAccount": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "listPallets": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "createPallet": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "getPallet": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "updatePallet": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "deletePallet": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "sealPallet": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "listCrates": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "createCrate": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "getCrate": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "updateCrate": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "deleteCrate": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "inspectCrate": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "listLots": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "createLot": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "getLot": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "updateLot": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "deleteLot": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "quarantineLot": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "listSuppliers": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "createSupplier": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "getSupplier": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "updateSupplier": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "deleteSupplier": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "listCarriers": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "createCarrier": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "getCarrier": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "updateCarrier": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "deleteCarrier": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "listDockDoors": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "createDockDoor": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "getDockDoor": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "updateDockDoor": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "deleteDockDoor": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "listForklifts": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "createForklift": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "getForklift": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "updateForklift": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "deleteForklift": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "listZones": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "createZone": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "getZone": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "updateZone": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "deleteZone": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "listLabels": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "createLabel": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "getLabel": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "updateLabel": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "deleteLabel": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "listStockCounts": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "createStockCount": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "getStockCount": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "updateStockCount": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "deleteStockCount": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "listReturnOrders": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "createReturnOrder": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "getReturnOrder": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "updateReturnOrder": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "deleteReturnOrder": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "listPickLists": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "createPickList": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "getPickList": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "updatePickList": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "deletePickList": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "listAdjustments": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "createAdjustment": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "getAdjustment": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "updateAdjustment": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "deleteAdjustment": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/bulk/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "shared",
+              "pointer": "/identities/user"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    }
+  }
+}

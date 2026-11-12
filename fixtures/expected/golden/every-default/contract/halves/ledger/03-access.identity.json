@@ -1,0 +1,176 @@
+{
+  "schemes": {
+    "bearer": {
+      "id": "bearer",
+      "kind": "bearer",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/bearer"
+      }
+    }
+  },
+  "identities": {
+    "user": {
+      "id": "user",
+      "kind": "credential",
+      "schemes": {
+        "read": [
+          "bearer"
+        ],
+        "write": [
+          "bearer"
+        ],
+        "optionalRead": []
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "UserPrincipal"
+      },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/user"
+      }
+    }
+  },
+  "operations": {
+    "entries_list": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "entry_create": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "entries_batch_get": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "entry_get": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "entry_update": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "entry_delete": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "entry_closing_balance": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    }
+  }
+}

@@ -1,0 +1,929 @@
+{
+  "operations": {
+    "listTemplates": {
+      "params": {
+        "query": [
+          {
+            "name": "cursor",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/templates/ops/list/paging"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "1",
+                "maximum": "50"
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/templates/ops/list/paging"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          },
+          {
+            "name": "sort",
+            "type": {
+              "kind": "array",
+              "items": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {
+                  "pattern": {
+                    "source": "^(?:createdAt|-createdAt)$",
+                    "normalized": "^(?:createdAt|-createdAt)$"
+                  }
+                }
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "list",
+              "style": "form",
+              "explode": false,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/templates/ops/list/paging"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          }
+        ],
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "Link",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": false,
+              "derivedFrom": {
+                "derivation": "paging.params",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/templates/ops/list/paging"
+                  },
+                  {
+                    "layer": "shared",
+                    "pointer": "/pagings/cursor"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "createTemplate": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "getTemplate": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "If-None-Match",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "cache.etag",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/templates/ops/get/cache"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "ETag",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": true,
+              "derivedFrom": {
+                "derivation": "cache.etag",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/templates/ops/get/cache"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "1": {
+          "status": 304,
+          "shape": "empty",
+          "headers": [
+            {
+              "name": "ETag",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": true,
+              "derivedFrom": {
+                "derivation": "cache.etag",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/templates/ops/get/cache"
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "cache.etag",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates/ops/get/cache"
+              }
+            ]
+          }
+        }
+      },
+      "cache": {
+        "family": "minute",
+        "directives": {
+          "maxAgeMs": 60000,
+          "immutable": false,
+          "noCache": false,
+          "mustRevalidate": false
+        },
+        "anonymous": "private",
+        "vary": [
+          "Authorization"
+        ],
+        "etag": true,
+        "perCallerKind": [
+          {
+            "caller": "identified",
+            "cacheControl": "private, max-age=60"
+          }
+        ],
+        "noStore": false,
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/templates/ops/get/cache"
+        },
+        "derivedFrom": {
+          "derivation": "cache.headers",
+          "from": [
+            {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/templates/ops/get/cache"
+            },
+            {
+              "layer": "shared",
+              "pointer": "/conventions/cache/families/minute"
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "updateTemplate": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "deleteTemplate": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "publishTemplate": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "listDeliveries": {
+      "params": {
+        "query": [
+          {
+            "name": "cursor",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/deliveries/ops/list/paging"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "1",
+                "maximum": "100"
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/deliveries/ops/list/paging"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          },
+          {
+            "name": "sort",
+            "type": {
+              "kind": "array",
+              "items": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {
+                  "pattern": {
+                    "source": "^(?:createdAt|-createdAt)$",
+                    "normalized": "^(?:createdAt|-createdAt)$"
+                  }
+                }
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "list",
+              "style": "form",
+              "explode": false,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/deliveries/ops/list/paging"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          }
+        ],
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "Link",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": false,
+              "derivedFrom": {
+                "derivation": "paging.params",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/deliveries/ops/list/paging"
+                  },
+                  {
+                    "layer": "shared",
+                    "pointer": "/pagings/cursor"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "createDelivery": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "getDelivery": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "updateDelivery": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "deleteDelivery": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "retryDelivery": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "dispatch": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/internal/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/internalToken"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Deadline",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.header",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/service/headers/deadline"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/headers/deadline"
+                }
+              ]
+            }
+          },
+          {
+            "name": "traceparent",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.header",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/service/headers/trace"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/headers/trace"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Actor-Surface",
+            "type": {
+              "kind": "enum",
+              "enum": "Surface"
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.header",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/service/headers/actorSurface"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/headers/actorSurface"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "deadlineHeader": "X-Deadline",
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    }
+  },
+  "api": {
+    "wire": {
+      "int64": "string",
+      "outputEnums": "enum",
+      "urls": "relative"
+    }
+  }
+}

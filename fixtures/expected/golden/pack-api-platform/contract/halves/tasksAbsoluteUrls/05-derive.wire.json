@@ -1,0 +1,146 @@
+{
+  "operations": {
+    "listNotes": {
+      "params": {
+        "query": [
+          {
+            "name": "page",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "1"
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "pack:@seampact/pack-api-platform",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "pack:@seampact/pack-api-platform",
+                  "pointer": "/pagings/hydra"
+                }
+              ]
+            }
+          },
+          {
+            "name": "itemsPerPage",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "1",
+                "maximum": "100"
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "pack:@seampact/pack-api-platform",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "pack:@seampact/pack-api-platform",
+                  "pointer": "/pagings/hydra"
+                }
+              ]
+            }
+          }
+        ],
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/notes/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "getNote": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/notes/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    }
+  },
+  "api": {
+    "wire": {
+      "int64": "string",
+      "outputEnums": "enum",
+      "urls": "absolute"
+    }
+  }
+}

@@ -1,0 +1,571 @@
+{
+  "formats": {
+    "bare": {
+      "id": "bare",
+      "origin": {
+        "layer": "core",
+        "pointer": "/formats/bare"
+      },
+      "media": "application/json",
+      "absent": "omit",
+      "success": {
+        "item": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "table": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "list": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "page": {
+          "body": {
+            "kind": "slot",
+            "slot": "items",
+            "path": []
+          },
+          "headers": []
+        }
+      },
+      "meta": {},
+      "error": {
+        "media": "application/problem+json",
+        "body": {
+          "kind": "object",
+          "members": [
+            {
+              "name": {
+                "kind": "text",
+                "text": "type"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "code",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "title"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "title",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "status"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "status",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "detail"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "detail",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "instance"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "instance",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "code"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "code",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "nature"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "nature",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "traceId"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "traceId",
+                "path": []
+              }
+            }
+          ],
+          "merge": "params"
+        },
+        "headers": []
+      }
+    }
+  },
+  "operations": [
+    {
+      "kind": "httpOperation",
+      "id": "copyDocs",
+      "name": {
+        "segments": [
+          "copy",
+          "docs"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "resource": {
+        "type": "docs",
+        "idProperty": "docId"
+      },
+      "method": "post",
+      "safe": false,
+      "path": "/v1/projects/{projectId}/docs/copy",
+      "params": {
+        "path": [
+          {
+            "name": "projectId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/projects/id/projectId"
+            }
+          }
+        ],
+        "query": [],
+        "header": [
+          {
+            "name": "X-Source-Doc",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/projects/member/routes/docs/collection/routes/copy/headers/X-Source-Doc"
+            }
+          }
+        ]
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Doc"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/projects/member/routes/docs/collection/routes/copy/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/projects/member/routes/docs/collection/routes/copy"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "copyHomeDocs",
+      "name": {
+        "segments": [
+          "copy",
+          "home",
+          "docs"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "resource": {
+        "type": "docs",
+        "idProperty": "docId"
+      },
+      "method": "post",
+      "safe": false,
+      "path": "/v1/projects/{projectId}/docs/copy-home",
+      "params": {
+        "path": [
+          {
+            "name": "projectId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/projects/id/projectId"
+            }
+          }
+        ],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Doc"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/projects/member/routes/docs/collection/routes/copyHome/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/projects/member/routes/docs/collection/routes/copyHome"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "getDoc",
+      "name": {
+        "segments": [
+          "get",
+          "doc"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "op": "get",
+      "resource": {
+        "type": "docs",
+        "idParam": "docId",
+        "idProperty": "docId"
+      },
+      "method": "get",
+      "safe": true,
+      "path": "/v1/projects/{projectId}/docs/{docId}",
+      "params": {
+        "path": [
+          {
+            "name": "projectId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/projects/id/projectId"
+            }
+          },
+          {
+            "name": "docId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/projects/member/routes/docs/id/docId"
+            }
+          }
+        ],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Doc"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/projects/member/routes/docs/item"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/projects/member/routes/docs/ops/get"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "updateDoc",
+      "name": {
+        "segments": [
+          "update",
+          "doc"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "op": "update",
+      "resource": {
+        "type": "docs",
+        "idParam": "docId",
+        "idProperty": "docId"
+      },
+      "method": "patch",
+      "safe": false,
+      "path": "/v1/projects/{projectId}/docs/{docId}",
+      "params": {
+        "path": [
+          {
+            "name": "projectId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/projects/id/projectId"
+            }
+          },
+          {
+            "name": "docId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/projects/member/routes/docs/id/docId"
+            }
+          }
+        ],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "Doc"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/projects/member/routes/docs/ops/update/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Doc"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/projects/member/routes/docs/item"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/projects/member/routes/docs/ops/update"
+      }
+    }
+  ],
+  "api": {
+    "id": "studio",
+    "name": {
+      "segments": [
+        "studio"
+      ],
+      "role": "schema"
+    },
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "kind": "product",
+    "pathVersion": {
+      "value": "prefix",
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/version"
+      }
+    },
+    "maturity": "experimental",
+    "compat": {
+      "policy": "none"
+    },
+    "surfaces": {
+      "app": {
+        "name": {
+          "segments": [
+            "app"
+          ],
+          "role": "schema"
+        },
+        "prefix": "/v1",
+        "pathVersion": "prefix",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app"
+        }
+      }
+    },
+    "documents": {},
+    "docs": {},
+    "extensions": {},
+    "origin": {
+      "layer": "api",
+      "pointer": "/api"
+    }
+  },
+  "lint": {
+    "rules": {},
+    "allows": []
+  }
+}

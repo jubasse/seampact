@@ -1,0 +1,197 @@
+{
+  "schemes": {
+    "bearer": {
+      "id": "bearer",
+      "kind": "bearer",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/bearer"
+      }
+    },
+    "hookSignature": {
+      "id": "hookSignature",
+      "kind": "signature",
+      "name": "Hook-Signature",
+      "signature": {
+        "verify": "template",
+        "format": "t={ts},v1={sig}",
+        "algorithm": "hmac-sha256",
+        "payload": "{ts}.{rawBody}",
+        "encoding": "hex",
+        "toleranceMs": 300000,
+        "key": {
+          "kind": "value",
+          "value": "hook"
+        }
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/hookSignature"
+      }
+    }
+  },
+  "identities": {
+    "user": {
+      "id": "user",
+      "kind": "credential",
+      "schemes": {
+        "read": [
+          "bearer"
+        ],
+        "write": [
+          "bearer"
+        ],
+        "optionalRead": []
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "UserPrincipal"
+      },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/user"
+      }
+    },
+    "hook": {
+      "id": "hook",
+      "kind": "signed",
+      "signed": "hookSignature",
+      "unknownKeys": {
+        "policy": "ignore",
+        "reason": "The sender adds event fields without notice."
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "HookCaller"
+      },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/hook"
+      }
+    }
+  },
+  "operations": {
+    "updateSecret": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "revealSecret": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "shareSecret": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "events": {
+      "input": {
+        "schema": {
+          "unknownKeys": {
+            "policy": "ignore",
+            "reason": "The sender adds event fields without notice.",
+            "derivedFrom": {
+              "derivation": "identity.unknownKeys",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/identities/hook"
+                }
+              ]
+            }
+          }
+        },
+        "rawBody": true
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "hook",
+        "schemes": [
+          "hookSignature"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/hooks/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "ping": {
+      "access": {
+        "kind": "identity",
+        "identity": "hook",
+        "schemes": [
+          "hookSignature"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/hooks/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    }
+  }
+}

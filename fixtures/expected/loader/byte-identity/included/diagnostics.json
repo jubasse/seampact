@@ -1,0 +1,32 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "tasks",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/validate/missing-keyword",
+          "message": "'api' needs 'version'.",
+          "fix": "Add 'version'.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/api"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/validate/missing-keyword",
+          "message": "Node 'tasks' states no kind: a node is a route ('method'), a collection or a single ('kind'), or a relay route ('relays') (ADR 0002 section 6).",
+          "fix": "Add 'method', 'kind: collection', 'kind: single' or, in a surface root's routes, 'relays'.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/tasks"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

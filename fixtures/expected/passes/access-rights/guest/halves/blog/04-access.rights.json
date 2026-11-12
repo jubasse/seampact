@@ -1,0 +1,165 @@
+{
+  "rights": {
+    "articles.read": {
+      "id": "articles.read",
+      "subject": {
+        "kind": "resource",
+        "type": {
+          "segments": [
+            "article"
+          ],
+          "role": "schema"
+        },
+        "idSchema": {
+          "kind": "scalar",
+          "type": "string",
+          "format": "uuid",
+          "refinements": {}
+        }
+      },
+      "guest": "Published articles are readable without an account.",
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/articles.read"
+      }
+    },
+    "articles.edit": {
+      "id": "articles.edit",
+      "subject": {
+        "kind": "resource",
+        "type": {
+          "segments": [
+            "article"
+          ],
+          "role": "schema"
+        },
+        "idSchema": {
+          "kind": "scalar",
+          "type": "string",
+          "format": "uuid",
+          "refinements": {}
+        }
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/articles.edit"
+      }
+    }
+  },
+  "rules": {
+    "throttle": {
+      "id": "throttle",
+      "takesBucket": true,
+      "errors": [
+        "api.rate_limited"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/throttle"
+      }
+    }
+  },
+  "buckets": {
+    "perAddress": {
+      "id": "perAddress",
+      "key": [
+        {
+          "in": "address",
+          "prefixBits": 64
+        }
+      ],
+      "limit": 30,
+      "windowMs": 60000,
+      "origin": {
+        "layer": "api",
+        "pointer": "/buckets/perAddress"
+      }
+    }
+  },
+  "operations": {
+    "getArticle": {
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "throttle",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/articles/ops/get/requires/0"
+          },
+          "bucket": "perAddress"
+        },
+        {
+          "kind": "right",
+          "right": "articles.read",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/articles/ops/get/requires/1"
+          },
+          "subject": {
+            "source": {
+              "in": "path",
+              "name": "articleId"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "previewArticle": {
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "articles.read",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/articles/member/routes/preview/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "path",
+              "name": "articleId"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "publishArticle": {
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "articles.edit",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/articles/member/routes/publish/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "path",
+              "name": "articleId"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    }
+  }
+}

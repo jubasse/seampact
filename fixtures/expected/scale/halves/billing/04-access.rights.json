@@ -1,0 +1,3006 @@
+{
+  "rights": {
+    "roles": {
+      "id": "roles",
+      "params": "RolesParams",
+      "subject": {
+        "kind": "scope",
+        "scope": "account"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/rights/roles"
+      }
+    }
+  },
+  "rules": {
+    "throttle": {
+      "id": "throttle",
+      "takesBucket": true,
+      "errors": [
+        "api.rate_limited"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/rules/throttle"
+      }
+    }
+  },
+  "scopes": {
+    "account": {
+      "id": "account",
+      "idSchema": {
+        "kind": "scalar",
+        "type": "string",
+        "format": "uuid",
+        "refinements": {}
+      },
+      "errors": [
+        "api.not_found"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/scopes/account"
+      }
+    }
+  },
+  "buckets": {
+    "write": {
+      "id": "write",
+      "key": [
+        {
+          "in": "principal",
+          "name": "userId"
+        }
+      ],
+      "limit": 60,
+      "windowMs": 60000,
+      "origin": {
+        "layer": "shared",
+        "pointer": "/buckets/write"
+      }
+    }
+  },
+  "operations": {
+    "listAccounts": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "getAccount": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    },
+    "listInvoices": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    },
+    "createInvoice": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "throttle",
+          "entry": "writeThrottle",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/invoices/ops/create/requires/0"
+          },
+          "bucket": "write"
+        },
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/invoices/ops/create/requires/1"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "getInvoice": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    },
+    "updateInvoice": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/invoices/ops/update/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "deleteInvoice": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/invoices/ops/delete/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "sendInvoice": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/invoices/member/routes/send/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "listPayments": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    },
+    "createPayment": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "throttle",
+          "entry": "writeThrottle",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/payments/ops/create/requires/0"
+          },
+          "bucket": "write"
+        },
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/payments/ops/create/requires/1"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "getPayment": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    },
+    "updatePayment": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/payments/ops/update/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "deletePayment": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/payments/ops/delete/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "capturePayment": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/payments/member/routes/capture/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "listRefunds": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    },
+    "createRefund": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "throttle",
+          "entry": "writeThrottle",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/refunds/ops/create/requires/0"
+          },
+          "bucket": "write"
+        },
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/refunds/ops/create/requires/1"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "getRefund": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    },
+    "updateRefund": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/refunds/ops/update/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "deleteRefund": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/refunds/ops/delete/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "approveRefund": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/refunds/member/routes/approve/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "listTaxRates": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    },
+    "createTaxRate": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "throttle",
+          "entry": "writeThrottle",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/taxRates/ops/create/requires/0"
+          },
+          "bucket": "write"
+        },
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/taxRates/ops/create/requires/1"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "getTaxRate": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    },
+    "updateTaxRate": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/taxRates/ops/update/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "deleteTaxRate": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/taxRates/ops/delete/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "publishTaxRate": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/taxRates/member/routes/publish/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "listCustomers": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    },
+    "createCustomer": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "throttle",
+          "entry": "writeThrottle",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/customers/ops/create/requires/0"
+          },
+          "bucket": "write"
+        },
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/customers/ops/create/requires/1"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "getCustomer": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    },
+    "updateCustomer": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/customers/ops/update/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "deleteCustomer": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/customers/ops/delete/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "cancelCustomer": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/customers/member/routes/cancel/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "listSubscriptions": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    },
+    "createSubscription": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "throttle",
+          "entry": "writeThrottle",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/subscriptions/ops/create/requires/0"
+          },
+          "bucket": "write"
+        },
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/subscriptions/ops/create/requires/1"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "getSubscription": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    },
+    "updateSubscription": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/subscriptions/ops/update/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "deleteSubscription": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/subscriptions/ops/delete/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "applySubscription": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/subscriptions/member/routes/apply/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "listPlans": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    },
+    "createPlan": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "throttle",
+          "entry": "writeThrottle",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/plans/ops/create/requires/0"
+          },
+          "bucket": "write"
+        },
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/plans/ops/create/requires/1"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "getPlan": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    },
+    "updatePlan": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/plans/ops/update/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "deletePlan": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/plans/ops/delete/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "closePlan": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/plans/member/routes/close/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "listCoupons": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    },
+    "createCoupon": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "throttle",
+          "entry": "writeThrottle",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/coupons/ops/create/requires/0"
+          },
+          "bucket": "write"
+        },
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/coupons/ops/create/requires/1"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "getCoupon": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    },
+    "updateCoupon": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/coupons/ops/update/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "deleteCoupon": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/coupons/ops/delete/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "listCreditNotes": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    },
+    "createCreditNote": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "throttle",
+          "entry": "writeThrottle",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/creditNotes/ops/create/requires/0"
+          },
+          "bucket": "write"
+        },
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/creditNotes/ops/create/requires/1"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "getCreditNote": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    },
+    "updateCreditNote": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/creditNotes/ops/update/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "deleteCreditNote": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/creditNotes/ops/delete/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "listPayouts": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    },
+    "createPayout": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "throttle",
+          "entry": "writeThrottle",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/payouts/ops/create/requires/0"
+          },
+          "bucket": "write"
+        },
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/payouts/ops/create/requires/1"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "getPayout": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    },
+    "updatePayout": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/payouts/ops/update/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "deletePayout": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/payouts/ops/delete/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "listDisputes": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    },
+    "createDispute": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "throttle",
+          "entry": "writeThrottle",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/disputes/ops/create/requires/0"
+          },
+          "bucket": "write"
+        },
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/disputes/ops/create/requires/1"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "getDispute": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    },
+    "updateDispute": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/disputes/ops/update/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "deleteDispute": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/disputes/ops/delete/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "listPriceLists": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    },
+    "createPriceList": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "throttle",
+          "entry": "writeThrottle",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/priceLists/ops/create/requires/0"
+          },
+          "bucket": "write"
+        },
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/priceLists/ops/create/requires/1"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "getPriceList": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    },
+    "updatePriceList": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/priceLists/ops/update/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "deletePriceList": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/priceLists/ops/delete/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "listLedgerEntries": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    },
+    "createLedgerEntry": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "throttle",
+          "entry": "writeThrottle",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/ledgerEntries/ops/create/requires/0"
+          },
+          "bucket": "write"
+        },
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/ledgerEntries/ops/create/requires/1"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "getLedgerEntry": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    },
+    "updateLedgerEntry": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/ledgerEntries/ops/update/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "deleteLedgerEntry": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/ledgerEntries/ops/delete/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "listStatements": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    },
+    "createStatement": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "throttle",
+          "entry": "writeThrottle",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/statements/ops/create/requires/0"
+          },
+          "bucket": "write"
+        },
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/statements/ops/create/requires/1"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "getStatement": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    },
+    "updateStatement": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/statements/ops/update/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "deleteStatement": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/statements/ops/delete/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "listReceipts": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    },
+    "createReceipt": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "throttle",
+          "entry": "writeThrottle",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/receipts/ops/create/requires/0"
+          },
+          "bucket": "write"
+        },
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/receipts/ops/create/requires/1"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "getReceipt": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    },
+    "updateReceipt": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/receipts/ops/update/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "deleteReceipt": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/receipts/ops/delete/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "listReminders": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    },
+    "createReminder": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "throttle",
+          "entry": "writeThrottle",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/reminders/ops/create/requires/0"
+          },
+          "bucket": "write"
+        },
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/reminders/ops/create/requires/1"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "getReminder": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    },
+    "updateReminder": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/reminders/ops/update/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "deleteReminder": {
+      "scopes": [
+        {
+          "scope": "account",
+          "source": {
+            "in": "path",
+            "name": "accountId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/scopes/account"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "accountEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/accounts/member/routes/reminders/ops/delete/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "account"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "stripeEvents": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    }
+  }
+}

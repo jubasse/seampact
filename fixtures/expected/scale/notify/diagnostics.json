@@ -1,0 +1,109 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "notify",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/enum-unknown",
+          "message": "no enum 'Currency' with values is declared",
+          "fix": "declare it under 'enums', or fix the name",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Template/properties/state/enum"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/enum-unknown",
+          "message": "no enum 'Grade' with values is declared",
+          "fix": "declare it under 'enums', or fix the name",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Template/properties/kind/enum"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/schema-unknown",
+          "message": "no schema 'ChilledCount' is declared",
+          "fix": "declare it under 'schemas', or fix the name",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Template/properties/detail"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/schema-unknown",
+          "message": "no schema 'ChilledRate' is declared",
+          "fix": "declare it under 'schemas', or fix the name",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Template/properties/extra"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/enum-unknown",
+          "message": "no enum 'Visibility' with values is declared",
+          "fix": "declare it under 'enums', or fix the name",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/PublishTemplateInput/properties/audience/enum"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/enum-unknown",
+          "message": "no enum 'Unit' with values is declared",
+          "fix": "declare it under 'enums', or fix the name",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Delivery/properties/state/enum"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/enum-unknown",
+          "message": "no enum 'Region' with values is declared",
+          "fix": "declare it under 'enums', or fix the name",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Delivery/properties/kind/enum"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/schema-unknown",
+          "message": "no schema 'ChilledTally' is declared",
+          "fix": "declare it under 'schemas', or fix the name",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Delivery/properties/detail"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/schema-unknown",
+          "message": "no schema 'BulkWeight' is declared",
+          "fix": "declare it under 'schemas', or fix the name",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Delivery/properties/extra"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

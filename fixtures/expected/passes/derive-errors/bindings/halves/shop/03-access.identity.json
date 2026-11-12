@@ -1,0 +1,49 @@
+{
+  "operations": {
+    "listMembers": {
+      "access": {
+        "kind": "public",
+        "reason": "The fixture checks role bindings only.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "getUser": {
+      "access": {
+        "kind": "public",
+        "reason": "The fixture checks role bindings only.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "historyUser": {
+      "access": {
+        "kind": "public",
+        "reason": "The fixture checks role bindings only.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    }
+  }
+}

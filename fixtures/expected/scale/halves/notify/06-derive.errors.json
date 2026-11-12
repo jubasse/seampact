@@ -1,0 +1,6079 @@
+{
+  "errors": {
+    "api.schema_invalid": {
+      "code": "api.schema_invalid",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 400
+      },
+      "params": "ApiSchemaInvalidParams",
+      "example": {
+        "issues": [
+          {
+            "pointer": "/name",
+            "rule": "minLength"
+          }
+        ]
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/api.schema_invalid"
+      },
+      "default": "schemaInvalid"
+    },
+    "api.rate_limited": {
+      "code": "api.rate_limited",
+      "family": "api",
+      "nature": "unavailable",
+      "http": {
+        "status": 429
+      },
+      "params": "ApiRateLimitedParams",
+      "example": {
+        "retryAfterMs": 1500
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/api.rate_limited"
+      },
+      "default": "rateLimited"
+    },
+    "api.quota_exhausted": {
+      "code": "api.quota_exhausted",
+      "family": "api",
+      "nature": "unavailable",
+      "http": {
+        "status": 429
+      },
+      "params": "ApiQuotaExhaustedParams",
+      "example": {
+        "target": "sample"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/api.quota_exhausted"
+      }
+    },
+    "api.maintenance_window": {
+      "code": "api.maintenance_window",
+      "family": "api",
+      "nature": "unavailable",
+      "http": {
+        "status": 503
+      },
+      "params": "ApiMaintenanceWindowParams",
+      "example": {
+        "lockedBy": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/api.maintenance_window"
+      }
+    },
+    "api.region_unavailable": {
+      "code": "api.region_unavailable",
+      "family": "api",
+      "nature": "unavailable",
+      "http": {
+        "status": 503
+      },
+      "params": "ApiRegionUnavailableParams",
+      "example": {
+        "expiredAt": "2027-01-15T09:30:00Z"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/api.region_unavailable"
+      }
+    },
+    "api.client_outdated": {
+      "code": "api.client_outdated",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 412
+      },
+      "params": "ApiClientOutdatedParams",
+      "example": {
+        "existingId": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/api.client_outdated"
+      }
+    },
+    "api.feature_disabled": {
+      "code": "api.feature_disabled",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 403
+      },
+      "params": "ApiFeatureDisabledParams",
+      "example": {
+        "limit": 100
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/api.feature_disabled"
+      }
+    },
+    "api.tenant_suspended": {
+      "code": "api.tenant_suspended",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 403
+      },
+      "params": "ApiTenantSuspendedParams",
+      "example": {
+        "field": "name"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/api.tenant_suspended"
+      }
+    },
+    "api.header_missing": {
+      "code": "api.header_missing",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 400
+      },
+      "params": "ApiHeaderMissingParams",
+      "example": {
+        "waitMs": 2000
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/api.header_missing"
+      }
+    },
+    "api.clock_skew": {
+      "code": "api.clock_skew",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 400
+      },
+      "params": "ApiClockSkewParams",
+      "example": {
+        "reason": "Held for review."
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/api.clock_skew"
+      }
+    },
+    "api.filter_too_wide": {
+      "code": "api.filter_too_wide",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 400
+      },
+      "params": "ApiFilterTooWideParams",
+      "example": {
+        "issues": [
+          {
+            "pointer": "/name",
+            "rule": "minLength"
+          }
+        ]
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/api.filter_too_wide"
+      }
+    },
+    "api.locale_unsupported": {
+      "code": "api.locale_unsupported",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 400
+      },
+      "params": "ApiLocaleUnsupportedParams",
+      "example": {
+        "currentVersion": 3
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/api.locale_unsupported"
+      }
+    },
+    "stock.missing": {
+      "code": "stock.missing",
+      "family": "stock",
+      "nature": "refused",
+      "http": {
+        "status": 404
+      },
+      "params": "StockMissingParams",
+      "example": {
+        "target": "sample"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/stock.missing"
+      }
+    },
+    "stock.locked": {
+      "code": "stock.locked",
+      "family": "stock",
+      "nature": "refused",
+      "http": {
+        "status": 423
+      },
+      "params": "StockLockedParams",
+      "example": {
+        "lockedBy": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/stock.locked"
+      }
+    },
+    "stock.expired": {
+      "code": "stock.expired",
+      "family": "stock",
+      "nature": "refused",
+      "http": {
+        "status": 410
+      },
+      "params": "StockExpiredParams",
+      "example": {
+        "expiredAt": "2027-01-15T09:30:00Z"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/stock.expired"
+      }
+    },
+    "stock.duplicated": {
+      "code": "stock.duplicated",
+      "family": "stock",
+      "nature": "refused",
+      "http": {
+        "status": 409
+      },
+      "params": "StockDuplicatedParams",
+      "example": {
+        "existingId": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/stock.duplicated"
+      }
+    },
+    "stock.limited": {
+      "code": "stock.limited",
+      "family": "stock",
+      "nature": "unavailable",
+      "http": {
+        "status": 429
+      },
+      "params": "StockLimitedParams",
+      "example": {
+        "limit": 100
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/stock.limited"
+      }
+    },
+    "stock.mismatched": {
+      "code": "stock.mismatched",
+      "family": "stock",
+      "nature": "refused",
+      "http": {
+        "status": 422
+      },
+      "params": "StockMismatchedParams",
+      "example": {
+        "field": "name"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/stock.mismatched"
+      }
+    },
+    "stock.unavailable": {
+      "code": "stock.unavailable",
+      "family": "stock",
+      "nature": "unavailable",
+      "http": {
+        "status": 503
+      },
+      "params": "StockUnavailableParams",
+      "example": {
+        "waitMs": 2000
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/stock.unavailable"
+      }
+    },
+    "stock.suspended": {
+      "code": "stock.suspended",
+      "family": "stock",
+      "nature": "refused",
+      "http": {
+        "status": 403
+      },
+      "params": "StockSuspendedParams",
+      "example": {
+        "reason": "Held for review."
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/stock.suspended"
+      }
+    },
+    "stock.rejected": {
+      "code": "stock.rejected",
+      "family": "stock",
+      "nature": "refused",
+      "http": {
+        "status": 400
+      },
+      "params": "StockRejectedParams",
+      "example": {
+        "issues": [
+          {
+            "pointer": "/name",
+            "rule": "minLength"
+          }
+        ]
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/stock.rejected"
+      }
+    },
+    "stock.outdated": {
+      "code": "stock.outdated",
+      "family": "stock",
+      "nature": "refused",
+      "http": {
+        "status": 412
+      },
+      "params": "StockOutdatedParams",
+      "example": {
+        "currentVersion": 3
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/stock.outdated"
+      }
+    },
+    "shelf.missing": {
+      "code": "shelf.missing",
+      "family": "shelf",
+      "nature": "refused",
+      "http": {
+        "status": 404
+      },
+      "params": "ShelfMissingParams",
+      "example": {
+        "target": "sample"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/shelf.missing"
+      }
+    },
+    "shelf.locked": {
+      "code": "shelf.locked",
+      "family": "shelf",
+      "nature": "refused",
+      "http": {
+        "status": 423
+      },
+      "params": "ShelfLockedParams",
+      "example": {
+        "lockedBy": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/shelf.locked"
+      }
+    },
+    "shelf.expired": {
+      "code": "shelf.expired",
+      "family": "shelf",
+      "nature": "refused",
+      "http": {
+        "status": 410
+      },
+      "params": "ShelfExpiredParams",
+      "example": {
+        "expiredAt": "2027-01-15T09:30:00Z"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/shelf.expired"
+      }
+    },
+    "shelf.duplicated": {
+      "code": "shelf.duplicated",
+      "family": "shelf",
+      "nature": "refused",
+      "http": {
+        "status": 409
+      },
+      "params": "ShelfDuplicatedParams",
+      "example": {
+        "existingId": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/shelf.duplicated"
+      }
+    },
+    "shelf.limited": {
+      "code": "shelf.limited",
+      "family": "shelf",
+      "nature": "unavailable",
+      "http": {
+        "status": 429
+      },
+      "params": "ShelfLimitedParams",
+      "example": {
+        "limit": 100
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/shelf.limited"
+      }
+    },
+    "shelf.mismatched": {
+      "code": "shelf.mismatched",
+      "family": "shelf",
+      "nature": "refused",
+      "http": {
+        "status": 422
+      },
+      "params": "ShelfMismatchedParams",
+      "example": {
+        "field": "name"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/shelf.mismatched"
+      }
+    },
+    "shelf.unavailable": {
+      "code": "shelf.unavailable",
+      "family": "shelf",
+      "nature": "unavailable",
+      "http": {
+        "status": 503
+      },
+      "params": "ShelfUnavailableParams",
+      "example": {
+        "waitMs": 2000
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/shelf.unavailable"
+      }
+    },
+    "shelf.suspended": {
+      "code": "shelf.suspended",
+      "family": "shelf",
+      "nature": "refused",
+      "http": {
+        "status": 403
+      },
+      "params": "ShelfSuspendedParams",
+      "example": {
+        "reason": "Held for review."
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/shelf.suspended"
+      }
+    },
+    "shelf.rejected": {
+      "code": "shelf.rejected",
+      "family": "shelf",
+      "nature": "refused",
+      "http": {
+        "status": 400
+      },
+      "params": "ShelfRejectedParams",
+      "example": {
+        "issues": [
+          {
+            "pointer": "/name",
+            "rule": "minLength"
+          }
+        ]
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/shelf.rejected"
+      }
+    },
+    "shelf.outdated": {
+      "code": "shelf.outdated",
+      "family": "shelf",
+      "nature": "refused",
+      "http": {
+        "status": 412
+      },
+      "params": "ShelfOutdatedParams",
+      "example": {
+        "currentVersion": 3
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/shelf.outdated"
+      }
+    },
+    "supplier.missing": {
+      "code": "supplier.missing",
+      "family": "supplier",
+      "nature": "refused",
+      "http": {
+        "status": 404
+      },
+      "params": "SupplierMissingParams",
+      "example": {
+        "target": "sample"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/supplier.missing"
+      }
+    },
+    "supplier.locked": {
+      "code": "supplier.locked",
+      "family": "supplier",
+      "nature": "refused",
+      "http": {
+        "status": 423
+      },
+      "params": "SupplierLockedParams",
+      "example": {
+        "lockedBy": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/supplier.locked"
+      }
+    },
+    "supplier.expired": {
+      "code": "supplier.expired",
+      "family": "supplier",
+      "nature": "refused",
+      "http": {
+        "status": 410
+      },
+      "params": "SupplierExpiredParams",
+      "example": {
+        "expiredAt": "2027-01-15T09:30:00Z"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/supplier.expired"
+      }
+    },
+    "supplier.duplicated": {
+      "code": "supplier.duplicated",
+      "family": "supplier",
+      "nature": "refused",
+      "http": {
+        "status": 409
+      },
+      "params": "SupplierDuplicatedParams",
+      "example": {
+        "existingId": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/supplier.duplicated"
+      }
+    },
+    "supplier.limited": {
+      "code": "supplier.limited",
+      "family": "supplier",
+      "nature": "unavailable",
+      "http": {
+        "status": 429
+      },
+      "params": "SupplierLimitedParams",
+      "example": {
+        "limit": 100
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/supplier.limited"
+      }
+    },
+    "supplier.mismatched": {
+      "code": "supplier.mismatched",
+      "family": "supplier",
+      "nature": "refused",
+      "http": {
+        "status": 422
+      },
+      "params": "SupplierMismatchedParams",
+      "example": {
+        "field": "name"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/supplier.mismatched"
+      }
+    },
+    "supplier.unavailable": {
+      "code": "supplier.unavailable",
+      "family": "supplier",
+      "nature": "unavailable",
+      "http": {
+        "status": 503
+      },
+      "params": "SupplierUnavailableParams",
+      "example": {
+        "waitMs": 2000
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/supplier.unavailable"
+      }
+    },
+    "supplier.suspended": {
+      "code": "supplier.suspended",
+      "family": "supplier",
+      "nature": "refused",
+      "http": {
+        "status": 403
+      },
+      "params": "SupplierSuspendedParams",
+      "example": {
+        "reason": "Held for review."
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/supplier.suspended"
+      }
+    },
+    "supplier.rejected": {
+      "code": "supplier.rejected",
+      "family": "supplier",
+      "nature": "refused",
+      "http": {
+        "status": 400
+      },
+      "params": "SupplierRejectedParams",
+      "example": {
+        "issues": [
+          {
+            "pointer": "/name",
+            "rule": "minLength"
+          }
+        ]
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/supplier.rejected"
+      }
+    },
+    "supplier.outdated": {
+      "code": "supplier.outdated",
+      "family": "supplier",
+      "nature": "refused",
+      "http": {
+        "status": 412
+      },
+      "params": "SupplierOutdatedParams",
+      "example": {
+        "currentVersion": 3
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/supplier.outdated"
+      }
+    },
+    "transfer.missing": {
+      "code": "transfer.missing",
+      "family": "transfer",
+      "nature": "refused",
+      "http": {
+        "status": 404
+      },
+      "params": "TransferMissingParams",
+      "example": {
+        "target": "sample"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/transfer.missing"
+      }
+    },
+    "transfer.locked": {
+      "code": "transfer.locked",
+      "family": "transfer",
+      "nature": "refused",
+      "http": {
+        "status": 423
+      },
+      "params": "TransferLockedParams",
+      "example": {
+        "lockedBy": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/transfer.locked"
+      }
+    },
+    "transfer.expired": {
+      "code": "transfer.expired",
+      "family": "transfer",
+      "nature": "refused",
+      "http": {
+        "status": 410
+      },
+      "params": "TransferExpiredParams",
+      "example": {
+        "expiredAt": "2027-01-15T09:30:00Z"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/transfer.expired"
+      }
+    },
+    "transfer.duplicated": {
+      "code": "transfer.duplicated",
+      "family": "transfer",
+      "nature": "refused",
+      "http": {
+        "status": 409
+      },
+      "params": "TransferDuplicatedParams",
+      "example": {
+        "existingId": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/transfer.duplicated"
+      }
+    },
+    "transfer.limited": {
+      "code": "transfer.limited",
+      "family": "transfer",
+      "nature": "unavailable",
+      "http": {
+        "status": 429
+      },
+      "params": "TransferLimitedParams",
+      "example": {
+        "limit": 100
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/transfer.limited"
+      }
+    },
+    "transfer.mismatched": {
+      "code": "transfer.mismatched",
+      "family": "transfer",
+      "nature": "refused",
+      "http": {
+        "status": 422
+      },
+      "params": "TransferMismatchedParams",
+      "example": {
+        "field": "name"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/transfer.mismatched"
+      }
+    },
+    "transfer.unavailable": {
+      "code": "transfer.unavailable",
+      "family": "transfer",
+      "nature": "unavailable",
+      "http": {
+        "status": 503
+      },
+      "params": "TransferUnavailableParams",
+      "example": {
+        "waitMs": 2000
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/transfer.unavailable"
+      }
+    },
+    "transfer.suspended": {
+      "code": "transfer.suspended",
+      "family": "transfer",
+      "nature": "refused",
+      "http": {
+        "status": 403
+      },
+      "params": "TransferSuspendedParams",
+      "example": {
+        "reason": "Held for review."
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/transfer.suspended"
+      }
+    },
+    "transfer.rejected": {
+      "code": "transfer.rejected",
+      "family": "transfer",
+      "nature": "refused",
+      "http": {
+        "status": 400
+      },
+      "params": "TransferRejectedParams",
+      "example": {
+        "issues": [
+          {
+            "pointer": "/name",
+            "rule": "minLength"
+          }
+        ]
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/transfer.rejected"
+      }
+    },
+    "transfer.outdated": {
+      "code": "transfer.outdated",
+      "family": "transfer",
+      "nature": "refused",
+      "http": {
+        "status": 412
+      },
+      "params": "TransferOutdatedParams",
+      "example": {
+        "currentVersion": 3
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/transfer.outdated"
+      }
+    },
+    "invoice.missing": {
+      "code": "invoice.missing",
+      "family": "invoice",
+      "nature": "refused",
+      "http": {
+        "status": 404
+      },
+      "params": "InvoiceMissingParams",
+      "example": {
+        "target": "sample"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/invoice.missing"
+      }
+    },
+    "invoice.locked": {
+      "code": "invoice.locked",
+      "family": "invoice",
+      "nature": "refused",
+      "http": {
+        "status": 423
+      },
+      "params": "InvoiceLockedParams",
+      "example": {
+        "lockedBy": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/invoice.locked"
+      }
+    },
+    "invoice.expired": {
+      "code": "invoice.expired",
+      "family": "invoice",
+      "nature": "refused",
+      "http": {
+        "status": 410
+      },
+      "params": "InvoiceExpiredParams",
+      "example": {
+        "expiredAt": "2027-01-15T09:30:00Z"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/invoice.expired"
+      }
+    },
+    "invoice.duplicated": {
+      "code": "invoice.duplicated",
+      "family": "invoice",
+      "nature": "refused",
+      "http": {
+        "status": 409
+      },
+      "params": "InvoiceDuplicatedParams",
+      "example": {
+        "existingId": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/invoice.duplicated"
+      }
+    },
+    "invoice.limited": {
+      "code": "invoice.limited",
+      "family": "invoice",
+      "nature": "unavailable",
+      "http": {
+        "status": 429
+      },
+      "params": "InvoiceLimitedParams",
+      "example": {
+        "limit": 100
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/invoice.limited"
+      }
+    },
+    "invoice.mismatched": {
+      "code": "invoice.mismatched",
+      "family": "invoice",
+      "nature": "refused",
+      "http": {
+        "status": 422
+      },
+      "params": "InvoiceMismatchedParams",
+      "example": {
+        "field": "name"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/invoice.mismatched"
+      }
+    },
+    "invoice.unavailable": {
+      "code": "invoice.unavailable",
+      "family": "invoice",
+      "nature": "unavailable",
+      "http": {
+        "status": 503
+      },
+      "params": "InvoiceUnavailableParams",
+      "example": {
+        "waitMs": 2000
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/invoice.unavailable"
+      }
+    },
+    "invoice.suspended": {
+      "code": "invoice.suspended",
+      "family": "invoice",
+      "nature": "refused",
+      "http": {
+        "status": 403
+      },
+      "params": "InvoiceSuspendedParams",
+      "example": {
+        "reason": "Held for review."
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/invoice.suspended"
+      }
+    },
+    "invoice.rejected": {
+      "code": "invoice.rejected",
+      "family": "invoice",
+      "nature": "refused",
+      "http": {
+        "status": 400
+      },
+      "params": "InvoiceRejectedParams",
+      "example": {
+        "issues": [
+          {
+            "pointer": "/name",
+            "rule": "minLength"
+          }
+        ]
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/invoice.rejected"
+      }
+    },
+    "invoice.outdated": {
+      "code": "invoice.outdated",
+      "family": "invoice",
+      "nature": "refused",
+      "http": {
+        "status": 412
+      },
+      "params": "InvoiceOutdatedParams",
+      "example": {
+        "currentVersion": 3
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/invoice.outdated"
+      }
+    },
+    "payment.missing": {
+      "code": "payment.missing",
+      "family": "payment",
+      "nature": "refused",
+      "http": {
+        "status": 404
+      },
+      "params": "PaymentMissingParams",
+      "example": {
+        "target": "sample"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/payment.missing"
+      }
+    },
+    "payment.locked": {
+      "code": "payment.locked",
+      "family": "payment",
+      "nature": "refused",
+      "http": {
+        "status": 423
+      },
+      "params": "PaymentLockedParams",
+      "example": {
+        "lockedBy": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/payment.locked"
+      }
+    },
+    "payment.expired": {
+      "code": "payment.expired",
+      "family": "payment",
+      "nature": "refused",
+      "http": {
+        "status": 410
+      },
+      "params": "PaymentExpiredParams",
+      "example": {
+        "expiredAt": "2027-01-15T09:30:00Z"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/payment.expired"
+      }
+    },
+    "payment.duplicated": {
+      "code": "payment.duplicated",
+      "family": "payment",
+      "nature": "refused",
+      "http": {
+        "status": 409
+      },
+      "params": "PaymentDuplicatedParams",
+      "example": {
+        "existingId": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/payment.duplicated"
+      }
+    },
+    "payment.limited": {
+      "code": "payment.limited",
+      "family": "payment",
+      "nature": "unavailable",
+      "http": {
+        "status": 429
+      },
+      "params": "PaymentLimitedParams",
+      "example": {
+        "limit": 100
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/payment.limited"
+      }
+    },
+    "payment.mismatched": {
+      "code": "payment.mismatched",
+      "family": "payment",
+      "nature": "refused",
+      "http": {
+        "status": 422
+      },
+      "params": "PaymentMismatchedParams",
+      "example": {
+        "field": "name"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/payment.mismatched"
+      }
+    },
+    "payment.unavailable": {
+      "code": "payment.unavailable",
+      "family": "payment",
+      "nature": "unavailable",
+      "http": {
+        "status": 503
+      },
+      "params": "PaymentUnavailableParams",
+      "example": {
+        "waitMs": 2000
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/payment.unavailable"
+      }
+    },
+    "payment.suspended": {
+      "code": "payment.suspended",
+      "family": "payment",
+      "nature": "refused",
+      "http": {
+        "status": 403
+      },
+      "params": "PaymentSuspendedParams",
+      "example": {
+        "reason": "Held for review."
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/payment.suspended"
+      }
+    },
+    "payment.rejected": {
+      "code": "payment.rejected",
+      "family": "payment",
+      "nature": "refused",
+      "http": {
+        "status": 400
+      },
+      "params": "PaymentRejectedParams",
+      "example": {
+        "issues": [
+          {
+            "pointer": "/name",
+            "rule": "minLength"
+          }
+        ]
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/payment.rejected"
+      }
+    },
+    "payment.outdated": {
+      "code": "payment.outdated",
+      "family": "payment",
+      "nature": "refused",
+      "http": {
+        "status": 412
+      },
+      "params": "PaymentOutdatedParams",
+      "example": {
+        "currentVersion": 3
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/payment.outdated"
+      }
+    },
+    "refund.missing": {
+      "code": "refund.missing",
+      "family": "refund",
+      "nature": "refused",
+      "http": {
+        "status": 404
+      },
+      "params": "RefundMissingParams",
+      "example": {
+        "target": "sample"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/refund.missing"
+      }
+    },
+    "refund.locked": {
+      "code": "refund.locked",
+      "family": "refund",
+      "nature": "refused",
+      "http": {
+        "status": 423
+      },
+      "params": "RefundLockedParams",
+      "example": {
+        "lockedBy": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/refund.locked"
+      }
+    },
+    "refund.expired": {
+      "code": "refund.expired",
+      "family": "refund",
+      "nature": "refused",
+      "http": {
+        "status": 410
+      },
+      "params": "RefundExpiredParams",
+      "example": {
+        "expiredAt": "2027-01-15T09:30:00Z"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/refund.expired"
+      }
+    },
+    "refund.duplicated": {
+      "code": "refund.duplicated",
+      "family": "refund",
+      "nature": "refused",
+      "http": {
+        "status": 409
+      },
+      "params": "RefundDuplicatedParams",
+      "example": {
+        "existingId": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/refund.duplicated"
+      }
+    },
+    "refund.limited": {
+      "code": "refund.limited",
+      "family": "refund",
+      "nature": "unavailable",
+      "http": {
+        "status": 429
+      },
+      "params": "RefundLimitedParams",
+      "example": {
+        "limit": 100
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/refund.limited"
+      }
+    },
+    "refund.mismatched": {
+      "code": "refund.mismatched",
+      "family": "refund",
+      "nature": "refused",
+      "http": {
+        "status": 422
+      },
+      "params": "RefundMismatchedParams",
+      "example": {
+        "field": "name"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/refund.mismatched"
+      }
+    },
+    "refund.unavailable": {
+      "code": "refund.unavailable",
+      "family": "refund",
+      "nature": "unavailable",
+      "http": {
+        "status": 503
+      },
+      "params": "RefundUnavailableParams",
+      "example": {
+        "waitMs": 2000
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/refund.unavailable"
+      }
+    },
+    "refund.suspended": {
+      "code": "refund.suspended",
+      "family": "refund",
+      "nature": "refused",
+      "http": {
+        "status": 403
+      },
+      "params": "RefundSuspendedParams",
+      "example": {
+        "reason": "Held for review."
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/refund.suspended"
+      }
+    },
+    "refund.rejected": {
+      "code": "refund.rejected",
+      "family": "refund",
+      "nature": "refused",
+      "http": {
+        "status": 400
+      },
+      "params": "RefundRejectedParams",
+      "example": {
+        "issues": [
+          {
+            "pointer": "/name",
+            "rule": "minLength"
+          }
+        ]
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/refund.rejected"
+      }
+    },
+    "refund.outdated": {
+      "code": "refund.outdated",
+      "family": "refund",
+      "nature": "refused",
+      "http": {
+        "status": 412
+      },
+      "params": "RefundOutdatedParams",
+      "example": {
+        "currentVersion": 3
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/refund.outdated"
+      }
+    },
+    "tax.missing": {
+      "code": "tax.missing",
+      "family": "tax",
+      "nature": "refused",
+      "http": {
+        "status": 404
+      },
+      "params": "TaxMissingParams",
+      "example": {
+        "target": "sample"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/tax.missing"
+      }
+    },
+    "tax.locked": {
+      "code": "tax.locked",
+      "family": "tax",
+      "nature": "refused",
+      "http": {
+        "status": 423
+      },
+      "params": "TaxLockedParams",
+      "example": {
+        "lockedBy": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/tax.locked"
+      }
+    },
+    "tax.expired": {
+      "code": "tax.expired",
+      "family": "tax",
+      "nature": "refused",
+      "http": {
+        "status": 410
+      },
+      "params": "TaxExpiredParams",
+      "example": {
+        "expiredAt": "2027-01-15T09:30:00Z"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/tax.expired"
+      }
+    },
+    "tax.duplicated": {
+      "code": "tax.duplicated",
+      "family": "tax",
+      "nature": "refused",
+      "http": {
+        "status": 409
+      },
+      "params": "TaxDuplicatedParams",
+      "example": {
+        "existingId": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/tax.duplicated"
+      }
+    },
+    "tax.limited": {
+      "code": "tax.limited",
+      "family": "tax",
+      "nature": "unavailable",
+      "http": {
+        "status": 429
+      },
+      "params": "TaxLimitedParams",
+      "example": {
+        "limit": 100
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/tax.limited"
+      }
+    },
+    "tax.mismatched": {
+      "code": "tax.mismatched",
+      "family": "tax",
+      "nature": "refused",
+      "http": {
+        "status": 422
+      },
+      "params": "TaxMismatchedParams",
+      "example": {
+        "field": "name"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/tax.mismatched"
+      }
+    },
+    "tax.unavailable": {
+      "code": "tax.unavailable",
+      "family": "tax",
+      "nature": "unavailable",
+      "http": {
+        "status": 503
+      },
+      "params": "TaxUnavailableParams",
+      "example": {
+        "waitMs": 2000
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/tax.unavailable"
+      }
+    },
+    "tax.suspended": {
+      "code": "tax.suspended",
+      "family": "tax",
+      "nature": "refused",
+      "http": {
+        "status": 403
+      },
+      "params": "TaxSuspendedParams",
+      "example": {
+        "reason": "Held for review."
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/tax.suspended"
+      }
+    },
+    "tax.rejected": {
+      "code": "tax.rejected",
+      "family": "tax",
+      "nature": "refused",
+      "http": {
+        "status": 400
+      },
+      "params": "TaxRejectedParams",
+      "example": {
+        "issues": [
+          {
+            "pointer": "/name",
+            "rule": "minLength"
+          }
+        ]
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/tax.rejected"
+      }
+    },
+    "tax.outdated": {
+      "code": "tax.outdated",
+      "family": "tax",
+      "nature": "refused",
+      "http": {
+        "status": 412
+      },
+      "params": "TaxOutdatedParams",
+      "example": {
+        "currentVersion": 3
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/tax.outdated"
+      }
+    },
+    "template.missing": {
+      "code": "template.missing",
+      "family": "template",
+      "nature": "refused",
+      "http": {
+        "status": 404
+      },
+      "params": "TemplateMissingParams",
+      "example": {
+        "target": "sample"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/template.missing"
+      }
+    },
+    "template.locked": {
+      "code": "template.locked",
+      "family": "template",
+      "nature": "refused",
+      "http": {
+        "status": 423
+      },
+      "params": "TemplateLockedParams",
+      "example": {
+        "lockedBy": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/template.locked"
+      }
+    },
+    "template.expired": {
+      "code": "template.expired",
+      "family": "template",
+      "nature": "refused",
+      "http": {
+        "status": 410
+      },
+      "params": "TemplateExpiredParams",
+      "example": {
+        "expiredAt": "2027-01-15T09:30:00Z"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/template.expired"
+      }
+    },
+    "template.duplicated": {
+      "code": "template.duplicated",
+      "family": "template",
+      "nature": "refused",
+      "http": {
+        "status": 409
+      },
+      "params": "TemplateDuplicatedParams",
+      "example": {
+        "existingId": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/template.duplicated"
+      }
+    },
+    "template.limited": {
+      "code": "template.limited",
+      "family": "template",
+      "nature": "unavailable",
+      "http": {
+        "status": 429
+      },
+      "params": "TemplateLimitedParams",
+      "example": {
+        "limit": 100
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/template.limited"
+      }
+    },
+    "template.mismatched": {
+      "code": "template.mismatched",
+      "family": "template",
+      "nature": "refused",
+      "http": {
+        "status": 422
+      },
+      "params": "TemplateMismatchedParams",
+      "example": {
+        "field": "name"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/template.mismatched"
+      }
+    },
+    "template.unavailable": {
+      "code": "template.unavailable",
+      "family": "template",
+      "nature": "unavailable",
+      "http": {
+        "status": 503
+      },
+      "params": "TemplateUnavailableParams",
+      "example": {
+        "waitMs": 2000
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/template.unavailable"
+      }
+    },
+    "template.suspended": {
+      "code": "template.suspended",
+      "family": "template",
+      "nature": "refused",
+      "http": {
+        "status": 403
+      },
+      "params": "TemplateSuspendedParams",
+      "example": {
+        "reason": "Held for review."
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/template.suspended"
+      }
+    },
+    "template.rejected": {
+      "code": "template.rejected",
+      "family": "template",
+      "nature": "refused",
+      "http": {
+        "status": 400
+      },
+      "params": "TemplateRejectedParams",
+      "example": {
+        "issues": [
+          {
+            "pointer": "/name",
+            "rule": "minLength"
+          }
+        ]
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/template.rejected"
+      }
+    },
+    "template.outdated": {
+      "code": "template.outdated",
+      "family": "template",
+      "nature": "refused",
+      "http": {
+        "status": 412
+      },
+      "params": "TemplateOutdatedParams",
+      "example": {
+        "currentVersion": 3
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/template.outdated"
+      }
+    },
+    "delivery.missing": {
+      "code": "delivery.missing",
+      "family": "delivery",
+      "nature": "refused",
+      "http": {
+        "status": 404
+      },
+      "params": "DeliveryMissingParams",
+      "example": {
+        "target": "sample"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/delivery.missing"
+      }
+    },
+    "delivery.locked": {
+      "code": "delivery.locked",
+      "family": "delivery",
+      "nature": "refused",
+      "http": {
+        "status": 423
+      },
+      "params": "DeliveryLockedParams",
+      "example": {
+        "lockedBy": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/delivery.locked"
+      }
+    },
+    "delivery.expired": {
+      "code": "delivery.expired",
+      "family": "delivery",
+      "nature": "refused",
+      "http": {
+        "status": 410
+      },
+      "params": "DeliveryExpiredParams",
+      "example": {
+        "expiredAt": "2027-01-15T09:30:00Z"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/delivery.expired"
+      }
+    },
+    "delivery.duplicated": {
+      "code": "delivery.duplicated",
+      "family": "delivery",
+      "nature": "refused",
+      "http": {
+        "status": 409
+      },
+      "params": "DeliveryDuplicatedParams",
+      "example": {
+        "existingId": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/delivery.duplicated"
+      }
+    },
+    "delivery.limited": {
+      "code": "delivery.limited",
+      "family": "delivery",
+      "nature": "unavailable",
+      "http": {
+        "status": 429
+      },
+      "params": "DeliveryLimitedParams",
+      "example": {
+        "limit": 100
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/delivery.limited"
+      }
+    },
+    "delivery.mismatched": {
+      "code": "delivery.mismatched",
+      "family": "delivery",
+      "nature": "refused",
+      "http": {
+        "status": 422
+      },
+      "params": "DeliveryMismatchedParams",
+      "example": {
+        "field": "name"
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/delivery.mismatched"
+      }
+    },
+    "delivery.unavailable": {
+      "code": "delivery.unavailable",
+      "family": "delivery",
+      "nature": "unavailable",
+      "http": {
+        "status": 503
+      },
+      "params": "DeliveryUnavailableParams",
+      "example": {
+        "waitMs": 2000
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/delivery.unavailable"
+      }
+    },
+    "delivery.suspended": {
+      "code": "delivery.suspended",
+      "family": "delivery",
+      "nature": "refused",
+      "http": {
+        "status": 403
+      },
+      "params": "DeliverySuspendedParams",
+      "example": {
+        "reason": "Held for review."
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/delivery.suspended"
+      }
+    },
+    "delivery.rejected": {
+      "code": "delivery.rejected",
+      "family": "delivery",
+      "nature": "refused",
+      "http": {
+        "status": 400
+      },
+      "params": "DeliveryRejectedParams",
+      "example": {
+        "issues": [
+          {
+            "pointer": "/name",
+            "rule": "minLength"
+          }
+        ]
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/delivery.rejected"
+      }
+    },
+    "delivery.outdated": {
+      "code": "delivery.outdated",
+      "family": "delivery",
+      "nature": "refused",
+      "http": {
+        "status": 412
+      },
+      "params": "DeliveryOutdatedParams",
+      "example": {
+        "currentVersion": 3
+      },
+      "docs": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/delivery.outdated"
+      }
+    },
+    "api.unauthenticated": {
+      "code": "api.unauthenticated",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 401
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.unauthenticated"
+      },
+      "default": "unauthenticated"
+    },
+    "api.forbidden": {
+      "code": "api.forbidden",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 403
+      },
+      "params": "ApiForbiddenParams",
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.forbidden"
+      },
+      "default": "forbidden"
+    },
+    "api.csrf_invalid": {
+      "code": "api.csrf_invalid",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 403
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.csrf_invalid"
+      },
+      "default": "csrfInvalid"
+    },
+    "api.sort_key_forbidden": {
+      "code": "api.sort_key_forbidden",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 403
+      },
+      "params": "ApiSortKeyForbiddenParams",
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.sort_key_forbidden"
+      },
+      "default": "sortKeyForbidden"
+    },
+    "api.not_found": {
+      "code": "api.not_found",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 404
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.not_found"
+      },
+      "default": "notFound"
+    },
+    "state.conflict": {
+      "code": "state.conflict",
+      "family": "state",
+      "nature": "refused",
+      "http": {
+        "status": 409
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/state.conflict"
+      },
+      "default": "stateConflict"
+    },
+    "api.idempotency_in_progress": {
+      "code": "api.idempotency_in_progress",
+      "family": "api",
+      "nature": "unavailable",
+      "http": {
+        "status": 409
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.idempotency_in_progress"
+      },
+      "default": "idempotencyInProgress"
+    },
+    "api.precondition_failed": {
+      "code": "api.precondition_failed",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 412
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.precondition_failed"
+      },
+      "default": "preconditionFailed"
+    },
+    "api.idempotency_key_reused": {
+      "code": "api.idempotency_key_reused",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 422
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.idempotency_key_reused"
+      },
+      "default": "idempotencyKeyReused"
+    },
+    "api.precondition_required": {
+      "code": "api.precondition_required",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 428
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.precondition_required"
+      },
+      "default": "preconditionRequired"
+    },
+    "api.cursor_too_old": {
+      "code": "api.cursor_too_old",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 410
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.cursor_too_old"
+      },
+      "default": "gone"
+    },
+    "api.payload_too_large": {
+      "code": "api.payload_too_large",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 413
+      },
+      "params": "ApiPayloadTooLargeParams",
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.payload_too_large"
+      },
+      "default": "payloadTooLarge"
+    },
+    "api.unsupported_media_type": {
+      "code": "api.unsupported_media_type",
+      "family": "api",
+      "nature": "refused",
+      "http": {
+        "status": 415
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.unsupported_media_type"
+      },
+      "default": "unsupportedMediaType"
+    },
+    "api.internal": {
+      "code": "api.internal",
+      "family": "api",
+      "nature": "failed",
+      "http": {
+        "status": 500
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.internal"
+      },
+      "default": "undeclaredStatus"
+    },
+    "api.upstream_unavailable": {
+      "code": "api.upstream_unavailable",
+      "family": "api",
+      "nature": "unavailable",
+      "http": {
+        "status": 502
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.upstream_unavailable"
+      },
+      "default": "upstreamUnavailable"
+    },
+    "api.service_unavailable": {
+      "code": "api.service_unavailable",
+      "family": "api",
+      "nature": "unavailable",
+      "http": {
+        "status": 503
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.service_unavailable"
+      },
+      "default": "serviceUnavailable"
+    },
+    "api.upstream_timeout": {
+      "code": "api.upstream_timeout",
+      "family": "api",
+      "nature": "unavailable",
+      "http": {
+        "status": 504
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.upstream_timeout"
+      },
+      "default": "upstreamTimeout"
+    },
+    "api.deadline_exceeded": {
+      "code": "api.deadline_exceeded",
+      "family": "api",
+      "nature": "unavailable",
+      "http": {
+        "status": 504
+      },
+      "docs": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.deadline_exceeded"
+      },
+      "default": "deadlineExceeded"
+    }
+  },
+  "operations": {
+    "listTemplates": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "each",
+                      "of": "issues",
+                      "as": {
+                        "kind": "object",
+                        "members": [
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "pointer"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "pointer"
+                              ]
+                            }
+                          },
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "rule"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "rule"
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates/ops/list"
+              },
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates/ops/list/paging"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/conventions/errors/derived/schemaInvalid"
+              }
+            ]
+          }
+        },
+        {
+          "code": "template.rejected",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "api.unauthenticated",
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              }
+            ]
+          }
+        },
+        {
+          "code": "template.suspended",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "template.missing",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "template.duplicated",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "template.expired",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "template.outdated",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "template.mismatched",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "template.locked",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "template.limited",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates/ops/list"
+              }
+            ]
+          }
+        },
+        {
+          "code": "template.unavailable",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        }
+      ]
+    },
+    "createTemplate": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "each",
+                      "of": "issues",
+                      "as": {
+                        "kind": "object",
+                        "members": [
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "pointer"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "pointer"
+                              ]
+                            }
+                          },
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "rule"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "rule"
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates/ops/create"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/conventions/errors/derived/schemaInvalid"
+              }
+            ]
+          }
+        },
+        {
+          "code": "template.rejected",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "api.unauthenticated",
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              }
+            ]
+          }
+        },
+        {
+          "code": "template.suspended",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "template.missing",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "template.duplicated",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "template.expired",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "template.outdated",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "api.payload_too_large",
+          "roles": [
+            {
+              "role": "payloadTooLarge",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "limitBytes",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates/ops/create/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates/ops/create/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "template.mismatched",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "template.locked",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "api.rate_limited",
+          "retryHeader": {
+            "name": "Retry-After",
+            "param": "retryAfterMs",
+            "unit": "s",
+            "derivedFrom": {
+              "derivation": "rule.bucket",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/templates/ops/create/requires/0"
+                }
+              ]
+            }
+          },
+          "derivedFrom": {
+            "derivation": "requirement.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates/ops/create/requires/0"
+              }
+            ]
+          }
+        },
+        {
+          "code": "template.limited",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates/ops/create"
+              }
+            ]
+          }
+        },
+        {
+          "code": "template.unavailable",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        }
+      ]
+    },
+    "getTemplate": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "each",
+                      "of": "issues",
+                      "as": {
+                        "kind": "object",
+                        "members": [
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "pointer"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "pointer"
+                              ]
+                            }
+                          },
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "rule"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "rule"
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates/ops/get"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/conventions/errors/derived/schemaInvalid"
+              }
+            ]
+          }
+        },
+        {
+          "code": "template.rejected",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "api.unauthenticated",
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              }
+            ]
+          }
+        },
+        {
+          "code": "template.suspended",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "api.not_found",
+          "roles": [
+            {
+              "role": "notFound"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "member.notFound",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates/ops/get"
+              }
+            ]
+          }
+        },
+        {
+          "code": "template.missing",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "template.duplicated",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "template.expired",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "template.outdated",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "template.mismatched",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "template.locked",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "template.limited",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates/ops/get"
+              }
+            ]
+          }
+        },
+        {
+          "code": "template.unavailable",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        }
+      ]
+    },
+    "updateTemplate": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "each",
+                      "of": "issues",
+                      "as": {
+                        "kind": "object",
+                        "members": [
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "pointer"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "pointer"
+                              ]
+                            }
+                          },
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "rule"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "rule"
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates/ops/update"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/conventions/errors/derived/schemaInvalid"
+              }
+            ]
+          }
+        },
+        {
+          "code": "template.rejected",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "api.unauthenticated",
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              }
+            ]
+          }
+        },
+        {
+          "code": "template.suspended",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "api.not_found",
+          "roles": [
+            {
+              "role": "notFound"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "member.notFound",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates/ops/update"
+              }
+            ]
+          }
+        },
+        {
+          "code": "template.missing",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "template.duplicated",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "template.expired",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "template.outdated",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "api.payload_too_large",
+          "roles": [
+            {
+              "role": "payloadTooLarge",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "limitBytes",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates/ops/update/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates/ops/update/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "template.mismatched",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "template.locked",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "template.limited",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates/ops/update"
+              }
+            ]
+          }
+        },
+        {
+          "code": "template.unavailable",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        }
+      ]
+    },
+    "deleteTemplate": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "each",
+                      "of": "issues",
+                      "as": {
+                        "kind": "object",
+                        "members": [
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "pointer"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "pointer"
+                              ]
+                            }
+                          },
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "rule"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "rule"
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates/ops/delete"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/conventions/errors/derived/schemaInvalid"
+              }
+            ]
+          }
+        },
+        {
+          "code": "template.rejected",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "api.unauthenticated",
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              }
+            ]
+          }
+        },
+        {
+          "code": "template.suspended",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "api.not_found",
+          "roles": [
+            {
+              "role": "notFound"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "member.notFound",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates/ops/delete"
+              }
+            ]
+          }
+        },
+        {
+          "code": "template.missing",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "template.duplicated",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "template.expired",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "template.outdated",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "template.mismatched",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "template.locked",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "template.limited",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates/ops/delete"
+              }
+            ]
+          }
+        },
+        {
+          "code": "template.unavailable",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        }
+      ]
+    },
+    "publishTemplate": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "each",
+                      "of": "issues",
+                      "as": {
+                        "kind": "object",
+                        "members": [
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "pointer"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "pointer"
+                              ]
+                            }
+                          },
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "rule"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "rule"
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates/member/routes/publish"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/conventions/errors/derived/schemaInvalid"
+              }
+            ]
+          }
+        },
+        {
+          "code": "template.rejected",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "api.unauthenticated",
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              }
+            ]
+          }
+        },
+        {
+          "code": "template.suspended",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "api.not_found",
+          "roles": [
+            {
+              "role": "notFound"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "member.notFound",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates/member/routes/publish"
+              }
+            ]
+          }
+        },
+        {
+          "code": "template.missing",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "template.duplicated",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "template.expired",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "template.outdated",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "api.payload_too_large",
+          "roles": [
+            {
+              "role": "payloadTooLarge",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "limitBytes",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates/member/routes/publish/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates/member/routes/publish/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "template.mismatched",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "template.locked",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "template.limited",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates/member/routes/publish"
+              }
+            ]
+          }
+        },
+        {
+          "code": "template.unavailable",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/templates"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/templates"
+          }
+        }
+      ]
+    },
+    "listDeliveries": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "each",
+                      "of": "issues",
+                      "as": {
+                        "kind": "object",
+                        "members": [
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "pointer"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "pointer"
+                              ]
+                            }
+                          },
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "rule"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "rule"
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries/ops/list"
+              },
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries/ops/list/paging"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/conventions/errors/derived/schemaInvalid"
+              }
+            ]
+          }
+        },
+        {
+          "code": "delivery.rejected",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "api.unauthenticated",
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              }
+            ]
+          }
+        },
+        {
+          "code": "delivery.suspended",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "delivery.missing",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "delivery.duplicated",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "delivery.expired",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "delivery.outdated",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "delivery.mismatched",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "delivery.locked",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "delivery.limited",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries/ops/list"
+              }
+            ]
+          }
+        },
+        {
+          "code": "delivery.unavailable",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        }
+      ]
+    },
+    "createDelivery": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "each",
+                      "of": "issues",
+                      "as": {
+                        "kind": "object",
+                        "members": [
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "pointer"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "pointer"
+                              ]
+                            }
+                          },
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "rule"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "rule"
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries/ops/create"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/conventions/errors/derived/schemaInvalid"
+              }
+            ]
+          }
+        },
+        {
+          "code": "delivery.rejected",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "api.unauthenticated",
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              }
+            ]
+          }
+        },
+        {
+          "code": "delivery.suspended",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "delivery.missing",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "delivery.duplicated",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "delivery.expired",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "delivery.outdated",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "api.payload_too_large",
+          "roles": [
+            {
+              "role": "payloadTooLarge",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "limitBytes",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries/ops/create/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries/ops/create/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "delivery.mismatched",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "delivery.locked",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "api.rate_limited",
+          "retryHeader": {
+            "name": "Retry-After",
+            "param": "retryAfterMs",
+            "unit": "s",
+            "derivedFrom": {
+              "derivation": "rule.bucket",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/deliveries/ops/create/requires/0"
+                }
+              ]
+            }
+          },
+          "derivedFrom": {
+            "derivation": "requirement.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries/ops/create/requires/0"
+              }
+            ]
+          }
+        },
+        {
+          "code": "delivery.limited",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries/ops/create"
+              }
+            ]
+          }
+        },
+        {
+          "code": "delivery.unavailable",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        }
+      ]
+    },
+    "getDelivery": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "each",
+                      "of": "issues",
+                      "as": {
+                        "kind": "object",
+                        "members": [
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "pointer"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "pointer"
+                              ]
+                            }
+                          },
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "rule"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "rule"
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries/ops/get"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/conventions/errors/derived/schemaInvalid"
+              }
+            ]
+          }
+        },
+        {
+          "code": "delivery.rejected",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "api.unauthenticated",
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              }
+            ]
+          }
+        },
+        {
+          "code": "delivery.suspended",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "api.not_found",
+          "roles": [
+            {
+              "role": "notFound"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "member.notFound",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries/ops/get"
+              }
+            ]
+          }
+        },
+        {
+          "code": "delivery.missing",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "delivery.duplicated",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "delivery.expired",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "delivery.outdated",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "delivery.mismatched",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "delivery.locked",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "delivery.limited",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries/ops/get"
+              }
+            ]
+          }
+        },
+        {
+          "code": "delivery.unavailable",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        }
+      ]
+    },
+    "updateDelivery": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "each",
+                      "of": "issues",
+                      "as": {
+                        "kind": "object",
+                        "members": [
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "pointer"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "pointer"
+                              ]
+                            }
+                          },
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "rule"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "rule"
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries/ops/update"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/conventions/errors/derived/schemaInvalid"
+              }
+            ]
+          }
+        },
+        {
+          "code": "delivery.rejected",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "api.unauthenticated",
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              }
+            ]
+          }
+        },
+        {
+          "code": "delivery.suspended",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "api.not_found",
+          "roles": [
+            {
+              "role": "notFound"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "member.notFound",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries/ops/update"
+              }
+            ]
+          }
+        },
+        {
+          "code": "delivery.missing",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "delivery.duplicated",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "delivery.expired",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "delivery.outdated",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "api.payload_too_large",
+          "roles": [
+            {
+              "role": "payloadTooLarge",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "limitBytes",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries/ops/update/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries/ops/update/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "delivery.mismatched",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "delivery.locked",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "delivery.limited",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries/ops/update"
+              }
+            ]
+          }
+        },
+        {
+          "code": "delivery.unavailable",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        }
+      ]
+    },
+    "deleteDelivery": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "each",
+                      "of": "issues",
+                      "as": {
+                        "kind": "object",
+                        "members": [
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "pointer"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "pointer"
+                              ]
+                            }
+                          },
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "rule"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "rule"
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries/ops/delete"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/conventions/errors/derived/schemaInvalid"
+              }
+            ]
+          }
+        },
+        {
+          "code": "delivery.rejected",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "api.unauthenticated",
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              }
+            ]
+          }
+        },
+        {
+          "code": "delivery.suspended",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "api.not_found",
+          "roles": [
+            {
+              "role": "notFound"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "member.notFound",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries/ops/delete"
+              }
+            ]
+          }
+        },
+        {
+          "code": "delivery.missing",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "delivery.duplicated",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "delivery.expired",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "delivery.outdated",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "delivery.mismatched",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "delivery.locked",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "delivery.limited",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries/ops/delete"
+              }
+            ]
+          }
+        },
+        {
+          "code": "delivery.unavailable",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        }
+      ]
+    },
+    "retryDelivery": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "each",
+                      "of": "issues",
+                      "as": {
+                        "kind": "object",
+                        "members": [
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "pointer"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "pointer"
+                              ]
+                            }
+                          },
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "rule"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "rule"
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries/member/routes/retry"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/conventions/errors/derived/schemaInvalid"
+              }
+            ]
+          }
+        },
+        {
+          "code": "delivery.rejected",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "api.unauthenticated",
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              }
+            ]
+          }
+        },
+        {
+          "code": "delivery.suspended",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "api.not_found",
+          "roles": [
+            {
+              "role": "notFound"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "member.notFound",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries/member/routes/retry"
+              }
+            ]
+          }
+        },
+        {
+          "code": "delivery.missing",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "delivery.duplicated",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "delivery.expired",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "delivery.outdated",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "api.payload_too_large",
+          "roles": [
+            {
+              "role": "payloadTooLarge",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "limitBytes",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries/member/routes/retry/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries/member/routes/retry/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "delivery.mismatched",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "delivery.locked",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "delivery.limited",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries/member/routes/retry"
+              }
+            ]
+          }
+        },
+        {
+          "code": "delivery.unavailable",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/deliveries"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/deliveries"
+          }
+        }
+      ]
+    },
+    "dispatch": {
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "roles": [
+            {
+              "role": "schemaInvalid",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "each",
+                      "of": "issues",
+                      "as": {
+                        "kind": "object",
+                        "members": [
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "pointer"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "pointer"
+                              ]
+                            }
+                          },
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "rule"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "slot": "item",
+                              "path": [
+                                "rule"
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/internal/routes/dispatch"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/conventions/errors/derived/schemaInvalid"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.unauthenticated",
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/internal/identity"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.payload_too_large",
+          "roles": [
+            {
+              "role": "payloadTooLarge",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "limitBytes",
+                      "path": []
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/internal/routes/dispatch/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/internal/routes/dispatch/input"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.internal",
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/internal/routes/dispatch"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.deadline_exceeded",
+          "roles": [
+            {
+              "role": "deadlineExceeded"
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "identity.deadline",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/headers/deadline"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/identities/service/headers/deadline"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

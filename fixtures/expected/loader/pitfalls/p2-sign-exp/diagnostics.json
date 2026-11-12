@@ -1,0 +1,27 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/yaml-number-format",
+      "message": "plain number '+1' is not written in plain decimal (P2)",
+      "fix": "quote it, or write the number in plain decimal",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/3/4"
+      },
+      "related": []
+    },
+    {
+      "severity": "error",
+      "rule": "seampact/load/yaml-number-format",
+      "message": "plain number '1e3' is not written in plain decimal (P2)",
+      "fix": "quote it, or write the number in plain decimal",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/4/4"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

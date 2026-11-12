@@ -1,0 +1,454 @@
+{
+  "operations": {
+    "echoNotice": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "public",
+        "reason": "A fixture for validators: no caller exists.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "echoStrictKeys": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "public",
+        "reason": "A fixture for validators: no caller exists.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "echoSubtreeKeys": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "public",
+        "reason": "A fixture for validators: no caller exists.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "echoIgnoreKeys": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "public",
+        "reason": "A fixture for validators: no caller exists.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "echoKeepKeys": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "public",
+        "reason": "A fixture for validators: no caller exists.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "echoProfile": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "public",
+        "reason": "A fixture for validators: no caller exists.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "echoPatchArticle": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "public",
+        "reason": "A fixture for validators: no caller exists.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "echoBounds": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "public",
+        "reason": "A fixture for validators: no caller exists.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "echoOpaqueItems": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "public",
+        "reason": "A fixture for validators: no caller exists.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "echoReceipt": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "public",
+        "reason": "A fixture for validators: no caller exists.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "echoLabelled": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "public",
+        "reason": "A fixture for validators: no caller exists.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "echoTags": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "public",
+        "reason": "A fixture for validators: no caller exists.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "echoPoint": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "public",
+        "reason": "A fixture for validators: no caller exists.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "echoQuantity": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "public",
+        "reason": "A fixture for validators: no caller exists.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "echoPercent": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "public",
+        "reason": "A fixture for validators: no caller exists.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "echoInstant": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "public",
+        "reason": "A fixture for validators: no caller exists.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "echoDay": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "public",
+        "reason": "A fixture for validators: no caller exists.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "echoEnvelope": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "public",
+        "reason": "A fixture for validators: no caller exists.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "echoOptionalEnvelope": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "public",
+        "reason": "A fixture for validators: no caller exists.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "echoMember": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "public",
+        "reason": "A fixture for validators: no caller exists.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "echoOwner": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "public",
+        "reason": "A fixture for validators: no caller exists.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "echoFormats": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "public",
+        "reason": "A fixture for validators: no caller exists.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "echoPatterns": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "public",
+        "reason": "A fixture for validators: no caller exists.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "echoComment": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "public",
+        "reason": "A fixture for validators: no caller exists.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "echoCounts": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "public",
+        "reason": "A fixture for validators: no caller exists.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    }
+  }
+}

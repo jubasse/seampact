@@ -16,7 +16,8 @@
       "**",
       "!packages/core/spec/schemas/authoring/**",
       "!packages/core/spec/src/authoring/grammar.snapshot.json",
-      "!fixtures/golden/**"
+      "!fixtures/golden/**",
+      "!fixtures/expected/**"
     ]
   },
   "linter": {

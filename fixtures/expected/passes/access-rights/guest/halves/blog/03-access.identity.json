@@ -1,0 +1,95 @@
+{
+  "schemes": {
+    "bearer": {
+      "id": "bearer",
+      "kind": "bearer",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/bearer"
+      }
+    }
+  },
+  "identities": {
+    "reader": {
+      "id": "reader",
+      "kind": "credential",
+      "schemes": {
+        "read": [
+          "bearer"
+        ],
+        "write": [
+          "bearer"
+        ],
+        "optionalRead": []
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "Reader"
+      },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/reader"
+      }
+    }
+  },
+  "operations": {
+    "getArticle": {
+      "access": {
+        "kind": "public",
+        "reason": "Published articles are public.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/articles/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "previewArticle": {
+      "access": {
+        "kind": "optional",
+        "identity": "reader",
+        "schemes": [
+          "bearer"
+        ],
+        "reason": "A signed-in reader also sees the drafts.",
+        "onRefused": "anonymous",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/articles/member/routes/preview/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous",
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "publishArticle": {
+      "access": {
+        "kind": "identity",
+        "identity": "reader",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/articles/member/routes/publish/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    }
+  }
+}

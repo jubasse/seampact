@@ -1,0 +1,46 @@
+{
+  "rights": {
+    "callerService": {
+      "id": "callerService",
+      "params": "CallerServiceParams",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/callerService"
+      }
+    }
+  },
+  "operations": {
+    "invoices": {
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "callerService",
+          "params": {
+            "allowed": [
+              "catalog"
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/internal/requires/0"
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "reindex": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    }
+  }
+}

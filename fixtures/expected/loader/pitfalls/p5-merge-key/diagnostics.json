@@ -1,0 +1,16 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/yaml-anchor",
+      "message": "merge key '<<' is not allowed (P5)",
+      "fix": "use $ref to share a declaration, or extends to share a base",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/api.yaml/6/3"
+      },
+      "related": []
+    }
+  ],
+  "apis": []
+}

@@ -1,0 +1,185 @@
+{
+  "rules": {
+    "recentAuth": {
+      "id": "recentAuth",
+      "takesBucket": false,
+      "proof": {
+        "in": "body",
+        "name": "token",
+        "schema": {
+          "kind": "scalar",
+          "type": "string",
+          "refinements": {}
+        }
+      },
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/recentAuth"
+      }
+    },
+    "pinned": {
+      "id": "pinned",
+      "takesBucket": false,
+      "proof": {
+        "in": "body",
+        "name": "token",
+        "schema": {
+          "kind": "scalar",
+          "type": "integer",
+          "refinements": {}
+        }
+      },
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/pinned"
+      }
+    },
+    "throttle": {
+      "id": "throttle",
+      "takesBucket": true,
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/throttle"
+      }
+    }
+  },
+  "buckets": {
+    "perName": {
+      "id": "perName",
+      "key": [
+        {
+          "in": "body",
+          "name": "name"
+        }
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/buckets/perName"
+      }
+    }
+  },
+  "operations": {
+    "rename": {
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "recentAuth",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/rename/requires/0"
+          }
+        },
+        {
+          "kind": "rule",
+          "rule": "throttle",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/rename/requires/1"
+          },
+          "bucket": "perName"
+        }
+      ],
+      "fieldRights": []
+    },
+    "lock": {
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "recentAuth",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/lock/requires/0"
+          }
+        },
+        {
+          "kind": "rule",
+          "rule": "pinned",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/lock/requires/1"
+          }
+        }
+      ],
+      "fieldRights": [],
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "ApiEmptyBody"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/lock/requires/0"
+        },
+        "rawBody": false,
+        "proofs": [
+          {
+            "name": "token",
+            "schema": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "derivedFrom": {
+              "derivation": "rule.proof",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/lock/requires/0"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/rules/recentAuth/proof"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "peek": {
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "recentAuth",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/peek/requires/0"
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "tag": {
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "recentAuth",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/tag/requires/0"
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "ping": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    }
+  }
+}

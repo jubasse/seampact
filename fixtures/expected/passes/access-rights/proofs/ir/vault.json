@@ -1,0 +1,2703 @@
+{
+  "api": {
+    "compat": {
+      "policy": "none"
+    },
+    "docs": {},
+    "documents": {},
+    "extensions": {},
+    "id": "vault",
+    "kind": "product",
+    "maturity": "experimental",
+    "name": {
+      "role": "schema",
+      "segments": [
+        "vault"
+      ]
+    },
+    "origin": {
+      "layer": "api",
+      "pointer": "/api"
+    },
+    "pathVersion": {
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/version"
+      },
+      "value": "prefix"
+    },
+    "surfaces": {
+      "app": {
+        "name": {
+          "role": "schema",
+          "segments": [
+            "app"
+          ]
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app"
+        },
+        "pathVersion": "prefix",
+        "prefix": "/v1"
+      },
+      "hooks": {
+        "name": {
+          "role": "schema",
+          "segments": [
+            "hooks"
+          ]
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/hooks"
+        },
+        "pathVersion": "prefix",
+        "prefix": "/v1/hooks"
+      }
+    },
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "wire": {
+      "int64": "string",
+      "outputEnums": "enum",
+      "urls": "relative"
+    }
+  },
+  "buckets": {
+    "perEmail": {
+      "id": "perEmail",
+      "key": [
+        {
+          "in": "body",
+          "name": "email"
+        },
+        {
+          "in": "address"
+        }
+      ],
+      "limit": 5,
+      "origin": {
+        "layer": "api",
+        "pointer": "/buckets/perEmail"
+      },
+      "windowMs": 900000
+    },
+    "perUser": {
+      "id": "perUser",
+      "key": [
+        {
+          "in": "principal",
+          "name": "userId"
+        }
+      ],
+      "limit": 60,
+      "origin": {
+        "layer": "api",
+        "pointer": "/buckets/perUser"
+      },
+      "windowMs": 60000
+    }
+  },
+  "conventions": {},
+  "enums": {},
+  "errors": {
+    "api.internal": {
+      "code": "api.internal",
+      "default": "undeclaredStatus",
+      "docs": {},
+      "family": "api",
+      "http": {
+        "status": 500
+      },
+      "nature": "failed",
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.internal"
+      }
+    },
+    "api.not_found": {
+      "code": "api.not_found",
+      "default": "notFound",
+      "docs": {},
+      "family": "api",
+      "http": {
+        "status": 404
+      },
+      "nature": "refused",
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.not_found"
+      }
+    },
+    "api.payload_too_large": {
+      "code": "api.payload_too_large",
+      "default": "payloadTooLarge",
+      "docs": {},
+      "family": "api",
+      "http": {
+        "status": 413
+      },
+      "nature": "refused",
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.payload_too_large"
+      },
+      "params": "ApiPayloadTooLargeParams"
+    },
+    "api.rate_limited": {
+      "code": "api.rate_limited",
+      "default": "rateLimited",
+      "docs": {},
+      "family": "api",
+      "http": {
+        "status": 429
+      },
+      "nature": "unavailable",
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.rate_limited"
+      },
+      "params": "ApiRateLimitedParams"
+    },
+    "api.schema_invalid": {
+      "code": "api.schema_invalid",
+      "default": "schemaInvalid",
+      "docs": {},
+      "family": "api",
+      "http": {
+        "status": 400
+      },
+      "nature": "refused",
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.schema_invalid"
+      },
+      "params": "ApiSchemaInvalidParams"
+    },
+    "api.unauthenticated": {
+      "code": "api.unauthenticated",
+      "default": "unauthenticated",
+      "docs": {},
+      "family": "api",
+      "http": {
+        "status": 401
+      },
+      "nature": "refused",
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.unauthenticated"
+      }
+    },
+    "api.unsupported_media_type": {
+      "code": "api.unsupported_media_type",
+      "default": "unsupportedMediaType",
+      "docs": {},
+      "family": "api",
+      "http": {
+        "status": 415
+      },
+      "nature": "refused",
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.unsupported_media_type"
+      }
+    }
+  },
+  "extensionKeys": {},
+  "features": [],
+  "formats": {
+    "bare": {
+      "absent": "omit",
+      "error": {
+        "body": {
+          "kind": "object",
+          "members": [
+            {
+              "name": {
+                "kind": "text",
+                "text": "type"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "code"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "title"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "title"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "status"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "status"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "detail"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "detail"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "instance"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "instance"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "code"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "code"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "nature"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "nature"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "traceId"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "traceId"
+              }
+            }
+          ],
+          "merge": "params"
+        },
+        "headers": [],
+        "media": "application/problem+json"
+      },
+      "id": "bare",
+      "media": "application/json",
+      "meta": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/formats/bare"
+      },
+      "success": {
+        "item": {
+          "body": {
+            "kind": "slot",
+            "path": [],
+            "slot": "payload"
+          },
+          "headers": []
+        },
+        "list": {
+          "body": {
+            "kind": "slot",
+            "path": [],
+            "slot": "payload"
+          },
+          "headers": []
+        },
+        "page": {
+          "body": {
+            "kind": "slot",
+            "path": [],
+            "slot": "items"
+          },
+          "headers": []
+        },
+        "table": {
+          "body": {
+            "kind": "slot",
+            "path": [],
+            "slot": "payload"
+          },
+          "headers": []
+        }
+      }
+    }
+  },
+  "headers": {},
+  "identities": {
+    "hook": {
+      "docs": {},
+      "errors": [],
+      "extensions": {},
+      "headers": [],
+      "id": "hook",
+      "kind": "signed",
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/hook"
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "HookCaller"
+      },
+      "signed": "hookSignature",
+      "unknownKeys": {
+        "policy": "ignore",
+        "reason": "The sender adds event fields without notice."
+      }
+    },
+    "user": {
+      "docs": {},
+      "errors": [],
+      "extensions": {},
+      "headers": [],
+      "id": "user",
+      "kind": "credential",
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/user"
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "UserPrincipal"
+      },
+      "schemes": {
+        "optionalRead": [],
+        "read": [
+          "bearer"
+        ],
+        "write": [
+          "bearer"
+        ]
+      }
+    }
+  },
+  "irRevision": 6,
+  "irVersion": 1,
+  "kinds": [
+    "httpOperation"
+  ],
+  "lint": {
+    "allows": [],
+    "rules": {}
+  },
+  "natures": {},
+  "operations": [
+    {
+      "access": {
+        "identity": "hook",
+        "kind": "identity",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/hooks/identity"
+        },
+        "schemes": [
+          "hookSignature"
+        ]
+      },
+      "bindings": [],
+      "callerKinds": [
+        "identified"
+      ],
+      "docs": {},
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/hooks/routes/events"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "issues"
+                    }
+                  }
+                ]
+              },
+              "role": "schemaInvalid"
+            }
+          ]
+        },
+        {
+          "code": "api.unauthenticated",
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/identities/hook"
+              },
+              {
+                "layer": "api",
+                "pointer": "/surfaces/hooks/identity"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ]
+        },
+        {
+          "code": "api.payload_too_large",
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/hooks/routes/events/input"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "limitBytes"
+                    }
+                  }
+                ]
+              },
+              "role": "payloadTooLarge"
+            }
+          ]
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/hooks/routes/events/input"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ]
+        },
+        {
+          "code": "api.internal",
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/hooks/routes/events"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ]
+        }
+      ],
+      "examples": {},
+      "extensions": {},
+      "features": [],
+      "fieldRights": [],
+      "format": "bare",
+      "id": "events",
+      "input": {
+        "bodyLimitBytes": 1048576,
+        "media": "application/json",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/hooks/routes/events/input"
+        },
+        "proofs": [
+          {
+            "derivedFrom": {
+              "derivation": "rule.proof",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/hooks/routes/events/requires/0"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/rules/recentAuth/proof"
+                }
+              ]
+            },
+            "name": "reauthToken",
+            "schema": {
+              "kind": "scalar",
+              "refinements": {
+                "maxLength": 512,
+                "minLength": 1
+              },
+              "type": "string"
+            }
+          }
+        ],
+        "rawBody": true,
+        "schema": {
+          "kind": "ref",
+          "schema": "HookEvent",
+          "unknownKeys": {
+            "derivedFrom": {
+              "derivation": "identity.unknownKeys",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/identities/hook"
+                }
+              ]
+            },
+            "policy": "ignore",
+            "reason": "The sender adds event fields without notice."
+          }
+        }
+      },
+      "internal": false,
+      "kind": "httpOperation",
+      "maturity": {
+        "level": "experimental",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        },
+        "source": "api"
+      },
+      "method": "post",
+      "name": {
+        "role": "operation",
+        "segments": [
+          "events"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/hooks/routes/events"
+      },
+      "params": {
+        "header": [
+          {
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/hooks/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/hookSignature"
+                }
+              ]
+            },
+            "name": "Hook-Signature",
+            "required": true,
+            "type": {
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "path": [],
+        "query": []
+      },
+      "path": "/v1/hooks/events",
+      "principalRequires": [],
+      "requires": [
+        {
+          "kind": "rule",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/hooks/routes/events/requires/0"
+          },
+          "rule": "recentAuth"
+        }
+      ],
+      "responses": [
+        {
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          },
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/hooks/routes/events/responses/204"
+          },
+          "shape": "empty",
+          "status": 204
+        }
+      ],
+      "safe": false,
+      "scopes": [],
+      "surface": "hooks",
+      "tags": [],
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "upstream": []
+    },
+    {
+      "access": {
+        "identity": "hook",
+        "kind": "identity",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/hooks/identity"
+        },
+        "schemes": [
+          "hookSignature"
+        ]
+      },
+      "bindings": [],
+      "callerKinds": [
+        "identified"
+      ],
+      "docs": {},
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/hooks/routes/ping"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "issues"
+                    }
+                  }
+                ]
+              },
+              "role": "schemaInvalid"
+            }
+          ]
+        },
+        {
+          "code": "api.unauthenticated",
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/identities/hook"
+              },
+              {
+                "layer": "api",
+                "pointer": "/surfaces/hooks/identity"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ]
+        },
+        {
+          "code": "api.payload_too_large",
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/hooks/routes/ping/requires/0"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "limitBytes"
+                    }
+                  }
+                ]
+              },
+              "role": "payloadTooLarge"
+            }
+          ]
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/hooks/routes/ping/requires/0"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ]
+        },
+        {
+          "code": "api.internal",
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/hooks/routes/ping"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ]
+        }
+      ],
+      "examples": {},
+      "extensions": {},
+      "features": [],
+      "fieldRights": [],
+      "format": "bare",
+      "id": "ping",
+      "input": {
+        "bodyLimitBytes": 1048576,
+        "media": "application/json",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/hooks/routes/ping/requires/0"
+        },
+        "proofs": [
+          {
+            "derivedFrom": {
+              "derivation": "rule.proof",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/hooks/routes/ping/requires/0"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/rules/recentAuth/proof"
+                }
+              ]
+            },
+            "name": "reauthToken",
+            "schema": {
+              "kind": "scalar",
+              "refinements": {
+                "maxLength": 512,
+                "minLength": 1
+              },
+              "type": "string"
+            }
+          }
+        ],
+        "rawBody": true,
+        "schema": {
+          "kind": "ref",
+          "schema": "ApiEmptyBody",
+          "unknownKeys": {
+            "derivedFrom": {
+              "derivation": "identity.unknownKeys",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/identities/hook"
+                }
+              ]
+            },
+            "policy": "ignore",
+            "reason": "The sender adds event fields without notice."
+          }
+        }
+      },
+      "internal": false,
+      "kind": "httpOperation",
+      "maturity": {
+        "level": "experimental",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        },
+        "source": "api"
+      },
+      "method": "post",
+      "name": {
+        "role": "operation",
+        "segments": [
+          "ping"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/hooks/routes/ping"
+      },
+      "params": {
+        "header": [
+          {
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/hooks/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/hookSignature"
+                }
+              ]
+            },
+            "name": "Hook-Signature",
+            "required": true,
+            "type": {
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "path": [],
+        "query": []
+      },
+      "path": "/v1/hooks/ping",
+      "principalRequires": [],
+      "requires": [
+        {
+          "kind": "rule",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/hooks/routes/ping/requires/0"
+          },
+          "rule": "recentAuth"
+        }
+      ],
+      "responses": [
+        {
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          },
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/hooks/routes/ping/responses/204"
+          },
+          "shape": "empty",
+          "status": 204
+        }
+      ],
+      "safe": false,
+      "scopes": [],
+      "surface": "hooks",
+      "tags": [],
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "upstream": []
+    },
+    {
+      "access": {
+        "identity": "user",
+        "kind": "identity",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        },
+        "schemes": [
+          "bearer"
+        ]
+      },
+      "bindings": [],
+      "callerKinds": [
+        "identified"
+      ],
+      "docs": {},
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/secrets/member/routes/reveal"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "issues"
+                    }
+                  }
+                ]
+              },
+              "role": "schemaInvalid"
+            }
+          ]
+        },
+        {
+          "code": "api.unauthenticated",
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ]
+        },
+        {
+          "code": "api.not_found",
+          "derivedFrom": {
+            "derivation": "member.notFound",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/secrets/member/routes/reveal"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "notFound"
+            }
+          ]
+        },
+        {
+          "code": "api.payload_too_large",
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/secrets/member/routes/reveal/requires/1"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "limitBytes"
+                    }
+                  }
+                ]
+              },
+              "role": "payloadTooLarge"
+            }
+          ]
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/secrets/member/routes/reveal/requires/1"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ]
+        },
+        {
+          "code": "api.internal",
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/secrets/member/routes/reveal"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ]
+        }
+      ],
+      "examples": {},
+      "extensions": {},
+      "features": [],
+      "fieldRights": [],
+      "format": "bare",
+      "id": "revealSecret",
+      "input": {
+        "bodyLimitBytes": 1048576,
+        "media": "application/json",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/secrets/member/routes/reveal/requires/1"
+        },
+        "proofs": [
+          {
+            "derivedFrom": {
+              "derivation": "rule.proof",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/secrets/member/routes/reveal/requires/1"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/rules/recentAuth/proof"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/secrets/member/routes/reveal/requires/2"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/rules/sameSession/proof"
+                }
+              ]
+            },
+            "name": "reauthToken",
+            "schema": {
+              "kind": "scalar",
+              "refinements": {
+                "maxLength": 512,
+                "minLength": 1
+              },
+              "type": "string"
+            }
+          }
+        ],
+        "rawBody": false,
+        "schema": {
+          "kind": "ref",
+          "schema": "ApiEmptyBody"
+        }
+      },
+      "internal": false,
+      "kind": "httpOperation",
+      "maturity": {
+        "level": "experimental",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        },
+        "source": "api"
+      },
+      "method": "post",
+      "name": {
+        "role": "operation",
+        "segments": [
+          "reveal",
+          "secret"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/secrets/member/routes/reveal"
+      },
+      "params": {
+        "header": [
+          {
+            "derivedFrom": {
+              "derivation": "rule.proof",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/secrets/member/routes/reveal/requires/0"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/rules/otp/proof"
+                }
+              ]
+            },
+            "name": "X-Otp",
+            "required": true,
+            "type": {
+              "kind": "scalar",
+              "refinements": {
+                "pattern": {
+                  "normalized": "^[0-9]{6}$",
+                  "source": "^[0-9]{6}$"
+                }
+              },
+              "type": "string"
+            }
+          },
+          {
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            },
+            "name": "Authorization",
+            "required": true,
+            "type": {
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "path": [
+          {
+            "name": "secretId",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/secrets/id/secretId"
+            },
+            "required": true,
+            "type": {
+              "format": "uuid",
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "query": []
+      },
+      "path": "/v1/secrets/{secretId}/reveal",
+      "principalRequires": [],
+      "requires": [
+        {
+          "kind": "rule",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/secrets/member/routes/reveal/requires/0"
+          },
+          "rule": "otp"
+        },
+        {
+          "kind": "rule",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/secrets/member/routes/reveal/requires/1"
+          },
+          "rule": "recentAuth"
+        },
+        {
+          "kind": "rule",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/secrets/member/routes/reveal/requires/2"
+          },
+          "rule": "sameSession"
+        }
+      ],
+      "resource": {
+        "idParam": "secretId",
+        "idProperty": "secretId",
+        "type": "secrets"
+      },
+      "responses": [
+        {
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          },
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/secrets/member/routes/reveal/responses/204"
+          },
+          "shape": "empty",
+          "status": 204
+        }
+      ],
+      "safe": false,
+      "scopes": [],
+      "surface": "app",
+      "tags": [],
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "upstream": []
+    },
+    {
+      "access": {
+        "identity": "user",
+        "kind": "identity",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        },
+        "schemes": [
+          "bearer"
+        ]
+      },
+      "bindings": [],
+      "callerKinds": [
+        "identified"
+      ],
+      "docs": {},
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/secrets/member/routes/share"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "issues"
+                    }
+                  }
+                ]
+              },
+              "role": "schemaInvalid"
+            }
+          ]
+        },
+        {
+          "code": "api.unauthenticated",
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ]
+        },
+        {
+          "code": "api.not_found",
+          "derivedFrom": {
+            "derivation": "member.notFound",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/secrets/member/routes/share"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "notFound"
+            }
+          ]
+        },
+        {
+          "code": "api.payload_too_large",
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/secrets/member/routes/share/input"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "limitBytes"
+                    }
+                  }
+                ]
+              },
+              "role": "payloadTooLarge"
+            }
+          ]
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/secrets/member/routes/share/input"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ]
+        },
+        {
+          "code": "api.rate_limited",
+          "derivedFrom": {
+            "derivation": "rule.bucket",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/secrets/member/routes/share/requires/1"
+              },
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/secrets/member/routes/share/requires/2"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "retryAfterMs"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "retryAfterMs"
+                    }
+                  }
+                ]
+              },
+              "role": "rateLimited"
+            }
+          ]
+        },
+        {
+          "code": "api.internal",
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/secrets/member/routes/share"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ]
+        }
+      ],
+      "examples": {},
+      "extensions": {},
+      "features": [],
+      "fieldRights": [],
+      "format": "bare",
+      "id": "shareSecret",
+      "input": {
+        "bodyLimitBytes": 1048576,
+        "fields": [
+          {
+            "name": "email",
+            "wire": {
+              "brackets": false,
+              "explode": true,
+              "kind": "text",
+              "style": "form"
+            }
+          },
+          {
+            "name": "note",
+            "wire": {
+              "brackets": false,
+              "explode": true,
+              "kind": "text",
+              "style": "form"
+            }
+          }
+        ],
+        "media": "application/x-www-form-urlencoded",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/secrets/member/routes/share/input"
+        },
+        "proofs": [
+          {
+            "derivedFrom": {
+              "derivation": "rule.proof",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/secrets/member/routes/share/requires/0"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/rules/recentAuth/proof"
+                }
+              ]
+            },
+            "name": "reauthToken",
+            "schema": {
+              "kind": "scalar",
+              "refinements": {
+                "maxLength": 512,
+                "minLength": 1
+              },
+              "type": "string"
+            },
+            "wire": {
+              "brackets": false,
+              "explode": true,
+              "kind": "text",
+              "style": "form"
+            }
+          }
+        ],
+        "rawBody": false,
+        "schema": {
+          "kind": "ref",
+          "schema": "ShareForm"
+        }
+      },
+      "internal": false,
+      "kind": "httpOperation",
+      "maturity": {
+        "level": "experimental",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        },
+        "source": "api"
+      },
+      "method": "post",
+      "name": {
+        "role": "operation",
+        "segments": [
+          "share",
+          "secret"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/secrets/member/routes/share"
+      },
+      "params": {
+        "header": [
+          {
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            },
+            "name": "Authorization",
+            "required": true,
+            "type": {
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "path": [
+          {
+            "name": "secretId",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/secrets/id/secretId"
+            },
+            "required": true,
+            "type": {
+              "format": "uuid",
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "query": []
+      },
+      "path": "/v1/secrets/{secretId}/share",
+      "principalRequires": [],
+      "requires": [
+        {
+          "kind": "rule",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/secrets/member/routes/share/requires/0"
+          },
+          "rule": "recentAuth"
+        },
+        {
+          "bucket": "perEmail",
+          "kind": "rule",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/secrets/member/routes/share/requires/1"
+          },
+          "rule": "throttle"
+        },
+        {
+          "bucket": "perUser",
+          "kind": "rule",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/secrets/member/routes/share/requires/2"
+          },
+          "rule": "throttle"
+        }
+      ],
+      "resource": {
+        "idParam": "secretId",
+        "idProperty": "secretId",
+        "type": "secrets"
+      },
+      "responses": [
+        {
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          },
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/secrets/member/routes/share/responses/204"
+          },
+          "shape": "empty",
+          "status": 204
+        }
+      ],
+      "safe": false,
+      "scopes": [],
+      "surface": "app",
+      "tags": [],
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "upstream": []
+    },
+    {
+      "access": {
+        "identity": "user",
+        "kind": "identity",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        },
+        "schemes": [
+          "bearer"
+        ]
+      },
+      "bindings": [],
+      "callerKinds": [
+        "identified"
+      ],
+      "docs": {},
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/secrets/ops/update"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "issues"
+                    }
+                  }
+                ]
+              },
+              "role": "schemaInvalid"
+            }
+          ]
+        },
+        {
+          "code": "api.unauthenticated",
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ]
+        },
+        {
+          "code": "api.not_found",
+          "derivedFrom": {
+            "derivation": "member.notFound",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/secrets/ops/update"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "notFound"
+            }
+          ]
+        },
+        {
+          "code": "api.payload_too_large",
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/secrets/ops/update/input"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "limitBytes"
+                    }
+                  }
+                ]
+              },
+              "role": "payloadTooLarge"
+            }
+          ]
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/secrets/ops/update/input"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ]
+        },
+        {
+          "code": "api.internal",
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/secrets/ops/update"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ]
+        }
+      ],
+      "examples": {},
+      "extensions": {},
+      "features": [],
+      "fieldRights": [],
+      "format": "bare",
+      "id": "updateSecret",
+      "input": {
+        "bodyLimitBytes": 1048576,
+        "media": "application/json",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/secrets/ops/update/input"
+        },
+        "proofs": [
+          {
+            "derivedFrom": {
+              "derivation": "rule.proof",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/secrets/ops/update/requires/0"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/rules/recentAuth/proof"
+                }
+              ]
+            },
+            "name": "reauthToken",
+            "schema": {
+              "kind": "scalar",
+              "refinements": {
+                "maxLength": 512,
+                "minLength": 1
+              },
+              "type": "string"
+            }
+          }
+        ],
+        "rawBody": false,
+        "schema": {
+          "kind": "ref",
+          "schema": "UpdateSecret"
+        }
+      },
+      "internal": false,
+      "kind": "httpOperation",
+      "maturity": {
+        "level": "experimental",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        },
+        "source": "api"
+      },
+      "method": "patch",
+      "name": {
+        "role": "operation",
+        "segments": [
+          "update",
+          "secret"
+        ]
+      },
+      "op": "update",
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/secrets/ops/update"
+      },
+      "params": {
+        "header": [
+          {
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            },
+            "name": "Authorization",
+            "required": true,
+            "type": {
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "path": [
+          {
+            "name": "secretId",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/secrets/id/secretId"
+            },
+            "required": true,
+            "type": {
+              "format": "uuid",
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "query": []
+      },
+      "path": "/v1/secrets/{secretId}",
+      "principalRequires": [],
+      "requires": [
+        {
+          "kind": "rule",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/secrets/ops/update/requires/0"
+          },
+          "rule": "recentAuth"
+        }
+      ],
+      "resource": {
+        "idParam": "secretId",
+        "idProperty": "secretId",
+        "type": "secrets"
+      },
+      "responses": [
+        {
+          "body": {
+            "kind": "ref",
+            "schema": "Secret"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          },
+          "headers": [],
+          "media": "application/json",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/secrets/item"
+          },
+          "shape": "item",
+          "status": 200
+        }
+      ],
+      "safe": false,
+      "scopes": [],
+      "surface": "app",
+      "tags": [],
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "upstream": []
+    }
+  ],
+  "packs": [],
+  "pagings": {},
+  "rights": {},
+  "rules": {
+    "otp": {
+      "docs": {},
+      "errors": [],
+      "extensions": {},
+      "id": "otp",
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/otp"
+      },
+      "proof": {
+        "in": "header",
+        "name": "X-Otp",
+        "schema": {
+          "kind": "scalar",
+          "refinements": {
+            "pattern": {
+              "normalized": "^[0-9]{6}$",
+              "source": "^[0-9]{6}$"
+            }
+          },
+          "type": "string"
+        }
+      },
+      "takesBucket": false
+    },
+    "recentAuth": {
+      "docs": {},
+      "errors": [],
+      "extensions": {},
+      "id": "recentAuth",
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/recentAuth"
+      },
+      "proof": {
+        "in": "body",
+        "name": "reauthToken",
+        "schema": {
+          "kind": "scalar",
+          "refinements": {
+            "maxLength": 512,
+            "minLength": 1
+          },
+          "type": "string"
+        }
+      },
+      "takesBucket": false
+    },
+    "sameSession": {
+      "docs": {},
+      "errors": [],
+      "extensions": {},
+      "id": "sameSession",
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/sameSession"
+      },
+      "proof": {
+        "in": "body",
+        "name": "reauthToken",
+        "schema": {
+          "kind": "scalar",
+          "refinements": {
+            "maxLength": 512,
+            "minLength": 1
+          },
+          "type": "string"
+        }
+      },
+      "takesBucket": false
+    },
+    "throttle": {
+      "docs": {},
+      "errors": [],
+      "extensions": {},
+      "id": "throttle",
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/throttle"
+      },
+      "takesBucket": true
+    }
+  },
+  "scalars": {},
+  "schemas": {
+    "ApiEmptyBody": {
+      "directions": [
+        "input"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "ApiEmptyBody",
+      "kind": "object",
+      "name": {
+        "role": "schema",
+        "segments": [
+          "api",
+          "empty",
+          "body"
+        ]
+      },
+      "origin": {
+        "layer": "core",
+        "pointer": "/schemas/ApiEmptyBody"
+      },
+      "properties": []
+    },
+    "ApiPayloadTooLargeParams": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "ApiPayloadTooLargeParams",
+      "kind": "object",
+      "name": {
+        "role": "params",
+        "segments": [
+          "api",
+          "payload",
+          "too",
+          "large"
+        ]
+      },
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.payload_too_large/params"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "limitBytes",
+          "nullable": false,
+          "optional": true,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.payload_too_large/params/limitBytes"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {
+              "minimum": "0"
+            },
+            "type": "integer"
+          }
+        }
+      ]
+    },
+    "ApiRateLimitedParams": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "ApiRateLimitedParams",
+      "kind": "object",
+      "name": {
+        "role": "params",
+        "segments": [
+          "api",
+          "rate",
+          "limited"
+        ]
+      },
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.rate_limited/params"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "retryAfterMs",
+          "nullable": false,
+          "optional": true,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.rate_limited/params/retryAfterMs"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {
+              "maximum": "9007199254740991",
+              "minimum": "0"
+            },
+            "type": "integer"
+          }
+        }
+      ]
+    },
+    "ApiSchemaInvalidIssue": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "ApiSchemaInvalidIssue",
+      "kind": "object",
+      "name": {
+        "role": "schema",
+        "segments": [
+          "api",
+          "schema",
+          "invalid",
+          "issue"
+        ]
+      },
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.schema_invalid/params/issues/items"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "in",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.schema_invalid/params/issues/items/properties/in"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {
+              "pattern": {
+                "normalized": "^(?:path|query|header|body)$",
+                "source": "^(?:path|query|header|body)$"
+              }
+            },
+            "type": "string"
+          }
+        },
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "pointer",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.schema_invalid/params/issues/items/properties/pointer"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        },
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "rule",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.schema_invalid/params/issues/items/properties/rule"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "ApiSchemaInvalidParams": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "ApiSchemaInvalidParams",
+      "kind": "object",
+      "name": {
+        "role": "params",
+        "segments": [
+          "api",
+          "schema",
+          "invalid"
+        ]
+      },
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.schema_invalid/params"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "issues",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.schema_invalid/params/issues"
+          },
+          "sensitive": false,
+          "type": {
+            "items": {
+              "kind": "ref",
+              "schema": "ApiSchemaInvalidIssue"
+            },
+            "kind": "array"
+          }
+        }
+      ]
+    },
+    "HookCaller": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "HookCaller",
+      "kind": "object",
+      "name": {
+        "role": "schema",
+        "segments": [
+          "hook",
+          "caller"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/HookCaller"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "account",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/HookCaller/properties/account"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "HookEvent": {
+      "directions": [
+        "input"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "HookEvent",
+      "kind": "object",
+      "name": {
+        "role": "schema",
+        "segments": [
+          "hook",
+          "event"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/HookEvent"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "kind",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/HookEvent/properties/kind"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "Secret": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "Secret",
+      "kind": "object",
+      "name": {
+        "role": "schema",
+        "segments": [
+          "secret"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/Secret"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "secretId",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Secret/properties/secretId"
+          },
+          "sensitive": false,
+          "type": {
+            "format": "uuid",
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        },
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "label",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Secret/properties/label"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "ShareForm": {
+      "directions": [
+        "input"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "ShareForm",
+      "kind": "object",
+      "name": {
+        "role": "schema",
+        "segments": [
+          "share",
+          "form"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/ShareForm"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "email",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/ShareForm/properties/email"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        },
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "note",
+          "nullable": false,
+          "optional": true,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/ShareForm/properties/note"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "UpdateSecret": {
+      "directions": [
+        "input"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "UpdateSecret",
+      "kind": "object",
+      "name": {
+        "role": "schema",
+        "segments": [
+          "update",
+          "secret"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/UpdateSecret"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "label",
+          "nullable": false,
+          "optional": true,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/UpdateSecret/properties/label"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "UserPrincipal": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "UserPrincipal",
+      "kind": "object",
+      "name": {
+        "role": "schema",
+        "segments": [
+          "user",
+          "principal"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/UserPrincipal"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "userId",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/UserPrincipal/properties/userId"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        }
+      ]
+    }
+  },
+  "schemes": {
+    "bearer": {
+      "id": "bearer",
+      "kind": "bearer",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/bearer"
+      }
+    },
+    "hookSignature": {
+      "id": "hookSignature",
+      "kind": "signature",
+      "name": "Hook-Signature",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/hookSignature"
+      },
+      "signature": {
+        "algorithm": "hmac-sha256",
+        "encoding": "hex",
+        "format": "t={ts},v1={sig}",
+        "key": {
+          "kind": "value",
+          "value": "hook"
+        },
+        "payload": "{ts}.{rawBody}",
+        "toleranceMs": 300000,
+        "verify": "template"
+      }
+    }
+  },
+  "scopes": {},
+  "services": {}
+}

@@ -1,0 +1,24 @@
+{
+  "operations": {
+    "listTasks": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "getTask": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "listComments": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "getComment": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    }
+  }
+}

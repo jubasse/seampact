@@ -1,0 +1,24 @@
+{
+  "workspace": [
+    {
+      "severity": "error",
+      "rule": "seampact/load/duplicate-key",
+      "message": "key 'a' is defined twice in the same mapping (P7)",
+      "fix": "remove the duplicate",
+      "origin": {
+        "layer": "api",
+        "pointer": "/~load/more.yaml/1/1"
+      },
+      "related": [
+        {
+          "origin": {
+            "layer": "api",
+            "pointer": "/~load/api.yaml/4/3"
+          },
+          "message": "first defined here"
+        }
+      ]
+    }
+  ],
+  "apis": []
+}

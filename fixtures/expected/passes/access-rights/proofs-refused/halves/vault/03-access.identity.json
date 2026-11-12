@@ -1,0 +1,174 @@
+{
+  "schemes": {
+    "bearer": {
+      "id": "bearer",
+      "kind": "bearer",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/bearer"
+      }
+    },
+    "hookSignature": {
+      "id": "hookSignature",
+      "kind": "signature",
+      "name": "Hook-Signature",
+      "signature": {
+        "verify": "template",
+        "format": "v1={sig}",
+        "algorithm": "hmac-sha256",
+        "payload": "{rawBody}",
+        "encoding": "hex",
+        "key": {
+          "kind": "value",
+          "value": "hook"
+        }
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/hookSignature"
+      }
+    }
+  },
+  "identities": {
+    "user": {
+      "id": "user",
+      "kind": "credential",
+      "schemes": {
+        "read": [
+          "bearer"
+        ],
+        "write": [
+          "bearer"
+        ],
+        "optionalRead": []
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "UserPrincipal"
+      },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/user"
+      }
+    },
+    "hook": {
+      "id": "hook",
+      "kind": "signed",
+      "signed": "hookSignature",
+      "principal": {
+        "kind": "schema",
+        "schema": "HookCaller"
+      },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/hook"
+      }
+    }
+  },
+  "operations": {
+    "rename": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "lock": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "peek": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "tag": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "ping": {
+      "access": {
+        "kind": "identity",
+        "identity": "hook",
+        "schemes": [
+          "hookSignature"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/hooks/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    }
+  }
+}
