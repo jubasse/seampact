@@ -1,0 +1,2 @@
+src/unions.rs#union_tags	packages/core/spec/src/ir/unions.ts#irUnionTags
+-	packages/core/spec/src/ir/unions.ts#isKnownVariant	skip: a match on the union's Unknown arm tells a known variant apart
