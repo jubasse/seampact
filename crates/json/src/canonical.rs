@@ -1,4 +1,5 @@
-//! The canonical text of a JSON value: the IR and source-map bytes, and the compact key of a value.
+//! The text of a JSON value: the IR and source-map bytes, the compact key of a value, and the
+//! indented text of a value in its own member order.
 
 use seampact_js::{cmp_utf16, js_key_order};
 
@@ -24,6 +25,8 @@ enum MemberOrder {
     /// UTF-16 order rebuilt into an object: array-index keys move first, as `Object.fromEntries`
     /// then `JSON.stringify` writes them.
     Utf16RebuiltAsObject,
+    /// The object's own order: JavaScript's own-key order, as `JSON.stringify` walks an object.
+    OwnKeys,
 }
 
 /// Which text a number is written as.
@@ -57,6 +60,28 @@ pub fn canonical_document(value: &JsonValue) -> String {
     let format = Format {
         layout: Layout::Indented,
         order: MemberOrder::Utf16,
+        numbers: NumberText::Written,
+    };
+
+    write_value(&mut text, value, format, "");
+    text.push('\n');
+
+    text
+}
+
+/// The text `JSON.stringify(value, null, 2)` writes, then a final newline: members in the
+/// object's own order, two-space indentation, LF line endings.
+///
+/// Strings are escaped as `JSON.stringify` escapes them and numbers written as ECMAScript writes
+/// them, or with their exact digits above 2^53. The oracle's `diagnostics.json` and pass-half
+/// files are written with it.
+#[must_use]
+pub fn indented_json(value: &JsonValue) -> String {
+    let mut text = String::new();
+
+    let format = Format {
+        layout: Layout::Indented,
+        order: MemberOrder::OwnKeys,
         numbers: NumberText::Written,
     };
 
@@ -187,14 +212,19 @@ fn write_object(output: &mut String, members: &JsonObject, format: Format, inden
 }
 
 fn ordered_members(members: &JsonObject, order: MemberOrder) -> Vec<(&String, &JsonValue)> {
+    match order {
+        MemberOrder::OwnKeys => members.iter().collect(),
+        MemberOrder::Utf16 => members_by_utf16_name(members),
+        MemberOrder::Utf16RebuiltAsObject => js_key_order(members_by_utf16_name(members)).collect(),
+    }
+}
+
+fn members_by_utf16_name(members: &JsonObject) -> Vec<(&String, &JsonValue)> {
     let mut sorted_members: Vec<(&String, &JsonValue)> = members.iter().collect();
 
     sorted_members.sort_by(|(left_name, _), (right_name, _)| cmp_utf16(left_name, right_name));
 
-    match order {
-        MemberOrder::Utf16 => sorted_members,
-        MemberOrder::Utf16RebuiltAsObject => js_key_order(sorted_members).collect(),
-    }
+    sorted_members
 }
 
 /// Writes what goes before the item or member at `position`: a comma after the first, and in an
@@ -323,6 +353,16 @@ mod tests {
             "\"\u{7f}\u{2028}\u{2029}/\""
         );
         assert_eq!(quoted("\u{1F600}"), "\"\u{1F600}\"");
+    }
+
+    #[test]
+    fn the_indented_text_keeps_the_own_key_order_with_array_index_keys_first() {
+        let text = indented_json(&value(r#"{"b": [1, {}], "a": null, "9": -0}"#));
+
+        assert_eq!(
+            text,
+            "{\n  \"9\": 0,\n  \"b\": [\n    1,\n    {}\n  ],\n  \"a\": null\n}\n"
+        );
     }
 
     #[test]
