@@ -398,3 +398,190 @@ impl LoadReader for MemoryReader {
 fn first_segment_below<'key>(key: &'key str, prefix: &str) -> Option<&'key str> {
     key.strip_prefix(prefix)?.split('/').next()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn memory(files: &[(&str, &str)]) -> MemoryReader {
+        MemoryReader::new(
+            files
+                .iter()
+                .map(|(path, text)| ((*path).to_owned(), (*text).to_owned())),
+        )
+    }
+
+    fn links(pairs: &[(&str, &str)]) -> Vec<(String, String)> {
+        pairs
+            .iter()
+            .map(|(from, to)| ((*from).to_owned(), (*to).to_owned()))
+            .collect()
+    }
+
+    #[test]
+    fn a_file_reads_by_a_normalised_path() {
+        let reader = memory(&[("./sub//a.yaml", "a: 1\n")]);
+
+        assert_eq!(
+            reader.read_text("sub/a.yaml", 100),
+            Some(LoadText::Text("a: 1\n".to_owned()))
+        );
+        assert_eq!(
+            reader.read_text("sub/../sub/./a.yaml", 100),
+            Some(LoadText::Text("a: 1\n".to_owned()))
+        );
+        assert_eq!(reader.read_text("sub/b.yaml", 100), None);
+        assert_eq!(reader.read_text("sub", 100), None);
+    }
+
+    #[test]
+    fn the_size_cap_counts_utf8_bytes_not_utf16_units() {
+        let reader = memory(&[("a", "é"), ("b", "😀"), ("c", "")]);
+
+        assert_eq!(
+            reader.read_text("a", 2),
+            Some(LoadText::Text("é".to_owned()))
+        );
+        assert_eq!(reader.read_text("a", 1), Some(LoadText::TooLarge));
+        assert_eq!(
+            reader.read_text("b", 4),
+            Some(LoadText::Text("😀".to_owned()))
+        );
+        assert_eq!(reader.read_text("b", 3), Some(LoadText::TooLarge));
+        assert_eq!(
+            reader.read_text("c", 0),
+            Some(LoadText::Text(String::new()))
+        );
+    }
+
+    #[test]
+    fn a_directory_lists_the_first_segment_of_every_file_and_link_below_it() {
+        let reader = memory(&[("a/x.yaml", ""), ("a/b/y.yaml", ""), ("c.yaml", "")])
+            .with_links(links(&[("a/link", "c.yaml"), ("d", "a")]));
+
+        assert_eq!(
+            reader.list_dir("."),
+            Some(vec!["a".to_owned(), "c.yaml".to_owned(), "d".to_owned()])
+        );
+        assert_eq!(
+            reader.list_dir("a"),
+            Some(vec!["x.yaml".to_owned(), "b".to_owned(), "link".to_owned()])
+        );
+        assert_eq!(
+            reader.list_dir("d"),
+            Some(vec!["x.yaml".to_owned(), "b".to_owned(), "link".to_owned()])
+        );
+        assert_eq!(reader.list_dir("a/b/y.yaml"), None);
+        assert_eq!(reader.list_dir("missing"), None);
+    }
+
+    #[test]
+    fn a_link_to_a_directory_is_followed_for_reads_and_real_paths() {
+        let reader = memory(&[("store/@acme/pack-a/package.json", "{}")]).with_links(links(&[(
+            "node_modules/@acme/pack-a",
+            "store/@acme/pack-a",
+        )]));
+
+        assert_eq!(
+            reader.read_text("node_modules/@acme/pack-a/package.json", 100),
+            Some(LoadText::Text("{}".to_owned()))
+        );
+        assert_eq!(
+            reader.real_path("node_modules/@acme/pack-a/package.json"),
+            Some("store/@acme/pack-a/package.json".to_owned())
+        );
+        assert_eq!(
+            reader.real_path("node_modules/@acme/pack-a"),
+            Some("store/@acme/pack-a".to_owned())
+        );
+    }
+
+    #[test]
+    fn a_link_does_not_match_a_longer_sibling_name() {
+        let reader = memory(&[("x/a", "1"), ("l/a", "2")]).with_links(links(&[("l", "x")]));
+
+        assert_eq!(
+            reader.read_text("l/a", 10),
+            Some(LoadText::Text("1".to_owned()))
+        );
+
+        let sibling = memory(&[("lx/a", "3")]).with_links(links(&[("l", "x")]));
+
+        assert_eq!(
+            sibling.read_text("lx/a", 10),
+            Some(LoadText::Text("3".to_owned()))
+        );
+    }
+
+    #[test]
+    fn a_link_loop_stops_after_the_hop_limit() {
+        let reader = memory(&[("f", "")]).with_links(links(&[("a", "b"), ("b", "a")]));
+
+        assert_eq!(reader.real_path("a"), None);
+        assert_eq!(reader.read_text("a", 10), None);
+    }
+
+    #[test]
+    fn real_paths_are_root_relative_and_the_root_is_a_dot() {
+        let reader = memory(&[("a/x", ""), ("../outside.yaml", "")]);
+
+        assert_eq!(reader.real_path("."), Some(".".to_owned()));
+        assert_eq!(reader.real_path(""), Some(".".to_owned()));
+        assert_eq!(reader.real_path("a"), Some("a".to_owned()));
+        assert_eq!(reader.real_path("a/./x"), Some("a/x".to_owned()));
+        assert_eq!(reader.real_path("a/y"), None);
+        assert_eq!(
+            reader.real_path("../outside.yaml"),
+            Some("../outside.yaml".to_owned())
+        );
+    }
+
+    #[test]
+    fn the_ascent_defaults_to_three_and_can_be_set() {
+        assert_eq!(memory(&[]).ascent(), 3);
+        assert_eq!(memory(&[]).with_ascent(0).ascent(), 0);
+    }
+
+    #[test]
+    fn a_path_is_relative_to_the_root_with_a_dot_for_the_root_itself() {
+        let root = Utf8Path::new("/work/ws");
+        let cases = [
+            ("/work/ws", "."),
+            ("/work/ws/a/b", "a/b"),
+            ("/work/secret.yaml", "../secret.yaml"),
+            ("/work/ws2/x", "../ws2/x"),
+            ("/", "../.."),
+            ("/other/x", "../../other/x"),
+            ("/work/ws/é/😀", "é/😀"),
+        ];
+
+        for (real, expected) in cases {
+            assert_eq!(
+                load_root_relative(root, Utf8Path::new(real)),
+                expected,
+                "real {real:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_ascent_counts_the_directories_above_the_root() {
+        assert_eq!(load_ascent_of(Utf8Path::new("/")), 0);
+        assert_eq!(load_ascent_of(Utf8Path::new("/work")), 1);
+        assert_eq!(load_ascent_of(Utf8Path::new("/work/ws/é")), 3);
+    }
+
+    #[test]
+    fn a_file_resolves_lexically_against_the_root_and_stops_at_the_top() {
+        let root = Utf8Path::new("/work/ws");
+
+        assert_eq!(resolve_from(root, "a/../b"), Utf8Path::new("/work/ws/b"));
+        assert_eq!(
+            resolve_from(root, "../secret.yaml"),
+            Utf8Path::new("/work/secret.yaml")
+        );
+        assert_eq!(resolve_from(root, "../../../../x"), Utf8Path::new("/x"));
+        assert_eq!(resolve_from(root, "."), Utf8Path::new("/work/ws"));
+        assert_eq!(resolve_from(root, "/abs/x"), Utf8Path::new("/abs/x"));
+    }
+}

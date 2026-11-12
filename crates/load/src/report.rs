@@ -406,3 +406,301 @@ fn moved_origin(
         locations.insert(diagnostic_location_key(origin), site);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashSet;
+
+    use seampact_ir::PackName;
+    use seampact_span::TextSize;
+
+    use super::*;
+
+    const SOURCE: &str = "a: 1\nb: 2\nc: 3\n";
+
+    fn files_with(path: &str) -> (SourceFiles, Span) {
+        let mut files = SourceFiles::new();
+        let file = files.add(path, SOURCE).expect("the file is added");
+
+        (files, Span::new(file, TextSize::from(5), TextSize::from(6)))
+    }
+
+    fn pending_at(span: Span, message: &str) -> PendingDiagnostic {
+        PendingDiagnostic::new(
+            LoadRule::FileMissing,
+            message.to_owned(),
+            "create it".to_owned(),
+            span,
+        )
+    }
+
+    #[test]
+    fn every_rule_id_is_unique_prefixed_and_matches_its_short_id() {
+        let ids: HashSet<&str> = LoadRule::ALL.iter().map(|rule| rule.short_id()).collect();
+
+        assert_eq!(ids.len(), LoadRule::ALL.len());
+
+        for rule in LoadRule::ALL {
+            assert_eq!(
+                rule.rule_id().as_str(),
+                format!("seampact/load/{}", rule.short_id()),
+                "rule {rule:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn every_load_rule_the_fixtures_emit_is_a_rule_of_the_enum() {
+        let coverage_path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../fixtures/expected/rule-coverage.json"
+        );
+        let text = std::fs::read_to_string(coverage_path).expect("the coverage file is there");
+        let coverage: serde_json::Value = serde_json::from_str(&text).expect("it is JSON");
+        let known: HashSet<String> = LoadRule::ALL
+            .iter()
+            .map(|rule| rule.rule_id().as_str().to_owned())
+            .collect();
+        let emitted: Vec<&String> = coverage
+            .as_object()
+            .expect("an object")
+            .keys()
+            .filter(|id| id.starts_with("seampact/load/"))
+            .collect();
+
+        assert!(
+            emitted
+                .iter()
+                .any(|id| id.as_str() == "seampact/load/path-escape"),
+            "the coverage lists no load rule"
+        );
+
+        for id in emitted {
+            assert!(known.contains(id), "rule {id} is not in LoadRule");
+        }
+    }
+
+    #[test]
+    fn a_site_pointer_escapes_the_file_and_names_line_and_column() {
+        let location = Location {
+            file: "a/b~c.yaml".to_owned(),
+            line: 3,
+            column: 7,
+            end_line: 3,
+            end_column: 9,
+        };
+
+        assert_eq!(load_site_pointer(&location), "/~load/a~1b~0c.yaml/3/7");
+    }
+
+    #[test]
+    fn a_reported_diagnostic_is_located_by_its_site_pointer_in_the_side_table()
+    -> Result<(), InternalError> {
+        let (files, span) = files_with("sub/api.yaml");
+        let mut reporter = Reporter::new();
+
+        reporter.report(&files, pending_at(span, "file 'x' does not exist"))?;
+
+        let [diagnostic] = reporter.diagnostics() else {
+            panic!("one diagnostic expected");
+        };
+
+        assert_eq!(diagnostic.rule.as_str(), "seampact/load/file-missing");
+        assert_eq!(diagnostic.severity, Severity::Error);
+        assert_eq!(diagnostic.origin.layer, DiagnosticLayer::Api);
+        assert_eq!(diagnostic.origin.pointer, "/~load/sub~1api.yaml/2/1");
+        assert_eq!(
+            reporter.locations().get("api#/~load/sub~1api.yaml/2/1"),
+            Some(&span)
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn the_same_rule_site_and_message_is_reported_once() -> Result<(), InternalError> {
+        let (files, span) = files_with("api.yaml");
+        let mut reporter = Reporter::new();
+
+        reporter.report(&files, pending_at(span, "same"))?;
+        reporter.report(&files, pending_at(span, "same"))?;
+        assert_eq!(reporter.len(), 1);
+
+        reporter.report(&files, pending_at(span, "another message"))?;
+        reporter.report(
+            &files,
+            PendingDiagnostic::new(
+                LoadRule::FileInvalid,
+                "same".to_owned(),
+                "fix".to_owned(),
+                span,
+            ),
+        )?;
+        assert_eq!(reporter.len(), 3);
+
+        let other_line = Span::new(span.file, TextSize::from(0), TextSize::from(1));
+
+        reporter.report(&files, pending_at(other_line, "same"))?;
+        assert_eq!(reporter.len(), 4);
+
+        Ok(())
+    }
+
+    #[test]
+    fn two_spans_at_one_position_are_one_site() -> Result<(), InternalError> {
+        let (files, span) = files_with("api.yaml");
+        let longer = Span::new(span.file, span.range.start(), TextSize::from(9));
+        let mut reporter = Reporter::new();
+
+        reporter.report(&files, pending_at(span, "same"))?;
+        reporter.report(&files, pending_at(longer, "same"))?;
+
+        assert_eq!(reporter.len(), 1);
+
+        Ok(())
+    }
+
+    #[test]
+    fn a_warning_and_its_related_positions_are_kept() -> Result<(), InternalError> {
+        let (files, span) = files_with("api.yaml");
+        let other = Span::new(span.file, TextSize::from(10), TextSize::from(11));
+        let mut reporter = Reporter::new();
+        let pending = pending_at(span, "twice")
+            .with_severity(Severity::Warning)
+            .with_related(vec![RelatedSite {
+                at: other,
+                message: "first here".to_owned(),
+            }]);
+
+        reporter.report(&files, pending)?;
+
+        let [diagnostic] = reporter.diagnostics() else {
+            panic!("one diagnostic expected");
+        };
+
+        assert_eq!(diagnostic.severity, Severity::Warning);
+        assert_eq!(diagnostic.related.len(), 1);
+        assert_eq!(diagnostic.related[0].message, "first here");
+        assert_eq!(diagnostic.related[0].origin.pointer, "/~load/api.yaml/3/1");
+        assert!(reporter.locations().contains_key("api#/~load/api.yaml/3/1"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn the_layer_of_the_reporter_names_the_origin() -> Result<(), InternalError> {
+        let (files, span) = files_with("p.yaml");
+        let mut reporter = Reporter::new();
+
+        reporter.layer = FileLayer::Api(ApiLayer::Pack(PackName::new("@acme/pack-a".to_owned())));
+        reporter.report(&files, pending_at(span, "m"))?;
+
+        assert_eq!(
+            reporter.diagnostics()[0].origin.layer,
+            DiagnosticLayer::Pack("@acme/pack-a".to_owned())
+        );
+        assert!(
+            reporter
+                .locations()
+                .contains_key("pack:@acme/pack-a#/~load/p.yaml/2/1")
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn a_diagnostic_outside_its_file_is_an_internal_error_and_reports_nothing() {
+        let (files, span) = files_with("api.yaml");
+        let beyond = Span::new(span.file, TextSize::from(500), TextSize::from(501));
+        let mut reporter = Reporter::new();
+
+        assert!(reporter.report(&files, pending_at(beyond, "m")).is_err());
+        assert!(reporter.is_empty());
+        assert!(reporter.locations().is_empty());
+    }
+
+    #[test]
+    fn relabel_moves_what_was_reported_since_and_its_table_keys() -> Result<(), InternalError> {
+        let (files, span) = files_with("api.yaml");
+        let later = Span::new(span.file, TextSize::from(10), TextSize::from(11));
+        let mut reporter = Reporter::new();
+
+        reporter.report(&files, pending_at(span, "before"))?;
+
+        let since = reporter.len();
+
+        reporter.report(
+            &files,
+            pending_at(later, "after").with_related(vec![RelatedSite {
+                at: later,
+                message: "also".to_owned(),
+            }]),
+        )?;
+
+        reporter.relabel(since, &FileLayer::Api(ApiLayer::Api), &FileLayer::Workspace);
+
+        let layers: Vec<&DiagnosticLayer> = reporter
+            .diagnostics()
+            .iter()
+            .map(|diagnostic| &diagnostic.origin.layer)
+            .collect();
+
+        assert_eq!(
+            layers,
+            vec![&DiagnosticLayer::Api, &DiagnosticLayer::Workspace]
+        );
+        assert_eq!(
+            reporter.diagnostics()[1].related[0].origin.layer,
+            DiagnosticLayer::Workspace
+        );
+
+        let keys: Vec<&String> = reporter.locations().keys().collect();
+
+        assert_eq!(
+            keys,
+            vec!["api#/~load/api.yaml/2/1", "workspace#/~load/api.yaml/3/1"]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn relabel_leaves_other_layers_and_a_since_past_the_end_alone() -> Result<(), InternalError> {
+        let (files, span) = files_with("api.yaml");
+        let mut reporter = Reporter::new();
+
+        reporter.layer = FileLayer::Api(ApiLayer::Shared);
+        reporter.report(&files, pending_at(span, "m"))?;
+
+        reporter.relabel(0, &FileLayer::Api(ApiLayer::Api), &FileLayer::Workspace);
+        reporter.relabel(9, &FileLayer::Api(ApiLayer::Shared), &FileLayer::Workspace);
+
+        assert_eq!(
+            reporter.diagnostics()[0].origin.layer,
+            DiagnosticLayer::Shared
+        );
+        assert!(
+            reporter
+                .locations()
+                .contains_key("shared#/~load/api.yaml/2/1")
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn the_budget_messages_carry_the_limits() {
+        assert!(work_limit_message().message.contains("2000000"));
+        assert!(text_limit_message().message.contains("67108864"));
+        assert!(
+            work_limit_message()
+                .message
+                .ends_with("the load stops here")
+        );
+        assert!(
+            text_limit_message()
+                .message
+                .ends_with("the load stops here")
+        );
+    }
+}

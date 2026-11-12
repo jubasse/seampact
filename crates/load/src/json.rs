@@ -74,3 +74,88 @@ fn write_compact_object(output: &mut String, members: &JsonObject) {
 
     output.push('}');
 }
+
+#[cfg(test)]
+mod tests {
+    use seampact_json::JsonNumber;
+
+    use super::*;
+
+    fn object(members: Vec<(&str, JsonValue)>) -> JsonValue {
+        let mut object = JsonObject::new();
+
+        for (name, member) in members {
+            object.insert(name.to_owned(), member);
+        }
+
+        JsonValue::Object(object)
+    }
+
+    fn number(value: f64) -> JsonValue {
+        JsonValue::Number(JsonNumber::from_f64(value).expect("a finite number"))
+    }
+
+    #[test]
+    fn the_three_prototype_names_are_reserved() {
+        for key in ["__proto__", "constructor", "prototype"] {
+            assert!(is_reserved_key(key), "key {key:?}");
+        }
+
+        for key in ["", "Constructor", "__proto", "proto", "toString", "é"] {
+            assert!(!is_reserved_key(key), "key {key:?}");
+        }
+    }
+
+    #[test]
+    fn a_reserved_key_is_an_ordinary_member_of_a_json_object() {
+        let mut members = JsonObject::new();
+
+        members.insert("__proto__".to_owned(), number(1.0));
+
+        assert_eq!(members.get("__proto__"), Some(&number(1.0)));
+        assert_eq!(members.get("constructor"), None);
+    }
+
+    #[test]
+    fn a_string_is_shown_as_it_is_and_nothing_for_an_absent_value() {
+        assert_eq!(show_value(None), "nothing");
+        assert_eq!(
+            show_value(Some(&JsonValue::String("a \"b\"".to_owned()))),
+            "a \"b\""
+        );
+    }
+
+    #[test]
+    fn any_other_value_is_shown_as_json_stringify_writes_it() {
+        assert_eq!(show_value(Some(&JsonValue::Null)), "null");
+        assert_eq!(show_value(Some(&JsonValue::Bool(false))), "false");
+        assert_eq!(show_value(Some(&number(-0.0))), "0");
+        assert_eq!(show_value(Some(&number(1e21))), "1e+21");
+        assert_eq!(show_value(Some(&number(0.1))), "0.1");
+        assert_eq!(show_value(Some(&JsonValue::Array(vec![]))), "[]");
+        assert_eq!(show_value(Some(&object(vec![]))), "{}");
+        assert_eq!(
+            show_value(Some(&JsonValue::Array(vec![
+                JsonValue::Null,
+                JsonValue::String("é\n\u{1}".to_owned()),
+                number(2.0),
+            ]))),
+            "[null,\"é\\n\\u0001\",2]"
+        );
+    }
+
+    #[test]
+    fn an_object_is_shown_in_javascript_key_order() {
+        let value = object(vec![
+            ("b", number(1.0)),
+            ("10", number(2.0)),
+            ("9", number(3.0)),
+            ("a", object(vec![("x", JsonValue::Null)])),
+        ]);
+
+        assert_eq!(
+            show_value(Some(&value)),
+            "{\"9\":3,\"10\":2,\"b\":1,\"a\":{\"x\":null}}"
+        );
+    }
+}
