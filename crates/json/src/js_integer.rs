@@ -27,15 +27,12 @@ pub fn js_integer_in_range(
     allowed: RangeInclusive<i64>,
 ) -> Result<i64, JsonError> {
     let allowed = safe_part_of(allowed);
-    let value = number.to_f64();
-    let integer = (value.fract() == 0.0)
-        .then(|| integer_within(value, &allowed))
-        .flatten();
-
-    integer.ok_or_else(|| JsonError::NotAnIntegerInRange {
-        found: number.to_string(),
-        allowed,
-    })
+    number
+        .integer_within(&allowed)
+        .ok_or_else(|| JsonError::NotAnIntegerInRange {
+            found: number.to_string(),
+            allowed,
+        })
 }
 
 /// Reads an IR integer member: any JSON number that is an integer in the safe range and within
@@ -86,27 +83,6 @@ fn safe_part_of(allowed: RangeInclusive<i64>) -> RangeInclusive<i64> {
     let (minimum, maximum) = allowed.into_inner();
 
     minimum.max(MIN_SAFE_INTEGER)..=maximum.min(MAX_SAFE_INTEGER)
-}
-
-/// The `i64` of an integral `value` when it lies in `allowed`, a subrange of the safe range.
-fn integer_within(value: f64, allowed: &RangeInclusive<i64>) -> Option<i64> {
-    #[expect(
-        clippy::cast_precision_loss,
-        reason = "the bounds are within the safe range, where every i64 is an exact f64"
-    )]
-    let is_within = (*allowed.start() as f64) <= value && value <= (*allowed.end() as f64);
-
-    if !is_within {
-        return None;
-    }
-
-    #[expect(
-        clippy::cast_possible_truncation,
-        reason = "integral and within the safe range, so the cast is exact"
-    )]
-    let integer = value as i64;
-
-    Some(integer)
 }
 
 #[cfg(test)]

@@ -2,6 +2,7 @@
 
 use std::fmt;
 use std::hash::{Hash, Hasher};
+use std::ops::RangeInclusive;
 
 use seampact_js::FiniteNumber;
 
@@ -57,6 +58,38 @@ impl JsonNumber {
     #[must_use]
     pub fn to_f64(&self) -> f64 {
         self.finite_value().get()
+    }
+
+    /// Whether `Number.isInteger` holds: `404.0` and `4.04e2` are integers, `1e-17` is not.
+    #[must_use]
+    pub fn is_integer(&self) -> bool {
+        self.finite_value().is_integer()
+    }
+
+    /// The `i64` of the number when it is an integer whose `f64` lies in `allowed`, else `None`.
+    ///
+    /// The bounds of `allowed` must be within 2^53 in magnitude, where every `i64` is an exact
+    /// `f64`; the comparison is made on the `f64`, as JavaScript makes it.
+    pub(crate) fn integer_within(&self, allowed: &RangeInclusive<i64>) -> Option<i64> {
+        let value = self.to_f64();
+
+        #[expect(
+            clippy::cast_precision_loss,
+            reason = "the bounds are within 2^53 in magnitude, where every i64 is an exact f64"
+        )]
+        let is_within = (*allowed.start() as f64) <= value && value <= (*allowed.end() as f64);
+
+        if !self.is_integer() || !is_within {
+            return None;
+        }
+
+        #[expect(
+            clippy::cast_possible_truncation,
+            reason = "an integer within 2^53 in magnitude, so the cast is exact"
+        )]
+        let integer = value as i64;
+
+        Some(integer)
     }
 
     /// The digits of an integer kept exact above 2^53, else `None`.

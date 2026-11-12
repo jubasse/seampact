@@ -1,13 +1,18 @@
 //! A JSON value as JavaScript holds it.
 
+use std::ops::RangeInclusive;
+
 use serde::de::Error as _;
 use serde::ser::{SerializeMap, SerializeSeq};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{JsonError, JsonNumber, JsonObject, escape_pointer};
 
-/// The largest magnitude written as a JSON integer by [`JsonValue`]'s `Serialize`: 2^53.
-const LARGEST_WHOLE_INTEGER: f64 = 9_007_199_254_740_992.0;
+/// The integers [`JsonValue`]'s `Serialize` writes as JSON integers: up to 2^53 in magnitude.
+const WHOLE_INTEGER_RANGE: RangeInclusive<i64> = -TWO_POW_53..=TWO_POW_53;
+
+/// 2^53, the largest integer below which an `f64` holds every integer.
+const TWO_POW_53: i64 = 9_007_199_254_740_992;
 
 /// A JSON value: the opaque values of the IR (examples, defaults, extension values) and of the
 /// authoring tree.
@@ -130,27 +135,10 @@ fn serialize_number<S: Serializer>(number: &JsonNumber, serializer: S) -> Result
         return exact_number.serialize(serializer);
     }
 
-    let value = number.to_f64();
-
-    match whole_integer(value) {
+    match number.integer_within(&WHOLE_INTEGER_RANGE) {
         Some(integer) => serializer.serialize_i64(integer),
-        None => serializer.serialize_f64(value),
+        None => serializer.serialize_f64(number.to_f64()),
     }
-}
-
-/// The `i64` of an integral `f64` within 2^53 in magnitude, else `None`.
-fn whole_integer(value: f64) -> Option<i64> {
-    if value.fract() != 0.0 || value.abs() > LARGEST_WHOLE_INTEGER {
-        return None;
-    }
-
-    #[expect(
-        clippy::cast_possible_truncation,
-        reason = "integral and within 2^53, so the cast is exact"
-    )]
-    let integer = value as i64;
-
-    Some(integer)
 }
 
 #[cfg(test)]
