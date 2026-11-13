@@ -13,6 +13,7 @@
 
 mod budget;
 mod compose;
+mod expand;
 mod fragments;
 mod json;
 mod layer_build;
@@ -28,6 +29,7 @@ pub mod yaml;
 
 pub use budget::{LoadBudget, load_work_of, utf16_length};
 pub use compose::{Merged, merge_layers};
+pub use expand::{Expander, MappingIndex, VisibleDeclaration, key_string};
 pub use fragments::{LoadFragment, load_sort_fragments};
 pub use json::{RESERVED_KEYS, is_reserved_key, show_value};
 pub use layer_build::{FileRef, LayerBuild, RefUse};
