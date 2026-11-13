@@ -160,7 +160,13 @@ impl Loader<'_, '_> {
         }
 
         if let Some(start) = stack.iter().position(|member| member.key == pack.key) {
-            return self.report_pack_cycle(pack, stack.get(start..).unwrap_or_default());
+            let Some(cycle) = stack.get(start..) else {
+                return Err(InternalError::new(
+                    "a pack found in the stack is past the end of the stack",
+                ));
+            };
+
+            return self.report_pack_cycle(pack, cycle);
         }
 
         if stack.len() >= LOAD_MAX_DEPTH {

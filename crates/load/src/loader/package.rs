@@ -108,8 +108,13 @@ impl Loader<'_, '_> {
             return self.refuse_package_name(name, at);
         }
 
+        let mut up = String::new();
+
         for depth in 0..=self.reader.ascent() {
-            let up = "../".repeat(usize::try_from(depth).unwrap_or(usize::MAX));
+            if depth > 0 {
+                up.push_str("../");
+            }
+
             let dir = join_path(ROOT_BOUNDARY, &format!("{up}{NODE_MODULES}/{name}"));
 
             // Kept should the grammar loosen.

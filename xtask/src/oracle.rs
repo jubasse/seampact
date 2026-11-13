@@ -40,6 +40,10 @@ const COMPILER_MANIFEST: &str = "crates/compiler/Cargo.toml";
 
 /// The compiler the oracle checks: the one place a compiler crate plugs its subject in, `None`
 /// until it does.
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "the plug point stays an Option: the gate refuses a compiler crate with no subject"
+)]
 fn compiler_subject() -> Option<Box<dyn OracleSubject>> {
     Some(Box::new(CompilerSubject))
 }
