@@ -1,6 +1,7 @@
 //! The oracle task: the harness of `seampact-oracle` run with the compiler subject.
 
 use camino::Utf8Path;
+use seampact_compiler::oracle::CompilerSubject;
 use seampact_json::JsonValue;
 use seampact_oracle::{
     Compilation, Fixture, HalfInput, OracleError, OracleSubject, RuleIdRegistry, Selection,
@@ -40,7 +41,7 @@ const COMPILER_MANIFEST: &str = "crates/compiler/Cargo.toml";
 /// The compiler the oracle checks: the one place a compiler crate plugs its subject in, `None`
 /// until it does.
 fn compiler_subject() -> Option<Box<dyn OracleSubject>> {
-    None
+    Some(Box::new(CompilerSubject))
 }
 
 /// Why the oracle cannot vouch for the workspace: a compiler crate exists and no subject is
