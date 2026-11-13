@@ -10,17 +10,17 @@ publish.workspace = true
 [dependencies]
 camino.workspace = true
 indexmap.workspace = true
+regress.workspace = true
 seampact-authoring.workspace = true
 seampact-diagnostics.workspace = true
 seampact-ir.workspace = true
 seampact-js.workspace = true
 seampact-json.workspace = true
 seampact-span.workspace = true
+serde_json.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
-regress.workspace = true
-serde_json.workspace = true
 tempfile.workspace = true
 
 [lints]

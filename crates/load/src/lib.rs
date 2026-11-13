@@ -13,6 +13,7 @@ mod json;
 mod limits;
 mod pack_files;
 mod paths;
+pub mod positions;
 mod reader;
 mod report;
 
