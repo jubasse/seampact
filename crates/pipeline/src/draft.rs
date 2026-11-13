@@ -495,4 +495,23 @@ mod tests {
 
         assert_eq!(DraftIr::from_json_value(&value).expect("it decodes"), draft);
     }
+
+    #[test]
+    fn a_proto_id_survives_the_catalogue_round_trip() {
+        let mut draft = DraftIr::new().to_json_value().expect("a new draft encodes");
+        let right = serde_json::json!({"id": "__proto__", "subject": {"kind": "scope", "scope": "space"}, "errors": [], "docs": {}, "extensions": {}, "origin": {"layer": "api", "pointer": "/rights/__proto__"}});
+
+        let JsonValue::Object(members) = &mut draft else {
+            panic!("a draft is an object");
+        };
+        members.insert(
+            "rights".to_owned(),
+            JsonValue::try_from(serde_json::json!({"__proto__": right})).expect("a JSON value"),
+        );
+
+        let decoded = DraftIr::from_json_value(&draft).expect("it decodes");
+
+        assert_eq!(decoded.rights.len(), 1);
+        assert_eq!(decoded.to_json_value().expect("it encodes"), draft);
+    }
 }
