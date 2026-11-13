@@ -14,4 +14,8 @@
 
 mod compose;
 mod fixtures;
+mod hardening;
 mod harness;
+mod packs;
+mod section_two;
+mod workspace;

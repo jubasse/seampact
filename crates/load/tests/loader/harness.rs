@@ -175,7 +175,6 @@ pub fn run_fixture(name: &str) -> Load {
 pub struct SpyReader {
     inner: MemoryReader,
     reads: RefCell<Vec<String>>,
-    listed: RefCell<Vec<String>>,
 }
 
 impl SpyReader {
@@ -183,16 +182,11 @@ impl SpyReader {
         Self {
             inner,
             reads: RefCell::new(Vec::new()),
-            listed: RefCell::new(Vec::new()),
         }
     }
 
     pub fn reads(&self) -> Vec<String> {
         self.reads.borrow().clone()
-    }
-
-    pub fn listed(&self) -> Vec<String> {
-        self.listed.borrow().clone()
     }
 }
 
@@ -204,8 +198,6 @@ impl LoadReader for SpyReader {
     }
 
     fn list_dir(&self, dir: &str) -> Option<Vec<String>> {
-        self.listed.borrow_mut().push(dir.to_owned());
-
         self.inner.list_dir(dir)
     }
 
