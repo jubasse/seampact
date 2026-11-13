@@ -91,3 +91,4 @@ src/source.rs#report_problem	packages/core/compiler/src/load/source.ts#FileStore
 src/source.rs#walk	packages/core/compiler/src/load/source.ts#FileStore.walk
 src/source.rs#report_too_deep	packages/core/compiler/src/load/source.ts#FileStore.reportTooDeep
 src/source.rs#check_plain	packages/core/compiler/src/load/source.ts#FileStore.checkPlain
+src/compose.rs#merge_layers	packages/core/compiler/src/load/compose.ts#mergeLayers

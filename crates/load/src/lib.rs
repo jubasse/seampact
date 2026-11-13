@@ -8,9 +8,11 @@
 //! reported through the [`Reporter`] under a [`LoadRule`]. [`FileStore`] reads each file once,
 //! checks every authored path and parses each file into a [`yaml::YamlNode`] tree, reporting the
 //! YAML pitfalls (P1 to P5, P9) and syntax errors as it does; [`resolve_plain_scalar`] is the
-//! core schema's reading of a plain scalar.
+//! core schema's reading of a plain scalar. [`merge_layers`] composes the layer builds of one api
+//! into its raw tree and the origin of each leaf.
 
 mod budget;
+mod compose;
 mod fragments;
 mod json;
 mod layer_build;
@@ -25,6 +27,7 @@ mod source;
 pub mod yaml;
 
 pub use budget::{LoadBudget, load_work_of, utf16_length};
+pub use compose::{Merged, merge_layers};
 pub use fragments::{LoadFragment, load_sort_fragments};
 pub use json::{RESERVED_KEYS, is_reserved_key, show_value};
 pub use layer_build::{FileRef, LayerBuild, RefUse};

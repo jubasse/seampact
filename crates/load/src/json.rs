@@ -25,14 +25,19 @@ pub fn show_value(value: Option<&JsonValue>) -> String {
     match value {
         None => "nothing".to_owned(),
         Some(JsonValue::String(text)) => text.clone(),
-        Some(other) => {
-            let mut written = String::new();
-
-            write_compact(&mut written, other);
-
-            written
-        }
+        Some(other) => json_stringify(other),
     }
+}
+
+/// `JSON.stringify(value)`: compact, members in the object's own order, numbers as JavaScript
+/// writes them.
+#[must_use]
+pub(crate) fn json_stringify(value: &JsonValue) -> String {
+    let mut written = String::new();
+
+    write_compact(&mut written, value);
+
+    written
 }
 
 fn write_compact(output: &mut String, value: &JsonValue) {
