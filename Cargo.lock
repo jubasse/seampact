@@ -878,7 +878,9 @@ version = "2.0.0"
 dependencies = [
  "camino",
  "indexmap",
+ "proptest",
  "regress",
+ "saphyr-parser",
  "seampact-authoring",
  "seampact-diagnostics",
  "seampact-ir",
