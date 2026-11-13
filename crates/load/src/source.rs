@@ -791,7 +791,7 @@ impl<'run> FileStore<'run> {
 /// `source.slice(0, 37)` can cut a surrogate pair in two; the lone half has no Rust form and is
 /// written as U+FFFD, which is what a JavaScript string with a lone surrogate becomes when it is
 /// written as UTF-8.
-fn shown_source(source: &str) -> String {
+pub(crate) fn shown_source(source: &str) -> String {
     if utf16_length(source) <= SHOWN_SOURCE_LIMIT {
         return source.to_owned();
     }
