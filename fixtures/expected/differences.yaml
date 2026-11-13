@@ -34,3 +34,13 @@ differences:
     change: value
     from: 9007199254740992
     to: 9007199254740993
+  - id: yaml-syntax-parser-message
+    reason: The Rust loader parses YAML with saphyr-parser, whose syntax error message replaces the yaml package's; the position is the same.
+    decision: docs/maintainers/rust-design/loader-and-pipeline.md#10-out-of-scope-and-differences-to-record
+    applies:
+      fixtures: ["rules/load-yaml-syntax"]
+      output: diagnostics
+      pointer: /workspace/1/message
+    change: message
+    from: "YAML syntax error: Flow map in block collection must be sufficiently indented and end with a }"
+    to: "YAML syntax error: while parsing a flow mapping, did not find expected ',' or '}'"
