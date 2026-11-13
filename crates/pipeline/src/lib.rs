@@ -1,5 +1,6 @@
 //! The pass pipeline: half names, the draft IR, half outputs and their merge, the derivation
-//! table, the schema service and the draft delta convention.
+//! table, the schema service, the draft delta convention, the readers over the loaded tree and the
+//! half context.
 //!
 //! A half reads the merged [`DraftIr`] by shared reference and returns an owned output; the
 //! output's `merge_into` moves its values into the draft and refuses any write over a value
