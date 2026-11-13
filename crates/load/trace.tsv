@@ -75,3 +75,19 @@ src/positions/position.rs#expected_types	packages/core/compiler/src/load/positio
 src/positions/position.rs#expected_keys	packages/core/compiler/src/load/positions.ts#expectedKeys
 src/positions/position.rs#admits_integer	packages/core/compiler/src/load/positions.ts#admitsInteger
 src/positions/position.rs#refuses_scalar	packages/core/compiler/src/load/positions.ts#refusesScalar
+src/scalars.rs#load_scalar_pitfall	packages/core/compiler/src/load/scalars.ts#loadScalarPitfall
+-	packages/core/compiler/src/load/source.ts#siteOf	skip: SourceFiles::location in seampact-span is the port, called where a position is shown
+src/source.rs#node_span	packages/core/compiler/src/load/source.ts#nodeSite
+src/source.rs#pair_span	packages/core/compiler/src/load/source.ts#pairSite
+-	packages/core/compiler/src/load/source.ts#normalizeText	skip: seampact_span::normalize_text, applied by SourceFiles::add
+src/source.rs#memo_real_path	packages/core/compiler/src/load/source.ts#memoReader
+src/source.rs#real_of	packages/core/compiler/src/load/source.ts#FileStore.realOf
+src/source.rs#new	packages/core/compiler/src/load/source.ts#FileStore.constructor
+src/source.rs#raw_text	packages/core/compiler/src/load/source.ts#FileStore.rawText
+src/source.rs#resolve	packages/core/compiler/src/load/source.ts#FileStore.resolve
+src/source.rs#check_file	packages/core/compiler/src/load/source.ts#FileStore.checkFile
+src/source.rs#parse	packages/core/compiler/src/load/source.ts#FileStore.parse
+src/source.rs#report_problem	packages/core/compiler/src/load/source.ts#FileStore.checkDocument
+src/source.rs#walk	packages/core/compiler/src/load/source.ts#FileStore.walk
+src/source.rs#report_too_deep	packages/core/compiler/src/load/source.ts#FileStore.reportTooDeep
+src/source.rs#check_plain	packages/core/compiler/src/load/source.ts#FileStore.checkPlain

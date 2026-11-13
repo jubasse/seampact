@@ -308,7 +308,7 @@ In pipeline order (ADR 0006 section 1).
 - `crates/ir`: The seampact IR and source-map types, their open enums, unions and registries, the embedded IR schema files and the canonical document roots.
 - `crates/js`: JavaScript semantics shared by every port lane: UTF-16 string order, JavaScript object key order and ECMAScript number text.
 - `crates/json`: JSON values as JavaScript holds them, their canonical text (IR, source map and OpenAPI bytes), the indented text of the oracle's diagnostics and halves, the JS-integer reader and the JSON Pointer escape.
-- `crates/load`: The load stage: the workspace readers (disk and memory), authored paths and pack files, the load limits and budget, the load diagnostics and the include fragments.
+- `crates/load`: The load stage: the workspace readers (disk and memory), authored paths and pack files, the load limits and budget, the load diagnostics, the include fragments, the YAML tree with its plain-scalar resolver, and the file store that parses each file and reports its pitfalls.
 - `crates/oracle`: The oracle harness of the Rust port: reads fixtures/expected/, compares a compiler subject's outputs with it under differences.yaml, and gives the verdict of `cargo xtask oracle`.
 - `crates/pipeline`: The pass pipeline: half names, the draft IR, the half outputs and their merge (with the element-owner rule), the derivation table and roles, the schema service trait and the draft delta convention.
 - `crates/span`: Source spans of the Rust port: file ids, byte ranges, the file table and the conversion to line and UTF-16 column.

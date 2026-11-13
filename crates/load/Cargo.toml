@@ -11,6 +11,7 @@ publish.workspace = true
 camino.workspace = true
 indexmap.workspace = true
 regress.workspace = true
+saphyr-parser.workspace = true
 seampact-authoring.workspace = true
 seampact-diagnostics.workspace = true
 seampact-ir.workspace = true
@@ -21,6 +22,7 @@ serde_json.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
+proptest.workspace = true
 tempfile.workspace = true
 
 [lints]
