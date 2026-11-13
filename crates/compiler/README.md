@@ -1,1 +1,1 @@
-The compiler: the stages in run order, and behind the `oracle` feature the subject `cargo xtask oracle` compiles fixtures with.
+The compiler: the stages in run order (`compile_workspace` with its stop rule, `run_half`), and behind the `oracle` feature the subject `cargo xtask oracle` compiles fixtures and runs halves with. Validate, the relay order, every half, link and finalize answer not ported until their lanes land.

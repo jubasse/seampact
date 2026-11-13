@@ -2,8 +2,19 @@
 -	scripts/oracle/compiler.ts#isPipelineModule	skip: checks the members of a dynamic import; the Rust subject is a typed implementation
 -	scripts/oracle/compiler.ts#isDeltaModule	skip: checks the members of a dynamic import; the Rust subject is a typed implementation
 -	scripts/oracle/compiler.ts#isObject	skip: checks the members of a dynamic import; the Rust subject is a typed implementation
--	scripts/oracle/compiler.ts#apiNameOf	skip: records the deltas of the halves, which the pipeline-orchestrator lane runs
--	scripts/oracle/compiler.ts#recordingPasses	skip: records the deltas of the halves, which the pipeline-orchestrator lane runs
+-	scripts/oracle/compiler.ts#apiNameOf	merged: src/oracle/half.rs#run_fixture_half
+-	scripts/oracle/compiler.ts#recordingPasses	merged: src/oracle/half.rs#run_fixture_half
 -	scripts/oracle/compiler.ts#refuseWorkspaceImports	skip: excluded.json names the fixtures with workspace.imports, which the harness never runs
 src/oracle.rs#compile	scripts/oracle/compiler.ts#oracleCompiler
 -	scripts/oracle/compiler.ts#loadOracleCompiler	skip: the subject is the value CompilerSubject, nothing is loaded at run time
+src/orchestrator.rs#has_error	packages/core/compiler/src/pipeline/orchestrator.ts#hasError
+src/orchestrator.rs#compile_workspace	packages/core/compiler/src/pipeline/orchestrator.ts#compileWorkspace
+src/stages.rs#link_workspace	packages/core/compiler/src/pipeline/orchestrator.ts#link
+src/context.rs#context	packages/core/compiler/src/pipeline/context.ts#pipelineContext
+-	packages/core/compiler/src/pipeline/context.ts#viewOf	skip: the read-only views of a guarded run are the borrows of the Rust half context
+-	packages/core/compiler/src/pipeline/draft-schema.ts#forEachSchemaObject	merged: src/oracle/half.rs#run_fixture_half
+-	packages/core/compiler/src/pipeline/draft-schema.ts#definitionName	merged: src/oracle/half.rs#run_fixture_half
+-	packages/core/compiler/src/pipeline/draft-schema.ts#variantTags	merged: src/oracle/half.rs#run_fixture_half
+-	packages/core/compiler/src/pipeline/draft-schema.ts#draftIrSchemas	merged: src/oracle/half.rs#run_fixture_half
+-	packages/core/compiler/src/pipeline/draft-schema.ts#createDraftValidator	merged: src/oracle/half.rs#run_fixture_half
+-	packages/core/compiler/src/pipeline/draft-schema.ts#isSchemaObject	merged: src/oracle/half.rs#run_fixture_half
