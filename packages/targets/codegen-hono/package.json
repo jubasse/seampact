@@ -53,7 +53,7 @@
     "prettier": "3.9.10"
   },
   "devDependencies": {
-    "@hono/node-server": "2.1.5",
+    "@hono/node-server": "2.1.6",
     "@seampact/codegen-core": "workspace:*",
     "@seampact/spec": "workspace:*",
     "@types/node": "24.19.2",
