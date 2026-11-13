@@ -32,8 +32,29 @@ fn response(status: u16) -> Result<Response, String> {
     decode(json!({"status": status, "shape": "item", "headers": [], "origin": origin()}))
 }
 
-fn header(name: &str) -> Result<ResponseHeader, String> {
-    decode(json!({"name": name, "type": schema_ref("S"), "required": false}))
+fn derived_from(derivation: &str) -> serde_json::Value {
+    json!({"derivation": derivation, "from": [origin()]})
+}
+
+fn derived_param(name: &str, derivation: &str) -> Result<Param, String> {
+    decode(json!({
+        "name": name, "type": schema_ref("S"), "required": true, "origin": origin(),
+        "derivedFrom": derived_from(derivation),
+    }))
+}
+
+fn derived_response(status: u16, derivation: &str) -> Result<Response, String> {
+    decode(json!({
+        "status": status, "shape": "item", "headers": [], "origin": origin(),
+        "derivedFrom": derived_from(derivation),
+    }))
+}
+
+fn derived_header(name: &str, derivation: &str) -> Result<ResponseHeader, String> {
+    decode(json!({
+        "name": name, "type": schema_ref("S"), "required": false,
+        "derivedFrom": derived_from(derivation),
+    }))
 }
 
 fn api() -> Result<DraftApi, String> {
@@ -385,7 +406,7 @@ fn lists_concatenate_in_run_order_and_headers_address_either_kind_of_response() 
         scopes: IrMap::default(),
         buckets: IrMap::default(),
         operations: vec![AccessRightsOperation {
-            header_params: vec![param("proof")?],
+            header_params: vec![derived_param("proof", "rule.proof")?],
             ..AccessRightsOperation::default()
         }],
     };
@@ -395,16 +416,16 @@ fn lists_concatenate_in_run_order_and_headers_address_either_kind_of_response() 
         .map_err(|failure| failure.to_string())?;
 
     let wire = DeriveWireOperation {
-        header_params: vec![param("derived")?],
-        responses: vec![response(404)?],
+        header_params: vec![derived_param("derived", "idempotency.write")?],
+        responses: vec![derived_response(404, "cache.etag")?],
         response_headers: vec![
             ResponseHeaderAdditions {
                 response: 0,
-                headers: vec![header("A")?],
+                headers: vec![derived_header("A", "cache.etag")?],
             },
             ResponseHeaderAdditions {
                 response: 1,
-                headers: vec![header("B")?],
+                headers: vec![derived_header("B", "cache.etag")?],
             },
         ],
         ..DeriveWireOperation::default()
@@ -446,10 +467,10 @@ fn a_response_index_past_both_lists_is_an_internal_error() -> Outcome {
 
     let mut draft = draft_with(vec![declared])?;
     let wire = DeriveWireOperation {
-        responses: vec![response(404)?],
+        responses: vec![derived_response(404, "cache.etag")?],
         response_headers: vec![ResponseHeaderAdditions {
             response: 2,
-            headers: vec![header("A")?],
+            headers: vec![derived_header("A", "cache.etag")?],
         }],
         ..DeriveWireOperation::default()
     };
@@ -553,4 +574,58 @@ fn the_draft_and_every_output_are_send_and_sync() {
     assert_send_and_sync::<DeriveWireOutput>();
     assert_send_and_sync::<DeriveErrorsOutput>();
     assert_send_and_sync::<Origin>();
+}
+
+#[test]
+fn a_half_appends_no_declared_element_and_none_of_another_halfs_derivation() -> Outcome {
+    let declared = DeriveWireOperation {
+        query_params: vec![param("declared")?],
+        ..DeriveWireOperation::default()
+    };
+    let another_halfs = DeriveWireOperation {
+        header_params: vec![derived_param("proof", "rule.proof")?],
+        ..DeriveWireOperation::default()
+    };
+    let in_a_list_it_does_not_derive_into = DeriveWireOperation {
+        responses: vec![derived_response(404, "rule.proof")?],
+        ..DeriveWireOperation::default()
+    };
+    let rights_in_a_path = AccessRightsOutput {
+        rights: IrMap::default(),
+        rules: IrMap::default(),
+        scopes: IrMap::default(),
+        buckets: IrMap::default(),
+        operations: vec![AccessRightsOperation {
+            header_params: vec![param("declared")?],
+            ..AccessRightsOperation::default()
+        }],
+    };
+
+    for (wire, expected) in [
+        (declared, "owned by tree.nodes (declared)"),
+        (
+            another_halfs,
+            "owned by access.rights (derivation rule.proof)",
+        ),
+        (
+            in_a_list_it_does_not_derive_into,
+            "derivation rule.proof adds no element here (derived by tree.nodes, derive.wire)",
+        ),
+    ] {
+        let mut draft = draft_with(vec![operation(json!({}))?])?;
+        let failure = failure_of(derive_wire_output(vec![wire])?.merge_into(&mut draft))?;
+
+        assert!(failure.contains(expected), "{failure}");
+        assert!(failure.contains("getTask"), "{failure}");
+    }
+
+    let mut draft = draft_with(vec![operation(json!({}))?])?;
+    let failure = failure_of(rights_in_a_path.merge_into(&mut draft))?;
+
+    assert!(
+        failure.contains("owned by tree.nodes (declared)"),
+        "{failure}"
+    );
+
+    Ok(())
 }
