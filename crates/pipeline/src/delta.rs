@@ -360,3 +360,248 @@ fn no_operation_id(path: &str, index: usize) -> InternalError {
         join(path, &index.to_string())
     ))
 }
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::*;
+
+    fn value(raw: serde_json::Value) -> JsonValue {
+        JsonValue::try_from(raw).unwrap()
+    }
+
+    fn object(raw: serde_json::Value) -> JsonObject {
+        match value(raw) {
+            JsonValue::Object(object) => object,
+            other => panic!("not an object: {other:?}"),
+        }
+    }
+
+    fn applied(
+        draft: serde_json::Value,
+        members: serde_json::Value,
+    ) -> Result<JsonValue, InternalError> {
+        let mut draft = value(draft);
+
+        draft_apply(&mut draft, &object(members))?;
+
+        Ok(draft)
+    }
+
+    #[test]
+    fn apply_sets_absent_members_and_appends_lists() {
+        let got = applied(
+            json!({"apis": [{"id": "a"}], "kinds": {}}),
+            json!({"apis": [{"id": "b"}], "tree": {"nodes": []}}),
+        )
+        .unwrap();
+
+        let want = value(json!({
+            "apis": [{"id": "a"}, {"id": "b"}],
+            "kinds": {},
+            "tree": {"nodes": []},
+        }));
+
+        assert_eq!(got, want);
+    }
+
+    #[test]
+    fn apply_orders_keys_as_javascript_does() {
+        let got = applied(json!({}), json!({"b": 1, "a": 2, "10": 3, "9": 4})).unwrap();
+
+        let JsonValue::Object(object) = got else {
+            panic!("not an object");
+        };
+        let keys: Vec<&str> = object.keys().map(String::as_str).collect();
+
+        // JavaScript order: integer keys ascending, then the others as inserted.
+        assert_eq!(keys, ["9", "10", "b", "a"]);
+    }
+
+    #[test]
+    fn apply_refuses_to_replace_a_member() {
+        let error = applied(json!({"a": {"b": 1}}), json!({"a": {"b": 2}})).unwrap_err();
+
+        assert!(error.to_string().contains("a.b is already set"), "{error}");
+    }
+
+    #[test]
+    fn apply_refuses_a_draft_that_is_no_object() {
+        let mut draft = value(json!([]));
+
+        assert!(draft_apply(&mut draft, &object(json!({}))).is_err());
+    }
+
+    #[test]
+    fn apply_merges_operations_by_id_and_appends_a_new_id() {
+        let got = applied(
+            json!({"operations": [{"id": "x"}]}),
+            json!({"operations": {"x": {"summary": "s"}, "y": {"id": "y"}}}),
+        )
+        .unwrap();
+
+        let want = value(json!({"operations": [{"id": "x", "summary": "s"}, {"id": "y"}]}));
+
+        assert_eq!(got, want);
+    }
+
+    #[test]
+    fn apply_refuses_an_operation_key_that_matches_no_id() {
+        let error = applied(
+            json!({"operations": [{"id": "x"}]}),
+            json!({"operations": {"z": {"id": "other"}}}),
+        )
+        .unwrap_err();
+
+        assert!(
+            error.to_string().contains("operations.z names no element"),
+            "{error}"
+        );
+    }
+
+    #[test]
+    fn apply_refuses_an_object_over_a_list_with_a_scalar_member() {
+        assert!(applied(json!({"l": [1]}), json!({"l": 3})).is_err());
+        assert!(applied(json!({"l": [1]}), json!({"l": {"0": {"a": 1}}})).is_err());
+    }
+
+    #[test]
+    fn apply_appends_the_next_index_and_refuses_a_gap() {
+        let got = applied(json!({"l": [{"a": 1}]}), json!({"l": {"1": {"b": 2}}})).unwrap();
+
+        assert_eq!(got, value(json!({"l": [{"a": 1}, {"b": 2}]})));
+        assert!(applied(json!({"l": [{"a": 1}]}), json!({"l": {"2": {"b": 2}}})).is_err());
+    }
+
+    #[test]
+    fn apply_reads_a_list_key_as_javascript_number_does() {
+        let indexed = [
+            "0",
+            "00",
+            "+0",
+            "-0",
+            "0x0",
+            "0X0",
+            "0b0",
+            "0o0",
+            "0.0",
+            "0e0",
+            "",
+            " ",
+            " 0 ",
+            "\u{feff}0",
+            "\u{85}0\u{a0}",
+        ];
+
+        for key in indexed {
+            let draft = json!({"l": [{"a": 1}]});
+            let members = json!({"l": {key: {"b": 2}}});
+
+            let got = applied(draft, members);
+            let want = value(json!({"l": [{"a": 1, "b": 2}]}));
+
+            // U+0085 is not ECMAScript white space: that key names no element.
+            if key.contains('\u{85}') {
+                assert!(got.is_err(), "key {key:?}");
+            } else {
+                assert_eq!(got.unwrap(), want, "key {key:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn apply_refuses_a_list_key_that_is_no_index() {
+        for key in [
+            "1.5",
+            "abc",
+            "Infinity",
+            "-1",
+            "0x",
+            "1e999",
+            "9007199254740993",
+            "0xffffffffffffffffff",
+        ] {
+            let got = applied(json!({"l": [{"a": 1}]}), json!({"l": {key: {"b": 2}}}));
+
+            assert!(got.is_err(), "key {key:?}");
+        }
+    }
+
+    fn assert_inverse(before: serde_json::Value, members: serde_json::Value) {
+        let before = value(before);
+        let members = object(members);
+
+        let mut after = before.clone();
+        draft_apply(&mut after, &members).unwrap();
+
+        assert_eq!(draft_delta(&before, &after).unwrap(), members);
+    }
+
+    #[test]
+    fn delta_is_the_inverse_of_apply() {
+        assert_inverse(json!({}), json!({"a": {"b": 1}}));
+        assert_inverse(json!({"l": [1]}), json!({"l": [2, 3]}));
+        assert_inverse(json!({"a": {"b": 1}}), json!({"a": {"c": 2}}));
+        assert_inverse(
+            json!({"operations": [{"id": "x"}]}),
+            json!({"operations": {"x": {"summary": "s"}}}),
+        );
+        assert_inverse(
+            json!({"l": [{"a": 1}]}),
+            json!({"l": {"0": {"b": 2}, "1": {"c": 3}}}),
+        );
+    }
+
+    #[test]
+    fn delta_of_equal_drafts_is_empty() {
+        let draft = value(json!({"a": [1, {"b": 2}]}));
+
+        assert!(draft_delta(&draft, &draft).unwrap().is_empty());
+    }
+
+    #[test]
+    fn delta_refuses_what_the_convention_cannot_say() {
+        let refused = [
+            (json!({"a": 1}), json!({})),
+            (json!({"a": 1}), json!({"a": 2})),
+            (json!({"a": {"b": 1}}), json!({"a": [1]})),
+            (json!({"a": [1, 2]}), json!({"a": [1]})),
+            (json!({"a": [1]}), json!({"a": [2]})),
+            (
+                json!({"operations": [{"id": "x"}]}),
+                json!({"operations": []}),
+            ),
+            (
+                json!({"operations": [{"id": "x"}]}),
+                json!({"operations": [{"id": "x", "s": 1}, {"s": 2}]}),
+            ),
+            (
+                json!({"operations": [{"s": 1}]}),
+                json!({"operations": [{"s": 1, "t": 2}]}),
+            ),
+        ];
+
+        for (before, after) in refused {
+            let result = draft_delta(&value(before.clone()), &value(after.clone()));
+
+            assert!(result.is_err(), "{before} -> {after}");
+        }
+    }
+
+    #[test]
+    fn delta_refuses_a_draft_that_is_no_object() {
+        assert!(draft_delta(&value(json!([])), &value(json!({}))).is_err());
+        assert!(draft_delta(&value(json!({})), &value(json!(1))).is_err());
+    }
+
+    #[test]
+    fn delta_writes_appended_operations_whole_without_an_id() {
+        let before = value(json!({"operations": []}));
+        let after = value(json!({"operations": [{"s": 1}]}));
+
+        let got = draft_delta(&before, &after).unwrap();
+
+        assert_eq!(got, object(json!({"operations": [{"s": 1}]})));
+    }
+}
