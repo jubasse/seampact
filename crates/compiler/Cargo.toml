@@ -11,11 +11,19 @@ publish.workspace = true
 oracle = ["dep:seampact-oracle"]
 
 [dependencies]
+indexmap.workspace = true
+seampact-authoring.workspace = true
 seampact-diagnostics.workspace = true
+seampact-ir.workspace = true
 seampact-json.workspace = true
 seampact-load.workspace = true
 seampact-oracle = { workspace = true, optional = true }
+seampact-pipeline.workspace = true
+seampact-span.workspace = true
 thiserror.workspace = true
+
+[dev-dependencies]
+camino.workspace = true
 
 [lints]
 workspace = true
