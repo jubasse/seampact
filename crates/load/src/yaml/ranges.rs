@@ -93,6 +93,25 @@ fn skip_gap(text: &str, from: usize) -> usize {
     position
 }
 
+/// The offset just past the `]` or `}` that closes a flow collection, searched from where its last
+/// member ends: only white space, comments, commas and the `:` of a pair with no value can lie
+/// between. `None` when something else does, which a parsed text never has.
+///
+/// The parser's end of a flow collection runs on to the next token, comment included.
+pub(super) fn flow_close_end(text: &str, from: usize) -> Option<usize> {
+    let mut position = from;
+
+    loop {
+        position = skip_gap(text, position);
+
+        match byte_at(text, position) {
+            Some(b',' | b':') => position += 1,
+            Some(b']' | b'}') => return Some(position + 1),
+            _ => return None,
+        }
+    }
+}
+
 /// The offset of the line break that ends the line holding `from`, or the end of the text.
 fn line_end(text: &str, from: usize) -> usize {
     text.as_bytes()
@@ -310,6 +329,15 @@ mod tests {
         let properties = scan_properties("&é😀 x", 0);
 
         assert_eq!(properties.anchor.as_deref(), Some("é😀"));
+    }
+
+    #[test]
+    fn a_flow_collection_ends_at_its_closing_bracket() {
+        assert_eq!(flow_close_end("{ a: 1 } }", 6), Some(8));
+        assert_eq!(flow_close_end("{b: 1}  # c }\nz", 5), Some(6));
+        assert_eq!(flow_close_end("[1, 2 ,\n  3 ,\n ]", 11), Some(16));
+        assert_eq!(flow_close_end("{ a: }", 3), Some(6));
+        assert_eq!(flow_close_end("[ 1 x", 3), None);
     }
 
     #[test]

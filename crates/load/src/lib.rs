@@ -10,7 +10,8 @@
 //! YAML pitfalls (P1 to P5, P9) and syntax errors as it does; [`resolve_plain_scalar`] is the
 //! core schema's reading of a plain scalar. An [`Expander`] expands `$include`, `$file` and the file
 //! form of `$ref` over those trees, one [`LayerBuild`] per layer file. [`merge_layers`] composes the layer builds of one api
-//! into its raw tree and the origin of each leaf.
+//! into its raw tree and the origin of each leaf. [`load_workspace`] runs all of it from an entry
+//! file: the raw trees, the files read, the sorted diagnostics and the fragments ([`LoadOutput`]).
 
 mod budget;
 mod compose;
@@ -19,6 +20,7 @@ mod fragments;
 mod json;
 mod layer_build;
 mod limits;
+mod loader;
 mod pack_files;
 mod paths;
 pub mod positions;
@@ -35,6 +37,7 @@ pub use fragments::{LoadFragment, load_sort_fragments};
 pub use json::{RESERVED_KEYS, is_reserved_key, show_value};
 pub use layer_build::{FileRef, LayerBuild, RefUse};
 pub use limits::{LOAD_MAX_DEPTH, LOAD_MAX_FILE_BYTES, LOAD_MAX_TEXT, LOAD_MAX_WORK};
+pub use loader::{LoadOptions, LoadOutput, load_workspace};
 pub use pack_files::{
     PackFileParts, pack_file_parts, pack_layer_id_of, pack_vendored_directory, pack_vendored_file,
     package_name_of, split_pack_file,

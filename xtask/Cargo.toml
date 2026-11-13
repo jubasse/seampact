@@ -10,6 +10,7 @@ publish.workspace = true
 [dependencies]
 anyhow.workspace = true
 camino.workspace = true
+seampact-compiler = { workspace = true, features = ["oracle"] }
 seampact-json.workspace = true
 seampact-oracle.workspace = true
 

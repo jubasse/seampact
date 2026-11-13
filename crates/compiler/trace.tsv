@@ -1,0 +1,9 @@
+-	scripts/oracle/compiler.ts#hasFunctions	skip: checks the members of a dynamic import; the Rust subject is a typed implementation
+-	scripts/oracle/compiler.ts#isPipelineModule	skip: checks the members of a dynamic import; the Rust subject is a typed implementation
+-	scripts/oracle/compiler.ts#isDeltaModule	skip: checks the members of a dynamic import; the Rust subject is a typed implementation
+-	scripts/oracle/compiler.ts#isObject	skip: checks the members of a dynamic import; the Rust subject is a typed implementation
+-	scripts/oracle/compiler.ts#apiNameOf	skip: records the deltas of the halves, which the pipeline-orchestrator lane runs
+-	scripts/oracle/compiler.ts#recordingPasses	skip: records the deltas of the halves, which the pipeline-orchestrator lane runs
+-	scripts/oracle/compiler.ts#refuseWorkspaceImports	skip: excluded.json names the fixtures with workspace.imports, which the harness never runs
+src/oracle.rs#compile	scripts/oracle/compiler.ts#oracleCompiler
+-	scripts/oracle/compiler.ts#loadOracleCompiler	skip: the subject is the value CompilerSubject, nothing is loaded at run time

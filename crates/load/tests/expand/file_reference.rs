@@ -250,12 +250,12 @@ fn an_element_a_lower_layer_declares_is_declared_twice_unless_it_is_the_same_ele
             .unwrap();
 
         expander
-            .finish_refs(&mut build, |name| {
-                (name == "Num").then(|| VisibleDeclaration {
+            .finish_refs(&mut build, |_, name| {
+                Ok((name == "Num").then(|| VisibleDeclaration {
                     site: None,
                     layer: FileLayer::Api(ApiLayer::Base),
                     source: source.map(str::to_owned),
-                })
+                }))
             })
             .unwrap();
 

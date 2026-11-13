@@ -123,7 +123,7 @@ fn expand_with_positions(
 
     if options.finish_refs {
         expander
-            .finish_refs(&mut build, |_| None::<VisibleDeclaration>)
+            .finish_refs(&mut build, |_, _| Ok(None::<VisibleDeclaration>))
             .expect("no internal error");
     }
 

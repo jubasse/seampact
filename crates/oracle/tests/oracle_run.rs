@@ -104,7 +104,8 @@ fn the_expected_files_themselves_all_match_and_leave_the_exact_integer_entries_s
         [
             "big-integers-exact",
             "big-integers-exact-tree-schemas",
-            "big-integers-exact-derive-errors"
+            "big-integers-exact-derive-errors",
+            "yaml-syntax-parser-message"
         ]
         .map(|id| format!(
             "difference {id} matched no mismatch: delete it from fixtures/expected/differences.yaml"
@@ -118,8 +119,12 @@ fn the_exact_integers_of_the_rust_port_are_accepted_by_the_committed_differences
         repository_root: repository_root(),
         rewrite: exact_big_integers,
     };
+    let selection = Selection {
+        fixture_glob: Some(FixtureGlob::new("big-integers/**")),
+        half: None,
+    };
 
-    let verdict = run_oracle(&repository_root(), &Selection::default(), &subject).unwrap();
+    let verdict = run_oracle(&repository_root(), &selection, &subject).unwrap();
 
     assert!(verdict.passed(), "{verdict}");
     assert_eq!(verdict.matching, verdict.fixtures);

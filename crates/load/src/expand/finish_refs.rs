@@ -38,7 +38,8 @@ impl Expander<'_, '_> {
     /// ("schema files are always name-keyed"), so the element joins `schemas`. Another catalogue
     /// reached by file would need the expected catalogue from the authoring schema.
     ///
-    /// `visible` tells whether a name is already declared by a layer this one builds on.
+    /// `visible` tells whether a name is already declared by a layer this one builds on; it is given
+    /// the expander, since looking a name up is charged to the load's budget.
     ///
     /// # Errors
     ///
@@ -46,7 +47,7 @@ impl Expander<'_, '_> {
     pub fn finish_refs(
         &mut self,
         build: &mut LayerBuild,
-        mut visible: impl FnMut(&str) -> Option<VisibleDeclaration>,
+        mut visible: impl FnMut(&mut Self, &str) -> Result<Option<VisibleDeclaration>, InternalError>,
     ) -> Result<(), InternalError> {
         // A queue read by a cursor, fed by the refs each expansion adds: no rescan, no shift.
         let mut queue: Vec<FileRef> = Vec::new();
@@ -78,7 +79,7 @@ impl Expander<'_, '_> {
                     source: build.sources.get(&pointer).cloned(),
                 })
             } else {
-                visible(&reference.name)
+                visible(self, &reference.name)?
             };
 
             // The same element, already declared here or by a layer this one builds on (by an

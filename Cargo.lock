@@ -827,6 +827,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "seampact-compiler"
+version = "2.0.0"
+dependencies = [
+ "seampact-diagnostics",
+ "seampact-json",
+ "seampact-load",
+ "seampact-oracle",
+ "thiserror",
+]
+
+[[package]]
 name = "seampact-diagnostics"
 version = "2.0.0"
 dependencies = [
@@ -1235,6 +1246,7 @@ version = "2.0.0"
 dependencies = [
  "anyhow",
  "camino",
+ "seampact-compiler",
  "seampact-json",
  "seampact-oracle",
 ]
