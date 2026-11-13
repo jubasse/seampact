@@ -72,3 +72,31 @@ src/derivations/roles.rs#derivation_datum_always	packages/core/compiler/src/deri
 -	packages/core/compiler/src/derivations/roles.ts#derivationParamsSchemaId	skip: deferred: it needs canonicalId and splitName of the naming module, which no Rust crate has yet
 -	packages/core/compiler/src/derivations/freeze.ts#derivationFreeze	skip: the table and the roles are immutable static data, nothing freezes at run time
 -	packages/core/compiler/src/derivations/freeze.ts#derivationCopy	skip: a half clones the borrowed datum, and Clone gives a writable deep copy
+-	packages/core/compiler/src/pipeline/conventions.ts#isRecord	skip: a match on JsonValue::Object tells a record apart
+src/readers/conventions.rs#convention_schema_leaves	packages/core/compiler/src/pipeline/conventions.ts#pipelineConventionSchemaLeaves
+src/readers/conventions.rs#is_convention_path	packages/core/compiler/src/pipeline/conventions.ts#isConventionPath
+src/readers/conventions.rs#pipeline_conventions	packages/core/compiler/src/pipeline/conventions.ts#pipelineConventions
+src/readers/conventions.rs#pipeline_rate_limit_param	packages/core/compiler/src/pipeline/conventions.ts#pipelineRateLimitParam
+-	packages/core/compiler/src/pipeline/inherited.ts#shapeOf	skip: each shape has its own setting enum and method, so no setting lacks a shape
+src/readers/inherited.rs#new	packages/core/compiler/src/pipeline/inherited.ts#pipelineInherited
+-	packages/core/compiler/src/pipeline/inherited.ts#readonlyMap	skip: an IndexMap is returned by value and the reader holds no reference to it
+src/readers/tree.rs#pipeline_tree_nodes	packages/core/compiler/src/pipeline/tree.ts#pipelineTreeNodes
+src/readers/units.rs#unit_pattern	packages/core/compiler/src/pipeline/units.ts#pipelineUnitPattern
+src/readers/units.rs#parse	packages/core/compiler/src/pipeline/units.ts#parse
+src/readers/units.rs#parse_size	packages/core/compiler/src/pipeline/units.ts#pipelineParseSize
+src/readers/units.rs#parse_duration	packages/core/compiler/src/pipeline/units.ts#pipelineParseDuration
+src/readers/declared.rs#pipeline_declared	packages/core/compiler/src/pipeline/declared.ts#pipelineDeclared
+src/readers/declared.rs#ir_holds	packages/core/compiler/src/pipeline/declared.ts#irHolds
+src/readers/declared.rs#entry_key	packages/core/compiler/src/pipeline/declared.ts#entryKey
+src/readers/declared.rs#inlined_entries_reached	packages/core/compiler/src/pipeline/declared.ts#inlinedEntriesReached
+src/readers/declared.rs#newly_reached_entries	packages/core/compiler/src/pipeline/declared.ts#newlyReachedEntries
+src/readers/declared.rs#strings_of	packages/core/compiler/src/pipeline/declared.ts#stringsOf
+src/readers/pointer.rs#is_json_object	packages/core/compiler/src/pipeline/pointer.ts#isJsonObject
+src/readers/pointer.rs#is_json_list	packages/core/compiler/src/pipeline/pointer.ts#isJsonList
+-	packages/core/compiler/src/pipeline/pointer.ts#escapeSegment	merged: src/readers/pointer.rs#pointer_below
+src/readers/pointer.rs#pointer_below	packages/core/compiler/src/pipeline/pointer.ts#pointerBelow
+src/readers/pointer.rs#segments_of	packages/core/compiler/src/pipeline/pointer.ts#segmentsOf
+src/readers/pointer.rs#json_at	packages/core/compiler/src/pipeline/pointer.ts#jsonAt
+src/readers/pointer.rs#json_at_pointer	packages/core/compiler/src/pipeline/pointer.ts#jsonAtPointer
+src/readers/pointer.rs#origin_copy	packages/core/compiler/src/pipeline/pointer.ts#originCopy
+src/readers/pointer.rs#pipeline_origin	packages/core/compiler/src/pipeline/pointer.ts#pipelineOrigin

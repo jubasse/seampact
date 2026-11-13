@@ -912,6 +912,10 @@ dependencies = [
 name = "seampact-pipeline"
 version = "2.0.0"
 dependencies = [
+ "camino",
+ "indexmap",
+ "regress",
+ "seampact-authoring",
  "seampact-diagnostics",
  "seampact-ir",
  "seampact-js",
