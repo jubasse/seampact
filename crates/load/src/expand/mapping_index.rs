@@ -93,8 +93,9 @@ impl Expander<'_, '_> {
     /// mapping: a lookup by name never rescans a large file for each site that names an element.
     ///
     /// A mapping is told apart by where its pairs live in memory: every parsed file is kept by the
-    /// store for the whole load, so a node's address is its identity.
-    pub fn mapping_index(&mut self, pairs: &[YamlPair]) -> Rc<MappingIndex> {
+    /// store for the whole load, so a node's address is its identity. Only pairs of a file the
+    /// store parsed may be passed, which is why this stays inside the crate.
+    pub(crate) fn mapping_index(&mut self, pairs: &[YamlPair]) -> Rc<MappingIndex> {
         if pairs.is_empty() {
             return Rc::new(MappingIndex::default());
         }
@@ -113,7 +114,7 @@ impl Expander<'_, '_> {
     ///
     /// A list segment is read as an array index (a canonical decimal): the TypeScript took
     /// `Number(segment)`, which also read `1.0`, ` 1` and `0x1`.
-    pub fn navigate<'file>(
+    pub(crate) fn navigate<'file>(
         &mut self,
         file: &'file ParsedFile,
         fragment: Option<&str>,
@@ -140,5 +141,17 @@ impl Expander<'_, '_> {
         }
 
         Some(node)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_target_shows_its_fragment_unless_there_is_none_or_it_is_empty() {
+        assert_eq!(shown_target("a.yaml", None), "a.yaml");
+        assert_eq!(shown_target("a.yaml", Some("")), "a.yaml");
+        assert_eq!(shown_target("a.yaml", Some("/K")), "a.yaml#/K");
     }
 }

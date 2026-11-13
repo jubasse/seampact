@@ -221,3 +221,19 @@ fn is_path(value: &str) -> bool {
 
     value.contains('/') || value.contains('\\') || starts_with_drive
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_value_is_a_path_with_a_separator_or_a_drive_letter() {
+        for path in ["./a.yaml", "a/b", "a\\b", "C:", "a:", "c:x", "z:/a"] {
+            assert!(is_path(path), "{path:?}");
+        }
+
+        for name in ["Task", "", "1:", "ab:c", "Task:"] {
+            assert!(!is_path(name), "{name:?}");
+        }
+    }
+}

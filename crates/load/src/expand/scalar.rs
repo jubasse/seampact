@@ -209,3 +209,44 @@ fn safe_whole_number(text: &str) -> Option<f64> {
 
     (number.abs() <= MAX_SAFE_INTEGER).then_some(number)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_whole_number_in_plain_decimal_within_the_safe_range_is_read() {
+        assert_eq!(safe_whole_number("0"), Some(0.0));
+        assert_eq!(safe_whole_number("-0"), Some(0.0));
+        assert_eq!(safe_whole_number("-12"), Some(-12.0));
+        assert_eq!(
+            safe_whole_number("9007199254740991"),
+            Some(MAX_SAFE_INTEGER)
+        );
+        assert_eq!(
+            safe_whole_number("-9007199254740991"),
+            Some(-MAX_SAFE_INTEGER)
+        );
+    }
+
+    #[test]
+    fn anything_else_is_no_whole_number_to_the_check() {
+        for text in [
+            "",
+            "-",
+            "01",
+            "-01",
+            "+1",
+            "1.0",
+            "1e3",
+            " 1",
+            "0x1",
+            "9007199254740992",
+            "-9007199254740992",
+        ] {
+            assert_eq!(safe_whole_number(text), None, "{text:?}");
+        }
+
+        assert_eq!(safe_whole_number(&"9".repeat(400)), None);
+    }
+}

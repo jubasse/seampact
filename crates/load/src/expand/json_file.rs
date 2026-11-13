@@ -205,3 +205,38 @@ fn bracket_depth_of(text: &str) -> usize {
 
     deepest
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_nesting_counts_brackets_outside_strings_only() {
+        assert_eq!(bracket_depth_of(""), 0);
+        assert_eq!(bracket_depth_of("[[{}]]"), 3);
+        assert_eq!(bracket_depth_of(r#"["[[[", "\"[[", {"a": "}"}]"#), 2);
+        assert_eq!(bracket_depth_of("]]]["), 1);
+    }
+
+    #[test]
+    fn a_text_nested_past_the_limit_is_not_parsed() {
+        let at_limit = format!(
+            "{}{}",
+            "[".repeat(MAX_PARSED_NESTING),
+            "]".repeat(MAX_PARSED_NESTING)
+        );
+        let past_limit = format!("[{at_limit}]");
+
+        assert!(matches!(parse_json_text(&at_limit), Ok(Some(_))));
+        assert_eq!(parse_json_text(&past_limit), Ok(None));
+    }
+
+    #[test]
+    fn the_parser_messages_are_v8s_where_a_fixture_holds_them() {
+        assert_eq!(parse_json_text(""), Err(UNEXPECTED_END.to_owned()));
+        assert_eq!(parse_json_text("  "), Err(UNEXPECTED_END.to_owned()));
+        assert_eq!(parse_json_text("[1,"), Err(UNEXPECTED_END.to_owned()));
+        assert!(parse_json_text("[1] x").is_err());
+        assert!(parse_json_text("1e400").is_err());
+    }
+}
