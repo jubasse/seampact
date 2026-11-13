@@ -372,3 +372,22 @@ mod arbitrary_text {
         }
     }
 }
+
+#[test]
+fn a_flow_collection_ends_at_its_closing_bracket_not_at_the_next_token() {
+    let nested = root_of("a: { b: { c: 1 } }\n");
+    let commented = root_of("a: {b: 1}  # c }\nz: 2\n");
+    let last_inner = |root: &YamlNode| match &root.kind {
+        YamlKind::Mapping(pairs) => pairs.first().and_then(|pair| pair.value.clone()),
+        _ => None,
+    };
+    let outer = last_inner(&nested).expect("a value");
+    let inner = match &outer.kind {
+        YamlKind::Mapping(pairs) => pairs.first().and_then(|pair| pair.value.clone()),
+        _ => None,
+    }
+    .expect("an inner mapping");
+
+    assert_eq!(start_end(&inner), (8, 16));
+    assert_eq!(start_end(&last_inner(&commented).expect("a value")), (3, 9));
+}

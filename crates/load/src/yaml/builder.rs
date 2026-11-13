@@ -10,7 +10,7 @@ use seampact_span::{FileId, Span, TextSize};
 
 use super::char_offsets::CharOffsets;
 use super::ranges::{
-    Properties, block_header_start, block_scalar_end, quoted_end, scan_properties,
+    Properties, block_header_start, block_scalar_end, flow_close_end, quoted_end, scan_properties,
     sequence_indicator_start, skip_blanks, trailing_end,
 };
 use super::{ScalarStyle, YamlDocument, YamlKind, YamlName, YamlNode, YamlPair, YamlProblem};
@@ -100,7 +100,7 @@ pub(super) fn parse_document(file: FileId, text: &str) -> Result<YamlDocument, I
 
                 builder.open(CollectionKind::Mapping, anchor, tag, bytes);
             }
-            Event::SequenceEnd | Event::MappingEnd => builder.close(bytes)?,
+            Event::SequenceEnd | Event::MappingEnd => builder.close()?,
             Event::Nothing | Event::StreamStart | Event::DocumentEnd => {}
         }
     }
@@ -390,14 +390,17 @@ impl<'text> TreeBuilder<'text> {
         });
     }
 
-    fn close(&mut self, bytes: ByteSpan) -> Result<(), InternalError> {
+    fn close(&mut self) -> Result<(), InternalError> {
         let Some(frame) = self.stack.pop() else {
             return Err(InternalError::new(
                 "the YAML parser closed a collection it had not opened",
             ));
         };
         let end = if frame.flow {
-            bytes.end
+            // The parser's end runs on past the bracket, to the next token.
+            flow_close_end(self.text, frame.last_end.max(frame.start + 1)).ok_or_else(|| {
+                InternalError::new("a flow collection has no closing bracket after its last member")
+            })?
         } else {
             frame.last_end
         };
