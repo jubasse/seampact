@@ -107,7 +107,13 @@ fn every_expected_half_delta_replays_onto_the_typed_draft() -> Result<(), String
         differences.extend(difference);
     }
 
-    println!("identical {identical} of {total}");
+    #[expect(
+        clippy::print_stdout,
+        reason = "the count the lane reports; nextest shows it with --no-capture"
+    )]
+    {
+        println!("identical {identical} of {total}");
+    }
     assert!(total > 0, "no half delta found under fixtures/expected");
     assert!(
         differences.is_empty(),

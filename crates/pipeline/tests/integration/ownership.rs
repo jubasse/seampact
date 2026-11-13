@@ -1,6 +1,6 @@
 //! Which half writes which draft field: the output types and their `merge_into`.
 
-use seampact_ir::{ApiWire, Origin, Param, Response, ResponseHeader};
+use seampact_ir::{ApiWire, IrMap, Origin, Param, Response, ResponseHeader};
 use seampact_pipeline::{
     AccessIdentityOperation, AccessIdentityOutput, AccessRightsOperation, AccessRightsOutput,
     ApiDeclaration, DeriveErrorsOutput, DeriveWireOperation, DeriveWireOutput, DraftApi, DraftIr,
@@ -238,9 +238,9 @@ fn each_half_of_the_unknown_keys_default_writes_the_input_schema_row() -> Outcom
     // access.identity writes it on a declared input; derive.wire then finds it set.
     let mut draft = draft_with(vec![operation(json!({"input": input_json(false)}))?])?;
     let identity = AccessIdentityOutput {
-        schemes: Default::default(),
-        headers: Default::default(),
-        identities: Default::default(),
+        schemes: IrMap::default(),
+        headers: IrMap::default(),
+        identities: IrMap::default(),
         operations: vec![AccessIdentityOperation {
             access: decode(json!({"kind": "public", "reason": "r", "origin": origin()}))?,
             caller_kinds: Vec::new(),
@@ -286,10 +286,10 @@ fn each_half_of_the_unknown_keys_default_writes_the_input_schema_row() -> Outcom
         origin: decode(origin())?,
     };
     let rights = AccessRightsOutput {
-        rights: Default::default(),
-        rules: Default::default(),
-        scopes: Default::default(),
-        buckets: Default::default(),
+        rights: IrMap::default(),
+        rules: IrMap::default(),
+        scopes: IrMap::default(),
+        buckets: IrMap::default(),
         operations: vec![AccessRightsOperation {
             proof_only_input: Some(proof_only),
             ..AccessRightsOperation::default()
@@ -338,9 +338,9 @@ fn derive_wire_fills_unknown_keys_where_no_half_set_them() -> Outcome {
 fn raw_body_has_a_declared_input_to_land_on() -> Outcome {
     let mut draft = draft_with(vec![operation(json!({}))?])?;
     let identity = AccessIdentityOutput {
-        schemes: Default::default(),
-        headers: Default::default(),
-        identities: Default::default(),
+        schemes: IrMap::default(),
+        headers: IrMap::default(),
+        identities: IrMap::default(),
         operations: vec![AccessIdentityOperation {
             access: decode(json!({"kind": "public", "reason": "r", "origin": origin()}))?,
             caller_kinds: Vec::new(),
@@ -380,10 +380,10 @@ fn lists_concatenate_in_run_order_and_headers_address_either_kind_of_response() 
 
     let mut draft = draft_with(vec![declared])?;
     let rights = AccessRightsOutput {
-        rights: Default::default(),
-        rules: Default::default(),
-        scopes: Default::default(),
-        buckets: Default::default(),
+        rights: IrMap::default(),
+        rules: IrMap::default(),
+        scopes: IrMap::default(),
+        buckets: IrMap::default(),
         operations: vec![AccessRightsOperation {
             header_params: vec![param("proof")?],
             ..AccessRightsOperation::default()
@@ -473,15 +473,15 @@ fn a_per_operation_output_of_another_length_is_an_internal_error() -> Outcome {
     };
     let one_wire = derive_wire_output(vec![DeriveWireOperation::default()])?;
     let one_errors = DeriveErrorsOutput {
-        errors: Default::default(),
-        natures: Default::default(),
+        errors: IrMap::default(),
+        natures: IrMap::default(),
         operation_errors: vec![Vec::new()],
     };
     let one_rights = AccessRightsOutput {
-        rights: Default::default(),
-        rules: Default::default(),
-        scopes: Default::default(),
-        buckets: Default::default(),
+        rights: IrMap::default(),
+        rules: IrMap::default(),
+        scopes: IrMap::default(),
+        buckets: IrMap::default(),
         operations: vec![AccessRightsOperation::default()],
     };
 
@@ -503,10 +503,10 @@ fn a_per_operation_output_of_another_length_is_an_internal_error() -> Outcome {
 fn sort_key_rights_match_the_declared_sort_keys() -> Outcome {
     let mut draft = draft_with(vec![operation(json!({}))?])?;
     let rights = |sort_keys: Vec<SortKeyRights>| AccessRightsOutput {
-        rights: Default::default(),
-        rules: Default::default(),
-        scopes: Default::default(),
-        buckets: Default::default(),
+        rights: IrMap::default(),
+        rules: IrMap::default(),
+        scopes: IrMap::default(),
+        buckets: IrMap::default(),
         operations: vec![AccessRightsOperation {
             sort_keys,
             ..AccessRightsOperation::default()
@@ -526,8 +526,8 @@ fn sort_key_rights_match_the_declared_sort_keys() -> Outcome {
 fn a_second_write_of_an_owned_member_names_the_member_and_the_operation() -> Outcome {
     let mut draft = draft_with(vec![operation(json!({"errors": []}))?])?;
     let errors = DeriveErrorsOutput {
-        errors: Default::default(),
-        natures: Default::default(),
+        errors: IrMap::default(),
+        natures: IrMap::default(),
         operation_errors: vec![Vec::new()],
     };
     let failure = failure_of(errors.merge_into(&mut draft))?;
