@@ -22,7 +22,7 @@ use crate::{
     resolve_authored_path, utf16_length,
 };
 
-const SHOWN_SOURCE_LIMIT: usize = 40;
+const SHOWN_SOURCE_LIMIT: u64 = 40;
 const SHOWN_SOURCE_KEPT: usize = 37;
 const MERGE_KEY: &str = "<<";
 const ELLIPSIS: &str = "...";
@@ -792,7 +792,7 @@ impl<'run> FileStore<'run> {
 /// written as U+FFFD, which is what a JavaScript string with a lone surrogate becomes when it is
 /// written as UTF-8.
 fn shown_source(source: &str) -> String {
-    if utf16_length(source) <= u64::try_from(SHOWN_SOURCE_LIMIT).unwrap_or(u64::MAX) {
+    if utf16_length(source) <= SHOWN_SOURCE_LIMIT {
         return source.to_owned();
     }
 

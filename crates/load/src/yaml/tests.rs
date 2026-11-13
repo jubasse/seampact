@@ -219,6 +219,20 @@ fn spans_are_bytes_and_locations_are_utf16_columns() {
 }
 
 #[test]
+fn a_non_ascii_and_an_astral_key_keep_their_text_and_order() {
+    let YamlKind::Mapping(pairs) = root_of("\u{e9}t\u{e9}: 1\n\"\u{1F600}\": 2\nz: 3\n").kind
+    else {
+        panic!("a mapping");
+    };
+    let keys: Vec<&str> = pairs
+        .iter()
+        .filter_map(|pair| pair.key.scalar_text())
+        .collect();
+
+    assert_eq!(keys, ["\u{e9}t\u{e9}", "\u{1F600}", "z"]);
+}
+
+#[test]
 fn a_key_with_an_escape_keeps_the_control_character() {
     let YamlKind::Mapping(pairs) = root_of("\"\\e[2J\": 1\n").kind else {
         panic!("a mapping");

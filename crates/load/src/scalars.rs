@@ -23,6 +23,9 @@ const HEXADECIMAL_BITS_PER_DIGIT: u32 = 4;
 /// the two bits that decide rounding, with the lowest bit standing for every digit dropped.
 const KEPT_MANTISSA_BITS: u32 = 120;
 
+/// A shift past which a base 8 or 16 token is infinite whatever its mantissa.
+const MAX_USEFUL_SHIFT: u32 = 2_000;
+
 /// What the core schema made of a plain scalar: the JavaScript value of the `yaml` package.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ResolvedScalar {
@@ -136,6 +139,8 @@ fn number_spelling(source: &str) -> Option<ResolvedScalar> {
     }
 
     if is_exponent_float(source) || is_plain_float(source) {
+        // Rust reads every spelling the two predicates accept (a table and a property test hold
+        // it), so a parse error cannot happen; `None` is read as non-finite only to stay total.
         return Some(finite_or_not(source.parse::<f64>().ok()));
     }
 
@@ -191,7 +196,7 @@ fn is_infinity_or_nan(source: &str) -> bool {
 fn power_of_two_radix_value(digits: &str, bits_per_digit: u32) -> Option<f64> {
     let mut mantissa: u128 = 0;
     let mut mantissa_bits: u32 = 0;
-    let mut dropped_exponent: i32 = 0;
+    let mut dropped_bits: u32 = 0;
     let mut dropped_any_set_bit = false;
 
     for digit in digits.chars().filter_map(|digit| digit.to_digit(16)) {
@@ -206,7 +211,7 @@ fn power_of_two_radix_value(digits: &str, bits_per_digit: u32) -> Option<f64> {
         }
 
         dropped_any_set_bit |= digit != 0;
-        dropped_exponent = dropped_exponent.saturating_add(i32::try_from(bits_per_digit).ok()?);
+        dropped_bits = dropped_bits.saturating_add(bits_per_digit);
     }
 
     if dropped_any_set_bit {
@@ -219,7 +224,8 @@ fn power_of_two_radix_value(digits: &str, bits_per_digit: u32) -> Option<f64> {
         reason = "the rounding to the nearest f64 is what parseInt does"
     )]
     let rounded = mantissa as f64;
-    let scaled = rounded * 2f64.powi(dropped_exponent.min(i32::from(i16::MAX)));
+    // 2^2000 is already infinite, so a larger shift changes nothing.
+    let scaled = rounded * f64::from(dropped_bits.min(MAX_USEFUL_SHIFT)).exp2();
 
     scaled.is_finite().then_some(scaled)
 }
