@@ -1,0 +1,334 @@
+# Recorded once with the yaml package 2.9.1 (parseDocument, schema core, merge false): the
+# node ranges the tree must reproduce, in bytes of ASCII inputs. `absent` is a pair without value.
+=== "a: 1\nb: 2\n"
+map 0..10
+  scalar 0..1 plain "a"
+  scalar 3..4 plain "1"
+  scalar 5..6 plain "b"
+  scalar 8..9 plain "2"
+=== "a: &x 1\nb: !!str 2\nc: *x\nd: [1, 2]\ne: {f: g}\nh:\n  - i\n  - j\nk: |\n  text\nl:\nm: &y\n"
+map 0..80
+  scalar 0..1 plain "a"
+  scalar 6..7 plain anchor:x "1"
+  scalar 8..9 plain "b"
+  scalar 17..18 plain tag:tag:yaml.org,2002:str "2"
+  scalar 19..20 plain "c"
+  alias 22..24 "x"
+  scalar 25..26 plain "d"
+  seq 28..34
+    scalar 29..30 plain "1"
+    scalar 32..33 plain "2"
+  scalar 35..36 plain "e"
+  map 38..44
+    scalar 39..40 plain "f"
+    scalar 42..43 plain "g"
+  scalar 45..46 plain "h"
+  seq 50..60
+    scalar 52..53 plain "i"
+    scalar 58..59 plain "j"
+  scalar 60..61 plain "k"
+  scalar 63..72 block "text\n"
+  scalar 72..73 plain "l"
+  scalar 74..74 plain ""
+  scalar 75..76 plain "m"
+  scalar 80..80 plain anchor:y ""
+=== "a: 1 # c\n\n# d\nb: 2  \n\n"
+map 0..21
+  scalar 0..1 plain "a"
+  scalar 3..4 plain "1"
+  scalar 14..15 plain "b"
+  scalar 17..18 plain "2"
+=== "a:\n  - x # c\n\n  - y   \n\n# e\nb: 1"
+map 0..32
+  scalar 0..1 plain "a"
+  seq 5..23
+    scalar 7..8 plain "x"
+    scalar 18..19 plain "y"
+  scalar 28..29 plain "b"
+  scalar 31..32 plain "1"
+=== "a:\n  b: 1\n\n  c: 2\n\nd: 3"
+map 0..23
+  scalar 0..1 plain "a"
+  map 5..18
+    scalar 5..6 plain "b"
+    scalar 8..9 plain "1"
+    scalar 13..14 plain "c"
+    scalar 16..17 plain "2"
+  scalar 19..20 plain "d"
+  scalar 22..23 plain "3"
+=== "- a\n- b: 1\n  c: 2   # q\n- [x]\n\n"
+seq 0..30
+  scalar 2..3 plain "a"
+  map 6..24
+    scalar 6..7 plain "b"
+    scalar 9..10 plain "1"
+    scalar 13..14 plain "c"
+    scalar 16..17 plain "2"
+  seq 26..29
+    scalar 27..28 plain "x"
+=== "a: |\n  t\n\nb: >-\n  u\n"
+map 0..20
+  scalar 0..1 plain "a"
+  scalar 3..9 block "t\n"
+  scalar 10..11 plain "b"
+  scalar 13..20 block "u"
+=== "a: \"q\"  # z\nb: 'r'\n"
+map 0..19
+  scalar 0..1 plain "a"
+  scalar 3..6 quoted "q"
+  scalar 12..13 plain "b"
+  scalar 15..18 quoted "r"
+=== "a:   \nb: 1"
+map 0..10
+  scalar 0..1 plain "a"
+  scalar 5..5 plain ""
+  scalar 6..7 plain "b"
+  scalar 9..10 plain "1"
+=== "a: # c\n  b: 1"
+map 0..13
+  scalar 0..1 plain "a"
+  map 9..13
+    scalar 9..10 plain "b"
+    scalar 12..13 plain "1"
+=== "- \n- x"
+seq 0..6
+  scalar 2..2 plain ""
+  scalar 5..6 plain "x"
+=== "-\n- x"
+seq 0..5
+  scalar 1..1 plain ""
+  scalar 4..5 plain "x"
+=== "{a, b: , c: d}"
+map 0..14
+  scalar 1..2 plain "a"
+  absent
+  scalar 4..5 plain "b"
+  scalar 7..7 plain ""
+  scalar 9..10 plain "c"
+  scalar 12..13 plain "d"
+=== "[a: b, c]"
+seq 0..9
+  map 1..5
+    scalar 1..2 plain "a"
+    scalar 4..5 plain "b"
+  scalar 7..8 plain "c"
+=== "? k\n: v"
+map 0..7
+  scalar 2..3 plain "k"
+  scalar 6..7 plain "v"
+=== "&r a: 1"
+map 3..7
+  scalar 3..4 plain anchor:r "a"
+  scalar 6..7 plain "1"
+=== "&r\na: 1"
+map 3..7 anchor:r
+  scalar 3..4 plain "a"
+  scalar 6..7 plain "1"
+=== "a: &x # c\n  b: 1"
+map 0..16
+  scalar 0..1 plain "a"
+  map 12..16 anchor:x
+    scalar 12..13 plain "b"
+    scalar 15..16 plain "1"
+=== "a: !!map &z\n  b: 1"
+map 0..18
+  scalar 0..1 plain "a"
+  map 14..18 anchor:z tag:tag:yaml.org,2002:map
+    scalar 14..15 plain "b"
+    scalar 17..18 plain "1"
+=== "a: &x {b: 1}"
+map 0..12
+  scalar 0..1 plain "a"
+  map 6..12 anchor:x
+    scalar 7..8 plain "b"
+    scalar 10..11 plain "1"
+=== "a: &x [1]"
+map 0..9
+  scalar 0..1 plain "a"
+  seq 6..9 anchor:x
+    scalar 7..8 plain "1"
+=== "a: !!seq &q\n  - 1"
+map 0..17
+  scalar 0..1 plain "a"
+  seq 14..17 anchor:q tag:tag:yaml.org,2002:seq
+    scalar 16..17 plain "1"
+=== "a: &x |\n  t\n"
+map 0..12
+  scalar 0..1 plain "a"
+  scalar 6..12 block anchor:x "t\n"
+=== "- !!str |-\n  t\n"
+seq 0..15
+  scalar 8..15 block tag:tag:yaml.org,2002:str "t"
+=== "- |+\n  t\n\n\n- y"
+seq 0..14
+  scalar 2..11 block "t\n\n\n"
+  scalar 13..14 plain "y"
+=== "a: |\nb: 1"
+map 0..9
+  scalar 0..1 plain "a"
+  scalar 3..5 block ""
+  scalar 5..6 plain "b"
+  scalar 8..9 plain "1"
+=== "a:   # c\nb: 1"
+map 0..13
+  scalar 0..1 plain "a"
+  scalar 5..5 plain ""
+  scalar 9..10 plain "b"
+  scalar 12..13 plain "1"
+=== "m: &y   \nn: 1"
+map 0..13
+  scalar 0..1 plain "m"
+  scalar 8..8 plain anchor:y ""
+  scalar 9..10 plain "n"
+  scalar 12..13 plain "1"
+=== "- &x   # c\n- y"
+seq 0..14
+  scalar 7..7 plain anchor:x ""
+  scalar 13..14 plain "y"
+=== "? k\nz: 1"
+map 0..8
+  scalar 2..3 plain "k"
+  absent
+  scalar 4..5 plain "z"
+  scalar 7..8 plain "1"
+=== "{a: }"
+map 0..5
+  scalar 1..2 plain "a"
+  scalar 4..4 plain ""
+=== "a: 1\nb:\n  - 1\n  - 2\nc:\n- 3\n- 4\n"
+map 0..31
+  scalar 0..1 plain "a"
+  scalar 3..4 plain "1"
+  scalar 5..6 plain "b"
+  seq 10..20
+    scalar 12..13 plain "1"
+    scalar 18..19 plain "2"
+  scalar 20..21 plain "c"
+  seq 23..31
+    scalar 25..26 plain "3"
+    scalar 29..30 plain "4"
+=== "\"x\""
+scalar 0..3 quoted "x"
+=== "plain"
+scalar 0..5 plain "plain"
+=== "[1, [2, 3], {a: [4]}]"
+seq 0..21
+  scalar 1..2 plain "1"
+  seq 4..10
+    scalar 5..6 plain "2"
+    scalar 8..9 plain "3"
+  map 12..20
+    scalar 13..14 plain "a"
+    seq 16..19
+      scalar 17..18 plain "4"
+=== "a: [1,\n  2]\nb: {c: 1,\n  d: 2}\n"
+map 0..30
+  scalar 0..1 plain "a"
+  seq 3..11
+    scalar 4..5 plain "1"
+    scalar 9..10 plain "2"
+  scalar 12..13 plain "b"
+  map 15..29
+    scalar 16..17 plain "c"
+    scalar 19..20 plain "1"
+    scalar 24..25 plain "d"
+    scalar 27..28 plain "2"
+=== "a: 'it''s'\nb: \"\\e[2J\"\n"
+map 0..22
+  scalar 0..1 plain "a"
+  scalar 3..10 quoted "it's"
+  scalar 11..12 plain "b"
+  scalar 14..21 quoted "\u001b[2J"
+=== "a: first\n  second\n  third\nb: 1\n"
+map 0..31
+  scalar 0..1 plain "a"
+  scalar 3..25 plain "first second third"
+  scalar 26..27 plain "b"
+  scalar 29..30 plain "1"
+=== "k: >\n  folded\n  text\n\n  more\nz: 1\n"
+map 0..34
+  scalar 0..1 plain "k"
+  scalar 3..29 block "folded text\nmore\n"
+  scalar 29..30 plain "z"
+  scalar 32..33 plain "1"
+=== "a: &x 1\nb: *x\nc: &y\n  d: 1\n"
+map 0..27
+  scalar 0..1 plain "a"
+  scalar 6..7 plain anchor:x "1"
+  scalar 8..9 plain "b"
+  alias 11..13 "x"
+  scalar 14..15 plain "c"
+  map 22..27 anchor:y
+    scalar 22..23 plain "d"
+    scalar 25..26 plain "1"
+=== "- - 1\n  - 2\n- - 3\n"
+seq 0..18
+  seq 2..12
+    scalar 4..5 plain "1"
+    scalar 10..11 plain "2"
+  seq 14..18
+    scalar 16..17 plain "3"
+=== "a:\n  b:\n    c:\n      d: 1\n"
+map 0..26
+  scalar 0..1 plain "a"
+  map 5..26
+    scalar 5..6 plain "b"
+    map 12..26
+      scalar 12..13 plain "c"
+      map 21..26
+        scalar 21..22 plain "d"
+        scalar 24..25 plain "1"
+=== "a: 1\n\n\n"
+map 0..5
+  scalar 0..1 plain "a"
+  scalar 3..4 plain "1"
+=== "# head\na: 1 # tail\n"
+map 7..19
+  scalar 7..8 plain "a"
+  scalar 10..11 plain "1"
+=== "- a: 1\n  b: 2\n- c: 3\n"
+seq 0..21
+  map 2..14
+    scalar 2..3 plain "a"
+    scalar 5..6 plain "1"
+    scalar 9..10 plain "b"
+    scalar 12..13 plain "2"
+  map 16..21
+    scalar 16..17 plain "c"
+    scalar 19..20 plain "3"
+=== "a: !!str\nb: &x\nc: !!int &y 5\n"
+map 0..29
+  scalar 0..1 plain "a"
+  scalar 8..8 plain tag:tag:yaml.org,2002:str ""
+  scalar 9..10 plain "b"
+  scalar 14..14 plain anchor:x ""
+  scalar 15..16 plain "c"
+  scalar 27..28 plain anchor:y tag:tag:yaml.org,2002:int "5"
+=== "key with space: value with space\n"
+map 0..33
+  scalar 0..14 plain "key with space"
+  scalar 16..32 plain "value with space"
+=== "? [a, b]\n: c\n"
+map 0..13
+  seq 2..8
+    scalar 3..4 plain "a"
+    scalar 6..7 plain "b"
+  scalar 11..12 plain "c"
+=== "a: !custom 1\n"
+map 0..13
+  scalar 0..1 plain "a"
+  scalar 11..12 plain tag:!custom "1"
+=== "a: !<tag:yaml.org,2002:str> 1\n"
+map 0..30
+  scalar 0..1 plain "a"
+  scalar 28..29 plain tag:tag:yaml.org,2002:str "1"
+=== "[a, b]: c\n"
+map 0..10
+  seq 0..6
+    scalar 1..2 plain "a"
+    scalar 4..5 plain "b"
+  scalar 8..9 plain "c"
+=== "a: \"multi\n  line\"\n"
+map 0..18
+  scalar 0..1 plain "a"
+  scalar 3..17 quoted "multi line"

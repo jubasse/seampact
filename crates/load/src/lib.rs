@@ -17,6 +17,7 @@ pub mod positions;
 mod reader;
 mod report;
 mod scalars;
+pub mod yaml;
 
 pub use budget::{LoadBudget, load_work_of, utf16_length};
 pub use fragments::{LoadFragment, load_sort_fragments};
