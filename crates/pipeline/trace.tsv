@@ -1,0 +1,60 @@
+src/halves.rs#pass	packages/core/compiler/src/pipeline/halves.ts#pipelinePassOf
+-	packages/core/compiler/src/pipeline/draft.ts#catalogue	skip: an IrMap has no prototype, so a `__proto__` key is an ordinary entry
+src/draft.rs#new	packages/core/compiler/src/pipeline/draft.ts#createDraftIR
+-	packages/core/compiler/src/pipeline/ownership.ts#owned	skip: the ownership table becomes the output types and their merge_into
+-	packages/core/compiler/src/pipeline/ownership.ts#elements	skip: the ownership table becomes the output types and their merge_into
+-	packages/core/compiler/src/pipeline/ownership.ts#op	skip: the ownership table becomes the output types and their merge_into
+-	packages/core/compiler/src/pipeline/ownership.ts#ops	skip: the ownership table becomes the output types and their merge_into
+-	packages/core/compiler/src/pipeline/ownership.ts#inputDefaults	skip: the ownership table becomes the output types and their merge_into
+-	packages/core/compiler/src/pipeline/ownership.ts#draftFieldSegments	skip: the ownership table becomes the output types and their merge_into
+-	packages/core/compiler/src/pipeline/ownership.ts#draftOwnershipRow	skip: the ownership table becomes the output types and their merge_into
+-	packages/core/compiler/src/pipeline/ownership.ts#draftElementOwner	skip: the element-owner rule for derived elements is the derivations lane's, which adds it to merge_into with the derivation table
+-	packages/core/compiler/src/pipeline/ownership.ts#draftOwnerText	skip: the ownership table becomes the output types and their merge_into
+-	packages/core/compiler/src/pipeline/draft-fixture.ts#isObject	skip: a match on JsonValue tells an object apart
+-	packages/core/compiler/src/pipeline/draft-fixture.ts#isJsonObject	skip: a match on JsonValue tells an object apart
+src/halves.rs#from_name	packages/core/compiler/src/pipeline/draft-fixture.ts#isHalfName
+src/delta.rs#join	packages/core/compiler/src/pipeline/draft-fixture.ts#join
+tests/integration/support/mod.rs#draft_fixture_halves	packages/core/compiler/src/pipeline/draft-fixture.ts#draftFixtureHalves
+tests/integration/support/mod.rs#draft_fixture	packages/core/compiler/src/pipeline/draft-fixture.ts#draftFixture
+src/delta.rs#draft_apply	packages/core/compiler/src/pipeline/draft-fixture.ts#draftFixtureApply
+src/delta.rs#merge_object	packages/core/compiler/src/pipeline/draft-fixture.ts#mergeObject
+src/delta.rs#merge_list	packages/core/compiler/src/pipeline/draft-fixture.ts#mergeList
+src/delta.rs#is_next_element	packages/core/compiler/src/pipeline/draft-fixture.ts#isNextElement
+src/delta.rs#operation_position	packages/core/compiler/src/pipeline/draft-fixture.ts#operationById
+src/delta.rs#draft_delta	packages/core/compiler/src/pipeline/draft-fixture.ts#draftFixtureDelta
+src/delta.rs#object_delta	packages/core/compiler/src/pipeline/draft-fixture.ts#objectDelta
+-	packages/core/compiler/src/pipeline/draft-fixture.ts#setMember	merged: src/delta.rs#object_delta
+src/delta.rs#member_delta	packages/core/compiler/src/pipeline/draft-fixture.ts#memberDelta
+src/delta.rs#list_delta	packages/core/compiler/src/pipeline/draft-fixture.ts#listDelta
+src/delta.rs#element_delta	packages/core/compiler/src/pipeline/draft-fixture.ts#elementDelta
+src/delta.rs#operation_id_of	packages/core/compiler/src/pipeline/draft-fixture.ts#operationIdOf
+-	packages/core/compiler/src/pipeline/draft-fixture.ts#isJsonValue	skip: a JsonValue is JSON by type
+-	packages/core/compiler/src/pipeline/draft-fixture.ts#jsonOf	skip: a JsonValue is copied by clone
+-	packages/core/compiler/src/pipeline/draft-fixture.ts#isDirection	skip: deferred: the fixture schema service reads the raw tree and needs the loader and tree.schemas
+-	packages/core/compiler/src/pipeline/draft-fixture.ts#strictDefinition	skip: deferred: the fixture schema service reads the raw tree and needs the loader and tree.schemas
+-	packages/core/compiler/src/pipeline/draft-fixture.ts#isTypeUse	skip: deferred: the fixture schema service reads the raw tree and needs the loader and tree.schemas
+-	packages/core/compiler/src/pipeline/draft-fixture.ts#isQueryWire	skip: deferred: the fixture schema service reads the raw tree and needs the loader and tree.schemas
+-	packages/core/compiler/src/pipeline/draft-fixture.ts#draftFixtureSchemaTables	skip: deferred: the fixture schema service reads the raw tree and needs the loader and tree.schemas
+-	packages/core/compiler/src/pipeline/draft-fixture.ts#draftFixtureSchemaService	skip: deferred: the fixture schema service reads the raw tree and needs the loader and tree.schemas
+-	packages/core/compiler/src/pipeline/draft-fixture.ts#invalidExampleMarkers	skip: deferred: the fixture schema service reads the raw tree and needs the loader and tree.schemas
+-	packages/core/compiler/src/pipeline/guard.ts#DraftAccessError.constructor	skip: a compile error in Rust: a half writes only through its output type and reads by shared reference
+-	packages/core/compiler/src/pipeline/guard.ts#buildTrie	skip: a compile error in Rust: a half writes only through its output type and reads by shared reference
+-	packages/core/compiler/src/pipeline/guard.ts#isIndex	skip: a compile error in Rust: a half writes only through its output type and reads by shared reference
+-	packages/core/compiler/src/pipeline/guard.ts#child	skip: a compile error in Rust: a half writes only through its output type and reads by shared reference
+-	packages/core/compiler/src/pipeline/guard.ts#isPrefix	skip: a compile error in Rust: a half writes only through its output type and reads by shared reference
+-	packages/core/compiler/src/pipeline/guard.ts#concreteText	skip: a compile error in Rust: a half writes only through its output type and reads by shared reference
+-	packages/core/compiler/src/pipeline/guard.ts#normalText	skip: a compile error in Rust: a half writes only through its output type and reads by shared reference
+-	packages/core/compiler/src/pipeline/guard.ts#isObject	skip: a compile error in Rust: a half writes only through its output type and reads by shared reference
+-	packages/core/compiler/src/pipeline/guard.ts#dataMember	skip: a compile error in Rust: a half writes only through its output type and reads by shared reference
+-	packages/core/compiler/src/pipeline/guard.ts#pipelineGuard	skip: a compile error in Rust: a half writes only through its output type and reads by shared reference
+-	packages/core/compiler/src/pipeline/guard.ts#member	skip: a compile error in Rust: a half writes only through its output type and reads by shared reference
+-	packages/core/compiler/src/pipeline/guard.ts#memberKeys	skip: a compile error in Rust: a half writes only through its output type and reads by shared reference
+-	packages/core/compiler/src/pipeline/view.ts#PipelineReadonlyError.constructor	skip: a compile error in Rust: a half writes only through its output type and reads by shared reference
+-	packages/core/compiler/src/pipeline/view.ts#isObject	skip: a compile error in Rust: a half writes only through its output type and reads by shared reference
+-	packages/core/compiler/src/pipeline/view.ts#pipelineView	skip: a compile error in Rust: a half writes only through its output type and reads by shared reference
+-	packages/core/compiler/src/pipeline/view.ts#join	skip: a compile error in Rust: a half writes only through its output type and reads by shared reference
+-	packages/core/compiler/src/pipeline/view.ts#pipelineViewSource	skip: a compile error in Rust: a half writes only through its output type and reads by shared reference
+-	packages/core/compiler/src/pipeline/view.ts#pipelineCopy	skip: a compile error in Rust: a half writes only through its output type and reads by shared reference
+-	packages/core/compiler/src/pipeline/view.ts#copy	skip: a compile error in Rust: a half writes only through its output type and reads by shared reference
+-	packages/core/compiler/src/pipeline/view.ts#notJsonShaped	skip: a compile error in Rust: a half writes only through its output type and reads by shared reference
+-	packages/core/compiler/src/pipeline/registry.ts#pipelineDefaultParts	skip: a compile error in Rust: a half writes only through its output type and the dispatch is run_half

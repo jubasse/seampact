@@ -18,6 +18,7 @@ seampact-js = { path = "crates/js", version = "2.0.0" }
 seampact-json = { path = "crates/json", version = "2.0.0" }
 seampact-load = { path = "crates/load", version = "2.0.0" }
 seampact-oracle = { path = "crates/oracle", version = "2.0.0" }
+seampact-pipeline = { path = "crates/pipeline", version = "2.0.0" }
 seampact-span = { path = "crates/span", version = "2.0.0" }
 # Parse surface and ordered maps; the number features follow the IR types design note, section 3.
 serde = { version = "1.0.229", features = ["derive"] }

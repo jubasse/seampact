@@ -907,6 +907,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "seampact-pipeline"
+version = "2.0.0"
+dependencies = [
+ "seampact-diagnostics",
+ "seampact-ir",
+ "seampact-js",
+ "seampact-json",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "seampact-span"
 version = "2.0.0"
 dependencies = [
