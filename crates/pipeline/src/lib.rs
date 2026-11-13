@@ -5,14 +5,17 @@
 //! output's `merge_into` moves its values into the draft and refuses any write over a value
 //! already set.
 
+mod context;
 mod count;
 mod delta;
 mod derivations;
 mod draft;
 mod halves;
 mod outputs;
+mod readers;
 mod service;
 
+pub use context::{HalfContext, RelayedDrafts};
 pub use delta::{draft_apply, draft_delta};
 pub use derivations::{
     DERIVATION_TABLE, DatumRequired, DerivationRole, DerivationRoles, DerivationRow,
@@ -30,5 +33,14 @@ pub use outputs::{
     ResponseHeaderAdditions, SortKeyRights, TreeNodesConcurrency, TreeNodesInput,
     TreeNodesOperation, TreeNodesOutput, TreeNodesPaging, TreeNodesSortKey, TreeSchemasMembers,
     TreeSchemasOutput,
+};
+pub use readers::{
+    ConventionDefault, ConventionDefaultValue, ConventionReading, Inherited, InheritedEntry,
+    NearestSetting, OrderedSetting, PerKeySetting, PipelineDeclared, ResolvedConventions,
+    SENSITIVE_ELSEWHERE_REFUSE, TreeNode, TreeNodeId, TreeNodeKind, TreeNodes, UnionSetting,
+    UnitKind, convention_defaults, convention_schema_leaves, is_json_list, is_json_object, json_at,
+    json_at_object, json_at_pointer, parse_duration, parse_size, pipeline_conventions,
+    pipeline_declared, pipeline_origin, pipeline_rate_limit_param, pipeline_tree_nodes,
+    pointer_below, unit_pattern, unit_table,
 };
 pub use service::{TreeSchemaExampleIssue, TreeSchemaService};
