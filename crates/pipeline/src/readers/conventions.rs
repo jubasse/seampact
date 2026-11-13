@@ -468,3 +468,45 @@ pub fn pipeline_rate_limit_param(
         _ => None,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use seampact_js::cmp_utf16;
+
+    use super::*;
+
+    fn sorted(mut paths: Vec<String>) -> Vec<String> {
+        paths.sort_by(|left, right| cmp_utf16(left, right));
+
+        paths
+    }
+
+    #[test]
+    fn the_convention_paths_equal_the_conventions_schemas_leaves() {
+        let schema = convention_schema_leaves()
+            .unwrap()
+            .keys()
+            .cloned()
+            .collect();
+
+        assert_eq!(sorted(convention_leaves()), sorted(schema));
+    }
+
+    #[test]
+    fn the_schema_leaves_are_built_once() {
+        let first = convention_schema_leaves().unwrap();
+        let second = convention_schema_leaves().unwrap();
+
+        assert!(std::ptr::eq(first, second));
+    }
+
+    #[test]
+    fn a_map_leaf_key_pattern_reads_as_an_unflagged_regular_expression() {
+        let leaves = convention_schema_leaves().unwrap();
+        let families = leaves.get("cache.families").unwrap().as_ref().unwrap();
+
+        assert!(families.find("minute").is_some());
+        assert!(families.find("Minute").is_none());
+        assert!(families.find("").is_none());
+    }
+}
