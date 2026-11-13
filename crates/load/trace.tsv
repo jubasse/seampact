@@ -113,3 +113,22 @@ src/expand/file_directive.rs#file_directive	packages/core/compiler/src/load/expa
 src/expand/json_file.rs#json_file	packages/core/compiler/src/load/expand.ts#Expander.jsonFile
 src/expand/json_file.rs#json_safe	packages/core/compiler/src/load/expand.ts#Expander.jsonSafe
 src/expand/file_reference.rs#file_reference	packages/core/compiler/src/load/expand.ts#Expander.ref
+src/loader/workspace_mode.rs#written_in	packages/core/compiler/src/load/loader.ts#writtenIn
+src/loader.rs#load_workspace	packages/core/compiler/src/load/loader.ts#loadWorkspace
+src/loader.rs#new	packages/core/compiler/src/load/loader.ts#Loader.constructor
+src/loader.rs#run	packages/core/compiler/src/load/loader.ts#Loader.run
+src/loader/entry.rs#entry_layer	packages/core/compiler/src/load/loader.ts#Loader.entryLayer
+src/loader/entry.rs#parse_as	packages/core/compiler/src/load/loader.ts#Loader.parseAs
+src/loader.rs#bad_shape	packages/core/compiler/src/load/loader.ts#Loader.badShape
+src/loader/entry.rs#layer	packages/core/compiler/src/load/loader.ts#Loader.layer
+src/loader/workspace_mode.rs#workspace_mode	packages/core/compiler/src/load/loader.ts#Loader.workspaceMode
+src/loader/api.rs#load_api	packages/core/compiler/src/load/loader.ts#Loader.loadApi
+src/loader/packs.rs#apply_list	packages/core/compiler/src/load/loader.ts#Loader.applyList
+src/loader/packs.rs#visit	packages/core/compiler/src/load/loader.ts#Loader.visit
+src/loader/packs.rs#find_pack	packages/core/compiler/src/load/loader.ts#Loader.findPack
+src/loader/packs.rs#load_pack	packages/core/compiler/src/load/loader.ts#Loader.loadPack
+src/loader/packs.rs#pack_layer_id	packages/core/compiler/src/load/loader.ts#Loader.packLayerId
+src/loader/package.rs#resolve_package	packages/core/compiler/src/load/loader.ts#Loader.resolvePackage
+tests/loader/harness.rs#run_fixture	packages/core/compiler/src/load/golden.ts#loadFixture
+tests/loader/fixtures.rs#golden	packages/core/compiler/src/load/golden.ts#expectGolden
+-	packages/core/compiler/src/load/golden.ts#must	skip: a test helper that unwraps an Option; the Rust tests use expect

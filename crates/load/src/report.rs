@@ -34,6 +34,10 @@ macro_rules! load_rules {
             /// Every rule of the load stage, in the order of the ids.
             pub const ALL: &'static [LoadRule] = &[$(Self::$variant,)+];
 
+            /// The full id of every rule, in the order of [`ALL`](Self::ALL).
+            pub const RULE_IDS: &'static [RuleId] =
+                &[$(RuleId::from_static(concat!("seampact/load/", $id)),)+];
+
             /// The id without the `seampact/load/` prefix.
             #[must_use]
             pub const fn short_id(self) -> &'static str {

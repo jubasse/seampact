@@ -37,6 +37,18 @@ use crate::yaml::{YamlKind, YamlNode, YamlPair};
 pub use self::finish_refs::VisibleDeclaration;
 pub use self::mapping_index::{MappingIndex, key_string};
 
+/// The parts of one load an [`Expander`] borrows, for the loader that works between two expansions.
+pub struct LoadParts<'part, 'store> {
+    /// The files of the load.
+    pub store: &'part mut FileStore<'store>,
+    /// The diagnostics of the load.
+    pub reporter: &'part mut Reporter,
+    /// The budget of the load.
+    pub budget: &'part mut LoadBudget,
+    /// The schema positions of the load.
+    pub positions: &'part mut Positions,
+}
+
 /// Expands the layer files of one load.
 pub struct Expander<'run, 'store> {
     store: &'run mut FileStore<'store>,
@@ -64,6 +76,17 @@ impl<'run, 'store> Expander<'run, 'store> {
             json_files: HashMap::new(),
             mapping_indexes: HashMap::new(),
             fragments: Vec::new(),
+        }
+    }
+
+    /// The parts of the load the expander borrows, each usable until the borrow of the expander
+    /// ends.
+    pub fn parts(&mut self) -> LoadParts<'_, 'store> {
+        LoadParts {
+            store: &mut *self.store,
+            reporter: &mut *self.reporter,
+            budget: &mut *self.budget,
+            positions: &mut *self.positions,
         }
     }
 
