@@ -83,12 +83,7 @@ impl Expander<'_, '_> {
             }
 
             let Some(key) = key else {
-                self.report(
-                    LoadRule::KeyNotScalar,
-                    "a mapping key must be a plain or quoted string".to_owned(),
-                    "write the key as a string",
-                    node_span(file, Some(key_node)),
-                )?;
+                self.report_key_not_scalar(file, key_node)?;
 
                 continue;
             };
@@ -104,15 +99,7 @@ impl Expander<'_, '_> {
                 let site = node_span(file, Some(key_node));
 
                 if let Some(first) = include_site {
-                    self.report_with_related(
-                        PendingDiagnostic::new(
-                            LoadRule::DuplicateKey,
-                            "key '$include' is defined twice in the same mapping (P7)".to_owned(),
-                            "write one $include with a list of paths".to_owned(),
-                            site,
-                        ),
-                        vec![first_defined_here(first)],
-                    )?;
+                    self.report_duplicate_include(site, first)?;
 
                     continue;
                 }
@@ -126,15 +113,7 @@ impl Expander<'_, '_> {
             let key_site = node_span(file, Some(key_node));
 
             if let Some(first) = seen.0.get(&key).copied() {
-                self.report_with_related(
-                    PendingDiagnostic::new(
-                        LoadRule::DuplicateKey,
-                        format!("key '{key}' is defined twice in the same mapping (P7)"),
-                        "remove the duplicate".to_owned(),
-                        key_site,
-                    ),
-                    vec![first_defined_here(first)],
-                )?;
+                self.report_duplicate_key(&key, key_site, first)?;
 
                 continue;
             }
@@ -172,6 +151,48 @@ impl Expander<'_, '_> {
         }
 
         Ok(())
+    }
+
+    fn report_key_not_scalar(
+        &mut self,
+        file: &ParsedFile,
+        key_node: &YamlNode,
+    ) -> Result<(), InternalError> {
+        self.report(
+            LoadRule::KeyNotScalar,
+            "a mapping key must be a plain or quoted string".to_owned(),
+            "write the key as a string",
+            node_span(file, Some(key_node)),
+        )
+    }
+
+    fn report_duplicate_include(&mut self, site: Span, first: Span) -> Result<(), InternalError> {
+        self.report_with_related(
+            PendingDiagnostic::new(
+                LoadRule::DuplicateKey,
+                "key '$include' is defined twice in the same mapping (P7)".to_owned(),
+                "write one $include with a list of paths".to_owned(),
+                site,
+            ),
+            vec![first_defined_here(first)],
+        )
+    }
+
+    fn report_duplicate_key(
+        &mut self,
+        key: &str,
+        site: Span,
+        first: Span,
+    ) -> Result<(), InternalError> {
+        self.report_with_related(
+            PendingDiagnostic::new(
+                LoadRule::DuplicateKey,
+                format!("key '{key}' is defined twice in the same mapping (P7)"),
+                "remove the duplicate".to_owned(),
+                site,
+            ),
+            vec![first_defined_here(first)],
+        )
     }
 
     pub(super) fn reserved(

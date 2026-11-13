@@ -5,6 +5,12 @@ use seampact_authoring::{ApiLayer, FileLayer};
 use seampact_diagnostics::{Diagnostic, print_diagnostics};
 use seampact_json::JsonValue;
 use seampact_load::positions::Positions;
+use std::cell::RefCell;
+
+thread_local! {
+    // Reading the schemas is the costly part of a run; what a run learns is only a cache.
+    static POSITIONS: RefCell<Positions> = RefCell::new(Positions::new().expect("the schemas load"));
+}
 use seampact_load::{
     Expander, FileStore, LayerBuild, LoadBudget, LoadFragment, LoadReader, MemoryReader,
     ROOT_BOUNDARY, Reporter, VisibleDeclaration, load_sort_fragments,
@@ -91,10 +97,17 @@ pub fn expand_with(files: Vec<(String, String)>, options: &Options) -> Run {
 
 /// Expands the entry of `options` read through `reader`.
 pub fn expand_on(reader: &dyn LoadReader, options: &Options) -> Run {
+    POSITIONS.with_borrow_mut(|positions| expand_with_positions(reader, options, positions))
+}
+
+fn expand_with_positions(
+    reader: &dyn LoadReader,
+    options: &Options,
+    positions: &mut Positions,
+) -> Run {
     let mut store = FileStore::new(reader).expect("the store builds");
     let mut reporter = Reporter::new();
     let mut budget = LoadBudget::new();
-    let mut positions = Positions::new().expect("the schemas load");
     let parsed = store
         .parse(&mut reporter, options.entry, ROOT_BOUNDARY)
         .expect("no internal error")
@@ -103,7 +116,7 @@ pub fn expand_on(reader: &dyn LoadReader, options: &Options) -> Run {
         RootChoice::OfLayer => None,
         RootChoice::Entry => Some(positions.entry_root_position().expect("the entry root")),
     };
-    let mut expander = Expander::new(&mut store, &mut reporter, &mut budget, &mut positions);
+    let mut expander = Expander::new(&mut store, &mut reporter, &mut budget, positions);
     let mut build = expander
         .expand_layer(&parsed, options.layer.clone(), root)
         .expect("no internal error");

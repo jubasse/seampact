@@ -7,6 +7,8 @@
     clippy::panic,
     clippy::indexing_slicing,
     clippy::too_many_lines,
+    clippy::format_push_string,
+    clippy::format_collect,
     reason = "test code: a failed lookup is the failed test"
 )]
 

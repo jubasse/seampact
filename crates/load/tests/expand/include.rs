@@ -377,3 +377,20 @@ fn a_shared_file_included_at_its_root_is_a_base_file() {
         [("base-part.yaml".to_owned(), None, Some("base"))]
     );
 }
+
+#[test]
+fn keys_come_in_javascript_order_and_pointers_escape_slash_and_tilde() {
+    let run = expand(&[(
+        "api.yaml",
+        "api: { name: t }\nx:\n  b: 1\n  '10': 2\n  a/b: 3\n  '2': 4\n  c~d: 5\n",
+    )]);
+
+    assert!(run.rules().is_empty(), "{}", run.printed);
+    assert_eq!(
+        run.tree_text(),
+        r#"{"api":{"name":"t"},"x":{"2":4,"10":2,"b":1,"a/b":3,"c~d":5}}"#
+    );
+    assert!(run.build.locs.contains_key("/x/a~1b"));
+    assert!(run.build.locs.contains_key("/x/c~0d"));
+    assert!(run.build.locs.contains_key(""));
+}
