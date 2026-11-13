@@ -8,7 +8,7 @@ src/draft.rs#new	packages/core/compiler/src/pipeline/draft.ts#createDraftIR
 -	packages/core/compiler/src/pipeline/ownership.ts#inputDefaults	skip: the ownership table becomes the output types and their merge_into
 -	packages/core/compiler/src/pipeline/ownership.ts#draftFieldSegments	skip: the ownership table becomes the output types and their merge_into
 -	packages/core/compiler/src/pipeline/ownership.ts#draftOwnershipRow	skip: the ownership table becomes the output types and their merge_into
--	packages/core/compiler/src/pipeline/ownership.ts#draftElementOwner	skip: the element-owner rule for derived elements is the derivations lane's, which adds it to merge_into with the derivation table
+src/outputs/element_owner.rs#element_owner	packages/core/compiler/src/pipeline/ownership.ts#draftElementOwner
 -	packages/core/compiler/src/pipeline/ownership.ts#draftOwnerText	skip: the ownership table becomes the output types and their merge_into
 -	packages/core/compiler/src/pipeline/draft-fixture.ts#isObject	skip: a match on JsonValue tells an object apart
 -	packages/core/compiler/src/pipeline/draft-fixture.ts#isJsonObject	skip: a match on JsonValue tells an object apart
@@ -58,3 +58,17 @@ src/delta.rs#operation_id_of	packages/core/compiler/src/pipeline/draft-fixture.t
 -	packages/core/compiler/src/pipeline/view.ts#copy	skip: a compile error in Rust: a half writes only through its output type and reads by shared reference
 -	packages/core/compiler/src/pipeline/view.ts#notJsonShaped	skip: a compile error in Rust: a half writes only through its output type and reads by shared reference
 -	packages/core/compiler/src/pipeline/registry.ts#pipelineDefaultParts	skip: a compile error in Rust: a half writes only through its output type and the dispatch is run_half
+src/derivations/table.rs#row	packages/core/compiler/src/derivations/table.ts#row
+src/derivations/table.rs#is_derivation_id	packages/core/compiler/src/derivations/table.ts#isDerivationId
+src/derivations/table.rs#derivation_row_of	packages/core/compiler/src/derivations/table.ts#derivationRowOf
+src/derivations/roles.rs#text	packages/core/compiler/src/derivations/roles.ts#text
+src/derivations/roles.rs#count	packages/core/compiler/src/derivations/roles.ts#count
+src/derivations/roles.rs#location	packages/core/compiler/src/derivations/roles.ts#location
+src/derivations/roles.rs#role	packages/core/compiler/src/derivations/roles.ts#role
+src/derivations/roles.rs#derivation_role_of	packages/core/compiler/src/derivations/roles.ts#derivationRoleOf
+src/derivations/roles.rs#fills_rate_limit_param	packages/core/compiler/src/derivations/roles.ts#fillsRateLimitParam
+src/derivations/roles.rs#derivation_param_of_datum	packages/core/compiler/src/derivations/roles.ts#derivationParamOfDatum
+src/derivations/roles.rs#derivation_datum_always	packages/core/compiler/src/derivations/roles.ts#derivationDatumAlways
+-	packages/core/compiler/src/derivations/roles.ts#derivationParamsSchemaId	skip: deferred: it needs canonicalId and splitName of the naming module, which no Rust crate has yet
+-	packages/core/compiler/src/derivations/freeze.ts#derivationFreeze	skip: the table and the roles are immutable static data, nothing freezes at run time
+-	packages/core/compiler/src/derivations/freeze.ts#derivationCopy	skip: a half clones the borrowed datum, and Clone gives a writable deep copy

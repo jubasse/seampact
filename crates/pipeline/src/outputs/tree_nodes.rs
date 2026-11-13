@@ -9,6 +9,7 @@ use seampact_ir::{
     TypeUse, UnknownQuery, ValueSource, WireFormat,
 };
 
+use super::element_owner::{ElementList, check_params, check_responses};
 use super::merge::{Site, write_catalogue, write_list, write_once};
 use crate::{
     ApiDeclaration, DraftApi, DraftConcurrency, DraftIr, DraftOperation, DraftOperationInput, Half,
@@ -163,6 +164,16 @@ impl From<TreeNodesInput> for DraftOperationInput {
     }
 }
 
+fn check_operation_elements(operation: &TreeNodesOperation) -> Result<(), InternalError> {
+    let site = Site::of_operation(Half::TreeNodes, operation.id.as_ref().to_owned());
+
+    check_params(ElementList::PathParams, &operation.params.path, &site)?;
+    check_params(ElementList::QueryParams, &operation.params.query, &site)?;
+    check_params(ElementList::HeaderParams, &operation.params.header, &site)?;
+
+    check_responses(&operation.responses, &site)
+}
+
 impl From<TreeNodesConcurrency> for DraftConcurrency {
     fn from(concurrency: TreeNodesConcurrency) -> Self {
         Self {
@@ -298,6 +309,10 @@ impl TreeNodesOutput {
         write_catalogue(&mut draft.pagings, self.pagings, "pagings", &site)?;
         write_catalogue(&mut draft.services, self.services, "services", &site)?;
         write_once(&mut draft.api, DraftApi::from(self.api), "api", &site)?;
+
+        for operation in &self.operations {
+            check_operation_elements(operation)?;
+        }
 
         let operations = self
             .operations

@@ -3,6 +3,7 @@
 
 mod adr;
 mod corpus;
+mod derivations;
 mod ownership;
 mod reference_drafts;
 mod support;

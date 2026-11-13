@@ -8,6 +8,7 @@ use seampact_ir::{
 };
 use seampact_json::JsonValue;
 
+use super::element_owner::{ElementList, check_params};
 use super::merge::{
     Site, existing, operations_with, write_catalogue, write_once, write_once_if_some,
 };
@@ -136,6 +137,8 @@ impl AccessRightsOutput {
             )?;
 
             if !entry.header_params.is_empty() {
+                check_params(ElementList::HeaderParams, &entry.header_params, &site)?;
+
                 let params = existing(&mut operation.params, "params", &site)?;
 
                 params.header.extend(entry.header_params);

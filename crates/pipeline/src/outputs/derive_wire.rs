@@ -6,6 +6,7 @@ use seampact_ir::{
     UnknownKeys,
 };
 
+use super::element_owner::{ElementList, check_params, check_response_headers, check_responses};
 use super::merge::{
     Site, existing, operations_with, write_once, write_once_if_some, write_unknown_keys,
 };
@@ -156,6 +157,10 @@ fn merge_parameters(
         return Ok(());
     }
 
+    check_params(ElementList::PathParams, &entry.path_params, site)?;
+    check_params(ElementList::QueryParams, &entry.query_params, site)?;
+    check_params(ElementList::HeaderParams, &entry.header_params, site)?;
+
     let params = existing(&mut operation.params, "params", site)?;
 
     params.path.extend(entry.path_params.iter().cloned());
@@ -175,11 +180,15 @@ fn merge_responses(
         return Ok(());
     }
 
+    check_responses(&appended, site)?;
+
     let responses = existing(&mut operation.responses, "responses", site)?;
 
     responses.extend(appended);
 
     for addition in header_additions {
+        check_response_headers(&addition.headers, site)?;
+
         let total = responses.len();
         let response = responses.get_mut(addition.response).ok_or_else(|| {
             InternalError::new(format!(
