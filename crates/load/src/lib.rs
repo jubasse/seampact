@@ -16,6 +16,7 @@ mod paths;
 pub mod positions;
 mod reader;
 mod report;
+mod scalars;
 
 pub use budget::{LoadBudget, load_work_of, utf16_length};
 pub use fragments::{LoadFragment, load_sort_fragments};
@@ -37,3 +38,4 @@ pub use report::{
     LoadMessage, LoadRule, PendingDiagnostic, RelatedSite, Reporter, diagnostic_layer_of,
     load_site_pointer, text_limit_message, work_limit_message,
 };
+pub use scalars::{PitfallPatterns, ResolvedScalar, ScalarPitfall, resolve_plain_scalar};

@@ -75,3 +75,4 @@ src/positions/position.rs#expected_types	packages/core/compiler/src/load/positio
 src/positions/position.rs#expected_keys	packages/core/compiler/src/load/positions.ts#expectedKeys
 src/positions/position.rs#admits_integer	packages/core/compiler/src/load/positions.ts#admitsInteger
 src/positions/position.rs#refuses_scalar	packages/core/compiler/src/load/positions.ts#refusesScalar
+src/scalars.rs#load_scalar_pitfall	packages/core/compiler/src/load/scalars.ts#loadScalarPitfall
