@@ -830,6 +830,7 @@ dependencies = [
 name = "seampact-compiler"
 version = "2.0.0"
 dependencies = [
+ "camino",
  "indexmap",
  "seampact-authoring",
  "seampact-diagnostics",
