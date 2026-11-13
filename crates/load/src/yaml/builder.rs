@@ -73,7 +73,7 @@ pub(super) fn parse_document(file: FileId, text: &str) -> Result<YamlDocument, I
             Ok(pair) => pair,
             Err(error) => return builder.refused(&error),
         };
-        let bytes = builder.byte_span(span)?;
+        let bytes = builder.byte_span(span);
 
         match event {
             Event::DocumentStart(_) => {
@@ -136,21 +136,20 @@ impl<'text> TreeBuilder<'text> {
         }
     }
 
-    fn byte_of(&self, marker: Marker) -> Result<usize, InternalError> {
-        self.offsets.byte_offset(marker.index()).ok_or_else(|| {
-            InternalError::new(format!(
-                "the YAML parser reported character {} of a text of {} bytes",
-                marker.index(),
-                self.text.len()
-            ))
-        })
+    /// The byte offset of a marker. The parser counts some positions in bytes where it reads a
+    /// multi-byte character after a `%` (`{a\n%é`), so a marker can fall past the end of the text:
+    /// the end is the nearest honest position, and the text is invalid YAML anyway.
+    fn byte_of(&self, marker: Marker) -> usize {
+        self.offsets
+            .byte_offset(marker.index())
+            .unwrap_or(self.text.len())
     }
 
-    fn byte_span(&self, span: ParserSpan) -> Result<ByteSpan, InternalError> {
-        Ok(ByteSpan {
-            start: self.byte_of(span.start)?,
-            end: self.byte_of(span.end)?,
-        })
+    fn byte_span(&self, span: ParserSpan) -> ByteSpan {
+        ByteSpan {
+            start: self.byte_of(span.start),
+            end: self.byte_of(span.end),
+        }
     }
 
     fn span(&self, start: usize, end: usize) -> Result<Span, InternalError> {
@@ -162,7 +161,7 @@ impl<'text> TreeBuilder<'text> {
     }
 
     fn refused(self, error: &ScanError) -> Result<YamlDocument, InternalError> {
-        let marker = self.byte_of(*error.marker())?;
+        let marker = self.byte_of(*error.marker());
         let at = self.span(marker, marker)?;
         let problem = if error.info() == RECURSION_LIMIT_INFO {
             YamlProblem::TooDeep { at }

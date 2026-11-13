@@ -193,7 +193,7 @@ pub struct YamlDocument {
 ///
 /// # Errors
 ///
-/// [`InternalError`] when the parser reports a position outside the text.
+/// [`InternalError`] when the text is longer than a span offset addresses.
 pub fn parse_yaml(file: FileId, text: &str) -> Result<YamlDocument, InternalError> {
     builder::parse_document(file, text)
 }

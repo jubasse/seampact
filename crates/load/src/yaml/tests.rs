@@ -129,6 +129,17 @@ fn a_syntax_error_has_no_root_and_the_marker() {
 }
 
 #[test]
+fn a_position_past_the_end_of_the_text_is_clamped_to_the_end() {
+    let text = "{a\t#\n%\u{e9}\u{1F600}\u{1F600}";
+    // The parser gives an empty scalar the span 5..20 in a text of 10 characters, and then
+    // refuses the text: the load answers a syntax problem, not an internal error.
+    let document = parse(text);
+
+    assert_eq!(document.root, None);
+    assert!(matches!(document.problem, Some(YamlProblem::Syntax { .. })));
+}
+
+#[test]
 fn a_second_document_keeps_the_first_and_runs_to_the_end_of_the_text() {
     let text = "a: 1\n---\nb: [\n";
     let document = parse(text);
@@ -306,4 +317,44 @@ fn the_end_of_the_cut_collection_still_reaches_its_last_value() {
 
     // Every enclosing block sequence ends where the last value does, below the cut or not.
     assert_eq!(usize::from(root.span.range.end()), text.len());
+}
+
+mod arbitrary_text {
+    use proptest::prelude::*;
+
+    use super::*;
+
+    proptest! {
+        // The parser may refuse any text, but the tree never panics or reports a position outside
+        // the text, and every kept node's span stays inside it.
+        #[test]
+        fn any_text_parses_to_a_tree_inside_the_text_or_a_problem(text in "[ -~\\t\\n\u{e9}\u{1F600}]{0,200}") {
+            let mut files = SourceFiles::new();
+            let file = files.add("a.yaml", &text).expect("a small text");
+            let normalised = files.get(file).expect("the file").text().to_owned();
+            let document = parse_yaml(file, &normalised).expect("no position outside the text");
+
+            if let Some(root) = &document.root {
+                assert_inside(root, normalised.len());
+            }
+        }
+    }
+
+    fn assert_inside(node: &YamlNode, length: usize) {
+        assert!(usize::from(node.span.range.end()) <= length);
+
+        match &node.kind {
+            YamlKind::Mapping(pairs) => {
+                for pair in pairs {
+                    assert_inside(&pair.key, length);
+
+                    if let Some(value) = &pair.value {
+                        assert_inside(value, length);
+                    }
+                }
+            }
+            YamlKind::Sequence(items) => items.iter().for_each(|item| assert_inside(item, length)),
+            YamlKind::Scalar { .. } | YamlKind::Alias(_) => {}
+        }
+    }
 }
