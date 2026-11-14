@@ -41,8 +41,9 @@ pub struct AccessIdentityOutput {
     pub headers: IrMap<HeaderId, HeaderDecl>,
     /// The `identities` catalogue.
     pub identities: IrMap<IdentityId, Identity>,
-    /// One entry per draft operation.
-    pub operations: Vec<AccessIdentityOperation>,
+    /// One entry per draft operation; `None` for a route whose access the half refused, which
+    /// gets none of the access members.
+    pub operations: Vec<Option<AccessIdentityOperation>>,
 }
 
 impl AccessIdentityOutput {
@@ -77,6 +78,10 @@ impl AccessIdentityOutput {
         for (operation, entry, site) in
             operations_with(&mut draft.operations, self.operations, Half::AccessIdentity)?
         {
+            let Some(entry) = entry else {
+                continue;
+            };
+
             write_once(&mut operation.access, entry.access, "access", &site)?;
             write_once(
                 &mut operation.caller_kinds,

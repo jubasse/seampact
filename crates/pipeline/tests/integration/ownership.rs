@@ -262,7 +262,7 @@ fn each_half_of_the_unknown_keys_default_writes_the_input_schema_row() -> Outcom
         schemes: IrMap::default(),
         headers: IrMap::default(),
         identities: IrMap::default(),
-        operations: vec![AccessIdentityOperation {
+        operations: vec![Some(AccessIdentityOperation {
             access: decode(json!({"kind": "public", "reason": "r", "origin": origin()}))?,
             caller_kinds: Vec::new(),
             principal_requires: Vec::new(),
@@ -270,7 +270,7 @@ fn each_half_of_the_unknown_keys_default_writes_the_input_schema_row() -> Outcom
             csrf: None,
             raw_body: Some(true),
             unknown_keys: Some(unknown_keys()?),
-        }],
+        })],
     };
 
     identity
@@ -356,13 +356,37 @@ fn derive_wire_fills_unknown_keys_where_no_half_set_them() -> Outcome {
 }
 
 #[test]
+fn a_refused_route_gets_no_access_member() -> Outcome {
+    let mut draft = draft_with(vec![operation(json!({}))?])?;
+    let identity = AccessIdentityOutput {
+        schemes: IrMap::default(),
+        headers: IrMap::default(),
+        identities: IrMap::default(),
+        operations: vec![None],
+    };
+
+    identity
+        .merge_into(&mut draft)
+        .map_err(|failure| failure.to_string())?;
+
+    let written = draft.operations.first().ok_or("no operation")?;
+
+    assert!(
+        written.access.is_none() && written.caller_kinds.is_none(),
+        "{written:?}"
+    );
+
+    Ok(())
+}
+
+#[test]
 fn raw_body_has_a_declared_input_to_land_on() -> Outcome {
     let mut draft = draft_with(vec![operation(json!({}))?])?;
     let identity = AccessIdentityOutput {
         schemes: IrMap::default(),
         headers: IrMap::default(),
         identities: IrMap::default(),
-        operations: vec![AccessIdentityOperation {
+        operations: vec![Some(AccessIdentityOperation {
             access: decode(json!({"kind": "public", "reason": "r", "origin": origin()}))?,
             caller_kinds: Vec::new(),
             principal_requires: Vec::new(),
@@ -370,7 +394,7 @@ fn raw_body_has_a_declared_input_to_land_on() -> Outcome {
             csrf: None,
             raw_body: Some(false),
             unknown_keys: None,
-        }],
+        })],
     };
     let failure = failure_of(identity.merge_into(&mut draft))?;
 
