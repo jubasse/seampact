@@ -10,6 +10,8 @@ use seampact_diagnostics::{Diagnostic, InternalError};
 use seampact_ir::{ContractIr, SourceMap};
 use seampact_pipeline::{DraftIr, Half, PassError};
 
+use crate::relay;
+
 /// A stage of the orchestrator, named where a run reaches one that is not ported.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Stage {
@@ -80,9 +82,14 @@ pub fn validate_workspace(_workspace: &RawWorkspace) -> StageAnswer<Validated> {
 }
 
 /// The relay order of the workspace's apis.
-#[must_use]
-pub fn workspace_relay_order(_workspace: &RawWorkspace) -> StageAnswer<RelayOrder> {
-    StageAnswer::NotPorted
+///
+/// # Errors
+///
+/// An [`InternalError`] from the relay order.
+pub fn workspace_relay_order(
+    workspace: &RawWorkspace,
+) -> Result<StageAnswer<RelayOrder>, InternalError> {
+    relay::workspace_relay_order(workspace).map(StageAnswer::Ported)
 }
 
 /// Links every api's derived draft, in workspace order; answers the diagnostics it reports, each

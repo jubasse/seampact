@@ -21,3 +21,10 @@ src/context.rs#context	packages/core/compiler/src/pipeline/context.ts#pipelineCo
 -	scripts/oracle/compiler.ts#contextKeepingReports	skip: dumps the per-half diagnostics and schema calls for the expected files; the Rust subject compares the dumped files
 -	scripts/oracle/compiler.ts#locationsOf	skip: dumps the per-half diagnostics and schema calls for the expected files; the Rust subject compares the dumped files
 -	scripts/oracle/compiler.ts#loggingSchemaService	skip: dumps the per-half diagnostics and schema calls for the expected files; the Rust subject compares the dumped files
+src/relay.rs#workspace_relay_routes	packages/core/compiler/src/workspace/order.ts#workspaceRelayRoutes
+src/relay.rs#relay_components	packages/core/compiler/src/workspace/order.ts#relayComponents
+src/relay.rs#relay_placement	packages/core/compiler/src/workspace/order.ts#relayPlacement
+src/relay.rs#workspace_relay_order	packages/core/compiler/src/workspace/order.ts#workspaceRelayOrder
+src/relay.rs#relay_target_api	packages/core/compiler/src/workspace/order.ts#relayTargetApi
+-	packages/core/compiler/src/workspace/order.ts#isDiagnosticOrigin	skip: ported in seampact-pass-link (src/origin.rs)
+src/relay.rs#relay_cycle_diagnostics	packages/core/compiler/src/workspace/order.ts#relayCycleDiagnostics

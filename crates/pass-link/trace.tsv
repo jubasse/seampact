@@ -1,0 +1,7 @@
+src/lib.rs#run	packages/core/compiler/src/passes/link/pass.ts#linkPass.run
+src/relays.rs#link_relay_superset	packages/core/compiler/src/passes/link/relays.ts#linkRelaySuperset
+src/relays.rs#is_gateway_own	packages/core/compiler/src/passes/link/relays.ts#isGatewayOwn
+src/relays.rs#is_operation	packages/core/compiler/src/passes/link/relays.ts#isOperation
+src/relays.rs#public_errors_of	packages/core/compiler/src/passes/link/relays.ts#publicErrorsOf
+src/relays.rs#roles_text	packages/core/compiler/src/passes/link/relays.ts#rolesText
+src/relays.rs#superset_diagnostic	packages/core/compiler/src/passes/link/relays.ts#supersetDiagnostic
