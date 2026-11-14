@@ -14,7 +14,7 @@ src/schemes.rs#access_identity_scheme_kinds	packages/core/compiler/src/passes/ac
 src/schemes.rs#access_identity_schemes	packages/core/compiler/src/passes/access/identity/schemes.ts#accessIdentitySchemes
 src/service.rs#access_identity_service_caller	packages/core/compiler/src/passes/access/identity/service.ts#accessIdentityServiceCaller
 src/operations.rs#origin_key	packages/core/compiler/src/passes/access/identity/operations.ts#originKey
--	packages/core/compiler/src/passes/access/identity/report.ts#isDiagnosticOrigin	merged: src/report.rs#diagnostic_origin_of
+-	packages/core/compiler/src/passes/access/identity/report.ts#isDiagnosticOrigin	merged: ../diagnostics/src/diagnostic.rs#of
 -	packages/core/compiler/src/passes/access/identity/read.ts#accessIdentityPointer	skip: ported in seampact-pipeline (src/readers/pointer.rs#pointer_below)
 src/read.rs#access_identity_string	packages/core/compiler/src/passes/access/identity/read.ts#accessIdentityString
 src/headers.rs#is_header_semantic	packages/core/compiler/src/passes/access/identity/headers.ts#isHeaderSemantic

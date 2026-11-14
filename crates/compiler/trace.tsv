@@ -26,5 +26,5 @@ src/relay.rs#relay_components	packages/core/compiler/src/workspace/order.ts#rela
 src/relay.rs#relay_placement	packages/core/compiler/src/workspace/order.ts#relayPlacement
 src/relay.rs#workspace_relay_order	packages/core/compiler/src/workspace/order.ts#workspaceRelayOrder
 src/relay.rs#relay_target_api	packages/core/compiler/src/workspace/order.ts#relayTargetApi
--	packages/core/compiler/src/workspace/order.ts#isDiagnosticOrigin	skip: ported in seampact-pass-link (src/origin.rs)
+-	packages/core/compiler/src/workspace/order.ts#isDiagnosticOrigin	merged: ../diagnostics/src/diagnostic.rs#of
 src/relay.rs#relay_cycle_diagnostics	packages/core/compiler/src/workspace/order.ts#relayCycleDiagnostics

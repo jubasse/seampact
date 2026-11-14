@@ -7,7 +7,6 @@
 )]
 
 mod not_ported;
-mod origin;
 mod relays;
 
 use indexmap::IndexMap;
@@ -16,7 +15,6 @@ use seampact_diagnostics::{Diagnostic, RuleId};
 use seampact_ir::ContractIr;
 use seampact_pipeline::{DraftIr, PassError};
 
-pub use origin::diagnostic_origin_of;
 pub use relays::LINK_GATEWAY_DERIVATIONS;
 use relays::{RELAY_SUPERSET_RULE_ID, link_relay_superset};
 

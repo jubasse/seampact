@@ -9,6 +9,7 @@ publish.workspace = true
 
 [dependencies]
 indexmap.workspace = true
+seampact-ir.workspace = true
 seampact-js.workspace = true
 seampact-json.workspace = true
 seampact-span.workspace = true

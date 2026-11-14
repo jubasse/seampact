@@ -3,12 +3,13 @@
 //! outside the gateway's own derivations must be a code of the relay route.
 
 use indexmap::IndexMap;
-use seampact_diagnostics::{Diagnostic, InternalError, RuleId, Severity, quote_text};
+use seampact_diagnostics::{
+    Diagnostic, DiagnosticOrigin, InternalError, RuleId, Severity, quote_text,
+};
 use seampact_ir::{ContractIr, DeclarationKind, OperationError, OperationId, OperationRef};
 use seampact_pipeline::{DraftIr, DraftOperation, PassError, pointer_below};
 
 use crate::not_ported::not_ported_yet;
-use crate::origin::diagnostic_origin_of;
 
 const LINK_RELAY_SUPERSET_RULE: &str = "seampact/link/relay-superset";
 
@@ -118,7 +119,7 @@ fn superset_diagnostic(
     missing: &OperationError,
 ) -> Result<Diagnostic, InternalError> {
     let route_label = route.id.as_ref().map_or("undefined", AsRef::as_ref);
-    let located = route.origin.as_ref().and_then(diagnostic_origin_of);
+    let located = route.origin.as_ref().and_then(DiagnosticOrigin::of);
     let Some(mut origin) = located else {
         return Err(InternalError::new(format!(
             "the relay route {route_api}.{route_label} has no authored origin"
