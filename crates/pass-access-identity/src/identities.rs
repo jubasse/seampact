@@ -113,7 +113,7 @@ fn docs_of(raw: &JsonObject) -> Docs {
     }
 }
 
-fn credential_members(
+pub(crate) fn credential_members(
     entry: &mut IdentityEntry<'_, '_, '_>,
 ) -> Result<Option<CredentialSchemes>, PassError> {
     let raw = entry.raw;

@@ -948,6 +948,7 @@ dependencies = [
 name = "seampact-pass-access-identity"
 version = "2.0.0"
 dependencies = [
+ "camino",
  "indexmap",
  "seampact-authoring",
  "seampact-diagnostics",
@@ -955,6 +956,7 @@ dependencies = [
  "seampact-js",
  "seampact-json",
  "seampact-pipeline",
+ "serde_json",
 ]
 
 [[package]]

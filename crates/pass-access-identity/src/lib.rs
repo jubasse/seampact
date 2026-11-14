@@ -24,6 +24,8 @@ mod schemes;
 mod service;
 mod signed;
 mod source;
+#[cfg(test)]
+mod tests;
 
 use seampact_diagnostics::RuleId;
 use seampact_pipeline::{AccessIdentityOutput, DraftIr, HalfContext, PassError, TreeSchemaService};

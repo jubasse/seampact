@@ -16,5 +16,9 @@ seampact-js.workspace = true
 seampact-json.workspace = true
 seampact-pipeline.workspace = true
 
+[dev-dependencies]
+camino.workspace = true
+serde_json.workspace = true
+
 [lints]
 workspace = true
