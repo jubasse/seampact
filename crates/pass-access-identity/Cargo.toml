@@ -17,8 +17,7 @@ seampact-json.workspace = true
 seampact-pipeline.workspace = true
 
 [dev-dependencies]
-camino.workspace = true
-serde_json.workspace = true
+seampact-pipeline = { workspace = true, features = ["test-support"] }
 
 [lints]
 workspace = true

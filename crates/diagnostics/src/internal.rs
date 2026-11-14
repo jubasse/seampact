@@ -2,6 +2,7 @@ use std::error::Error;
 use std::fmt;
 use std::panic::Location;
 
+use seampact_ir::NarrowUnionError;
 use seampact_span::SpanError;
 
 use crate::diagnostic_inert;
@@ -63,6 +64,15 @@ impl fmt::Display for InternalError {
 }
 
 impl Error for InternalError {}
+
+/// A union value a half built or read from its draft holds only known variants, so `?` turns a
+/// failed narrowing into an internal error located at the `?`.
+impl From<NarrowUnionError> for InternalError {
+    #[track_caller]
+    fn from(error: NarrowUnionError) -> Self {
+        Self::new(error.to_string())
+    }
+}
 
 /// A [`SpanError`] is a bug once the loader enforces its limits, so `?` turns it into an
 /// internal error located at the `?`.

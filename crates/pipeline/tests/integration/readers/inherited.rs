@@ -6,7 +6,7 @@ use seampact_pipeline::{
     UnionSetting,
 };
 
-use super::raw_api::{api_origin, single_layer_api};
+use seampact_pipeline::testing::{api_layer_origin, raw_api_from_json};
 
 const API: &str = r#"{
   "surfaces": {"app": {
@@ -59,7 +59,7 @@ fn text(value: &JsonValue) -> String {
 
 #[test]
 fn tree_nodes_in_document_order_with_op_entries_under_their_scope() {
-    let raw = single_layer_api(API);
+    let raw = raw_api_from_json(API).unwrap();
     let inherited = Inherited::new(&raw).unwrap();
     let nodes = inherited.nodes();
     let listed: Vec<(String, String, String, Option<String>)> = nodes
@@ -171,14 +171,17 @@ fn tree_nodes_in_document_order_with_op_entries_under_their_scope() {
             .clone()
     };
 
-    assert_eq!(origin_of(&format!("{TASKS}/collection")), api_origin(TASKS));
+    assert_eq!(
+        origin_of(&format!("{TASKS}/collection")),
+        api_layer_origin(TASKS)
+    );
     assert_eq!(
         origin_of(&format!("{TASKS}/member")),
-        api_origin(&format!("{TASKS}/member"))
+        api_layer_origin(&format!("{TASKS}/member"))
     );
     assert_eq!(
         origin_of(&format!("{LABELS}/ops/1")),
-        api_origin(&format!("{LABELS}/ops/1"))
+        api_layer_origin(&format!("{LABELS}/ops/1"))
     );
     assert!(
         nodes
@@ -191,7 +194,7 @@ fn tree_nodes_in_document_order_with_op_entries_under_their_scope() {
 
 #[test]
 fn nearest_takes_the_closest_node_that_sets_the_setting() {
-    let raw = single_layer_api(API);
+    let raw = raw_api_from_json(API).unwrap();
     let inherited = Inherited::new(&raw).unwrap();
     let get = node_at(&inherited, &format!("{TASKS}/ops/get"));
     let list = node_at(&inherited, &format!("{TASKS}/ops/list"));
@@ -201,7 +204,10 @@ fn nearest_takes_the_closest_node_that_sets_the_setting() {
         .unwrap();
 
     assert_eq!(text(own.value), "admin");
-    assert_eq!(own.origin, api_origin(&format!("{TASKS}/ops/get/identity")));
+    assert_eq!(
+        own.origin,
+        api_layer_origin(&format!("{TASKS}/ops/get/identity"))
+    );
     assert_eq!(own.node, get);
 
     let surface = inherited
@@ -222,7 +228,7 @@ fn nearest_takes_the_closest_node_that_sets_the_setting() {
 
 #[test]
 fn ordered_keeps_every_entry_from_the_root_down() {
-    let raw = single_layer_api(API);
+    let raw = raw_api_from_json(API).unwrap();
     let inherited = Inherited::new(&raw).unwrap();
     let get = node_at(&inherited, &format!("{TASKS}/ops/get"));
     let list = node_at(&inherited, &format!("{TASKS}/ops/list"));
@@ -289,7 +295,7 @@ fn ordered_keeps_every_entry_from_the_root_down() {
 
 #[test]
 fn union_drops_an_equal_entry_and_keeps_the_first_setters_origin() {
-    let raw = single_layer_api(API);
+    let raw = raw_api_from_json(API).unwrap();
     let inherited = Inherited::new(&raw).unwrap();
     let get = node_at(&inherited, &format!("{TASKS}/ops/get"));
     let tags = inherited.union(get, UnionSetting::Tags).unwrap().unwrap();
@@ -310,7 +316,7 @@ fn union_drops_an_equal_entry_and_keeps_the_first_setters_origin() {
 
 #[test]
 fn errors_keep_every_attachment_with_its_node() {
-    let raw = single_layer_api(API);
+    let raw = raw_api_from_json(API).unwrap();
     let inherited = Inherited::new(&raw).unwrap();
     let get = node_at(&inherited, &format!("{TASKS}/ops/get"));
     let errors = inherited.union(get, UnionSetting::Errors).unwrap().unwrap();
@@ -347,7 +353,7 @@ fn errors_keep_every_attachment_with_its_node() {
 
 #[test]
 fn per_key_takes_the_nearest_node_for_each_key_in_first_set_order() {
-    let raw = single_layer_api(API);
+    let raw = raw_api_from_json(API).unwrap();
     let inherited = Inherited::new(&raw).unwrap();
     let assign = node_at(&inherited, &format!("{TASKS}/member/routes/assign"));
     let roles = inherited
@@ -379,11 +385,12 @@ fn per_key_takes_the_nearest_node_for_each_key_in_first_set_order() {
 fn a_union_entrys_identity_ignores_key_order() {
     // A hand-made merged tree: the readers are generic over the values, and no union setting of
     // the grammar holds objects yet.
-    let raw = single_layer_api(
+    let raw = raw_api_from_json(
         r#"{"surfaces":{"app":{
             "tags":[{"a":1,"b":[{"c":1,"d":2}]},"app"],
             "routes":{"ping":{"method":"get","tags":[{"b":[{"d":2,"c":1}],"a":1},"ping"]}}}}}"#,
-    );
+    )
+    .unwrap();
     let inherited = Inherited::new(&raw).unwrap();
     let ping = node_at(&inherited, "/surfaces/app/routes/ping");
     let tags = inherited.union(ping, UnionSetting::Tags).unwrap().unwrap();

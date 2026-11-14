@@ -13,7 +13,6 @@ use seampact_diagnostics::{
     Diagnostic, DiagnosticOrigin, InternalError, RelatedLocation, RuleId, Severity,
 };
 use seampact_json::JsonValue;
-use seampact_pass_link::diagnostic_origin_of;
 use seampact_pipeline::{TreeNodeKind, pipeline_origin, pipeline_tree_nodes, pointer_below};
 
 use crate::stages::RelayOrder;
@@ -68,7 +67,7 @@ fn workspace_relay_routes(
         let pointer = pointer_below(&node.pointer, &[RELAYS_MEMBER]);
         let origin = pipeline_origin(raw, &pointer)
             .as_ref()
-            .and_then(diagnostic_origin_of);
+            .and_then(DiagnosticOrigin::of);
         let Some(origin) = origin else {
             return Err(InternalError::new(format!(
                 "relay order: api '{}' has no source location for {pointer}",

@@ -83,6 +83,14 @@ impl DeriveWireScope<'_, '_, '_> {
 - `quote`: `seampact-diagnostics` `text.rs` (section 1), from the seam PR on.
 - `treeNodesBodyLimit`: `pass-tree-nodes`, public; the coverage script orders functions that other halves call right after the spine, so it lands in brief 3 of `tree.nodes`, the first after the spine.
 
+- A value the half builds or reads from its own catalogue is held in a closed form until the half writes its output: the generated `Known<Name>` of `seampact-ir`, the union's variants without `Unknown`. `From<Known<Name>> for <Name>` writes it back. A value read from the draft is narrowed once, at the read: `Known<Name>::try_from(open)` for an owned value, `Known<Name>Ref::try_from(&open)` for a borrowed one, whose variants borrow the union's so nothing is cloned. The failure, `NarrowUnionError`, converts with `?` into `InternalError` and `PassError::Internal`. Functions below the narrowing take a closed form and are total, as in the TypeScript; one that serves both built and read values takes `Known<Name>Ref` (`From<&Known<Name>>`). No `Unknown(_) =>` arm answers `None`, skips or defaults.
+- The readers of the context (`raw`, `inherited`, `conventions`, `workspace`) are `&'run` fields: copy them out (`let inherited = scope.context.inherited;`) before a loop that reports. They are never read through a reporter. `HalfContext::relayed` and `imported` answer `&'run` too, so a relayed or imported operation is borrowed, never cloned.
+- A half that creates elements (tree.nodes creates the operations, tree.schemas the schemas) has an empty accumulator: its own members' only store is the output, read and written through the scope. `OperationIndex` and the `_of` views apply to the halves after it.
+- A TypeScript wrapper that delegates (a once reporter around a reporter) stays a wrapper that holds `&mut` to what it wraps and calls it, so the wrapped state (an error count) stays the TypeScript's.
+- A composite string key (`` `${layer}:${pointer}` ``, `JSON.stringify([...])`) ports as the same string, collisions included.
+- A comparator that needs a fallible value computes the keys first (`Result<Vec<_>, _>` and `?`), then sorts on total keys. A comparator never stores an error and answers `Ordering::Equal`.
+- `isDiagnosticOrigin`, copied in every pass's TypeScript: `DiagnosticOrigin::of(&Origin)` of `seampact-diagnostics`; a pass's trace line reads `merged: ../diagnostics/src/diagnostic.rs#of`.
+
 ## 4. The seam PR
 
 One PR, before any pass lane, small enough to land first. It starts once the oracle-dump lane has landed the expected files below.
@@ -146,6 +154,16 @@ A type the seam reads that has no serde form gets a reader in `seampact_compiler
 - `differences.schema.json` gains two `output` values: `half-diagnostics` (the file `<NN>-<half>.diagnostics.json`, addressed by `api`, `half` and a pointer into the array) and `schema-calls` (addressed by `api` and the pointer `/<index>/answer`, `index` the position of the call in `schema-calls/<api>.json`).
 - The `oracle_run.rs` test stops pinning the list of stale entries: it asserts only that every problem line is a stale-difference line.
 
+### Seam follow-up, before the next body briefs
+
+Landed after the first pattern review, before any further body brief:
+
+- `diagnostic_origin_of` moved from `pass-link` to `seampact-diagnostics` as `DiagnosticOrigin::of`; the copies in pass crates are deleted and their trace lines read `merged:`.
+- `HalfContext::relayed` and `imported` return `Option<&'run _>`.
+- The `test-support` feature of `seampact-pipeline` (a dev-dependency with the feature on) exports `testing::HalfFixture` and `testing::FakeSchemaService`. `HalfFixture::from_json(text)` or `from_layers` owns the raw api with leaf origins, a workspace holding it, the relayed drafts (`with_relayed`), the imports (`with_import`) and the sink; `with_context(|context| ..)` lends the `HalfContext`, whose conventions and inherited readers borrow the fixture, and `into_diagnostics()` answers what was reported. `FakeSchemaService` answers the type uses and query wires set per pointer and the example issues set per method; an unlisted pointer answers nothing. `raw_api_from_json`, `raw_api_from_layers` and `api_layer_origin` serve reader tests.
+- `ir_unions!` generates `Known<Name>` and `Known<Name>Ref` for every union (section 3).
+- Every IR id has a `const fn from_static`, so a derivation id is a constant (`DerivationId::from_static`).
+
 ## 5. The service replay check
 
 The halves after `tree.schemas` are compared against the recorded service; the Rust service is checked against the same records:
@@ -201,6 +219,17 @@ Measured (function lines per brief, 0 for a skeleton-only brief 1; skeleton in e
 - `access.identity` and `tree.nodes` keep their TypeScript tests as hand-ported Rust tests: no fixture conversion covers them.
 - Validate keeps the TypeScript messages: the spike shows the ajv-shaped conversion ports nearly one to one over `jsonschema`.
 
+### Skeleton conventions
+
+- Visibility: a function the TypeScript exports is `pub(crate)`, an unexported one private, and only what another crate calls is `pub`.
+- Signatures borrow what the TypeScript returns from its arguments (`Option<&str>`, `Option<&TypeUse>`) and return owned values only for what the function builds. Small `Copy` enums and the site struct go by value (the site derives `Copy`).
+- A TypeScript regex constant ports as the private `fn` that tests it, as a stub, never as a pattern string. A constant holding a built value ports as a private `fn` that returns it. Internal regexes become plain code; a character class used in two crates is one shared helper.
+- Rules: one enum per half with `const fn rule_id(self) -> RuleId` (full id, `RuleId::from_static`) and `const ALL: &[Self]`. A unit test checks that `RULE_IDS` equals `ALL` mapped through `rule_id`. The crates ported before this convention adopt it in their next brief.
+- Derivation ids come from the shared constants or `DerivationId::from_static`, never `DerivationId::new` over a local string.
+- A TypeScript function copied across passes with the same body ports once, in the lowest shared crate. A helper or type not built yet is a "For the lead" item, never a local stand-in. If one is unavoidable in a skeleton, the brief that ports its first consumer replaces it first.
+- A TypeScript class that holds the context becomes a struct that borrows `&'scope mut <Half>Scope` for one call tree, with its methods in an `impl`.
+- A union value is matched in its closed `Known<Name>` form (section 3), never with an `Unknown` arm.
+
 ## 8. Wave plan
 
 - Wave 1: the seam PR (Opus, effort high); lane `stages`: validate, the relay order and link (about 820 lines); lane `shared`: naming, `pass-tree-shared` and templates (about 970 lines). Validate and the relay order come first because `compile` reaches them on every fixture.
@@ -214,6 +243,9 @@ Measured (function lines per brief, 0 for a skeleton-only brief 1; skeleton in e
 
 - The oracle compares each half's delta and diagnostics; converted TypeScript tests are fixtures. A lane hand-ports only what no fixture reaches: cases built on a fake service or context, the PORTING.md section 2 edge rows its functions touch, the stable bricks (naming, templates, `text.rs`, the `seampact-ir` helpers), and the `checkTextExample` cases beyond the four calls the fixtures record.
 - PORTING.md section 6 says the same.
+
+- Hand-ported tests build their context with `seampact_pipeline::testing::HalfFixture` and `FakeSchemaService`, never a local harness.
+- No test restates a `match` or a constant that the oracle's pairs already reach (caller kinds per access kind, exact encoding strings). The hand-ported tests are the fake-context cases, the PORTING.md section 2 edge rows, the internal-error paths and the stable bricks.
 
 ## Spike evidence
 

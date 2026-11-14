@@ -301,7 +301,7 @@ src/writes.rs#on_member_scope	packages/core/compiler/src/passes/tree/nodes/write
 src/writes.rs#check_not_restated	packages/core/compiler/src/passes/tree/nodes/writes.ts#checkNotRestated
 src/writes.rs#restating_origin	packages/core/compiler/src/passes/tree/nodes/writes.ts#restatingOrigin
 src/writes.rs#report_nothing_to_inherit	packages/core/compiler/src/passes/tree/nodes/writes.ts#reportNothingToInherit
-src/diagnostics.rs#is_diagnostic_origin	packages/core/compiler/src/passes/tree/nodes/diagnostics.ts#isDiagnosticOrigin
+-	packages/core/compiler/src/passes/tree/nodes/diagnostics.ts#isDiagnosticOrigin	merged: ../diagnostics/src/diagnostic.rs#of
 src/diagnostics.rs#tree_nodes_node_origin	packages/core/compiler/src/passes/tree/nodes/diagnostics.ts#treeNodesNodeOrigin
 src/diagnostics.rs#tree_nodes_report_once	packages/core/compiler/src/passes/tree/nodes/diagnostics.ts#treeNodesReportOnce
 src/diagnostics.rs#tree_nodes_rule_id	packages/core/compiler/src/passes/tree/nodes/diagnostics.ts#treeNodesRuleId

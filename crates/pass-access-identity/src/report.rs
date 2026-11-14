@@ -5,9 +5,9 @@ use std::collections::HashSet;
 
 use seampact_authoring::RawApi;
 use seampact_diagnostics::{
-    Diagnostic, DiagnosticLayer, DiagnosticOrigin, InternalError, RelatedLocation, RuleId, Severity,
+    Diagnostic, DiagnosticOrigin, InternalError, RelatedLocation, RuleId, Severity,
 };
-use seampact_ir::{Layer, Origin};
+use seampact_ir::Origin;
 use seampact_json::{JsonValue, stringify_json};
 use seampact_pipeline::{HalfContext, Inherited, ResolvedConventions};
 
@@ -139,7 +139,7 @@ impl<'run> AccessIdentityReporter<'_, 'run> {
         let located = self
             .context
             .origin(pointer)
-            .and_then(|origin| diagnostic_origin_of(&origin));
+            .and_then(|origin| DiagnosticOrigin::of(&origin));
 
         located.ok_or_else(|| {
             InternalError::new(format!(
@@ -191,24 +191,6 @@ impl<'run> AccessIdentityReporter<'_, 'run> {
 
         Ok(())
     }
-}
-
-// The diagnostic form of an origin; the core layer has none (`isDiagnosticOrigin`).
-fn diagnostic_origin_of(origin: &Origin) -> Option<DiagnosticOrigin> {
-    let layer = match &origin.layer {
-        Layer::Api => DiagnosticLayer::Api,
-        Layer::Shared => DiagnosticLayer::Shared,
-        Layer::Base => DiagnosticLayer::Base,
-        Layer::Workspace => DiagnosticLayer::Workspace,
-        Layer::Pack(name) => DiagnosticLayer::Pack(name.as_str().to_owned()),
-        Layer::Core => return None,
-    };
-
-    Some(DiagnosticOrigin {
-        layer,
-        pointer: origin.pointer.clone(),
-        api: origin.api.clone(),
-    })
 }
 
 /// The reporter of one run, counting from zero.

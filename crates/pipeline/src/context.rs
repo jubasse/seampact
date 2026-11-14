@@ -70,17 +70,22 @@ impl<'run> HalfContext<'run> {
     }
 
     /// The derived draft of a workspace api that already ran, `None` for an api of no workspace
-    /// or one that has not run.
+    /// or one that has not run. It borrows the run, not the context, so it outlives a report.
     #[must_use]
-    pub fn relayed(&self, api: &str) -> Option<&DraftIr> {
-        self.relayed.relayed(api)
+    pub fn relayed(&self, api: &str) -> Option<&'run DraftIr> {
+        let relayed: &'run dyn RelayedDrafts = self.relayed;
+
+        relayed.relayed(api)
     }
 
     /// The IR of an imported api, when the `imports` option supplies one, in the open reader types:
     /// an IR from another compiler version may hold a variant or a value this one does not know.
+    /// It borrows the run, not the context, so it outlives a report.
     #[must_use]
-    pub fn imported(&self, api: &str) -> Option<&ContractIr> {
-        self.imports.get(api)
+    pub fn imported(&self, api: &str) -> Option<&'run ContractIr> {
+        let imports: &'run IndexMap<String, ContractIr> = self.imports;
+
+        imports.get(api)
     }
 
     /// Reports a diagnostic.

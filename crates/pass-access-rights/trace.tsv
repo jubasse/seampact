@@ -51,7 +51,7 @@ src/source.rs#is_bare_source	packages/core/compiler/src/passes/access/rights/sou
 src/restricted_positions.rs#authored_pointer	packages/core/compiler/src/passes/access/rights/restricted-positions.ts#authoredPointer
 src/restricted_positions.rs#optional_pointer	packages/core/compiler/src/passes/access/rights/restricted-positions.ts#optionalPointer
 src/source.rs#is_named_source	packages/core/compiler/src/passes/access/rights/source.ts#isNamedSource
-src/report.rs#is_diagnostic_origin	packages/core/compiler/src/passes/access/rights/report.ts#isDiagnosticOrigin
+-	packages/core/compiler/src/passes/access/rights/report.ts#isDiagnosticOrigin	merged: ../diagnostics/src/diagnostic.rs#of
 src/restricted_fields.rs#schema_of	packages/core/compiler/src/passes/access/rights/restricted-fields.ts#schemaOf
 src/sort_keys.rs#item_objects_of	packages/core/compiler/src/passes/access/rights/sort-keys.ts#itemObjectsOf
 src/read.rs#access_rights_strings	packages/core/compiler/src/passes/access/rights/read.ts#accessRightsStrings

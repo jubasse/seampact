@@ -86,8 +86,17 @@ pub use sensitive_field::{
 };
 pub use source_map::{SourceLocation, SourceMap};
 pub use unions::{
-    Access, ApiVersion, Csrf, EnumSource, Idempotency, Identity, KeysPolicy, MemberName, Principal,
-    Requirement, RightSubject, Schema, Scheme, SchemeKey, SignatureVerify, Template, TextPart,
-    TypeUse, UNIONS, UnionEntry, UnionTag, UnknownQuery, UnknownVariant, union_tags,
+    Access, ApiVersion, Csrf, EnumSource, Idempotency, Identity, KeysPolicy, KnownAccess,
+    KnownAccessRef, KnownApiVersion, KnownApiVersionRef, KnownCsrf, KnownCsrfRef, KnownEnumSource,
+    KnownEnumSourceRef, KnownIdempotency, KnownIdempotencyRef, KnownIdentity, KnownIdentityRef,
+    KnownKeysPolicy, KnownKeysPolicyRef, KnownMemberName, KnownMemberNameRef, KnownPrincipal,
+    KnownPrincipalRef, KnownRequirement, KnownRequirementRef, KnownRightSubject,
+    KnownRightSubjectRef, KnownSchema, KnownSchemaRef, KnownScheme, KnownSchemeKey,
+    KnownSchemeKeyRef, KnownSchemeRef, KnownSignatureVerify, KnownSignatureVerifyRef,
+    KnownTemplate, KnownTemplateRef, KnownTextPart, KnownTextPartRef, KnownTypeUse,
+    KnownTypeUseRef, KnownUnionTag, KnownUnionTagRef, KnownUnknownQuery, KnownUnknownQueryRef,
+    MemberName, NarrowUnionError, Principal, Requirement, RightSubject, Schema, Scheme, SchemeKey,
+    SignatureVerify, Template, TextPart, TypeUse, UNIONS, UnionEntry, UnionTag, UnknownQuery,
+    UnknownVariant, union_tags,
 };
 pub use version::{IR_REVISION, IR_VERSION};

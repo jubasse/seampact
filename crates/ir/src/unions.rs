@@ -49,6 +49,38 @@ impl UnknownVariant {
     }
 }
 
+/// A union value narrowed to its closed form holds a variant this IR revision does not know.
+///
+/// A half narrows only values it built or read from the draft, so the failure is a bug of the
+/// compiler, never a fault of the contract.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("the {union} variant `{tag}` is not known to this compiler")]
+pub struct NarrowUnionError {
+    union: &'static str,
+    tag: String,
+}
+
+impl NarrowUnionError {
+    /// The union's definition name.
+    #[must_use]
+    pub const fn union(&self) -> &'static str {
+        self.union
+    }
+
+    /// The tag of the unknown variant.
+    #[must_use]
+    pub fn tag(&self) -> &str {
+        &self.tag
+    }
+
+    fn of(union: &'static str, variant: &UnknownVariant) -> Self {
+        Self {
+            union,
+            tag: variant.tag().to_owned(),
+        }
+    }
+}
+
 /// One union of the IR schemas, as its registry entry lists it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct UnionEntry {
@@ -181,11 +213,16 @@ pub(crate) mod scalar_type_use_member {
 /// Writes each union, its `tag`, serde by tag dispatch and the [`UNIONS`] registry; one
 /// invocation lists every definition, so the registry cannot miss one.
 ///
+/// Each union also gets its closed forms, the same variants without `Unknown`: an owned one
+/// (`known`) that converts back into the union, and a borrowed one (`known_ref`) whose variants
+/// borrow the union's, so narrowing a borrowed value clones nothing.
+///
 /// `Serialize` targets `serde_json` only, as [`JsonValue`]'s does.
 macro_rules! ir_unions {
     ($(
         $(#[doc = $doc:literal])*
-        $name:ident, tag: $tag_member:literal, must_act: $must_act:literal {
+        $name:ident, known: $known:ident, known_ref: $known_ref:ident,
+        tag: $tag_member:literal, must_act: $must_act:literal {
             $($variant:ident($variant_type:ty) = $tag:literal,)+
         }
     )+) => {
@@ -249,6 +286,66 @@ macro_rules! ir_unions {
                     }
                 }
             }
+
+            #[doc = concat!("The closed form of [`", stringify!($name), "`]: its known variants, owned.")]
+            #[derive(Debug, Clone, PartialEq)]
+            #[allow(
+                clippy::large_enum_variant,
+                reason = "the variants hold the schema's structs by value, as the open union does"
+            )]
+            pub enum $known {
+                $(
+                    #[doc = concat!("The `", $tag, "` variant.")]
+                    $variant($variant_type),
+                )+
+            }
+
+            #[doc = concat!("The closed form of a borrowed [`", stringify!($name), "`]: its known variants, borrowed.")]
+            #[derive(Debug, Clone, Copy, PartialEq)]
+            pub enum $known_ref<'union> {
+                $(
+                    #[doc = concat!("The `", $tag, "` variant.")]
+                    $variant(&'union $variant_type),
+                )+
+            }
+
+            impl From<$known> for $name {
+                fn from(known: $known) -> Self {
+                    match known {
+                        $($known::$variant(variant) => Self::$variant(variant),)+
+                    }
+                }
+            }
+
+            impl TryFrom<$name> for $known {
+                type Error = NarrowUnionError;
+
+                fn try_from(open: $name) -> Result<Self, Self::Error> {
+                    match open {
+                        $($name::$variant(variant) => Ok(Self::$variant(variant)),)+
+                        $name::Unknown(variant) => Err(NarrowUnionError::of(stringify!($name), &variant)),
+                    }
+                }
+            }
+
+            impl<'union> TryFrom<&'union $name> for $known_ref<'union> {
+                type Error = NarrowUnionError;
+
+                fn try_from(open: &'union $name) -> Result<Self, Self::Error> {
+                    match open {
+                        $($name::$variant(variant) => Ok(Self::$variant(variant)),)+
+                        $name::Unknown(variant) => Err(NarrowUnionError::of(stringify!($name), variant)),
+                    }
+                }
+            }
+
+            impl<'union> From<&'union $known> for $known_ref<'union> {
+                fn from(known: &'union $known) -> Self {
+                    match known {
+                        $($known::$variant(variant) => Self::$variant(variant),)+
+                    }
+                }
+            }
         )+
 
         /// Every union of the IR schemas, in schema file order.
@@ -265,17 +362,20 @@ macro_rules! ir_unions {
 
 ir_unions! {
     /// The key a signature is verified with: an id the application resolves to its secret, never the secret itself, written as a value or read from the request.
-    SchemeKey, tag: "kind", must_act: true {
+    SchemeKey, known: KnownSchemeKey, known_ref: KnownSchemeKeyRef,
+    tag: "kind", must_act: true {
         Value(ValueSchemeKey) = "value",
         Source(SourceSchemeKey) = "from",
     }
     /// How a signature is verified (ADR 0004 section 4).
-    SignatureVerify, tag: "verify", must_act: true {
+    SignatureVerify, known: KnownSignatureVerify, known_ref: KnownSignatureVerifyRef,
+    tag: "verify", must_act: true {
         Template(TemplateSignature) = "template",
         Application(ApplicationSignature) = "application",
     }
     /// A security scheme (ADR 0004 section 4), tagged on its kind.
-    Scheme, tag: "kind", must_act: true {
+    Scheme, known: KnownScheme, known_ref: KnownSchemeRef,
+    tag: "kind", must_act: true {
         Cookie(CookieScheme) = "cookie",
         Header(HeaderScheme) = "header",
         Query(QueryScheme) = "query",
@@ -284,33 +384,39 @@ ir_unions! {
         Signature(SignatureScheme) = "signature",
     }
     /// The principal schema: one schema, or one per credential variant.
-    Principal, tag: "kind", must_act: false {
+    Principal, known: KnownPrincipal, known_ref: KnownPrincipalRef,
+    tag: "kind", must_act: false {
         Schema(SchemaPrincipal) = "schema",
         Variants(VariantsPrincipal) = "variants",
     }
     /// Unknown keys of a signed identity's payload: ignored or kept, with the reason.
-    KeysPolicy, tag: "policy", must_act: true {
+    KeysPolicy, known: KnownKeysPolicy, known_ref: KnownKeysPolicyRef,
+    tag: "policy", must_act: true {
         Ignore(IgnoreKeysPolicy) = "ignore",
         Keep(KeepKeysPolicy) = "keep",
     }
     /// An identity (ADR 0004 section 4), tagged on its kind.
-    Identity, tag: "kind", must_act: true {
+    Identity, known: KnownIdentity, known_ref: KnownIdentityRef,
+    tag: "kind", must_act: true {
         Credential(CredentialIdentity) = "credential",
         Signed(SignedIdentity) = "signed",
     }
     /// The subject a right is checked against.
-    RightSubject, tag: "kind", must_act: true {
+    RightSubject, known: KnownRightSubject, known_ref: KnownRightSubjectRef,
+    tag: "kind", must_act: true {
         NoSubject(NoSubject) = "none",
         Scope(ScopeSubject) = "scope",
         Resource(ResourceSubject) = "resource",
     }
     /// Where an enum's values come from: a shared vocabulary or another enum.
-    EnumSource, tag: "kind", must_act: false {
+    EnumSource, known: KnownEnumSource, known_ref: KnownEnumSourceRef,
+    tag: "kind", must_act: false {
         Vocabulary(VocabularyEnumSource) = "vocabulary",
         Enum(CatalogueEnumSource) = "enum",
     }
     /// A template of the template language (ADR 0002 sections 13 and 14).
-    Template, tag: "kind", must_act: false {
+    Template, known: KnownTemplate, known_ref: KnownTemplateRef,
+    tag: "kind", must_act: false {
         Slot(SlotTemplate) = "slot",
         Text(TextTemplate) = "text",
         Literal(LiteralTemplate) = "literal",
@@ -319,59 +425,70 @@ ir_unions! {
         Each(EachTemplate) = "each",
     }
     /// A part of a text template: literal text, or a slot with its path.
-    TextPart, tag: "kind", must_act: false {
+    TextPart, known: KnownTextPart, known_ref: KnownTextPartRef,
+    tag: "kind", must_act: false {
         Text(PlainTextPart) = "text",
         Slot(SlotTextPart) = "slot",
     }
     /// The name of an object template member: literal text, or a slot.
-    MemberName, tag: "kind", must_act: false {
+    MemberName, known: KnownMemberName, known_ref: KnownMemberNameRef,
+    tag: "kind", must_act: false {
         Text(PlainMemberName) = "text",
         Slot(SlotMemberName) = "slot",
     }
     /// The api version: the path version number, or a label when every surface's pathVersion is 'none'.
-    ApiVersion, tag: "kind", must_act: false {
+    ApiVersion, known: KnownApiVersion, known_ref: KnownApiVersionRef,
+    tag: "kind", must_act: false {
         Path(PathApiVersion) = "path",
         Label(LabelApiVersion) = "label",
     }
     /// Undeclared query keys.
-    UnknownQuery, tag: "policy", must_act: true {
+    UnknownQuery, known: KnownUnknownQuery, known_ref: KnownUnknownQueryRef,
+    tag: "policy", must_act: true {
         Refuse(RefuseUnknownQuery) = "refuse",
         Ignore(IgnoreUnknownQuery) = "ignore",
     }
     /// Who may call the operation.
-    Access, tag: "kind", must_act: true {
+    Access, known: KnownAccess, known_ref: KnownAccessRef,
+    tag: "kind", must_act: true {
         Identity(IdentityAccess) = "identity",
         Optional(OptionalAccess) = "optional",
         Public(PublicAccess) = "public",
     }
     /// A requirement, in declared order (FR-5).
-    Requirement, tag: "kind", must_act: true {
+    Requirement, known: KnownRequirement, known_ref: KnownRequirementRef,
+    tag: "kind", must_act: true {
         Right(RightRequirement) = "right",
         Rule(RuleRequirement) = "rule",
     }
     /// The idempotency key of an unsafe operation: derived settings, or an exemption with its reason.
-    Idempotency, tag: "kind", must_act: true {
+    Idempotency, known: KnownIdempotency, known_ref: KnownIdempotencyRef,
+    tag: "kind", must_act: true {
         Derived(DerivedIdempotency) = "derived",
         Exempt(ExemptIdempotency) = "exempt",
     }
     /// The CSRF check of an unsafe operation reached through a cookie scheme: the derived header, or an exemption with its reason (invariant ir.csrf.cookie).
-    Csrf, tag: "kind", must_act: true {
+    Csrf, known: KnownCsrf, known_ref: KnownCsrfRef,
+    tag: "kind", must_act: true {
         Derived(DerivedCsrf) = "derived",
         Exempt(ExemptCsrf) = "exempt",
     }
     /// A named schema: objects, maps and unions are always named (ADR 0004 section 5).
-    Schema, tag: "kind", must_act: false {
+    Schema, known: KnownSchema, known_ref: KnownSchemaRef,
+    tag: "kind", must_act: false {
         Object(ObjectSchema) = "object",
         Map(MapSchema) = "map",
         Union(UnionSchema) = "union",
     }
     /// Where a union's tag is read; 'header' only for a route's whole input.
-    UnionTag, tag: "in", must_act: false {
+    UnionTag, known: KnownUnionTag, known_ref: KnownUnionTagRef,
+    tag: "in", must_act: false {
         Body(BodyUnionTag) = "body",
         Header(HeaderUnionTag) = "header",
     }
     /// What a property, item, body or parameter is (ADR 0004 section 5).
-    TypeUse, tag: "kind", must_act: false {
+    TypeUse, known: KnownTypeUse, known_ref: KnownTypeUseRef,
+    tag: "kind", must_act: false {
         Ref(RefTypeUse) = "ref",
         Opaque(OpaqueTypeUse) = "opaque",
         File(FileTypeUse) = "file",
@@ -446,5 +563,52 @@ mod tests {
         assert_eq!(csrf.known_tags, ["derived", "exempt"]);
         assert!(csrf.must_act);
         assert_eq!(union_tags("Origin"), None);
+    }
+
+    fn signature_verify_of(text: &str) -> SignatureVerify {
+        serde_json::from_str(text).unwrap()
+    }
+
+    #[test]
+    fn a_known_variant_narrows_owned_and_borrowed_and_converts_back() {
+        let open = signature_verify_of(r#"{"verify":"application","headers":[]}"#);
+        let borrowed = KnownSignatureVerifyRef::try_from(&open).unwrap();
+
+        assert!(matches!(borrowed, KnownSignatureVerifyRef::Application(_)));
+
+        let known = KnownSignatureVerify::try_from(open.clone()).unwrap();
+
+        assert_eq!(
+            KnownSignatureVerifyRef::from(&known),
+            KnownSignatureVerifyRef::try_from(&open).unwrap()
+        );
+        assert_eq!(SignatureVerify::from(known), open);
+    }
+
+    #[test]
+    fn a_borrowed_narrowing_borrows_the_variant_it_was_given() {
+        let open = signature_verify_of(r#"{"verify":"application","headers":[]}"#);
+        let (SignatureVerify::Application(variant), KnownSignatureVerifyRef::Application(narrowed)) =
+            (&open, KnownSignatureVerifyRef::try_from(&open).unwrap())
+        else {
+            panic!("the application variant expected, got {open:?}");
+        };
+
+        assert!(std::ptr::eq(variant, narrowed));
+    }
+
+    #[test]
+    fn an_unknown_variant_does_not_narrow_and_names_the_union_and_tag() {
+        let open = signature_verify_of(r#"{"verify":"hardware","slot":2}"#);
+        let borrowed = KnownSignatureVerifyRef::try_from(&open).unwrap_err();
+        let owned = KnownSignatureVerify::try_from(open).unwrap_err();
+
+        assert_eq!(borrowed, owned);
+        assert_eq!(owned.union(), "SignatureVerify");
+        assert_eq!(owned.tag(), "hardware");
+        assert_eq!(
+            owned.to_string(),
+            "the SignatureVerify variant `hardware` is not known to this compiler"
+        );
     }
 }

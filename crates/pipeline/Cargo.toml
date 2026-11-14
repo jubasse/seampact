@@ -7,7 +7,12 @@ rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 
+[features]
+# The shared fixture and fake schema service of hand-ported half tests.
+test-support = ["dep:camino"]
+
 [dependencies]
+camino = { workspace = true, optional = true }
 indexmap.workspace = true
 regress.workspace = true
 seampact-authoring.workspace = true
@@ -22,6 +27,7 @@ thiserror.workspace = true
 
 [dev-dependencies]
 camino.workspace = true
+seampact-pipeline = { workspace = true, features = ["test-support"] }
 
 [lints]
 workspace = true

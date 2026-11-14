@@ -15,6 +15,8 @@ mod halves;
 mod outputs;
 mod readers;
 mod service;
+#[cfg(feature = "test-support")]
+pub mod testing;
 
 pub use context::{HalfContext, RelayedDrafts};
 pub use delta::{draft_apply, draft_delta};
