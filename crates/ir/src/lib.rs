@@ -19,6 +19,7 @@ mod open_enums;
 mod operation;
 mod schema_files;
 mod schemas;
+mod sensitive_field;
 mod source_map;
 mod unions;
 mod version;
@@ -78,6 +79,10 @@ pub use schemas::{
     ArrayTypeUse, BodyUnionTag, EnumNarrowing, EnumTypeUse, FieldRestriction, FileTypeUse,
     HeaderUnionTag, JsonContent, MapSchema, ObjectSchema, OpaqueTypeUse, Pattern, Property,
     RefTypeUse, Refinements, Scalar, ScalarTypeUse, UnionSchema, UnionVariant, UnknownKeys,
+};
+pub use sensitive_field::{
+    IrSensitiveReach, MissingSchemaError, find_ir_sensitive_param_reaches,
+    find_ir_sensitive_reaches, sensitive_reach_text,
 };
 pub use source_map::{SourceLocation, SourceMap};
 pub use unions::{
