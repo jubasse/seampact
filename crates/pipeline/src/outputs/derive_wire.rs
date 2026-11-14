@@ -98,7 +98,13 @@ impl DeriveWireOutput {
         for (operation, entry, site) in
             operations_with(&mut draft.operations, self.operations, Half::DeriveWire)?
         {
-            merge_parameters(operation, &entry, &site)?;
+            merge_parameters(
+                operation,
+                entry.path_params,
+                entry.query_params,
+                entry.header_params,
+                &site,
+            )?;
             merge_responses(operation, entry.responses, entry.response_headers, &site)?;
 
             if let Some(limit) = entry.body_limit_bytes {
@@ -147,25 +153,24 @@ impl DeriveWireOutput {
 
 fn merge_parameters(
     operation: &mut crate::DraftOperation,
-    entry: &DeriveWireOperation,
+    path_params: Vec<Param>,
+    query_params: Vec<Param>,
+    header_params: Vec<Param>,
     site: &Site,
 ) -> Result<(), InternalError> {
-    if entry.path_params.is_empty()
-        && entry.query_params.is_empty()
-        && entry.header_params.is_empty()
-    {
+    if path_params.is_empty() && query_params.is_empty() && header_params.is_empty() {
         return Ok(());
     }
 
-    check_params(ElementList::PathParams, &entry.path_params, site)?;
-    check_params(ElementList::QueryParams, &entry.query_params, site)?;
-    check_params(ElementList::HeaderParams, &entry.header_params, site)?;
+    check_params(ElementList::PathParams, &path_params, site)?;
+    check_params(ElementList::QueryParams, &query_params, site)?;
+    check_params(ElementList::HeaderParams, &header_params, site)?;
 
     let params = existing(&mut operation.params, "params", site)?;
 
-    params.path.extend(entry.path_params.iter().cloned());
-    params.query.extend(entry.query_params.iter().cloned());
-    params.header.extend(entry.header_params.iter().cloned());
+    params.path.extend(path_params);
+    params.query.extend(query_params);
+    params.header.extend(header_params);
 
     Ok(())
 }

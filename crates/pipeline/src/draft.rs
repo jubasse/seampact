@@ -17,12 +17,10 @@ use seampact_ir::{
     PackRef, Paging, PagingId, PagingStyle, Params, PathVersion, PrincipalRequirement, Requirement,
     Response, Right, RightId, Rule, RuleId, Scalar, ScalarId, Schema, SchemaId, Scheme, SchemeId,
     Scope, ScopeId, Service, ServiceId, Surface, SurfaceId, TypeUse, UnknownQuery, ValueSource,
-    WireFormat,
+    WireFormat, optional_count,
 };
-use seampact_json::JsonValue;
+use seampact_json::{JsonValue, escape_pointer};
 use serde::{Deserialize, Serialize};
-
-use crate::count::optional_count;
 
 /// The request body of an operation in the draft: the members of later halves are optional.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -440,22 +438,73 @@ impl DraftIr {
         })
     }
 
-    /// Reads a draft from its JSON value; a member the draft does not know is dropped.
+    /// Reads a draft from its JSON value.
     ///
     /// # Errors
     ///
-    /// An [`InternalError`] when the value does not fit the draft form: the draft is built by the
-    /// passes, so a misfit is a bug.
+    /// An [`InternalError`] when the value does not fit the draft form, or when encoding the
+    /// decoded draft gives another value (an unknown or dropped member): the draft is built by
+    /// the passes, so a misfit is a bug. The error names the first differing pointer.
     pub fn from_json_value(value: &JsonValue) -> Result<Self, InternalError> {
         let tree = serde_json::to_value(value).map_err(|failure| {
             InternalError::new(format!("the draft value does not encode: {failure}"))
         })?;
 
-        serde_json::from_value(tree).map_err(|failure| {
+        let draft: Self = serde_json::from_value(tree).map_err(|failure| {
             InternalError::new(format!(
                 "the draft value does not fit the draft form: {failure}"
             ))
-        })
+        })?;
+
+        let encoded = draft.to_json_value()?;
+
+        match first_difference(value, &encoded, "") {
+            Some(pointer) => Err(InternalError::new(format!(
+                "the draft value does not survive the draft form: it differs at '{pointer}'"
+            ))),
+            None => Ok(draft),
+        }
+    }
+}
+
+/// The pointer of the first member where `left` and `right` differ, `None` when they are equal.
+fn first_difference(left: &JsonValue, right: &JsonValue, pointer: &str) -> Option<String> {
+    match (left, right) {
+        (JsonValue::Object(left_members), JsonValue::Object(right_members)) => {
+            let child_pointer = |key: &str| format!("{pointer}/{}", escape_pointer(key));
+
+            // Each shared member is compared once: walking it from both sides doubles the work
+            // at every nesting level.
+            let left_difference =
+                left_members
+                    .iter()
+                    .find_map(|(key, left_child)| match right_members.get(key) {
+                        Some(right_child) => {
+                            first_difference(left_child, right_child, &child_pointer(key))
+                        }
+                        None => Some(child_pointer(key)),
+                    });
+
+            left_difference.or_else(|| {
+                right_members
+                    .keys()
+                    .find(|key| left_members.get(key).is_none())
+                    .map(|key| child_pointer(key))
+            })
+        }
+        (JsonValue::Array(left_items), JsonValue::Array(right_items)) => {
+            let shared = left_items.len().min(right_items.len());
+            let shared_difference = left_items.iter().zip(right_items).enumerate().find_map(
+                |(index, (left_child, right_child))| {
+                    first_difference(left_child, right_child, &format!("{pointer}/{index}"))
+                },
+            );
+
+            shared_difference.or_else(|| {
+                (left_items.len() != right_items.len()).then(|| format!("{pointer}/{shared}"))
+            })
+        }
+        _ => (left != right).then(|| pointer.to_owned()),
     }
 }
 
@@ -468,6 +517,22 @@ impl Default for DraftIr {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn comparing_two_deeply_nested_equal_values_visits_each_member_once() {
+        const NESTING_DEPTH: usize = 64;
+
+        let mut nested = JsonValue::Null;
+
+        for _ in 0..NESTING_DEPTH {
+            let mut members = seampact_json::JsonObject::new();
+
+            members.insert("child".to_owned(), nested);
+            nested = JsonValue::Object(members);
+        }
+
+        assert_eq!(first_difference(&nested, &nested.clone(), ""), None);
+    }
 
     fn assert_send_and_sync<T: Send + Sync>() {}
 
@@ -513,5 +578,25 @@ mod tests {
 
         assert_eq!(decoded.rights.len(), 1);
         assert_eq!(decoded.to_json_value().expect("it encodes"), draft);
+    }
+
+    #[test]
+    fn an_unknown_member_of_an_operation_is_an_internal_error_naming_its_pointer() {
+        let mut draft = DraftIr::new().to_json_value().expect("a new draft encodes");
+        let JsonValue::Object(members) = &mut draft else {
+            panic!("a draft is an object");
+        };
+        members.insert(
+            "operations".to_owned(),
+            JsonValue::try_from(serde_json::json!([{"id": "listTasks", "unknownMember": 1}]))
+                .expect("a JSON value"),
+        );
+
+        let failure = DraftIr::from_json_value(&draft).expect_err("the member is dropped");
+
+        assert!(
+            failure.to_string().contains("/operations/0/unknownMember"),
+            "{failure}"
+        );
     }
 }

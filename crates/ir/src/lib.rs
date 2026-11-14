@@ -50,6 +50,7 @@ pub use ids::{
     OperationId, PackName, PagingId, Reason, RightId, RuleId, ScalarId, SchemaId, SchemeId,
     ScopeId, ServiceId, Slot, SurfaceId, VariantId,
 };
+pub use integers::optional_count;
 pub use ir_map::IrMap;
 pub use layer::Layer;
 pub use open_enums::{

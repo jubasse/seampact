@@ -394,3 +394,65 @@ fn keys_come_in_javascript_order_and_pointers_escape_slash_and_tilde() {
     assert!(run.build.locs.contains_key("/x/c~0d"));
     assert!(run.build.locs.contains_key(""));
 }
+
+const TWO_SCHEMAS: &str = "items:\n  - { type: string }\n  - { type: integer }\n";
+
+#[test]
+fn a_list_segment_is_read_as_javascript_reads_a_number() {
+    for (segment, want) in [
+        ("1", "integer"),
+        ("01", "integer"),
+        ("1.0", "integer"),
+        ("0x1", "integer"),
+        ("1e0", "integer"),
+        ("", "string"),
+    ] {
+        let run = expand(&[
+            (
+                "api.yaml",
+                &format!("api: {{ name: t }}\nx:\n  $include: ./a.yaml#/items/{segment}\n"),
+            ),
+            ("a.yaml", TWO_SCHEMAS),
+        ]);
+
+        assert!(run.rules().is_empty(), "{segment:?}: {}", run.printed);
+        assert_eq!(
+            run.tree_text(),
+            format!(r#"{{"api":{{"name":"t"}},"x":{{"type":"{want}"}}}}"#),
+            "{segment:?}"
+        );
+    }
+}
+
+#[test]
+fn an_include_in_a_file_reached_by_a_file_reference_reads_a_list_segment_as_a_number() {
+    // A file `$ref` names one top-level element, so a list segment is reached through the
+    // `$include` its element holds.
+    for (segment, want) in [("01", "integer"), ("", "string")] {
+        let run = expand_with(
+            owned(&[
+                (
+                    "api.yaml",
+                    "api: { name: t }\nschemas:\n  A: { $ref: './s.yaml#/Note' }\n",
+                ),
+                (
+                    "s.yaml",
+                    &format!("Note:\n  $include: ./a.yaml#/items/{segment}\n"),
+                ),
+                ("a.yaml", TWO_SCHEMAS),
+            ]),
+            &Options {
+                finish_refs: true,
+                ..Options::default()
+            },
+        );
+
+        assert!(run.rules().is_empty(), "{segment:?}: {}", run.printed);
+        assert!(
+            run.tree_text()
+                .contains(&format!(r#""Note":{{"type":"{want}"}}"#)),
+            "{segment:?}: {}",
+            run.tree_text()
+        );
+    }
+}

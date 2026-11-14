@@ -3,7 +3,9 @@
 
 use std::cell::Cell;
 
-use seampact_load::{LOAD_MAX_WORK, LoadReader, LoadText, MemoryReader};
+use seampact_load::{
+    LOAD_MAX_WORK, LoadOptions, LoadReader, LoadText, MemoryReader, load_workspace,
+};
 
 use crate::harness::{Options, expand, expand_on, owned};
 
@@ -373,4 +375,104 @@ fn the_text_limit_counts_utf16_units_not_characters() {
 
     assert_eq!(run.rules(), ["expansion-limit"]);
     assert!(run.diagnostics[0].message.contains("characters of text"));
+}
+
+/// Loads `entry` of a memory workspace: the merge of layers is the loader's, not the expander's.
+fn load_memory_workspace(files: Vec<(String, String)>, entry: &str) -> seampact_load::LoadOutput {
+    let reader = MemoryReader::new(files);
+
+    load_workspace(&LoadOptions {
+        reader: &reader,
+        entry,
+    })
+    .expect("no internal error")
+}
+
+fn rules_of(output: &seampact_load::LoadOutput) -> Vec<&str> {
+    output
+        .diagnostics
+        .iter()
+        .map(|diagnostic| {
+            diagnostic
+                .rule
+                .as_str()
+                .trim_start_matches("seampact/load/")
+        })
+        .collect()
+}
+
+#[test]
+fn many_apis_over_one_shared_layer_end_at_the_expansion_limit() {
+    let apis = 1_500;
+    let leaves = 8_000;
+    let mut workspace = String::from("workspace:\n  shared: ./shared.yaml\n  apis:\n");
+    let mut files: Vec<(String, String)> = Vec::new();
+
+    for index in 0..apis {
+        workspace.push_str(&format!("    a{index}: ./a{index}.yaml\n"));
+        files.push((
+            format!("a{index}.yaml"),
+            format!("api: {{ name: a{index} }}\n"),
+        ));
+    }
+
+    let shared: String = (0..leaves)
+        .map(|index| format!("  k{index}: 1\n"))
+        .collect();
+
+    files.push(("workspace.yaml".to_owned(), workspace));
+    files.push(("shared.yaml".to_owned(), format!("conventions:\n{shared}")));
+
+    let output = load_memory_workspace(files, "workspace.yaml");
+
+    assert_eq!(rules_of(&output), ["expansion-limit"]);
+    assert!(output.workspace.apis.len() < apis);
+}
+
+#[test]
+fn an_api_overriding_every_leaf_of_a_large_pack_merges_in_work_linear_in_its_size() {
+    // The load reports `expansion-limit` once it has spent LOAD_MAX_WORK units, a count and not a
+    // clock: a merge that re-walked the pack for each leaf would spend 30,000 squared units.
+    let count = 30_000;
+    let conventions = |value: u32| -> String {
+        (0..count)
+            .map(|index| format!("  k{index}: {value}\n"))
+            .collect()
+    };
+    let output = load_memory_workspace(
+        owned(&[
+            (
+                "api.yaml",
+                &format!(
+                    "api: {{ name: t }}\npacks: [./p.yaml]\nconventions:\n{}",
+                    conventions(2)
+                ),
+            ),
+            (
+                "p.yaml",
+                &format!(
+                    "pack: {{ name: p, version: 1.0.0 }}\nconventions:\n{}",
+                    conventions(1)
+                ),
+            ),
+        ]),
+        "api.yaml",
+    );
+
+    assert_eq!(rules_of(&output), Vec::<&str>::new());
+
+    let api = output.workspace.apis.first().expect("one api");
+    let origin = api
+        .leaf_origins
+        .get(&format!("/conventions/k{}", count - 1))
+        .expect("the last leaf has an origin");
+
+    assert_eq!(origin.layer.to_string(), "api");
+    let merged = serde_json::to_value(seampact_json::JsonValue::Object(api.merged.clone()))
+        .expect("a JSON tree");
+
+    assert_eq!(
+        merged.pointer("/conventions/k0"),
+        Some(&serde_json::json!(2))
+    );
 }

@@ -133,13 +133,28 @@ impl Expander<'_, '_> {
     }
 }
 
-/// The value of a JSON text, `Ok(None)` when it nests deeper than any use could admit (it is
-/// not parsed), or the parser's message.
+/// The value of a JSON text for a `$file` use, `Ok(None)` when it nests deeper than any use could
+/// admit (it is not parsed), or the parser's message.
+fn parse_json_text(text: &str) -> Result<Option<JsonValue>, String> {
+    let Some(parsed) = parse_json_document(text, MAX_PARSED_NESTING)? else {
+        return Ok(None);
+    };
+
+    JsonValue::try_from(parsed)
+        .map(Some)
+        .map_err(|error| error.to_string())
+}
+
+/// The value of a JSON text as the parser reads it (a number beyond `f64` stays a token),
+/// `Ok(None)` when it nests deeper than `max_nesting` (it is not parsed), or the parser's message.
 ///
 /// The nesting is scanned first so that the parser, whose own recursion limit is off, never
-/// meets more than [`MAX_PARSED_NESTING`] levels.
-fn parse_json_text(text: &str) -> Result<Option<JsonValue>, String> {
-    if bracket_depth_of(text) > MAX_PARSED_NESTING {
+/// meets more than `max_nesting` levels.
+pub(crate) fn parse_json_document(
+    text: &str,
+    max_nesting: usize,
+) -> Result<Option<serde_json::Value>, String> {
+    if bracket_depth_of(text) > max_nesting {
         return Ok(None);
     }
 
@@ -160,9 +175,7 @@ fn parse_json_text(text: &str) -> Result<Option<JsonValue>, String> {
         Some(Err(error)) => return Err(parser_message(&error)),
     }
 
-    JsonValue::try_from(first)
-        .map(Some)
-        .map_err(|error| error.to_string())
+    Ok(Some(first))
 }
 
 fn parser_message(error: &serde_json::Error) -> String {

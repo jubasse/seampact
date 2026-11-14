@@ -7,7 +7,6 @@
 //! already set.
 
 mod context;
-mod count;
 mod delta;
 mod derivations;
 mod draft;
