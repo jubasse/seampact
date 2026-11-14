@@ -25,3 +25,4 @@ pub use print::{
     diagnostic_sort, print_diagnostics,
 };
 pub use sink::DiagnosticSink;
+pub use text::{access_rights_quoted, quote, quote_text};
