@@ -1,0 +1,20 @@
+[package]
+name = "seampact-templates"
+description = "The seampact template reader of ADR 0002 section 13: a raw template read into the IR's template."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+seampact-diagnostics.workspace = true
+seampact-ir.workspace = true
+seampact-js.workspace = true
+seampact-json.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+
+[lints]
+workspace = true
