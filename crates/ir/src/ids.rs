@@ -2,26 +2,35 @@
 //!
 //! The id grammar is a diagnostic of the passes and a check of the schema, not a type error.
 
-use std::borrow::Borrow;
+use std::borrow::{Borrow, Cow};
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
-/// Writes each newtype over `String` with `new`, `as_str`, `Display`, `AsRef<str>` and
-/// `Borrow<str>`, so an IR map keyed by it is looked up with a `&str`.
+/// Writes each newtype over its text with `new`, `from_static`, `as_str`, `Display`, `AsRef<str>`
+/// and `Borrow<str>`, so an IR map keyed by it is looked up with a `&str`.
+///
+/// The text is a `Cow` so an id a stage declares, such as a derivation table id, is a constant
+/// that borrows its text; decoding always owns it.
 macro_rules! ir_ids {
     ($($(#[doc = $doc:literal])* $name:ident;)+) => {
         $(
             $(#[doc = $doc])*
             #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
             #[serde(transparent)]
-            pub struct $name(String);
+            pub struct $name(Cow<'static, str>);
 
             impl $name {
                 /// Wraps `text` as written; nothing is checked.
                 #[must_use]
                 pub fn new(text: String) -> Self {
-                    Self(text)
+                    Self(Cow::Owned(text))
+                }
+
+                /// An id a stage declares as a constant; nothing is checked.
+                #[must_use]
+                pub const fn from_static(text: &'static str) -> Self {
+                    Self(Cow::Borrowed(text))
                 }
 
                 /// The text as written.
@@ -109,4 +118,23 @@ ir_ids! {
     DecimalLiteral;
     /// The name of a pack, the part of `Origin.layer` after `pack:`.
     PackName;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const TABLE_DERIVATION: DerivationId = DerivationId::from_static("input.invalid");
+
+    #[test]
+    fn a_constant_id_equals_and_writes_as_the_same_id_built_at_run_time() {
+        let built = DerivationId::new("input.invalid".to_owned());
+
+        assert_eq!(TABLE_DERIVATION, built);
+        assert_eq!(TABLE_DERIVATION.as_str(), "input.invalid");
+        assert_eq!(
+            serde_json::to_string(&TABLE_DERIVATION).unwrap(),
+            serde_json::to_string(&built).unwrap()
+        );
+    }
 }
