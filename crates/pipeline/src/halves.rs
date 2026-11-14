@@ -98,6 +98,63 @@ impl Half {
     }
 }
 
+/// A half that runs after `tree.schemas` and reads the schema service it built.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum LaterHalf {
+    /// `tree.nodes`.
+    TreeNodes,
+    /// `access.identity`.
+    AccessIdentity,
+    /// `access.rights`.
+    AccessRights,
+    /// `derive.wire`.
+    DeriveWire,
+    /// `derive.errors`.
+    DeriveErrors,
+}
+
+impl LaterHalf {
+    /// The later halves in [`Half::RUN_ORDER`] order.
+    pub const RUN_ORDER: [Self; 5] = [
+        Self::TreeNodes,
+        Self::AccessIdentity,
+        Self::AccessRights,
+        Self::DeriveWire,
+        Self::DeriveErrors,
+    ];
+
+    /// The later half `half` is, or `None` for `tree.schemas`.
+    #[must_use]
+    pub const fn of(half: Half) -> Option<Self> {
+        match half {
+            Half::TreeSchemas => None,
+            Half::TreeNodes => Some(Self::TreeNodes),
+            Half::AccessIdentity => Some(Self::AccessIdentity),
+            Half::AccessRights => Some(Self::AccessRights),
+            Half::DeriveWire => Some(Self::DeriveWire),
+            Half::DeriveErrors => Some(Self::DeriveErrors),
+        }
+    }
+}
+
+impl From<LaterHalf> for Half {
+    fn from(half: LaterHalf) -> Self {
+        match half {
+            LaterHalf::TreeNodes => Self::TreeNodes,
+            LaterHalf::AccessIdentity => Self::AccessIdentity,
+            LaterHalf::AccessRights => Self::AccessRights,
+            LaterHalf::DeriveWire => Self::DeriveWire,
+            LaterHalf::DeriveErrors => Self::DeriveErrors,
+        }
+    }
+}
+
+impl fmt::Display for LaterHalf {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(Half::from(*self).as_str())
+    }
+}
+
 impl fmt::Display for Half {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str(self.as_str())
@@ -126,6 +183,20 @@ mod tests {
             assert_eq!(half.pass().as_str(), pass, "{half}");
             assert_eq!(Half::from_name(half.as_str()), Some(half));
         }
+    }
+
+    #[test]
+    fn the_later_halves_are_the_run_order_after_tree_schemas() {
+        let later: Vec<Half> = LaterHalf::RUN_ORDER.into_iter().map(Half::from).collect();
+        let back: Vec<Option<LaterHalf>> = Half::RUN_ORDER.into_iter().map(LaterHalf::of).collect();
+
+        assert_eq!(later, Half::RUN_ORDER.get(1..).unwrap());
+        assert_eq!(back.first(), Some(&None));
+        assert!(
+            LaterHalf::RUN_ORDER
+                .into_iter()
+                .all(|half| LaterHalf::of(half.into()) == Some(half))
+        );
     }
 
     #[test]

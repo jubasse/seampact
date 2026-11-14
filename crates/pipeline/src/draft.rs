@@ -22,6 +22,8 @@ use seampact_ir::{
 use seampact_json::{JsonValue, escape_pointer};
 use serde::{Deserialize, Serialize};
 
+use crate::OperationIndex;
+
 /// The request body of an operation in the draft: the members of later halves are optional.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -421,6 +423,11 @@ impl DraftIr {
             lint: None,
             operations: Vec::new(),
         }
+    }
+
+    /// The index of every operation, in `operations` order.
+    pub fn operation_indices(&self) -> impl Iterator<Item = OperationIndex> + use<> {
+        (0..self.operations.len()).map(OperationIndex::new)
     }
 
     /// The draft as the JSON value the draft fixtures and the expected deltas are written in.

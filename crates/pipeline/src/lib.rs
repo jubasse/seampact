@@ -10,6 +10,7 @@ mod context;
 mod delta;
 mod derivations;
 mod draft;
+mod error;
 mod halves;
 mod outputs;
 mod readers;
@@ -26,10 +27,11 @@ pub use derivations::{
 pub use draft::{
     ApiDeclaration, DraftApi, DraftConcurrency, DraftIr, DraftOperation, DraftOperationInput,
 };
-pub use halves::{Half, PassName};
+pub use error::PassError;
+pub use halves::{Half, LaterHalf, PassName};
 pub use outputs::{
     AccessIdentityOperation, AccessIdentityOutput, AccessRightsOperation, AccessRightsOutput,
-    DeriveErrorsOutput, DeriveWireOperation, DeriveWireOutput, ProofOnlyInput,
+    DeriveErrorsOutput, DeriveWireOperation, DeriveWireOutput, OperationIndex, ProofOnlyInput,
     ResponseHeaderAdditions, SortKeyRights, TreeNodesConcurrency, TreeNodesInput,
     TreeNodesOperation, TreeNodesOutput, TreeNodesPaging, TreeNodesSortKey, TreeSchemasMembers,
     TreeSchemasOutput,

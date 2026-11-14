@@ -10,6 +10,7 @@ mod derive_errors;
 mod derive_wire;
 mod element_owner;
 mod merge;
+mod operation_index;
 mod tree_nodes;
 mod tree_schemas;
 
@@ -17,6 +18,7 @@ pub use access_identity::{AccessIdentityOperation, AccessIdentityOutput};
 pub use access_rights::{AccessRightsOperation, AccessRightsOutput, ProofOnlyInput, SortKeyRights};
 pub use derive_errors::DeriveErrorsOutput;
 pub use derive_wire::{DeriveWireOperation, DeriveWireOutput, ResponseHeaderAdditions};
+pub use operation_index::OperationIndex;
 pub use tree_nodes::{
     TreeNodesConcurrency, TreeNodesInput, TreeNodesOperation, TreeNodesOutput, TreeNodesPaging,
     TreeNodesSortKey,
