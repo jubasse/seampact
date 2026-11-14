@@ -4,7 +4,8 @@ use seampact_ir::{ErrorRole, NatureBase, OPEN_ENUMS, ScalarType, TypeUse};
 use seampact_pipeline::{
     DERIVATION_TABLE, DatumRequired, DerivationRoles, Half, IssueLocation, PACK_DERIVATION_ROW,
     RoleDatum, derivation_datum_always, derivation_issue_members, derivation_param_of_datum,
-    derivation_role_of, derivation_roles, derivation_row_of, is_derivation_id,
+    derivation_params_schema_id, derivation_role_of, derivation_roles, derivation_row_of,
+    is_derivation_id,
 };
 
 use crate::support::repository_root;
@@ -385,4 +386,20 @@ fn the_rate_limit_delay_fills_the_param_the_convention_names() -> Outcome {
     ));
 
     Ok(())
+}
+
+#[test]
+fn the_params_schema_id_of_an_error_code_is_its_adr_0007_canonical_id() {
+    for (code, id) in [
+        ("api.rate_limited", "ApiRateLimitedParams"),
+        ("tasks.locked", "TasksLockedParams"),
+        ("1042", "_1042Params"),
+        ("", "Params"),
+    ] {
+        assert_eq!(
+            derivation_params_schema_id(code).unwrap().as_str(),
+            id,
+            "code {code:?}"
+        );
+    }
 }

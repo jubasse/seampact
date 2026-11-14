@@ -69,7 +69,7 @@ src/derivations/roles.rs#derivation_role_of	packages/core/compiler/src/derivatio
 src/derivations/roles.rs#fills_rate_limit_param	packages/core/compiler/src/derivations/roles.ts#fillsRateLimitParam
 src/derivations/roles.rs#derivation_param_of_datum	packages/core/compiler/src/derivations/roles.ts#derivationParamOfDatum
 src/derivations/roles.rs#derivation_datum_always	packages/core/compiler/src/derivations/roles.ts#derivationDatumAlways
--	packages/core/compiler/src/derivations/roles.ts#derivationParamsSchemaId	skip: deferred: it needs canonicalId and splitName of the naming module, which no Rust crate has yet
+src/derivations/roles.rs#derivation_params_schema_id	packages/core/compiler/src/derivations/roles.ts#derivationParamsSchemaId
 -	packages/core/compiler/src/derivations/freeze.ts#derivationFreeze	skip: the table and the roles are immutable static data, nothing freezes at run time
 -	packages/core/compiler/src/derivations/freeze.ts#derivationCopy	skip: a half clones the borrowed datum, and Clone gives a writable deep copy
 -	packages/core/compiler/src/pipeline/conventions.ts#isRecord	skip: a match on JsonValue::Object tells a record apart

@@ -7,7 +7,7 @@ mod table;
 pub use roles::{
     DatumRequired, DerivationRole, EMPTY_BODY_SCHEMA_ID, ISSUE_SCHEMA_ID, IssueLocation,
     IssueMember, RoleDatum, derivation_datum_always, derivation_issue_members,
-    derivation_param_of_datum, derivation_role_of, derivation_roles,
+    derivation_param_of_datum, derivation_params_schema_id, derivation_role_of, derivation_roles,
 };
 pub use table::{
     DERIVATION_TABLE, DerivationRoles, DerivationRow, PACK_DERIVATION_ROW, derivation_row_of,
