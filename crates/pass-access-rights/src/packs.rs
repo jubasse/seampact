@@ -1,0 +1,143 @@
+//! The rights a pack derives per route, and the entries that select them (ADR 0002 section 12).
+
+use seampact_ir::{Name, OperationScope, PackRef, Right, RightSubject};
+use seampact_json::{JsonObject, JsonValue};
+use seampact_pipeline::{PassError, TreeNodeId};
+
+use crate::catalogues::AccessRightsCatalogues;
+use crate::not_ported::not_ported_yet;
+use crate::report::AccessRightsReporter;
+use crate::restricted_fields::AccessRightsDraftSchemas;
+use crate::routes::{AccessRightsApi, AccessRightsRoute};
+use crate::schema_use::AccessRightsContext;
+
+/// One `derive` entry of a pack, with the pointer it is written at.
+#[derive(Debug, Clone)]
+pub(crate) struct AccessRightsDeriveEntry<'run> {
+    pub(crate) pointer: String,
+    pub(crate) entry: String,
+    pub(crate) derivation: String,
+    pub(crate) settings: &'run JsonObject,
+}
+
+/// What one derived right is built from.
+#[derive(Debug, Clone)]
+pub(crate) struct DerivedRightInput<'run, 'draft> {
+    pub(crate) entry: &'draft AccessRightsDeriveEntry<'run>,
+    pub(crate) route: &'draft AccessRightsRoute,
+    pub(crate) scopes: &'draft [OperationScope],
+    pub(crate) schemas: &'draft AccessRightsDraftSchemas,
+}
+
+/// What `derivedSubject` reads besides a [`DerivedRightInput`].
+#[derive(Debug, Clone)]
+pub(crate) struct DerivedSubjectInput<'run, 'draft> {
+    pub(crate) input: DerivedRightInput<'run, 'draft>,
+    pub(crate) declare_right: Option<&'run JsonValue>,
+    pub(crate) pointer: String,
+}
+
+/// A template text with the pointer it is written at.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct AccessRightsTemplate {
+    pub(crate) text: String,
+    pub(crate) pointer: String,
+}
+
+/// A derived right's subject with the schema name of its id, when it names one.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct AccessRightsDerivedSubject {
+    pub(crate) subject: RightSubject,
+    pub(crate) id_name: Option<String>,
+}
+
+/// What `checkSameSubject` compares: the derived subject with the right already declared.
+#[derive(Debug, Clone)]
+pub(crate) struct SameSubjectCheck<'derived> {
+    pub(crate) id: String,
+    pub(crate) present: &'derived Right,
+    pub(crate) derived: &'derived RightSubject,
+    pub(crate) pointer: String,
+    pub(crate) route: &'derived AccessRightsRoute,
+}
+
+/// What `resourceSubject` reads of the node a pack right is derived at.
+#[derive(Debug, Clone)]
+pub(crate) struct PackResourceInput<'draft> {
+    pub(crate) at: TreeNodeId,
+    pub(crate) schemas: &'draft AccessRightsDraftSchemas,
+    pub(crate) pointer: String,
+    pub(crate) route: &'draft AccessRightsRoute,
+}
+
+/// The layer prefix of a pack's origin.
+const PACK_LAYER: &str = "pack:";
+
+const RESOURCE_SLOT: &str = "{resource}";
+
+const OP_SLOT: &str = "{op}";
+
+pub(crate) fn access_rights_derive_entries<'run>(
+    _context: &AccessRightsContext<'_, '_, 'run>,
+    _packs: &[PackRef],
+) -> Result<Vec<AccessRightsDeriveEntry<'run>>, PassError> {
+    Err(not_ported_yet("accessRightsDeriveEntries"))
+}
+
+pub(crate) fn access_rights_selects(
+    _context: &AccessRightsContext,
+    _entry: &AccessRightsDeriveEntry<'_>,
+    _route: &AccessRightsRoute,
+    _api: &AccessRightsApi,
+) -> Result<bool, PassError> {
+    Err(not_ported_yet("accessRightsSelects"))
+}
+
+pub(crate) fn access_rights_expand(
+    _reporter: &mut AccessRightsReporter,
+    _template: &AccessRightsTemplate,
+    _route: &AccessRightsRoute,
+) -> Result<Option<String>, PassError> {
+    Err(not_ported_yet("accessRightsExpand"))
+}
+
+pub(crate) fn access_rights_declare_right(
+    _context: &AccessRightsContext,
+    _reporter: &mut AccessRightsReporter,
+    _catalogues: &mut AccessRightsCatalogues,
+    _input: &DerivedRightInput<'_, '_>,
+) -> Result<(), PassError> {
+    Err(not_ported_yet("accessRightsDeclareRight"))
+}
+
+pub(crate) fn check_same_subject(
+    _reporter: &mut AccessRightsReporter,
+    _options: &SameSubjectCheck<'_>,
+) -> Result<(), PassError> {
+    Err(not_ported_yet("checkSameSubject"))
+}
+
+pub(crate) fn derived_subject(
+    _context: &AccessRightsContext,
+    _reporter: &mut AccessRightsReporter,
+    _input: &DerivedSubjectInput<'_, '_>,
+) -> Result<Option<AccessRightsDerivedSubject>, PassError> {
+    Err(not_ported_yet("derivedSubject"))
+}
+
+pub(crate) fn resource_subject(
+    _context: &AccessRightsContext,
+    _reporter: &mut AccessRightsReporter,
+    _options: &PackResourceInput<'_>,
+) -> Result<Option<AccessRightsDerivedSubject>, PassError> {
+    Err(not_ported_yet("resourceSubject"))
+}
+
+pub(crate) fn item_name(
+    _context: &AccessRightsContext,
+    _schemas: &AccessRightsDraftSchemas,
+    _item: &JsonValue,
+    _pointer: &str,
+) -> Result<Name, PassError> {
+    Err(not_ported_yet("itemName"))
+}
