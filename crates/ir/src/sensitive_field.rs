@@ -302,6 +302,10 @@ pub fn sensitive_reach_text(reach: &IrSensitiveReach) -> String {
 }
 
 #[cfg(test)]
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "the fixture builders take the JSON they embed, which json! only borrows"
+)]
 mod tests {
     use serde_json::{Value, json};
 
