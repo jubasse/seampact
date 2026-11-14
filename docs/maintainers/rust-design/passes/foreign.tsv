@@ -1,0 +1,27 @@
+file	reached by (half pairs)
+finalize/canonical-order.ts	derive.errors 56
+passes/tree/nodes/field-wire.ts	access.rights 1
+passes/tree/nodes/limits.ts	derive.wire 41
+passes/tree/nodes/names.ts	tree.schemas 284, derive.wire 47, derive.errors 34
+passes/tree/nodes/raw.ts	tree.schemas 238, derive.errors 34
+passes/tree/nodes/relays.ts	derive.errors 14, tree.schemas 10
+passes/tree/schemas/decimal.ts	derive.errors 61, tree.nodes 4
+passes/tree/schemas/example-check.ts	derive.errors 64, access.rights 24, tree.nodes 7
+passes/tree/schemas/pass.ts	tree.nodes 153, access.rights 82, derive.errors 71, access.identity 106, derive.wire 8
+passes/tree/schemas/pattern.ts	derive.wire 18
+passes/tree/schemas/raw.ts	derive.errors 63, access.rights 24, tree.nodes 7
+spec:authoring/schemas.ts	tree.schemas 1, derive.wire 2
+spec:ir/calendar-date.ts	tree.nodes 18
+spec:ir/closed-declaration.ts	tree.schemas 16
+spec:ir/instance-walk.ts	tree.schemas 16
+spec:ir/schema-walk.ts	tree.schemas 16
+spec:ir/sensitive-field.ts	derive.wire 109, derive.errors 72
+spec:ir/type-use.ts	tree.nodes 13
+spec:json/canonical.ts	tree.schemas 72, access.identity 4, access.rights 39, tree.nodes 17, derive.errors 9
+spec:json/pointer.ts	tree.schemas 239, tree.nodes 229, access.identity 165, access.rights 119, derive.wire 111, derive.errors 109
+spec:naming/identifier.ts	tree.schemas 284, tree.nodes 184, derive.errors 109
+spec:naming/reserved.ts	tree.schemas 284, derive.errors 109
+spec:naming/roles.ts	tree.schemas 284, tree.nodes 184, derive.errors 109
+spec:naming/split.ts	tree.schemas 284, tree.nodes 229, derive.errors 109, access.rights 73
+templates/reader.ts	tree.nodes 166, derive.errors 66
+validate/diagnostics.ts	derive.errors 21, derive.wire 2, access.rights 1, tree.nodes 3, tree.schemas 1

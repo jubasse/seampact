@@ -24,6 +24,13 @@ interface TraceLine {
   disposition: string | undefined;
 }
 
+/** A function of a TypeScript file as the trace names it, with its 1-based line range. */
+export interface TypeScriptFunction {
+  name: string;
+  startLine: number;
+  endLine: number;
+}
+
 /**
  * The functions of a TypeScript file, as the trace names them: top-level function
  * declarations, top-level consts bound to an arrow or a function expression (also behind
@@ -32,8 +39,16 @@ interface TraceLine {
  * accessors and function-valued properties). Nested closures are not listed.
  */
 export function listTypeScriptFunctions(fileName: string, source: string): string[] {
+  return listTypeScriptFunctionRanges(fileName, source).map((found) => found.name);
+}
+
+/** The functions `listTypeScriptFunctions` names, each with the lines of its declaration. */
+export function listTypeScriptFunctionRanges(
+  fileName: string,
+  source: string,
+): TypeScriptFunction[] {
   const sourceFile = ts.createSourceFile(fileName, source, ts.ScriptTarget.Latest, false);
-  const names: string[] = [];
+  const found: NamedNode[] = [];
 
   for (const statement of sourceFile.statements) {
     // An overload signature has no body; the implementation is listed once.
@@ -42,37 +57,73 @@ export function listTypeScriptFunctions(fileName: string, source: string): strin
       statement.name !== undefined &&
       statement.body !== undefined
     ) {
-      names.push(statement.name.text);
+      found.push({ name: statement.name.text, node: statement });
     }
 
     if (ts.isVariableStatement(statement)) {
-      names.push(...functionConstNames(sourceFile, statement));
+      found.push(...functionConstNames(sourceFile, statement));
     }
 
     if (ts.isClassDeclaration(statement) && statement.name !== undefined) {
-      names.push(...classMethodNames(sourceFile, statement.name.text, statement));
+      found.push(...memberNames(sourceFile, statement.name.text, statement.members));
     }
   }
 
-  return names;
+  return mergeSameNames(sourceFile, found);
 }
 
-function functionConstNames(sourceFile: ts.SourceFile, statement: ts.VariableStatement): string[] {
-  const names: string[] = [];
+interface NamedNode {
+  name: string;
+  node: ts.Node;
+}
+
+// A get and a set accessor of one name are one function spanning both.
+function mergeSameNames(sourceFile: ts.SourceFile, found: NamedNode[]): TypeScriptFunction[] {
+  const byName = new Map<string, TypeScriptFunction>();
+
+  for (const { name, node } of found) {
+    const startLine = lineOf(sourceFile, node.getStart(sourceFile));
+    const endLine = lineOf(sourceFile, node.getEnd());
+    const known = byName.get(name);
+
+    byName.set(
+      name,
+      known === undefined
+        ? { name, startLine, endLine }
+        : {
+            name,
+            startLine: Math.min(known.startLine, startLine),
+            endLine: Math.max(known.endLine, endLine),
+          },
+    );
+  }
+
+  return [...byName.values()];
+}
+
+function lineOf(sourceFile: ts.SourceFile, position: number): number {
+  return sourceFile.getLineAndCharacterOfPosition(position).line + 1;
+}
+
+function functionConstNames(
+  sourceFile: ts.SourceFile,
+  statement: ts.VariableStatement,
+): NamedNode[] {
+  const found: NamedNode[] = [];
 
   for (const declaration of statement.declarationList.declarations) {
     if (!ts.isIdentifier(declaration.name) || declaration.initializer === undefined) continue;
 
     const initializer = unwrapExpression(declaration.initializer);
 
-    if (isFunctionValue(initializer)) names.push(declaration.name.text);
+    if (isFunctionValue(initializer)) found.push({ name: declaration.name.text, node: statement });
 
     if (ts.isObjectLiteralExpression(initializer)) {
-      names.push(...memberNames(sourceFile, declaration.name.text, initializer.properties));
+      found.push(...memberNames(sourceFile, declaration.name.text, initializer.properties));
     }
   }
 
-  return names;
+  return found;
 }
 
 function unwrapExpression(expression: ts.Expression): ts.Expression {
@@ -97,25 +148,17 @@ function isFunctionValue(expression: ts.Expression | undefined): boolean {
   return ts.isArrowFunction(unwrapped) || ts.isFunctionExpression(unwrapped);
 }
 
-function classMethodNames(
-  sourceFile: ts.SourceFile,
-  className: string,
-  declaration: ts.ClassDeclaration,
-): string[] {
-  return memberNames(sourceFile, className, declaration.members);
-}
-
-/** `Owner.member` for each member with a body or a function value; a get and a set count once. */
+/** `Owner.member` for each member with a body or a function value. */
 function memberNames(
   sourceFile: ts.SourceFile,
   owner: string,
   members: ts.NodeArray<ts.ClassElement | ts.ObjectLiteralElementLike>,
-): string[] {
-  const names = new Set<string>();
+): NamedNode[] {
+  const found: NamedNode[] = [];
 
   for (const member of members) {
     if (ts.isConstructorDeclaration(member)) {
-      if (member.body !== undefined) names.add(`${owner}.constructor`);
+      if (member.body !== undefined) found.push({ name: `${owner}.constructor`, node: member });
 
       continue;
     }
@@ -135,12 +178,13 @@ function memberNames(
 
     if (memberName === undefined) continue;
 
-    names.add(
-      `${owner}.${ts.isIdentifier(memberName) || ts.isPrivateIdentifier(memberName) ? memberName.text : memberName.getText(sourceFile)}`,
-    );
+    found.push({
+      name: `${owner}.${ts.isIdentifier(memberName) || ts.isPrivateIdentifier(memberName) ? memberName.text : memberName.getText(sourceFile)}`,
+      node: member,
+    });
   }
 
-  return [...names];
+  return found;
 }
 
 /** The problems of every `crates/<crate>/trace.tsv` and of `xtask/trace.tsv` under `root`. */
