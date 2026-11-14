@@ -6,26 +6,31 @@
     reason = "functions reached only by stubs until the half's last brief"
 )]
 
+mod api;
+mod collections;
+mod degradable;
+mod diagnostics;
+mod examples;
+mod field_wire;
+mod fields;
+mod formats;
+mod input;
+mod lifecycle;
+mod limits;
 mod not_ported;
+mod operations;
+mod paging;
+mod pagings;
+mod params;
+mod pass;
+mod paths;
+mod relays;
+mod responses;
+mod settings;
+mod templates;
+mod writes;
 
-use seampact_diagnostics::RuleId;
-use seampact_pipeline::{DraftIr, HalfContext, PassError, TreeNodesOutput, TreeSchemaService};
-
-use crate::not_ported::not_ported_yet;
-
-/// Every rule id the half reports, read by the oracle's rule id registry.
-pub const RULE_IDS: &[RuleId] = &[];
-
-/// Runs `tree.nodes` over the draft, reading schemas through the service `tree.schemas` built.
-///
-/// # Errors
-///
-/// [`PassError::NotPortedYet`] when the run reaches a function not ported yet, else
-/// [`PassError::Internal`] for a bug.
-pub fn run(
-    _draft: &DraftIr,
-    _context: &mut HalfContext<'_>,
-    _schemas: &dyn TreeSchemaService,
-) -> Result<TreeNodesOutput, PassError> {
-    Err(not_ported_yet("treeNodesPass.run"))
-}
+pub use diagnostics::RULE_IDS;
+pub use field_wire::tree_nodes_field_wire;
+pub use limits::{TreeNodesBodyLimit, TreeNodesBodyLimitContext, tree_nodes_body_limit};
+pub use pass::run;
