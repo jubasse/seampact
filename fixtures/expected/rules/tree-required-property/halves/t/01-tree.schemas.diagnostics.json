@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/required-property",
+    "message": "'title' stays required, but a default fills an absent property",
+    "fix": "leave it out of 'required'",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Required/properties/title"
+    },
+    "related": []
+  }
+]

@@ -1,0 +1,21 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/name-collision",
+    "message": "the schemas 'TaskId' and 'TaskID' give the same identifier",
+    "fix": "rename one of them",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/TaskId"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/schemas/TaskID"
+        },
+        "message": "'TaskID' is declared here"
+      }
+    ]
+  }
+]

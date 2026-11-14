@@ -1,0 +1,24 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/service/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "P"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/other/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "P"
+    }
+  }
+]

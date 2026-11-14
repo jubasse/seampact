@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/derived-field",
+    "message": "'missing' is no property of the source 'Article'",
+    "fix": "remove it from 'fields', or declare it on 'Article'",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Lacks/pick/fields/1"
+    },
+    "related": []
+  }
+]

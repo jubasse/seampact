@@ -1,0 +1,144 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/derive/error-unknown",
+    "message": "error code 'shop.absent' is attached here, but no layer or node declares it and it is no default code",
+    "fix": "declare 'shop.absent' with a status in 'errors', or attach a declared code",
+    "origin": {
+      "layer": "api",
+      "pointer": "/conventions/errors/every/0"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/derive/nature-base",
+    "message": "nature 'refused' is named like a base nature; the base natures are refused, unavailable, failed",
+    "fix": "rename the nature, or use the base nature 'refused' directly on the error",
+    "origin": {
+      "layer": "api",
+      "pointer": "/natures/refused"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/derive/error-pattern",
+    "message": "error code 'TASK_NOT_FOUND' does not match conventions.errors.pattern '^[a-z]+(\\.[a-z_]+)+$'",
+    "fix": "rename the code to match the pattern, or change the pattern",
+    "origin": {
+      "layer": "api",
+      "pointer": "/errors/TASK_NOT_FOUND"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/conventions/errors/pattern"
+        },
+        "message": "the pattern is set here"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/derive/error-pattern",
+    "message": "error code 'E1042' does not match conventions.errors.pattern '^[a-z]+(\\.[a-z_]+)+$'",
+    "fix": "rename the code to match the pattern, or change the pattern",
+    "origin": {
+      "layer": "api",
+      "pointer": "/errors/E1042"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/conventions/errors/pattern"
+        },
+        "message": "the pattern is set here"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/derive/error-pattern",
+    "message": "error code '404-gone' does not match conventions.errors.pattern '^[a-z]+(\\.[a-z_]+)+$'",
+    "fix": "rename the code to match the pattern, or change the pattern",
+    "origin": {
+      "layer": "api",
+      "pointer": "/errors/404-gone"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/conventions/errors/pattern"
+        },
+        "message": "the pattern is set here"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/derive/error-nature",
+    "message": "error 'shop.odd' has nature 'weird', which is neither a base nature nor a declared nature; the allowed values are refused, unavailable, failed",
+    "fix": "use a base nature or declare the nature in 'natures'",
+    "origin": {
+      "layer": "api",
+      "pointer": "/errors/shop.odd/nature"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/derive/error-example",
+    "message": "error 'shop.bare' has an example but no params for it to show",
+    "fix": "declare the params, or remove the example",
+    "origin": {
+      "layer": "api",
+      "pointer": "/errors/shop.bare/example"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/derive/error-example",
+    "message": "the example of error 'shop.counted' does not fit its params: 'many' is not a number",
+    "fix": "correct the example to fit the params",
+    "origin": {
+      "layer": "api",
+      "pointer": "/errors/shop.counted/example/count"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/derive/error-redefined",
+    "message": "error code 'shop.locked' is declared again with a different definition",
+    "fix": "attach the code with {} or { example } here, or give one of the two declarations another code",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/errors/shop.locked"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/errors/shop.locked"
+        },
+        "message": "'shop.locked' is first declared here"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/derive/error-unknown",
+    "message": "error code 'shop.missing' is attached here, but no layer or node declares it and it is no default code",
+    "fix": "declare 'shop.missing' with a status in 'errors', or attach a declared code",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/errors/shop.missing"
+    },
+    "related": []
+  }
+]

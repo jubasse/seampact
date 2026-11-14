@@ -1,0 +1,129 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/proof-name",
+    "message": "rule 'recentAuth' reads its proof 'token' from the body of route 'rename', whose input already has a field 'token'",
+    "fix": "rename the input's field, or give the proof another name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/rename/requires/0"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/rules/recentAuth/proof"
+        },
+        "message": "the proof is declared here"
+      },
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/schemas/Rename/properties/token"
+        },
+        "message": "the input's field is declared here"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/bucket-key",
+    "message": "bucket 'perName' counts body.name on route 'rename', whose input has no field 'name'",
+    "fix": "count a field the input declares, or require the bucket on a route whose input has it",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/rename/requires/1"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/buckets/perName/key/0"
+        },
+        "message": "the key is declared here"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/proof-name",
+    "message": "rules 'recentAuth' and 'pinned' read the body proof 'token' on route 'lock' with different schemas",
+    "fix": "give one of the proofs another name, or the same schema",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/lock/requires/1"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/rules/pinned/proof"
+        },
+        "message": "this proof is declared here"
+      },
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/lock/requires/0"
+        },
+        "message": "the first requirement reading that name"
+      },
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/rules/recentAuth/proof"
+        },
+        "message": "whose proof is declared here"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/proof-input",
+    "message": "rule 'recentAuth' reads its proof 'token' from the body of route 'peek', a get without input",
+    "fix": "read the proof in a header, or require the rule on a route with a body",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/peek/requires/0"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/rules/recentAuth/proof"
+        },
+        "message": "the proof is declared here"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/proof-input",
+    "message": "rule 'recentAuth' reads its proof 'token' from the body of route 'tag', whose input is no named object schema",
+    "fix": "make the route's input an object schema, or read the proof in a header",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/tag/requires/0"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/tag/input"
+        },
+        "message": "the route's input is declared here"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/signed-input",
+    "message": "route 'ping' runs under signed identity 'hook', whose signature covers the raw body, and has no input",
+    "fix": "declare `input`",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/hooks/routes/ping"
+    },
+    "related": []
+  }
+]

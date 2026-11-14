@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/upstream-service",
+    "message": "The upstream service ledger of up is not declared in services.",
+    "fix": "Declare ledger in services, or name a declared service.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/up/upstream/0"
+    },
+    "related": []
+  }
+]

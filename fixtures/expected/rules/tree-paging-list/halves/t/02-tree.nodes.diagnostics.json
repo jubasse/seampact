@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/paging-list",
+    "message": "The operation save writes paging, but it is no list.",
+    "fix": "Remove paging, or make the route a list (the list op, or item instead of output).",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/save/paging"
+    },
+    "related": []
+  }
+]

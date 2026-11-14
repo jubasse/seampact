@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-code-name",
+    "message": "'b' is not a value of the enum",
+    "fix": "give code names to the enum's values only",
+    "origin": {
+      "layer": "api",
+      "pointer": "/enums/Named/codeNames/b"
+    },
+    "related": []
+  }
+]

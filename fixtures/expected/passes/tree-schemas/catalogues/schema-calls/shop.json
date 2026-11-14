@@ -1,0 +1,92 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/orders/ops/list/query/limit?",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "integer",
+      "refinements": {
+        "minimum": "1"
+      }
+    }
+  },
+  {
+    "method": "queryWire",
+    "args": [
+      "/surfaces/app/routes/orders/ops/list/query/limit?"
+    ],
+    "answer": {
+      "kind": "number",
+      "style": "form",
+      "explode": true,
+      "brackets": false
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/orders/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Order"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/orders/ops/create/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "CreateOrder",
+      "unknownKeys": {
+        "policy": "refuse",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/orders/ops/create/input/unknownKeys"
+        }
+      }
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/orders/id/orderId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/orders/member/routes/reopen/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "OpenOrder"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/orders/member/routes/archive/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ArchiveOrderOutput"
+    }
+  }
+]

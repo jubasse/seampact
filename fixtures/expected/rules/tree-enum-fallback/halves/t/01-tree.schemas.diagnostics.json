@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-fallback",
+    "message": "the fallback 'b' is not a value of the enum",
+    "fix": "name one of [a]",
+    "origin": {
+      "layer": "api",
+      "pointer": "/enums/Fallback/fallback"
+    },
+    "related": []
+  }
+]

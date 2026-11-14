@@ -1,0 +1,25 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/tags/id/noteId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/tags/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Note"
+    }
+  }
+]

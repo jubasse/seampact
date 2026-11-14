@@ -1,0 +1,39 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/service/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ServicePrincipal"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rights/callerService/params",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "CallerServiceParams"
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "allowed": [
+          "catalog"
+        ]
+      },
+      {
+        "kind": "ref",
+        "schema": "CallerServiceParams"
+      }
+    ],
+    "answer": []
+  }
+]

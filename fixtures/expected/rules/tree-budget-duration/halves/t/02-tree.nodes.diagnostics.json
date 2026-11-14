@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/budget-duration",
+    "message": "The budget 99999999999999999999d of slow is too long to hold in milliseconds.",
+    "fix": "Write a shorter budget.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/slow/budget"
+    },
+    "related": []
+  }
+]

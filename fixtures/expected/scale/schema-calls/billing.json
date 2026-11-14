@@ -1,0 +1,4040 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Account"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/id/accountId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/invoices/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Invoice"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/invoices/ops/create/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "CreateInvoice"
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "name": "Sample invoice",
+        "state": "north",
+        "kind": "low"
+      },
+      {
+        "kind": "ref",
+        "schema": "CreateInvoice"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/invoices/id/invoiceId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/invoices/ops/update/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "UpdateInvoice"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/invoices/member/routes/send/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "SendInvoiceInput"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/invoices/member/routes/send/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Invoice"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/payments/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Payment"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/payments/ops/create/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "CreatePayment"
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "name": "Sample payment",
+        "state": "draft",
+        "kind": "private"
+      },
+      {
+        "kind": "ref",
+        "schema": "CreatePayment"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/payments/id/paymentId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/payments/ops/update/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "UpdatePayment"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/payments/member/routes/capture/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "CapturePaymentInput"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/payments/member/routes/capture/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Payment"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/refunds/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Refund"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/refunds/ops/create/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "CreateRefund"
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "name": "Sample refund",
+        "state": "poor",
+        "kind": "new"
+      },
+      {
+        "kind": "ref",
+        "schema": "CreateRefund"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/refunds/id/refundId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/refunds/ops/update/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "UpdateRefund"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/refunds/member/routes/approve/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ApproveRefundInput"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/refunds/member/routes/approve/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Refund"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/taxRates/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TaxRate"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/taxRates/ops/create/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "CreateTaxRate"
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "name": "Sample taxRate",
+        "state": "low",
+        "kind": "eur"
+      },
+      {
+        "kind": "ref",
+        "schema": "CreateTaxRate"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/taxRates/id/taxRateId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/taxRates/ops/update/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "UpdateTaxRate"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/taxRates/member/routes/publish/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "PublishTaxRateInput"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/taxRates/member/routes/publish/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TaxRate"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/customers/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Customer"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/customers/ops/create/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "CreateCustomer"
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "name": "Sample customer",
+        "state": "private",
+        "kind": "piece"
+      },
+      {
+        "kind": "ref",
+        "schema": "CreateCustomer"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/customers/id/customerId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/customers/ops/update/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "UpdateCustomer"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/customers/member/routes/cancel/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "CancelCustomerInput"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/customers/member/routes/cancel/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Customer"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/subscriptions/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Subscription"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/subscriptions/ops/create/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "CreateSubscription"
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "name": "Sample subscription",
+        "state": "new",
+        "kind": "domestic"
+      },
+      {
+        "kind": "ref",
+        "schema": "CreateSubscription"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/subscriptions/id/subscriptionId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/subscriptions/ops/update/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "UpdateSubscription"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/subscriptions/member/routes/apply/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ApplySubscriptionInput"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/subscriptions/member/routes/apply/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Subscription"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/plans/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Plan"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/plans/ops/create/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "CreatePlan"
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "name": "Sample plan",
+        "state": "eur",
+        "kind": "a"
+      },
+      {
+        "kind": "ref",
+        "schema": "CreatePlan"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/plans/id/planId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/plans/ops/update/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "UpdatePlan"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/plans/member/routes/close/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ClosePlanInput"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/plans/member/routes/close/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Plan"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/coupons/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Coupon"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/coupons/ops/create/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "CreateCoupon"
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "name": "Sample coupon",
+        "state": "piece",
+        "kind": "north"
+      },
+      {
+        "kind": "ref",
+        "schema": "CreateCoupon"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/coupons/id/couponId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/coupons/ops/update/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "UpdateCoupon"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/creditNotes/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "CreditNote"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/creditNotes/ops/create/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "CreateCreditNote"
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "name": "Sample creditNote",
+        "state": "domestic",
+        "kind": "draft"
+      },
+      {
+        "kind": "ref",
+        "schema": "CreateCreditNote"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/creditNotes/id/creditNoteId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/creditNotes/ops/update/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "UpdateCreditNote"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/payouts/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Payout"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/payouts/ops/create/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "CreatePayout"
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "name": "Sample payout",
+        "state": "a",
+        "kind": "poor"
+      },
+      {
+        "kind": "ref",
+        "schema": "CreatePayout"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/payouts/id/payoutId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/payouts/ops/update/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "UpdatePayout"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/disputes/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Dispute"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/disputes/ops/create/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "CreateDispute"
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "name": "Sample dispute",
+        "state": "north",
+        "kind": "low"
+      },
+      {
+        "kind": "ref",
+        "schema": "CreateDispute"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/disputes/id/disputeId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/disputes/ops/update/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "UpdateDispute"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/priceLists/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "PriceList"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/priceLists/ops/create/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "CreatePriceList"
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "name": "Sample priceList",
+        "state": "draft",
+        "kind": "private"
+      },
+      {
+        "kind": "ref",
+        "schema": "CreatePriceList"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/priceLists/id/priceListId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/priceLists/ops/update/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "UpdatePriceList"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/ledgerEntries/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "LedgerEntry"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/ledgerEntries/ops/create/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "CreateLedgerEntry"
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "name": "Sample ledgerEntry",
+        "state": "poor",
+        "kind": "new"
+      },
+      {
+        "kind": "ref",
+        "schema": "CreateLedgerEntry"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/ledgerEntries/id/ledgerEntryId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/ledgerEntries/ops/update/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "UpdateLedgerEntry"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/statements/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Statement"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/statements/ops/create/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "CreateStatement"
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "name": "Sample statement",
+        "state": "low",
+        "kind": "eur"
+      },
+      {
+        "kind": "ref",
+        "schema": "CreateStatement"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/statements/id/statementId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/statements/ops/update/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "UpdateStatement"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/receipts/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Receipt"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/receipts/ops/create/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "CreateReceipt"
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "name": "Sample receipt",
+        "state": "private",
+        "kind": "piece"
+      },
+      {
+        "kind": "ref",
+        "schema": "CreateReceipt"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/receipts/id/receiptId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/receipts/ops/update/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "UpdateReceipt"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/reminders/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Reminder"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/reminders/ops/create/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "CreateReminder"
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "name": "Sample reminder",
+        "state": "new",
+        "kind": "domestic"
+      },
+      {
+        "kind": "ref",
+        "schema": "CreateReminder"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/reminders/id/reminderId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/accounts/member/routes/reminders/ops/update/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "UpdateReminder"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/hooks/routes/stripeEvents/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "PaymentEvent"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/user/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "UserPrincipal"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/service/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ServicePrincipal"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/service/headers/actorSurface/schema",
+      "input"
+    ],
+    "answer": {
+      "kind": "enum",
+      "enum": "Surface"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/partner/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "PartnerPrincipal"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/webhook/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "WebhookCaller"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rights/roles/params",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "RolesParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/scopes/account/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "allowed": [
+          "owner",
+          "editor"
+        ]
+      },
+      {
+        "kind": "ref",
+        "schema": "RolesParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/api.schema_invalid/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ApiSchemaInvalidParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/api.rate_limited/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ApiRateLimitedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/api.quota_exhausted/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ApiQuotaExhaustedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/api.maintenance_window/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ApiMaintenanceWindowParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/api.region_unavailable/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ApiRegionUnavailableParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/api.client_outdated/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ApiClientOutdatedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/api.feature_disabled/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ApiFeatureDisabledParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/api.tenant_suspended/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ApiTenantSuspendedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/api.header_missing/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ApiHeaderMissingParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/api.clock_skew/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ApiClockSkewParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/api.filter_too_wide/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ApiFilterTooWideParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/api.locale_unsupported/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ApiLocaleUnsupportedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/stock.missing/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "StockMissingParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/stock.locked/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "StockLockedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/stock.expired/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "StockExpiredParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/stock.duplicated/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "StockDuplicatedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/stock.limited/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "StockLimitedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/stock.mismatched/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "StockMismatchedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/stock.unavailable/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "StockUnavailableParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/stock.suspended/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "StockSuspendedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/stock.rejected/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "StockRejectedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/stock.outdated/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "StockOutdatedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/shelf.missing/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ShelfMissingParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/shelf.locked/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ShelfLockedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/shelf.expired/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ShelfExpiredParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/shelf.duplicated/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ShelfDuplicatedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/shelf.limited/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ShelfLimitedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/shelf.mismatched/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ShelfMismatchedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/shelf.unavailable/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ShelfUnavailableParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/shelf.suspended/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ShelfSuspendedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/shelf.rejected/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ShelfRejectedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/shelf.outdated/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ShelfOutdatedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/supplier.missing/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "SupplierMissingParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/supplier.locked/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "SupplierLockedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/supplier.expired/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "SupplierExpiredParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/supplier.duplicated/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "SupplierDuplicatedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/supplier.limited/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "SupplierLimitedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/supplier.mismatched/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "SupplierMismatchedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/supplier.unavailable/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "SupplierUnavailableParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/supplier.suspended/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "SupplierSuspendedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/supplier.rejected/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "SupplierRejectedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/supplier.outdated/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "SupplierOutdatedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/transfer.missing/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TransferMissingParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/transfer.locked/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TransferLockedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/transfer.expired/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TransferExpiredParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/transfer.duplicated/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TransferDuplicatedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/transfer.limited/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TransferLimitedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/transfer.mismatched/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TransferMismatchedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/transfer.unavailable/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TransferUnavailableParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/transfer.suspended/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TransferSuspendedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/transfer.rejected/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TransferRejectedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/transfer.outdated/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TransferOutdatedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/invoice.missing/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "InvoiceMissingParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/invoice.locked/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "InvoiceLockedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/invoice.expired/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "InvoiceExpiredParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/invoice.duplicated/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "InvoiceDuplicatedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/invoice.limited/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "InvoiceLimitedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/invoice.mismatched/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "InvoiceMismatchedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/invoice.unavailable/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "InvoiceUnavailableParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/invoice.suspended/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "InvoiceSuspendedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/invoice.rejected/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "InvoiceRejectedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/invoice.outdated/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "InvoiceOutdatedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/payment.missing/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "PaymentMissingParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/payment.locked/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "PaymentLockedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/payment.expired/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "PaymentExpiredParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/payment.duplicated/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "PaymentDuplicatedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/payment.limited/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "PaymentLimitedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/payment.mismatched/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "PaymentMismatchedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/payment.unavailable/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "PaymentUnavailableParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/payment.suspended/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "PaymentSuspendedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/payment.rejected/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "PaymentRejectedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/payment.outdated/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "PaymentOutdatedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/refund.missing/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "RefundMissingParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/refund.locked/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "RefundLockedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/refund.expired/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "RefundExpiredParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/refund.duplicated/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "RefundDuplicatedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/refund.limited/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "RefundLimitedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/refund.mismatched/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "RefundMismatchedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/refund.unavailable/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "RefundUnavailableParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/refund.suspended/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "RefundSuspendedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/refund.rejected/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "RefundRejectedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/refund.outdated/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "RefundOutdatedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/tax.missing/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TaxMissingParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/tax.locked/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TaxLockedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/tax.expired/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TaxExpiredParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/tax.duplicated/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TaxDuplicatedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/tax.limited/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TaxLimitedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/tax.mismatched/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TaxMismatchedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/tax.unavailable/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TaxUnavailableParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/tax.suspended/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TaxSuspendedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/tax.rejected/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TaxRejectedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/tax.outdated/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TaxOutdatedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/template.missing/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TemplateMissingParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/template.locked/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TemplateLockedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/template.expired/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TemplateExpiredParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/template.duplicated/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TemplateDuplicatedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/template.limited/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TemplateLimitedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/template.mismatched/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TemplateMismatchedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/template.unavailable/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TemplateUnavailableParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/template.suspended/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TemplateSuspendedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/template.rejected/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TemplateRejectedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/template.outdated/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TemplateOutdatedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/delivery.missing/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "DeliveryMissingParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/delivery.locked/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "DeliveryLockedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/delivery.expired/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "DeliveryExpiredParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/delivery.duplicated/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "DeliveryDuplicatedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/delivery.limited/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "DeliveryLimitedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/delivery.mismatched/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "DeliveryMismatchedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/delivery.unavailable/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "DeliveryUnavailableParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/delivery.suspended/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "DeliverySuspendedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/delivery.rejected/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "DeliveryRejectedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/delivery.outdated/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "DeliveryOutdatedParams"
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "issues": [
+          {
+            "pointer": "/name",
+            "rule": "minLength"
+          }
+        ]
+      },
+      {
+        "kind": "ref",
+        "schema": "ApiSchemaInvalidParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "retryAfterMs": 1500
+      },
+      {
+        "kind": "ref",
+        "schema": "ApiRateLimitedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "target": "sample"
+      },
+      {
+        "kind": "ref",
+        "schema": "ApiQuotaExhaustedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "lockedBy": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      {
+        "kind": "ref",
+        "schema": "ApiMaintenanceWindowParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "expiredAt": "2027-01-15T09:30:00Z"
+      },
+      {
+        "kind": "ref",
+        "schema": "ApiRegionUnavailableParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "existingId": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      {
+        "kind": "ref",
+        "schema": "ApiClientOutdatedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "limit": 100
+      },
+      {
+        "kind": "ref",
+        "schema": "ApiFeatureDisabledParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "field": "name"
+      },
+      {
+        "kind": "ref",
+        "schema": "ApiTenantSuspendedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "waitMs": 2000
+      },
+      {
+        "kind": "ref",
+        "schema": "ApiHeaderMissingParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "reason": "Held for review."
+      },
+      {
+        "kind": "ref",
+        "schema": "ApiClockSkewParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "issues": [
+          {
+            "pointer": "/name",
+            "rule": "minLength"
+          }
+        ]
+      },
+      {
+        "kind": "ref",
+        "schema": "ApiFilterTooWideParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "currentVersion": 3
+      },
+      {
+        "kind": "ref",
+        "schema": "ApiLocaleUnsupportedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "target": "sample"
+      },
+      {
+        "kind": "ref",
+        "schema": "StockMissingParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "lockedBy": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      {
+        "kind": "ref",
+        "schema": "StockLockedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "expiredAt": "2027-01-15T09:30:00Z"
+      },
+      {
+        "kind": "ref",
+        "schema": "StockExpiredParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "existingId": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      {
+        "kind": "ref",
+        "schema": "StockDuplicatedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "limit": 100
+      },
+      {
+        "kind": "ref",
+        "schema": "StockLimitedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "field": "name"
+      },
+      {
+        "kind": "ref",
+        "schema": "StockMismatchedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "waitMs": 2000
+      },
+      {
+        "kind": "ref",
+        "schema": "StockUnavailableParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "reason": "Held for review."
+      },
+      {
+        "kind": "ref",
+        "schema": "StockSuspendedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "issues": [
+          {
+            "pointer": "/name",
+            "rule": "minLength"
+          }
+        ]
+      },
+      {
+        "kind": "ref",
+        "schema": "StockRejectedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "currentVersion": 3
+      },
+      {
+        "kind": "ref",
+        "schema": "StockOutdatedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "target": "sample"
+      },
+      {
+        "kind": "ref",
+        "schema": "ShelfMissingParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "lockedBy": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      {
+        "kind": "ref",
+        "schema": "ShelfLockedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "expiredAt": "2027-01-15T09:30:00Z"
+      },
+      {
+        "kind": "ref",
+        "schema": "ShelfExpiredParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "existingId": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      {
+        "kind": "ref",
+        "schema": "ShelfDuplicatedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "limit": 100
+      },
+      {
+        "kind": "ref",
+        "schema": "ShelfLimitedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "field": "name"
+      },
+      {
+        "kind": "ref",
+        "schema": "ShelfMismatchedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "waitMs": 2000
+      },
+      {
+        "kind": "ref",
+        "schema": "ShelfUnavailableParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "reason": "Held for review."
+      },
+      {
+        "kind": "ref",
+        "schema": "ShelfSuspendedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "issues": [
+          {
+            "pointer": "/name",
+            "rule": "minLength"
+          }
+        ]
+      },
+      {
+        "kind": "ref",
+        "schema": "ShelfRejectedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "currentVersion": 3
+      },
+      {
+        "kind": "ref",
+        "schema": "ShelfOutdatedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "target": "sample"
+      },
+      {
+        "kind": "ref",
+        "schema": "SupplierMissingParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "lockedBy": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      {
+        "kind": "ref",
+        "schema": "SupplierLockedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "expiredAt": "2027-01-15T09:30:00Z"
+      },
+      {
+        "kind": "ref",
+        "schema": "SupplierExpiredParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "existingId": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      {
+        "kind": "ref",
+        "schema": "SupplierDuplicatedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "limit": 100
+      },
+      {
+        "kind": "ref",
+        "schema": "SupplierLimitedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "field": "name"
+      },
+      {
+        "kind": "ref",
+        "schema": "SupplierMismatchedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "waitMs": 2000
+      },
+      {
+        "kind": "ref",
+        "schema": "SupplierUnavailableParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "reason": "Held for review."
+      },
+      {
+        "kind": "ref",
+        "schema": "SupplierSuspendedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "issues": [
+          {
+            "pointer": "/name",
+            "rule": "minLength"
+          }
+        ]
+      },
+      {
+        "kind": "ref",
+        "schema": "SupplierRejectedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "currentVersion": 3
+      },
+      {
+        "kind": "ref",
+        "schema": "SupplierOutdatedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "target": "sample"
+      },
+      {
+        "kind": "ref",
+        "schema": "TransferMissingParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "lockedBy": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      {
+        "kind": "ref",
+        "schema": "TransferLockedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "expiredAt": "2027-01-15T09:30:00Z"
+      },
+      {
+        "kind": "ref",
+        "schema": "TransferExpiredParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "existingId": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      {
+        "kind": "ref",
+        "schema": "TransferDuplicatedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "limit": 100
+      },
+      {
+        "kind": "ref",
+        "schema": "TransferLimitedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "field": "name"
+      },
+      {
+        "kind": "ref",
+        "schema": "TransferMismatchedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "waitMs": 2000
+      },
+      {
+        "kind": "ref",
+        "schema": "TransferUnavailableParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "reason": "Held for review."
+      },
+      {
+        "kind": "ref",
+        "schema": "TransferSuspendedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "issues": [
+          {
+            "pointer": "/name",
+            "rule": "minLength"
+          }
+        ]
+      },
+      {
+        "kind": "ref",
+        "schema": "TransferRejectedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "currentVersion": 3
+      },
+      {
+        "kind": "ref",
+        "schema": "TransferOutdatedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "target": "sample"
+      },
+      {
+        "kind": "ref",
+        "schema": "InvoiceMissingParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "lockedBy": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      {
+        "kind": "ref",
+        "schema": "InvoiceLockedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "expiredAt": "2027-01-15T09:30:00Z"
+      },
+      {
+        "kind": "ref",
+        "schema": "InvoiceExpiredParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "existingId": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      {
+        "kind": "ref",
+        "schema": "InvoiceDuplicatedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "limit": 100
+      },
+      {
+        "kind": "ref",
+        "schema": "InvoiceLimitedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "field": "name"
+      },
+      {
+        "kind": "ref",
+        "schema": "InvoiceMismatchedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "waitMs": 2000
+      },
+      {
+        "kind": "ref",
+        "schema": "InvoiceUnavailableParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "reason": "Held for review."
+      },
+      {
+        "kind": "ref",
+        "schema": "InvoiceSuspendedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "issues": [
+          {
+            "pointer": "/name",
+            "rule": "minLength"
+          }
+        ]
+      },
+      {
+        "kind": "ref",
+        "schema": "InvoiceRejectedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "currentVersion": 3
+      },
+      {
+        "kind": "ref",
+        "schema": "InvoiceOutdatedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "target": "sample"
+      },
+      {
+        "kind": "ref",
+        "schema": "PaymentMissingParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "lockedBy": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      {
+        "kind": "ref",
+        "schema": "PaymentLockedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "expiredAt": "2027-01-15T09:30:00Z"
+      },
+      {
+        "kind": "ref",
+        "schema": "PaymentExpiredParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "existingId": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      {
+        "kind": "ref",
+        "schema": "PaymentDuplicatedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "limit": 100
+      },
+      {
+        "kind": "ref",
+        "schema": "PaymentLimitedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "field": "name"
+      },
+      {
+        "kind": "ref",
+        "schema": "PaymentMismatchedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "waitMs": 2000
+      },
+      {
+        "kind": "ref",
+        "schema": "PaymentUnavailableParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "reason": "Held for review."
+      },
+      {
+        "kind": "ref",
+        "schema": "PaymentSuspendedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "issues": [
+          {
+            "pointer": "/name",
+            "rule": "minLength"
+          }
+        ]
+      },
+      {
+        "kind": "ref",
+        "schema": "PaymentRejectedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "currentVersion": 3
+      },
+      {
+        "kind": "ref",
+        "schema": "PaymentOutdatedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "target": "sample"
+      },
+      {
+        "kind": "ref",
+        "schema": "RefundMissingParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "lockedBy": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      {
+        "kind": "ref",
+        "schema": "RefundLockedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "expiredAt": "2027-01-15T09:30:00Z"
+      },
+      {
+        "kind": "ref",
+        "schema": "RefundExpiredParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "existingId": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      {
+        "kind": "ref",
+        "schema": "RefundDuplicatedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "limit": 100
+      },
+      {
+        "kind": "ref",
+        "schema": "RefundLimitedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "field": "name"
+      },
+      {
+        "kind": "ref",
+        "schema": "RefundMismatchedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "waitMs": 2000
+      },
+      {
+        "kind": "ref",
+        "schema": "RefundUnavailableParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "reason": "Held for review."
+      },
+      {
+        "kind": "ref",
+        "schema": "RefundSuspendedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "issues": [
+          {
+            "pointer": "/name",
+            "rule": "minLength"
+          }
+        ]
+      },
+      {
+        "kind": "ref",
+        "schema": "RefundRejectedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "currentVersion": 3
+      },
+      {
+        "kind": "ref",
+        "schema": "RefundOutdatedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "target": "sample"
+      },
+      {
+        "kind": "ref",
+        "schema": "TaxMissingParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "lockedBy": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      {
+        "kind": "ref",
+        "schema": "TaxLockedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "expiredAt": "2027-01-15T09:30:00Z"
+      },
+      {
+        "kind": "ref",
+        "schema": "TaxExpiredParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "existingId": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      {
+        "kind": "ref",
+        "schema": "TaxDuplicatedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "limit": 100
+      },
+      {
+        "kind": "ref",
+        "schema": "TaxLimitedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "field": "name"
+      },
+      {
+        "kind": "ref",
+        "schema": "TaxMismatchedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "waitMs": 2000
+      },
+      {
+        "kind": "ref",
+        "schema": "TaxUnavailableParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "reason": "Held for review."
+      },
+      {
+        "kind": "ref",
+        "schema": "TaxSuspendedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "issues": [
+          {
+            "pointer": "/name",
+            "rule": "minLength"
+          }
+        ]
+      },
+      {
+        "kind": "ref",
+        "schema": "TaxRejectedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "currentVersion": 3
+      },
+      {
+        "kind": "ref",
+        "schema": "TaxOutdatedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "target": "sample"
+      },
+      {
+        "kind": "ref",
+        "schema": "TemplateMissingParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "lockedBy": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      {
+        "kind": "ref",
+        "schema": "TemplateLockedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "expiredAt": "2027-01-15T09:30:00Z"
+      },
+      {
+        "kind": "ref",
+        "schema": "TemplateExpiredParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "existingId": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      {
+        "kind": "ref",
+        "schema": "TemplateDuplicatedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "limit": 100
+      },
+      {
+        "kind": "ref",
+        "schema": "TemplateLimitedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "field": "name"
+      },
+      {
+        "kind": "ref",
+        "schema": "TemplateMismatchedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "waitMs": 2000
+      },
+      {
+        "kind": "ref",
+        "schema": "TemplateUnavailableParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "reason": "Held for review."
+      },
+      {
+        "kind": "ref",
+        "schema": "TemplateSuspendedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "issues": [
+          {
+            "pointer": "/name",
+            "rule": "minLength"
+          }
+        ]
+      },
+      {
+        "kind": "ref",
+        "schema": "TemplateRejectedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "currentVersion": 3
+      },
+      {
+        "kind": "ref",
+        "schema": "TemplateOutdatedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "target": "sample"
+      },
+      {
+        "kind": "ref",
+        "schema": "DeliveryMissingParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "lockedBy": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      {
+        "kind": "ref",
+        "schema": "DeliveryLockedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "expiredAt": "2027-01-15T09:30:00Z"
+      },
+      {
+        "kind": "ref",
+        "schema": "DeliveryExpiredParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "existingId": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      {
+        "kind": "ref",
+        "schema": "DeliveryDuplicatedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "limit": 100
+      },
+      {
+        "kind": "ref",
+        "schema": "DeliveryLimitedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "field": "name"
+      },
+      {
+        "kind": "ref",
+        "schema": "DeliveryMismatchedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "waitMs": 2000
+      },
+      {
+        "kind": "ref",
+        "schema": "DeliveryUnavailableParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "reason": "Held for review."
+      },
+      {
+        "kind": "ref",
+        "schema": "DeliverySuspendedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "issues": [
+          {
+            "pointer": "/name",
+            "rule": "minLength"
+          }
+        ]
+      },
+      {
+        "kind": "ref",
+        "schema": "DeliveryRejectedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "currentVersion": 3
+      },
+      {
+        "kind": "ref",
+        "schema": "DeliveryOutdatedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      "0",
+      {
+        "kind": "scalar",
+        "type": "string",
+        "format": "decimal",
+        "refinements": {
+          "minimum": "0"
+        }
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      "9007199254740991",
+      {
+        "kind": "scalar",
+        "type": "string",
+        "format": "decimal",
+        "refinements": {
+          "maximum": "9007199254740991"
+        }
+      }
+    ],
+    "answer": []
+  }
+]

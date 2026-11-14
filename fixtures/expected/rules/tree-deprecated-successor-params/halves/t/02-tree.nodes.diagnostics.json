@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/deprecated-successor-params",
+    "message": "The successor getKeyed of unkeyed has the path param key, which unkeyed has not.",
+    "fix": "Name a successor whose path params are path params of unkeyed, of the same type.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/unkeyed/deprecated/successor"
+    },
+    "related": []
+  }
+]

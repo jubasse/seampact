@@ -1,0 +1,213 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/notes/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Note"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/drafts/id/draftId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/raw/query/payload",
+      "input"
+    ],
+    "answer": {
+      "kind": "opaque",
+      "reason": "Vendor JSON.",
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/raw/query/payload"
+      }
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/batch/query/payloads",
+      "input"
+    ],
+    "answer": {
+      "kind": "array",
+      "items": {
+        "kind": "opaque",
+        "reason": "Vendor JSON.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/batch/query/payloads/items"
+        }
+      }
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/attached/headers/X-File",
+      "input"
+    ],
+    "answer": {
+      "kind": "file",
+      "media": []
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/shadowed/pathParams/itemId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/shadowed/query/itemId?",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/shadowed/query/tags?",
+      "input"
+    ],
+    "answer": {
+      "kind": "array",
+      "items": {
+        "kind": "scalar",
+        "type": "string",
+        "refinements": {}
+      }
+    }
+  },
+  {
+    "method": "queryWire",
+    "args": [
+      "/surfaces/app/routes/shadowed/query/itemId?"
+    ],
+    "answer": {
+      "kind": "text",
+      "style": "form",
+      "explode": true,
+      "brackets": false
+    }
+  },
+  {
+    "method": "queryWire",
+    "args": [
+      "/surfaces/app/routes/shadowed/query/tags?"
+    ],
+    "answer": {
+      "kind": "list",
+      "style": "form",
+      "explode": true,
+      "brackets": false
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/both/responses/200/body",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Note"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/emptied/responses/204/body",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Note"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/listed/query",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/twice/headers/X-A",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/twice/headers/x-a",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/hook/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "GithubEvent"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/hook/headers/X-GitHub-Event",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  }
+]

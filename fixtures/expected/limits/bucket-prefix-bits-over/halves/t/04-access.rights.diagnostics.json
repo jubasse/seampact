@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/bucket-key",
+    "message": "bucket 'b' counts address/129, a prefix longer than 128 bits",
+    "fix": "count a prefix of at most 128 bits",
+    "origin": {
+      "layer": "api",
+      "pointer": "/buckets/b/key/0"
+    },
+    "related": []
+  }
+]

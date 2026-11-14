@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/annotation-position",
+    "message": "'deprecated' on a scalar here is not kept by the contract model",
+    "fix": "remove 'deprecated' here; mark the property that holds this schema instead",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Note/properties/tags/items/deprecated"
+    },
+    "related": []
+  }
+]

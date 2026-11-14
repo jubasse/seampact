@@ -1,5 +1,7 @@
 //! The oracle task: the harness of `seampact-oracle` run with the compiler subject.
 
+use std::time::Duration;
+
 use camino::Utf8Path;
 use seampact_compiler::oracle::CompilerSubject;
 use seampact_json::JsonValue;
@@ -64,6 +66,28 @@ fn unplugged_compiler_problem(
     None
 }
 
+/// The seconds one fixture may take unless `--time-limit` says otherwise.
+const DEFAULT_FIXTURE_TIME_LIMIT: Duration = Duration::from_secs(120);
+
+/// Names the fixture that passed the limit and ends the run: a subject that hangs never returns.
+fn stop_on_time_limit(fixture: &str, limit: Duration) {
+    eprintln!(
+        "{ORACLE_STEP}: fixture {fixture} ran past the {} s limit of one fixture: stopping",
+        limit.as_secs()
+    );
+
+    std::process::exit(1);
+}
+
+/// Every fixture, every output, the default time limit.
+pub fn default_selection() -> Selection {
+    Selection {
+        fixture_time_limit: Some(DEFAULT_FIXTURE_TIME_LIMIT),
+        on_time_limit: Some(stop_on_time_limit),
+        ..Selection::default()
+    }
+}
+
 /// Runs the oracle on `selection` and gives its verdict.
 ///
 /// # Errors
@@ -96,7 +120,7 @@ pub fn oracle_gate_step(workspace_root: &Utf8Path) -> StepOutcome {
         return StepOutcome::Failed { step: ORACLE_STEP };
     }
 
-    match run_oracle_task(workspace_root, &Selection::default()) {
+    match run_oracle_task(workspace_root, &default_selection()) {
         Ok(verdict) => {
             println!("{verdict}");
 

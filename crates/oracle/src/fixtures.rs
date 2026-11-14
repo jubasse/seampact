@@ -25,8 +25,13 @@ const ENTRY_FILES: [&str; 2] = ["workspace.yaml", "api.yaml"];
 const NODE_MODULES: &str = "node_modules";
 
 /// The names under a fixture's expected directory that hold its own files.
-pub(crate) const OWN_EXPECTED_ENTRIES: [&str; 4] =
-    ["diagnostics.json", "ir", "source-map", "halves"];
+pub(crate) const OWN_EXPECTED_ENTRIES: [&str; 5] = [
+    "diagnostics.json",
+    "ir",
+    "source-map",
+    "halves",
+    "schema-calls",
+];
 
 /// One fixture.
 #[derive(Debug, Clone, PartialEq, Eq)]

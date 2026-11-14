@@ -1,0 +1,128 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/scope-within",
+    "message": "scope 'team' is within 'org', which the scopes catalogue does not declare",
+    "fix": "declare the parent scope, or name a declared one in 'within'",
+    "origin": {
+      "layer": "api",
+      "pointer": "/scopes/team/within"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/scope-within",
+    "message": "scope 'left' is within itself through left -> right -> left",
+    "fix": "remove the cycle from the scopes' 'within' chain",
+    "origin": {
+      "layer": "api",
+      "pointer": "/scopes/left/within"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/right-pattern",
+    "message": "right 'Tasks' does not match conventions.rights.pattern '^[a-z]+(\\.[a-z]+)+$'",
+    "fix": "rename the right to match the pattern, or change the pattern",
+    "origin": {
+      "layer": "api",
+      "pointer": "/rights/Tasks"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/conventions/rights/pattern"
+        },
+        "message": "the pattern is set here"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/right-name",
+    "message": "the codeName '--' of right 'tasks.code' yields no identifier segment",
+    "fix": "set the right's codeName to a name with letters or digits",
+    "origin": {
+      "layer": "api",
+      "pointer": "/rights/tasks.code"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/right-name",
+    "message": "right '*' yields no identifier segment for generated code",
+    "fix": "set the right's codeName to a name with letters or digits",
+    "origin": {
+      "layer": "api",
+      "pointer": "/rights/*"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/right-pattern",
+    "message": "right '*' does not match conventions.rights.pattern '^[a-z]+(\\.[a-z]+)+$'",
+    "fix": "rename the right to match the pattern, or change the pattern",
+    "origin": {
+      "layer": "api",
+      "pointer": "/rights/*"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/conventions/rights/pattern"
+        },
+        "message": "the pattern is set here"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/right-subject",
+    "message": "the subject of right 'tasks.own' names scope 'channel', which the scopes catalogue does not declare",
+    "fix": "declare the scope in 'scopes', or name a declared one",
+    "origin": {
+      "layer": "api",
+      "pointer": "/rights/tasks.own/subject/scope"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/proof-schema",
+    "message": "the proof of rule 'stepUp' declares no schema",
+    "fix": "set the proof's 'schema' to the named schema of the value it reads",
+    "origin": {
+      "layer": "api",
+      "pointer": "/rules/stepUp/proof"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/bucket-key",
+    "message": "bucket 'wide' counts address/200, a prefix longer than 128 bits",
+    "fix": "count a prefix of at most 128 bits",
+    "origin": {
+      "layer": "api",
+      "pointer": "/buckets/wide/key/0"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/bucket-window",
+    "message": "the window '99999999999999d' of bucket 'forever' is too long to count in milliseconds",
+    "fix": "write a shorter window",
+    "origin": {
+      "layer": "api",
+      "pointer": "/buckets/forever/window"
+    },
+    "related": []
+  }
+]

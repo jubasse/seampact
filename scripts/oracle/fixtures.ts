@@ -78,7 +78,7 @@ function walk(directory: string, found: OracleFixture[]): void {
 }
 
 // The names under a fixture's expected directory that hold its own files: a nested fixture there would collide.
-const OWN_EXPECTED_NAMES = ["diagnostics.json", "ir", "source-map", "halves"];
+const OWN_EXPECTED_NAMES = ["diagnostics.json", "ir", "source-map", "halves", "schema-calls"];
 
 function refuseCollidingNames(fixtures: readonly OracleFixture[]): void {
   for (const { path } of fixtures) {

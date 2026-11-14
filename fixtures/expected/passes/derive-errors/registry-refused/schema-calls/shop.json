@@ -1,0 +1,31 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/shop.counted/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ShopCountedParams"
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "count": "many"
+      },
+      {
+        "kind": "ref",
+        "schema": "ShopCountedParams"
+      }
+    ],
+    "answer": [
+      {
+        "pointer": "/count",
+        "message": "'many' is not a number"
+      }
+    ]
+  }
+]

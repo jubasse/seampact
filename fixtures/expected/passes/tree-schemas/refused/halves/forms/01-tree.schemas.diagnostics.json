@@ -1,0 +1,117 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/query-map",
+    "message": "a query field or header proof holds no map: no query wire encodes its keys",
+    "fix": "declare the keys as the fields of an object, or send the value in a JSON body",
+    "origin": {
+      "layer": "api",
+      "pointer": "/rules/fresh/proof/schema"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/query-map",
+    "message": "this body proof holds a map, and a form or multipart route sends it as a field: no field wire encodes its keys",
+    "fix": "declare the keys as the fields of an object, or send the route's input as JSON",
+    "origin": {
+      "layer": "api",
+      "pointer": "/rules/signed/proof/schema"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/upload/inputMedia"
+        },
+        "message": "the route sends its input as a form"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/extension-value",
+    "message": "the extension does not fit its schema at '': 'b' is shorter than 2 characters",
+    "fix": "correct the value, or the schema its extension key declares",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Upload/x-acme-owner"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/example-value",
+    "message": "the example does not fit its schema at '': 'long-name' is longer than 3 characters",
+    "fix": "correct the example, or the schema it is parsed against",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Upload/properties/name/examples/0"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/default-value",
+    "message": "the default does not fit its schema at '': 0 is not at least 1",
+    "fix": "correct the default, or the schema it is parsed against",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Upload/properties/size/default"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/extension-place",
+    "message": "'x-acme-owner' may sit on schema, not on property",
+    "fix": "add 'property' to its 'at', or move it",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Upload/properties/kind/x-acme-owner"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/extensions/acme/owner"
+        },
+        "message": "its declaration"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/query-map",
+    "message": "a query field or header proof holds no map: no query wire encodes its keys",
+    "fix": "declare the keys as the fields of an object, or send the value in a JSON body",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/search/query/labels?"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/mark-position",
+    "message": "'default' sits on an optional property or an optional query field",
+    "fix": "remove 'default' here",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/search/query/term/default"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/extension-unknown",
+    "message": "'x-acme-nope' is no declared extension key",
+    "fix": "declare it under 'extensions' with its schema and places, or remove it",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/search/x-acme-nope"
+    },
+    "related": []
+  }
+]

@@ -1,0 +1,195 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/entries/ops/list/query/filter",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "EntryFilter"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/entries/ops/list/query/kinds",
+      "input"
+    ],
+    "answer": {
+      "kind": "array",
+      "items": {
+        "kind": "enum",
+        "enum": "EntryKind"
+      },
+      "maxItems": 2
+    }
+  },
+  {
+    "method": "queryWire",
+    "args": [
+      "/surfaces/app/routes/entries/ops/list/query/filter"
+    ],
+    "answer": {
+      "kind": "object",
+      "style": "deepObject",
+      "explode": true,
+      "brackets": false
+    }
+  },
+  {
+    "method": "queryWire",
+    "args": [
+      "/surfaces/app/routes/entries/ops/list/query/kinds"
+    ],
+    "answer": {
+      "kind": "list",
+      "style": "form",
+      "explode": false,
+      "brackets": false
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/entries/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Entry"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/entries/ops/create/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "CreateEntry"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/entries/ops/batch",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "EntriesBatchGetInput"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/entries/id/entryId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/entries/ops/update/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ReplaceEntry"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/entries/member/routes/closing_balance/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Entry"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/user/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "UserPrincipal"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/err.bad_input/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ErrBadInputParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/err.forbidden/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ErrForbiddenParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/err.sort_key_forbidden/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ErrSortKeyForbiddenParams"
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "issues": [
+          {
+            "pointer": "/title",
+            "rule": "minLength"
+          }
+        ]
+      },
+      {
+        "kind": "ref",
+        "schema": "ErrBadInputParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "key": "amount"
+      },
+      {
+        "kind": "ref",
+        "schema": "ErrSortKeyForbiddenParams"
+      }
+    ],
+    "answer": []
+  }
+]

@@ -1,0 +1,57 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/notes/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Note"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/notes/ops/create/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "CreateNote"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/settings/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Settings"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/settings/ops/update/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Settings"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/user/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "UserPrincipal"
+    }
+  }
+]

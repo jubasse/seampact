@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/sort-key",
+    "message": "The sort key colour of listTags is not a property of its item Note.",
+    "fix": "Name a property of Note, or declare colour on it.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/tags/ops/list/sortable/0"
+    },
+    "related": []
+  }
+]

@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/union-tag",
+    "message": "the variant 'a' declares the tag property 'k'",
+    "fix": "remove it from the variant; the union adds it",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/U/oneOf/a"
+    },
+    "related": []
+  }
+]

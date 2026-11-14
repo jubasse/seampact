@@ -1,0 +1,30 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/one/query/filter?",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Deep"
+    }
+  },
+  {
+    "method": "queryWire",
+    "args": [
+      "/surfaces/app/routes/one/query/filter?"
+    ]
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/one/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Note"
+    }
+  }
+]

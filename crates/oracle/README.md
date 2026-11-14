@@ -1,1 +1,1 @@
-The oracle harness of the Rust port: reads fixtures/expected/, compares a compiler subject's outputs with it under differences.yaml, and gives the verdict of `cargo xtask oracle`.
+The oracle harness of the Rust port: reads fixtures/expected/, compares a compiler subject's outputs with it under differences.yaml, and gives the verdict of `cargo xtask oracle`. A run gives each fixture a time limit (120 s by default, `--time-limit <seconds>` changes it): a fixture past it is named and fails the run.

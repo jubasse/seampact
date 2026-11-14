@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/format-type",
+    "message": "the portable format 'uuid' is a string, not a integer",
+    "fix": "write 'type: string, format: uuid'",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/A/format"
+    },
+    "related": []
+  }
+]

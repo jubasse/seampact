@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-unknown",
+    "message": "no enum 'Missing' with values is declared",
+    "fix": "declare it under 'enums', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/A/properties/b/enum"
+    },
+    "related": []
+  }
+]

@@ -1,0 +1,117 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/input-file",
+    "message": "The form input of formJsonText holds a file at file inside the field meta, but a file is a top-level field.",
+    "fix": "Make the file a top-level field of a multipart input (inputMedia: multipart), or return it as a download.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/WithFile/properties/file"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/input-file",
+    "message": "The form input of formFile holds the file field file, but a form body carries no file.",
+    "fix": "Set inputMedia: multipart, which carries files.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/formFile/input/properties/file"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/input-file-size",
+    "message": "The file field file of tooLarge allows 2097152 bytes, more than the route's body limit of 1048576 bytes.",
+    "fix": "Raise bodyLimit on the route, or lower the file's maxSize.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/tooLarge/input/properties/file"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/conventions/bodyLimit"
+        },
+        "message": "the body limit"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/input-file",
+    "message": "The JSON input of jsonFile holds a file at file, but a file travels only in a multipart input or as a download.",
+    "fix": "Make the file a top-level field of a multipart input (inputMedia: multipart), or return it as a download.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/jsonFile/input/properties/file"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/form-input",
+    "message": "The form input of formScalar is not an object schema, so it has no fields.",
+    "fix": "Declare the input as an object whose properties are the fields.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/formScalar/input"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/form-field",
+    "message": "The field anything of the form input of formOpaque has no form encoding.",
+    "fix": "Give the field a number, boolean, text, list or object schema, a file in multipart, or JSON text (contentMediaType: application/json).",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/formOpaque/input/properties/anything"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/input-file",
+    "message": "The multipart input of multipartObject holds a file at scan inside the field doc, but a file is a top-level field.",
+    "fix": "Make the file a top-level field of a multipart input (inputMedia: multipart), or return it as a download.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/multipartObject/input/properties/doc/properties/scan"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/input-file",
+    "message": "The multipart input of multipartPages holds a file inside the field pages, but a file is a top-level field.",
+    "fix": "Make the file a top-level field of a multipart input (inputMedia: multipart), or return it as a download.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/multipartPages/input/properties/pages"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/input-file-size",
+    "message": "The file field file of getReportsBatch allows 3145728 bytes, more than the route's body limit of 2097152 bytes.",
+    "fix": "Raise bodyLimit on the route, or lower the file's maxSize.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/reports/ops/batch/input/properties/file"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/conventions/batch/bodyLimit"
+        },
+        "message": "the body limit"
+      }
+    ]
+  }
+]

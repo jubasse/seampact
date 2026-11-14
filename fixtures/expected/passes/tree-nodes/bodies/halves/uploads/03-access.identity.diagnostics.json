@@ -1,0 +1,24 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/deny-by-default",
+    "message": "route 'slackCommand' has no identity and no public access",
+    "fix": "Set 'identity: <name>' on it or an ancestor, or 'access: { public: \"<reason>\" }'.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/slackCommand"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/deny-by-default",
+    "message": "route 'attach' has no identity and no public access",
+    "fix": "Set 'identity: <name>' on it or an ancestor, or 'access: { public: \"<reason>\" }'.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/attach"
+    },
+    "related": []
+  }
+]

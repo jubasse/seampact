@@ -1,0 +1,462 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/template-slot",
+    "message": "The template of the format slotted writes the slot '$code', which success.item does not fill.",
+    "fix": "Use a slot of success.item (ADR 0002 sections 13 and 14), or write '$$code' for the literal text.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/formats/slotted/success/item/body/code"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/template-syntax",
+    "message": "The template of the format broken is not valid: the text 'cost $5' writes a $ that starts no slot.",
+    "fix": "Write $name for a slot, ${name} inside a longer text, $$ for a literal $, and { $each: $slot, $as: <template> } for an array.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/formats/broken/success/list/body"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/format-meta",
+    "message": "The meta field 'user' of the format untyped is filled by 'handler', which gives it no type.",
+    "fix": "Write the schema of 'user' beside its fill.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/formats/untyped/meta/user"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/format-error-code",
+    "message": "The error body of the format codeless writes no $code, so a client cannot tell the error.",
+    "fix": "Write $code in the error body, as a member or inside a text ('https://errors.example.com/${code}'), or set 'conventions.errors.requireCode: false'.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/formats/codeless/error"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/template-syntax",
+    "message": "The template of the format malformed is not valid: an array template is { $each, $as } and nothing else.",
+    "fix": "Write $name for a slot, ${name} inside a longer text, $$ for a literal $, and { $each: $slot, $as: <template> } for an array.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/formats/malformed/success/item/body"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/template-syntax",
+    "message": "The template of the format malformed is not valid: $merge takes one slot ($payload), without a member path.",
+    "fix": "Write $name for a slot, ${name} inside a longer text, $$ for a literal $, and { $each: $slot, $as: <template> } for an array.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/formats/malformed/success/table/body/$merge"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/template-syntax",
+    "message": "The template of the format malformed is not valid: the member name '$bad.key' is no slot (write $$ for a literal $).",
+    "fix": "Write $name for a slot, ${name} inside a longer text, $$ for a literal $, and { $each: $slot, $as: <template> } for an array.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/formats/malformed/success/list/body/$bad.key"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/template-slot",
+    "message": "The template of the format leaky writes the slot '$payload', which an error body does not fill.",
+    "fix": "Use a slot of an error body (ADR 0002 sections 13 and 14), or write '$$payload' for the literal text.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/formats/leaky/error/body/data"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/template-merge",
+    "message": "The template of the format statusMerge merges '$status', which holds no object.",
+    "fix": "Merge an object slot ($payload, $meta, $fields), or write the slot as a member.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/formats/statusMerge/success/item/body/$merge"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/template-each",
+    "message": "The template of the format eachMeta maps with $each '$meta', which holds no array.",
+    "fix": "Map an array slot ($payload), or write the slot as a member.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/formats/eachMeta/success/item/body/$each"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/template-name",
+    "message": "The template of the format payloadKey names a member with '$payload', which holds no name.",
+    "fix": "Name the member with a name slot ($collection), or write $$ for a literal $.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/formats/payloadKey/success/item/body/$payload"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/template-slot",
+    "message": "The template of the format unusedBad writes the slot '$nope', which success.item does not fill.",
+    "fix": "Use a slot of success.item (ADR 0002 sections 13 and 14), or write '$$nope' for the literal text.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/formats/unusedBad/success/item/body"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/paging-reserved",
+    "message": "The paging style name none is reserved for a list served whole.",
+    "fix": "Rename the style none.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/pagings/none"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/paging-position",
+    "message": "The paging style twice writes no single position role.",
+    "fix": "Write exactly one of cursor, page, offset and since, or the pair after and before.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/pagings/twice/request"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/paging-request",
+    "message": "The paging style nameless is not valid: its cursor role names no query parameter or header.",
+    "fix": "Write query or header on the role.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/pagings/nameless/request/cursor"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/paging-request",
+    "message": "The paging style split is not valid: its split sort names no direction parameter.",
+    "fix": "Write direction on the sort role.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/pagings/split/request/sort"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/paging-items",
+    "message": "The page body of the paging style itemless writes $items nowhere.",
+    "fix": "Write $items exactly once in response.body.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/pagings/itemless/response/body"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/paging-role",
+    "message": "The paging style misfit pages by cursor, but writes the role $page, which only page, offset styles fill.",
+    "fix": "Remove $page, or page by page or offset.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/pagings/misfit/response"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/paging-link",
+    "message": "The link 'next' of the paging style linked is no URL role.",
+    "fix": "Write one of $self, $first, $previous, $next, $last.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/pagings/linked/response/links/next"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/paging-meta",
+    "message": "The paging style metaed adds meta members, but the page of the format bare writes no $meta.",
+    "fix": "Write response.body on metaed, or use a format whose page writes $meta.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/pagings/metaed/response/meta"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/paging-request",
+    "message": "The paging style keyed is not valid: its keyed sort parameter 'sort' holds no {key}.",
+    "fix": "Write {key} in the parameter name, as order[{key}].",
+    "origin": {
+      "layer": "api",
+      "pointer": "/pagings/keyed/request/sort"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/paging-request",
+    "message": "The paging style directed is not valid: its sort names a direction parameter, which only style: split reads.",
+    "fix": "Remove direction, or write style: split.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/pagings/directed/request/sort"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/paging-position",
+    "message": "The paging style half writes no single position role.",
+    "fix": "Write exactly one of cursor, page, offset and since, or the pair after and before.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/pagings/half/request"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/template-slot",
+    "message": "The template of the paging style headed writes the slot '$code', which a paging style's meta, headers and links does not fill.",
+    "fix": "Use a slot of a paging style's meta, headers and links (ADR 0002 sections 13 and 14), or write '$$code' for the literal text.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/pagings/headed/response/headers/X-Code"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/paging-position",
+    "message": "The paging style bodiless writes no single position role.",
+    "fix": "Write exactly one of cursor, page, offset and since, or the pair after and before.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/pagings/bodiless"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/paging-meta-clash",
+    "message": "The meta member 'servedAt' is named by both the paging style clashing and the format stamped.",
+    "fix": "Rename 'servedAt' in the style's meta or in the format's meta.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/pagings/clashing/response/meta/servedAt"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/formats/stamped/meta/servedAt"
+        },
+        "message": "the meta field 'servedAt' of stamped"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/paging-request",
+    "message": "The paging style dup is not valid: its limit role sends the query parameter 'x', which another role sends too.",
+    "fix": "Give each request role its own query parameter.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/pagings/dup/request/limit"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/paging-role",
+    "message": "The paging style sinceprev pages by since, but writes the role $previous, which only cursor, page, offset styles fill.",
+    "fix": "Remove $previous, or page by cursor or page or offset.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/pagings/sinceprev/response"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/paging-position",
+    "message": "The paging style unusedBadStyle writes no single position role.",
+    "fix": "Write exactly one of cursor, page, offset and since, or the pair after and before.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/pagings/unusedBadStyle/request"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/format-id",
+    "message": "The template of the format ided writes $id, but the item of ided has no id property.",
+    "fix": "Declare the id property on the item (or set idProperty), or use a format that reads no id.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/ided"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/formats/ided"
+        },
+        "message": "the format ided"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/format-merge",
+    "message": "The template of the format merged writes the member 'kind', which the merged $payload of merged defines too.",
+    "fix": "Rename the property 'kind' of Note, or the template's member.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/merged"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/formats/merged"
+        },
+        "message": "the format merged"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/format-merge",
+    "message": "The template of the format merged merges $payload, but it holds no object for text.",
+    "fix": "Answer an object from text, map an array with { $each: $payload, $as: <template> }, or use a format that wraps the payload.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/text"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/formats/merged"
+        },
+        "message": "the format merged"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/format-merge",
+    "message": "The template of the format listMerge merges $payload, but it holds an array for lm.",
+    "fix": "Answer an object from lm, map an array with { $each: $payload, $as: <template> }, or use a format that wraps the payload.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/lm"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/formats/listMerge"
+        },
+        "message": "the format listMerge"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/format-merge",
+    "message": "The template of the format arrMerge merges $payload, but it holds an array for am.",
+    "fix": "Answer an object from am, map an array with { $each: $payload, $as: <template> }, or use a format that wraps the payload.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/am"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/formats/arrMerge"
+        },
+        "message": "the format arrMerge"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/format-each",
+    "message": "The template of the format itemMap maps $payload with $each, but it holds no array for im.",
+    "fix": "Write $payload as a member, or use a format whose item shape maps no $payload.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/im"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/formats/itemMap"
+        },
+        "message": "the format itemMap"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/format-id",
+    "message": "The template of the paging style idless writes $itemId, but the item of idless has no id property.",
+    "fix": "Declare the id property on the item (or set idProperty), or use a format that reads no id.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/idless"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/pagings/idless"
+        },
+        "message": "the paging style idless"
+      }
+    ]
+  }
+]

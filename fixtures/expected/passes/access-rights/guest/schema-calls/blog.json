@@ -1,0 +1,85 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/articles/id/articleId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/articles/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Article"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/articles/member/routes/preview/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Article"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/articles/member/routes/publish/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Article"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/reader/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Reader"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rights/articles.read/subject/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rights/articles.edit/subject/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  }
+]

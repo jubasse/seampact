@@ -1,5 +1,8 @@
 import { expect, test } from "vitest";
 import { checkFixtures, checkReport, ruleCoverage } from "./commands.ts";
+import { loadOracleCompiler } from "./compiler.ts";
+import { expectedFilesOf } from "./expected.ts";
+import { discoverFixtures, readExcluded } from "./fixtures.ts";
 import { declaredRuleIds } from "./rule-ids.ts";
 
 // 1.x CI keeps the expected outputs current while the TS compiler lives: `node scripts/oracle/cli.ts write` after
@@ -30,4 +33,24 @@ test("every rule id the expected diagnostics hold is declared, and coverage name
   const withoutPathEscape = declaredRuleIds().filter((id) => id !== "seampact/load/path-escape");
 
   expect(ruleCoverage(withoutPathEscape).undeclared).toEqual(["seampact/load/path-escape"]);
+});
+
+test("a half that reports gets a diagnostics file and an api with schema calls gets a call log", async () => {
+  const compiler = await loadOracleCompiler();
+  const excluded = readExcluded();
+  const filesOf = (path: string) => {
+    const fixture = discoverFixtures().find((candidate) => candidate.path === path);
+
+    if (fixture === undefined) throw new Error(`no fixture ${path}`);
+
+    return expectedFilesOf(compiler, fixture, excluded);
+  };
+
+  const names = [...filesOf("bundle-channels/imports/tasks-service").keys()];
+
+  expect(names).toContain("halves/tasksService/02-tree.nodes.diagnostics.json");
+  expect([...filesOf("big-integers/above-2-pow-53").keys()]).toContain("schema-calls/bigints.json");
+  expect(names.filter((name) => name.endsWith(".diagnostics.json")).length).toBeLessThan(
+    names.filter((name) => name.startsWith("halves/")).length,
+  );
 });

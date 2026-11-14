@@ -1,0 +1,177 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/scope-twice",
+    "message": "scope 'aisle' is entered twice on the routes below this node",
+    "fix": "enter the scope once, on the highest node that needs it",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/shops/member/scopes/aisle"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/shops/scopes/aisle"
+        },
+        "message": "first entered here"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/scope-nesting",
+    "message": "scope 'shop' is entered below 'aisle', which is within it",
+    "fix": "enter 'shop' on 'aisle''s node or above it",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/shops/member/scopes/shop"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/shops/scopes/aisle"
+        },
+        "message": "'aisle' is entered here"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/scope-unknown",
+    "message": "scope 'till' is entered here, but the scopes catalogue does not declare it",
+    "fix": "declare the scope in 'scopes', or enter a declared one",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/shops/member/scopes/till"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/requirement-entry",
+    "message": "'managerOnly' names no entry of the requirements catalogue",
+    "fix": "declare it under 'requirements', or write the requirement as an item ({ right } or { rule })",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/shops/member/routes/items/member/routes/restock/requires/0"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/requirement-target",
+    "message": "the requirement names right 'items.close', which the rights catalogue does not declare",
+    "fix": "declare the right in 'rights', or name a declared one",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/shops/member/routes/items/member/routes/restock/requires/1/right"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/requirement-params",
+    "message": "right 'items.read' declares no params, but the requirement gives some",
+    "fix": "remove 'params', or declare params on the right",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/shops/member/routes/items/member/routes/restock/requires/2/params"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/requirement-params",
+    "message": "the params of the requirement do not fit StaffParams, the params of right 'staff': /level: '__invalid_example__' is not a number",
+    "fix": "give params that fit StaffParams",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/shops/member/routes/items/member/routes/restock/requires/3/params"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/requirement-bucket",
+    "message": "rule 'throttle' is declared with 'bucket: true', so each use names a bucket",
+    "fix": "name a declared bucket in the requirement's 'bucket'",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/shops/member/routes/items/member/routes/restock/requires/4"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/requirement-subject",
+    "message": "the subject path.shopId of right 'items.edit' is 'ShopId', not the right's id schema 'ItemId'",
+    "fix": "read the subject from a source whose schema is the right's id schema",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/shops/member/routes/items/member/routes/restock/requires/5/subject"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/requirement-twice",
+    "message": "the route requires right 'items.edit' twice with equal params",
+    "fix": "remove one of the two requirements",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/shops/member/routes/items/member/routes/restock/requires/7"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/shops/member/routes/items/member/routes/restock/requires/6"
+        },
+        "message": "first required here"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/pack-template",
+    "message": "the template '{resource}.read' reads {resource}, and route 'health' belongs to no collection or single",
+    "fix": "narrow the entry's selector to routes of a collection or single, or drop {resource}",
+    "origin": {
+      "layer": "pack:odd",
+      "pointer": "/derive/0/require/right"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/requirement-target",
+    "message": "the requirement names right 'brands.read', which the rights catalogue does not declare",
+    "fix": "declare the right in 'rights', or name a declared one",
+    "origin": {
+      "layer": "pack:odd",
+      "pointer": "/derive/0/require/right"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/pack-right",
+    "message": "right 'items.edit' has a resource subject, and the entry derives another none subject for route 'listBrands'",
+    "fix": "give the right the subject the entry derives, or narrow the entry's selector",
+    "origin": {
+      "layer": "pack:odd",
+      "pointer": "/derive/1/declareRight"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/rights/items.edit"
+        },
+        "message": "the right is declared here"
+      }
+    ]
+  }
+]

@@ -1,0 +1,114 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/members/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Member"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/members/id/userId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/me/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Member"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/api.rate_limited/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ApiRateLimitedParams"
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "retryAfterMs": 1500,
+        "scope": "user"
+      },
+      {
+        "kind": "ref",
+        "schema": "ApiRateLimitedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/members/errors/members.locked/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "MembersLockedParams"
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "lockedBy": "u-1"
+      },
+      {
+        "kind": "ref",
+        "schema": "MembersLockedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "retryAfterMs": 30000,
+        "scope": "user"
+      },
+      {
+        "kind": "ref",
+        "schema": "ApiRateLimitedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      "0",
+      {
+        "kind": "scalar",
+        "type": "string",
+        "format": "decimal",
+        "refinements": {
+          "minimum": "0"
+        }
+      }
+    ],
+    "answer": []
+  }
+]

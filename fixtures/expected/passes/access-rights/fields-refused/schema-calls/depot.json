@@ -1,0 +1,92 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/crates/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Crate"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/crates/ops/create/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Crate"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/pallet/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Pallet"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/movement/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Movement"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/stack/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Stack0"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/clerk/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Clerk"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rights/crates.weigh/subject/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/depot.full/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "DepotFullParams"
+    }
+  }
+]

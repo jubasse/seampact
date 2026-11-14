@@ -1,0 +1,13 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/pages/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Note"
+    }
+  }
+]

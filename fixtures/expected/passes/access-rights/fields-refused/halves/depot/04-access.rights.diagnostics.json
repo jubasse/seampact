@@ -1,0 +1,133 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/field-right-target",
+    "message": "the field is restricted to right 'crates.ghost', which the rights catalogue does not declare",
+    "fix": "declare the right in 'rights', or name a declared one",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Crate/properties/label/restrictedTo"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/field-right-params",
+    "message": "right 'audit' declares no params, but the field's restrictedTo gives some",
+    "fix": "remove 'params', or declare params on the right",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Crate/properties/seal/restrictedTo/params"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/field-right-recursive",
+    "message": "schema 'Pallet' holds a restricted field and references itself below 'Pallet/stacked/*', so route 'pallet' would have field rights at pointers without end",
+    "fix": "restrict the field in a schema that is not recursive, or end the recursion before it",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Pallet"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/field-right-conflict",
+    "message": "output field 'Movement/fee' of route 'movement' is restricted in 'Delivery' and in 'Pickup' with a different right, params, input policy or subject, and one field right cannot hold both",
+    "fix": "give the fields at this pointer the same restrictedTo and subject, or rename one of them",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Pickup/properties/fee/restrictedTo"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/schemas/Delivery/properties/fee/restrictedTo"
+        },
+        "message": "the field of 'Delivery' is restricted here"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/field-right-position",
+    "message": "field 'Manifest/secret' is restricted to right 'audit' and is reached from the params of error 'depot.full', where the IR lists no field right",
+    "fix": "move the restricted field out of the schemas this position reaches, or remove its restrictedTo",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Manifest/properties/secret/restrictedTo"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/errors/depot.full/params"
+        },
+        "message": "the position is written here"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/sort-key-right",
+    "message": "sort key 'weight' of route 'listCrates' is given right 'audit', but its field is restricted to 'crates.weigh'",
+    "fix": "remove the key's 'right', or write 'crates.weigh'",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/crates/ops/list/sortable/0/right"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/schemas/Crate/properties/weight/restrictedTo"
+        },
+        "message": "the field is restricted to 'crates.weigh' here"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/filtered-by",
+    "message": "route 'listCrates' is filtered by right 'crates.ghost', which the rights catalogue does not declare",
+    "fix": "declare the right in 'rights', or name a declared one",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/crates/ops/list/filteredBy"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/field-right-subject",
+    "message": "input field 'Crate/weight' of create route 'createCrate' is restricted to resource right 'crates.weigh', and a create route has no id of the resource it creates",
+    "fix": "restrict the field in the create input to a scope right or a right without subject",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/crates/ops/create/input"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/schemas/Crate/properties/weight/restrictedTo"
+        },
+        "message": "the field is restricted to 'crates.weigh' here"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/field-right-limit",
+    "message": "route 'stack' reaches more than 1000 restricted fields from its input and responses, more field rights than one operation may list",
+    "fix": "reference the schemas holding restricted fields from fewer places in this route's bodies",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/stack"
+    },
+    "related": []
+  }
+]

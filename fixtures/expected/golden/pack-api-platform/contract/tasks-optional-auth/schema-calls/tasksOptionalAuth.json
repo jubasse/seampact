@@ -1,0 +1,24 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/welcome/routes/greeting/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Greeting"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/welcome/routes/strictGreeting/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Greeting"
+    }
+  }
+]

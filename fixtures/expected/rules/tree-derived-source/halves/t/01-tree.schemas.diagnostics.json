@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/derived-source",
+    "message": "the source 'Mapped' of a derived object is not an object schema",
+    "fix": "derive from an object schema: a plain one, an 'allOf' or another derived object",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/FromMap/pick/from"
+    },
+    "related": []
+  }
+]

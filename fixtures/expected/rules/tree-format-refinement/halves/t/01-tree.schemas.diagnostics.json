@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/format-refinement",
+    "message": "the named format 'shortCode' already sets 'maxLength'",
+    "fix": "remove 'maxLength' here, or declare another named format",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/A/maxLength"
+    },
+    "related": []
+  }
+]

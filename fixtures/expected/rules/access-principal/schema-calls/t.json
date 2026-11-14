@@ -1,0 +1,14 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/user/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  }
+]

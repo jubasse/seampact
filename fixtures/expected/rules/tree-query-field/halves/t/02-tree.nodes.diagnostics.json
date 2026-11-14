@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/query-field",
+    "message": "The query field filter of findNotes has no query encoding.",
+    "fix": "Give the field a number, boolean, text, enum or list of them, or an object of them.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/one/query/filter?"
+    },
+    "related": []
+  }
+]

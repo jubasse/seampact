@@ -1,0 +1,129 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/brands/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Item"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/shops/id/shopId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/shops/member/routes/items/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Item"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/shops/member/routes/items/id/itemId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/user/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "UserPrincipal"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rights/items.edit/subject/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rights/staff/params",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "StaffParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/scopes/shop/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/scopes/aisle/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "level": "__invalid_example__"
+      },
+      {
+        "kind": "ref",
+        "schema": "StaffParams"
+      }
+    ],
+    "answer": [
+      {
+        "pointer": "/level",
+        "message": "'__invalid_example__' is not a number"
+      }
+    ]
+  }
+]

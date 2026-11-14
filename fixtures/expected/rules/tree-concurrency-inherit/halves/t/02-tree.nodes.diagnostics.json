@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/concurrency-inherit",
+    "message": "The route flagNote writes concurrency: inherit, but it declares no concurrency.",
+    "fix": "Remove concurrency: inherit, or declare concurrency on the collection that owns the route.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/tags/member/routes/flag/concurrency"
+    },
+    "related": []
+  }
+]

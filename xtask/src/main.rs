@@ -13,6 +13,7 @@ mod prerequisite;
 
 use std::path::Path;
 use std::process::ExitCode;
+use std::time::Duration;
 
 use anyhow::Context;
 use camino::Utf8PathBuf;
@@ -20,13 +21,17 @@ use seampact_oracle::{FixtureGlob, Selection};
 
 use crate::outcome::StepOutcome;
 
-const USAGE: &str = "usage: cargo xtask (gate | oracle [<glob>] [--half <name>])";
+const USAGE: &str =
+    "usage: cargo xtask (gate | oracle [<glob>] [--half <name>] [--time-limit <seconds>])";
 
 /// The exit code of a command line that names no known task or selects nothing.
 const EXIT_USAGE: u8 = 2;
 
 /// The flag that compares one pass half alone.
 const HALF_FLAG: &str = "--half";
+
+/// The flag that sets the seconds one fixture may take.
+const TIME_LIMIT_FLAG: &str = "--time-limit";
 
 fn main() -> ExitCode {
     match run() {
@@ -88,12 +93,21 @@ fn oracle_task(
     }
 }
 
-/// The selection of `oracle [<glob>] [--half <name>]`, or `None` when the arguments are not that.
+/// The selection of `oracle [<glob>] [--half <name>] [--time-limit <seconds>]`, or `None` when the
+/// arguments are not that.
 fn oracle_selection(arguments: &[String]) -> Option<Selection> {
-    let mut selection = Selection::default();
+    let mut selection = oracle::default_selection();
     let mut remaining = arguments.iter();
 
     while let Some(argument) = remaining.next() {
+        if argument == TIME_LIMIT_FLAG {
+            let seconds: u64 = remaining.next()?.parse().ok()?;
+
+            selection.fixture_time_limit = Some(Duration::from_secs(seconds));
+
+            continue;
+        }
+
         if argument == HALF_FLAG {
             let half = remaining.next()?;
 
@@ -151,6 +165,22 @@ mod tests {
         assert_eq!(selection.half.as_deref(), Some("tree.nodes"));
         assert_eq!(selection.fixture_glob, Some(FixtureGlob::new("golden/*")));
         assert!(oracle_selection(&[]).is_some());
+    }
+
+    #[test]
+    fn the_time_limit_defaults_to_two_minutes_and_a_flag_changes_it() {
+        let default = oracle_selection(&[]).unwrap();
+        let changed = oracle_selection(&arguments("--time-limit 30")).unwrap();
+
+        assert_eq!(default.fixture_time_limit, Some(Duration::from_secs(120)));
+        assert_eq!(changed.fixture_time_limit, Some(Duration::from_secs(30)));
+    }
+
+    #[test]
+    fn a_time_limit_that_is_not_a_number_of_seconds_is_refused() {
+        for refused in ["--time-limit", "--time-limit soon", "--time-limit -1"] {
+            assert!(oracle_selection(&arguments(refused)).is_none(), "{refused}");
+        }
     }
 
     #[test]

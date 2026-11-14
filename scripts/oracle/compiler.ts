@@ -28,6 +28,21 @@ export interface HalfDelta {
   api: string;
   half: string;
   delta: object;
+  /** What the half reported, sorted as `diagnostics.json` is; empty when it reported nothing. */
+  diagnostics: OracleDiagnostic[];
+}
+
+/** One question the later halves asked the schema service of an api, with its answer (absent: it answered undefined). */
+export interface SchemaCall {
+  method: string;
+  args: unknown[];
+  answer?: unknown;
+}
+
+export interface SchemaCalls {
+  api: string;
+  /** Deduplicated by method and arguments, in the order of the first call. */
+  calls: SchemaCall[];
 }
 
 export interface OracleApiResult {
@@ -42,6 +57,8 @@ export interface OracleCompilation {
   apis: OracleApiResult[];
   /** Per api, the halves that ran, in run order. */
   halves: HalfDelta[];
+  /** Per api with at least one schema service call. */
+  schemaCalls: SchemaCalls[];
 }
 
 export interface OracleCompiler {
@@ -62,6 +79,8 @@ interface PipelineModule {
     apis: { api: string; diagnostics: readonly object[]; ir?: object; sourceMap?: object }[];
   };
   finalizeSerializeJson(value: object): string;
+  pipelineCopy<T>(value: T): T;
+  diagnosticSort(diagnostics: readonly object[], locations: object): object[];
 }
 
 interface DeltaModule {
@@ -80,6 +99,8 @@ function isPipelineModule(value: unknown): value is PipelineModule {
       "pipelineDefaultParts",
       "compileWorkspace",
       "finalizeSerializeJson",
+      "pipelineCopy",
+      "diagnosticSort",
     ]) && Array.isArray(Reflect.get(value as object, "pipelineHalves"))
   );
 }
@@ -99,10 +120,80 @@ function apiNameOf(context: object): string {
   return name;
 }
 
+const SCHEMA_SERVICE_METHODS = [
+  "typeUse",
+  "checkExample",
+  "queryWire",
+  "checkTextExample",
+] as const;
+
+// The context of a half whose `report` also keeps what the half reported.
+function contextKeepingReports(context: object, reported: object[]): object {
+  const report: unknown = Reflect.get(context, "report");
+
+  if (typeof report !== "function") throw new Error("a half ran with no report function");
+
+  return Object.freeze({
+    ...context,
+    report: (diagnostic: object) => {
+      reported.push(diagnostic);
+      Reflect.apply(report, context, [diagnostic]);
+    },
+  });
+}
+
+function locationsOf(context: object): object {
+  const raw: unknown = Reflect.get(context, "raw");
+  const locations: unknown = isObject(raw) ? Reflect.get(raw, "locations") : undefined;
+
+  if (!isObject(locations)) throw new Error("a half ran with no source locations in its context");
+
+  return locations;
+}
+
+// The schema service, answering as `service` does and logging each distinct call. Arguments and answers are copied
+// with `pipelineCopy`: with the guard on they are read-only views, which `structuredClone` refuses.
+function loggingSchemaService(
+  pipeline: PipelineModule,
+  service: object,
+  calls: Map<string, SchemaCall>,
+): object {
+  const logged = (method: string): unknown => {
+    const original: unknown = Reflect.get(service, method);
+
+    if (typeof original !== "function") throw new Error(`the schema service has no ${method}`);
+
+    return (...args: unknown[]): unknown => {
+      const answer: unknown = Reflect.apply(original, service, args);
+      const call: SchemaCall = {
+        method,
+        args: pipeline.pipelineCopy(args),
+        ...(answer === undefined ? {} : { answer: pipeline.pipelineCopy(answer) }),
+      };
+      const key = JSON.stringify([call.method, call.args]);
+      const earlier = calls.get(key);
+
+      if (earlier === undefined) calls.set(key, call);
+      else if (JSON.stringify(earlier.answer) !== JSON.stringify(call.answer))
+        throw new Error(`the schema service answered ${key} twice with different answers`);
+
+      return answer;
+    };
+  };
+
+  return Object.fromEntries(SCHEMA_SERVICE_METHODS.map((method) => [method, logged(method)]));
+}
+
+interface Recording {
+  halves: HalfDelta[];
+  /** Per api name, the schema service calls by (method, arguments). */
+  schemaCalls: Map<string, Map<string, SchemaCall>>;
+}
+
 function recordingPasses(
   pipeline: PipelineModule,
   deltas: DeltaModule,
-  recorded: HalfDelta[],
+  recording: Recording,
 ): Record<string, Part> {
   const defaults = pipeline.pipelineDefaultParts().passes;
 
@@ -113,16 +204,27 @@ function recordingPasses(
       if (part === undefined) throw new Error(`the default parts have no half ${half}`);
 
       const run = (draft: object, context: object): unknown => {
+        const api = apiNameOf(context);
+        const reported: object[] = [];
         const before = structuredClone(draft);
-        const result = part.run(draft, context);
+        const result = part.run(draft, contextKeepingReports(context, reported));
 
-        recorded.push({
-          api: apiNameOf(context),
+        recording.halves.push({
+          api,
           half,
           delta: deltas.draftFixtureDelta(before, draft),
+          diagnostics: pipeline.diagnosticSort(reported, locationsOf(context)),
         });
 
-        return result;
+        if (half !== "tree.schemas") return result;
+
+        if (!isObject(result)) throw new Error(`tree.schemas of ${api} returned no schema service`);
+
+        const calls = new Map<string, SchemaCall>();
+
+        recording.schemaCalls.set(api, calls);
+
+        return loggingSchemaService(pipeline, result, calls);
       };
 
       return [half, { ...part, run }];
@@ -147,16 +249,19 @@ function oracleCompiler(pipeline: PipelineModule, deltas: DeltaModule): OracleCo
     compile(root, entry) {
       refuseWorkspaceImports(root, entry);
 
-      const halves: HalfDelta[] = [];
+      const recording: Recording = { halves: [], schemaCalls: new Map() };
       const result = pipeline.compileWorkspace({
         reader: pipeline.loadFsReader(root),
         entry,
-        parts: { passes: recordingPasses(pipeline, deltas, halves) },
+        parts: { passes: recordingPasses(pipeline, deltas, recording) },
       });
 
       return {
         diagnostics: [...result.diagnostics],
-        halves,
+        halves: recording.halves,
+        schemaCalls: [...recording.schemaCalls]
+          .map(([api, calls]) => ({ api, calls: [...calls.values()] }))
+          .filter(({ calls }) => calls.length > 0),
         apis: result.apis.map((api) => ({
           api: api.api,
           diagnostics: [...api.diagnostics],
