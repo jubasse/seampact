@@ -470,19 +470,28 @@ impl DraftIr {
 /// The pointer of the first member where `left` and `right` differ, `None` when they are equal.
 fn first_difference(left: &JsonValue, right: &JsonValue, pointer: &str) -> Option<String> {
     match (left, right) {
-        (JsonValue::Object(left_members), JsonValue::Object(right_members)) => left_members
-            .keys()
-            .chain(right_members.keys())
-            .find_map(|key| {
-                let child = format!("{pointer}/{}", escape_pointer(key));
+        (JsonValue::Object(left_members), JsonValue::Object(right_members)) => {
+            let child_pointer = |key: &str| format!("{pointer}/{}", escape_pointer(key));
 
-                match (left_members.get(key), right_members.get(key)) {
-                    (Some(left_child), Some(right_child)) => {
-                        first_difference(left_child, right_child, &child)
-                    }
-                    _ => Some(child),
-                }
-            }),
+            // Each shared member is compared once: walking it from both sides doubles the work
+            // at every nesting level.
+            let left_difference =
+                left_members
+                    .iter()
+                    .find_map(|(key, left_child)| match right_members.get(key) {
+                        Some(right_child) => {
+                            first_difference(left_child, right_child, &child_pointer(key))
+                        }
+                        None => Some(child_pointer(key)),
+                    });
+
+            left_difference.or_else(|| {
+                right_members
+                    .keys()
+                    .find(|key| left_members.get(key).is_none())
+                    .map(|key| child_pointer(key))
+            })
+        }
         (JsonValue::Array(left_items), JsonValue::Array(right_items)) => {
             let shared = left_items.len().min(right_items.len());
             let shared_difference = left_items.iter().zip(right_items).enumerate().find_map(
@@ -508,6 +517,22 @@ impl Default for DraftIr {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn comparing_two_deeply_nested_equal_values_visits_each_member_once() {
+        const NESTING_DEPTH: usize = 64;
+
+        let mut nested = JsonValue::Null;
+
+        for _ in 0..NESTING_DEPTH {
+            let mut members = seampact_json::JsonObject::new();
+
+            members.insert("child".to_owned(), nested);
+            nested = JsonValue::Object(members);
+        }
+
+        assert_eq!(first_difference(&nested, &nested.clone(), ""), None);
+    }
 
     fn assert_send_and_sync<T: Send + Sync>() {}
 
