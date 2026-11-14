@@ -22,9 +22,23 @@ Spawn and message agents as the global AGENTS.md "Sub-agents" table says (Herdr 
 
 ## Rust port
 
-- Grid: Sonnet medium for port lanes, each brief listing the TypeScript test cases to port; Sonnet high for derive and the loader; Opus high for design notes, seams (IR and authoring types, diagnostic type, writer) and freeze reviews. The lead runs Sonnet medium during port waves and Opus at freezes.
+- Grid: Sonnet medium for port lanes, each brief listing the TypeScript test cases and what covers each (see "Port lessons"); Sonnet high for derive and the loader; Opus high for design notes, seams (IR and authoring types, diagnostic type, writer) and freeze reviews. The lead runs Sonnet medium during port waves and Opus at freezes.
 - One agent per 500-1,000 TypeScript lines, from a complete brief (template in the `seampact-rust-port-ts` skill).
 - For lane PRs merged into the port branch `feat/rust-core`: one review per layer, not per PR; every PR to develop keeps its fresh-agent review. The mechanical checks (`clippy::indexing_slicing`, the trace check, cargo deny and machete) carry the rest.
+
+### Port lessons
+
+- Oracle first. A TypeScript test that runs the compiler on a contract becomes an oracle fixture, never a hand-written Rust test. Hand-port only what no fixture can reach: fake services, the edge rows of PORTING.md section 2, stable bricks (A47). Each lane report keeps a ledger: every TypeScript test case of its files, with the fixture, the Rust test or the named fixture that covers it.
+- Make the oracle reach a lane as early as possible. A layer whose oracle answers only at its last lane makes every earlier lane hand-port its tests (the loader did). Before the lanes, record what an unported neighbour would answer: a half's diagnostics, the schema service's calls.
+- One crate per unit that lanes port in parallel, scaffolded by a seam PR with every shared hook in place (dispatch arm, rule ids, exports). After it, no lane touches a shared file. Parallel lanes in one crate conflicted on `lib.rs`, `trace.tsv` and `Cargo.toml`.
+- The design note splits each unit into briefs of about 1,000 TypeScript lines, one PR each. A relay at the call cap is the next brief, not "continue".
+- A dependent lane starts only once its dependency's land has exited 0 (`wave.sh land ... && wave.sh start ...`). Never judge a land from filtered output.
+- Worktrees live in a durable directory (`WAVE_ROOT` outside `/tmp`). An agent paused at the usage limit first commits its work in progress on its branch.
+- A new `fixtures/expected/differences.yaml` entry comes with its update to `crates/oracle/tests/oracle_run.rs`, which pins the stale entries of a self-compare.
+- A paused lane with one command left is finished by the lead, not by a fresh agent.
+- Lane reports give Rust code lines, Rust test lines and TypeScript lines apart. Layer 1 came out at 4.4 times the TypeScript against 2.4 budgeted.
+- An Opus pattern review after the first merged brief of a layer catches test or pattern bloat early. The layer review still runs at the layer end.
+- A planning or review agent that must hand back through `hc send` needs a shell: use `seampact-reviewer` or `seampact-implementer`, not `seampact-writer`.
 
 ## Economy
 
