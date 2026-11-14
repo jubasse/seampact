@@ -184,20 +184,20 @@ Measured (function lines per brief, 0 for a skeleton-only brief 1; skeleton in e
 
 | Crate | Lines | Skeleton | Briefs | Lines per brief | Comparable pairs after each brief | Share after each brief |
 |---|---|---|---|---|---|---|
-| `pass-tree-schemas` | 4,721 | 4,080 | 6 | 0 1,218 969 999 995 540 | 0 2 29 179 265 284 of 284 | 0 1 10 63 93 100% |
-| `pass-tree-nodes` | 4,725 | 4,245 | 6 | 0 1,016 961 993 990 765 | 0 2 25 112 207 229 of 229 | 0 1 11 49 90 100% |
-| `pass-access-identity` | 1,956 | 1,470 | 2 | 995 961 | 79 171 of 171 | 46 100% |
-| `pass-access-rights` | 3,458 | 2,295 | 5 | 0 1,070 1,000 959 429 | 0 5 98 111 123 of 123 | 0 4 80 90 100% |
-| `pass-derive-wire` | 1,820 | 1,470 | 2 | 985 835 | 58 116 of 116 | 50 100% |
-| `pass-derive-errors` | 2,788 | 2,145 | 4 | 0 1,136 998 654 | 0 17 41 109 of 109 | 0 16 38 100% |
-| `pass-tree-shared` | 239 | 420 | 1 | 239 | reached by 284 pairs | |
-| `templates` | 276 | 240 | 1 | 276 | reached by 166 `tree.nodes` pairs | |
-| `validate` | 589 | 450 | 1 | 589 | 242 fixtures | |
-| relay order | 163 | 105 | 1 | 163 | 231 fixtures | |
-| `pass-link` | 71 | 105 | 1 | 71 | 40 fixtures | |
+| `pass-tree-schemas` | 4,721 | 4,080 | 6 | 0 996 991 996 988 750 | 0 25 129 499 778 896 of 896 | 0 3 14 56 87 100% |
+| `pass-tree-nodes` | 4,725 | 4,245 | 6 | 0 996 990 993 990 756 | 0 73 92 386 656 730 of 730 | 0 10 13 53 90 100% |
+| `pass-access-identity` | 1,956 | 1,470 | 2 | 964 992 | 221 639 of 639 | 35 100% |
+| `pass-access-rights` | 3,458 | 2,295 | 5 | 0 1,043 986 973 456 | 0 45 443 516 546 of 546 | 0 8 81 95 100% |
+| `pass-derive-wire` | 1,820 | 1,470 | 2 | 977 843 | 245 488 of 488 | 50 100% |
+| `pass-derive-errors` | 2,788 | 2,145 | 3 | 919 995 874 | 43 165 456 of 456 | 9 36 100% |
+| `pass-tree-shared` | 239 | 420 | 1 | 239 | reached by 896 pairs | |
+| `templates` | 276 | 240 | 1 | 276 | reached by 443 `tree.nodes` pairs | |
+| `validate` | 589 | 450 | 1 | 589 | 699 pairs | |
+| relay order | 163 | 105 | 1 | 163 | 688 pairs | |
+| `pass-link` | 71 | 105 | 1 | 71 | 149 pairs | |
 
 - The skeletons of `tree.schemas` and `tree.nodes` alone are estimated at the PR size (4,080 and 4,245 Rust lines); the spike's ratio counts the rustdoc of public functions, which most pass functions (`pub(crate)`) do not carry.
-- The progressive oracle of the two largest halves is a cliff: a pair reaches about a third of a half's lines, and the gain order completes few pairs until the shared middle is in. The earlier estimate of 65-83% of pairs at half a half's lines reads the same curve at 50% of the whole files' lines (6,111 and 6,973, types, imports and the shared files included), that is about 3,000 to 3,500 function lines: the end of brief 4 here for `tree.schemas` (63%), inside brief 5 for `tree.nodes` (49% after brief 4). Counting the service reach under `tree.schemas` pairs lowers its share after brief 4 from 80% to 63%.
+- The progressive oracle of the two largest halves is a cliff: a pair reaches about a third of a half's lines, and the gain order completes few pairs until the shared middle is in. The earlier estimate of 65-83% of pairs at half a half's lines reads the same curve at 50% of the whole files' lines (6,111 and 6,973, types, imports and the shared files included), that is about 3,000 to 3,500 function lines: the end of brief 4 here for `tree.schemas` (56%) and `tree.nodes` (53%). The `tree.schemas` shares count the service reach under its pairs (section 6).
 - `access.identity` and `tree.nodes` keep their TypeScript tests as hand-ported Rust tests: no fixture conversion covers them.
 - Validate keeps the TypeScript messages: the spike shows the ajv-shaped conversion ports nearly one to one over `jsonschema`.
 
