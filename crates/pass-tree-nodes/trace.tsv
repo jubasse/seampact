@@ -26,31 +26,286 @@
 -	packages/core/compiler/src/passes/tree/nodes/raw.ts#treeNodesObjectOf	skip: ported in seampact-pass-tree-shared (crates/pass-tree-shared/src/raw.rs#tree_nodes_object_of)
 -	packages/core/compiler/src/passes/tree/nodes/raw.ts#treeNodesTagHeader	skip: ported in seampact-pass-tree-shared (crates/pass-tree-shared/src/raw.rs#tree_nodes_tag_header)
 -	packages/core/compiler/src/passes/tree/nodes/relays.ts#treeNodesRelayOrigin	skip: ported in seampact-pass-tree-shared (crates/pass-tree-shared/src/relays.rs#tree_nodes_relay_origin)
--	packages/core/compiler/src/passes/tree/nodes/relays.ts#treeNodesRelayShape	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
--	packages/core/compiler/src/passes/tree/nodes/relays.ts#treeNodesJoinRelayDeclarations	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
--	packages/core/compiler/src/passes/tree/nodes/relays.ts#heldDeclaration	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
--	packages/core/compiler/src/passes/tree/nodes/relays.ts#addDeclaration	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
--	packages/core/compiler/src/passes/tree/nodes/relays.ts#sameDeclaration	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
--	packages/core/compiler/src/passes/tree/nodes/relays.ts#reportDifferentDeclaration	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
--	packages/core/compiler/src/passes/tree/nodes/relays.ts#pushDeclarations	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
--	packages/core/compiler/src/passes/tree/nodes/relays.ts#stamped	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
--	packages/core/compiler/src/passes/tree/nodes/relays.ts#isCopied	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
--	packages/core/compiler/src/passes/tree/nodes/relays.ts#copiedParams	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
--	packages/core/compiler/src/passes/tree/nodes/relays.ts#copiedInput	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
--	packages/core/compiler/src/passes/tree/nodes/relays.ts#copiedResponses	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
--	packages/core/compiler/src/passes/tree/nodes/relays.ts#copiedPaging	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
--	packages/core/compiler/src/passes/tree/nodes/relays.ts#pathUnderPrefix	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
--	packages/core/compiler/src/passes/tree/nodes/relays.ts#relayPath	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
--	packages/core/compiler/src/passes/tree/nodes/relays.ts#relayTarget	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
--	packages/core/compiler/src/passes/tree/nodes/relays.ts#relaySource	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
--	packages/core/compiler/src/passes/tree/nodes/relays.ts#relayedSource	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
--	packages/core/compiler/src/passes/tree/nodes/relays.ts#importedSource	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
--	packages/core/compiler/src/passes/tree/nodes/relays.ts#importInconsistency	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
--	packages/core/compiler/src/passes/tree/nodes/relays.ts#importedOperationIndex	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
--	packages/core/compiler/src/passes/tree/nodes/relays.ts#importedDeclaration	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
--	packages/core/compiler/src/passes/tree/nodes/relays.ts#namedUnknowns	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
--	packages/core/compiler/src/passes/tree/nodes/relays.ts#ownEntry	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
--	packages/core/compiler/src/passes/tree/nodes/relays.ts#checkRouteName	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
--	packages/core/compiler/src/passes/tree/nodes/relays.ts#reportNoOperation	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
--	packages/core/compiler/src/passes/tree/nodes/relays.ts#reportTarget	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
--	packages/core/compiler/src/passes/tree/nodes/relays.ts#relaysOrigin	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
+src/api.rs#one_of	packages/core/compiler/src/passes/tree/nodes/api.ts#oneOf
+src/api.rs#text_of	packages/core/compiler/src/passes/tree/nodes/api.ts#textOf
+src/api.rs#tree_nodes_api	packages/core/compiler/src/passes/tree/nodes/api.ts#treeNodesApi
+src/api.rs#required_origin	packages/core/compiler/src/passes/tree/nodes/api.ts#requiredOrigin
+src/api.rs#version_of	packages/core/compiler/src/passes/tree/nodes/api.ts#versionOf
+src/api.rs#path_version_of	packages/core/compiler/src/passes/tree/nodes/api.ts#pathVersionOf
+src/api.rs#tree_nodes_docs	packages/core/compiler/src/passes/tree/nodes/api.ts#treeNodesDocs
+src/api.rs#caller_of	packages/core/compiler/src/passes/tree/nodes/api.ts#callerOf
+src/api.rs#documents_of	packages/core/compiler/src/passes/tree/nodes/api.ts#documentsOf
+src/api.rs#surfaces_of	packages/core/compiler/src/passes/tree/nodes/api.ts#surfacesOf
+src/api.rs#check_prefix	packages/core/compiler/src/passes/tree/nodes/api.ts#checkPrefix
+src/api.rs#check_prefix_placeholders	packages/core/compiler/src/passes/tree/nodes/api.ts#checkPrefixPlaceholders
+src/api.rs#resolve_prefix	packages/core/compiler/src/passes/tree/nodes/api.ts#resolvePrefix
+src/api.rs#leading_slash	packages/core/compiler/src/passes/tree/nodes/api.ts#leadingSlash
+src/api.rs#trim_trailing_slash	packages/core/compiler/src/passes/tree/nodes/api.ts#trimTrailingSlash
+src/collections.rs#tree_nodes_report_idless_collection	packages/core/compiler/src/passes/tree/nodes/collections.ts#treeNodesReportIdlessCollection
+src/collections.rs#tree_nodes_check_id_properties	packages/core/compiler/src/passes/tree/nodes/collections.ts#treeNodesCheckIdProperties
+src/collections.rs#id_property_pointer	packages/core/compiler/src/passes/tree/nodes/collections.ts#idPropertyPointer
+src/degradable.rs#tree_nodes_degradable	packages/core/compiler/src/passes/tree/nodes/degradable.ts#treeNodesDegradable
+src/degradable.rs#format_fills_degraded	packages/core/compiler/src/passes/tree/nodes/degradable.ts#formatFillsDegraded
+src/degradable.rs#check_path	packages/core/compiler/src/passes/tree/nodes/degradable.ts#checkPath
+src/degradable.rs#name_unfit_for_header	packages/core/compiler/src/passes/tree/nodes/degradable.ts#nameUnfitForHeader
+src/degradable.rs#path_fault	packages/core/compiler/src/passes/tree/nodes/degradable.ts#pathFault
+src/degradable.rs#variants_fault	packages/core/compiler/src/passes/tree/nodes/degradable.ts#variantsFault
+src/degradable.rs#report_path	packages/core/compiler/src/passes/tree/nodes/degradable.ts#reportPath
+src/examples.rs#tree_nodes_examples	packages/core/compiler/src/passes/tree/nodes/examples.ts#treeNodesExamples
+src/examples.rs#example_of	packages/core/compiler/src/passes/tree/nodes/examples.ts#exampleOf
+src/examples.rs#check_value	packages/core/compiler/src/passes/tree/nodes/examples.ts#checkValue
+src/examples.rs#check_example	packages/core/compiler/src/passes/tree/nodes/examples.ts#checkExample
+src/examples.rs#check_success	packages/core/compiler/src/passes/tree/nodes/examples.ts#checkSuccess
+src/examples.rs#report_target	packages/core/compiler/src/passes/tree/nodes/examples.ts#reportTarget
+src/examples.rs#report_key_issue	packages/core/compiler/src/passes/tree/nodes/examples.ts#reportKeyIssue
+src/examples.rs#table_id_use	packages/core/compiler/src/passes/tree/nodes/examples.ts#tableIdUse
+src/examples.rs#report_issue	packages/core/compiler/src/passes/tree/nodes/examples.ts#reportIssue
+src/field_wire.rs#tree_nodes_is_file_field	packages/core/compiler/src/passes/tree/nodes/field-wire.ts#treeNodesIsFileField
+src/field_wire.rs#plain_wire	packages/core/compiler/src/passes/tree/nodes/field-wire.ts#plainWire
+src/field_wire.rs#tree_nodes_field_wire_of	packages/core/compiler/src/passes/tree/nodes/field-wire.ts#treeNodesFieldWireOf
+src/field_wire.rs#tree_nodes_field_wire	packages/core/compiler/src/passes/tree/nodes/field-wire.ts#treeNodesFieldWire
+src/fields.rs#tree_nodes_fields	packages/core/compiler/src/passes/tree/nodes/fields.ts#treeNodesFields
+src/fields.rs#named_schema_fields	packages/core/compiler/src/passes/tree/nodes/fields.ts#namedSchemaFields
+src/fields.rs#tree_nodes_field_travels	packages/core/compiler/src/passes/tree/nodes/fields.ts#treeNodesFieldTravels
+src/fields.rs#tree_nodes_innermost	packages/core/compiler/src/passes/tree/nodes/fields.ts#treeNodesInnermost
+src/formats.rs#slot	packages/core/compiler/src/passes/tree/nodes/formats.ts#slot
+src/formats.rs#bare_error_member	packages/core/compiler/src/passes/tree/nodes/formats.ts#bareErrorMember
+src/formats.rs#tree_nodes_formats	packages/core/compiler/src/passes/tree/nodes/formats.ts#treeNodesFormats
+src/formats.rs#declared_format	packages/core/compiler/src/passes/tree/nodes/formats.ts#declaredFormat
+src/formats.rs#core_bare	packages/core/compiler/src/passes/tree/nodes/formats.ts#coreBare
+src/formats.rs#format_of	packages/core/compiler/src/passes/tree/nodes/formats.ts#formatOf
+src/formats.rs#tree_nodes_absent	packages/core/compiler/src/passes/tree/nodes/formats.ts#treeNodesAbsent
+src/formats.rs#text_of	packages/core/compiler/src/passes/tree/nodes/formats.ts#textOf
+src/formats.rs#tree_nodes_named_templates	packages/core/compiler/src/passes/tree/nodes/formats.ts#treeNodesNamedTemplates
+src/formats.rs#new	packages/core/compiler/src/passes/tree/nodes/formats.ts#FormatReader.constructor
+src/formats.rs#success	packages/core/compiler/src/passes/tree/nodes/formats.ts#FormatReader.success
+src/formats.rs#shape	packages/core/compiler/src/passes/tree/nodes/formats.ts#FormatReader.shape
+src/formats.rs#meta	packages/core/compiler/src/passes/tree/nodes/formats.ts#FormatReader.meta
+src/formats.rs#meta_member	packages/core/compiler/src/passes/tree/nodes/formats.ts#FormatReader.metaMember
+src/formats.rs#schema_type	packages/core/compiler/src/passes/tree/nodes/formats.ts#FormatReader.schemaType
+src/formats.rs#refuse_untyped_meta	packages/core/compiler/src/passes/tree/nodes/formats.ts#FormatReader.refuseUntypedMeta
+src/formats.rs#error	packages/core/compiler/src/passes/tree/nodes/formats.ts#FormatReader.error
+src/formats.rs#code_required	packages/core/compiler/src/passes/tree/nodes/formats.ts#FormatReader.codeRequired
+src/formats.rs#refuse_codeless	packages/core/compiler/src/passes/tree/nodes/formats.ts#FormatReader.refuseCodeless
+src/formats.rs#site	packages/core/compiler/src/passes/tree/nodes/formats.ts#FormatReader.site
+src/formats.rs#meta_fill	packages/core/compiler/src/passes/tree/nodes/formats.ts#metaFill
+src/formats.rs#tree_nodes_check_payloads	packages/core/compiler/src/passes/tree/nodes/formats.ts#treeNodesCheckPayloads
+src/formats.rs#own_of	packages/core/compiler/src/passes/tree/nodes/formats.ts#ownOf
+src/formats.rs#is_success_shape	packages/core/compiler/src/passes/tree/nodes/formats.ts#isSuccessShape
+src/formats.rs#slot_value_of_use	packages/core/compiler/src/passes/tree/nodes/formats.ts#slotValueOfUse
+src/formats.rs#payload_of	packages/core/compiler/src/passes/tree/nodes/formats.ts#payloadOf
+src/formats.rs#record_of	packages/core/compiler/src/passes/tree/nodes/formats.ts#recordOf
+src/formats.rs#written_templates	packages/core/compiler/src/passes/tree/nodes/formats.ts#writtenTemplates
+src/formats.rs#check_id_slots	packages/core/compiler/src/passes/tree/nodes/formats.ts#checkIdSlots
+src/formats.rs#check_item_collection_slot	packages/core/compiler/src/passes/tree/nodes/formats.ts#checkItemCollectionSlot
+src/formats.rs#check_member_names	packages/core/compiler/src/passes/tree/nodes/formats.ts#checkMemberNames
+src/formats.rs#duplicate_member_name	packages/core/compiler/src/passes/tree/nodes/formats.ts#duplicateMemberName
+src/formats.rs#member_name_text	packages/core/compiler/src/passes/tree/nodes/formats.ts#memberNameText
+src/formats.rs#has_property	packages/core/compiler/src/passes/tree/nodes/formats.ts#hasProperty
+src/formats.rs#check_slot_values	packages/core/compiler/src/passes/tree/nodes/formats.ts#checkSlotValues
+src/formats.rs#slot_value	packages/core/compiler/src/passes/tree/nodes/formats.ts#slotValue
+src/formats.rs#each_element	packages/core/compiler/src/passes/tree/nodes/formats.ts#eachElement
+src/formats.rs#check_merge	packages/core/compiler/src/passes/tree/nodes/formats.ts#checkMerge
+src/formats.rs#report_payload	packages/core/compiler/src/passes/tree/nodes/formats.ts#reportPayload
+src/formats.rs#origin_of_operation	packages/core/compiler/src/passes/tree/nodes/formats.ts#originOfOperation
+src/input.rs#join_path	packages/core/compiler/src/passes/tree/nodes/input.ts#joinPath
+src/input.rs#tree_nodes_input	packages/core/compiler/src/passes/tree/nodes/input.ts#treeNodesInput
+src/input.rs#media_of	packages/core/compiler/src/passes/tree/nodes/input.ts#mediaOf
+src/input.rs#report_nested_files	packages/core/compiler/src/passes/tree/nodes/input.ts#reportNestedFiles
+src/input.rs#files_below	packages/core/compiler/src/passes/tree/nodes/input.ts#filesBelow
+src/input.rs#tree_nodes_batch_input	packages/core/compiler/src/passes/tree/nodes/input.ts#treeNodesBatchInput
+src/input.rs#input_schema_pointer	packages/core/compiler/src/passes/tree/nodes/input.ts#inputSchemaPointer
+src/input.rs#media_word	packages/core/compiler/src/passes/tree/nodes/input.ts#mediaWord
+src/input.rs#form_fields	packages/core/compiler/src/passes/tree/nodes/input.ts#formFields
+src/input.rs#field_wire	packages/core/compiler/src/passes/tree/nodes/input.ts#fieldWire
+src/input.rs#check_file_field	packages/core/compiler/src/passes/tree/nodes/input.ts#checkFileField
+src/lifecycle.rs#tree_nodes_own_extensions	packages/core/compiler/src/passes/tree/nodes/lifecycle.ts#treeNodesOwnExtensions
+src/lifecycle.rs#extensions_of	packages/core/compiler/src/passes/tree/nodes/lifecycle.ts#extensionsOf
+src/lifecycle.rs#add_extensions	packages/core/compiler/src/passes/tree/nodes/lifecycle.ts#addExtensions
+src/lifecycle.rs#tree_nodes_extensions	packages/core/compiler/src/passes/tree/nodes/lifecycle.ts#treeNodesExtensions
+src/lifecycle.rs#tree_nodes_tags	packages/core/compiler/src/passes/tree/nodes/lifecycle.ts#treeNodesTags
+src/lifecycle.rs#tree_nodes_upstream	packages/core/compiler/src/passes/tree/nodes/lifecycle.ts#treeNodesUpstream
+src/lifecycle.rs#tree_nodes_internal	packages/core/compiler/src/passes/tree/nodes/lifecycle.ts#treeNodesInternal
+src/lifecycle.rs#tree_nodes_stated_maturity	packages/core/compiler/src/passes/tree/nodes/lifecycle.ts#treeNodesStatedMaturity
+src/lifecycle.rs#tree_nodes_budget_ms	packages/core/compiler/src/passes/tree/nodes/lifecycle.ts#treeNodesBudgetMs
+src/lifecycle.rs#tree_nodes_deprecated	packages/core/compiler/src/passes/tree/nodes/lifecycle.ts#treeNodesDeprecated
+src/lifecycle.rs#tree_nodes_check_successor	packages/core/compiler/src/passes/tree/nodes/lifecycle.ts#treeNodesCheckSuccessor
+src/lifecycle.rs#successor_rel_of	packages/core/compiler/src/passes/tree/nodes/lifecycle.ts#successorRelOf
+src/lifecycle.rs#deprecation_dates_hold	packages/core/compiler/src/passes/tree/nodes/lifecycle.ts#deprecationDatesHold
+src/lifecycle.rs#since_is_date	packages/core/compiler/src/passes/tree/nodes/lifecycle.ts#sinceIsDate
+src/lifecycle.rs#sunset_is_date	packages/core/compiler/src/passes/tree/nodes/lifecycle.ts#sunsetIsDate
+src/lifecycle.rs#report_successor_params	packages/core/compiler/src/passes/tree/nodes/lifecycle.ts#reportSuccessorParams
+src/lifecycle.rs#report_deprecation	packages/core/compiler/src/passes/tree/nodes/lifecycle.ts#reportDeprecation
+src/lifecycle.rs#report_unknown_service	packages/core/compiler/src/passes/tree/nodes/lifecycle.ts#reportUnknownService
+src/limits.rs#tree_nodes_body_limit	packages/core/compiler/src/passes/tree/nodes/limits.ts#treeNodesBodyLimit
+src/limits.rs#parsed_body_limit	packages/core/compiler/src/passes/tree/nodes/limits.ts#parsedBodyLimit
+src/limits.rs#tree_nodes_check_body_limits	packages/core/compiler/src/passes/tree/nodes/limits.ts#treeNodesCheckBodyLimits
+src/limits.rs#check_limit	packages/core/compiler/src/passes/tree/nodes/limits.ts#checkLimit
+src/operations.rs#is_http_method	packages/core/compiler/src/passes/tree/nodes/operations.ts#isHttpMethod
+src/operations.rs#tree_nodes_operations	packages/core/compiler/src/passes/tree/nodes/operations.ts#treeNodesOperations
+src/operations.rs#check_successors	packages/core/compiler/src/passes/tree/nodes/operations.ts#checkSuccessors
+src/operations.rs#member_id_failed	packages/core/compiler/src/passes/tree/nodes/operations.ts#memberIdFailed
+src/operations.rs#route_of	packages/core/compiler/src/passes/tree/nodes/operations.ts#routeOf
+src/operations.rs#report_route_clashes	packages/core/compiler/src/passes/tree/nodes/operations.ts#reportRouteClashes
+src/operations.rs#operation_of	packages/core/compiler/src/passes/tree/nodes/operations.ts#operationOf
+src/operations.rs#relay_operation_of	packages/core/compiler/src/passes/tree/nodes/operations.ts#relayOperationOf
+src/operations.rs#shape_of	packages/core/compiler/src/passes/tree/nodes/operations.ts#shapeOf
+src/operations.rs#lifecycle_of	packages/core/compiler/src/passes/tree/nodes/operations.ts#lifecycleOf
+src/operations.rs#report_no_input	packages/core/compiler/src/passes/tree/nodes/operations.ts#reportNoInput
+src/operations.rs#report_get_input	packages/core/compiler/src/passes/tree/nodes/operations.ts#reportGetInput
+src/operations.rs#surface_of	packages/core/compiler/src/passes/tree/nodes/operations.ts#surfaceOf
+src/operations.rs#method_of	packages/core/compiler/src/passes/tree/nodes/operations.ts#methodOf
+src/operations.rs#resource_of	packages/core/compiler/src/passes/tree/nodes/operations.ts#resourceOf
+src/operations.rs#warn_bare_id_singular	packages/core/compiler/src/passes/tree/nodes/operations.ts#warnBareIdSingular
+src/operations.rs#report_no_singular	packages/core/compiler/src/passes/tree/nodes/operations.ts#reportNoSingular
+src/operations.rs#report_clashes	packages/core/compiler/src/passes/tree/nodes/operations.ts#reportClashes
+src/operations.rs#report_clash	packages/core/compiler/src/passes/tree/nodes/operations.ts#reportClash
+src/paging.rs#refuse_outside_list	packages/core/compiler/src/passes/tree/nodes/paging.ts#refuseOutsideList
+src/paging.rs#tree_nodes_paging	packages/core/compiler/src/passes/tree/nodes/paging.ts#treeNodesPaging
+src/paging.rs#named_style	packages/core/compiler/src/passes/tree/nodes/paging.ts#namedStyle
+src/paging.rs#over_limit_of	packages/core/compiler/src/passes/tree/nodes/paging.ts#overLimitOf
+src/paging.rs#refuse_sort_without_role	packages/core/compiler/src/passes/tree/nodes/paging.ts#refuseSortWithoutRole
+src/paging.rs#sort_keys_of	packages/core/compiler/src/passes/tree/nodes/paging.ts#sortKeysOf
+src/paging.rs#number_of	packages/core/compiler/src/passes/tree/nodes/paging.ts#numberOf
+src/paging.rs#sort_style_of	packages/core/compiler/src/passes/tree/nodes/paging.ts#sortStyleOf
+src/paging.rs#request_roles	packages/core/compiler/src/passes/tree/nodes/paging.ts#requestRoles
+src/paging.rs#written_limits	packages/core/compiler/src/passes/tree/nodes/paging.ts#writtenLimits
+src/paging.rs#convention_limit	packages/core/compiler/src/passes/tree/nodes/paging.ts#conventionLimit
+src/paging.rs#above_max_limit	packages/core/compiler/src/passes/tree/nodes/paging.ts#aboveMaxLimit
+src/paging.rs#convention_limits	packages/core/compiler/src/passes/tree/nodes/paging.ts#conventionLimits
+src/paging.rs#declared_style	packages/core/compiler/src/passes/tree/nodes/paging.ts#declaredStyle
+src/paging.rs#token_of	packages/core/compiler/src/passes/tree/nodes/paging.ts#tokenOf
+src/paging.rs#refuse_taken_names	packages/core/compiler/src/passes/tree/nodes/paging.ts#refuseTakenNames
+src/paging.rs#limits_of	packages/core/compiler/src/passes/tree/nodes/paging.ts#limitsOf
+src/paging.rs#refuse_unsignable_keys	packages/core/compiler/src/passes/tree/nodes/paging.ts#refuseUnsignableKeys
+src/paging.rs#report_unknown_key	packages/core/compiler/src/passes/tree/nodes/paging.ts#reportUnknownKey
+src/paging.rs#request_related	packages/core/compiler/src/passes/tree/nodes/paging.ts#requestRelated
+src/paging.rs#report_route_contradiction	packages/core/compiler/src/passes/tree/nodes/paging.ts#reportRouteContradiction
+src/paging.rs#report_missing_limit	packages/core/compiler/src/passes/tree/nodes/paging.ts#reportMissingLimit
+src/paging.rs#report_convention_contradiction	packages/core/compiler/src/passes/tree/nodes/paging.ts#reportConventionContradiction
+src/pagings.rs#tree_nodes_pagings	packages/core/compiler/src/passes/tree/nodes/pagings.ts#treeNodesPagings
+src/pagings.rs#refuse_reserved_style	packages/core/compiler/src/passes/tree/nodes/pagings.ts#refuseReservedStyle
+src/pagings.rs#style_of	packages/core/compiler/src/passes/tree/nodes/pagings.ts#styleOf
+src/pagings.rs#used_roles	packages/core/compiler/src/passes/tree/nodes/pagings.ts#usedRoles
+src/pagings.rs#handler_result_of	packages/core/compiler/src/passes/tree/nodes/pagings.ts#handlerResultOf
+src/pagings.rs#new	packages/core/compiler/src/passes/tree/nodes/pagings.ts#StyleReader.constructor
+src/pagings.rs#request	packages/core/compiler/src/passes/tree/nodes/pagings.ts#StyleReader.request
+src/pagings.rs#check_sent_once	packages/core/compiler/src/passes/tree/nodes/pagings.ts#StyleReader.checkSentOnce
+src/pagings.rs#request_role	packages/core/compiler/src/passes/tree/nodes/pagings.ts#StyleReader.requestRole
+src/pagings.rs#check_sort	packages/core/compiler/src/passes/tree/nodes/pagings.ts#StyleReader.checkSort
+src/pagings.rs#refuse_request	packages/core/compiler/src/passes/tree/nodes/pagings.ts#StyleReader.refuseRequest
+src/pagings.rs#position	packages/core/compiler/src/passes/tree/nodes/pagings.ts#StyleReader.position
+src/pagings.rs#response	packages/core/compiler/src/passes/tree/nodes/pagings.ts#StyleReader.response
+src/pagings.rs#meta	packages/core/compiler/src/passes/tree/nodes/pagings.ts#StyleReader.meta
+src/pagings.rs#links	packages/core/compiler/src/passes/tree/nodes/pagings.ts#StyleReader.links
+src/pagings.rs#check_items_once	packages/core/compiler/src/passes/tree/nodes/pagings.ts#StyleReader.checkItemsOnce
+src/pagings.rs#check_kinds	packages/core/compiler/src/passes/tree/nodes/pagings.ts#StyleReader.checkKinds
+src/pagings.rs#site	packages/core/compiler/src/passes/tree/nodes/pagings.ts#StyleReader.site
+src/pagings.rs#report	packages/core/compiler/src/passes/tree/nodes/pagings.ts#StyleReader.report
+src/pagings.rs#sort_fault	packages/core/compiler/src/passes/tree/nodes/pagings.ts#sortFault
+src/pagings.rs#check_formats	packages/core/compiler/src/passes/tree/nodes/pagings.ts#checkFormats
+src/pagings.rs#check_meta	packages/core/compiler/src/passes/tree/nodes/pagings.ts#checkMeta
+src/pagings.rs#format_related	packages/core/compiler/src/passes/tree/nodes/pagings.ts#formatRelated
+src/pagings.rs#sent_key	packages/core/compiler/src/passes/tree/nodes/pagings.ts#sentKey
+src/params.rs#placeholders_of	packages/core/compiler/src/passes/tree/nodes/params.ts#placeholdersOf
+src/params.rs#tree_nodes_unknown_query	packages/core/compiler/src/passes/tree/nodes/params.ts#treeNodesUnknownQuery
+src/params.rs#chain_of	packages/core/compiler/src/passes/tree/nodes/params.ts#chainOf
+src/params.rs#policy_of	packages/core/compiler/src/passes/tree/nodes/params.ts#policyOf
+src/params.rs#inherited_fields	packages/core/compiler/src/passes/tree/nodes/params.ts#inheritedFields
+src/params.rs#check_tag_header_not_declared	packages/core/compiler/src/passes/tree/nodes/params.ts#checkTagHeaderNotDeclared
+src/params.rs#params_of	packages/core/compiler/src/passes/tree/nodes/params.ts#paramsOf
+src/params.rs#tree_nodes_params	packages/core/compiler/src/passes/tree/nodes/params.ts#treeNodesParams
+src/params.rs#check_query_not_named_like_path	packages/core/compiler/src/passes/tree/nodes/params.ts#checkQueryNotNamedLikePath
+src/params.rs#path_param_fields	packages/core/compiler/src/passes/tree/nodes/params.ts#pathParamFields
+src/params.rs#check_placeholders	packages/core/compiler/src/passes/tree/nodes/params.ts#checkPlaceholders
+src/params.rs#param_of	packages/core/compiler/src/passes/tree/nodes/params.ts#paramOf
+src/params.rs#report_undeclared_placeholder	packages/core/compiler/src/passes/tree/nodes/params.ts#reportUndeclaredPlaceholder
+src/params.rs#report_twice	packages/core/compiler/src/passes/tree/nodes/params.ts#reportTwice
+src/params.rs#report_repeated_placeholder	packages/core/compiler/src/passes/tree/nodes/params.ts#reportRepeatedPlaceholder
+src/paths.rs#segment_of_name	packages/core/compiler/src/passes/tree/nodes/paths.ts#segmentOfName
+src/paths.rs#path_case_of	packages/core/compiler/src/passes/tree/nodes/paths.ts#pathCaseOf
+src/paths.rs#tree_nodes_check_path_parts	packages/core/compiler/src/passes/tree/nodes/paths.ts#treeNodesCheckPathParts
+src/paths.rs#part_of	packages/core/compiler/src/passes/tree/nodes/paths.ts#partOf
+src/paths.rs#tree_nodes_path	packages/core/compiler/src/passes/tree/nodes/paths.ts#treeNodesPath
+src/paths.rs#written_part	packages/core/compiler/src/passes/tree/nodes/paths.ts#writtenPart
+src/paths.rs#op_part	packages/core/compiler/src/passes/tree/nodes/paths.ts#opPart
+src/relays.rs#tree_nodes_relay_shape	packages/core/compiler/src/passes/tree/nodes/relays.ts#treeNodesRelayShape
+src/relays.rs#tree_nodes_join_relay_declarations	packages/core/compiler/src/passes/tree/nodes/relays.ts#treeNodesJoinRelayDeclarations
+src/relays.rs#held_declaration	packages/core/compiler/src/passes/tree/nodes/relays.ts#heldDeclaration
+src/relays.rs#add_declaration	packages/core/compiler/src/passes/tree/nodes/relays.ts#addDeclaration
+src/relays.rs#same_declaration	packages/core/compiler/src/passes/tree/nodes/relays.ts#sameDeclaration
+src/relays.rs#report_different_declaration	packages/core/compiler/src/passes/tree/nodes/relays.ts#reportDifferentDeclaration
+src/relays.rs#push_declarations	packages/core/compiler/src/passes/tree/nodes/relays.ts#pushDeclarations
+src/relays.rs#stamped	packages/core/compiler/src/passes/tree/nodes/relays.ts#stamped
+src/relays.rs#is_copied	packages/core/compiler/src/passes/tree/nodes/relays.ts#isCopied
+src/relays.rs#copied_params	packages/core/compiler/src/passes/tree/nodes/relays.ts#copiedParams
+src/relays.rs#copied_input	packages/core/compiler/src/passes/tree/nodes/relays.ts#copiedInput
+src/relays.rs#copied_responses	packages/core/compiler/src/passes/tree/nodes/relays.ts#copiedResponses
+src/relays.rs#copied_paging	packages/core/compiler/src/passes/tree/nodes/relays.ts#copiedPaging
+src/relays.rs#path_under_prefix	packages/core/compiler/src/passes/tree/nodes/relays.ts#pathUnderPrefix
+src/relays.rs#relay_path	packages/core/compiler/src/passes/tree/nodes/relays.ts#relayPath
+src/relays.rs#relay_target	packages/core/compiler/src/passes/tree/nodes/relays.ts#relayTarget
+src/relays.rs#relay_source	packages/core/compiler/src/passes/tree/nodes/relays.ts#relaySource
+src/relays.rs#relayed_source	packages/core/compiler/src/passes/tree/nodes/relays.ts#relayedSource
+src/relays.rs#imported_source	packages/core/compiler/src/passes/tree/nodes/relays.ts#importedSource
+src/relays.rs#import_inconsistency	packages/core/compiler/src/passes/tree/nodes/relays.ts#importInconsistency
+src/relays.rs#imported_operation_index	packages/core/compiler/src/passes/tree/nodes/relays.ts#importedOperationIndex
+src/relays.rs#imported_declaration	packages/core/compiler/src/passes/tree/nodes/relays.ts#importedDeclaration
+src/relays.rs#named_unknowns	packages/core/compiler/src/passes/tree/nodes/relays.ts#namedUnknowns
+src/relays.rs#own_entry	packages/core/compiler/src/passes/tree/nodes/relays.ts#ownEntry
+src/relays.rs#check_route_name	packages/core/compiler/src/passes/tree/nodes/relays.ts#checkRouteName
+src/relays.rs#report_no_operation	packages/core/compiler/src/passes/tree/nodes/relays.ts#reportNoOperation
+src/relays.rs#report_target	packages/core/compiler/src/passes/tree/nodes/relays.ts#reportTarget
+src/relays.rs#relays_origin	packages/core/compiler/src/passes/tree/nodes/relays.ts#relaysOrigin
+src/responses.rs#empty_response	packages/core/compiler/src/passes/tree/nodes/responses.ts#emptyResponse
+src/responses.rs#media_of	packages/core/compiler/src/passes/tree/nodes/responses.ts#mediaOf
+src/responses.rs#tree_nodes_format	packages/core/compiler/src/passes/tree/nodes/responses.ts#treeNodesFormat
+src/responses.rs#tree_nodes_is_list	packages/core/compiler/src/passes/tree/nodes/responses.ts#treeNodesIsList
+src/responses.rs#check_no_content_body	packages/core/compiler/src/passes/tree/nodes/responses.ts#checkNoContentBody
+src/responses.rs#tree_nodes_responses	packages/core/compiler/src/passes/tree/nodes/responses.ts#treeNodesResponses
+src/responses.rs#format_origin_of	packages/core/compiler/src/passes/tree/nodes/responses.ts#formatOriginOf
+src/responses.rs#declared_responses	packages/core/compiler/src/passes/tree/nodes/responses.ts#declaredResponses
+src/responses.rs#output_status	packages/core/compiler/src/passes/tree/nodes/responses.ts#outputStatus
+src/responses.rs#docs_of	packages/core/compiler/src/passes/tree/nodes/responses.ts#docsOf
+src/responses.rs#body_response	packages/core/compiler/src/passes/tree/nodes/responses.ts#bodyResponse
+src/responses.rs#list_shape	packages/core/compiler/src/passes/tree/nodes/responses.ts#listShape
+src/responses.rs#op_status	packages/core/compiler/src/passes/tree/nodes/responses.ts#opStatus
+src/responses.rs#op_responses	packages/core/compiler/src/passes/tree/nodes/responses.ts#opResponses
+src/responses.rs#check_responses_alone	packages/core/compiler/src/passes/tree/nodes/responses.ts#checkResponsesAlone
+src/responses.rs#response_headers	packages/core/compiler/src/passes/tree/nodes/responses.ts#responseHeaders
+src/responses.rs#written_response	packages/core/compiler/src/passes/tree/nodes/responses.ts#writtenResponse
+src/responses.rs#batch_table	packages/core/compiler/src/passes/tree/nodes/responses.ts#batchTable
+src/responses.rs#report_redirect_body	packages/core/compiler/src/passes/tree/nodes/responses.ts#reportRedirectBody
+src/responses.rs#report_no_item	packages/core/compiler/src/passes/tree/nodes/responses.ts#reportNoItem
+src/responses.rs#report_header_twice	packages/core/compiler/src/passes/tree/nodes/responses.ts#reportHeaderTwice
+src/settings.rs#tree_nodes_api_settings	packages/core/compiler/src/passes/tree/nodes/settings.ts#treeNodesApiSettings
+src/settings.rs#write_conventions	packages/core/compiler/src/passes/tree/nodes/settings.ts#writeConventions
+src/settings.rs#lint_rules	packages/core/compiler/src/passes/tree/nodes/settings.ts#lintRules
+src/settings.rs#lint_allows	packages/core/compiler/src/passes/tree/nodes/settings.ts#lintAllows
+src/settings.rs#add_route_position_allows	packages/core/compiler/src/passes/tree/nodes/settings.ts#addRoutePositionAllows
+src/settings.rs#add_inline_schema_allows	packages/core/compiler/src/passes/tree/nodes/settings.ts#addInlineSchemaAllows
+src/settings.rs#add_fields_map_allows	packages/core/compiler/src/passes/tree/nodes/settings.ts#addFieldsMapAllows
+src/settings.rs#packs_of	packages/core/compiler/src/passes/tree/nodes/settings.ts#packsOf
+src/settings.rs#write_services	packages/core/compiler/src/passes/tree/nodes/settings.ts#writeServices
+src/settings.rs#add_nested_allows	packages/core/compiler/src/passes/tree/nodes/settings.ts#addNestedAllows
+src/templates.rs#slots_of	packages/core/compiler/src/passes/tree/nodes/templates.ts#slotsOf
+src/templates.rs#tree_nodes_template	packages/core/compiler/src/passes/tree/nodes/templates.ts#treeNodesTemplate
+src/writes.rs#check_declaration	packages/core/compiler/src/passes/tree/nodes/writes.ts#checkDeclaration
+src/writes.rs#resource_node_of	packages/core/compiler/src/passes/tree/nodes/writes.ts#resourceNodeOf
+src/writes.rs#tree_nodes_owner	packages/core/compiler/src/passes/tree/nodes/writes.ts#treeNodesOwner
+src/writes.rs#tree_nodes_concurrency	packages/core/compiler/src/passes/tree/nodes/writes.ts#treeNodesConcurrency
+src/writes.rs#origin_of	packages/core/compiler/src/passes/tree/nodes/writes.ts#originOf
+src/writes.rs#check_owner_alone	packages/core/compiler/src/passes/tree/nodes/writes.ts#checkOwnerAlone
+src/writes.rs#parse_source	packages/core/compiler/src/passes/tree/nodes/writes.ts#parseSource
+src/writes.rs#on_member_scope	packages/core/compiler/src/passes/tree/nodes/writes.ts#onMemberScope
+src/writes.rs#check_not_restated	packages/core/compiler/src/passes/tree/nodes/writes.ts#checkNotRestated
+src/writes.rs#restating_origin	packages/core/compiler/src/passes/tree/nodes/writes.ts#restatingOrigin
+src/writes.rs#report_nothing_to_inherit	packages/core/compiler/src/passes/tree/nodes/writes.ts#reportNothingToInherit
+src/diagnostics.rs#is_diagnostic_origin	packages/core/compiler/src/passes/tree/nodes/diagnostics.ts#isDiagnosticOrigin
+src/diagnostics.rs#tree_nodes_node_origin	packages/core/compiler/src/passes/tree/nodes/diagnostics.ts#treeNodesNodeOrigin
+src/diagnostics.rs#tree_nodes_report_once	packages/core/compiler/src/passes/tree/nodes/diagnostics.ts#treeNodesReportOnce
+src/diagnostics.rs#tree_nodes_rule_id	packages/core/compiler/src/passes/tree/nodes/diagnostics.ts#treeNodesRuleId
+src/diagnostics.rs#tree_nodes_error	packages/core/compiler/src/passes/tree/nodes/diagnostics.ts#treeNodesError
+src/diagnostics.rs#tree_nodes_locate	packages/core/compiler/src/passes/tree/nodes/diagnostics.ts#treeNodesLocate
+src/diagnostics.rs#tree_nodes_warning	packages/core/compiler/src/passes/tree/nodes/diagnostics.ts#treeNodesWarning
+src/pass.rs#run	packages/core/compiler/src/passes/tree/nodes/pass.ts#treeNodesPass.run
