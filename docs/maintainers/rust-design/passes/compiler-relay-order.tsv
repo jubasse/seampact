@@ -1,0 +1,8 @@
+brief	function	file	lines	size	pairs
+1	workspaceRelayRoutes	workspace/order.ts	40-61	22	231/231
+1	relayComponents	workspace/order.ts	64-109	46	231/231
+1	relayPlacement	workspace/order.ts	113-136	24	231/231
+1	workspaceRelayOrder	workspace/order.ts	178-202	25	231/231
+1	relayTargetApi	workspace/order.ts	33-38	6	30/231
+1	isDiagnosticOrigin	workspace/order.ts	29-30	2	11/231
+1	relayCycleDiagnostics	workspace/order.ts	139-176	38	1/231
