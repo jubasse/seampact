@@ -1,0 +1,13 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/formats/house/meta/region/schema",
+      "output"
+    ],
+    "answer": {
+      "kind": "enum",
+      "enum": "Region"
+    }
+  }
+]

@@ -1,0 +1,9 @@
+api: { name: shop, version: 1 }
+conventions: { errors: { derived: { notFound: shop.missing } } }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: The contract checks error declarations and role bindings only. }
+    routes:
+      ping: { method: get }

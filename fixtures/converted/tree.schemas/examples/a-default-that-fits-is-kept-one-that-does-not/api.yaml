@@ -1,0 +1,10 @@
+api: { name: t, version: 1 }
+schemas:
+  Settings:
+    type: object
+    properties:
+      size: { type: integer, minimum: 1, default: 10 }
+      note: { type: string, nullable: true, default: null }
+      limits: { type: array, items: { type: integer }, default: [1, "two"] }
+      level: { type: integer, default: low }
+  Small: { pick: { from: Settings, fields: [size] }, properties: { size: { default: 0 } } }

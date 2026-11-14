@@ -1,0 +1,59 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "shop",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/sort-key-right",
+          "message": "sort key 'cost' of route 'listItems' is given right 'items.audit', but its field is restricted to 'items.cost'",
+          "fix": "remove the key's 'right', or write 'items.cost'",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/items/ops/list/sortable/0/right"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/Item/properties/cost/restrictedTo"
+              },
+              "message": "the field is restricted to 'items.cost' here"
+            }
+          ]
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/sort-key-right",
+          "message": "sort key 'name' is given right 'items.ghost', which the rights catalogue does not declare",
+          "fix": "declare the right in 'rights', or name a declared one",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/items/ops/list/sortable/1/right"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/sort-key-right",
+          "message": "sort key 'grade' of route 'listItems' inherits right 'items.grade' with params from its field, and a sort key's right carries no params",
+          "fix": "remove the key from 'sortable', or restrict the field to a right without params",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/items/ops/list/sortable/2"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/Item/properties/grade/restrictedTo"
+              },
+              "message": "the field's restriction with params"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

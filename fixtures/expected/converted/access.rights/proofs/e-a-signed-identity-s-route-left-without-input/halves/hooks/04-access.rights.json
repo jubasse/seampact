@@ -1,0 +1,90 @@
+{
+  "rules": {
+    "recentAuth": {
+      "id": "recentAuth",
+      "takesBucket": false,
+      "proof": {
+        "in": "body",
+        "name": "token",
+        "schema": {
+          "kind": "scalar",
+          "type": "string",
+          "refinements": {}
+        }
+      },
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/recentAuth"
+      }
+    }
+  },
+  "operations": {
+    "ping": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "pong": {
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "recentAuth",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/hooks/routes/pong/requires/0"
+          }
+        }
+      ],
+      "fieldRights": [],
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "ApiEmptyBody"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/hooks/routes/pong/requires/0"
+        },
+        "rawBody": true,
+        "proofs": [
+          {
+            "name": "token",
+            "schema": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "derivedFrom": {
+              "derivation": "rule.proof",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/hooks/routes/pong/requires/0"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/rules/recentAuth/proof"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "peek": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "drop": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    }
+  }
+}

@@ -1,0 +1,26 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/invoices/routes/list/query/apiKey?",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "queryWire",
+    "args": [
+      "/surfaces/app/routes/invoices/routes/list/query/apiKey?"
+    ],
+    "answer": {
+      "kind": "text",
+      "style": "form",
+      "explode": true,
+      "brackets": false
+    }
+  }
+]

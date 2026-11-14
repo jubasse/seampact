@@ -1,0 +1,14 @@
+{
+  "operations": {
+    "ping": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "poke": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    }
+  }
+}

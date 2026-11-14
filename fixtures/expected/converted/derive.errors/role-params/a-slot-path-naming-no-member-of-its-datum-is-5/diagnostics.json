@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "shop",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/derive/role-param-type",
+          "message": "role 'schemaInvalid' reads $item.pointr, but $item has no member 'pointr'",
+          "fix": "read a member $item has, or the datum itself",
+          "origin": {
+            "layer": "api",
+            "pointer": "/conventions/errors/derived/schemaInvalid/params/issues/$as/pointer"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

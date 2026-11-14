@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/derive/role-param-type",
+    "message": "role 'sortKeyForbidden' fills the param 'key' of 'shop.sort_denied' with $key, but its maxLength is not provably within the param's maxLength 2",
+    "fix": "fill 'key' with a value its type provably takes, or change the param's type in 'shop.sort_denied'",
+    "origin": {
+      "layer": "api",
+      "pointer": "/conventions/errors/derived/sortKeyForbidden/params/key"
+    },
+    "related": []
+  }
+]

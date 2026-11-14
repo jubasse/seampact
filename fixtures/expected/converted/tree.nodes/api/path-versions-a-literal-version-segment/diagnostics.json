@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "audit",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/path-version",
+          "message": "The prefix /v2/app of the surface app holds the literal version segment v2, which differs from the api version 1; the version is held once, on the api.",
+          "fix": "Write {version} instead of v2.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/prefix"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,235 @@
+{
+  "rights": {
+    "orgMember": {
+      "id": "orgMember",
+      "subject": {
+        "kind": "scope",
+        "scope": "org"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/orgMember"
+      }
+    },
+    "projectRole": {
+      "id": "projectRole",
+      "subject": {
+        "kind": "scope",
+        "scope": "project"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/projectRole"
+      }
+    },
+    "docs.edit": {
+      "id": "docs.edit",
+      "subject": {
+        "kind": "resource",
+        "type": {
+          "segments": [
+            "doc"
+          ],
+          "role": "schema"
+        },
+        "idSchema": {
+          "kind": "scalar",
+          "type": "string",
+          "format": "uuid",
+          "refinements": {}
+        }
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/docs.edit"
+      }
+    },
+    "docs.read": {
+      "id": "docs.read",
+      "subject": {
+        "kind": "resource",
+        "type": {
+          "segments": [
+            "doc"
+          ],
+          "role": "schema"
+        },
+        "idSchema": {
+          "kind": "scalar",
+          "type": "string",
+          "format": "uuid",
+          "refinements": {}
+        }
+      },
+      "guest": "Published docs are public.",
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/docs.read"
+      }
+    },
+    "notes.edit": {
+      "id": "notes.edit",
+      "subject": {
+        "kind": "resource",
+        "type": {
+          "segments": [
+            "note"
+          ],
+          "role": "schema"
+        },
+        "idSchema": {
+          "kind": "scalar",
+          "type": "string",
+          "format": "uuid",
+          "refinements": {}
+        }
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/notes.edit"
+      }
+    },
+    "projects.edit": {
+      "id": "projects.edit",
+      "subject": {
+        "kind": "resource",
+        "type": {
+          "segments": [
+            "project"
+          ],
+          "role": "schema"
+        },
+        "idSchema": {
+          "kind": "scalar",
+          "type": "string",
+          "format": "uuid",
+          "refinements": {}
+        }
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/projects.edit"
+      }
+    },
+    "audit": {
+      "id": "audit",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/audit"
+      }
+    },
+    "teamRole": {
+      "id": "teamRole",
+      "subject": {
+        "kind": "scope",
+        "scope": "team"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/teamRole"
+      }
+    }
+  },
+  "scopes": {
+    "org": {
+      "id": "org",
+      "idSchema": {
+        "kind": "scalar",
+        "type": "string",
+        "format": "uuid",
+        "refinements": {}
+      },
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/scopes/org"
+      }
+    },
+    "project": {
+      "id": "project",
+      "idSchema": {
+        "kind": "scalar",
+        "type": "string",
+        "format": "uuid",
+        "refinements": {}
+      },
+      "within": "org",
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/scopes/project"
+      }
+    },
+    "board": {
+      "id": "board",
+      "idSchema": {
+        "kind": "scalar",
+        "type": "string",
+        "format": "uuid",
+        "refinements": {}
+      },
+      "within": "project",
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/scopes/board"
+      }
+    }
+  },
+  "operations": {
+    "ping": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    }
+  }
+}

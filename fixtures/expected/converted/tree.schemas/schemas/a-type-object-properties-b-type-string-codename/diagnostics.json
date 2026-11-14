@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/name-segments",
+          "message": "the codeName '--' yields no identifier segment",
+          "fix": "write a codeName with letters or digits",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/A/properties/b/codeName"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

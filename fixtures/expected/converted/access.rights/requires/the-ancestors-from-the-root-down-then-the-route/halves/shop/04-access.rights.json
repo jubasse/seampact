@@ -1,0 +1,143 @@
+{
+  "rights": {
+    "shop.open": {
+      "id": "shop.open",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/shop.open"
+      }
+    },
+    "staff": {
+      "id": "staff",
+      "params": "StaffParams",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/staff"
+      }
+    }
+  },
+  "rules": {
+    "throttle": {
+      "id": "throttle",
+      "takesBucket": true,
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/throttle"
+      }
+    },
+    "audit": {
+      "id": "audit",
+      "takesBucket": false,
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/audit"
+      }
+    },
+    "note": {
+      "id": "note",
+      "params": "NoteParams",
+      "takesBucket": false,
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/note"
+      }
+    }
+  },
+  "buckets": {
+    "perUser": {
+      "id": "perUser",
+      "key": [
+        {
+          "in": "principal",
+          "name": "userId"
+        }
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/buckets/perUser"
+      }
+    }
+  },
+  "operations": {
+    "refundOrders": {
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "audit",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/requires/0"
+          }
+        },
+        {
+          "kind": "right",
+          "right": "staff",
+          "params": {
+            "level": 3
+          },
+          "entry": "seniorStaff",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/orders/requires/0"
+          }
+        },
+        {
+          "kind": "rule",
+          "rule": "throttle",
+          "entry": "writeThrottle",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/orders/routes/refund/requires/0"
+          },
+          "bucket": "perUser"
+        },
+        {
+          "kind": "right",
+          "right": "shop.open",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/orders/routes/refund/requires/1"
+          }
+        },
+        {
+          "kind": "right",
+          "right": "staff",
+          "params": {
+            "level": 1
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/orders/routes/refund/requires/2"
+          }
+        }
+      ],
+      "fieldRights": []
+    }
+  }
+}

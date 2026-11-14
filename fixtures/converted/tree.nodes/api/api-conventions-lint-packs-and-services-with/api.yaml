@@ -1,0 +1,50 @@
+
+api:
+  name: billing
+  version: 1
+  kind: service
+  role: gateway
+  caller: { identity: service, right: callerService }
+  summary: Invoices.
+  description: Invoices sent to customers.
+  documents:
+    internalOnly: { surfaces: [ops], internal: include }
+    everything: {}
+packs: [./house.yaml]
+conventions:
+  bodyLimit: 2MiB
+  query: { unknownKeys: { ignore: "Gateways add tracking keys." } }
+lint:
+  rules: { seampact/credential-name: error }
+services:
+  ledger: { maturity: stable }
+  mailer: {}
+schemas:
+  Invoice:
+    type: object
+    properties:
+      token: { type: string, lint: { allow: { seampact/credential-name: "A public share token." } } }
+      lines:
+        type: array
+        items:
+          type: object
+          properties:
+            secret: { type: string, lint: { allow: { seampact/credential-name: "A line label." } } }
+    lint: { allow: { seampact/unused-declaration: "Kept for the next version." } }
+surfaces:
+  app:
+    prefix: /v{version}
+    lint: { allow: { seampact/subtree-exception: "Probes are public on purpose." } }
+    routes:
+      invoices:
+        kind: single
+        lint: { allow: { seampact/redundant-maturity: "Stated for the docs." } }
+        routes:
+          list:
+            method: get
+            query:
+              apiKey?: { type: string, lint: { allow: { seampact/credential-name: "A public key." } } }
+  ops:
+    prefix: /ops
+    routes:
+      health: { method: get }

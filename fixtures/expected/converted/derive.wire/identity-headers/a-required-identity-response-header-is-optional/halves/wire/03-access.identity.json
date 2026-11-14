@@ -1,0 +1,650 @@
+{
+  "schemes": {
+    "sessionCookie": {
+      "id": "sessionCookie",
+      "kind": "cookie",
+      "name": "__Host-session",
+      "csrf": "csrfToken",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/sessionCookie"
+      }
+    },
+    "csrfToken": {
+      "id": "csrfToken",
+      "kind": "header",
+      "name": "X-Csrf-Token",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/csrfToken"
+      }
+    },
+    "bearer": {
+      "id": "bearer",
+      "kind": "bearer",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/bearer"
+      }
+    },
+    "basicAuth": {
+      "id": "basicAuth",
+      "kind": "basic",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/basicAuth"
+      }
+    },
+    "deviceToken": {
+      "id": "deviceToken",
+      "kind": "header",
+      "name": "X-Device-Token",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/deviceToken"
+      }
+    },
+    "mapsKey": {
+      "id": "mapsKey",
+      "kind": "query",
+      "name": "key",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/mapsKey"
+      }
+    },
+    "stripeSignature": {
+      "id": "stripeSignature",
+      "kind": "signature",
+      "name": "Stripe-Signature",
+      "signature": {
+        "verify": "template",
+        "format": "t={ts},v1={sig}",
+        "algorithm": "hmac-sha256",
+        "payload": "{ts}.{rawBody}",
+        "encoding": "hex",
+        "toleranceMs": 300000,
+        "key": {
+          "kind": "value",
+          "value": "stripe"
+        }
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/stripeSignature"
+      }
+    }
+  },
+  "headers": {
+    "deadline": {
+      "id": "deadline",
+      "semantic": "deadline",
+      "name": "X-Deadline",
+      "in": "request",
+      "origin": {
+        "layer": "api",
+        "pointer": "/headers/deadline"
+      }
+    },
+    "trace": {
+      "id": "trace",
+      "semantic": "traceContext",
+      "name": "traceparent",
+      "in": "request",
+      "origin": {
+        "layer": "api",
+        "pointer": "/headers/trace"
+      }
+    },
+    "served": {
+      "id": "served",
+      "semantic": "traceContext",
+      "name": "traceresponse",
+      "in": "response",
+      "origin": {
+        "layer": "api",
+        "pointer": "/headers/served"
+      }
+    },
+    "rightsVersion": {
+      "id": "rightsVersion",
+      "semantic": "versionToken",
+      "response": "X-Rights-Version",
+      "request": "If-Rights-Version",
+      "origin": {
+        "layer": "api",
+        "pointer": "/headers/rightsVersion"
+      }
+    }
+  },
+  "identities": {
+    "member": {
+      "id": "member",
+      "kind": "credential",
+      "schemes": {
+        "read": [
+          "sessionCookie"
+        ],
+        "write": [
+          "sessionCookie"
+        ],
+        "optionalRead": []
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "MemberPrincipal"
+      },
+      "errors": [],
+      "headers": [
+        {
+          "header": "rightsVersion",
+          "for": "all",
+          "required": false,
+          "from": {
+            "in": "principal",
+            "name": "rightsVersion"
+          },
+          "stale": "api.rights_version_stale",
+          "origin": {
+            "layer": "api",
+            "pointer": "/identities/member/headers/rightsVersion"
+          }
+        },
+        {
+          "header": "served",
+          "for": "reads",
+          "required": false,
+          "origin": {
+            "layer": "api",
+            "pointer": "/identities/member/headers/served"
+          }
+        }
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/member"
+      }
+    },
+    "mixed": {
+      "id": "mixed",
+      "kind": "credential",
+      "schemes": {
+        "read": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "write": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "optionalRead": []
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "MemberPrincipal"
+      },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/mixed"
+      }
+    },
+    "robot": {
+      "id": "robot",
+      "kind": "credential",
+      "schemes": {
+        "read": [
+          "bearer"
+        ],
+        "write": [
+          "basicAuth",
+          "bearer"
+        ],
+        "optionalRead": []
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "MemberPrincipal"
+      },
+      "errors": [],
+      "headers": [
+        {
+          "header": "deadline",
+          "for": "all",
+          "required": true,
+          "origin": {
+            "layer": "api",
+            "pointer": "/identities/robot/headers/deadline"
+          }
+        },
+        {
+          "header": "trace",
+          "for": "writes",
+          "required": false,
+          "origin": {
+            "layer": "api",
+            "pointer": "/identities/robot/headers/trace"
+          }
+        },
+        {
+          "header": "served",
+          "for": "reads",
+          "required": true,
+          "origin": {
+            "layer": "api",
+            "pointer": "/identities/robot/headers/served"
+          }
+        }
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/robot"
+      }
+    },
+    "device": {
+      "id": "device",
+      "kind": "credential",
+      "schemes": {
+        "read": [
+          "deviceToken"
+        ],
+        "write": [
+          "deviceToken"
+        ],
+        "optionalRead": []
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "MemberPrincipal"
+      },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/device"
+      }
+    },
+    "partner": {
+      "id": "partner",
+      "kind": "credential",
+      "schemes": {
+        "read": [
+          "mapsKey"
+        ],
+        "write": [],
+        "optionalRead": []
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "MemberPrincipal"
+      },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/partner"
+      }
+    },
+    "stripe": {
+      "id": "stripe",
+      "kind": "signed",
+      "signed": "stripeSignature",
+      "principal": {
+        "kind": "schema",
+        "schema": "MemberPrincipal"
+      },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/stripe"
+      }
+    }
+  },
+  "operations": {
+    "notes": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "member",
+        "schemes": [
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "api",
+              "pointer": "/identities/member"
+            },
+            {
+              "layer": "api",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "bigNotes": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "member",
+        "schemes": [
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "api",
+              "pointer": "/identities/member"
+            },
+            {
+              "layer": "api",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "archive": {
+      "access": {
+        "kind": "identity",
+        "identity": "member",
+        "schemes": [
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "api",
+              "pointer": "/identities/member"
+            },
+            {
+              "layer": "api",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "board": {
+      "access": {
+        "kind": "identity",
+        "identity": "member",
+        "schemes": [
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "comments": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "mixed",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/mixed/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "api",
+              "pointer": "/identities/mixed"
+            },
+            {
+              "layer": "api",
+              "pointer": "/schemes/sessionCookie"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "comment": {
+      "access": {
+        "kind": "identity",
+        "identity": "mixed",
+        "schemes": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/mixed/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "exempt",
+        "reason": "Deleting a comment twice is harmless and the token page is cached.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/mixed/routes/comment/csrf"
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "jobs": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "robot",
+        "schemes": [
+          "basicAuth",
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/robots/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "status": {
+      "access": {
+        "kind": "identity",
+        "identity": "robot",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/robots/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "feed": {
+      "access": {
+        "kind": "optional",
+        "identity": "robot",
+        "schemes": [
+          "bearer"
+        ],
+        "reason": "Anonymous robots read the public feed.",
+        "onRefused": "anonymous",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/robots/routes/feed/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous",
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "ping": {
+      "access": {
+        "kind": "identity",
+        "identity": "device",
+        "schemes": [
+          "deviceToken"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/devices/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "tiles": {
+      "access": {
+        "kind": "identity",
+        "identity": "partner",
+        "schemes": [
+          "mapsKey"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/partner/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "stripe": {
+      "input": {
+        "rawBody": true
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "stripe",
+        "schemes": [
+          "stripeSignature"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/hooks/routes/stripe/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "github": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "public",
+        "reason": "GitHub signs nothing the api checks yet.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/hooks/routes/github/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    }
+  }
+}

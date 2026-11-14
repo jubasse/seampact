@@ -1,0 +1,35 @@
+api: { name: t, version: 1 }
+schemas:
+
+  Article:
+    type: object
+    required: [articleId, title]
+    properties:
+      articleId: { type: string, format: uuid }
+      title: { type: string, minLength: 1, maxLength: 200, description: The heading. }
+      body: { type: string, maxLength: 20000, sensitive: true }
+      state: { type: string, restrictedTo: articles.seeState }
+
+  Written:
+    type: object
+    required: [title]
+    properties:
+      title: { type: string, minLength: 1, maxLength: 200, description: The heading. }
+      body: { type: string, maxLength: 20000, sensitive: true }
+  Picked:
+    pick: { from: Article, fields: [body, title] }
+    title: A new article.
+    examples: [{ title: First }]
+  Omitted:
+    omit: { from: Article, fields: [articleId] }
+    required: []
+    properties:
+      body: { nullable: true, deprecated: true, title: Text }
+      state: { restrictedTo: { right: roles, params: { allowed: [owner] } }, default: open }
+  FromMerged:
+    pick: { from: Merged, fields: [extra, title] }
+  Merged: { allOf: [Picked, { type: object, properties: { extra: { type: boolean } } }] }
+  FromDerived:
+    omit: { from: Omitted, fields: [body] }
+  InlineMember:
+    allOf: [{ pick: { from: Article, fields: [title] } }, { type: object, properties: { more: { type: integer } } }]

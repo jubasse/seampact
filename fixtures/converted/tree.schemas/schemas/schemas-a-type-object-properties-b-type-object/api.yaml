@@ -1,0 +1,4 @@
+api: { name: t, version: 1 }
+schemas:
+  A: { type: object, properties: { b: { type: object, properties: { c: { type: string } } } } }
+  AB: { type: string }

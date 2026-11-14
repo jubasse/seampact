@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-inline",
+    "message": "an inline object has no derived name here",
+    "fix": "declare it under 'schemas' and write its name here",
+    "origin": {
+      "layer": "api",
+      "pointer": "/identities/u/principal"
+    },
+    "related": []
+  }
+]

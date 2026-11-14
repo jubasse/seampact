@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/derive/role-datum",
+    "message": "role 'sortKeyForbidden' requires the datum 'key', which no param of 'shop.sort_denied' receives",
+    "fix": "add a param 'key' to 'shop.sort_denied', or bind it with params: { key: $key }",
+    "origin": {
+      "layer": "api",
+      "pointer": "/conventions/errors/derived/sortKeyForbidden"
+    },
+    "related": []
+  }
+]

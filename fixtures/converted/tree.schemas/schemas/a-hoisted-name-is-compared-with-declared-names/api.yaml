@@ -1,0 +1,4 @@
+api: { name: t, version: 1 }
+schemas:
+  Order: { type: object, properties: { address: { type: object, properties: { city: { type: string } } } } }
+  ORDERAddress: { type: object, properties: { street: { type: string } } }

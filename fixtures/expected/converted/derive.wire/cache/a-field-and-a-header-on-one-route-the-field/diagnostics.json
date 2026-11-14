@@ -1,0 +1,36 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "lifecycle",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/derive/cache-sensitive",
+          "message": "cache family 'minute' would store the sensitive field 'Key.secret', which the routes it reaches answer",
+          "fix": "Drop cache or sensitive, or write freshness: never.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/mixed/cache"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/mixed"
+              },
+              "message": "a route it reaches"
+            },
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/Key/properties/secret"
+              },
+              "message": "the sensitive value"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

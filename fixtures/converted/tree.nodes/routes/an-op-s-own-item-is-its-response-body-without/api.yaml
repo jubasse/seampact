@@ -1,0 +1,17 @@
+
+api: { name: a, version: 1, kind: product }
+
+pagings:
+  cursor:
+    request: { cursor: { query: cursor }, limit: { query: limit } }
+    response: { body: $items }
+conventions:
+  paging: { default: cursor, maxLimit: 50 }
+
+schemas:
+  Note: { type: object, properties: { text: { type: string } } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      notes: { kind: collection, ops: { list: { item: Note } } }

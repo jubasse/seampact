@@ -1,0 +1,16 @@
+api: { name: t, version: 1 }
+extensions:
+  acme:
+    origin: { at: [schema], schema: { type: object, properties: { layer: { type: string }, pointer: { type: string } } } }
+schemas:
+  Box: { type: object, properties: { owner: Owner } }
+  Owner:
+    type: object
+    examples: [{ name: a, origin: { layer: api, pointer: /north } }]
+    x-acme-origin: { layer: api, pointer: /south }
+    properties:
+      name: { type: string, restrictedTo: { right: notes.read, params: { origin: { layer: api, pointer: /east } } } }
+      origin:
+        type: object
+        properties: { layer: { type: string }, origin: { type: object, properties: { pointer: { type: string } } } }
+        default: { layer: api, origin: { pointer: /west } }

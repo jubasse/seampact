@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "a",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/internal-product",
+          "message": "The service api a writes internal, which only a product api's documents read.",
+          "fix": "Remove internal; a service api is internal as a whole.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/internal/internal"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+api: { name: t, version: 1 }
+schemas:
+  TaskId: { type: string, format: uuid }
+  Task:
+    type: object
+    required: [taskId, version]
+    properties: { taskId: TaskId, version: { type: integer, minimum: 1 } }
+  UpdateTask: { type: object, properties: { title: { type: string } } }
+surfaces:
+  app:
+    routes:
+      tasks:
+        kind: collection
+        id: { taskId: TaskId }
+        item: Task
+        ops:
+          list:
+            query: { filter: { type: object, properties: { state: { type: string } } } }
+        member:
+          routes:
+            assign:
+              method: post
+              input: { type: object, properties: { userId: { type: string } } }
+              output: { type: object, properties: { ok: { type: boolean } } }
+              headers: { X-Context: { type: object, properties: { a: { type: string } } } }
+              responses:
+                202: { body: { type: object, properties: { queued: { type: boolean } } } }

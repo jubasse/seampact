@@ -1,0 +1,905 @@
+{
+  "conventions": {
+    "cache.families": {
+      "value": {
+        "everyDirective": {
+          "maxAge": "60s",
+          "sharedMaxAge": "120s",
+          "staleWhileRevalidate": "30s",
+          "staleIfError": "1h",
+          "immutable": true,
+          "noCache": true,
+          "mustRevalidate": true
+        }
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/cache/families"
+      }
+    }
+  },
+  "formats": {
+    "bare": {
+      "id": "bare",
+      "origin": {
+        "layer": "core",
+        "pointer": "/formats/bare"
+      },
+      "media": "application/json",
+      "absent": "omit",
+      "success": {
+        "item": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "table": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "list": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "page": {
+          "body": {
+            "kind": "slot",
+            "slot": "items",
+            "path": []
+          },
+          "headers": []
+        }
+      },
+      "meta": {},
+      "error": {
+        "media": "application/problem+json",
+        "body": {
+          "kind": "object",
+          "members": [
+            {
+              "name": {
+                "kind": "text",
+                "text": "type"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "code",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "title"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "title",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "status"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "status",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "detail"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "detail",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "instance"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "instance",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "code"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "code",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "nature"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "nature",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "traceId"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "traceId",
+                "path": []
+              }
+            }
+          ],
+          "merge": "params"
+        },
+        "headers": []
+      }
+    }
+  },
+  "operations": [
+    {
+      "kind": "httpOperation",
+      "id": "digest",
+      "name": {
+        "segments": [
+          "digest"
+        ],
+        "role": "operation"
+      },
+      "surface": "responses",
+      "method": "get",
+      "safe": true,
+      "path": "/responses/v1/digest",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Note"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/responses/routes/digest/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/responses/routes/digest"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "getNote",
+      "name": {
+        "segments": [
+          "get",
+          "note"
+        ],
+        "role": "operation"
+      },
+      "surface": "responses",
+      "op": "get",
+      "resource": {
+        "type": "notes",
+        "idParam": "noteId",
+        "idProperty": "noteId"
+      },
+      "method": "get",
+      "safe": true,
+      "path": "/responses/v1/notes/{noteId}",
+      "params": {
+        "path": [
+          {
+            "name": "noteId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/responses/routes/notes/id/noteId"
+            }
+          }
+        ],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Note"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/responses/routes/notes/item"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/responses/routes/notes/ops/get"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "updateNote",
+      "name": {
+        "segments": [
+          "update",
+          "note"
+        ],
+        "role": "operation"
+      },
+      "surface": "responses",
+      "op": "update",
+      "resource": {
+        "type": "notes",
+        "idParam": "noteId",
+        "idProperty": "noteId"
+      },
+      "method": "patch",
+      "safe": false,
+      "path": "/responses/v1/notes/{noteId}",
+      "params": {
+        "path": [
+          {
+            "name": "noteId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/responses/routes/notes/id/noteId"
+            }
+          }
+        ],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "EditNote"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/responses/routes/notes/ops/update/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Note"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/responses/routes/notes/item"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "concurrency": {
+        "version": {
+          "in": "header",
+          "name": "If-Match"
+        },
+        "field": "revision"
+      },
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/responses/routes/notes/ops/update"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "saveNote",
+      "name": {
+        "segments": [
+          "save",
+          "note"
+        ],
+        "role": "operation"
+      },
+      "surface": "responses",
+      "resource": {
+        "type": "notes",
+        "idParam": "noteId",
+        "idProperty": "noteId"
+      },
+      "method": "post",
+      "safe": false,
+      "path": "/responses/v1/notes/{noteId}/save",
+      "params": {
+        "path": [
+          {
+            "name": "noteId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/responses/routes/notes/id/noteId"
+            }
+          }
+        ],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "EditNote"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/responses/routes/notes/member/routes/save/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Note"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/responses/routes/notes/member/routes/save/responses/200"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        },
+        {
+          "status": 201,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Note"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/responses/routes/notes/member/routes/save/responses/201"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/responses/routes/notes/member/routes/save"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "keyNote",
+      "name": {
+        "segments": [
+          "key",
+          "note"
+        ],
+        "role": "operation"
+      },
+      "surface": "responses",
+      "resource": {
+        "type": "notes",
+        "idParam": "noteId",
+        "idProperty": "noteId"
+      },
+      "method": "get",
+      "safe": true,
+      "path": "/responses/v1/notes/{noteId}/key",
+      "params": {
+        "path": [
+          {
+            "name": "noteId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/responses/routes/notes/id/noteId"
+            }
+          }
+        ],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "NoteKey"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/responses/routes/notes/member/routes/key/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/responses/routes/notes/member/routes/key"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "legacyNote",
+      "name": {
+        "segments": [
+          "legacy",
+          "note"
+        ],
+        "role": "operation"
+      },
+      "surface": "responses",
+      "resource": {
+        "type": "notes",
+        "idParam": "noteId",
+        "idProperty": "noteId"
+      },
+      "method": "get",
+      "safe": true,
+      "path": "/responses/v1/notes/{noteId}/legacy",
+      "params": {
+        "path": [
+          {
+            "name": "noteId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/responses/routes/notes/id/noteId"
+            }
+          }
+        ],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Note"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/responses/routes/notes/member/routes/legacy/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "deprecated": {
+        "since": "2026-12-31",
+        "sunset": "2027-06-30",
+        "successor": {
+          "kind": "httpOperation",
+          "api": "tasksResponses",
+          "id": "getNote"
+        },
+        "successorRel": "successor-version",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/responses/routes/notes/member/routes/legacy/deprecated"
+        }
+      },
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/responses/routes/notes/member/routes/legacy"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "getMemo",
+      "name": {
+        "segments": [
+          "get",
+          "memo"
+        ],
+        "role": "operation"
+      },
+      "surface": "responses",
+      "op": "get",
+      "resource": {
+        "type": "memos",
+        "idParam": "memoId",
+        "idProperty": "memoId"
+      },
+      "method": "get",
+      "safe": true,
+      "path": "/responses/v1/memos/{memoId}",
+      "params": {
+        "path": [
+          {
+            "name": "memoId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/responses/routes/memos/id/memoId"
+            }
+          }
+        ],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Memo"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/responses/routes/memos/item"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/responses/routes/memos/ops/get"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "deleteMemo",
+      "name": {
+        "segments": [
+          "delete",
+          "memo"
+        ],
+        "role": "operation"
+      },
+      "surface": "responses",
+      "op": "delete",
+      "resource": {
+        "type": "memos",
+        "idParam": "memoId",
+        "idProperty": "memoId"
+      },
+      "method": "delete",
+      "safe": false,
+      "path": "/responses/v1/memos/{memoId}",
+      "params": {
+        "path": [
+          {
+            "name": "memoId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/responses/routes/memos/id/memoId"
+            }
+          }
+        ],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "responses": [
+        {
+          "status": 204,
+          "shape": "empty",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/responses/routes/memos/ops/delete"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "concurrency": {
+        "version": {
+          "in": "query",
+          "name": "expectedVersion"
+        },
+        "field": "version"
+      },
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/responses/routes/memos/ops/delete"
+      }
+    }
+  ],
+  "api": {
+    "id": "tasksResponses",
+    "name": {
+      "segments": [
+        "tasks",
+        "responses"
+      ],
+      "role": "schema"
+    },
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "kind": "product",
+    "pathVersion": {
+      "value": "prefix",
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/version"
+      }
+    },
+    "maturity": "provisional",
+    "compat": {
+      "policy": "none"
+    },
+    "surfaces": {
+      "responses": {
+        "name": {
+          "segments": [
+            "responses"
+          ],
+          "role": "schema"
+        },
+        "prefix": "/responses/v1",
+        "pathVersion": "prefix",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/responses"
+        }
+      }
+    },
+    "documents": {},
+    "docs": {
+      "summary": "Notes whose routes answer several successes, cache directives, a sensitive field, a deprecation and If-Match, and memos deleted with a body-sourced version."
+    },
+    "extensions": {},
+    "origin": {
+      "layer": "api",
+      "pointer": "/api"
+    }
+  },
+  "lint": {
+    "rules": {},
+    "allows": []
+  }
+}

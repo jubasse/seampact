@@ -1,0 +1,17 @@
+# tasks-service/api.yaml
+api:
+  name: tasksService
+  version: 1
+  kind: service
+  caller: { identity: service, right: callerService }
+  maturity: provisional
+
+natures:
+  locked: { base: unavailable }
+
+surfaces:
+  internal:
+    prefix: /internal/v{version}
+    requires: [{ right: callerService, params: { allowed: [catalog] } }]
+    routes:
+      getTask: { relays: tasks.getTask }

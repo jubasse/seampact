@@ -1,0 +1,60 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/getTask/pathParams/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/getTask/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Task"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/legacyTask/pathParams/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/legacyTask/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Task"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/legacyLink/pathParams/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  }
+]

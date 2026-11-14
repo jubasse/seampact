@@ -1,0 +1,112 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-values",
+    "message": "the enum 'Empty' declares no values",
+    "fix": "write 'values', or 'source: { enum: <Enum> }'",
+    "origin": {
+      "layer": "api",
+      "pointer": "/enums/Empty"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-values",
+    "message": "the enum 'Both' takes the values of 'Twice' and writes values of its own",
+    "fix": "remove 'values', or the 'source.enum'",
+    "origin": {
+      "layer": "api",
+      "pointer": "/enums/Both"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-values",
+    "message": "the value 'a' is listed twice",
+    "fix": "list each value once",
+    "origin": {
+      "layer": "api",
+      "pointer": "/enums/Twice/values"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-unknown",
+    "message": "no enum 'Missing' with values is declared",
+    "fix": "declare it under 'enums', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/enums/Lost/source/enum"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-cycle",
+    "message": "the enum 'Loop' takes its values from a cycle of sources: Loop -> Loop",
+    "fix": "give one enum of the cycle its own 'values'",
+    "origin": {
+      "layer": "api",
+      "pointer": "/enums/Loop/source/enum"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-reason",
+    "message": "the enum 'Sourced' has a source, and a reason says why an enum is local",
+    "fix": "remove 'reason', or remove the source of a local enum",
+    "origin": {
+      "layer": "api",
+      "pointer": "/enums/Sourced/reason"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-fallback",
+    "message": "the fallback 'b' is not a value of the enum",
+    "fix": "name one of [a]",
+    "origin": {
+      "layer": "api",
+      "pointer": "/enums/Fallback/fallback"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-code-name",
+    "message": "'b' is not a value of the enum",
+    "fix": "give code names to the enum's values only",
+    "origin": {
+      "layer": "api",
+      "pointer": "/enums/Named/codeNames/b"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/name-collision",
+    "message": "the values 'a-b' and 'a_b' give the same identifier",
+    "fix": "give one of them a code name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/enums/Same/values"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-narrowing",
+    "message": "a narrowing of 'Named' lists some of its values, each once, and not all of them",
+    "fix": "keep a strict subset of [a, -]",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Card/properties/all/enum/to"
+    },
+    "related": []
+  }
+]

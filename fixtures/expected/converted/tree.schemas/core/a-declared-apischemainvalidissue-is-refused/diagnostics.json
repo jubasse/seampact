@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/schema-reserved",
+          "message": "the schema 'ApiSchemaInvalidIssue' is reserved for one issue of the default code 'api.schema_invalid'",
+          "fix": "declare the schema under another name",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/ApiSchemaInvalidIssue"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

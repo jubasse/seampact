@@ -1,0 +1,43 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "hooks",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/signed-input",
+          "message": "route 'ping' runs under signed identity 'hook', whose signature covers the raw body, and has no input",
+          "fix": "declare `input`",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/hooks/routes/ping"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/signed-input",
+          "message": "route 'peek' runs under signed identity 'hook', whose signature covers the raw body, and has no input",
+          "fix": "serve the signed deliveries on a route with a body (a `post` with `input`)",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/hooks/routes/peek"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/signed-input",
+          "message": "route 'drop' runs under signed identity 'hook', whose signature covers the raw body, and has no input",
+          "fix": "declare `input`",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/hooks/routes/drop"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

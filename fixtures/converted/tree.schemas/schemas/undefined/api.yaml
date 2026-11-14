@@ -1,0 +1,5 @@
+api: { name: t, version: 1 }
+schemas:
+
+  Blob: { opaque: "A third party's free-form value.", nullable: true }
+  Holder: { type: object, properties: { blob: Blob, blobs: { type: array, items: Blob } } }

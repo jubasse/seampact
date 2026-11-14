@@ -1,0 +1,21 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/derive/relay-declaration",
+    "message": "the nature 'locked' that tasks.getTask answers differs from the one this api declares",
+    "fix": "declare it once in a shared file both apis load, or rename one of them",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/internal/routes/getTask/relays"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/natures/locked"
+        },
+        "message": "this api's nature 'locked'"
+      }
+    ]
+  }
+]

@@ -1,0 +1,19 @@
+{
+  "operations": {
+    "digest": {
+      "access": {
+        "kind": "public",
+        "reason": "The digest is the same for every reader.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/responses/routes/digest/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    }
+  }
+}

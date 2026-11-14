@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/concurrency-version",
+    "message": "the input schema 'UpdateTaskInput' declares 'expectedVersion', which 'concurrency' adds",
+    "fix": "remove it; 'concurrency' adds it",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/tasks/ops/update/input"
+    },
+    "related": []
+  }
+]

@@ -1,0 +1,15 @@
+
+api: { name: a, version: 1, kind: product }
+conventions:
+  query: { unknownKeys: { ignore: "Gateways add tracking keys." } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      search: { method: get }
+      strict: { method: get, unknownQuery: refuse }
+      pages:
+        kind: single
+        unknownQuery: { ignore: "Marketing links add utm_* parameters." }
+        routes:
+          home: { method: get }

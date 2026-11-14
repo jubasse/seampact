@@ -1,0 +1,103 @@
+{
+  "irRevision": 6,
+  "locations": {
+    "api#/api": {
+      "column": 1,
+      "endColumn": 32,
+      "endLine": 1,
+      "file": "api.yaml",
+      "line": 1
+    },
+    "api#/api/version": {
+      "column": 20,
+      "endColumn": 30,
+      "endLine": 1,
+      "file": "api.yaml",
+      "line": 1
+    },
+    "api#/conventions/errors/derived": {
+      "column": 13,
+      "endColumn": 92,
+      "endLine": 3,
+      "file": "api.yaml",
+      "line": 3
+    },
+    "api#/conventions/errors/derived/schemaInvalid": {
+      "column": 24,
+      "endColumn": 90,
+      "endLine": 3,
+      "file": "api.yaml",
+      "line": 3
+    },
+    "api#/errors/shop.invalid": {
+      "column": 3,
+      "endColumn": 83,
+      "endLine": 7,
+      "file": "api.yaml",
+      "line": 7
+    },
+    "api#/errors/shop.invalid/params": {
+      "column": 32,
+      "endColumn": 81,
+      "endLine": 7,
+      "file": "api.yaml",
+      "line": 7
+    },
+    "api#/errors/shop.invalid/params/issues": {
+      "column": 42,
+      "endColumn": 79,
+      "endLine": 7,
+      "file": "api.yaml",
+      "line": 7
+    },
+    "api#/schemas/Issue": {
+      "column": 3,
+      "endColumn": 115,
+      "endLine": 5,
+      "file": "api.yaml",
+      "line": 5
+    },
+    "api#/schemas/Issue/properties/in": {
+      "column": 40,
+      "endColumn": 60,
+      "endLine": 5,
+      "file": "api.yaml",
+      "line": 5
+    },
+    "api#/schemas/Issue/properties/pointer": {
+      "column": 62,
+      "endColumn": 87,
+      "endLine": 5,
+      "file": "api.yaml",
+      "line": 5
+    },
+    "api#/schemas/Issue/properties/rule": {
+      "column": 89,
+      "endColumn": 111,
+      "endLine": 5,
+      "file": "api.yaml",
+      "line": 5
+    },
+    "api#/surfaces/app": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 15,
+      "file": "api.yaml",
+      "line": 10
+    },
+    "api#/surfaces/app/access": {
+      "column": 5,
+      "endColumn": 87,
+      "endLine": 12,
+      "file": "api.yaml",
+      "line": 12
+    },
+    "api#/surfaces/app/routes/ping": {
+      "column": 7,
+      "endColumn": 28,
+      "endLine": 14,
+      "file": "api.yaml",
+      "line": 14
+    }
+  }
+}

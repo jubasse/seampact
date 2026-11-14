@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/derive/role-param",
+    "message": "the params template of role 'sortKeyForbidden' is no object, so it fills no param of 'shop.sort_denied'",
+    "fix": "write params as an object whose keys are params of the code: { <param>: $<datum> }",
+    "origin": {
+      "layer": "api",
+      "pointer": "/conventions/errors/derived/sortKeyForbidden/params"
+    },
+    "related": []
+  }
+]

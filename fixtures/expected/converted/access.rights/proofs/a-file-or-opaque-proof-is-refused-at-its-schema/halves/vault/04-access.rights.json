@@ -1,0 +1,131 @@
+{
+  "rules": {
+    "recentAuth": {
+      "id": "recentAuth",
+      "takesBucket": false,
+      "proof": {
+        "in": "body",
+        "name": "token",
+        "schema": {
+          "kind": "scalar",
+          "type": "string",
+          "refinements": {}
+        }
+      },
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/recentAuth"
+      }
+    },
+    "numbered": {
+      "id": "numbered",
+      "takesBucket": false,
+      "proof": {
+        "in": "body",
+        "name": "reauth",
+        "schema": {
+          "kind": "scalar",
+          "type": "integer",
+          "refinements": {}
+        }
+      },
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/numbered"
+      }
+    },
+    "worded": {
+      "id": "worded",
+      "takesBucket": false,
+      "proof": {
+        "in": "body",
+        "name": "reauth",
+        "schema": {
+          "kind": "scalar",
+          "type": "string",
+          "refinements": {}
+        }
+      },
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/worded"
+      }
+    },
+    "otp": {
+      "id": "otp",
+      "takesBucket": false,
+      "proof": {
+        "in": "header",
+        "name": "X-Otp",
+        "schema": {
+          "kind": "scalar",
+          "type": "string",
+          "refinements": {}
+        }
+      },
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/otp"
+      }
+    },
+    "otpAgain": {
+      "id": "otpAgain",
+      "takesBucket": false,
+      "proof": {
+        "in": "header",
+        "name": "x-otp",
+        "schema": {
+          "kind": "scalar",
+          "type": "string",
+          "refinements": {}
+        }
+      },
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/otpAgain"
+      }
+    },
+    "otpNumber": {
+      "id": "otpNumber",
+      "takesBucket": false,
+      "proof": {
+        "in": "header",
+        "name": "X-OTP",
+        "schema": {
+          "kind": "scalar",
+          "type": "integer",
+          "refinements": {}
+        }
+      },
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/otpNumber"
+      }
+    }
+  },
+  "operations": {
+    "ping": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    }
+  }
+}

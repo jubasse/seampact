@@ -1,0 +1,40 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/field-right-position",
+    "message": "field 'Filter/secret' is restricted to right 'audit' and is reached from query parameter 'filter' of route 'search', where the IR lists no field right",
+    "fix": "move the restricted field out of the schemas this position reaches, or remove its restrictedTo",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Filter/properties/secret/restrictedTo"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/search/query/filter"
+        },
+        "message": "the position is written here"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/field-right-position",
+    "message": "field 'Detail/hidden' is restricted to right 'audit2' and is reached from the params of error 'shop.full', where the IR lists no field right",
+    "fix": "move the restricted field out of the schemas this position reaches, or remove its restrictedTo",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Detail/properties/hidden/restrictedTo"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/errors/shop.full/params"
+        },
+        "message": "the position is written here"
+      }
+    ]
+  }
+]

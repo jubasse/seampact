@@ -1,0 +1,43 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "a",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/deny-by-default",
+          "message": "route 'health' has no identity and no public access",
+          "fix": "Set 'identity: <name>' on it or an ancestor, or 'access: { public: \"<reason>\" }'.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/health"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/deny-by-default",
+          "message": "route 'listNotes' has no identity and no public access",
+          "fix": "Set 'identity: <name>' on it or an ancestor, or 'access: { public: \"<reason>\" }'.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/notes/ops/0"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/deny-by-default",
+          "message": "route 'getNote' has no identity and no public access",
+          "fix": "Set 'identity: <name>' on it or an ancestor, or 'access: { public: \"<reason>\" }'.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/notes/ops/1"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

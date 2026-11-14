@@ -1,0 +1,43 @@
+{
+  "rights": {
+    "toString": {
+      "id": "toString",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {
+        "summary": "Odd but valid."
+      },
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/toString"
+      }
+    },
+    "hasOwnProperty": {
+      "id": "hasOwnProperty",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/hasOwnProperty"
+      }
+    }
+  },
+  "operations": {
+    "ping": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    }
+  }
+}

@@ -1,0 +1,425 @@
+{
+  "irRevision": 6,
+  "locations": {
+    "api#/api": {
+      "column": 1,
+      "endColumn": 32,
+      "endLine": 1,
+      "file": "api.yaml",
+      "line": 1
+    },
+    "api#/api/version": {
+      "column": 20,
+      "endColumn": 30,
+      "endLine": 1,
+      "file": "api.yaml",
+      "line": 1
+    },
+    "api#/identities/clerk": {
+      "column": 3,
+      "endColumn": 76,
+      "endLine": 5,
+      "file": "api.yaml",
+      "line": 5
+    },
+    "api#/schemas/Clerk": {
+      "column": 3,
+      "endColumn": 90,
+      "endLine": 9,
+      "file": "api.yaml",
+      "line": 9
+    },
+    "api#/schemas/Clerk/properties/clerkId": {
+      "column": 61,
+      "endColumn": 86,
+      "endLine": 9,
+      "file": "api.yaml",
+      "line": 9
+    },
+    "api#/schemas/L0": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 13,
+      "file": "api.yaml",
+      "line": 10
+    },
+    "api#/schemas/L0/properties/a": {
+      "column": 19,
+      "endColumn": 24,
+      "endLine": 12,
+      "file": "api.yaml",
+      "line": 12
+    },
+    "api#/schemas/L0/properties/b": {
+      "column": 26,
+      "endColumn": 31,
+      "endLine": 12,
+      "file": "api.yaml",
+      "line": 12
+    },
+    "api#/schemas/L1": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 16,
+      "file": "api.yaml",
+      "line": 13
+    },
+    "api#/schemas/L1/properties/a": {
+      "column": 19,
+      "endColumn": 24,
+      "endLine": 15,
+      "file": "api.yaml",
+      "line": 15
+    },
+    "api#/schemas/L1/properties/b": {
+      "column": 26,
+      "endColumn": 31,
+      "endLine": 15,
+      "file": "api.yaml",
+      "line": 15
+    },
+    "api#/schemas/L10": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 43,
+      "file": "api.yaml",
+      "line": 40
+    },
+    "api#/schemas/L10/properties/a": {
+      "column": 19,
+      "endColumn": 25,
+      "endLine": 42,
+      "file": "api.yaml",
+      "line": 42
+    },
+    "api#/schemas/L10/properties/b": {
+      "column": 27,
+      "endColumn": 33,
+      "endLine": 42,
+      "file": "api.yaml",
+      "line": 42
+    },
+    "api#/schemas/L11": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 46,
+      "file": "api.yaml",
+      "line": 43
+    },
+    "api#/schemas/L11/properties/a": {
+      "column": 19,
+      "endColumn": 25,
+      "endLine": 45,
+      "file": "api.yaml",
+      "line": 45
+    },
+    "api#/schemas/L11/properties/b": {
+      "column": 27,
+      "endColumn": 33,
+      "endLine": 45,
+      "file": "api.yaml",
+      "line": 45
+    },
+    "api#/schemas/L12": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 49,
+      "file": "api.yaml",
+      "line": 46
+    },
+    "api#/schemas/L12/properties/a": {
+      "column": 19,
+      "endColumn": 25,
+      "endLine": 48,
+      "file": "api.yaml",
+      "line": 48
+    },
+    "api#/schemas/L12/properties/b": {
+      "column": 27,
+      "endColumn": 33,
+      "endLine": 48,
+      "file": "api.yaml",
+      "line": 48
+    },
+    "api#/schemas/L13": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 52,
+      "file": "api.yaml",
+      "line": 49
+    },
+    "api#/schemas/L13/properties/a": {
+      "column": 19,
+      "endColumn": 25,
+      "endLine": 51,
+      "file": "api.yaml",
+      "line": 51
+    },
+    "api#/schemas/L13/properties/b": {
+      "column": 27,
+      "endColumn": 33,
+      "endLine": 51,
+      "file": "api.yaml",
+      "line": 51
+    },
+    "api#/schemas/L14": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 55,
+      "file": "api.yaml",
+      "line": 52
+    },
+    "api#/schemas/L14/properties/a": {
+      "column": 19,
+      "endColumn": 25,
+      "endLine": 54,
+      "file": "api.yaml",
+      "line": 54
+    },
+    "api#/schemas/L14/properties/b": {
+      "column": 27,
+      "endColumn": 33,
+      "endLine": 54,
+      "file": "api.yaml",
+      "line": 54
+    },
+    "api#/schemas/L15": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 58,
+      "file": "api.yaml",
+      "line": 55
+    },
+    "api#/schemas/L15/properties/a": {
+      "column": 19,
+      "endColumn": 25,
+      "endLine": 57,
+      "file": "api.yaml",
+      "line": 57
+    },
+    "api#/schemas/L15/properties/b": {
+      "column": 27,
+      "endColumn": 33,
+      "endLine": 57,
+      "file": "api.yaml",
+      "line": 57
+    },
+    "api#/schemas/L16": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 61,
+      "file": "api.yaml",
+      "line": 58
+    },
+    "api#/schemas/L16/properties/code": {
+      "column": 19,
+      "endColumn": 41,
+      "endLine": 60,
+      "file": "api.yaml",
+      "line": 60
+    },
+    "api#/schemas/L2": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 19,
+      "file": "api.yaml",
+      "line": 16
+    },
+    "api#/schemas/L2/properties/a": {
+      "column": 19,
+      "endColumn": 24,
+      "endLine": 18,
+      "file": "api.yaml",
+      "line": 18
+    },
+    "api#/schemas/L2/properties/b": {
+      "column": 26,
+      "endColumn": 31,
+      "endLine": 18,
+      "file": "api.yaml",
+      "line": 18
+    },
+    "api#/schemas/L3": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 22,
+      "file": "api.yaml",
+      "line": 19
+    },
+    "api#/schemas/L3/properties/a": {
+      "column": 19,
+      "endColumn": 24,
+      "endLine": 21,
+      "file": "api.yaml",
+      "line": 21
+    },
+    "api#/schemas/L3/properties/b": {
+      "column": 26,
+      "endColumn": 31,
+      "endLine": 21,
+      "file": "api.yaml",
+      "line": 21
+    },
+    "api#/schemas/L4": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 25,
+      "file": "api.yaml",
+      "line": 22
+    },
+    "api#/schemas/L4/properties/a": {
+      "column": 19,
+      "endColumn": 24,
+      "endLine": 24,
+      "file": "api.yaml",
+      "line": 24
+    },
+    "api#/schemas/L4/properties/b": {
+      "column": 26,
+      "endColumn": 31,
+      "endLine": 24,
+      "file": "api.yaml",
+      "line": 24
+    },
+    "api#/schemas/L5": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 28,
+      "file": "api.yaml",
+      "line": 25
+    },
+    "api#/schemas/L5/properties/a": {
+      "column": 19,
+      "endColumn": 24,
+      "endLine": 27,
+      "file": "api.yaml",
+      "line": 27
+    },
+    "api#/schemas/L5/properties/b": {
+      "column": 26,
+      "endColumn": 31,
+      "endLine": 27,
+      "file": "api.yaml",
+      "line": 27
+    },
+    "api#/schemas/L6": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 31,
+      "file": "api.yaml",
+      "line": 28
+    },
+    "api#/schemas/L6/properties/a": {
+      "column": 19,
+      "endColumn": 24,
+      "endLine": 30,
+      "file": "api.yaml",
+      "line": 30
+    },
+    "api#/schemas/L6/properties/b": {
+      "column": 26,
+      "endColumn": 31,
+      "endLine": 30,
+      "file": "api.yaml",
+      "line": 30
+    },
+    "api#/schemas/L7": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 34,
+      "file": "api.yaml",
+      "line": 31
+    },
+    "api#/schemas/L7/properties/a": {
+      "column": 19,
+      "endColumn": 24,
+      "endLine": 33,
+      "file": "api.yaml",
+      "line": 33
+    },
+    "api#/schemas/L7/properties/b": {
+      "column": 26,
+      "endColumn": 31,
+      "endLine": 33,
+      "file": "api.yaml",
+      "line": 33
+    },
+    "api#/schemas/L8": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 37,
+      "file": "api.yaml",
+      "line": 34
+    },
+    "api#/schemas/L8/properties/a": {
+      "column": 19,
+      "endColumn": 24,
+      "endLine": 36,
+      "file": "api.yaml",
+      "line": 36
+    },
+    "api#/schemas/L8/properties/b": {
+      "column": 26,
+      "endColumn": 31,
+      "endLine": 36,
+      "file": "api.yaml",
+      "line": 36
+    },
+    "api#/schemas/L9": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 40,
+      "file": "api.yaml",
+      "line": 37
+    },
+    "api#/schemas/L9/properties/a": {
+      "column": 19,
+      "endColumn": 25,
+      "endLine": 39,
+      "file": "api.yaml",
+      "line": 39
+    },
+    "api#/schemas/L9/properties/b": {
+      "column": 27,
+      "endColumn": 33,
+      "endLine": 39,
+      "file": "api.yaml",
+      "line": 39
+    },
+    "api#/schemes/bearer": {
+      "column": 3,
+      "endColumn": 27,
+      "endLine": 3,
+      "file": "api.yaml",
+      "line": 3
+    },
+    "api#/surfaces/app": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 74,
+      "file": "api.yaml",
+      "line": 69
+    },
+    "api#/surfaces/app/identity": {
+      "column": 5,
+      "endColumn": 20,
+      "endLine": 71,
+      "file": "api.yaml",
+      "line": 71
+    },
+    "api#/surfaces/app/routes/deep": {
+      "column": 7,
+      "endColumn": 40,
+      "endLine": 73,
+      "file": "api.yaml",
+      "line": 73
+    },
+    "api#/surfaces/app/routes/deep/output": {
+      "column": 28,
+      "endColumn": 38,
+      "endLine": 73,
+      "file": "api.yaml",
+      "line": 73
+    }
+  }
+}

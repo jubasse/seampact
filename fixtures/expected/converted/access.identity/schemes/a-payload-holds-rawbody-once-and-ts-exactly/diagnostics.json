@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "a",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/signature-template",
+          "message": "the payload '{body}' of signature scheme 'sig' must hold '{rawBody}' once and '{ts}' at most once, and no other placeholder",
+          "fix": "Write the signed bytes from '{rawBody}', '{ts}' and literal text, such as '{ts}.{rawBody}'.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemes/sig/payload"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

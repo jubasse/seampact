@@ -1,0 +1,6 @@
+api: { name: t, version: 1 }
+enums:
+  Base: { values: [a, b], reason: "Base values." }
+  Narrow: { source: { enum: Base } }
+schemas:
+  Box: { type: object, properties: { s: { enum: Narrow } } }

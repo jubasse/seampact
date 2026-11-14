@@ -1,0 +1,736 @@
+{
+  "formats": {
+    "bare": {
+      "id": "bare",
+      "origin": {
+        "layer": "core",
+        "pointer": "/formats/bare"
+      },
+      "media": "application/json",
+      "absent": "omit",
+      "success": {
+        "item": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "table": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "list": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "page": {
+          "body": {
+            "kind": "slot",
+            "slot": "items",
+            "path": []
+          },
+          "headers": []
+        }
+      },
+      "meta": {},
+      "error": {
+        "media": "application/problem+json",
+        "body": {
+          "kind": "object",
+          "members": [
+            {
+              "name": {
+                "kind": "text",
+                "text": "type"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "code",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "title"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "title",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "status"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "status",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "detail"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "detail",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "instance"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "instance",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "code"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "code",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "nature"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "nature",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "traceId"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "traceId",
+                "path": []
+              }
+            }
+          ],
+          "merge": "params"
+        },
+        "headers": []
+      }
+    }
+  },
+  "pagings": {
+    "changes": {
+      "id": "changes",
+      "origin": {
+        "layer": "api",
+        "pointer": "/pagings/changes"
+      },
+      "position": "since",
+      "absent": "omit",
+      "request": [
+        {
+          "role": "since",
+          "in": "query",
+          "name": "since"
+        },
+        {
+          "role": "limit",
+          "in": "query",
+          "name": "limit"
+        }
+      ],
+      "response": {
+        "body": {
+          "kind": "object",
+          "members": [
+            {
+              "name": {
+                "kind": "text",
+                "text": "items"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "items",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "next"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "nextSince",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "complete"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "complete",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "limit"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "limit",
+                "path": []
+              }
+            }
+          ]
+        },
+        "meta": [],
+        "headers": [],
+        "links": []
+      },
+      "handlerResult": [
+        "nextSince",
+        "complete"
+      ]
+    },
+    "stripeList": {
+      "id": "stripeList",
+      "origin": {
+        "layer": "api",
+        "pointer": "/pagings/stripeList"
+      },
+      "position": "cursor",
+      "absent": "omit",
+      "request": [
+        {
+          "role": "after",
+          "in": "query",
+          "name": "starting_after"
+        },
+        {
+          "role": "before",
+          "in": "query",
+          "name": "ending_before"
+        },
+        {
+          "role": "limit",
+          "in": "query",
+          "name": "limit"
+        }
+      ],
+      "response": {
+        "body": {
+          "kind": "object",
+          "members": [
+            {
+              "name": {
+                "kind": "text",
+                "text": "object"
+              },
+              "value": {
+                "kind": "literal",
+                "value": "list"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "data"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "items",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "has_more"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "more",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "url"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "path",
+                "path": []
+              }
+            }
+          ]
+        },
+        "meta": [],
+        "headers": [],
+        "links": []
+      },
+      "handlerResult": [
+        "more"
+      ]
+    },
+    "cappedPages": {
+      "id": "cappedPages",
+      "origin": {
+        "layer": "api",
+        "pointer": "/pagings/cappedPages"
+      },
+      "position": "page",
+      "absent": "omit",
+      "request": [
+        {
+          "role": "page",
+          "in": "query",
+          "name": "page",
+          "base": 1
+        },
+        {
+          "role": "limit",
+          "in": "query",
+          "name": "limit"
+        }
+      ],
+      "response": {
+        "body": {
+          "kind": "object",
+          "members": [
+            {
+              "name": {
+                "kind": "text",
+                "text": "data"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "items",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "has_more"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "more",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "limit"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "limit",
+                "path": []
+              }
+            }
+          ]
+        },
+        "meta": [],
+        "headers": [],
+        "links": []
+      },
+      "handlerResult": [
+        "more"
+      ]
+    }
+  },
+  "operations": [
+    {
+      "kind": "httpOperation",
+      "id": "listNotes",
+      "name": {
+        "segments": [
+          "list",
+          "notes"
+        ],
+        "role": "operation"
+      },
+      "surface": "notes",
+      "op": "list",
+      "resource": {
+        "type": "notes",
+        "idProperty": "noteId"
+      },
+      "method": "get",
+      "safe": true,
+      "path": "/paging/v1/notes",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Note"
+          },
+          "shape": "page",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/notes/routes/notes/item"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "paging": {
+        "style": "stripeList",
+        "maxLimit": 10,
+        "defaultLimit": 10,
+        "overLimit": "reject",
+        "sortKeys": [],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/notes/routes/notes/ops/list/paging"
+        }
+      },
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/notes/routes/notes/ops/list"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "listCapped",
+      "name": {
+        "segments": [
+          "list",
+          "capped"
+        ],
+        "role": "operation"
+      },
+      "surface": "notes",
+      "op": "list",
+      "resource": {
+        "type": "capped",
+        "idProperty": "noteId"
+      },
+      "method": "get",
+      "safe": true,
+      "path": "/paging/v1/capped",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Note"
+          },
+          "shape": "page",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/notes/routes/capped/item"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "paging": {
+        "style": "cappedPages",
+        "maxLimit": 10,
+        "defaultLimit": 10,
+        "overLimit": "clamp",
+        "sortKeys": [],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/notes/routes/capped/ops/list/paging"
+        }
+      },
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/notes/routes/capped/ops/list"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "listChanges",
+      "name": {
+        "segments": [
+          "list",
+          "changes"
+        ],
+        "role": "operation"
+      },
+      "surface": "notes",
+      "op": "list",
+      "resource": {
+        "type": "changes",
+        "idProperty": "noteId"
+      },
+      "method": "get",
+      "safe": true,
+      "path": "/paging/v1/changes",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Note"
+          },
+          "shape": "page",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/notes/routes/changes/item"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "paging": {
+        "style": "changes",
+        "maxLimit": 10,
+        "defaultLimit": 10,
+        "overLimit": "clamp",
+        "token": "opaque",
+        "sortKeys": [],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/notes/routes/changes/ops/list/paging"
+        }
+      },
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/notes/routes/changes/ops/list"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "listEvents",
+      "name": {
+        "segments": [
+          "list",
+          "events"
+        ],
+        "role": "operation"
+      },
+      "surface": "notes",
+      "op": "list",
+      "resource": {
+        "type": "events",
+        "idProperty": "noteId"
+      },
+      "method": "get",
+      "safe": true,
+      "path": "/paging/v1/events",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Note"
+          },
+          "shape": "page",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/notes/routes/events/item"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "paging": {
+        "style": "changes",
+        "maxLimit": 10,
+        "defaultLimit": 10,
+        "overLimit": "reject",
+        "token": "instant",
+        "sortKeys": [],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/notes/routes/events/ops/list/paging"
+        }
+      },
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/notes/routes/events/ops/list"
+      }
+    }
+  ],
+  "api": {
+    "id": "tasksPaging",
+    "name": {
+      "segments": [
+        "tasks",
+        "paging"
+      ],
+      "role": "schema"
+    },
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "kind": "product",
+    "pathVersion": {
+      "value": "prefix",
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/version"
+      }
+    },
+    "maturity": "provisional",
+    "compat": {
+      "policy": "none"
+    },
+    "surfaces": {
+      "notes": {
+        "name": {
+          "segments": [
+            "notes"
+          ],
+          "role": "schema"
+        },
+        "prefix": "/paging/v1",
+        "pathVersion": "prefix",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/notes"
+        }
+      }
+    },
+    "documents": {},
+    "docs": {
+      "summary": "Notes read through a changes feed, a Stripe-style list and a clamped list that reports its limit."
+    },
+    "extensions": {},
+    "origin": {
+      "layer": "api",
+      "pointer": "/api"
+    }
+  },
+  "lint": {
+    "rules": {},
+    "allows": []
+  }
+}

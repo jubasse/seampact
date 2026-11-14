@@ -1,0 +1,53 @@
+api: { name: mail, version: 1 }
+schemes:
+  bearer: { kind: bearer }
+identities:
+  user: { schemes: { read: [bearer], write: [bearer] }, principal: UserPrincipal }
+enums:
+  Kind: { values: [plain, digest], reason: The two mail kinds. }
+schemas:
+  Message:
+    type: object
+    required: [to, count, urgent, kind, replyTo, secret]
+    properties:
+      to: { type: string }
+      count: { type: integer }
+      urgent: { type: boolean }
+      kind: { enum: Kind }
+      cc: { type: string }
+      replyTo: { type: string, nullable: true }
+      secret: { type: string, sensitive: true }
+  UserPrincipal: { type: object, required: [userId], properties: { userId: { type: string } } }
+rules:
+  throttle: { bucket: true }
+  recentAuth: { proof: { in: body, name: reauthToken, schema: { type: string } } }
+buckets:
+  perUser: { key: [principal.userId] }
+  perRecipient: { key: [body.to, address] }
+  perCount: { key: [body.count] }
+  perUrgency: { key: [body.urgent] }
+  perKind: { key: [body.kind] }
+  perCc: { key: [body.cc] }
+  perReplyTo: { key: [body.replyTo] }
+  perSecret: { key: [body.secret] }
+  perSubject: { key: [body.subject] }
+  perToken: { key: [body.reauthToken] }
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: user
+    routes:
+      send:
+        method: post
+        input: Message
+        requires:
+          - { rule: recentAuth }
+          - { rule: throttle, bucket: perCc }
+          - { rule: throttle, bucket: perReplyTo }
+          - { rule: throttle, bucket: perSecret }
+          - { rule: throttle, bucket: perToken }
+        responses: { 204: {} }
+      ping:
+        method: post
+        requires: [{ rule: recentAuth }, { rule: throttle, bucket: perToken }]
+        responses: { 204: {} }

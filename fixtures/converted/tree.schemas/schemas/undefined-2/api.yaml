@@ -1,0 +1,18 @@
+api: { name: t, version: 1 }
+schemas:
+
+  Shapes:
+    type: object
+    required: [list]
+    properties:
+      list: { type: array, items: { type: string }, minItems: 1, maxItems: 3 }
+      table: { type: object, additionalProperties: { type: integer }, propertyNames: { type: string, format: uuid } }
+      blob: { opaque: "A third party's free-form value." }
+      maybeBlob: { opaque: "A third party's free-form value.", nullable: true }
+      blobs: { type: array, items: { opaque: "A third party's free-form value.", nullable: true } }
+      upload: { file: { media: [image/png], maxSize: 2KiB } }
+      merged: { allOf: [Named, { type: object, properties: { extra: { type: boolean } } }] }
+      json: { type: string, contentMediaType: application/json, contentSchema: Named }
+  Named: { type: object, properties: { name: { type: string } } }
+  Tags: { type: array, items: { type: string } }
+  UsesTags: { type: object, properties: { tags: Tags } }

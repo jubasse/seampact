@@ -1,0 +1,19 @@
+
+api: { name: a, version: 1, kind: product }
+pagings:
+  signed:
+    request: { cursor: { query: cursor }, limit: { query: limit }, sort: { query: sort } }
+    response: { body: $items }
+  pair:
+    request: { cursor: { query: cursor }, limit: { query: limit }, sort: { query: sort, style: pair } }
+    response: { body: $items }
+conventions:
+  paging: { maxLimit: 100 }
+schemas:
+  Note: { type: object, properties: { "a,b": { type: string }, "-c": { type: string }, d: { type: string } } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      signed: { method: get, item: Note, paging: signed, sortable: ["a,b", "-c", d] }
+      pair: { method: get, item: Note, paging: pair, sortable: ["a,b", "-c", d] }

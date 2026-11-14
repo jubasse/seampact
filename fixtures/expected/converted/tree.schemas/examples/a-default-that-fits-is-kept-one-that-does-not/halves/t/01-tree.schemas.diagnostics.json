@@ -1,0 +1,35 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/default-value",
+    "message": "the default does not fit its schema at '/1': 'two' is not a number",
+    "fix": "correct the default, or the schema it is parsed against",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Settings/properties/limits/default/1"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/default-value",
+    "message": "the default does not fit its schema at '': 'low' is not a number",
+    "fix": "correct the default, or the schema it is parsed against",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Settings/properties/level/default"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/default-value",
+    "message": "the default does not fit its schema at '': 0 is not at least 1",
+    "fix": "correct the default, or the schema it is parsed against",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Small/properties/size/default"
+    },
+    "related": []
+  }
+]

@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "a",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/signature-key",
+          "message": "the key of signature scheme 'empty' names neither a value nor a source",
+          "fix": "Write 'key: { value: <id> }' or 'key: { from: <path, query or header source> }'.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemes/empty/key"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

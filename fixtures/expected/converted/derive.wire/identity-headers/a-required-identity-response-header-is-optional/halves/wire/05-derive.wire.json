@@ -1,0 +1,1284 @@
+{
+  "operations": {
+    "notes": {
+      "params": {
+        "header": [
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/identities/member"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "idempotency.write",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/conventions/idempotency"
+                }
+              ]
+            }
+          },
+          {
+            "name": "If-Rights-Version",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.versionToken",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/identities/member/headers/rightsVersion"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/headers/rightsVersion"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "schema": {
+          "unknownKeys": {
+            "policy": "ignore",
+            "reason": "Older clients still send fields the api dropped.",
+            "derivedFrom": {
+              "derivation": "input.unknownKeys",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/conventions/input/unknownKeys"
+                }
+              ]
+            }
+          }
+        },
+        "bodyLimitBytes": 524288
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "Idempotency-Replayed",
+              "type": {
+                "kind": "scalar",
+                "type": "boolean",
+                "refinements": {}
+              },
+              "required": false,
+              "derivedFrom": {
+                "derivation": "idempotency.write",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/conventions/idempotency"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "X-Rights-Version",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": true,
+              "semantic": "versionToken",
+              "derivedFrom": {
+                "derivation": "identity.versionToken",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/identities/member/headers/rightsVersion"
+                  },
+                  {
+                    "layer": "api",
+                    "pointer": "/headers/rightsVersion"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "idempotency": {
+        "kind": "derived",
+        "header": "Idempotency-Key",
+        "replayHeader": "Idempotency-Replayed",
+        "lifetimeMs": 3600000,
+        "required": true,
+        "enforce": "boundary",
+        "derivedFrom": {
+          "derivation": "idempotency.write",
+          "from": [
+            {
+              "layer": "api",
+              "pointer": "/conventions/idempotency"
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "experimental",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        }
+      }
+    },
+    "bigNotes": {
+      "params": {
+        "header": [
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/identities/member"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          },
+          {
+            "name": "If-Rights-Version",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.versionToken",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/identities/member/headers/rightsVersion"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/headers/rightsVersion"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 20971520
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "X-Rights-Version",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": true,
+              "semantic": "versionToken",
+              "derivedFrom": {
+                "derivation": "identity.versionToken",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/identities/member/headers/rightsVersion"
+                  },
+                  {
+                    "layer": "api",
+                    "pointer": "/headers/rightsVersion"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "experimental",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        }
+      }
+    },
+    "archive": {
+      "params": {
+        "header": [
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/identities/member"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          },
+          {
+            "name": "If-Rights-Version",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.versionToken",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/identities/member/headers/rightsVersion"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/headers/rightsVersion"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "X-Rights-Version",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": true,
+              "semantic": "versionToken",
+              "derivedFrom": {
+                "derivation": "identity.versionToken",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/identities/member/headers/rightsVersion"
+                  },
+                  {
+                    "layer": "api",
+                    "pointer": "/headers/rightsVersion"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "idempotency": {
+        "kind": "exempt",
+        "reason": "Archiving twice leaves the note archived.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/archive/idempotency"
+        }
+      },
+      "maturity": {
+        "level": "experimental",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        }
+      }
+    },
+    "board": {
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "traceresponse",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": false,
+              "semantic": "traceContext",
+              "derivedFrom": {
+                "derivation": "identity.header",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/identities/member/headers/served"
+                  },
+                  {
+                    "layer": "api",
+                    "pointer": "/headers/served"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "X-Rights-Version",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": true,
+              "semantic": "versionToken",
+              "derivedFrom": {
+                "derivation": "identity.versionToken",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/identities/member/headers/rightsVersion"
+                  },
+                  {
+                    "layer": "api",
+                    "pointer": "/headers/rightsVersion"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "experimental",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        }
+      }
+    },
+    "comments": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/mixed/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Csrf-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/identities/mixed"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/sessionCookie"
+                }
+              ]
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "idempotency.write",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/conventions/idempotency"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "schema": {
+          "unknownKeys": {
+            "policy": "ignore",
+            "reason": "Older clients still send fields the api dropped.",
+            "derivedFrom": {
+              "derivation": "input.unknownKeys",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/conventions/input/unknownKeys"
+                }
+              ]
+            }
+          }
+        },
+        "bodyLimitBytes": 2097152
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "Idempotency-Replayed",
+              "type": {
+                "kind": "scalar",
+                "type": "boolean",
+                "refinements": {}
+              },
+              "required": false,
+              "derivedFrom": {
+                "derivation": "idempotency.write",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/conventions/idempotency"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "idempotency": {
+        "kind": "derived",
+        "header": "Idempotency-Key",
+        "replayHeader": "Idempotency-Replayed",
+        "lifetimeMs": 3600000,
+        "required": true,
+        "enforce": "boundary",
+        "derivedFrom": {
+          "derivation": "idempotency.write",
+          "from": [
+            {
+              "layer": "api",
+              "pointer": "/conventions/idempotency"
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "experimental",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        }
+      }
+    },
+    "comment": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/mixed/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "idempotency.write",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/conventions/idempotency"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "Idempotency-Replayed",
+              "type": {
+                "kind": "scalar",
+                "type": "boolean",
+                "refinements": {}
+              },
+              "required": false,
+              "derivedFrom": {
+                "derivation": "idempotency.write",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/conventions/idempotency"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "idempotency": {
+        "kind": "derived",
+        "header": "Idempotency-Key",
+        "replayHeader": "Idempotency-Replayed",
+        "lifetimeMs": 3600000,
+        "required": true,
+        "enforce": "boundary",
+        "derivedFrom": {
+          "derivation": "idempotency.write",
+          "from": [
+            {
+              "layer": "api",
+              "pointer": "/conventions/idempotency"
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "experimental",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        }
+      }
+    },
+    "jobs": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/robots/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/basicAuth"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "idempotency.write",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/conventions/idempotency"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Deadline",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.header",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/identities/robot/headers/deadline"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/headers/deadline"
+                }
+              ]
+            }
+          },
+          {
+            "name": "traceparent",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.header",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/identities/robot/headers/trace"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/headers/trace"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "schema": {
+          "unknownKeys": {
+            "policy": "ignore",
+            "reason": "Older clients still send fields the api dropped.",
+            "derivedFrom": {
+              "derivation": "input.unknownKeys",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/conventions/input/unknownKeys"
+                }
+              ]
+            }
+          }
+        },
+        "bodyLimitBytes": 524288
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "Idempotency-Replayed",
+              "type": {
+                "kind": "scalar",
+                "type": "boolean",
+                "refinements": {}
+              },
+              "required": false,
+              "derivedFrom": {
+                "derivation": "idempotency.write",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/conventions/idempotency"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "idempotency": {
+        "kind": "derived",
+        "header": "Idempotency-Key",
+        "replayHeader": "Idempotency-Replayed",
+        "lifetimeMs": 3600000,
+        "required": true,
+        "enforce": "boundary",
+        "derivedFrom": {
+          "derivation": "idempotency.write",
+          "from": [
+            {
+              "layer": "api",
+              "pointer": "/conventions/idempotency"
+            }
+          ]
+        }
+      },
+      "deadlineHeader": "X-Deadline",
+      "maturity": {
+        "level": "experimental",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        }
+      }
+    },
+    "status": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/robots/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Deadline",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.header",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/identities/robot/headers/deadline"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/headers/deadline"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "traceresponse",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": true,
+              "semantic": "traceContext",
+              "derivedFrom": {
+                "derivation": "identity.header",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/identities/robot/headers/served"
+                  },
+                  {
+                    "layer": "api",
+                    "pointer": "/headers/served"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "deadlineHeader": "X-Deadline",
+      "maturity": {
+        "level": "experimental",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        }
+      }
+    },
+    "feed": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/robots/routes/feed/access"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Deadline",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.header",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/identities/robot/headers/deadline"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/headers/deadline"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "traceresponse",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": false,
+              "semantic": "traceContext",
+              "derivedFrom": {
+                "derivation": "identity.header",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/identities/robot/headers/served"
+                  },
+                  {
+                    "layer": "api",
+                    "pointer": "/headers/served"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "deadlineHeader": "X-Deadline",
+      "maturity": {
+        "level": "experimental",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        }
+      }
+    },
+    "ping": {
+      "params": {
+        "header": [
+          {
+            "name": "X-Device-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/devices/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/deviceToken"
+                }
+              ]
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "idempotency.write",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/conventions/idempotency"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "Idempotency-Replayed",
+              "type": {
+                "kind": "scalar",
+                "type": "boolean",
+                "refinements": {}
+              },
+              "required": false,
+              "derivedFrom": {
+                "derivation": "idempotency.write",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/conventions/idempotency"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "idempotency": {
+        "kind": "derived",
+        "header": "Idempotency-Key",
+        "replayHeader": "Idempotency-Replayed",
+        "lifetimeMs": 3600000,
+        "required": true,
+        "enforce": "boundary",
+        "derivedFrom": {
+          "derivation": "idempotency.write",
+          "from": [
+            {
+              "layer": "api",
+              "pointer": "/conventions/idempotency"
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "experimental",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        }
+      }
+    },
+    "tiles": {
+      "params": {
+        "query": [
+          {
+            "name": "key",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/partner/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/mapsKey"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "experimental",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        }
+      }
+    },
+    "stripe": {
+      "params": {
+        "header": [
+          {
+            "name": "Stripe-Signature",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/hooks/routes/stripe/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/stripeSignature"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "schema": {
+          "unknownKeys": {
+            "policy": "ignore",
+            "reason": "Older clients still send fields the api dropped.",
+            "derivedFrom": {
+              "derivation": "input.unknownKeys",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/conventions/input/unknownKeys"
+                }
+              ]
+            }
+          }
+        },
+        "bodyLimitBytes": 524288
+      },
+      "maturity": {
+        "level": "experimental",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        }
+      }
+    },
+    "github": {
+      "params": {
+        "header": [
+          {
+            "name": "Idempotency-Key",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "idempotency.write",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/conventions/idempotency"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-GitHub-Event",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "union.headerTag",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/schemas/GithubEvent"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "schema": {
+          "unknownKeys": {
+            "policy": "ignore",
+            "reason": "Older clients still send fields the api dropped.",
+            "derivedFrom": {
+              "derivation": "input.unknownKeys",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/conventions/input/unknownKeys"
+                }
+              ]
+            }
+          }
+        },
+        "bodyLimitBytes": 524288
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "Idempotency-Replayed",
+              "type": {
+                "kind": "scalar",
+                "type": "boolean",
+                "refinements": {}
+              },
+              "required": false,
+              "derivedFrom": {
+                "derivation": "idempotency.write",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/conventions/idempotency"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "idempotency": {
+        "kind": "derived",
+        "header": "Idempotency-Key",
+        "replayHeader": "Idempotency-Replayed",
+        "lifetimeMs": 3600000,
+        "required": true,
+        "enforce": "boundary",
+        "derivedFrom": {
+          "derivation": "idempotency.write",
+          "from": [
+            {
+              "layer": "api",
+              "pointer": "/conventions/idempotency"
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "experimental",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        }
+      }
+    }
+  },
+  "api": {
+    "wire": {
+      "int64": "string",
+      "outputEnums": "enum",
+      "urls": "relative"
+    }
+  }
+}

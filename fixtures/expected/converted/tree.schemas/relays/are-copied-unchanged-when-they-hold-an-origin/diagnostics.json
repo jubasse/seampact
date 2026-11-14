@@ -1,0 +1,43 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/schema-inline",
+          "message": "an inline object has no derived name here",
+          "fix": "declare it under 'schemas' and write its name here",
+          "origin": {
+            "layer": "api",
+            "pointer": "/extensions/acme/origin/schema"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/example-value",
+          "message": "the example does not fit its schema at '/origin/pointer': 'pointer' is not a property of OwnerOrigin",
+          "fix": "correct the example, or the schema it is parsed against",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Owner/examples/0/origin/pointer"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/extension-unknown",
+          "message": "'x-acme-origin' is no declared extension key",
+          "fix": "declare it under 'extensions' with its schema and places, or remove it",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Owner/x-acme-origin"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

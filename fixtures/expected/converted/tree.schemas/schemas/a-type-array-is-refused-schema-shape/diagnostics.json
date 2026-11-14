@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/schema-shape",
+          "message": "an array needs its item schema",
+          "fix": "add 'items'",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/A"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

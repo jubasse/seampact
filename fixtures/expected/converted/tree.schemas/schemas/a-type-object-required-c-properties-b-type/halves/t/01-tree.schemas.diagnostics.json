@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/required-unknown",
+    "message": "'c' is required but is no property of the object",
+    "fix": "declare the property, or remove it from 'required'",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/A/required"
+    },
+    "related": []
+  }
+]

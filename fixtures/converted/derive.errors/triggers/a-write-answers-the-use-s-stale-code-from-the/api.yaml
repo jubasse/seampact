@@ -1,0 +1,22 @@
+api: { name: shop, version: 1 }
+errors:
+  shop.rights_stale: { status: 409 }
+schemas:
+  Viewer: { type: object, properties: { id: { type: string }, rightsVersion: { type: string } } }
+schemes:
+  bearer: { kind: bearer }
+headers:
+  rightsVersion: { semantic: versionToken, response: X-Rights-Version, request: If-Rights-Version }
+identities:
+  viewer:
+    schemes: { read: [bearer], write: [bearer] }
+    principal: Viewer
+    headers:
+      rightsVersion: { from: principal.rightsVersion, for: writes, stale: shop.rights_stale }
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: viewer
+    routes:
+      ping: { method: get }
+      poke: { method: post }

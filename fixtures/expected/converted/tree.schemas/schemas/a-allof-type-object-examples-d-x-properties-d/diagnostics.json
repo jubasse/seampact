@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/annotation-position",
+          "message": "'examples' on a member of 'allOf' is not kept by the contract model",
+          "fix": "remove 'examples' here; put the example on the object that holds this value",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/A/allOf/0/examples"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,305 @@
+{
+  "rules": {
+    "throttle": {
+      "id": "throttle",
+      "takesBucket": true,
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/throttle"
+      }
+    },
+    "recentAuth": {
+      "id": "recentAuth",
+      "takesBucket": false,
+      "proof": {
+        "in": "body",
+        "name": "reauthToken",
+        "schema": {
+          "kind": "scalar",
+          "type": "string",
+          "refinements": {}
+        }
+      },
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/recentAuth"
+      }
+    }
+  },
+  "buckets": {
+    "perUser": {
+      "id": "perUser",
+      "key": [
+        {
+          "in": "principal",
+          "name": "userId"
+        }
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/buckets/perUser"
+      }
+    },
+    "perRecipient": {
+      "id": "perRecipient",
+      "key": [
+        {
+          "in": "body",
+          "name": "to"
+        },
+        {
+          "in": "address"
+        }
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/buckets/perRecipient"
+      }
+    },
+    "perCount": {
+      "id": "perCount",
+      "key": [
+        {
+          "in": "body",
+          "name": "count"
+        }
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/buckets/perCount"
+      }
+    },
+    "perUrgency": {
+      "id": "perUrgency",
+      "key": [
+        {
+          "in": "body",
+          "name": "urgent"
+        }
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/buckets/perUrgency"
+      }
+    },
+    "perKind": {
+      "id": "perKind",
+      "key": [
+        {
+          "in": "body",
+          "name": "kind"
+        }
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/buckets/perKind"
+      }
+    },
+    "perCc": {
+      "id": "perCc",
+      "key": [
+        {
+          "in": "body",
+          "name": "cc"
+        }
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/buckets/perCc"
+      }
+    },
+    "perReplyTo": {
+      "id": "perReplyTo",
+      "key": [
+        {
+          "in": "body",
+          "name": "replyTo"
+        }
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/buckets/perReplyTo"
+      }
+    },
+    "perSecret": {
+      "id": "perSecret",
+      "key": [
+        {
+          "in": "body",
+          "name": "secret"
+        }
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/buckets/perSecret"
+      }
+    },
+    "perSubject": {
+      "id": "perSubject",
+      "key": [
+        {
+          "in": "body",
+          "name": "subject"
+        }
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/buckets/perSubject"
+      }
+    },
+    "perToken": {
+      "id": "perToken",
+      "key": [
+        {
+          "in": "body",
+          "name": "reauthToken"
+        }
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/buckets/perToken"
+      }
+    }
+  },
+  "operations": {
+    "send": {
+      "input": {
+        "proofs": [
+          {
+            "name": "reauthToken",
+            "schema": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "derivedFrom": {
+              "derivation": "rule.proof",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/send/requires/0"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/rules/recentAuth/proof"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "recentAuth",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/send/requires/0"
+          }
+        },
+        {
+          "kind": "rule",
+          "rule": "throttle",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/send/requires/1"
+          },
+          "bucket": "perCc"
+        },
+        {
+          "kind": "rule",
+          "rule": "throttle",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/send/requires/2"
+          },
+          "bucket": "perReplyTo"
+        },
+        {
+          "kind": "rule",
+          "rule": "throttle",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/send/requires/3"
+          },
+          "bucket": "perSecret"
+        },
+        {
+          "kind": "rule",
+          "rule": "throttle",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/send/requires/4"
+          },
+          "bucket": "perToken"
+        }
+      ],
+      "fieldRights": []
+    },
+    "ping": {
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "recentAuth",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/ping/requires/0"
+          }
+        },
+        {
+          "kind": "rule",
+          "rule": "throttle",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/ping/requires/1"
+          },
+          "bucket": "perToken"
+        }
+      ],
+      "fieldRights": [],
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "ApiEmptyBody"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/ping/requires/0"
+        },
+        "rawBody": false,
+        "proofs": [
+          {
+            "name": "reauthToken",
+            "schema": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "derivedFrom": {
+              "derivation": "rule.proof",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/ping/requires/0"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/rules/recentAuth/proof"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  }
+}

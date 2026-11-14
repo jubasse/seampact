@@ -1,0 +1,7 @@
+api: { name: t, version: 1 }
+surfaces:
+  app:
+    routes:
+      search:
+        method: get
+        query: { term: { type: string, default: all } }

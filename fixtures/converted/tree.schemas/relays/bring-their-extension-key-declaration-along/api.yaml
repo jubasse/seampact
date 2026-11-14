@@ -1,0 +1,6 @@
+api: { name: t, version: 1 }
+extensions:
+  acme:
+    owner: { at: [schema], schema: { type: string } }
+schemas:
+  Box: { type: object, x-acme-owner: team, properties: { count: { type: integer } } }

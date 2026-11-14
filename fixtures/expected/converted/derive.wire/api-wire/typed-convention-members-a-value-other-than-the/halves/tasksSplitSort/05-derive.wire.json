@@ -1,0 +1,203 @@
+{
+  "operations": {
+    "listNotes": {
+      "params": {
+        "query": [
+          {
+            "name": "page",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "1"
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/notes/routes/notes/ops/list/paging"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/pagings/githubPages"
+                }
+              ]
+            }
+          },
+          {
+            "name": "per_page",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "1"
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/notes/routes/notes/ops/list/paging"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/pagings/githubPages"
+                }
+              ]
+            }
+          },
+          {
+            "name": "sort",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {
+                "pattern": {
+                  "source": "^(?:created)$",
+                  "normalized": "^(?:created)$"
+                }
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/notes/routes/notes/ops/list/paging"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/pagings/githubPages"
+                }
+              ]
+            }
+          },
+          {
+            "name": "direction",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {
+                "pattern": {
+                  "source": "^(?:asc|desc)$",
+                  "normalized": "^(?:asc|desc)$"
+                }
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/notes/routes/notes/ops/list/paging"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/pagings/githubPages"
+                }
+              ]
+            }
+          }
+        ],
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/notes/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "Link",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": false,
+              "derivedFrom": {
+                "derivation": "paging.params",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/surfaces/notes/routes/notes/ops/list/paging"
+                  },
+                  {
+                    "layer": "api",
+                    "pointer": "/pagings/githubPages"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    }
+  },
+  "api": {
+    "wire": {
+      "int64": "number",
+      "outputEnums": "open",
+      "urls": "absolute"
+    }
+  }
+}

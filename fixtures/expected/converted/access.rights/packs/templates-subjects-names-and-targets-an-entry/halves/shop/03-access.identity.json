@@ -1,0 +1,49 @@
+{
+  "operations": {
+    "health": {
+      "access": {
+        "kind": "public",
+        "reason": "The fixture checks derivations only.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "listItems": {
+      "access": {
+        "kind": "public",
+        "reason": "The fixture checks derivations only.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "getItem": {
+      "access": {
+        "kind": "public",
+        "reason": "The fixture checks derivations only.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    }
+  }
+}

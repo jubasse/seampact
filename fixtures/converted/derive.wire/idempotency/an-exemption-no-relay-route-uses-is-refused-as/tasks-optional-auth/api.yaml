@@ -1,0 +1,27 @@
+# tasks-optional-auth/api.yaml
+api:
+  name: tasksOptionalAuth
+  version: 1
+  kind: product
+  maturity: provisional
+  summary: A greeting that visitors and signed-in users both read.
+
+schemas:
+  Greeting:
+    type: object
+    required: [signedIn]
+    properties: { signedIn: { type: boolean } }
+
+surfaces:
+  welcome:
+    prefix: /welcome/v{version}
+    identity: user
+    routes:
+      greeting:
+        method: get
+        access: { optionalAuth: "Visitors see the greeting before they sign in." }
+        output: Greeting
+      strictGreeting:
+        method: get
+        access: { optionalAuth: "A bad token must be told, not read as a visitor.", onRefused: reject }
+        output: Greeting

@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "shop",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/derive/role-param-type",
+          "message": "role 'schemaInvalid' fills the param 'notice' of 'shop.invalid' with an array, but the param's type (object) does not take an array",
+          "fix": "fill 'notice' with a value its type provably takes, or change the param's type in 'shop.invalid'",
+          "origin": {
+            "layer": "api",
+            "pointer": "/conventions/errors/derived/schemaInvalid/params/notice"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,117 @@
+{
+  "irRevision": 6,
+  "locations": {
+    "api#/api": {
+      "column": 1,
+      "endColumn": 33,
+      "endLine": 1,
+      "file": "api.yaml",
+      "line": 1
+    },
+    "api#/api/version": {
+      "column": 21,
+      "endColumn": 31,
+      "endLine": 1,
+      "file": "api.yaml",
+      "line": 1
+    },
+    "api#/identities/user": {
+      "column": 3,
+      "endColumn": 83,
+      "endLine": 5,
+      "file": "api.yaml",
+      "line": 5
+    },
+    "api#/rules/otp": {
+      "column": 3,
+      "endColumn": 61,
+      "endLine": 17,
+      "file": "api.yaml",
+      "line": 17
+    },
+    "api#/rules/otp/proof": {
+      "column": 10,
+      "endColumn": 59,
+      "endLine": 17,
+      "file": "api.yaml",
+      "line": 17
+    },
+    "api#/rules/otpAgain": {
+      "column": 3,
+      "endColumn": 66,
+      "endLine": 18,
+      "file": "api.yaml",
+      "line": 18
+    },
+    "api#/rules/otpAgain/proof": {
+      "column": 15,
+      "endColumn": 64,
+      "endLine": 18,
+      "file": "api.yaml",
+      "line": 18
+    },
+    "api#/schemas/UserPrincipal": {
+      "column": 3,
+      "endColumn": 96,
+      "endLine": 12,
+      "file": "api.yaml",
+      "line": 12
+    },
+    "api#/schemas/UserPrincipal/properties/userId": {
+      "column": 68,
+      "endColumn": 92,
+      "endLine": 12,
+      "file": "api.yaml",
+      "line": 12
+    },
+    "api#/schemes/bearer": {
+      "column": 3,
+      "endColumn": 27,
+      "endLine": 3,
+      "file": "api.yaml",
+      "line": 3
+    },
+    "api#/surfaces/app": {
+      "column": 3,
+      "endColumn": 31,
+      "endLine": 28,
+      "file": "api.yaml",
+      "line": 21
+    },
+    "api#/surfaces/app/identity": {
+      "column": 5,
+      "endColumn": 19,
+      "endLine": 23,
+      "file": "api.yaml",
+      "line": 23
+    },
+    "api#/surfaces/app/routes/ping": {
+      "column": 7,
+      "endColumn": 31,
+      "endLine": 28,
+      "file": "api.yaml",
+      "line": 25
+    },
+    "api#/surfaces/app/routes/ping/requires/0": {
+      "column": 20,
+      "endColumn": 33,
+      "endLine": 27,
+      "file": "api.yaml",
+      "line": 27
+    },
+    "api#/surfaces/app/routes/ping/requires/1": {
+      "column": 35,
+      "endColumn": 53,
+      "endLine": 27,
+      "file": "api.yaml",
+      "line": 27
+    },
+    "api#/surfaces/app/routes/ping/responses/204": {
+      "column": 22,
+      "endColumn": 29,
+      "endLine": 28,
+      "file": "api.yaml",
+      "line": 28
+    }
+  }
+}

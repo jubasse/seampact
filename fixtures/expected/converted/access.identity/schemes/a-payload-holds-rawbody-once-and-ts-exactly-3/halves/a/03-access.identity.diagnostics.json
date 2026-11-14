@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/signature-template",
+    "message": "the format of signature scheme 'sig' reads '{ts}', which its payload does not sign",
+    "fix": "Add '{ts}' to the payload, such as '{ts}.{rawBody}', or remove the '{ts}' pair from the format.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemes/sig/payload"
+    },
+    "related": []
+  }
+]

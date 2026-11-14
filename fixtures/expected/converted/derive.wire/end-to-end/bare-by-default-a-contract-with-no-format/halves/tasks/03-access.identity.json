@@ -1,0 +1,19 @@
+{
+  "operations": {
+    "getTask": {
+      "access": {
+        "kind": "public",
+        "reason": "Tasks are public.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    }
+  }
+}

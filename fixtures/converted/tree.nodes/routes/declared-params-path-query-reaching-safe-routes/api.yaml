@@ -1,0 +1,22 @@
+
+api: { name: a, version: 1, kind: product }
+schemas:
+  OrgId: { type: string }
+  Filter: { type: object, properties: { state: { type: string } } }
+surfaces:
+  app:
+    prefix: /v{version}
+    headers: { X-Tenant: { type: string } }
+    routes:
+      projects:
+        kind: single
+        path: 'orgs/{orgId}/projects/{projectId}'
+        pathParams: { orgId: OrgId, projectId: OrgId }
+        query: { verbose?: { type: boolean } }
+        routes:
+          show: { method: get, query: Filter }
+          rename:
+            method: post
+            query: { dryRun?: { type: boolean } }
+            headers: { x-tenant: { type: string } }
+          misplaced: { method: get, path: 'x/{missing}', pathParams: { unused: OrgId } }

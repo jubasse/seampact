@@ -1,0 +1,24 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/tasks/errors/api.forbidden/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ApiForbiddenParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/boards/errors/tasks.locked/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TasksLockedParams"
+    }
+  }
+]

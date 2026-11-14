@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/example-value",
+    "message": "the example does not fit its schema at '': 12 is not a string",
+    "fix": "correct the example, or the schema it is parsed against",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Wrong/properties/title/examples/0"
+    },
+    "related": []
+  }
+]

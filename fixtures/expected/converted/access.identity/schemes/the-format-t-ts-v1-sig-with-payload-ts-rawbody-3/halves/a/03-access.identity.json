@@ -1,0 +1,25 @@
+{
+  "schemes": {
+    "sig": {
+      "id": "sig",
+      "kind": "signature",
+      "name": "Stripe-Signature",
+      "signature": {
+        "verify": "template",
+        "format": "t={ts},v1={sig}",
+        "algorithm": "hmac-sha256",
+        "payload": "{ts}.{rawBody}",
+        "encoding": "hex",
+        "toleranceMs": 300000,
+        "key": {
+          "kind": "value",
+          "value": "stripe"
+        }
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/sig"
+      }
+    }
+  }
+}

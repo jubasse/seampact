@@ -1,0 +1,32 @@
+{
+  "headers": {
+    "first": {
+      "id": "first",
+      "semantic": "actorSurface",
+      "name": "X-First",
+      "in": "request",
+      "schema": {
+        "kind": "enum",
+        "enum": "Surface"
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/headers/first"
+      }
+    },
+    "second": {
+      "id": "second",
+      "semantic": "actorSurface",
+      "name": "X-Second",
+      "in": "request",
+      "schema": {
+        "kind": "enum",
+        "enum": "Surface"
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/headers/second"
+      }
+    }
+  }
+}

@@ -9,6 +9,8 @@
     "rules/access-binding-source"
   ],
   "seampact/access/bucket-key": [
+    "converted/access.rights/bucket-keys/a-missing-body-field-a-boolean-or-enum-field",
+    "converted/access.rights/bucket-keys/an-optional-nullable-or-sensitive-field-and-a",
     "limits/bucket-prefix-bits-over",
     "passes/access-rights/catalogues-refused",
     "passes/access-rights/proofs-refused"
@@ -23,36 +25,80 @@
     "rules/access-csrf-header"
   ],
   "seampact/access/deny-by-default": [
+    "converted/tree.nodes/api/path-versions-a-literal-version-segment-under",
+    "converted/tree.nodes/api/path-versions-a-prefix-with-version",
+    "converted/tree.nodes/api/path-versions-a-prefix-without-a-leading-slash",
+    "converted/tree.nodes/api/path-versions-a-prefix-without-version",
+    "converted/tree.nodes/api/path-versions-a-string-version-with-every",
+    "converted/tree.nodes/api/path-versions-an-empty-prefix-under-pathversion",
+    "converted/tree.nodes/api/path-versions-an-empty-prefix-under-prefix-mode",
+    "converted/tree.nodes/api/path-versions-pathversion-none-in-the",
+    "converted/tree.nodes/api/path-versions-pathversion-none-set-by-a-pack",
+    "converted/tree.nodes/api/path-versions-the-api-s-path-version-the-2",
+    "converted/tree.nodes/formats/formats-and-paging-styles-bare-from-the-core",
+    "converted/tree.nodes/routes/an-op-s-own-item-is-its-response-body-without",
+    "converted/tree.nodes/routes/declared-responses-shapes-statuses-sorted",
+    "converted/tree.nodes/routes/unknown-query-keys-the-nearest-unknownquery",
+    "converted/tree.nodes/shapes/paging-declared-the-route-s-style-or-none-else",
+    "converted/tree.nodes/shapes/paging-limits-a-convention-default-is-lowered",
+    "converted/tree.schemas/directions/undefined",
+    "converted/tree.schemas/extensions/declared-keys-are-written-with-their-schema-and",
+    "converted/tree.schemas/routes/a-body-source-adds-the-version-after-the",
+    "converted/tree.schemas/routes/maxids-comes-from-the-conventions-when-the-op",
+    "converted/tree.schemas/routes/maxids-comes-from-the-conventions-when-the-op-3",
+    "converted/tree.schemas/routes/the-batch-op-s-ids-input-is-an-array-of-the-id",
+    "converted/tree.schemas/routes/the-id-type-is-the-one-property-of-a-named-id",
     "passes/tree-nodes/bodies"
   ],
   "seampact/access/field-right-conflict": [
+    "converted/access.rights/field-rights/union-variants-restricting-one-pointer",
+    "converted/access.rights/sort-keys/a-union-item-inherits-the-one-restriction-its",
     "passes/access-rights/fields-refused"
   ],
   "seampact/access/field-right-limit": [
+    "converted/access.rights/field-rights/a-16-level-shared-reference-diamond-2",
+    "converted/access.rights/field-rights/a-diamond-ending-in-a-json-text-field-reports",
     "passes/access-rights/fields-refused"
   ],
   "seampact/access/field-right-params": [
     "passes/access-rights/fields-refused"
   ],
   "seampact/access/field-right-position": [
+    "converted/access.rights/field-rights/a-diamond-ending-in-a-json-text-field-reports",
+    "converted/access.rights/field-rights/a-restricted-field-below-the-json-content-of-a",
+    "converted/access.rights/field-rights/a-restricted-field-reached-from-a-query",
     "passes/access-rights/fields-refused"
   ],
   "seampact/access/field-right-recursive": [
+    "converted/access.rights/field-rights/a-restricted-field-below-a-recursive-reference",
     "passes/access-rights/fields-refused"
   ],
   "seampact/access/field-right-subject": [
+    "converted/access.rights/field-rights/a-resource-right-cannot-restrict-a-create-input",
+    "converted/access.rights/field-rights/a-scope-right-needs-the-route-to-resolve-its",
+    "converted/access.rights/field-rights/an-input-subject-is-found-among-the-route-s",
+    "converted/access.rights/field-rights/an-optional-holder-property-is-no-output-subject",
+    "converted/access.rights/field-rights/an-output-subject-is-the-holder-s-one-property",
+    "converted/access.rights/field-rights/two-fields-of-one-route-whose-subject-fails-are",
     "passes/access-rights/fields-refused"
   ],
   "seampact/access/field-right-target": [
+    "converted/access.rights/field-rights/an-author-string-quoted-in-a-message-is-cut",
     "passes/access-rights/fields-refused"
   ],
   "seampact/access/filtered-by": [
+    "converted/access.rights/sort-keys/a-filteredby-naming-an-undeclared-right-is-an",
     "passes/access-rights/fields-refused"
   ],
   "seampact/access/guest-right": [
+    "converted/access.rights/catalogues/rights-named-like-inherited-members-are-entries",
+    "converted/access.rights/packs/a-refused-derived-right-a-derived-requirement",
+    "converted/access.rights/requires/a-right-without-guest-reason-inherited-by-two",
     "passes/access-rights/guest"
   ],
   "seampact/access/header-declaration": [
+    "converted/access.identity/identities/a-declaration-names-its-header-and-side-or-a",
+    "converted/access.identity/identities/an-actorsurface-declaration-s-schema-is-an-enum",
     "rules/access-header-declaration"
   ],
   "seampact/access/header-use": [
@@ -62,6 +108,83 @@
     "rules/access-identity-member"
   ],
   "seampact/access/identity-reference": [
+    "converted/derive.errors/relays/a-code-a-node-attaches-and-an-identity-also/tasks-optional-auth",
+    "converted/derive.errors/relays/a-code-a-node-attaches-and-an-identity-also/tasks-paging",
+    "converted/derive.errors/relays/a-code-a-node-attaches-and-an-identity-also/tasks-responses",
+    "converted/derive.errors/relays/a-code-a-node-attaches-and-an-identity-also/tasks-split-sort",
+    "converted/derive.errors/relays/a-code-both-declare-the-same-is-copied-once-and/tasks-optional-auth",
+    "converted/derive.errors/relays/a-code-both-declare-the-same-is-copied-once-and/tasks-paging",
+    "converted/derive.errors/relays/a-code-both-declare-the-same-is-copied-once-and/tasks-responses",
+    "converted/derive.errors/relays/a-code-both-declare-the-same-is-copied-once-and/tasks-split-sort",
+    "converted/derive.errors/relays/a-code-the-second-declares-differently-than-the/tasks-optional-auth",
+    "converted/derive.errors/relays/a-code-the-second-declares-differently-than-the/tasks-paging",
+    "converted/derive.errors/relays/a-code-the-second-declares-differently-than-the/tasks-responses",
+    "converted/derive.errors/relays/a-code-the-second-declares-differently-than-the/tasks-split-sort",
+    "converted/derive.errors/relays/a-copied-code-this-api-declares-differently-is/tasks-optional-auth",
+    "converted/derive.errors/relays/a-copied-code-this-api-declares-differently-is/tasks-paging",
+    "converted/derive.errors/relays/a-copied-code-this-api-declares-differently-is/tasks-responses",
+    "converted/derive.errors/relays/a-copied-code-this-api-declares-differently-is/tasks-split-sort",
+    "converted/derive.errors/relays/a-copied-code-whose-params-schema-this-api/tasks-optional-auth",
+    "converted/derive.errors/relays/a-copied-code-whose-params-schema-this-api/tasks-paging",
+    "converted/derive.errors/relays/a-copied-code-whose-params-schema-this-api/tasks-responses",
+    "converted/derive.errors/relays/a-copied-code-whose-params-schema-this-api/tasks-split-sort",
+    "converted/derive.errors/relays/a-copied-nature-this-api-declares-on-another/tasks-optional-auth",
+    "converted/derive.errors/relays/a-copied-nature-this-api-declares-on-another/tasks-paging",
+    "converted/derive.errors/relays/a-copied-nature-this-api-declares-on-another/tasks-responses",
+    "converted/derive.errors/relays/a-copied-nature-this-api-declares-on-another/tasks-split-sort",
+    "converted/derive.errors/relays/a-nature-the-second-declares-on-another-base/tasks-optional-auth",
+    "converted/derive.errors/relays/a-nature-the-second-declares-on-another-base/tasks-paging",
+    "converted/derive.errors/relays/a-nature-the-second-declares-on-another-base/tasks-responses",
+    "converted/derive.errors/relays/a-nature-the-second-declares-on-another-base/tasks-split-sort",
+    "converted/derive.errors/relays/a-node-s-code-joins-this-api-with-its/tasks-optional-auth",
+    "converted/derive.errors/relays/a-node-s-code-joins-this-api-with-its/tasks-paging",
+    "converted/derive.errors/relays/a-node-s-code-joins-this-api-with-its/tasks-responses",
+    "converted/derive.errors/relays/a-node-s-code-joins-this-api-with-its/tasks-split-sort",
+    "converted/derive.wire/api-wire/a-written-default-is-accepted/tasks-optional-auth",
+    "converted/derive.wire/api-wire/a-written-default-is-accepted/tasks-paging",
+    "converted/derive.wire/api-wire/a-written-default-is-accepted/tasks-responses",
+    "converted/derive.wire/api-wire/a-written-default-is-accepted/tasks-split-sort",
+    "converted/derive.wire/api-wire/typed-convention-members-a-value-other-than-the/tasks-optional-auth",
+    "converted/derive.wire/api-wire/typed-convention-members-a-value-other-than-the/tasks-paging",
+    "converted/derive.wire/api-wire/typed-convention-members-a-value-other-than-the/tasks-responses",
+    "converted/derive.wire/api-wire/typed-convention-members-a-value-other-than-the/tasks-split-sort",
+    "converted/derive.wire/buckets/a-bucket-without-a-limit-is-warned-about-that/tasks-optional-auth",
+    "converted/derive.wire/buckets/a-bucket-without-a-limit-is-warned-about-that/tasks-paging",
+    "converted/derive.wire/buckets/a-bucket-without-a-limit-is-warned-about-that/tasks-responses",
+    "converted/derive.wire/buckets/a-bucket-without-a-limit-is-warned-about-that/tasks-split-sort",
+    "converted/derive.wire/buckets/a-bucket-without-a-window-is-warned-about-that/tasks-optional-auth",
+    "converted/derive.wire/buckets/a-bucket-without-a-window-is-warned-about-that/tasks-paging",
+    "converted/derive.wire/buckets/a-bucket-without-a-window-is-warned-about-that/tasks-responses",
+    "converted/derive.wire/buckets/a-bucket-without-a-window-is-warned-about-that/tasks-split-sort",
+    "converted/derive.wire/buckets/a-bucket-without-limit-and-window-is-warned/tasks-optional-auth",
+    "converted/derive.wire/buckets/a-bucket-without-limit-and-window-is-warned/tasks-paging",
+    "converted/derive.wire/buckets/a-bucket-without-limit-and-window-is-warned/tasks-responses",
+    "converted/derive.wire/buckets/a-bucket-without-limit-and-window-is-warned/tasks-split-sort",
+    "converted/derive.wire/concurrency/a-relay-of-an-imported-api-reads-the-version/tasks-optional-auth",
+    "converted/derive.wire/concurrency/a-relay-of-an-imported-api-reads-the-version/tasks-paging",
+    "converted/derive.wire/concurrency/a-relay-of-an-imported-api-reads-the-version/tasks-responses",
+    "converted/derive.wire/concurrency/a-relay-of-an-imported-api-reads-the-version/tasks-split-sort",
+    "converted/derive.wire/concurrency/a-relayed-body-version-names-the-public/tasks-optional-auth",
+    "converted/derive.wire/concurrency/a-relayed-body-version-names-the-public/tasks-paging",
+    "converted/derive.wire/concurrency/a-relayed-body-version-names-the-public/tasks-responses",
+    "converted/derive.wire/concurrency/a-relayed-body-version-names-the-public/tasks-split-sort",
+    "converted/derive.wire/concurrency/a-relayed-query-version-takes-the-public/tasks-optional-auth",
+    "converted/derive.wire/concurrency/a-relayed-query-version-takes-the-public/tasks-paging",
+    "converted/derive.wire/concurrency/a-relayed-query-version-takes-the-public/tasks-responses",
+    "converted/derive.wire/concurrency/a-relayed-query-version-takes-the-public/tasks-split-sort",
+    "converted/derive.wire/idempotency/an-exemption-a-relay-route-inherits-and-uses-is/tasks-optional-auth",
+    "converted/derive.wire/idempotency/an-exemption-a-relay-route-inherits-and-uses-is/tasks-paging",
+    "converted/derive.wire/idempotency/an-exemption-a-relay-route-inherits-and-uses-is/tasks-responses",
+    "converted/derive.wire/idempotency/an-exemption-a-relay-route-inherits-and-uses-is/tasks-split-sort",
+    "converted/derive.wire/idempotency/an-exemption-no-relay-route-uses-is-refused-as/tasks-optional-auth",
+    "converted/derive.wire/idempotency/an-exemption-no-relay-route-uses-is-refused-as/tasks-paging",
+    "converted/derive.wire/idempotency/an-exemption-no-relay-route-uses-is-refused-as/tasks-responses",
+    "converted/derive.wire/idempotency/an-exemption-no-relay-route-uses-is-refused-as/tasks-split-sort",
+    "converted/derive.wire/pass/a-relay-route-derives-its-idempotency-key-and/tasks-optional-auth",
+    "converted/derive.wire/pass/a-relay-route-derives-its-idempotency-key-and/tasks-paging",
+    "converted/derive.wire/pass/a-relay-route-derives-its-idempotency-key-and/tasks-responses",
+    "converted/derive.wire/pass/a-relay-route-derives-its-idempotency-key-and/tasks-split-sort",
+    "converted/tree.nodes/api/api-conventions-lint-packs-and-services-with",
     "golden/pack-api-platform/contract/tasks-optional-auth",
     "golden/pack-api-platform/contract/tasks-paging",
     "golden/pack-api-platform/contract/tasks-responses",
@@ -91,9 +214,11 @@
     "rules/access-optional-identity"
   ],
   "seampact/access/pack-right": [
+    "converted/access.rights/packs/templates-subjects-names-and-targets-an-entry",
     "passes/access-rights/refused"
   ],
   "seampact/access/pack-template": [
+    "converted/access.rights/packs/templates-subjects-names-and-targets-an-entry",
     "passes/access-rights/refused"
   ],
   "seampact/access/principal": [
@@ -103,12 +228,19 @@
     "rules/access-principal-field"
   ],
   "seampact/access/proof-input": [
+    "converted/access.rights/bucket-keys/a-key-naming-a-body-proof-the-route-refuses-is",
+    "converted/access.rights/proofs/a-proof-named-as-a-field-of-the-input-a-non",
     "passes/access-rights/proofs-refused"
   ],
   "seampact/access/proof-name": [
+    "converted/access.rights/proofs/a-declared-credential-or-csrf-header-of-that",
+    "converted/access.rights/proofs/a-proof-named-as-a-field-of-the-input-a-non",
+    "converted/access.rights/proofs/two-body-proofs-of-one-name-with-different",
+    "converted/access.rights/proofs/two-rules-reading-one-header-name-whatever-its-2",
     "passes/access-rights/proofs-refused"
   ],
   "seampact/access/proof-schema": [
+    "converted/access.rights/proofs/a-file-or-opaque-proof-is-refused-at-its-schema",
     "passes/access-rights/catalogues-refused"
   ],
   "seampact/access/public-identity": [
@@ -124,45 +256,74 @@
     "passes/access-rights/refused"
   ],
   "seampact/access/requirement-subject": [
+    "converted/access.rights/subjects/a-named-id-schema-never-equals-an-inline-one-as",
+    "converted/access.rights/subjects/a-principal-subject-is-refused-on-an-optional",
+    "converted/access.rights/subjects/a-resource-subject-defaults-to-a-member-id-of",
+    "converted/access.rights/subjects/a-scope-subject-error-inherited-by-two-routes",
+    "converted/access.rights/subjects/a-written-subject-whose-schema-is-not-the-right",
+    "converted/access.rights/subjects/an-optional-principal-field-is-refused-as-a",
+    "converted/access.rights/subjects/an-optional-query-field-or-header-is-refused-as",
+    "converted/access.rights/subjects/subjects-that-read-nothing-the-route-has-or",
+    "converted/access.rights/subjects/two-member-ids-of-the-right-s-id-schema-in-the",
     "passes/access-rights/refused"
   ],
   "seampact/access/requirement-target": [
+    "converted/access.rights/catalogues/rights-named-like-inherited-members-are-entries",
+    "converted/access.rights/packs/templates-subjects-names-and-targets-an-entry",
+    "converted/access.rights/packs/the-same-contract-without-the-crud-rights-pack",
+    "converted/access.rights/requires/an-entry-of-the-requirements-catalogue-is",
+    "converted/access.rights/requires/an-item-inherited-by-several-routes-is-checked",
     "passes/access-rights/refused"
   ],
   "seampact/access/requirement-twice": [
+    "converted/access.rights/packs/a-refused-derived-right-a-derived-requirement",
+    "converted/access.rights/requires/absent-params-and-empty-params-are-the-same",
     "passes/access-rights/refused"
   ],
   "seampact/access/right-name": [
     "passes/access-rights/catalogues-refused"
   ],
   "seampact/access/right-pattern": [
+    "converted/access.rights/catalogues/a-rights-pattern-that-is-no-regular-expression",
+    "converted/access.rights/packs/a-refused-derived-right-a-derived-requirement",
+    "converted/access.rights/packs/templates-subjects-names-and-targets-an-entry",
     "passes/access-rights/catalogues-refused"
   ],
   "seampact/access/right-subject": [
+    "converted/access.rights/requires/a-refused-caller-right-adds-no-caller-right",
     "passes/access-rights/catalogues-refused"
   ],
   "seampact/access/scheme-kind": [
+    "converted/access.identity/schemes/a-cookie-s-csrf-names-a-declared-header-scheme",
     "rules/access-scheme-kind"
   ],
   "seampact/access/scheme-member": [
+    "converted/access.identity/schemes/a-cookie-header-query-or-signature-scheme-needs",
+    "converted/access.identity/schemes/a-cookie-or-header-name-is-an-http-token-a",
     "rules/access-scheme-member"
   ],
   "seampact/access/scheme-query-field": [
     "rules/access-scheme-query-field"
   ],
   "seampact/access/scheme-reference": [
+    "converted/access.identity/schemes/a-cookie-s-csrf-names-a-declared-header-scheme",
     "rules/access-scheme-reference"
   ],
   "seampact/access/scope-nesting": [
+    "converted/access.rights/subjects/a-scope-entered-twice-below-its-own-child-or",
+    "converted/access.rights/subjects/a-scope-entered-without-the-scope-it-is-within",
     "passes/access-rights/refused"
   ],
   "seampact/access/scope-twice": [
+    "converted/access.rights/subjects/a-scope-entered-twice-below-its-own-child-or",
     "passes/access-rights/refused"
   ],
   "seampact/access/scope-unknown": [
+    "converted/access.rights/subjects/a-scope-entered-twice-below-its-own-child-or",
     "passes/access-rights/refused"
   ],
   "seampact/access/scope-within": [
+    "converted/access.rights/subjects/a-right-on-a-refused-scope-adds-no-error-where",
     "passes/access-rights/catalogues-refused"
   ],
   "seampact/access/service-access": [
@@ -172,106 +333,246 @@
     "rules/access-service-identity"
   ],
   "seampact/access/signature-key": [
+    "converted/access.identity/schemes/a-key-names-a-value-or-a-source",
+    "converted/access.identity/schemes/a-template-signature-declares-its-template",
     "rules/access-signature-key"
   ],
   "seampact/access/signature-key-source": [
     "rules/access-signature-key-source"
   ],
   "seampact/access/signature-template": [
+    "converted/access.identity/schemes/a-payload-holds-rawbody-once-and-ts-exactly",
+    "converted/access.identity/schemes/a-payload-holds-rawbody-once-and-ts-exactly-2",
+    "converted/access.identity/schemes/a-payload-holds-rawbody-once-and-ts-exactly-3",
+    "converted/access.identity/schemes/an-algorithm-other-than-hmac-sha256-is-refused",
+    "converted/access.identity/schemes/an-unknown-encoding-is-refused",
+    "converted/access.identity/schemes/the-format-sha256-sig-extra-with-payload",
+    "converted/access.identity/schemes/the-format-t-ts-v1-sig-id-id-with-payload-ts",
+    "converted/access.identity/schemes/the-format-t-ts-v1-sig-with-payload-ts-rawbody",
+    "converted/access.identity/schemes/the-format-t-ts-v1-sig-with-payload-ts-rawbody-2",
+    "converted/access.identity/schemes/the-format-ts-sig-with-payload-ts-rawbody-fits",
+    "converted/access.identity/schemes/the-format-v1-sig-v1-sig-with-payload-rawbody",
+    "converted/access.identity/schemes/the-format-v1-ts-v1-sig-with-payload-ts-rawbody",
     "rules/access-signature-template"
   ],
   "seampact/access/signature-tolerance": [
+    "converted/access.identity/schemes/a-tolerance-beyond-the-safe-integer-range-of",
+    "converted/access.identity/schemes/tolerance-is-required-with-ts-and-refused",
     "rules/access-signature-tolerance"
   ],
   "seampact/access/signature-verify": [
+    "converted/access.identity/schemes/a-template-signature-declares-its-template",
     "rules/access-signature-verify"
   ],
   "seampact/access/signed-access": [
     "rules/access-signed-access"
   ],
   "seampact/access/signed-input": [
+    "converted/access.rights/proofs/e-a-signed-identity-s-route-left-without-input",
     "passes/access-rights/proofs-refused"
   ],
   "seampact/access/sort-key-right": [
+    "converted/access.rights/sort-keys/a-key-whose-resource-or-scope-right-has-no",
+    "converted/access.rights/sort-keys/a-list-whose-item-is-not-an-object-or-a-union",
+    "converted/access.rights/sort-keys/a-resource-right-whose-id-schema-is-a-property",
+    "converted/access.rights/sort-keys/a-stated-right-that-disagrees-with-the-field-s",
+    "converted/access.rights/sort-keys/a-union-item-inherits-the-one-restriction-its",
+    "converted/access.rights/sort-keys/a-written-right-that-declares-params-is-refused",
     "passes/access-rights/fields-refused"
   ],
   "seampact/derive/bucket-limits": [
+    "converted/access.rights/bucket-keys/body-keys-name-a-required-non-null-string-or",
+    "converted/access.rights/requires/conventions-access-guestrule-allow-accepts-a",
+    "converted/access.rights/requires/each-route-s-requirement-holds-its-own-copy-of",
+    "converted/access.rights/requires/the-ancestors-from-the-root-down-then-the-route",
+    "converted/derive.wire/buckets/a-bucket-without-a-limit-is-warned-about-that",
+    "converted/derive.wire/buckets/a-bucket-without-a-window-is-warned-about-that",
+    "converted/derive.wire/buckets/a-bucket-without-limit-and-window-is-warned",
+    "converted/derive.wire/end-to-end/a-bucket-without-limit-and-window-is-warned",
     "passes/access-rights/catalogues"
   ],
   "seampact/derive/cache-family": [
+    "converted/derive.wire/cache/a-family-that-is-not-declared-or-sets-no-maxage",
+    "converted/derive.wire/cache/a-family-that-is-not-declared-or-sets-no-maxage-2",
+    "converted/derive.wire/cache/a-fault-of-a-collection-s-cache-is-reported",
     "rules/derive-cache-family"
   ],
   "seampact/derive/cache-freshness": [
+    "converted/derive.wire/cache/a-cache-without-freshness-is-refused-at-the",
     "rules/derive-cache-freshness"
   ],
   "seampact/derive/cache-method": [
+    "converted/derive.wire/cache/cache-written-on-a-non-get-route-is-refused",
     "rules/derive-cache-method"
   ],
   "seampact/derive/cache-sensitive": [
+    "converted/derive.wire/cache/a-cache-family-on-a-route-answering-a-sensitive",
+    "converted/derive.wire/cache/a-collection-s-cache-over-a-sensitive-field-is",
+    "converted/derive.wire/cache/a-field-and-a-header-on-one-route-the-field",
     "rules/derive-cache-sensitive"
   ],
   "seampact/derive/cache-sensitive-elsewhere": [
+    "converted/derive.errors/registry/under-refuse-each-code-is-refused-at-its-params",
+    "converted/derive.wire/cache/a-field-and-a-header-on-one-route-under-refuse",
+    "converted/derive.wire/cache/a-field-and-a-header-on-one-route-under-refuse-2",
+    "converted/derive.wire/cache/a-property-holding-sensitive-items-is-a-field-2",
     "rules/derive-cache-sensitive-elsewhere"
   ],
   "seampact/derive/derived-name-collision": [
+    "converted/derive.wire/lifecycle/a-successor-link-on-a-page-that-has-its-own",
+    "converted/derive.wire/lifecycle/a-sunset-header-named-as-the-deprecation-header",
+    "converted/derive.wire/paging/a-paging-parameter-taking-a-query-credential-s",
+    "converted/derive.wire/pass/a-derivation-taking-another-derivation-s-name",
+    "converted/derive.wire/pass/a-derived-header-colliding-with-a-declared-one",
+    "converted/derive.wire/pass/two-header-declarations-of-one-identity-on-one",
     "rules/derive-derived-name-collision"
   ],
   "seampact/derive/error-default": [
+    "converted/derive.errors/registry/a-redeclared-default-code-changing-its-status",
     "rules/derive-error-default"
   ],
   "seampact/derive/error-example": [
+    "converted/derive.errors/registry/an-attachment-s-example-is-checked-against-the",
+    "converted/derive.errors/registry/an-example-missing-a-required-param-is-located",
     "passes/derive-errors/operations",
     "passes/derive-errors/registry-refused"
   ],
   "seampact/derive/error-nature": [
+    "converted/derive.wire/credentials/two-query-schemes-of-one-access-on-one",
+    "converted/derive.wire/idempotency/an-exemption-inherited-by-a-route-the-key",
+    "converted/derive.wire/idempotency/an-unset-convention-derives-no-key",
+    "converted/derive.wire/idempotency/enforce-none-declares-the-key-without-a-replay",
+    "converted/derive.wire/idempotency/methods-defaults-to-every-non-safe-method",
+    "converted/derive.wire/idempotency/required-false-makes-the-key-optional",
+    "converted/derive.wire/identity-headers/a-required-identity-response-header-is-optional",
+    "converted/derive.wire/identity-headers/a-required-versiontoken-use-makes-its-request",
+    "converted/derive.wire/identity-headers/a-versiontoken-request-header-stays-on-writes",
+    "converted/derive.wire/identity-headers/two-response-declarations-of-one-identity-on",
+    "converted/derive.wire/identity-headers/undefined",
+    "converted/derive.wire/pass/keep-is-written-as-keep-and-the-default-refuse",
     "passes/derive-errors/registry-refused",
     "passes/derive-wire/wire"
   ],
   "seampact/derive/error-params": [],
   "seampact/derive/error-pattern": [
+    "converted/derive.errors/registry/a-pattern-that-is-no-regular-expression-is",
+    "converted/derive.errors/registry/conventions-errors-pattern-applies-to-a",
     "passes/derive-errors/registry-refused"
   ],
   "seampact/derive/error-redefined": [
+    "converted/derive.errors/registry/a-node-declaration-that-differs-from-another",
+    "converted/tree.schemas/code-params/different-params-of-one-code-are-left-to-the",
     "passes/derive-errors/registry-refused"
   ],
   "seampact/derive/error-unknown": [
+    "converted/derive.errors/identity-errors/a-listed-code-nobody-declares-is-refused-at-its",
+    "converted/derive.errors/registry/a-code-a-right-a-rule-or-a-scope-lists-that",
+    "converted/derive.errors/registry/a-code-an-identity-lists-that-nobody-declares",
+    "converted/derive.errors/triggers/a-stale-code-nobody-declares-is-refused-at-the",
     "passes/access-identity/catalogues",
     "passes/access-rights/catalogues",
     "passes/derive-errors/operations",
     "passes/derive-errors/registry-refused"
   ],
   "seampact/derive/idempotency-convention": [
+    "converted/derive.wire/idempotency/a-convention-without-header-replayheader-or",
+    "converted/derive.wire/idempotency/a-lifetime-no-safe-integer-of-milliseconds",
+    "converted/derive.wire/pass/every-diagnostic-has-a-derive-rule-a-message-a",
     "rules/derive-idempotency-convention"
   ],
   "seampact/derive/idempotency-exempt-unused": [
+    "converted/derive.wire/idempotency/an-exemption-no-relay-route-uses-is-refused-as",
+    "converted/derive.wire/idempotency/an-exemption-the-key-does-not-reach-is-refused",
+    "converted/derive.wire/idempotency/an-exemption-the-key-does-not-reach-is-refused-2",
+    "converted/derive.wire/idempotency/an-exemption-the-key-does-not-reach-is-refused-3",
+    "converted/derive.wire/pass/every-diagnostic-has-a-derive-rule-a-message-a-2",
     "rules/derive-idempotency-exempt-unused"
   ],
   "seampact/derive/nature-base": [
     "passes/derive-errors/registry-refused"
   ],
   "seampact/derive/relay-declaration": [
+    "converted/derive.errors/relays/a-code-the-second-declares-differently-than-the",
+    "converted/derive.errors/relays/a-copied-code-this-api-declares-differently-is",
+    "converted/derive.errors/relays/a-copied-code-whose-params-schema-this-api",
+    "converted/derive.errors/relays/a-copied-nature-this-api-declares-on-another",
+    "converted/derive.errors/relays/a-nature-the-second-declares-on-another-base",
     "rules/derive-relay-declaration"
   ],
   "seampact/derive/retry-param": [
+    "converted/derive.errors/triggers/a-redeclared-api-rate-limited-whose-param-is",
+    "converted/derive.errors/triggers/absent-from-the-code-s-params-is-refused-once",
+    "converted/derive.errors/triggers/an-integer-with-a-format-is-refused-once",
+    "converted/derive.errors/triggers/an-integer-with-a-negative-minimum-is-refused",
+    "converted/derive.errors/triggers/an-integer-with-no-minimum-is-refused-once",
+    "converted/derive.errors/triggers/declared-by-a-named-params-schema-loca-is",
+    "converted/derive.errors/triggers/declared-on-a-tree-node-located-at-the-is",
+    "converted/derive.errors/triggers/not-an-integer-is-refused-once-located-at",
+    "converted/derive.errors/triggers/nullable-is-refused-once-located-at-errors-shop",
+    "converted/derive.errors/triggers/optional-is-refused-once-located-at-errors-shop",
     "rules/derive-retry-param"
   ],
   "seampact/derive/role-code": [
+    "converted/access.rights/catalogues/a-right-without-written-errors-answers-the-code",
+    "converted/derive.errors/bindings/a-binding-to-an-unregistered-code-is-refused-at",
+    "converted/derive.errors/bindings/an-errorroles-binding-to-an-unregistered-code",
     "passes/derive-errors/bindings-refused"
   ],
   "seampact/derive/role-datum": [
+    "converted/derive.errors/bindings/a-bound-code-whose-params-cannot-receive-a",
+    "converted/derive.errors/bindings/a-default-code-redeclared-with-params-that-drop",
+    "converted/derive.errors/bindings/a-redeclared-default-code-also-bound-on-a-node",
+    "converted/derive.errors/bindings/a-template-that-reads-no-required-datum-only-a",
+    "converted/derive.errors/bindings/ratelimited-requires-the-param-conventions-2",
+    "converted/derive.errors/bindings/ratelimited-s-delay-is-required-once-2",
+    "converted/derive.errors/role-params/the-rate-limit-param-filled-under-its-own-key-2",
     "passes/derive-errors/bindings-refused",
     "passes/derive-errors/forbidden-pointer"
   ],
   "seampact/derive/role-param": [
+    "converted/derive.errors/bindings/a-datum-written-to-a-key-that-is-no-param-of",
+    "converted/derive.errors/bindings/a-datum-written-to-a-key-that-is-no-param-of-2",
+    "converted/derive.errors/bindings/a-literal-dollar-key-names-no-param",
+    "converted/derive.errors/bindings/a-params-template-that-is-no-object-is-refused",
     "rules/derive-role-param"
   ],
   "seampact/derive/role-param-required": [
+    "converted/derive.errors/role-params/a-by-name-binding-leaving-a-required-param",
+    "converted/derive.errors/role-params/a-required-param-fed-by-a-datum-the-role-may",
+    "converted/tree.schemas/code-params/a-default-code-declared-with-params-on-a-tree",
+    "converted/tree.schemas/core/a-default-code-declared-with-params-takes-the",
+    "converted/tree.schemas/core/the-issue-schema-may-be-taken-by-a-layer-once",
     "rules/derive-role-param-required"
   ],
   "seampact/derive/role-param-type": [
+    "converted/derive.errors/role-params/a-datum-fills-an-enum-format-refinement-or-2",
+    "converted/derive.errors/role-params/a-datum-fills-an-enum-format-refinement-or-3",
+    "converted/derive.errors/role-params/a-datum-fills-an-enum-format-refinement-or-4",
+    "converted/derive.errors/role-params/a-datum-fills-an-enum-format-refinement-or-5",
+    "converted/derive.errors/role-params/a-datum-fills-an-enum-format-refinement-or-6",
+    "converted/derive.errors/role-params/a-literal-is-validated-against-its-param-s-type-2",
+    "converted/derive.errors/role-params/a-slot-path-naming-no-member-of-its-datum-is-2",
+    "converted/derive.errors/role-params/a-slot-path-naming-no-member-of-its-datum-is-3",
+    "converted/derive.errors/role-params/a-slot-path-naming-no-member-of-its-datum-is-5",
+    "converted/derive.errors/role-params/a-slot-whose-datum-type-the-param-does-not-take",
+    "converted/derive.errors/role-params/a-text-holding-an-array-datum-has-no-text-form",
+    "converted/derive.errors/role-params/a-text-template-filling-an-integer-param-is",
+    "converted/derive.errors/role-params/a-union-param-takes-only-an-object-an-array",
+    "converted/derive.errors/role-params/a-union-param-takes-only-an-object-an-array-2",
+    "converted/derive.errors/role-params/a-union-param-takes-only-an-object-an-array-3",
+    "converted/derive.errors/role-params/an-array-param-s-item-bounds-refuse-an-each-2",
+    "converted/derive.errors/role-params/an-array-param-s-item-bounds-refuse-an-each-3",
+    "converted/derive.errors/role-params/an-issue-item-merged-whole-fills-the-param-s-2",
+    "converted/derive.errors/role-params/an-issue-item-merged-whole-fills-the-param-s-3",
+    "converted/derive.errors/role-params/an-issue-item-merged-whole-fills-the-param-s-4",
+    "converted/derive.errors/role-params/the-delay-fills-a-param-whose-bounds-it-keeps-3",
+    "converted/derive.errors/role-params/the-delay-fills-a-param-whose-bounds-it-keeps-4",
+    "converted/derive.errors/role-params/the-issues-slot-fills-an-item-schema-of-the-2",
     "rules/derive-role-param-type"
   ],
   "seampact/derive/role-template": [
+    "converted/derive.errors/role-params/a-template-writing-a-slot-the-role-does-not",
+    "converted/derive.errors/role-params/an-each-inside-another-each-s-as-is-refused",
     "rules/derive-role-template"
   ],
   "seampact/finalize/id-collision": [],
@@ -446,18 +747,55 @@
     "loader/pitfalls/p9-tag"
   ],
   "seampact/tree/all-of-member": [
+    "converted/tree.schemas/schemas/a-allof-type-string-is-refused-all-of-member",
     "rules/tree-all-of-member"
   ],
   "seampact/tree/all-of-property": [
+    "converted/tree.schemas/schemas/a-allof-type-object-properties-x-type-string",
     "rules/tree-all-of-property"
   ],
   "seampact/tree/annotation-position": [
+    "converted/tree.schemas/schemas/a-allof-b-type-object-description-more",
+    "converted/tree.schemas/schemas/a-allof-type-object-deprecated-true-properties",
+    "converted/tree.schemas/schemas/a-allof-type-object-examples-d-x-properties-d",
+    "converted/tree.schemas/schemas/a-ref-b-description-an-alias-b-type-object",
+    "converted/tree.schemas/schemas/a-type-array-items-type-string-deprecated-true",
+    "converted/tree.schemas/schemas/a-type-array-items-type-string-title-tags-is",
+    "converted/tree.schemas/schemas/a-type-string-deprecated-true-is-refused-naming",
+    "converted/tree.schemas/schemas/a-type-string-examples-x-is-refused-naming",
+    "converted/tree.schemas/schemas/a-type-string-format-uuid-description-an-id-is",
+    "converted/tree.schemas/schemas/docs-on-a-route-position-schema-are-refused",
     "rules/tree-annotation-position"
   ],
   "seampact/tree/api-version": [
+    "converted/tree.nodes/api/path-versions-a-string-version-with-a-versioned",
     "passes/tree-nodes/routes-refused"
   ],
   "seampact/tree/batch-ids": [
+    "converted/derive.errors/relays/a-code-a-node-attaches-and-an-identity-also/tasks",
+    "converted/derive.errors/relays/a-code-both-declare-the-same-is-copied-once-and/tasks",
+    "converted/derive.errors/relays/a-code-both-declare-the-same-is-copied-once-and/tasks-two",
+    "converted/derive.errors/relays/a-code-the-second-declares-differently-than-the/tasks",
+    "converted/derive.errors/relays/a-code-the-second-declares-differently-than-the/tasks-two",
+    "converted/derive.errors/relays/a-copied-code-this-api-declares-differently-is/tasks",
+    "converted/derive.errors/relays/a-copied-code-whose-params-schema-this-api/tasks",
+    "converted/derive.errors/relays/a-copied-nature-this-api-declares-on-another/tasks",
+    "converted/derive.errors/relays/a-nature-the-second-declares-on-another-base/tasks",
+    "converted/derive.errors/relays/a-nature-the-second-declares-on-another-base/tasks-two",
+    "converted/derive.errors/relays/a-node-s-code-joins-this-api-with-its/tasks",
+    "converted/derive.wire/api-wire/a-written-default-is-accepted/tasks",
+    "converted/derive.wire/api-wire/typed-convention-members-a-value-other-than-the/tasks",
+    "converted/derive.wire/buckets/a-bucket-without-a-limit-is-warned-about-that/tasks",
+    "converted/derive.wire/buckets/a-bucket-without-a-window-is-warned-about-that/tasks",
+    "converted/derive.wire/buckets/a-bucket-without-limit-and-window-is-warned/tasks",
+    "converted/derive.wire/concurrency/a-relay-of-an-imported-api-reads-the-version/tasks",
+    "converted/derive.wire/concurrency/a-relayed-body-version-names-the-public/tasks",
+    "converted/derive.wire/concurrency/a-relayed-query-version-takes-the-public/tasks",
+    "converted/derive.wire/idempotency/an-exemption-a-relay-route-inherits-and-uses-is/tasks",
+    "converted/derive.wire/idempotency/an-exemption-no-relay-route-uses-is-refused-as/tasks",
+    "converted/derive.wire/pass/a-relay-route-derives-its-idempotency-key-and/tasks",
+    "converted/tree.schemas/routes/maxids-comes-from-the-conventions-when-the-op-2",
+    "converted/tree.schemas/routes/the-id-type-is-the-one-property-of-a-named-id-2",
     "golden/pack-api-platform/contract/tasks",
     "golden/pack-crud-rights/contract/tasks",
     "golden/pack-hal/contract/tasks",
@@ -467,18 +805,27 @@
     "reference/tasks"
   ],
   "seampact/tree/body-limit": [
+    "converted/tree.nodes/input/bodies-beyond-json-a-body-limit-beyond-a-safe",
     "passes/tree-nodes/routes-refused"
   ],
   "seampact/tree/budget-duration": [
     "rules/tree-budget-duration"
   ],
   "seampact/tree/collection-id": [
+    "converted/tree.nodes/routes/declared-responses-an-op-s-output-takes-its",
+    "converted/tree.nodes/routes/declared-responses-an-op-s-output-takes-its-2",
     "passes/tree-nodes/routes-refused"
   ],
   "seampact/tree/collection-singular": [
+    "converted/tree.nodes/input/tree-nodes-diagnostics-are-located-bodies-and",
     "rules/tree-collection-singular"
   ],
   "seampact/tree/concurrency-field": [
+    "converted/tree.schemas/routes/a-missing-field-is-refused-once-per-owner",
+    "converted/tree.schemas/routes/a-missing-field-is-refused-once-per-owner-2",
+    "converted/tree.schemas/routes/a-missing-field-is-refused-once-per-owner-3",
+    "converted/tree.schemas/routes/a-missing-field-is-refused-once-per-owner-4",
+    "converted/tree.schemas/routes/an-input-shared-with-an-unversioned-route-a-4",
     "passes/tree-nodes/shapes-refused"
   ],
   "seampact/tree/concurrency-inherit": [
@@ -488,6 +835,31 @@
     "rules/tree-concurrency-input"
   ],
   "seampact/tree/concurrency-version": [
+    "converted/derive.errors/relays/a-code-a-node-attaches-and-an-identity-also/tasks",
+    "converted/derive.errors/relays/a-code-both-declare-the-same-is-copied-once-and/tasks",
+    "converted/derive.errors/relays/a-code-both-declare-the-same-is-copied-once-and/tasks-two",
+    "converted/derive.errors/relays/a-code-the-second-declares-differently-than-the/tasks",
+    "converted/derive.errors/relays/a-code-the-second-declares-differently-than-the/tasks-two",
+    "converted/derive.errors/relays/a-copied-code-this-api-declares-differently-is/tasks",
+    "converted/derive.errors/relays/a-copied-code-whose-params-schema-this-api/tasks",
+    "converted/derive.errors/relays/a-copied-nature-this-api-declares-on-another/tasks",
+    "converted/derive.errors/relays/a-nature-the-second-declares-on-another-base/tasks",
+    "converted/derive.errors/relays/a-nature-the-second-declares-on-another-base/tasks-two",
+    "converted/derive.errors/relays/a-node-s-code-joins-this-api-with-its/tasks",
+    "converted/derive.wire/api-wire/a-written-default-is-accepted/tasks",
+    "converted/derive.wire/api-wire/typed-convention-members-a-value-other-than-the/tasks",
+    "converted/derive.wire/buckets/a-bucket-without-a-limit-is-warned-about-that/tasks",
+    "converted/derive.wire/buckets/a-bucket-without-a-window-is-warned-about-that/tasks",
+    "converted/derive.wire/buckets/a-bucket-without-limit-and-window-is-warned/tasks",
+    "converted/derive.wire/concurrency/a-relayed-body-version-names-the-public/tasks",
+    "converted/derive.wire/idempotency/an-exemption-a-relay-route-inherits-and-uses-is/tasks",
+    "converted/derive.wire/idempotency/an-exemption-no-relay-route-uses-is-refused-as/tasks",
+    "converted/derive.wire/pass/a-relay-route-derives-its-idempotency-key-and/tasks",
+    "converted/tree.schemas/routes/an-input-schema-used-by-an-output-or-by-another",
+    "converted/tree.schemas/routes/an-input-schema-used-by-an-output-or-by-another-2",
+    "converted/tree.schemas/routes/an-input-shared-with-an-unversioned-route-a",
+    "converted/tree.schemas/routes/an-input-shared-with-an-unversioned-route-a-2",
+    "converted/tree.schemas/routes/an-input-shared-with-an-unversioned-route-a-3",
     "golden/pack-api-platform/contract/tasks",
     "golden/pack-crud-rights/contract/tasks",
     "golden/pack-hal/contract/tasks",
@@ -498,6 +870,8 @@
     "rules/tree-concurrency-version"
   ],
   "seampact/tree/default-value": [
+    "converted/tree.schemas/examples/a-default-that-fits-is-kept-one-that-does-not",
+    "converted/tree.schemas/examples/an-optional-query-field-takes-a-default-parsed",
     "passes/tree-schemas/refused"
   ],
   "seampact/tree/degradable-header": [
@@ -521,30 +895,63 @@
     "rules/tree-deprecated-sunset"
   ],
   "seampact/tree/derived-field": [
+    "converted/tree.schemas/derived/a-field-the-source-lacks-a-bad-overlay-or",
     "rules/tree-derived-field"
   ],
   "seampact/tree/derived-overlay": [
+    "converted/tree.schemas/derived/an-overlay-of-a-property-the-object-does-not",
     "rules/tree-derived-overlay"
   ],
   "seampact/tree/derived-source": [
+    "converted/tree.schemas/derived/a-field-the-source-lacks-a-bad-overlay-or",
     "rules/tree-derived-source"
   ],
   "seampact/tree/enum-code-name": [
+    "converted/tree.schemas/enums/bad-values-sources-reasons-fallbacks-code-names",
     "rules/tree-enum-code-name"
   ],
   "seampact/tree/enum-cycle": [
+    "converted/tree.schemas/enums/bad-values-sources-reasons-fallbacks-code-names",
+    "converted/tree.schemas/schemas/an-enum-use-whose-source-enums-form-a-cycle",
     "rules/tree-enum-cycle"
   ],
   "seampact/tree/enum-fallback": [
+    "converted/tree.schemas/enums/bad-values-sources-reasons-fallbacks-code-names",
     "rules/tree-enum-fallback"
   ],
   "seampact/tree/enum-narrowing": [
+    "converted/tree.schemas/enums/bad-values-sources-reasons-fallbacks-code-names",
     "rules/tree-enum-narrowing"
   ],
   "seampact/tree/enum-reason": [
+    "converted/tree.schemas/enums/bad-values-sources-reasons-fallbacks-code-names",
     "rules/tree-enum-reason"
   ],
   "seampact/tree/enum-unknown": [
+    "converted/derive.errors/relays/a-code-a-node-attaches-and-an-identity-also/tasks",
+    "converted/derive.errors/relays/a-code-both-declare-the-same-is-copied-once-and/tasks",
+    "converted/derive.errors/relays/a-code-both-declare-the-same-is-copied-once-and/tasks-two",
+    "converted/derive.errors/relays/a-code-the-second-declares-differently-than-the/tasks",
+    "converted/derive.errors/relays/a-code-the-second-declares-differently-than-the/tasks-two",
+    "converted/derive.errors/relays/a-copied-code-this-api-declares-differently-is/tasks",
+    "converted/derive.errors/relays/a-copied-code-whose-params-schema-this-api/tasks",
+    "converted/derive.errors/relays/a-copied-nature-this-api-declares-on-another/tasks",
+    "converted/derive.errors/relays/a-nature-the-second-declares-on-another-base/tasks",
+    "converted/derive.errors/relays/a-nature-the-second-declares-on-another-base/tasks-two",
+    "converted/derive.errors/relays/a-node-s-code-joins-this-api-with-its/tasks",
+    "converted/derive.wire/api-wire/a-written-default-is-accepted/tasks",
+    "converted/derive.wire/api-wire/typed-convention-members-a-value-other-than-the/tasks",
+    "converted/derive.wire/buckets/a-bucket-without-a-limit-is-warned-about-that/tasks",
+    "converted/derive.wire/buckets/a-bucket-without-a-window-is-warned-about-that/tasks",
+    "converted/derive.wire/buckets/a-bucket-without-limit-and-window-is-warned/tasks",
+    "converted/derive.wire/concurrency/a-relay-of-an-imported-api-reads-the-version/tasks",
+    "converted/derive.wire/concurrency/a-relayed-body-version-names-the-public/tasks",
+    "converted/derive.wire/concurrency/a-relayed-query-version-takes-the-public/tasks",
+    "converted/derive.wire/idempotency/an-exemption-a-relay-route-inherits-and-uses-is/tasks",
+    "converted/derive.wire/idempotency/an-exemption-no-relay-route-uses-is-refused-as/tasks",
+    "converted/derive.wire/pass/a-relay-route-derives-its-idempotency-key-and/tasks",
+    "converted/tree.schemas/enums/bad-values-sources-reasons-fallbacks-code-names",
+    "converted/tree.schemas/schemas/a-type-object-properties-b-enum-missing-is",
     "golden/pack-api-platform/contract/tasks",
     "golden/pack-crud-rights/contract/tasks",
     "golden/pack-hal/contract/tasks",
@@ -557,24 +964,37 @@
     "scale/notify"
   ],
   "seampact/tree/enum-values": [
+    "converted/tree.schemas/enums/bad-values-sources-reasons-fallbacks-code-names",
     "rules/tree-enum-values"
   ],
   "seampact/tree/example-target": [
+    "converted/tree.nodes/shapes/route-examples-a-status-the-route-does-not",
     "rules/tree-example-target"
   ],
   "seampact/tree/example-value": [
+    "converted/tree.nodes/shapes/table-example-keys-an-id-written-as-a-fields",
+    "converted/tree.nodes/shapes/table-example-keys-an-id-written-as-a-schema",
+    "converted/tree.schemas/derived/an-overlay-s-examples-replace-the-source-s-and",
+    "converted/tree.schemas/examples/written-examples-are-parsed-at-compile-time",
+    "converted/tree.schemas/relays/are-copied-unchanged-when-they-hold-an-origin",
     "passes/tree-schemas/refused"
   ],
   "seampact/tree/extension-place": [
+    "converted/tree.schemas/extensions/an-undeclared-key-a-key-off-its-places-and-a",
     "passes/tree-schemas/refused"
   ],
   "seampact/tree/extension-unknown": [
+    "converted/tree.schemas/extensions/an-undeclared-key-a-key-off-its-places-and-a",
+    "converted/tree.schemas/relays/are-copied-unchanged-when-they-hold-an-origin",
     "passes/tree-schemas/refused"
   ],
   "seampact/tree/extension-value": [
+    "converted/tree.schemas/extensions/an-undeclared-key-a-key-off-its-places-and-a",
     "passes/tree-schemas/refused"
   ],
   "seampact/tree/fields-schema": [
+    "converted/tree.nodes/routes/a-collection-id-naming-a-non-object-schema-is",
+    "converted/tree.schemas/schemas/rules-r-params-tags-schemas-tags-type-array",
     "passes/tree-nodes/routes-refused"
   ],
   "seampact/tree/form-field": [
@@ -605,15 +1025,24 @@
     "rules/tree-format-refinement"
   ],
   "seampact/tree/format-type": [
+    "converted/tree.schemas/schemas/a-format-email-is-refused-format-type",
+    "converted/tree.schemas/schemas/a-named-format-beside-a-type-is-refused",
+    "converted/tree.schemas/schemas/a-type-integer-format-uuid-is-refused-format",
+    "converted/tree.schemas/schemas/a-type-string-format-password-is-refused-format",
+    "converted/tree.schemas/schemas/every-diagnostic-has-its-rule-message-fix-and-a",
     "rules/tree-format-type"
   ],
   "seampact/tree/format-unknown": [
+    "converted/tree.schemas/schemas/a-type-string-format-nowhere-is-refused-format",
     "rules/tree-format-unknown"
   ],
   "seampact/tree/get-input": [
     "rules/tree-get-input"
   ],
   "seampact/tree/id-property": [
+    "converted/tree.nodes/routes/a-collection-id-written-as-a-schema-name-gives",
+    "converted/tree.nodes/routes/ops-inputs-and-idproperty",
+    "converted/tree.schemas/schemas/undefined-8",
     "passes/tree-nodes/routes-refused",
     "rules/tree-collection-singular"
   ],
@@ -624,41 +1053,72 @@
     "passes/tree-nodes/bodies-refused"
   ],
   "seampact/tree/internal-product": [
+    "converted/tree.nodes/shapes/lifecycle-members-a-service-api-writes-no",
     "rules/tree-internal-product"
   ],
   "seampact/tree/map-keys": [
+    "converted/tree.schemas/schemas/a-type-object-additionalproperties-type-string",
     "rules/tree-map-keys"
   ],
   "seampact/tree/mark-position": [
+    "converted/tree.schemas/examples/an-optional-query-field-takes-a-default-parsed",
+    "converted/tree.schemas/examples/is-refused-at-the-default-since-a-required",
+    "converted/tree.schemas/schemas/a-type-array-items-type-string-default-x-is",
+    "converted/tree.schemas/schemas/a-type-object-properties-b-opaque-why-sensitive",
+    "converted/tree.schemas/schemas/a-type-object-properties-b-type-object-typename",
+    "converted/tree.schemas/schemas/a-type-string-codename-a-is-refused-mark",
     "passes/tree-schemas/refused"
   ],
   "seampact/tree/name-collision": [
+    "converted/tree.schemas/enums/a-value-with-no-segment-is-named-by-its-2",
+    "converted/tree.schemas/enums/bad-values-sources-reasons-fallbacks-code-names",
+    "converted/tree.schemas/enums/two-enums-whose-names-give-one-identifier",
+    "converted/tree.schemas/schemas/a-hoisted-name-is-compared-with-declared-names",
+    "converted/tree.schemas/schemas/every-diagnostic-has-its-rule-message-fix-and-a",
+    "converted/tree.schemas/schemas/rights-r-params-a-type-string-schemas-rparams",
+    "converted/tree.schemas/schemas/schemas-a-type-object-properties-b-type-object",
+    "converted/tree.schemas/schemas/schemas-a-type-object-properties-userid-type",
+    "converted/tree.schemas/schemas/schemas-taskid-type-string-taskid-type-string",
+    "converted/tree.schemas/schemas/two-hoisted-names-with-one-identifier-collide",
     "rules/tree-name-collision",
     "rules/tree-name-collision-property",
     "rules/tree-name-collision-schemas"
   ],
   "seampact/tree/name-segments": [
+    "converted/tree.schemas/enums/a-value-with-no-segment-is-named-by-its-2",
+    "converted/tree.schemas/schemas/a-type-object-properties-b-type-string-codename",
     "rules/tree-name-segments"
   ],
   "seampact/tree/no-content-body": [
+    "converted/tree.nodes/routes/declared-responses-refused-beside-output-a-204",
     "passes/tree-nodes/routes-refused"
   ],
   "seampact/tree/object-empty": [
+    "converted/tree.schemas/schemas/a-type-object-is-refused-object-empty",
     "rules/tree-object-empty"
   ],
   "seampact/tree/op-input": [
+    "converted/tree.nodes/routes/ops-inputs-and-idproperty",
     "passes/tree-nodes/routes-refused"
   ],
   "seampact/tree/op-item": [
+    "converted/tree.schemas/query-wire/each-kind-under-the-default-conventions-at",
+    "converted/tree.schemas/query-wire/lists-brackets-and-objects-deepobject-set-the",
+    "converted/tree.schemas/query-wire/lists-comma-and-objects-explode-set-the-style",
+    "converted/tree.schemas/query-wire/lists-repeat-and-objects-explode-set-the-style",
     "passes/tree-nodes/routes-refused"
   ],
   "seampact/tree/opaque-position": [
+    "converted/tree.nodes/routes/opaque-outside-parameters-no-file-nor-a-list-of",
+    "converted/tree.nodes/routes/opaque-outside-parameters-no-opaque-value-in-a",
     "passes/tree-nodes/routes-refused"
   ],
   "seampact/tree/operation-id-unique": [
+    "converted/tree.nodes/input/tree-nodes-diagnostics-are-located-bodies-and",
     "rules/tree-operation-id-unique"
   ],
   "seampact/tree/operation-name-unique": [
+    "converted/tree.nodes/input/tree-nodes-diagnostics-are-located-bodies-and",
     "rules/tree-operation-name-unique"
   ],
   "seampact/tree/owner-concurrency": [
@@ -668,6 +1128,8 @@
     "passes/tree-nodes/formats-refused"
   ],
   "seampact/tree/paging-limit": [
+    "converted/tree.nodes/shapes/paging-limits-a-limit-the-convention-s-style",
+    "converted/tree.nodes/shapes/paging-limits-a-route-default-above-the",
     "rules/tree-paging-limit"
   ],
   "seampact/tree/paging-link": [
@@ -701,6 +1163,31 @@
     "rules/tree-paging-sort"
   ],
   "seampact/tree/paging-style": [
+    "converted/derive.errors/relays/a-code-a-node-attaches-and-an-identity-also/tasks-absolute-urls",
+    "converted/derive.errors/relays/a-code-both-declare-the-same-is-copied-once-and/tasks-absolute-urls",
+    "converted/derive.errors/relays/a-code-the-second-declares-differently-than-the/tasks-absolute-urls",
+    "converted/derive.errors/relays/a-copied-code-this-api-declares-differently-is/tasks-absolute-urls",
+    "converted/derive.errors/relays/a-copied-code-whose-params-schema-this-api/tasks-absolute-urls",
+    "converted/derive.errors/relays/a-copied-nature-this-api-declares-on-another/tasks-absolute-urls",
+    "converted/derive.errors/relays/a-nature-the-second-declares-on-another-base/tasks-absolute-urls",
+    "converted/derive.errors/relays/a-node-s-code-joins-this-api-with-its/tasks-absolute-urls",
+    "converted/derive.wire/api-wire/a-written-default-is-accepted/tasks-absolute-urls",
+    "converted/derive.wire/api-wire/typed-convention-members-a-value-other-than-the/tasks-absolute-urls",
+    "converted/derive.wire/buckets/a-bucket-without-a-limit-is-warned-about-that/tasks-absolute-urls",
+    "converted/derive.wire/buckets/a-bucket-without-a-window-is-warned-about-that/tasks-absolute-urls",
+    "converted/derive.wire/buckets/a-bucket-without-limit-and-window-is-warned/tasks-absolute-urls",
+    "converted/derive.wire/concurrency/a-relay-of-an-imported-api-reads-the-version/tasks-absolute-urls",
+    "converted/derive.wire/concurrency/a-relayed-body-version-names-the-public/tasks-absolute-urls",
+    "converted/derive.wire/concurrency/a-relayed-query-version-takes-the-public/tasks-absolute-urls",
+    "converted/derive.wire/idempotency/an-exemption-a-relay-route-inherits-and-uses-is/tasks-absolute-urls",
+    "converted/derive.wire/idempotency/an-exemption-no-relay-route-uses-is-refused-as/tasks-absolute-urls",
+    "converted/derive.wire/pass/a-relay-route-derives-its-idempotency-key-and/tasks-absolute-urls",
+    "converted/tree.nodes/shapes/paging-declared-a-list-with-neither-a-style-nor",
+    "converted/tree.schemas/query-wire/each-kind-under-the-default-conventions-at",
+    "converted/tree.schemas/query-wire/lists-brackets-and-objects-deepobject-set-the",
+    "converted/tree.schemas/query-wire/lists-comma-and-objects-explode-set-the-style",
+    "converted/tree.schemas/query-wire/lists-repeat-and-objects-explode-set-the-style",
+    "converted/tree.schemas/routes/an-inline-route-schema-takes-its-operation-s",
     "golden/pack-api-platform/contract/tasks-absolute-urls",
     "golden/pack-crud-rights/contract/tasks-absolute-urls",
     "golden/pack-hal/contract/tasks-absolute-urls",
@@ -716,18 +1203,29 @@
     "rules/tree-paging-unknown"
   ],
   "seampact/tree/param-unique": [
+    "converted/tree.nodes/routes/declared-params-path-query-reaching-safe-routes",
+    "converted/tree.nodes/routes/declared-responses-refused-beside-output-a-204",
     "passes/tree-nodes/routes-refused"
   ],
   "seampact/tree/path-param": [
+    "converted/tree.nodes/api/path-versions-a-placeholder-other-than-version",
+    "converted/tree.nodes/routes/declared-params-path-query-reaching-safe-routes",
+    "converted/tree.nodes/routes/paths-placeholders-reported-where-written-once",
     "passes/tree-nodes/routes-refused"
   ],
   "seampact/tree/path-segment": [
     "passes/tree-nodes/routes-refused"
   ],
   "seampact/tree/path-version": [
+    "converted/tree.nodes/api/path-versions-a-literal-version-segment",
+    "converted/tree.nodes/api/path-versions-an-empty-prefix-under-prefix-mode",
+    "converted/tree.nodes/api/path-versions-the-api-s-path-version-the",
+    "converted/tree.nodes/api/path-versions-version-under-pathversion-none",
     "passes/tree-nodes/routes-refused"
   ],
   "seampact/tree/pattern": [
+    "converted/tree.schemas/schemas/a-type-string-pattern-a-is-refused-pattern",
+    "converted/tree.schemas/schemas/every-diagnostic-has-its-rule-message-fix-and-a",
     "limits/pattern-group-depth-over",
     "limits/pattern-repeat-over"
   ],
@@ -735,18 +1233,35 @@
     "rules/tree-query-field"
   ],
   "seampact/tree/query-map": [
+    "converted/tree.schemas/query-wire/is-refused-since-no-query-wire-encodes-its-keys",
+    "converted/tree.schemas/query-wire/is-refused-since-the-proof-travels-as-a-form",
     "passes/tree-schemas/refused"
   ],
   "seampact/tree/redirect-body": [
+    "converted/tree.nodes/routes/redirects-without-a-body",
     "passes/tree-nodes/routes-refused"
   ],
   "seampact/tree/refinement-precision": [
+    "converted/tree.schemas/schemas/a-type-integer-maximum-9007199254740993-is",
+    "converted/tree.schemas/schemas/a-type-number-maximum-123456789012-345678-is",
+    "converted/tree.schemas/schemas/a-type-string-format-decimal-minimum-0",
     "limits/fraction-digits-over"
   ],
   "seampact/tree/refinement-range": [
+    "converted/tree.schemas/schemas/a-type-array-items-type-string-minitems-4",
+    "converted/tree.schemas/schemas/a-type-integer-exclusiveminimum-1",
+    "converted/tree.schemas/schemas/a-type-integer-exclusiveminimum-1-maximum-1-is",
+    "converted/tree.schemas/schemas/a-type-integer-minimum-1-2-maximum-1-8-is",
+    "converted/tree.schemas/schemas/a-type-integer-minimum-10-maximum-1-is-refused",
+    "converted/tree.schemas/schemas/a-type-string-format-decimal-minimum-2-5",
+    "converted/tree.schemas/schemas/a-type-string-minlength-5-maxlength-2-is",
+    "converted/tree.schemas/schemas/bounds-that-leave-room-for-one-value-are-kept-a-4",
     "rules/tree-refinement-range"
   ],
   "seampact/tree/refinement-type": [
+    "converted/tree.schemas/schemas/a-type-integer-maxlength-3-is-refused",
+    "converted/tree.schemas/schemas/a-type-number-multipleof-0-1-is-refused",
+    "converted/tree.schemas/schemas/a-type-string-minimum-1-is-refused-refinement",
     "rules/tree-refinement-type"
   ],
   "seampact/tree/relay-declaration": [
@@ -757,6 +1272,45 @@
   ],
   "seampact/tree/relay-target": [
     "bundle-channels/imports/tasks-service",
+    "converted/derive.errors/relays/a-code-a-node-attaches-and-an-identity-also/tasks-service",
+    "converted/derive.errors/relays/a-code-a-node-attaches-and-an-identity-also/tasks-service-writes",
+    "converted/derive.errors/relays/a-code-both-declare-the-same-is-copied-once-and/tasks-service",
+    "converted/derive.errors/relays/a-code-both-declare-the-same-is-copied-once-and/tasks-service-writes",
+    "converted/derive.errors/relays/a-code-the-second-declares-differently-than-the/tasks-service",
+    "converted/derive.errors/relays/a-code-the-second-declares-differently-than-the/tasks-service-writes",
+    "converted/derive.errors/relays/a-copied-code-this-api-declares-differently-is/tasks-service",
+    "converted/derive.errors/relays/a-copied-code-this-api-declares-differently-is/tasks-service-writes",
+    "converted/derive.errors/relays/a-copied-code-whose-params-schema-this-api/tasks-service",
+    "converted/derive.errors/relays/a-copied-code-whose-params-schema-this-api/tasks-service-writes",
+    "converted/derive.errors/relays/a-copied-nature-this-api-declares-on-another/tasks-service",
+    "converted/derive.errors/relays/a-copied-nature-this-api-declares-on-another/tasks-service-writes",
+    "converted/derive.errors/relays/a-nature-the-second-declares-on-another-base/tasks-service",
+    "converted/derive.errors/relays/a-nature-the-second-declares-on-another-base/tasks-service-writes",
+    "converted/derive.errors/relays/a-node-s-code-joins-this-api-with-its/tasks-service",
+    "converted/derive.errors/relays/a-node-s-code-joins-this-api-with-its/tasks-service-writes",
+    "converted/derive.wire/api-wire/a-written-default-is-accepted/tasks-service",
+    "converted/derive.wire/api-wire/a-written-default-is-accepted/tasks-service-writes",
+    "converted/derive.wire/api-wire/typed-convention-members-a-value-other-than-the/tasks-service",
+    "converted/derive.wire/api-wire/typed-convention-members-a-value-other-than-the/tasks-service-writes",
+    "converted/derive.wire/buckets/a-bucket-without-a-limit-is-warned-about-that/tasks-service",
+    "converted/derive.wire/buckets/a-bucket-without-a-limit-is-warned-about-that/tasks-service-writes",
+    "converted/derive.wire/buckets/a-bucket-without-a-window-is-warned-about-that/tasks-service",
+    "converted/derive.wire/buckets/a-bucket-without-a-window-is-warned-about-that/tasks-service-writes",
+    "converted/derive.wire/buckets/a-bucket-without-limit-and-window-is-warned/tasks-service",
+    "converted/derive.wire/buckets/a-bucket-without-limit-and-window-is-warned/tasks-service-writes",
+    "converted/derive.wire/concurrency/a-relay-of-an-imported-api-reads-the-version/tasks-service",
+    "converted/derive.wire/concurrency/a-relay-of-an-imported-api-reads-the-version/tasks-service-writes",
+    "converted/derive.wire/concurrency/a-relayed-body-version-names-the-public/tasks-service",
+    "converted/derive.wire/concurrency/a-relayed-body-version-names-the-public/tasks-service-writes",
+    "converted/derive.wire/concurrency/a-relayed-query-version-takes-the-public/tasks-service",
+    "converted/derive.wire/concurrency/a-relayed-query-version-takes-the-public/tasks-service-writes",
+    "converted/derive.wire/idempotency/an-exemption-a-relay-route-inherits-and-uses-is/tasks-service",
+    "converted/derive.wire/idempotency/an-exemption-a-relay-route-inherits-and-uses-is/tasks-service-writes",
+    "converted/derive.wire/idempotency/an-exemption-no-relay-route-uses-is-refused-as/tasks-service",
+    "converted/derive.wire/idempotency/an-exemption-no-relay-route-uses-is-refused-as/tasks-service-writes",
+    "converted/derive.wire/pass/a-relay-route-derives-its-idempotency-key-and/tasks-service",
+    "converted/derive.wire/pass/a-relay-route-derives-its-idempotency-key-and/tasks-service-writes",
+    "converted/tree.schemas/relays/a-route-naming-an-api-that-has-not-run-copies",
     "golden/pack-api-platform/contract/tasks-service",
     "golden/pack-api-platform/contract/tasks-service-writes",
     "golden/pack-crud-rights/contract/tasks-service",
@@ -778,40 +1332,99 @@
   ],
   "seampact/tree/relay-unknown": [],
   "seampact/tree/required-property": [
+    "converted/tree.schemas/derived/a-field-the-source-lacks-a-bad-overlay-or",
+    "converted/tree.schemas/schemas/a-type-object-required-b-properties-b-type",
+    "converted/tree.schemas/schemas/a-type-object-required-b-properties-b-type-2",
     "rules/tree-required-property"
   ],
   "seampact/tree/required-unknown": [
+    "converted/tree.schemas/derived/a-field-the-source-lacks-a-bad-overlay-or",
+    "converted/tree.schemas/schemas/a-type-object-required-c-properties-b-type",
     "rules/tree-required-unknown"
   ],
   "seampact/tree/responses-output": [
+    "converted/tree.nodes/routes/declared-responses-refused-beside-output-a-204",
+    "converted/tree.schemas/routes/an-inline-route-schema-takes-its-operation-s",
     "passes/tree-nodes/routes-refused"
   ],
   "seampact/tree/route-unique": [
     "passes/tree-nodes/routes-refused"
   ],
   "seampact/tree/scalar-name": [
+    "converted/tree.schemas/schemas/a-scalar-named-password-is-refused-the-fix",
+    "converted/tree.schemas/schemas/a-scalar-named-uuid-is-refused-the-fix-naming",
+    "converted/tree.schemas/schemas/every-diagnostic-has-its-rule-message-fix-and-a",
     "rules/tree-scalar-name"
   ],
   "seampact/tree/schema-content": [
     "rules/tree-schema-content"
   ],
   "seampact/tree/schema-cycle": [
+    "converted/tree.schemas/derived/a-field-the-source-lacks-a-bad-overlay-or",
+    "converted/tree.schemas/schemas/a-type-array-items-a-is-refused-schema-cycle",
+    "converted/tree.schemas/schemas/a-type-object-required-b-properties-b-b-b-type",
     "rules/tree-schema-cycle"
   ],
   "seampact/tree/schema-inline": [
+    "converted/tree.schemas/relays/are-copied-unchanged-when-they-hold-an-origin",
+    "converted/tree.schemas/routes/an-operation-without-a-name-is-skipped-an",
+    "converted/tree.schemas/schemas/identities-u-schemes-read-write-principal-type",
     "rules/tree-schema-inline"
   ],
   "seampact/tree/schema-keyword": [
+    "converted/tree.schemas/schemas/a-type-string-items-type-string-is-refused",
     "rules/tree-schema-keyword"
   ],
   "seampact/tree/schema-reserved": [
+    "converted/tree.schemas/core/a-declared-apiemptybody-is-refused-naming-the",
+    "converted/tree.schemas/core/a-declared-apiratelimitedparams-is-refused",
+    "converted/tree.schemas/core/a-declared-apischemainvalidissue-is-refused",
+    "converted/tree.schemas/core/a-declared-schema-named-like-replaced-params-is",
+    "converted/tree.schemas/core/a-declared-schema-whose-identifier-equals-a",
+    "converted/tree.schemas/core/a-hoist-landing-on-a-reserved-id-is-refused-0",
+    "converted/tree.schemas/core/a-hoist-landing-on-a-reserved-id-is-refused-1",
+    "converted/tree.schemas/core/a-hoist-landing-on-a-reserved-id-is-refused-2",
+    "converted/tree.schemas/core/a-hoist-refused-on-an-id-the-layer-params-took",
+    "converted/tree.schemas/core/a-use-of-a-refused-reserved-declaration-is-not",
+    "converted/tree.schemas/core/both-spellings-of-a-reserved-identifier-are",
+    "converted/tree.schemas/core/both-spellings-of-a-reserved-identifier-are-2",
     "rules/tree-schema-reserved"
   ],
   "seampact/tree/schema-shape": [
+    "converted/tree.schemas/schemas/a-is-refused-schema-shape",
+    "converted/tree.schemas/schemas/a-type-array-is-refused-schema-shape",
     "limits/depth-nesting-at",
     "rules/tree-schema-shape"
   ],
   "seampact/tree/schema-unknown": [
+    "converted/derive.errors/relays/a-code-a-node-attaches-and-an-identity-also/tasks",
+    "converted/derive.errors/relays/a-code-both-declare-the-same-is-copied-once-and/tasks",
+    "converted/derive.errors/relays/a-code-both-declare-the-same-is-copied-once-and/tasks-two",
+    "converted/derive.errors/relays/a-code-the-second-declares-differently-than-the/tasks",
+    "converted/derive.errors/relays/a-code-the-second-declares-differently-than-the/tasks-two",
+    "converted/derive.errors/relays/a-copied-code-this-api-declares-differently-is/tasks",
+    "converted/derive.errors/relays/a-copied-code-whose-params-schema-this-api/tasks",
+    "converted/derive.errors/relays/a-copied-nature-this-api-declares-on-another/tasks",
+    "converted/derive.errors/relays/a-nature-the-second-declares-on-another-base/tasks",
+    "converted/derive.errors/relays/a-nature-the-second-declares-on-another-base/tasks-two",
+    "converted/derive.errors/relays/a-node-s-code-joins-this-api-with-its/tasks",
+    "converted/derive.wire/api-wire/a-written-default-is-accepted/tasks",
+    "converted/derive.wire/api-wire/typed-convention-members-a-value-other-than-the/tasks",
+    "converted/derive.wire/buckets/a-bucket-without-a-limit-is-warned-about-that/tasks",
+    "converted/derive.wire/buckets/a-bucket-without-a-window-is-warned-about-that/tasks",
+    "converted/derive.wire/buckets/a-bucket-without-limit-and-window-is-warned/tasks",
+    "converted/derive.wire/concurrency/a-relay-of-an-imported-api-reads-the-version/tasks",
+    "converted/derive.wire/concurrency/a-relayed-body-version-names-the-public/tasks",
+    "converted/derive.wire/concurrency/a-relayed-query-version-takes-the-public/tasks",
+    "converted/derive.wire/idempotency/an-exemption-a-relay-route-inherits-and-uses-is/tasks",
+    "converted/derive.wire/idempotency/an-exemption-no-relay-route-uses-is-refused-as/tasks",
+    "converted/derive.wire/pass/a-relay-route-derives-its-idempotency-key-and/tasks",
+    "converted/tree.schemas/derived/a-field-the-source-lacks-a-bad-overlay-or",
+    "converted/tree.schemas/examples/an-example-of-a-schema-whose-property-failed-to",
+    "converted/tree.schemas/routes/a-missing-field-is-refused-once-per-owner-5",
+    "converted/tree.schemas/schemas/a-type-object-properties-b-missing-is-refused",
+    "converted/tree.schemas/schemas/every-diagnostic-has-its-rule-message-fix-and-a",
+    "converted/tree.schemas/schemas/rights-r-params-missing-is-refused-schema",
     "golden/pack-api-platform/contract/tasks",
     "golden/pack-crud-rights/contract/tasks",
     "golden/pack-hal/contract/tasks",
@@ -827,6 +1440,7 @@
     "rules/tree-sort-key-dash"
   ],
   "seampact/tree/sort-key-signed": [
+    "converted/tree.nodes/shapes/sort-keys-a-signed-style-refuses-a-key-holding",
     "rules/tree-sort-key-dash"
   ],
   "seampact/tree/template-each": [
@@ -845,19 +1459,28 @@
     "passes/tree-nodes/formats-refused"
   ],
   "seampact/tree/union-discriminator": [
+    "converted/tree.schemas/schemas/u-oneof-a-b-b-type-object-properties-x-type",
     "rules/tree-union-discriminator"
   ],
   "seampact/tree/union-header": [
+    "converted/tree.schemas/schemas/h-discriminator-from-header-x-kind-oneof-a-b-b",
     "passes/tree-nodes/routes-refused",
     "rules/tree-union-header"
   ],
   "seampact/tree/union-tag": [
+    "converted/tree.schemas/schemas/u-discriminator-k-oneof-a-b-b-type-object",
     "rules/tree-union-tag"
   ],
   "seampact/tree/union-variant": [
+    "converted/tree.schemas/schemas/a-nullable-alias-of-an-object-is-refused-as-a",
+    "converted/tree.schemas/schemas/every-diagnostic-has-its-rule-message-fix-and-a",
+    "converted/tree.schemas/schemas/u-discriminator-k-oneof-a-type-string-is",
     "rules/tree-union-variant"
   ],
   "seampact/tree/unknown-keys": [
+    "converted/tree.schemas/directions/unknownkeys-on-a-map-whose-keys-are-free-is",
+    "converted/tree.schemas/directions/unknownkeys-on-an-alias-declaration-that-only",
+    "converted/tree.schemas/directions/unknownkeys-where-every-use-is-output-or-on-a",
     "rules/tree-unknown-keys"
   ],
   "seampact/tree/upstream-service": [

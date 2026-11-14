@@ -1,0 +1,55 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "shop",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/field-right-conflict",
+          "message": "output field 'Mixed/cost' of route 'listMixed' is restricted in 'EvA' and in 'EvB' with a different right, params, input policy or subject, and one field right cannot hold both",
+          "fix": "give the fields at this pointer the same restrictedTo and subject, or rename one of them",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/EvB/properties/cost/restrictedTo"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/EvA/properties/cost/restrictedTo"
+              },
+              "message": "the field of 'EvA' is restricted here"
+            }
+          ]
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/sort-key-right",
+          "message": "sort key 'cost' of route 'listMixed' sorts a union whose variants restrict its field differently, so the key has no one right",
+          "fix": "give the field the same restrictedTo in every variant, or remove the key from 'sortable'",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/mixed/ops/list/sortable/0"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/EvA/properties/cost/restrictedTo"
+              },
+              "message": "the field is restricted to 'items.cost' here"
+            },
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/EvB/properties/cost/restrictedTo"
+              },
+              "message": "the field is restricted to 'items.audit' here"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

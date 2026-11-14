@@ -1,0 +1,79 @@
+api: { name: shop, version: 1 }
+schemes:
+  bearer: { kind: bearer }
+identities:
+  clerk: { schemes: { read: [bearer], write: [bearer] }, principal: Clerk }
+schemas:
+  ItemId: { type: string, format: uuid }
+  ChildId: { type: string, format: uuid }
+  Clerk: { type: object, required: [clerkId], properties: { clerkId: { type: string } } }
+  Item:
+    type: object
+    required: [itemId, name]
+    properties:
+      itemId: ItemId
+      name: { type: string }
+      cost: { type: integer, restrictedTo: items.cost }
+      grade: { type: integer, restrictedTo: { right: items.grade, params: { level: high } } }
+      margin: { type: integer, restrictedTo: items.margin }
+  EvA:
+    type: object
+    properties: { cost: { type: integer, restrictedTo: items.cost }, name: { type: string } }
+  EvB:
+    type: object
+    properties: { cost: { type: integer, restrictedTo: items.audit }, name: { type: string } }
+  EvC:
+    type: object
+    properties: { cost: { type: integer }, name: { type: string } }
+  Mixed:
+    discriminator: kind
+    oneOf: { a: EvA, b: EvB }
+  Shared:
+    discriminator: kind
+    oneOf: { a: EvA, c: EvC }
+  Child:
+    type: object
+    required: [childId, itemId]
+    properties:
+      childId: ChildId
+      itemId: ItemId
+      margin: { type: integer, restrictedTo: items.margin }
+  Remark:
+    type: object
+    required: [remarkId, name]
+    properties: { remarkId: ChildId, name: { type: string } }
+  Tally:
+    type: object
+    additionalProperties: { type: integer }
+pagings:
+  offset:
+    request:
+      offset: { query: offset }
+      limit: { query: limit }
+      sort: { query: sort, style: signed }
+    response:
+      body: $items
+conventions:
+  paging: { maxLimit: 50 }
+rights:
+  items.cost: {}
+  items.grade: { params: { level: { type: string } } }
+  items.read: {}
+  items.audit: {}
+  items.margin: { subject: { resource: Item, id: ItemId } }
+  shop.staff: { subject: { scope: shop } }
+scopes:
+  shop: { id: { type: string, format: uuid } }
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: clerk
+    routes:
+      items:
+        kind: collection
+        id: { itemId: ItemId }
+        item: Item
+        ops:
+          list:
+            paging: offset
+            filteredBy: items.read

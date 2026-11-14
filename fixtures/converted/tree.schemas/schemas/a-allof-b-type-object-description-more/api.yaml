@@ -1,0 +1,4 @@
+api: { name: t, version: 1 }
+schemas:
+  A: { allOf: [B, { type: object, description: More., properties: { d: { type: string } } }] }
+  B: { type: object, properties: { c: { type: string } } }

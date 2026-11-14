@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/signature-tolerance",
+    "message": "the tolerance '999999999999d' of signature scheme 'sig' is beyond 9007199254740991 milliseconds",
+    "fix": "Write a tolerance of minutes, such as '5m'.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemes/sig/tolerance"
+    },
+    "related": []
+  }
+]

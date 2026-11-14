@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/batch-ids",
+          "message": "the batch op reads its records by id, and its collection has no single id parameter",
+          "fix": "give the collection one id parameter, or declare the op's 'input'",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/tasks/ops/batch"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

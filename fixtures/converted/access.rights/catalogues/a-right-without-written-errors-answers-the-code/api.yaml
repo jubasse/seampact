@@ -1,0 +1,13 @@
+api: { name: shop, version: 1 }
+conventions:
+  errors: { derived: { forbidden: { code: shop.denied } } }
+rights:
+  shop.open: {}
+  shop.close: { errors: [] }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: The contract checks catalogues only. }
+    routes:
+      ping: { method: get }

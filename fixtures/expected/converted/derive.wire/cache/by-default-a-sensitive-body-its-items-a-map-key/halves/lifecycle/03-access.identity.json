@@ -1,0 +1,653 @@
+{
+  "schemes": {
+    "bearer": {
+      "id": "bearer",
+      "kind": "bearer",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/bearer"
+      }
+    },
+    "sessionCookie": {
+      "id": "sessionCookie",
+      "kind": "cookie",
+      "name": "__Host-session",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/sessionCookie"
+      }
+    },
+    "deviceToken": {
+      "id": "deviceToken",
+      "kind": "header",
+      "name": "X-Device-Token",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/deviceToken"
+      }
+    }
+  },
+  "identities": {
+    "member": {
+      "id": "member",
+      "kind": "credential",
+      "schemes": {
+        "read": [
+          "bearer",
+          "deviceToken",
+          "sessionCookie"
+        ],
+        "write": [
+          "bearer"
+        ],
+        "optionalRead": []
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "MemberPrincipal"
+      },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/member"
+      }
+    }
+  },
+  "operations": {
+    "listNotes": {
+      "access": {
+        "kind": "identity",
+        "identity": "member",
+        "schemes": [
+          "bearer",
+          "deviceToken",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "getNote": {
+      "access": {
+        "kind": "identity",
+        "identity": "member",
+        "schemes": [
+          "bearer",
+          "deviceToken",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "updateNote": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "member",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "deleteNote": {
+      "access": {
+        "kind": "identity",
+        "identity": "member",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "listDocs": {
+      "access": {
+        "kind": "identity",
+        "identity": "member",
+        "schemes": [
+          "bearer",
+          "deviceToken",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "getDoc": {
+      "access": {
+        "kind": "identity",
+        "identity": "member",
+        "schemes": [
+          "bearer",
+          "deviceToken",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "updateDoc": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "member",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "listDrafts": {
+      "access": {
+        "kind": "identity",
+        "identity": "member",
+        "schemes": [
+          "bearer",
+          "deviceToken",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "updateDraft": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "member",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "deleteDraft": {
+      "access": {
+        "kind": "identity",
+        "identity": "member",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "publishDraft": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "member",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "feed": {
+      "access": {
+        "kind": "public",
+        "reason": "The feed is public.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/feed/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "board": {
+      "access": {
+        "kind": "optional",
+        "identity": "member",
+        "schemes": [
+          "bearer",
+          "deviceToken",
+          "sessionCookie"
+        ],
+        "reason": "Guests see the public board.",
+        "onRefused": "anonymous",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/board/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous",
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "history": {
+      "access": {
+        "kind": "identity",
+        "identity": "member",
+        "schemes": [
+          "bearer",
+          "deviceToken",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "token": {
+      "access": {
+        "kind": "identity",
+        "identity": "member",
+        "schemes": [
+          "bearer",
+          "deviceToken",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "tokens": {
+      "access": {
+        "kind": "identity",
+        "identity": "member",
+        "schemes": [
+          "bearer",
+          "deviceToken",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "table": {
+      "access": {
+        "kind": "identity",
+        "identity": "member",
+        "schemes": [
+          "bearer",
+          "deviceToken",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "signed": {
+      "access": {
+        "kind": "identity",
+        "identity": "member",
+        "schemes": [
+          "bearer",
+          "deviceToken",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "held": {
+      "access": {
+        "kind": "identity",
+        "identity": "member",
+        "schemes": [
+          "bearer",
+          "deviceToken",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "plain": {
+      "access": {
+        "kind": "identity",
+        "identity": "member",
+        "schemes": [
+          "bearer",
+          "deviceToken",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "keys": {
+      "access": {
+        "kind": "identity",
+        "identity": "member",
+        "schemes": [
+          "bearer",
+          "deviceToken",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "rotateKey": {
+      "access": {
+        "kind": "identity",
+        "identity": "member",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "neverKeys": {
+      "access": {
+        "kind": "identity",
+        "identity": "member",
+        "schemes": [
+          "bearer",
+          "deviceToken",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "legacy": {
+      "access": {
+        "kind": "identity",
+        "identity": "member",
+        "schemes": [
+          "bearer",
+          "deviceToken",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "retired": {
+      "access": {
+        "kind": "identity",
+        "identity": "member",
+        "schemes": [
+          "bearer",
+          "deviceToken",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "prices": {
+      "access": {
+        "kind": "identity",
+        "identity": "member",
+        "schemes": [
+          "bearer",
+          "deviceToken",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "beta": {
+      "access": {
+        "kind": "identity",
+        "identity": "member",
+        "schemes": [
+          "bearer",
+          "deviceToken",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "export": {
+      "access": {
+        "kind": "identity",
+        "identity": "member",
+        "schemes": [
+          "bearer",
+          "deviceToken",
+          "sessionCookie"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "callback": {
+      "access": {
+        "kind": "public",
+        "reason": "The provider redirects the browser here.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/callback/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "moved": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "member",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    }
+  }
+}

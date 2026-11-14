@@ -1,0 +1,11 @@
+api: { name: a, version: 1 }
+schemes:
+
+  sig:
+    kind: signature
+    name: Stripe-Signature
+    algorithm: hmac-sha256
+    encoding: hex
+    key: { value: stripe }
+    format: 'v1={sig},v1={sig}'
+    payload: '{rawBody}'

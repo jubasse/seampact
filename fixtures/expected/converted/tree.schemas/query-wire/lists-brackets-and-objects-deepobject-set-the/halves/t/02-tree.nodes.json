@@ -1,0 +1,400 @@
+{
+  "conventions": {
+    "query.lists": {
+      "value": "brackets",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/query/lists"
+      }
+    },
+    "query.objects": {
+      "value": "deepObject",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/query/objects"
+      }
+    }
+  },
+  "formats": {
+    "bare": {
+      "id": "bare",
+      "origin": {
+        "layer": "core",
+        "pointer": "/formats/bare"
+      },
+      "media": "application/json",
+      "absent": "omit",
+      "success": {
+        "item": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "table": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "list": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "page": {
+          "body": {
+            "kind": "slot",
+            "slot": "items",
+            "path": []
+          },
+          "headers": []
+        }
+      },
+      "meta": {},
+      "error": {
+        "media": "application/problem+json",
+        "body": {
+          "kind": "object",
+          "members": [
+            {
+              "name": {
+                "kind": "text",
+                "text": "type"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "code",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "title"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "title",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "status"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "status",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "detail"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "detail",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "instance"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "instance",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "code"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "code",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "nature"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "nature",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "traceId"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "traceId",
+                "path": []
+              }
+            }
+          ],
+          "merge": "params"
+        },
+        "headers": []
+      }
+    }
+  },
+  "operations": [
+    {
+      "kind": "httpOperation",
+      "id": "listItems",
+      "name": {
+        "segments": [
+          "list",
+          "items"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "op": "list",
+      "resource": {
+        "type": "items",
+        "idProperty": "itemId"
+      },
+      "method": "get",
+      "safe": true,
+      "path": "/v1/items",
+      "params": {
+        "path": [],
+        "query": [
+          {
+            "name": "limit",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {}
+            },
+            "required": false,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/items/ops/list/query/limit?"
+            },
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            }
+          },
+          {
+            "name": "tags",
+            "type": {
+              "kind": "array",
+              "items": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              }
+            },
+            "required": false,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/items/ops/list/query/tags?"
+            },
+            "wire": {
+              "kind": "list",
+              "style": "form",
+              "explode": true,
+              "brackets": true
+            }
+          },
+          {
+            "name": "filter",
+            "type": {
+              "kind": "ref",
+              "schema": "Filter"
+            },
+            "required": false,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/items/ops/list/query/filter?"
+            },
+            "wire": {
+              "kind": "object",
+              "style": "deepObject",
+              "explode": true,
+              "brackets": false
+            }
+          }
+        ],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "responses": [],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/items/ops/list"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "send",
+      "name": {
+        "segments": [
+          "send"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "method": "post",
+      "safe": false,
+      "path": "/v1/send",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/x-www-form-urlencoded",
+        "schema": {
+          "kind": "ref",
+          "schema": "SendInput"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/send/input"
+        },
+        "fields": [
+          {
+            "name": "note",
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            }
+          },
+          {
+            "name": "ids",
+            "wire": {
+              "kind": "list",
+              "style": "form",
+              "explode": true,
+              "brackets": true
+            }
+          }
+        ]
+      },
+      "responses": [
+        {
+          "status": 204,
+          "shape": "empty",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/send"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/send"
+      }
+    }
+  ],
+  "api": {
+    "id": "t",
+    "name": {
+      "segments": [
+        "t"
+      ],
+      "role": "schema"
+    },
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "kind": "product",
+    "pathVersion": {
+      "value": "prefix",
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/version"
+      }
+    },
+    "maturity": "experimental",
+    "compat": {
+      "policy": "none"
+    },
+    "surfaces": {
+      "app": {
+        "name": {
+          "segments": [
+            "app"
+          ],
+          "role": "schema"
+        },
+        "prefix": "/v1",
+        "pathVersion": "prefix",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app"
+        }
+      }
+    },
+    "documents": {},
+    "docs": {},
+    "extensions": {},
+    "origin": {
+      "layer": "api",
+      "pointer": "/api"
+    }
+  },
+  "lint": {
+    "rules": {},
+    "allows": []
+  }
+}

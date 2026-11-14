@@ -1,0 +1,46 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/default-value",
+    "message": "the default does not fit its schema at '': 'first' is not a number",
+    "fix": "correct the default, or the schema it is parsed against",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/tasks/ops/list/query/page?/default"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/mark-position",
+    "message": "'default' sits on a checked value: an opaque value holds no mark or default",
+    "fix": "remove 'default' here",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/tasks/ops/list/query/raw?/default"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/mark-position",
+    "message": "'default' sits on an optional property or an optional query field",
+    "fix": "remove 'default' here",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/tasks/ops/list/query/sort/default"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/mark-position",
+    "message": "'default' sits on an optional property or an optional query field",
+    "fix": "remove 'default' here",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/tasks/ops/list/headers/X-Trace?/default"
+    },
+    "related": []
+  }
+]

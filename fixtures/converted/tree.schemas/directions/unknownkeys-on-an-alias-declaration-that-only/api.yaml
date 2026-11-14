@@ -1,0 +1,12 @@
+api: { name: t, version: 1 }
+schemas:
+  Answer: { type: object, properties: { a: { type: string } } }
+  Strict: { $ref: Answer, unknownKeys: refuse }
+  Loose: { $ref: Answer, unknownKeys: refuse }
+surfaces:
+  app:
+    routes:
+      send:
+        method: post
+        input: { type: object, properties: { loose: Loose } }
+        output: Strict

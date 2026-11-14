@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/concurrency-version",
+          "message": "a body version source adds its property to the input, which is not an object schema",
+          "fix": "make the input an object schema, or read the version from the query or a header",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/tasks/ops/update/input"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

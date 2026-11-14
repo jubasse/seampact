@@ -1,0 +1,62 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "shop",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/field-right-subject",
+          "message": "input field 'Item/cost' of route 'importItems' is restricted to right 'items.cost', and no member id of the route has its id schema",
+          "fix": "restrict the field to a right whose subject the route resolves, or use another input schema on this route",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/items/collection/routes/import/input"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/Item/properties/cost/restrictedTo"
+              },
+              "message": "the field is restricted to 'items.cost' here"
+            }
+          ]
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/field-right-subject",
+          "message": "input field 'Item/cost' of route 'swapLeft' is restricted to right 'items.cost', and its subject could be member id 'left' or 'right'",
+          "fix": "restrict the field to a right whose subject the route resolves, or use another input schema on this route",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/pairs/member/routes/swap/input"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/Item/properties/cost/restrictedTo"
+              },
+              "message": "the field is restricted to 'items.cost' here"
+            },
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/pairs/id/left"
+              },
+              "message": "member id 'left' has the right's id schema"
+            },
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/pairs/id/right"
+              },
+              "message": "member id 'right' has the right's id schema"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

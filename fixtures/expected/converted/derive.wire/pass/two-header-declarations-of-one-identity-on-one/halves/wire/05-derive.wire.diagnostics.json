@@ -1,0 +1,42 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/derive/derived-name-collision",
+    "message": "derivation identity.header writes the header 'TraceParent' of operation 'jobs' twice, with a different type or requirement",
+    "fix": "Give each scheme or header declaration the derivation reads its own name, or make their type and requirement agree.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/headers/trace2"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/robots/routes/jobs"
+        },
+        "message": "the first route it reaches"
+      },
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/identities/robot/headers/trace"
+        },
+        "message": "the name taken"
+      },
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/headers/trace"
+        },
+        "message": "the name taken"
+      },
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/identities/robot/headers/trace2"
+        },
+        "message": "the derivation"
+      }
+    ]
+  }
+]

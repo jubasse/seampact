@@ -1,0 +1,14 @@
+api: { name: t, version: 1 }
+schemas:
+  Order:
+    type: object
+    properties:
+      address: { type: object, properties: { city: { type: string } } }
+      lines: { type: array, items: { type: object, properties: { sku: { type: string } } } }
+      extras: { type: object, additionalProperties: { type: object, properties: { x: { type: string } } } }
+rights:
+  tasks.update: { params: { level?: { type: integer }, scope: { type: object, properties: { id: { type: string } } } } }
+rules:
+  recentAuth: { params: Order }
+errors:
+  '404-gone': { status: 410, params: { at: { type: string } } }

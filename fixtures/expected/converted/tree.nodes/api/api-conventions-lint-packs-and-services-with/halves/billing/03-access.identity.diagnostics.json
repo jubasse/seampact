@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/identity-reference",
+    "message": "identity 'service' is not declared",
+    "fix": "Declare the identity under 'identities', or name a declared one.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/api/caller/identity"
+    },
+    "related": []
+  }
+]

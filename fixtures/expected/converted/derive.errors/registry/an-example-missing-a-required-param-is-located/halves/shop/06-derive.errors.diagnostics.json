@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/derive/error-example",
+    "message": "the example of error 'shop.counted' does not fit its params: the required property 'count' is missing",
+    "fix": "correct the example to fit the params",
+    "origin": {
+      "layer": "api",
+      "pointer": "/errors/shop.counted/example"
+    },
+    "related": []
+  }
+]

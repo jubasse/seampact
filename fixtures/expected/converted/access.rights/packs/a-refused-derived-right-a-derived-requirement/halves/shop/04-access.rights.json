@@ -1,0 +1,138 @@
+{
+  "rights": {
+    "shop.audit": {
+      "id": "shop.audit",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/shop.audit"
+      }
+    },
+    "items.view": {
+      "id": "items.view",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "pack:extra",
+        "pointer": "/derive/3/declareRight"
+      },
+      "derivedFrom": {
+        "derivation": "pack.extra.views",
+        "from": [
+          {
+            "layer": "pack:extra",
+            "pointer": "/derive/3/declareRight"
+          },
+          {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/items/ops/1"
+          }
+        ]
+      }
+    },
+    "things.view": {
+      "id": "things.view",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "pack:extra",
+        "pointer": "/derive/3/declareRight"
+      },
+      "derivedFrom": {
+        "derivation": "pack.extra.views",
+        "from": [
+          {
+            "layer": "pack:extra",
+            "pointer": "/derive/3/declareRight"
+          },
+          {
+            "layer": "api",
+            "pointer": "/surfaces/open/routes/things/ops/1"
+          }
+        ]
+      }
+    }
+  },
+  "operations": {
+    "listItems": {
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "shop.audit",
+          "derivedFrom": {
+            "derivation": "pack.extra.audits",
+            "from": [
+              {
+                "layer": "pack:extra",
+                "pointer": "/derive/1/require"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "getItem": {
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "shop.audit",
+          "derivedFrom": {
+            "derivation": "pack.extra.audits",
+            "from": [
+              {
+                "layer": "pack:extra",
+                "pointer": "/derive/1/require"
+              }
+            ]
+          }
+        },
+        {
+          "kind": "right",
+          "right": "items.view",
+          "derivedFrom": {
+            "derivation": "pack.extra.views",
+            "from": [
+              {
+                "layer": "pack:extra",
+                "pointer": "/derive/3/require"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "listThings": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "getThing": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    }
+  }
+}

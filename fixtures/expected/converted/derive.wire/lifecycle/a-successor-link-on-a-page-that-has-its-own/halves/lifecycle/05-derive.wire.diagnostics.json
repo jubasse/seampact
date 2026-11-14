@@ -1,0 +1,35 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/derive/derived-name-collision",
+    "message": "operation 'legacy' already has a header 'Link' from derivation paging.params, so derivation deprecation.headers cannot add its own",
+    "fix": "Rename the declared parameter or header, or the name the derivation takes from its scheme, header or convention.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/legacy/deprecated"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/legacy"
+        },
+        "message": "the first route it reaches"
+      },
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/legacy/paging"
+        },
+        "message": "the name taken"
+      },
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/pagings/githubPages"
+        },
+        "message": "the name taken"
+      }
+    ]
+  }
+]

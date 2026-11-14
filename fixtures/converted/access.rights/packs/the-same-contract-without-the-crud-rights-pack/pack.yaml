@@ -1,0 +1,20 @@
+# The CRUD rights pack shape (ADR 0002 section 2, ADR 0008): a right per resource and op, on the item with its
+# member id or the innermost scope, required on each op route; a write throttle on every write route.
+pack: { name: crud-rights, version: 1.0.0, extends: [] }
+
+rules:
+  throttle: { bucket: true, errors: [api.rate_limited] }
+
+buckets:
+  perUser: { key: [principal.userId], limit: 60, window: 1m }
+
+derive:
+  - entry: crud
+    select: { op: [list, get, create, update, delete, batch] }
+    declareRight:
+      name: '{resource}.{op}'
+      subject: { member: resource, collection: innermostScope }
+    require: { right: '{resource}.{op}' }
+  - entry: writes
+    select: { access: [write] }
+    require: { rule: throttle, bucket: perUser }

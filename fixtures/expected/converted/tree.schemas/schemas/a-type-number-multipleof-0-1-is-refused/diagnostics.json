@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/refinement-type",
+          "message": "'multipleOf' does not apply to a number",
+          "fix": "use 'type: integer', or 'type: string, format: decimal' for an exact step",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/A/multipleOf"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

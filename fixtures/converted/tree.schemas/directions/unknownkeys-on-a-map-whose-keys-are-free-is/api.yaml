@@ -1,0 +1,5 @@
+api: { name: t, version: 1 }
+schemas:
+  Labels: { type: object, additionalProperties: { type: string }, unknownKeys: refuse }
+  Tags: { type: object, additionalProperties: { type: string } }
+  Holder: { type: object, properties: { tags: { $ref: Tags, unknownKeys: refuse } } }

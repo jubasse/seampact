@@ -1,0 +1,6 @@
+api: { name: a, version: 1 }
+headers:
+  first: { name: X-First, in: request, semantic: actorSurface, schema: { enum: Surface } }
+  second: { name: X-Second, in: request, semantic: actorSurface, schema: { enum: Surface } }
+enums:
+  Surface: { values: [app, studio], reason: "The product's entry points." }

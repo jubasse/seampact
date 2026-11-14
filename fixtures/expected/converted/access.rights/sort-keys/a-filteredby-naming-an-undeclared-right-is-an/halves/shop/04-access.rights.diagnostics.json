@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/filtered-by",
+    "message": "route 'listItems' is filtered by right 'items.ghost', which the rights catalogue does not declare",
+    "fix": "declare the right in 'rights', or name a declared one",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/items/ops/list/filteredBy"
+    },
+    "related": []
+  }
+]

@@ -1,0 +1,13 @@
+api: { name: a, version: 1 }
+schemes:
+
+  bare: { kind: signature, name: X-Sig }
+  listed:
+    kind: signature
+    name: Stripe-Signature
+    algorithm: hmac-sha256
+    encoding: hex
+    key: { value: stripe }
+    format: 'sha256={sig}'
+    payload: '{rawBody}'
+    headers: [X-Other]

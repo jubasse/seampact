@@ -1,0 +1,43 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "a",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/signature-key",
+          "message": "signature scheme 'bare' verifies by template and has no 'key'",
+          "fix": "Name the key id the secret lookup receives: 'key: { value: <id> }' or 'key: { from: <path, query or header source> }'.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemes/bare"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/signature-verify",
+          "message": "signature scheme 'bare' verifies by template and has no 'format', 'algorithm', 'payload', 'encoding'",
+          "fix": "Declare format, algorithm, payload and encoding (ADR 0013), or set 'verify: application' to verify in the authenticate hook.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemes/bare"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/signature-verify",
+          "message": "signature scheme 'listed' verifies by template and lists 'headers'",
+          "fix": "Remove 'headers', which only 'verify: application' hands to the authenticate hook, or set 'verify: application'.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemes/listed/headers"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

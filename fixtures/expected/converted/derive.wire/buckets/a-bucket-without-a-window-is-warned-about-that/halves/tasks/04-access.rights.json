@@ -1,0 +1,790 @@
+{
+  "rights": {
+    "roles": {
+      "id": "roles",
+      "params": "RolesParams",
+      "subject": {
+        "kind": "scope",
+        "scope": "channel"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/rights/roles"
+      }
+    },
+    "tasks.read": {
+      "id": "tasks.read",
+      "subject": {
+        "kind": "scope",
+        "scope": "channel"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/rights/tasks.read"
+      }
+    },
+    "tasks.update": {
+      "id": "tasks.update",
+      "subject": {
+        "kind": "resource",
+        "type": {
+          "segments": [
+            "task"
+          ],
+          "role": "schema"
+        },
+        "idSchema": {
+          "kind": "scalar",
+          "type": "string",
+          "format": "uuid",
+          "refinements": {}
+        }
+      },
+      "errors": [
+        "api.forbidden",
+        "api.not_found"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/rights/tasks.update"
+      }
+    },
+    "tasks.seeEffort": {
+      "id": "tasks.seeEffort",
+      "subject": {
+        "kind": "resource",
+        "type": {
+          "segments": [
+            "task"
+          ],
+          "role": "schema"
+        },
+        "idSchema": {
+          "kind": "scalar",
+          "type": "string",
+          "format": "uuid",
+          "refinements": {}
+        }
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/rights/tasks.seeEffort"
+      }
+    },
+    "callerService": {
+      "id": "callerService",
+      "params": "CallerServiceParams",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/rights/callerService"
+      }
+    },
+    "preferences.digest": {
+      "id": "preferences.digest",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {
+        "summary": "Lets the caller turn on the email digest."
+      },
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/preferences.digest"
+      }
+    }
+  },
+  "rules": {
+    "throttle": {
+      "id": "throttle",
+      "takesBucket": true,
+      "errors": [
+        "api.rate_limited"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/rules/throttle"
+      }
+    },
+    "recentAuth": {
+      "id": "recentAuth",
+      "params": "RecentAuthParams",
+      "takesBucket": false,
+      "proof": {
+        "in": "body",
+        "name": "reauthToken",
+        "schema": {
+          "kind": "scalar",
+          "type": "string",
+          "refinements": {
+            "minLength": 1,
+            "maxLength": 512
+          }
+        }
+      },
+      "errors": [
+        "api.reauthentication_required"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/rules/recentAuth"
+      }
+    }
+  },
+  "scopes": {
+    "channel": {
+      "id": "channel",
+      "idSchema": {
+        "kind": "scalar",
+        "type": "string",
+        "format": "uuid",
+        "refinements": {}
+      },
+      "errors": [
+        "api.not_found"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/scopes/channel"
+      }
+    }
+  },
+  "buckets": {
+    "write": {
+      "id": "write",
+      "key": [
+        {
+          "in": "principal",
+          "name": "userId"
+        }
+      ],
+      "limit": 60,
+      "origin": {
+        "layer": "shared",
+        "pointer": "/buckets/write"
+      }
+    }
+  },
+  "operations": {
+    "health": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "listChannels": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "getChannel": {
+      "scopes": [
+        {
+          "scope": "channel",
+          "source": {
+            "in": "path",
+            "name": "channelId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": []
+    },
+    "listTasks": {
+      "scopes": [
+        {
+          "scope": "channel",
+          "source": {
+            "in": "path",
+            "name": "channelId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": [
+        {
+          "schema": "Task",
+          "pointer": "/effort",
+          "right": "tasks.seeEffort",
+          "subject": {
+            "source": {
+              "in": "holderField",
+              "name": "taskId"
+            }
+          },
+          "direction": "output",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/schemas/Task/properties/effort/restrictedTo"
+              }
+            ]
+          }
+        }
+      ],
+      "filteredBy": "tasks.read"
+    },
+    "createTask": {
+      "scopes": [
+        {
+          "scope": "channel",
+          "source": {
+            "in": "path",
+            "name": "channelId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "throttle",
+          "entry": "writeThrottle",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/create/requires/0"
+          },
+          "bucket": "write"
+        },
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "channelEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/create/requires/1"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "channel"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": [
+        {
+          "schema": "CreateTask",
+          "pointer": "/effort",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner"
+            ]
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "channel"
+            }
+          },
+          "direction": "input",
+          "inputPolicy": "reject",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/schemas/CreateTask/properties/effort/restrictedTo"
+              }
+            ]
+          }
+        },
+        {
+          "schema": "Task",
+          "pointer": "/effort",
+          "right": "tasks.seeEffort",
+          "subject": {
+            "source": {
+              "in": "holderField",
+              "name": "taskId"
+            }
+          },
+          "direction": "output",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/schemas/Task/properties/effort/restrictedTo"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "getTasksBatch": {
+      "scopes": [
+        {
+          "scope": "channel",
+          "source": {
+            "in": "path",
+            "name": "channelId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": [
+        {
+          "schema": "Task",
+          "pointer": "/effort",
+          "right": "tasks.seeEffort",
+          "subject": {
+            "source": {
+              "in": "holderField",
+              "name": "taskId"
+            }
+          },
+          "direction": "output",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/schemas/Task/properties/effort/restrictedTo"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "searchTasks": {
+      "scopes": [
+        {
+          "scope": "channel",
+          "source": {
+            "in": "path",
+            "name": "channelId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "tasks.read",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "channel"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": [
+        {
+          "schema": "TaskSearchResult",
+          "pointer": "/items/*/effort",
+          "right": "tasks.seeEffort",
+          "subject": {
+            "source": {
+              "in": "holderField",
+              "name": "taskId"
+            }
+          },
+          "direction": "output",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/schemas/Task/properties/effort/restrictedTo"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "getTask": {
+      "scopes": [
+        {
+          "scope": "channel",
+          "source": {
+            "in": "path",
+            "name": "channelId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": [
+        {
+          "schema": "Task",
+          "pointer": "/effort",
+          "right": "tasks.seeEffort",
+          "subject": {
+            "source": {
+              "in": "holderField",
+              "name": "taskId"
+            }
+          },
+          "direction": "output",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/schemas/Task/properties/effort/restrictedTo"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "updateTask": {
+      "scopes": [
+        {
+          "scope": "channel",
+          "source": {
+            "in": "path",
+            "name": "channelId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "tasks.update",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/update/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "path",
+              "name": "taskId"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": [
+        {
+          "schema": "Task",
+          "pointer": "/effort",
+          "right": "tasks.seeEffort",
+          "subject": {
+            "source": {
+              "in": "holderField",
+              "name": "taskId"
+            }
+          },
+          "direction": "output",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/schemas/Task/properties/effort/restrictedTo"
+              }
+            ]
+          }
+        },
+        {
+          "schema": "UpdateTask",
+          "pointer": "/effort",
+          "right": "tasks.seeEffort",
+          "subject": {
+            "source": {
+              "in": "path",
+              "name": "taskId"
+            }
+          },
+          "direction": "input",
+          "inputPolicy": "reject",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/schemas/Task/properties/effort/restrictedTo"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "assignTask": {
+      "scopes": [
+        {
+          "scope": "channel",
+          "source": {
+            "in": "path",
+            "name": "channelId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "roles",
+          "params": {
+            "allowed": [
+              "owner",
+              "editor"
+            ]
+          },
+          "entry": "channelEditor",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/assign/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "channel"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": [
+        {
+          "schema": "Task",
+          "pointer": "/effort",
+          "right": "tasks.seeEffort",
+          "subject": {
+            "source": {
+              "in": "holderField",
+              "name": "taskId"
+            }
+          },
+          "direction": "output",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/schemas/Task/properties/effort/restrictedTo"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "archiveTask": {
+      "scopes": [
+        {
+          "scope": "channel",
+          "source": {
+            "in": "path",
+            "name": "channelId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": [
+        {
+          "schema": "Task",
+          "pointer": "/effort",
+          "right": "tasks.seeEffort",
+          "subject": {
+            "source": {
+              "in": "holderField",
+              "name": "taskId"
+            }
+          },
+          "direction": "output",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/schemas/Task/properties/effort/restrictedTo"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "purgeTask": {
+      "scopes": [
+        {
+          "scope": "channel",
+          "source": {
+            "in": "path",
+            "name": "channelId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "recentAuth",
+          "params": {
+            "intent": "purge_task"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge/requires/0"
+          }
+        }
+      ],
+      "fieldRights": [],
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "ApiEmptyBody"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge/requires/0"
+        },
+        "rawBody": false,
+        "proofs": [
+          {
+            "name": "reauthToken",
+            "schema": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {
+                "minLength": 1,
+                "maxLength": 512
+              }
+            },
+            "derivedFrom": {
+              "derivation": "rule.proof",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge/requires/0"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/rules/recentAuth/proof"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "getPreferences": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "updatePreferences": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": [
+        {
+          "schema": "UpdatePreferences",
+          "pointer": "/digest",
+          "right": "preferences.digest",
+          "direction": "input",
+          "inputPolicy": "strip",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/schemas/UpdatePreferences/properties/digest/restrictedTo"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "getDraft": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "deleteDraft": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "payments": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    }
+  }
+}

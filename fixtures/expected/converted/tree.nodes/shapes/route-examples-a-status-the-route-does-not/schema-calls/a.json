@@ -1,0 +1,14 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/ping/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  }
+]

@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "warning",
+    "rule": "seampact/tree/path-version",
+    "message": "The prefix of the surface app is empty, but its paths still start with /v{version}.",
+    "fix": "Set pathVersion: none on the surface to keep its paths as written, or write the prefix you want.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/prefix"
+    },
+    "related": []
+  }
+]

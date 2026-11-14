@@ -1,0 +1,14 @@
+api: { name: shop, version: 1 }
+schemas:
+  Viewer: { type: object, properties: { id: { type: string } } }
+schemes:
+  bearer: { kind: bearer }
+identities:
+  viewer: { schemes: { read: [bearer], write: [bearer] }, principal: Viewer, errors: [api.unauthenticated, shop.nope] }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: The contract checks error declarations and role bindings only. }
+    routes:
+      ping: { method: get }

@@ -1,0 +1,36 @@
+api: { name: t, version: 1 }
+conventions: { query: { lists: repeat, objects: explode } }
+enums:
+  State: { values: [open, done], reason: "Local states." }
+rules:
+  fresh: { proof: { in: body, name: ticket, schema: { type: integer } } }
+schemas:
+  Filter: { type: object, properties: { state: { enum: State }, tags: { type: array, items: { type: string } } } }
+  Deep: { type: object, properties: { filter: Filter } }
+  Form:
+    type: object
+    properties:
+      count: { type: integer }
+      flag: { type: boolean }
+      text: { type: string }
+      state: { enum: State }
+      tags: { type: array, items: { type: integer } }
+      filter: Filter
+      deep: Deep
+      blob: { opaque: "Free-form." }
+surfaces:
+  app:
+    routes:
+      items:
+        kind: collection
+        id: { itemId: { type: string } }
+        ops:
+          list:
+            query:
+              limit?: { type: integer }
+              tags?: { type: array, items: { type: string } }
+              filter?: Filter
+      send:
+        method: post
+        inputMedia: form
+        input: { type: object, properties: { note: { type: string }, ids: { type: array, items: { type: integer } } } }

@@ -1,0 +1,27 @@
+api: { name: t, version: 1 }
+rules:
+  signed: { proof: { in: body, name: ticket, schema: Labels } }
+  sealed: { proof: { in: body, name: seal, schema: Labels } }
+  stamped: { proof: { in: body, name: stamp, schema: Labels } }
+requirements:
+  stampedEntry: { rule: stamped }
+schemas:
+  Labels: { type: object, additionalProperties: { type: string } }
+  Upload: { type: object, properties: { name: { type: string } } }
+surfaces:
+  app:
+    routes:
+      upload:
+        method: post
+        inputMedia: multipart
+        input: Upload
+        requires: [{ rule: signed }]
+      attach:
+        method: post
+        inputMedia: form
+        input: Upload
+        requires: [stampedEntry]
+      submit:
+        method: post
+        input: Upload
+        requires: [{ rule: sealed }]

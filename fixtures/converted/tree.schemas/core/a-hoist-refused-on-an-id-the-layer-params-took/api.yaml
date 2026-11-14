@@ -1,0 +1,5 @@
+api: { name: t, version: 1 }
+errors:
+  api.forbidden: { status: 403, params: { a: { type: string } } }
+rights:
+  api.forbidden: { params: { a: { type: string } } }

@@ -1,0 +1,11 @@
+api: { name: a, version: 1 }
+schemes:
+
+  sig:
+    kind: signature
+    name: X-Sig
+    format: 'sha256={sig}'
+    algorithm: hmac-sha256
+    payload: '{rawBody}'
+    encoding: base32
+    key: { value: k }

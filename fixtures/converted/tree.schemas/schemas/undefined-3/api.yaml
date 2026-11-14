@@ -1,0 +1,13 @@
+api: { name: t, version: 1 }
+schemas:
+
+  Notice:
+    discriminator: kind
+    oneOf:
+      done: TaskDone
+      assigned: { type: object, required: [to], properties: { to: { type: string } } }
+      cancelled: { type: object }
+  TaskDone: { type: object, properties: { at: { type: string, format: date-time } } }
+  GithubEvent:
+    discriminator: { from: header.X-GitHub-Event }
+    oneOf: { ping: TaskDone }

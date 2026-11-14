@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-reserved",
+    "message": "the name 'ApiRateLimitedParams' is reserved for the params of the default code 'api.rate_limited'",
+    "fix": "rename the schema, or the right, rule or error",
+    "origin": {
+      "layer": "api",
+      "pointer": "/rights/api.rate_limited/params"
+    },
+    "related": []
+  }
+]

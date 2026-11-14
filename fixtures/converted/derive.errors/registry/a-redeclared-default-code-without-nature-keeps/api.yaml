@@ -1,0 +1,12 @@
+api: { name: shop, version: 1 }
+natures:
+  throttled: { base: unavailable }
+errors:
+  api.idempotency_in_progress: { status: 409, title: Still running. }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: The contract checks error declarations and role bindings only. }
+    routes:
+      ping: { method: get }

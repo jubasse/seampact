@@ -1,0 +1,5 @@
+api: { name: t, version: 1 }
+rights:
+  r: { params: { a: { type: string } } }
+schemas:
+  RParams: { type: string }

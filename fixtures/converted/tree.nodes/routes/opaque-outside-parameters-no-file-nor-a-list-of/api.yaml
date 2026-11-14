@@ -1,0 +1,14 @@
+
+api: { name: a, version: 1, kind: product }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      hook:
+        method: get
+        path: 'raw/{raw}'
+        pathParams: { raw: { file: {} } }
+        query: { payloads: { type: array, items: { opaque: "Vendor JSON." } } }
+        headers: { X-Files: { type: array, items: { file: {} } } }
+        responses:
+          200: { headers: { X-Trace: { type: array, items: { opaque: "Vendor JSON." } } } }

@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/all-of-member",
+    "message": "a member of 'allOf' is not an object schema",
+    "fix": "merge object schemas only",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/A/allOf/0"
+    },
+    "related": []
+  }
+]

@@ -1,0 +1,13 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/shop.denied/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ShopDeniedParams"
+    }
+  }
+]

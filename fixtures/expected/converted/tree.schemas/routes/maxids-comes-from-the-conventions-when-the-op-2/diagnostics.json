@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/batch-ids",
+          "message": "the batch op sets no 'maxIds', and 'conventions.batch.maxIds' is not set",
+          "fix": "set 'maxIds' on the op, or 'conventions.batch.maxIds'",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/tasks/ops/batch"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

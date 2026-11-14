@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "a",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/redirect-body",
+          "message": "The 303 response of submit is a redirect, which has no body.",
+          "fix": "Remove the body; the compiler adds the Location header.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/submit/responses/303/body"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

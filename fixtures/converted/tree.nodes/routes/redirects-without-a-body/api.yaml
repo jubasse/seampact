@@ -1,0 +1,10 @@
+
+api: { name: a, version: 1, kind: product }
+schemas:
+  Note: { type: object, properties: { text: { type: string } } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      callback: { method: get, responses: { 302: {} } }
+      submit: { method: post, responses: { 303: { body: Note } } }

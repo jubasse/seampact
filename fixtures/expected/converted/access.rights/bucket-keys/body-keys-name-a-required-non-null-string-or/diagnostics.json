@@ -1,0 +1,120 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "mail",
+      "diagnostics": [
+        {
+          "severity": "warning",
+          "rule": "seampact/derive/bucket-limits",
+          "message": "The bucket 'perUser' sets no limit and window, so the server binds them.",
+          "fix": "Set limit and window on the bucket 'perUser', or bind them in the server.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/buckets/perUser"
+          },
+          "related": []
+        },
+        {
+          "severity": "warning",
+          "rule": "seampact/derive/bucket-limits",
+          "message": "The bucket 'perRecipient' sets no limit and window, so the server binds them.",
+          "fix": "Set limit and window on the bucket 'perRecipient', or bind them in the server.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/buckets/perRecipient"
+          },
+          "related": []
+        },
+        {
+          "severity": "warning",
+          "rule": "seampact/derive/bucket-limits",
+          "message": "The bucket 'perCount' sets no limit and window, so the server binds them.",
+          "fix": "Set limit and window on the bucket 'perCount', or bind them in the server.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/buckets/perCount"
+          },
+          "related": []
+        },
+        {
+          "severity": "warning",
+          "rule": "seampact/derive/bucket-limits",
+          "message": "The bucket 'perUrgency' sets no limit and window, so the server binds them.",
+          "fix": "Set limit and window on the bucket 'perUrgency', or bind them in the server.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/buckets/perUrgency"
+          },
+          "related": []
+        },
+        {
+          "severity": "warning",
+          "rule": "seampact/derive/bucket-limits",
+          "message": "The bucket 'perKind' sets no limit and window, so the server binds them.",
+          "fix": "Set limit and window on the bucket 'perKind', or bind them in the server.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/buckets/perKind"
+          },
+          "related": []
+        },
+        {
+          "severity": "warning",
+          "rule": "seampact/derive/bucket-limits",
+          "message": "The bucket 'perCc' sets no limit and window, so the server binds them.",
+          "fix": "Set limit and window on the bucket 'perCc', or bind them in the server.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/buckets/perCc"
+          },
+          "related": []
+        },
+        {
+          "severity": "warning",
+          "rule": "seampact/derive/bucket-limits",
+          "message": "The bucket 'perReplyTo' sets no limit and window, so the server binds them.",
+          "fix": "Set limit and window on the bucket 'perReplyTo', or bind them in the server.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/buckets/perReplyTo"
+          },
+          "related": []
+        },
+        {
+          "severity": "warning",
+          "rule": "seampact/derive/bucket-limits",
+          "message": "The bucket 'perSecret' sets no limit and window, so the server binds them.",
+          "fix": "Set limit and window on the bucket 'perSecret', or bind them in the server.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/buckets/perSecret"
+          },
+          "related": []
+        },
+        {
+          "severity": "warning",
+          "rule": "seampact/derive/bucket-limits",
+          "message": "The bucket 'perSubject' sets no limit and window, so the server binds them.",
+          "fix": "Set limit and window on the bucket 'perSubject', or bind them in the server.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/buckets/perSubject"
+          },
+          "related": []
+        },
+        {
+          "severity": "warning",
+          "rule": "seampact/derive/bucket-limits",
+          "message": "The bucket 'perToken' sets no limit and window, so the server binds them.",
+          "fix": "Set limit and window on the bucket 'perToken', or bind them in the server.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/buckets/perToken"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/derive/error-redefined",
+          "message": "error code 'tasks.locked' is declared again with a different definition",
+          "fix": "attach the code with {} or { example } here, or give one of the two declarations another code",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/boards/errors/tasks.locked"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/tasks/errors/tasks.locked"
+              },
+              "message": "'tasks.locked' is first declared here"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

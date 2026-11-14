@@ -1,0 +1,12 @@
+api: { name: t, version: 1 }
+rules:
+  fresh: { proof: { in: header, name: X-Ticket, schema: Labels } }
+  signed: { proof: { in: body, name: ticket, schema: Labels } }
+schemas:
+  Labels: { type: object, additionalProperties: { type: string } }
+surfaces:
+  app:
+    routes:
+      search:
+        method: get
+        query: { labels?: Labels }

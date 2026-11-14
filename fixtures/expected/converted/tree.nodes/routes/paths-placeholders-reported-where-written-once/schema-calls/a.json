@@ -1,0 +1,14 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/orgs/routes/pair/pathParams/key",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  }
+]

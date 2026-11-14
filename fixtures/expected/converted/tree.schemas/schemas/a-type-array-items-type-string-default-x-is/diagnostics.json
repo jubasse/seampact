@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/mark-position",
+          "message": "'default' sits on an optional property or an optional query field",
+          "fix": "remove 'default' here",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/A/items/default"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

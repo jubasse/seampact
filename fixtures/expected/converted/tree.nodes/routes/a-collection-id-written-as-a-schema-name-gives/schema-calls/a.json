@@ -1,0 +1,46 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/tasks/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TaskKey"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/tasks/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Task"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/notes/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TaskKey"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/notes/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Note"
+    }
+  }
+]

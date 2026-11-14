@@ -1,0 +1,61 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "tasks",
+      "diagnostics": []
+    },
+    {
+      "api": "tasksService",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/derive/relay-declaration",
+          "message": "the error 'tasks.locked' that tasks.getTask answers differs from the one this api declares",
+          "fix": "declare it once in a shared file both apis load, or rename one of them",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/internal/routes/getTask/relays"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/errors/tasks.locked"
+              },
+              "message": "this api's error 'tasks.locked'"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "api": "tasksServiceWrites",
+      "diagnostics": []
+    },
+    {
+      "api": "tasksDevices",
+      "diagnostics": []
+    },
+    {
+      "api": "tasksOptionalAuth",
+      "diagnostics": []
+    },
+    {
+      "api": "tasksAbsoluteUrls",
+      "diagnostics": []
+    },
+    {
+      "api": "tasksResponses",
+      "diagnostics": []
+    },
+    {
+      "api": "tasksPaging",
+      "diagnostics": []
+    },
+    {
+      "api": "tasksSplitSort",
+      "diagnostics": []
+    }
+  ]
+}

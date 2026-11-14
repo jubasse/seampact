@@ -1,0 +1,9 @@
+
+api: { name: audit, version: 3, kind: product }
+conventions: { pathVersion: prefix, pathCase: snake }
+surfaces:
+  app:
+    prefix: /v2
+    routes:
+      auditLog: { method: get }
+      byDay: { method: get, path: 'days/{day}', pathParams: { day: { type: string } } }

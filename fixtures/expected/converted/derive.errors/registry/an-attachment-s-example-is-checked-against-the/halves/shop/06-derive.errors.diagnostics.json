@@ -1,0 +1,24 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/derive/error-example",
+    "message": "the example of error 'shop.counted' does not fit its params: 'three' is not a number",
+    "fix": "correct the example to fit the params",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/ping/errors/shop.counted/example/count"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/derive/error-example",
+    "message": "error 'shop.plain' has an example but no params for it to show",
+    "fix": "declare the params, or remove the example",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/ping/errors/shop.plain/example"
+    },
+    "related": []
+  }
+]

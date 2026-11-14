@@ -1,0 +1,116 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/bucket-key",
+    "message": "bucket 'perUrgency' counts body.urgent on route 'send', whose input field 'urgent' is no string or integer",
+    "fix": "count a string or integer field of the input",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/send/requires/0"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/buckets/perUrgency/key/0"
+        },
+        "message": "the key is declared here"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/bucket-key",
+    "message": "bucket 'perSubject' counts body.subject on route 'send', whose input has no field 'subject'",
+    "fix": "count a field the input declares, or require the bucket on a route whose input has it",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/send/requires/1"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/buckets/perSubject/key/0"
+        },
+        "message": "the key is declared here"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/bucket-key",
+    "message": "bucket 'perKind' counts body.kind on route 'send', whose input field 'kind' is no string or integer",
+    "fix": "count a string or integer field of the input",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/send/requires/2"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/buckets/perKind/key/0"
+        },
+        "message": "the key is declared here"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/bucket-key",
+    "message": "bucket 'perUser' counts principal.userId on route 'status', a public route, where the principal may be null",
+    "fix": "count the bucket by a source every caller has (address, a body field), or require it on an identified route",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/status/requires/0"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/buckets/perUser/key/0"
+        },
+        "message": "the key is declared here"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/bucket-key",
+    "message": "bucket 'perUser' counts principal.userId on route 'inbox', an optional-auth route, where the principal may be null",
+    "fix": "count the bucket by a source every caller has (address, a body field), or require it on an identified route",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/inbox/requires/0"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/buckets/perUser/key/0"
+        },
+        "message": "the key is declared here"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/bucket-key",
+    "message": "bucket 'perRecipient' counts body.to on route 'ping', whose input has no field 'to'",
+    "fix": "count a field the input declares, or require the bucket on a route whose input has it",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/ping/requires/0"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/buckets/perRecipient/key/0"
+        },
+        "message": "the key is declared here"
+      }
+    ]
+  }
+]

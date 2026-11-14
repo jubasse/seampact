@@ -1,0 +1,16 @@
+
+api: { name: uploads, version: 1, kind: product }
+conventions:
+  batch: { bodyLimit: 99999999999999999999MiB }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      attach:
+        method: post
+        inputMedia: multipart
+        bodyLimit: 99999999999999999999MiB
+        input:
+          type: object
+          properties:
+            file: { file: { media: [image/png], maxSize: 2MiB } }

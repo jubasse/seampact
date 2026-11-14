@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/scope-nesting",
+    "message": "scope 'project' is within 'org', which is not entered at this node or an ancestor",
+    "fix": "enter 'org' at this node or an ancestor",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/ping/scopes/project"
+    },
+    "related": []
+  }
+]

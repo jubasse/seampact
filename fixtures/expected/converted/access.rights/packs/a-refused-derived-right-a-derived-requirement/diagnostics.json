@@ -1,0 +1,67 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "shop",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/right-pattern",
+          "message": "right 'items:get' does not match conventions.rights.pattern '^[a-z]+\\.[a-z]+$'",
+          "fix": "rename the right to match the pattern, or change the pattern",
+          "origin": {
+            "layer": "pack:extra",
+            "pointer": "/derive/0/declareRight"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/conventions/rights/pattern"
+              },
+              "message": "the pattern is set here"
+            }
+          ]
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/requirement-twice",
+          "message": "the route requires right 'shop.audit' twice with equal params",
+          "fix": "remove one of the two requirements",
+          "origin": {
+            "layer": "pack:extra",
+            "pointer": "/derive/2/require"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "pack:extra",
+                "pointer": "/derive/1/require"
+              },
+              "message": "first required here"
+            }
+          ]
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/guest-right",
+          "message": "right 'things.view' is required on public route 'getThing', where an anonymous caller reaches it, and the right has no 'guest' reason",
+          "fix": "narrow the entry's 'select' to identified routes, or declare the right in 'rights' with a 'guest' reason",
+          "origin": {
+            "layer": "pack:extra",
+            "pointer": "/derive/3/require"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/open/access"
+              },
+              "message": "the route's access is set here"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

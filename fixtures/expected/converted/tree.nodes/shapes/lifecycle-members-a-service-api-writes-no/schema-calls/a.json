@@ -1,0 +1,26 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/internal/routes/ping/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/internal/routes/pong/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  }
+]

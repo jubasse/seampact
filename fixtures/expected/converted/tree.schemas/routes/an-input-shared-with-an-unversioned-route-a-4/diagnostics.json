@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/concurrency-field",
+          "message": "the item has no property 'revision' to compare the version with",
+          "fix": "name a property of the item schema in 'field'",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/tasks/concurrency/field"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

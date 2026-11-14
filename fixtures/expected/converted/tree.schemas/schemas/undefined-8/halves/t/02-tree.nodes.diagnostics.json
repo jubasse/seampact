@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/id-property",
+    "message": "The item Item of the collection items has no property itemId to hold the member id.",
+    "fix": "Set idProperty to the item property that holds the id, or add that property to the item.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/items/id/itemId"
+    },
+    "related": []
+  }
+]

@@ -1,0 +1,106 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/derive/cache-sensitive-elsewhere",
+    "message": "conventions.cache.sensitiveElsewhere is refuse, so no route may answer the sensitive keys of map 'TokenTable' in a 200 response",
+    "fix": "Answer the value in a property of the body, drop its sensitive mark, or set conventions.cache.sensitiveElsewhere: noStore.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/TokenTable"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/table"
+        },
+        "message": "a route it reaches"
+      },
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/conventions/cache/sensitiveElsewhere"
+        },
+        "message": "the convention"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/derive/cache-sensitive-elsewhere",
+    "message": "conventions.cache.sensitiveElsewhere is refuse, so no route may answer a sensitive value as the body of a 200 response",
+    "fix": "Answer the value in a property of the body, drop its sensitive mark, or set conventions.cache.sensitiveElsewhere: noStore.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/token/output"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/token"
+        },
+        "message": "a route it reaches"
+      },
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/conventions/cache/sensitiveElsewhere"
+        },
+        "message": "the convention"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/derive/cache-sensitive-elsewhere",
+    "message": "conventions.cache.sensitiveElsewhere is refuse, so no route may answer a sensitive value as the body of a 200 response",
+    "fix": "Answer the value in a property of the body, drop its sensitive mark, or set conventions.cache.sensitiveElsewhere: noStore.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/tokens/output"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/tokens"
+        },
+        "message": "a route it reaches"
+      },
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/conventions/cache/sensitiveElsewhere"
+        },
+        "message": "the convention"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/derive/cache-sensitive-elsewhere",
+    "message": "conventions.cache.sensitiveElsewhere is refuse, so no route may answer the sensitive header 'X-Token' of a 200 response",
+    "fix": "Answer the value in a property of the body, drop its sensitive mark, or set conventions.cache.sensitiveElsewhere: noStore.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/signed/responses/200/headers/X-Token"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/signed"
+        },
+        "message": "a route it reaches"
+      },
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/conventions/cache/sensitiveElsewhere"
+        },
+        "message": "the convention"
+      }
+    ]
+  }
+]

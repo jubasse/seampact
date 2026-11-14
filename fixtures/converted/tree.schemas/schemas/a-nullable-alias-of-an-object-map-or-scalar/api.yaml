@@ -1,0 +1,19 @@
+api: { name: t, version: 1 }
+schemas:
+
+  Foo: { type: object, properties: { a: { type: string } } }
+  Labels: { type: object, additionalProperties: { type: string } }
+  Id: { type: string, format: uuid }
+  MaybeFoo: { $ref: Foo, nullable: true }
+  MaybeMaybeFoo: MaybeFoo
+  MaybeLabels: { $ref: Labels, nullable: true }
+  MaybeId: { $ref: Id, nullable: true }
+  Holder:
+    type: object
+    required: [foo, deep, labels, id]
+    properties:
+      foo: MaybeFoo
+      deep: MaybeMaybeFoo
+      labels: MaybeLabels
+      id: MaybeId
+      list: { type: array, items: MaybeFoo }

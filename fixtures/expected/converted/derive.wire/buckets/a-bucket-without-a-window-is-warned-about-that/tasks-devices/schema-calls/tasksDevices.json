@@ -1,0 +1,24 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/devices/routes/status/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "DeviceStatus"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/device/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "DevicePrincipal"
+    }
+  }
+]

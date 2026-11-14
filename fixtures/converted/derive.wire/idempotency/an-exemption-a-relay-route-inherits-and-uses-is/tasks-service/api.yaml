@@ -1,0 +1,16 @@
+# tasks-service/api.yaml
+api:
+  name: tasksService
+  version: 1
+  kind: service
+  caller: { identity: service, right: callerService }
+  maturity: provisional
+
+surfaces:
+  internal:
+    prefix: /internal/v{version}
+    idempotency: { exempt: "Relayed calls carry the public key." }
+    requires: [{ right: callerService, params: { allowed: [catalog] } }]
+    routes:
+      getTask: { relays: tasks.getTask }
+      assignTask: { relays: tasks.assignTask }

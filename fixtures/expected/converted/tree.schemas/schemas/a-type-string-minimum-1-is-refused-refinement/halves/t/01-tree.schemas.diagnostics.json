@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/refinement-type",
+    "message": "'minimum' does not apply to a string",
+    "fix": "remove 'minimum'",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/A/minimum"
+    },
+    "related": []
+  }
+]

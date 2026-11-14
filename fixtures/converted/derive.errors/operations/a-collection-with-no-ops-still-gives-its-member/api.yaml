@@ -1,0 +1,26 @@
+api: { name: shop, version: 1 }
+errors:
+  tasks.not_found: { status: 404 }
+schemas:
+  TaskId: { type: string }
+  CommentId: { type: string }
+  Task: { type: object, required: [taskId], properties: { taskId: TaskId } }
+  Comment: { type: object, required: [commentId], properties: { commentId: CommentId } }
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: The contract checks member.notFound only. }
+    routes:
+      tasks:
+        kind: collection
+        id: { taskId: TaskId }
+        item: Task
+        member:
+          errorRoles:
+            notFound: tasks.not_found
+          routes:
+            comments:
+              kind: collection
+              id: { commentId: CommentId }
+              item: Comment
+              ops: { list: { paging: none } }

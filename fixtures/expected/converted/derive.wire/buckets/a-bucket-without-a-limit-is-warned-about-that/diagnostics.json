@@ -1,0 +1,149 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "tasks",
+      "diagnostics": [
+        {
+          "severity": "warning",
+          "rule": "seampact/derive/bucket-limits",
+          "message": "The bucket 'write' sets no limit, so the server binds it.",
+          "fix": "Set limit on the bucket 'write', or bind it in the server.",
+          "origin": {
+            "layer": "shared",
+            "pointer": "/buckets/write"
+          },
+          "related": []
+        }
+      ]
+    },
+    {
+      "api": "tasksService",
+      "diagnostics": [
+        {
+          "severity": "warning",
+          "rule": "seampact/derive/bucket-limits",
+          "message": "The bucket 'write' sets no limit, so the server binds it.",
+          "fix": "Set limit on the bucket 'write', or bind it in the server.",
+          "origin": {
+            "layer": "shared",
+            "pointer": "/buckets/write"
+          },
+          "related": []
+        }
+      ]
+    },
+    {
+      "api": "tasksServiceWrites",
+      "diagnostics": [
+        {
+          "severity": "warning",
+          "rule": "seampact/derive/bucket-limits",
+          "message": "The bucket 'write' sets no limit, so the server binds it.",
+          "fix": "Set limit on the bucket 'write', or bind it in the server.",
+          "origin": {
+            "layer": "shared",
+            "pointer": "/buckets/write"
+          },
+          "related": []
+        }
+      ]
+    },
+    {
+      "api": "tasksDevices",
+      "diagnostics": [
+        {
+          "severity": "warning",
+          "rule": "seampact/derive/bucket-limits",
+          "message": "The bucket 'write' sets no limit, so the server binds it.",
+          "fix": "Set limit on the bucket 'write', or bind it in the server.",
+          "origin": {
+            "layer": "shared",
+            "pointer": "/buckets/write"
+          },
+          "related": []
+        }
+      ]
+    },
+    {
+      "api": "tasksOptionalAuth",
+      "diagnostics": [
+        {
+          "severity": "warning",
+          "rule": "seampact/derive/bucket-limits",
+          "message": "The bucket 'write' sets no limit, so the server binds it.",
+          "fix": "Set limit on the bucket 'write', or bind it in the server.",
+          "origin": {
+            "layer": "shared",
+            "pointer": "/buckets/write"
+          },
+          "related": []
+        }
+      ]
+    },
+    {
+      "api": "tasksAbsoluteUrls",
+      "diagnostics": [
+        {
+          "severity": "warning",
+          "rule": "seampact/derive/bucket-limits",
+          "message": "The bucket 'write' sets no limit, so the server binds it.",
+          "fix": "Set limit on the bucket 'write', or bind it in the server.",
+          "origin": {
+            "layer": "shared",
+            "pointer": "/buckets/write"
+          },
+          "related": []
+        }
+      ]
+    },
+    {
+      "api": "tasksResponses",
+      "diagnostics": [
+        {
+          "severity": "warning",
+          "rule": "seampact/derive/bucket-limits",
+          "message": "The bucket 'write' sets no limit, so the server binds it.",
+          "fix": "Set limit on the bucket 'write', or bind it in the server.",
+          "origin": {
+            "layer": "shared",
+            "pointer": "/buckets/write"
+          },
+          "related": []
+        }
+      ]
+    },
+    {
+      "api": "tasksPaging",
+      "diagnostics": [
+        {
+          "severity": "warning",
+          "rule": "seampact/derive/bucket-limits",
+          "message": "The bucket 'write' sets no limit, so the server binds it.",
+          "fix": "Set limit on the bucket 'write', or bind it in the server.",
+          "origin": {
+            "layer": "shared",
+            "pointer": "/buckets/write"
+          },
+          "related": []
+        }
+      ]
+    },
+    {
+      "api": "tasksSplitSort",
+      "diagnostics": [
+        {
+          "severity": "warning",
+          "rule": "seampact/derive/bucket-limits",
+          "message": "The bucket 'write' sets no limit, so the server binds it.",
+          "fix": "Set limit on the bucket 'write', or bind it in the server.",
+          "origin": {
+            "layer": "shared",
+            "pointer": "/buckets/write"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

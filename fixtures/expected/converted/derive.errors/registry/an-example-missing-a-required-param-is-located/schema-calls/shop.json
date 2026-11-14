@@ -1,0 +1,29 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/shop.counted/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ShopCountedParams"
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {},
+      {
+        "kind": "ref",
+        "schema": "ShopCountedParams"
+      }
+    ],
+    "answer": [
+      {
+        "pointer": "",
+        "message": "the required property 'count' is missing"
+      }
+    ]
+  }
+]

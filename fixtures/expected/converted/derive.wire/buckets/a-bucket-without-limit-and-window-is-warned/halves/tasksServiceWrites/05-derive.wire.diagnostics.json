@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "warning",
+    "rule": "seampact/derive/bucket-limits",
+    "message": "The bucket 'write' sets no limit and window, so the server binds them.",
+    "fix": "Set limit and window on the bucket 'write', or bind them in the server.",
+    "origin": {
+      "layer": "shared",
+      "pointer": "/buckets/write"
+    },
+    "related": []
+  }
+]

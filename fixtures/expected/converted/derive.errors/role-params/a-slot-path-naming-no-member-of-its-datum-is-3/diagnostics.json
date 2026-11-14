@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "shop",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/derive/role-param-type",
+          "message": "role 'sortKeyForbidden' reads $key.nothing, but $key has no member 'nothing'",
+          "fix": "read a member $key has, or the datum itself",
+          "origin": {
+            "layer": "api",
+            "pointer": "/conventions/errors/derived/sortKeyForbidden/params/detail"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

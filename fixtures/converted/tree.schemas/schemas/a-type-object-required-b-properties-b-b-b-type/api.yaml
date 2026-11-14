@@ -1,0 +1,4 @@
+api: { name: t, version: 1 }
+schemas:
+  A: { type: object, required: [b], properties: { b: B } }
+  B: { type: object, required: [a], properties: { a: A } }

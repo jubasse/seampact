@@ -1,0 +1,13 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/ping/errors/shop.slow/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ShopSlowParams"
+    }
+  }
+]

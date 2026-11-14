@@ -1,0 +1,54 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "a",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/op-input",
+          "message": "The create op createTask has no input; the item schema holds fields a client never sends.",
+          "fix": "Declare input on the create op.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/tasks/ops/0"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/op-input",
+          "message": "The update op updateTask has no input; the item schema holds fields a client never sends.",
+          "fix": "Declare input on the update op.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/tasks/ops/1"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/id-property",
+          "message": "The item Note of the collection notes has no property noteId to hold the member id.",
+          "fix": "Set idProperty to the item property that holds the id, or add that property to the item.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/notes/id/noteId"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/id-property",
+          "message": "The item Note of the collection memos has no property key to hold the member id.",
+          "fix": "Set idProperty to the item property that holds the id, or add that property to the item.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/memos/idProperty"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

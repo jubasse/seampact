@@ -1,0 +1,29 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "shop",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/field-right-subject",
+          "message": "output field 'Loose/cost' of route 'loose' is restricted to right 'items.cost', and the subject 'itemId' of its holder 'Loose' is optional: the subject must be a required field",
+          "fix": "give 'Loose' exactly one required property of the right's id schema, or restrict the field to another right",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/loose"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/Loose/properties/cost/restrictedTo"
+              },
+              "message": "the field is restricted to 'items.cost' here"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

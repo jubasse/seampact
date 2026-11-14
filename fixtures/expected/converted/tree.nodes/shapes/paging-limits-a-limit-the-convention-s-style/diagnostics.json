@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "a",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/paging-limit",
+          "message": "The paging style cursor of conventions.paging.default is used by lists, but its limit role needs a maxLimit.",
+          "fix": "Set maxLimit on the route's paging or in conventions.paging.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/conventions/paging/default"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

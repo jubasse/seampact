@@ -1,0 +1,54 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/deny-by-default",
+          "message": "route 'updateTask' has no identity and no public access",
+          "fix": "Set 'identity: <name>' on it or an ancestor, or 'access: { public: \"<reason>\" }'.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/tasks/ops/update"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/deny-by-default",
+          "message": "route 'deleteTask' has no identity and no public access",
+          "fix": "Set 'identity: <name>' on it or an ancestor, or 'access: { public: \"<reason>\" }'.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/tasks/ops/delete"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/deny-by-default",
+          "message": "route 'archiveTask' has no identity and no public access",
+          "fix": "Set 'identity: <name>' on it or an ancestor, or 'access: { public: \"<reason>\" }'.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/tasks/member/routes/archive"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/deny-by-default",
+          "message": "route 'noteTask' has no identity and no public access",
+          "fix": "Set 'identity: <name>' on it or an ancestor, or 'access: { public: \"<reason>\" }'.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/tasks/member/routes/note"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

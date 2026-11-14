@@ -1,0 +1,117 @@
+{
+  "schemes": {
+    "sig": {
+      "id": "sig",
+      "kind": "signature",
+      "name": "Sig",
+      "signature": {
+        "verify": "template",
+        "format": "v1={sig}",
+        "algorithm": "hmac-sha256",
+        "payload": "{rawBody}",
+        "encoding": "hex",
+        "key": {
+          "kind": "value",
+          "value": "hook"
+        }
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/sig"
+      }
+    }
+  },
+  "identities": {
+    "hook": {
+      "id": "hook",
+      "kind": "signed",
+      "signed": "sig",
+      "principal": {
+        "kind": "schema",
+        "schema": "Caller"
+      },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/hook"
+      }
+    }
+  },
+  "operations": {
+    "ping": {
+      "access": {
+        "kind": "identity",
+        "identity": "hook",
+        "schemes": [
+          "sig"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/hooks/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "pong": {
+      "access": {
+        "kind": "identity",
+        "identity": "hook",
+        "schemes": [
+          "sig"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/hooks/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "peek": {
+      "access": {
+        "kind": "identity",
+        "identity": "hook",
+        "schemes": [
+          "sig"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/hooks/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "drop": {
+      "access": {
+        "kind": "identity",
+        "identity": "hook",
+        "schemes": [
+          "sig"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/hooks/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    }
+  }
+}

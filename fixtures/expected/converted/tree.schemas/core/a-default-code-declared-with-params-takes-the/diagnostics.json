@@ -1,0 +1,32 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/derive/role-param-required",
+          "message": "role 'forbidden' may leave the required param 'field' of 'api.forbidden' without a value",
+          "fix": "fill it with a literal or a datum role 'forbidden' always supplies, or make it optional in 'api.forbidden'",
+          "origin": {
+            "layer": "api",
+            "pointer": "/errors/api.forbidden"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/derive/role-param-required",
+          "message": "role 'forbidden' may leave the required param 'pointer' of 'api.forbidden' without a value",
+          "fix": "fill it with a literal or a datum role 'forbidden' always supplies, or make it optional in 'api.forbidden'",
+          "origin": {
+            "layer": "api",
+            "pointer": "/errors/api.forbidden"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+api: { name: t, version: 1 }
+schemas:
+
+  A:
+    type: object
+    deprecated: true
+    properties:
+      b: { type: string, examples: [x] }
+      c: { $ref: B, examples: [{ d: why }] }
+      list: { type: array, items: { type: string, description: An item., examples: [z] } }
+      table: { type: object, additionalProperties: { type: integer, title: A count } }
+  B: { type: object, properties: { d: { type: string } } }
+  U: { discriminator: k, oneOf: { a: { $ref: B, description: A variant. } } }

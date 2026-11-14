@@ -1,0 +1,11 @@
+api: { name: shop, version: 1 }
+rights:
+  toString: { summary: Odd but valid. }
+  hasOwnProperty: {}
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: The contract checks catalogues only. }
+    requires: [{ right: valueOf }, { right: toString }]
+    routes:
+      ping: { method: get }

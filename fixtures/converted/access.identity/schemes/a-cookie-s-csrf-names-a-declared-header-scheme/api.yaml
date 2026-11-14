@@ -1,0 +1,6 @@
+api: { name: a, version: 1 }
+schemes:
+
+  session: { kind: cookie, name: s, csrf: missing }
+  other: { kind: cookie, name: o, csrf: bearer }
+  bearer: { kind: bearer }

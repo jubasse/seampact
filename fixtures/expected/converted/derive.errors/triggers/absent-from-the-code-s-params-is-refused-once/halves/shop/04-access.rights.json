@@ -1,0 +1,51 @@
+{
+  "rules": {
+    "slowDown": {
+      "id": "slowDown",
+      "takesBucket": true,
+      "errors": [
+        "shop.slow"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/slowDown"
+      }
+    }
+  },
+  "buckets": {
+    "writes": {
+      "id": "writes",
+      "key": [
+        {
+          "in": "address"
+        }
+      ],
+      "limit": 60,
+      "windowMs": 60000,
+      "origin": {
+        "layer": "api",
+        "pointer": "/buckets/writes"
+      }
+    }
+  },
+  "operations": {
+    "ping": {
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "slowDown",
+          "entry": "writeLimit",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/ping/requires/0"
+          },
+          "bucket": "writes"
+        }
+      ],
+      "fieldRights": []
+    }
+  }
+}

@@ -1,0 +1,134 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/notes/ops/update/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Note"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/notes/id/noteId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/notes/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Note"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/notes/member/routes/tag/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "array",
+      "items": {
+        "kind": "scalar",
+        "type": "string",
+        "refinements": {}
+      }
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/user/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "UserPrincipal"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rules/recentAuth/proof/schema",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rules/numbered/proof/schema",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "integer",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rules/worded/proof/schema",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rules/otp/proof/schema",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rules/otpAgain/proof/schema",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rules/otpNumber/proof/schema",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "integer",
+      "refinements": {}
+    }
+  }
+]

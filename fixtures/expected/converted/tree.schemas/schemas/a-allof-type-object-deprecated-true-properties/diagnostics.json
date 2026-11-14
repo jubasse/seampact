@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/annotation-position",
+          "message": "'deprecated' on a member of 'allOf' is not kept by the contract model",
+          "fix": "remove 'deprecated' here; mark the property that holds this schema instead",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/A/allOf/0/deprecated"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

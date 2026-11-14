@@ -1,0 +1,68 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/deny-by-default",
+    "message": "route 'notes' has no identity and no public access",
+    "fix": "Set 'identity: <name>' on it or an ancestor, or 'access: { public: \"<reason>\" }'.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/notes"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/deny-by-default",
+    "message": "route 'recent' has no identity and no public access",
+    "fix": "Set 'identity: <name>' on it or an ancestor, or 'access: { public: \"<reason>\" }'.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/recent"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/deny-by-default",
+    "message": "route 'sized' has no identity and no public access",
+    "fix": "Set 'identity: <name>' on it or an ancestor, or 'access: { public: \"<reason>\" }'.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/sized"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/deny-by-default",
+    "message": "route 'everything' has no identity and no public access",
+    "fix": "Set 'identity: <name>' on it or an ancestor, or 'access: { public: \"<reason>\" }'.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/everything"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/deny-by-default",
+    "message": "route 'changes' has no identity and no public access",
+    "fix": "Set 'identity: <name>' on it or an ancestor, or 'access: { public: \"<reason>\" }'.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/changes"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/deny-by-default",
+    "message": "route 'instants' has no identity and no public access",
+    "fix": "Set 'identity: <name>' on it or an ancestor, or 'access: { public: \"<reason>\" }'.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/instants"
+    },
+    "related": []
+  }
+]

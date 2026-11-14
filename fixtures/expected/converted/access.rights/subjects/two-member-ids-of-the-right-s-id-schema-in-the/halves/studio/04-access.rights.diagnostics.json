@@ -1,0 +1,28 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/requirement-subject",
+    "message": "ambiguous default subject: right 'docs.edit' on route 'touchFrom' could read member id 'fromId' or 'toId', each of its id schema",
+    "fix": "write the requirement's 'subject', naming one of the member ids",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/links/member/routes/touch/requires/0"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/links/id/fromId"
+        },
+        "message": "member id 'fromId' has the right's id schema"
+      },
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/links/id/toId"
+        },
+        "message": "member id 'toId' has the right's id schema"
+      }
+    ]
+  }
+]

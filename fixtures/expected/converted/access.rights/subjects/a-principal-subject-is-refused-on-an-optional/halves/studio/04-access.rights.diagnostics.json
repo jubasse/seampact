@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/requirement-subject",
+    "message": "the subject principal.profile.docId of right 'docs.read' reads the principal, which is null for an anonymous caller of optional-auth route 'reader'",
+    "fix": "read the subject from a request value, or require the right on an identified route",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/reader/requires/0/subject"
+    },
+    "related": []
+  }
+]

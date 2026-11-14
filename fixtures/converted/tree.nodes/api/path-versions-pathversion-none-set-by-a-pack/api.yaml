@@ -1,0 +1,5 @@
+
+api: { name: audit, version: '2024-06-20', kind: product }
+packs: [./unversioned.yaml]
+surfaces:
+  app: { prefix: /audit, routes: { ping: { method: get } } }

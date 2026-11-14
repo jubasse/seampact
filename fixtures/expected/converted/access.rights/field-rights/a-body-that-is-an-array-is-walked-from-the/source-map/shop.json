@@ -1,0 +1,110 @@
+{
+  "irRevision": 6,
+  "locations": {
+    "api#/api": {
+      "column": 1,
+      "endColumn": 32,
+      "endLine": 1,
+      "file": "api.yaml",
+      "line": 1
+    },
+    "api#/api/version": {
+      "column": 20,
+      "endColumn": 30,
+      "endLine": 1,
+      "file": "api.yaml",
+      "line": 1
+    },
+    "api#/identities/clerk": {
+      "column": 3,
+      "endColumn": 76,
+      "endLine": 5,
+      "file": "api.yaml",
+      "line": 5
+    },
+    "api#/rights/items.cost": {
+      "column": 3,
+      "endColumn": 58,
+      "endLine": 17,
+      "file": "api.yaml",
+      "line": 17
+    },
+    "api#/schemas/Clerk": {
+      "column": 3,
+      "endColumn": 90,
+      "endLine": 9,
+      "file": "api.yaml",
+      "line": 9
+    },
+    "api#/schemas/Clerk/properties/clerkId": {
+      "column": 61,
+      "endColumn": 86,
+      "endLine": 9,
+      "file": "api.yaml",
+      "line": 9
+    },
+    "api#/schemas/Item": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 14,
+      "file": "api.yaml",
+      "line": 10
+    },
+    "api#/schemas/Item/properties/cost": {
+      "column": 35,
+      "endColumn": 84,
+      "endLine": 13,
+      "file": "api.yaml",
+      "line": 13
+    },
+    "api#/schemas/Item/properties/cost/restrictedTo": {
+      "column": 58,
+      "endColumn": 82,
+      "endLine": 13,
+      "file": "api.yaml",
+      "line": 13
+    },
+    "api#/schemas/Item/properties/itemId": {
+      "column": 19,
+      "endColumn": 33,
+      "endLine": 13,
+      "file": "api.yaml",
+      "line": 13
+    },
+    "api#/schemes/bearer": {
+      "column": 3,
+      "endColumn": 27,
+      "endLine": 3,
+      "file": "api.yaml",
+      "line": 3
+    },
+    "api#/surfaces/app": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 32,
+      "file": "api.yaml",
+      "line": 22
+    },
+    "api#/surfaces/app/identity": {
+      "column": 5,
+      "endColumn": 20,
+      "endLine": 24,
+      "file": "api.yaml",
+      "line": 24
+    },
+    "api#/surfaces/app/routes/items/collection/routes/restock": {
+      "column": 13,
+      "endColumn": 76,
+      "endLine": 31,
+      "file": "api.yaml",
+      "line": 31
+    },
+    "api#/surfaces/app/routes/items/collection/routes/restock/output": {
+      "column": 38,
+      "endColumn": 74,
+      "endLine": 31,
+      "file": "api.yaml",
+      "line": 31
+    }
+  }
+}

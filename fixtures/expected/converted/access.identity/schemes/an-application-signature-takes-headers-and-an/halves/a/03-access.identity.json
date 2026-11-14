@@ -1,0 +1,37 @@
+{
+  "schemes": {
+    "slack": {
+      "id": "slack",
+      "kind": "signature",
+      "name": "X-Slack-Signature",
+      "signature": {
+        "verify": "application",
+        "headers": []
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/slack"
+      }
+    },
+    "keyed": {
+      "id": "keyed",
+      "kind": "signature",
+      "name": "X-Sig",
+      "signature": {
+        "verify": "application",
+        "headers": [],
+        "key": {
+          "kind": "from",
+          "from": {
+            "in": "header",
+            "name": "X-Key-Id"
+          }
+        }
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/keyed"
+      }
+    }
+  }
+}

@@ -1,0 +1,13 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/api.sort_key_forbidden/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ApiSortKeyForbiddenParams"
+    }
+  }
+]

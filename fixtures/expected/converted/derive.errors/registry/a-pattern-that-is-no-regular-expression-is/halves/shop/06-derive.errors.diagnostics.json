@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/derive/error-pattern",
+    "message": "conventions.errors.pattern '[' is no regular expression: 'SyntaxError: Invalid regular expression: /[/u: Unterminated character class'",
+    "fix": "write a regular expression every error code must match",
+    "origin": {
+      "layer": "api",
+      "pointer": "/conventions/errors/pattern"
+    },
+    "related": []
+  }
+]

@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/required-property",
+          "message": "'b' is listed in 'required', but a default fills an absent property",
+          "fix": "remove it from 'required'",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/A/properties/b"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

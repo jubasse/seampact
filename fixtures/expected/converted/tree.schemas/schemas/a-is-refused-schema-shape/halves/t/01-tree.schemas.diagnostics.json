@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-shape",
+    "message": "the schema has no shape: no type, reference, enum, oneOf, allOf, opaque or file",
+    "fix": "write a 'type' (with 'properties' for an object), a schema name, or '{ opaque: <reason> }'",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/A"
+    },
+    "related": []
+  }
+]

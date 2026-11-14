@@ -1,0 +1,42 @@
+api: { name: vault, version: 1 }
+schemes:
+  bearer: { kind: bearer }
+  apiKey: { kind: header, name: X-Api-Key }
+  session: { kind: cookie, name: sid, csrf: csrfToken }
+  csrfToken: { kind: header, name: X-Csrf-Token }
+  sig: { kind: signature, name: Sig, format: 'v1={sig}', algorithm: hmac-sha256, payload: '{rawBody}', encoding: hex, key: { value: hook } }
+identities:
+  user: { schemes: { read: [bearer], write: [bearer] }, principal: Caller }
+  keyed: { schemes: { read: [apiKey], write: [apiKey] }, principal: Caller }
+  browser: { schemes: { read: [session], write: [session] }, principal: Caller }
+  hook: { kind: signed, scheme: sig, principal: Caller }
+schemas:
+  Caller: { type: object, required: [account], properties: { account: { type: string } } }
+  Event: { type: object, required: [kind], properties: { kind: { type: string } } }
+rules:
+  otp: { proof: { in: header, name: X-Otp, schema: { type: string } } }
+  bearerProof: { proof: { in: header, name: authorization, schema: { type: string } } }
+  keyProof: { proof: { in: header, name: X-API-KEY, schema: { type: string } } }
+  csrfProof: { proof: { in: header, name: x-csrf-token, schema: { type: string } } }
+  sigProof: { proof: { in: header, name: sig, schema: { type: string } } }
+surfaces:
+  app:
+    identity: user
+    routes:
+      declared: { method: post, headers: { x-otp: { type: string } }, requires: [{ rule: otp }], responses: { 204: {} } }
+      bearer: { method: post, requires: [{ rule: bearerProof }], responses: { 204: {} } }
+  keys:
+    prefix: /keys
+    identity: keyed
+    routes:
+      keyed: { method: post, requires: [{ rule: keyProof }], responses: { 204: {} } }
+  web:
+    prefix: /web
+    identity: browser
+    routes:
+      browser: { method: post, requires: [{ rule: csrfProof }], responses: { 204: {} } }
+  hooks:
+    prefix: /hooks
+    identity: hook
+    routes:
+      hook: { method: post, input: Event, requires: [{ rule: sigProof }], responses: { 204: {} } }

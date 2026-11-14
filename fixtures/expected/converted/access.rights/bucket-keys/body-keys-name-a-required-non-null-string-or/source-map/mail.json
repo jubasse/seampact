@@ -1,0 +1,180 @@
+{
+  "irRevision": 6,
+  "locations": {
+    "api#/api": {
+      "column": 1,
+      "endColumn": 32,
+      "endLine": 1,
+      "file": "api.yaml",
+      "line": 1
+    },
+    "api#/api/version": {
+      "column": 20,
+      "endColumn": 30,
+      "endLine": 1,
+      "file": "api.yaml",
+      "line": 1
+    },
+    "api#/buckets/perCount": {
+      "column": 3,
+      "endColumn": 34,
+      "endLine": 27,
+      "file": "api.yaml",
+      "line": 27
+    },
+    "api#/buckets/perRecipient": {
+      "column": 3,
+      "endColumn": 44,
+      "endLine": 26,
+      "file": "api.yaml",
+      "line": 26
+    },
+    "api#/enums/Kind": {
+      "column": 3,
+      "endColumn": 65,
+      "endLine": 7,
+      "file": "api.yaml",
+      "line": 7
+    },
+    "api#/identities/user": {
+      "column": 3,
+      "endColumn": 83,
+      "endLine": 5,
+      "file": "api.yaml",
+      "line": 5
+    },
+    "api#/rules/throttle": {
+      "column": 3,
+      "endColumn": 29,
+      "endLine": 22,
+      "file": "api.yaml",
+      "line": 22
+    },
+    "api#/schemas/Message": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 20,
+      "file": "api.yaml",
+      "line": 9
+    },
+    "api#/schemas/Message/properties/cc": {
+      "column": 7,
+      "endColumn": 27,
+      "endLine": 17,
+      "file": "api.yaml",
+      "line": 17
+    },
+    "api#/schemas/Message/properties/count": {
+      "column": 7,
+      "endColumn": 31,
+      "endLine": 14,
+      "file": "api.yaml",
+      "line": 14
+    },
+    "api#/schemas/Message/properties/kind": {
+      "column": 7,
+      "endColumn": 27,
+      "endLine": 16,
+      "file": "api.yaml",
+      "line": 16
+    },
+    "api#/schemas/Message/properties/replyTo": {
+      "column": 7,
+      "endColumn": 48,
+      "endLine": 18,
+      "file": "api.yaml",
+      "line": 18
+    },
+    "api#/schemas/Message/properties/secret": {
+      "column": 7,
+      "endColumn": 48,
+      "endLine": 19,
+      "file": "api.yaml",
+      "line": 19
+    },
+    "api#/schemas/Message/properties/to": {
+      "column": 7,
+      "endColumn": 27,
+      "endLine": 13,
+      "file": "api.yaml",
+      "line": 13
+    },
+    "api#/schemas/Message/properties/urgent": {
+      "column": 7,
+      "endColumn": 32,
+      "endLine": 15,
+      "file": "api.yaml",
+      "line": 15
+    },
+    "api#/schemas/UserPrincipal": {
+      "column": 3,
+      "endColumn": 96,
+      "endLine": 20,
+      "file": "api.yaml",
+      "line": 20
+    },
+    "api#/schemas/UserPrincipal/properties/userId": {
+      "column": 68,
+      "endColumn": 92,
+      "endLine": 20,
+      "file": "api.yaml",
+      "line": 20
+    },
+    "api#/schemes/bearer": {
+      "column": 3,
+      "endColumn": 27,
+      "endLine": 3,
+      "file": "api.yaml",
+      "line": 3
+    },
+    "api#/surfaces/app": {
+      "column": 3,
+      "endColumn": 31,
+      "endLine": 46,
+      "file": "api.yaml",
+      "line": 36
+    },
+    "api#/surfaces/app/identity": {
+      "column": 5,
+      "endColumn": 19,
+      "endLine": 38,
+      "file": "api.yaml",
+      "line": 38
+    },
+    "api#/surfaces/app/routes/send": {
+      "column": 7,
+      "endColumn": 31,
+      "endLine": 46,
+      "file": "api.yaml",
+      "line": 40
+    },
+    "api#/surfaces/app/routes/send/input": {
+      "column": 9,
+      "endColumn": 23,
+      "endLine": 42,
+      "file": "api.yaml",
+      "line": 42
+    },
+    "api#/surfaces/app/routes/send/requires/0": {
+      "column": 13,
+      "endColumn": 53,
+      "endLine": 44,
+      "file": "api.yaml",
+      "line": 44
+    },
+    "api#/surfaces/app/routes/send/requires/1": {
+      "column": 13,
+      "endColumn": 49,
+      "endLine": 45,
+      "file": "api.yaml",
+      "line": 45
+    },
+    "api#/surfaces/app/routes/send/responses/204": {
+      "column": 22,
+      "endColumn": 29,
+      "endLine": 46,
+      "file": "api.yaml",
+      "line": 46
+    }
+  }
+}

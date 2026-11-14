@@ -1,0 +1,8 @@
+api: { name: shop, version: 1 }
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: The contract checks role bindings only. }
+    errorRoles: { forbidden: { code: shop.denied } }
+    routes:
+      ping: { method: get }

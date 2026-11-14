@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/union-header",
+          "message": "a union tagged by a request header is only allowed as a route's whole input",
+          "fix": "tag the union by a body property, or use it as the route's 'input'",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/B/properties/h"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

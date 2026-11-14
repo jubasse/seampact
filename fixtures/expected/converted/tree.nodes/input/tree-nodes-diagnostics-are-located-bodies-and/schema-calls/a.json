@@ -1,0 +1,14 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/tasks/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  }
+]

@@ -1,0 +1,20 @@
+
+api: { name: a, version: 1, kind: product }
+
+pagings:
+  cursor:
+    request: { cursor: { query: cursor }, limit: { query: limit } }
+    response: { body: $items }
+conventions:
+  paging: { default: cursor, maxLimit: 50 }
+
+schemas:
+  TaskId: { type: string }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      tasks: { kind: collection, id: { taskId: TaskId }, item: TaskId, ops: [list] }
+      listTasks: { method: get }
+      archive: { method: post, operationId: list_tasks }
+      logs: { kind: collection, ops: { create: { input: TaskId } } }

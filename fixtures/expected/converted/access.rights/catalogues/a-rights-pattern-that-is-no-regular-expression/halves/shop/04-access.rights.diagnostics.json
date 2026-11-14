@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/right-pattern",
+    "message": "conventions.rights.pattern '(' is no regular expression: SyntaxError: Invalid regular expression: /(/u: Unterminated group",
+    "fix": "write a regular expression every right name must match",
+    "origin": {
+      "layer": "api",
+      "pointer": "/conventions/rights/pattern"
+    },
+    "related": []
+  }
+]

@@ -1,0 +1,3 @@
+
+pack: { name: unversioned, version: 1.0.0, extends: [] }
+conventions: { pathVersion: none }

@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/object-empty",
+          "message": "an object needs at least one property (only a union variant may hold its tag alone)",
+          "fix": "add a property, or write '{ opaque: <reason> }' for a free-form value",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/A"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

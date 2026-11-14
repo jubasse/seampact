@@ -1,0 +1,3 @@
+api: { name: a, version: 1 }
+headers:
+  surface: { name: X-Surface, in: request, semantic: actorSurface, schema: { type: string } }

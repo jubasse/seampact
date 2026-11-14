@@ -1,0 +1,37 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/shop.invalid/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ShopInvalidParams"
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      "a",
+      {
+        "kind": "scalar",
+        "type": "string",
+        "refinements": {}
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      "b",
+      {
+        "kind": "scalar",
+        "type": "string",
+        "refinements": {}
+      }
+    ],
+    "answer": []
+  }
+]

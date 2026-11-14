@@ -1,0 +1,29 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/name-collision",
+          "message": "the name 'RParams' this schema derives is already the name of another schema",
+          "fix": "rename the schema, or the right, rule or error",
+          "origin": {
+            "layer": "api",
+            "pointer": "/rights/r/params"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/RParams"
+              },
+              "message": "'RParams' is named here"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

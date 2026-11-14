@@ -1,0 +1,21 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/name-collision",
+    "message": "the name 'OrderAddress' this schema derives gives the same identifier as the schema 'ORDERAddress'",
+    "fix": "rename the schema or the property",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Order/properties/address"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/schemas/ORDERAddress"
+        },
+        "message": "'ORDERAddress' is named here"
+      }
+    ]
+  }
+]

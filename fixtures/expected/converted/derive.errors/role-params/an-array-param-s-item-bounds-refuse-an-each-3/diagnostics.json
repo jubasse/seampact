@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "shop",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/derive/role-param-type",
+          "message": "role 'schemaInvalid' fills the param 'tags' of 'shop.invalid' with an array, but it may hold more items than the param's maxItems 1",
+          "fix": "fill 'tags' with a value its type provably takes, or change the param's type in 'shop.invalid'",
+          "origin": {
+            "layer": "api",
+            "pointer": "/conventions/errors/derived/schemaInvalid/params/tags"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

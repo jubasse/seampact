@@ -1,0 +1,89 @@
+{
+  "irRevision": 6,
+  "locations": {
+    "api#/api": {
+      "column": 1,
+      "endColumn": 32,
+      "endLine": 1,
+      "file": "api.yaml",
+      "line": 1
+    },
+    "api#/api/version": {
+      "column": 20,
+      "endColumn": 30,
+      "endLine": 1,
+      "file": "api.yaml",
+      "line": 1
+    },
+    "api#/conventions/access/guestRule": {
+      "column": 26,
+      "endColumn": 42,
+      "endLine": 20,
+      "file": "api.yaml",
+      "line": 20
+    },
+    "api#/identities/user": {
+      "column": 3,
+      "endColumn": 83,
+      "endLine": 5,
+      "file": "api.yaml",
+      "line": 5
+    },
+    "api#/rights/shop.open": {
+      "column": 3,
+      "endColumn": 16,
+      "endLine": 9,
+      "file": "api.yaml",
+      "line": 9
+    },
+    "api#/schemas/UserPrincipal": {
+      "column": 3,
+      "endColumn": 96,
+      "endLine": 7,
+      "file": "api.yaml",
+      "line": 7
+    },
+    "api#/schemas/UserPrincipal/properties/userId": {
+      "column": 68,
+      "endColumn": 92,
+      "endLine": 7,
+      "file": "api.yaml",
+      "line": 7
+    },
+    "api#/schemes/bearer": {
+      "column": 3,
+      "endColumn": 27,
+      "endLine": 3,
+      "file": "api.yaml",
+      "line": 3
+    },
+    "api#/surfaces/app": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 29,
+      "file": "api.yaml",
+      "line": 22
+    },
+    "api#/surfaces/app/access": {
+      "column": 5,
+      "endColumn": 42,
+      "endLine": 25,
+      "file": "api.yaml",
+      "line": 25
+    },
+    "api#/surfaces/app/requires/0": {
+      "column": 16,
+      "endColumn": 36,
+      "endLine": 26,
+      "file": "api.yaml",
+      "line": 26
+    },
+    "api#/surfaces/app/routes/first": {
+      "column": 7,
+      "endColumn": 29,
+      "endLine": 28,
+      "file": "api.yaml",
+      "line": 28
+    }
+  }
+}

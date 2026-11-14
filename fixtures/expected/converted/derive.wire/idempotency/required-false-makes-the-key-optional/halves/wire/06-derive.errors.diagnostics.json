@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/derive/error-nature",
+    "message": "error 'api.rights_version_stale' has nature 'conflict', which is neither a base nature nor a declared nature; the allowed values are refused, unavailable, failed",
+    "fix": "use a base nature or declare the nature in 'natures'",
+    "origin": {
+      "layer": "api",
+      "pointer": "/errors/api.rights_version_stale/nature"
+    },
+    "related": []
+  }
+]

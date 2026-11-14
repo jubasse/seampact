@@ -1,0 +1,13 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/tasks/errors/tasks.locked/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TasksLockedParams"
+    }
+  }
+]

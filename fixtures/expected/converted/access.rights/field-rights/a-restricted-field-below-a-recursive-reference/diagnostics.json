@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "shop",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/field-right-recursive",
+          "message": "schema 'Comment' holds a restricted field and references itself below 'Comment/replies/*', so route 'thread' would have field rights at pointers without end",
+          "fix": "restrict the field in a schema that is not recursive, or end the recursion before it",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Comment"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

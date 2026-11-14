@@ -1,0 +1,129 @@
+{
+  "operations": {
+    "listNotes": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "getNote": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "updateNote": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "deleteNote": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "listDocs": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "getDoc": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "updateDoc": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "listDrafts": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "updateDraft": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "deleteDraft": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "publishDraft": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "feed": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "board": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "history": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "plain": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "keys": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "rotateKey": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "neverKeys": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "legacy": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "retired": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "prices": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "beta": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "export": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "callback": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "moved": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    }
+  }
+}

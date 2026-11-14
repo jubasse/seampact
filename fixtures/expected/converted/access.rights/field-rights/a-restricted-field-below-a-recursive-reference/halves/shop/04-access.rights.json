@@ -1,0 +1,145 @@
+{
+  "rights": {
+    "items.cost": {
+      "id": "items.cost",
+      "subject": {
+        "kind": "resource",
+        "type": {
+          "segments": [
+            "item"
+          ],
+          "role": "schema"
+        },
+        "idSchema": {
+          "kind": "scalar",
+          "type": "string",
+          "format": "uuid",
+          "refinements": {}
+        }
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/items.cost"
+      }
+    },
+    "shop.role": {
+      "id": "shop.role",
+      "params": "ShopRoleParams",
+      "subject": {
+        "kind": "scope",
+        "scope": "shop"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/shop.role"
+      }
+    },
+    "audit": {
+      "id": "audit",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/audit"
+      }
+    },
+    "audit2": {
+      "id": "audit2",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/audit2"
+      }
+    }
+  },
+  "scopes": {
+    "shop": {
+      "id": "shop",
+      "idSchema": {
+        "kind": "scalar",
+        "type": "string",
+        "format": "uuid",
+        "refinements": {}
+      },
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/scopes/shop"
+      }
+    }
+  },
+  "operations": {
+    "thread": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": [
+        {
+          "schema": "Comment",
+          "pointer": "/secret",
+          "right": "audit",
+          "direction": "output",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/schemas/Comment/properties/secret/restrictedTo"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "threads": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": [
+        {
+          "schema": "Comment",
+          "pointer": "/secret",
+          "right": "audit",
+          "direction": "output",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/schemas/Comment/properties/secret/restrictedTo"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "tree": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    }
+  }
+}

@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/example-target",
+    "message": "The example made of ping targets the status 201, which the route does not declare.",
+    "fix": "Give the example one of status (a success with a body), request: true (on a route with input) or error.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/ping/examples/made"
+    },
+    "related": []
+  }
+]

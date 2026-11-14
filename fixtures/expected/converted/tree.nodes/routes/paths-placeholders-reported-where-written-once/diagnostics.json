@@ -1,0 +1,32 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "a",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/path-param",
+          "message": "The path /v1/orgs/{orgId}/show of showOrgs holds {orgId}, which no pathParams or id declares.",
+          "fix": "Declare orgId in pathParams.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/orgs/path"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/path-param",
+          "message": "The path /v1/orgs/{orgId}/pair/{key}/{key} of pairOrgs holds {key} twice, so one parameter would fill two segments.",
+          "fix": "Rename one of the two placeholders and declare it.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/orgs/routes/pair/path"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

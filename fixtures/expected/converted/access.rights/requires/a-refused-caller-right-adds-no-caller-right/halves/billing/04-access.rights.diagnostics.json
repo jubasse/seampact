@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/right-subject",
+    "message": "the subject of right 'callerService' names scope 'nowhere', which the scopes catalogue does not declare",
+    "fix": "declare the scope in 'scopes', or name a declared one",
+    "origin": {
+      "layer": "api",
+      "pointer": "/rights/callerService/subject/scope"
+    },
+    "related": []
+  }
+]

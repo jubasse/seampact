@@ -1,0 +1,16 @@
+api: { name: t, version: 1 }
+schemas:
+
+  Account:
+    type: object
+    typeName: acme:Account
+    title: An account
+    required: [name]
+    properties:
+      name: { type: string, description: The display name., deprecated: true }
+      class: { type: string, codeName: kind }
+      secret: Secret
+      note: { type: string, restrictedTo: { right: notes.read, params: { level: 2 }, input: strip } }
+      effort: { type: integer, restrictedTo: tasks.seeEffort }
+      locale: { type: string, default: en }
+  Secret: { type: string, sensitive: true }

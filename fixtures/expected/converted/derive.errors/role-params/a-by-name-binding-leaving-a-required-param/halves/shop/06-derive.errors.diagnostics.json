@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/derive/role-param-required",
+    "message": "role 'notFound' may leave the required param 'resource' of 'shop.missing' without a value",
+    "fix": "fill it with a literal or a datum role 'notFound' always supplies, or make it optional in 'shop.missing'",
+    "origin": {
+      "layer": "api",
+      "pointer": "/conventions/errors/derived/notFound"
+    },
+    "related": []
+  }
+]

@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/unknown-keys",
+          "message": "'unknownKeys' acts on input uses only, and every use here is output",
+          "fix": "remove 'unknownKeys' here; an output use strips unknown keys on emit",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Strict/unknownKeys"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

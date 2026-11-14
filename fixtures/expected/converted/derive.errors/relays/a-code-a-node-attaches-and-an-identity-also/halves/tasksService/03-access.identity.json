@@ -1,0 +1,220 @@
+{
+  "schemes": {
+    "sessionCookie": {
+      "id": "sessionCookie",
+      "kind": "cookie",
+      "name": "__Host-session",
+      "csrf": "csrfToken",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/schemes/sessionCookie"
+      }
+    },
+    "csrfToken": {
+      "id": "csrfToken",
+      "kind": "header",
+      "name": "X-Csrf-Token",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/schemes/csrfToken"
+      }
+    },
+    "bearer": {
+      "id": "bearer",
+      "kind": "bearer",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/schemes/bearer"
+      }
+    },
+    "internalToken": {
+      "id": "internalToken",
+      "kind": "bearer",
+      "bearer": {
+        "format": "jwt"
+      },
+      "origin": {
+        "layer": "shared",
+        "pointer": "/schemes/internalToken"
+      }
+    },
+    "stripeSignature": {
+      "id": "stripeSignature",
+      "kind": "signature",
+      "name": "Stripe-Signature",
+      "signature": {
+        "verify": "template",
+        "format": "t={ts},v1={sig}",
+        "algorithm": "hmac-sha256",
+        "payload": "{ts}.{rawBody}",
+        "encoding": "hex",
+        "toleranceMs": 300000,
+        "key": {
+          "kind": "value",
+          "value": "stripe"
+        }
+      },
+      "origin": {
+        "layer": "shared",
+        "pointer": "/schemes/stripeSignature"
+      }
+    }
+  },
+  "headers": {
+    "deadline": {
+      "id": "deadline",
+      "semantic": "deadline",
+      "name": "X-Deadline",
+      "in": "request",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/headers/deadline"
+      }
+    },
+    "trace": {
+      "id": "trace",
+      "semantic": "traceContext",
+      "name": "traceparent",
+      "in": "request",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/headers/trace"
+      }
+    },
+    "actorSurface": {
+      "id": "actorSurface",
+      "semantic": "actorSurface",
+      "name": "X-Actor-Surface",
+      "in": "request",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/headers/actorSurface"
+      }
+    }
+  },
+  "identities": {
+    "user": {
+      "id": "user",
+      "kind": "credential",
+      "schemes": {
+        "read": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "write": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "optionalRead": []
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "UserPrincipal"
+      },
+      "errors": [
+        "tasks.locked"
+      ],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/identities/user"
+      }
+    },
+    "service": {
+      "id": "service",
+      "kind": "credential",
+      "schemes": {
+        "read": [
+          "internalToken"
+        ],
+        "write": [
+          "internalToken"
+        ],
+        "optionalRead": []
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "ServicePrincipal"
+      },
+      "errors": [],
+      "headers": [
+        {
+          "header": "deadline",
+          "for": "all",
+          "required": true,
+          "origin": {
+            "layer": "shared",
+            "pointer": "/identities/service/headers/deadline"
+          }
+        },
+        {
+          "header": "trace",
+          "for": "all",
+          "required": false,
+          "origin": {
+            "layer": "shared",
+            "pointer": "/identities/service/headers/trace"
+          }
+        },
+        {
+          "header": "actorSurface",
+          "for": "writes",
+          "required": true,
+          "schema": {
+            "kind": "enum",
+            "enum": "Surface"
+          },
+          "origin": {
+            "layer": "shared",
+            "pointer": "/identities/service/headers/actorSurface"
+          }
+        }
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/identities/service"
+      }
+    },
+    "stripe": {
+      "id": "stripe",
+      "kind": "signed",
+      "signed": "stripeSignature",
+      "principal": {
+        "kind": "schema",
+        "schema": "WebhookCaller"
+      },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/identities/stripe"
+      }
+    }
+  },
+  "operations": {
+    "getTask": {
+      "access": {
+        "kind": "identity",
+        "identity": "service",
+        "schemes": [
+          "internalToken"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/caller/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    }
+  }
+}

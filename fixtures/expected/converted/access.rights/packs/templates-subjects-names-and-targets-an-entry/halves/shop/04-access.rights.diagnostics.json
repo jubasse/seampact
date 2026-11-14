@@ -1,0 +1,62 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/pack-template",
+    "message": "the template '{resource}.read' reads {resource}, and route 'health' belongs to no collection or single",
+    "fix": "narrow the entry's selector to routes of a collection or single, or drop {resource}",
+    "origin": {
+      "layer": "pack:odd",
+      "pointer": "/derive/0/require/right"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/requirement-target",
+    "message": "the requirement names right 'items.read', which the rights catalogue does not declare",
+    "fix": "declare the right in 'rights', or name a declared one",
+    "origin": {
+      "layer": "pack:odd",
+      "pointer": "/derive/0/require/right"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/pack-right",
+    "message": "right 'items.get' has a scope subject, and the entry derives another resource subject for route 'getItem'",
+    "fix": "give the right the subject the entry derives, or narrow the entry's selector",
+    "origin": {
+      "layer": "pack:odd",
+      "pointer": "/derive/1/declareRight"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/rights/items.get"
+        },
+        "message": "the right is declared here"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/right-pattern",
+    "message": "right 'items:list' does not match conventions.rights.pattern '^[a-z]+\\.[a-z]+$'",
+    "fix": "rename the right to match the pattern, or change the pattern",
+    "origin": {
+      "layer": "pack:odd",
+      "pointer": "/derive/3/declareRight"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/conventions/rights/pattern"
+        },
+        "message": "the pattern is set here"
+      }
+    ]
+  }
+]

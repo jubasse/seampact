@@ -1,0 +1,21 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/all-of-property",
+    "message": "the property 'x' is declared twice with different schemas",
+    "fix": "declare it once, or give both the same schema",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/A/allOf/1"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/schemas/A/allOf/0"
+        },
+        "message": "the other declaration is in this member"
+      }
+    ]
+  }
+]

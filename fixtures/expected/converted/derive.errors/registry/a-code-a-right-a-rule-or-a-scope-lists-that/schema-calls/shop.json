@@ -1,0 +1,14 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/scopes/org/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  }
+]

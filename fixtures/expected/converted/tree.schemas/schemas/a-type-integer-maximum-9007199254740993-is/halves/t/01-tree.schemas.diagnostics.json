@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/refinement-precision",
+    "message": "'maximum' is an integer beyond the safe range, whose written digits the contract reader cannot keep",
+    "fix": "write a bound between -(2^53 - 1) and 2^53 - 1",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/A/maximum"
+    },
+    "related": []
+  }
+]

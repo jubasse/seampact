@@ -1,0 +1,16 @@
+pack: { name: extra, version: 1.0.0, extends: [] }
+derive:
+  - entry: colons
+    select: { op: [get] }
+    declareRight: { name: '{resource}:{op}' }
+    require: { right: '{resource}:{op}' }
+  - entry: audits
+    select: { identity: [user] }
+    require: { right: shop.audit }
+  - entry: auditsAgain
+    select: { identity: [user] }
+    require: { right: shop.audit }
+  - entry: views
+    select: { op: [get] }
+    declareRight: { name: '{resource}.view' }
+    require: { right: '{resource}.view' }

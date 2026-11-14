@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/derive/role-param-type",
+    "message": "role 'schemaInvalid' writes the member 'in' into the param 'issues' of 'shop.invalid', whose type has no such member",
+    "fix": "write only members of the param's type, or add 'in' to it",
+    "origin": {
+      "layer": "api",
+      "pointer": "/conventions/errors/derived/schemaInvalid/params/issues/$as/$merge"
+    },
+    "related": []
+  }
+]

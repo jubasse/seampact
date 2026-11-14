@@ -1,0 +1,6 @@
+api: { name: t, version: 1 }
+enums:
+  A: { source: { enum: B } }
+  B: { source: { enum: A } }
+schemas:
+  S: { type: object, properties: { a: { enum: A } } }

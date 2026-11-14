@@ -1,0 +1,35 @@
+# tasks-devices/api.yaml
+api:
+  name: tasksDevices
+  version: 1
+  kind: product
+  maturity: provisional
+  summary: The status a paired wall display reads.
+
+schemes:
+  deviceToken: { kind: header, name: X-Device-Token }
+
+identities:
+  device:
+    schemes: { read: [deviceToken], write: [deviceToken] }
+    principal: DevicePrincipal
+
+schemas:
+  DeviceId: { type: string, format: uuid }
+  DevicePrincipal:
+    type: object
+    required: [deviceId]
+    properties: { deviceId: DeviceId }
+  DeviceStatus:
+    type: object
+    required: [deviceId]
+    properties: { deviceId: DeviceId }
+
+surfaces:
+  devices:
+    prefix: /devices/v{version}
+    identity: device
+    routes:
+      status:
+        method: get
+        output: DeviceStatus

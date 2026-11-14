@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/derive/role-param-type",
+    "message": "role 'schemaInvalid' fills the param 'issues' of 'shop.invalid' with $each over $issues, but it may hold fewer items than the param's minItems 1",
+    "fix": "fill 'issues' with a value its type provably takes, or change the param's type in 'shop.invalid'",
+    "origin": {
+      "layer": "api",
+      "pointer": "/conventions/errors/derived/schemaInvalid/params/issues"
+    },
+    "related": []
+  }
+]

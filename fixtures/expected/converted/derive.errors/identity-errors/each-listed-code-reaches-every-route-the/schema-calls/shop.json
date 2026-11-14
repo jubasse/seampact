@@ -1,0 +1,13 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/viewer/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Viewer"
+    }
+  }
+]

@@ -1,0 +1,205 @@
+{
+  "operations": {
+    "getTask": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/api/caller/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/internalToken"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Deadline",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.header",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/service/headers/deadline"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/headers/deadline"
+                }
+              ]
+            }
+          },
+          {
+            "name": "traceparent",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.header",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/service/headers/trace"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/headers/trace"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "deadlineHeader": "X-Deadline",
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "assignTask": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/api/caller/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/internalToken"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Deadline",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.header",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/service/headers/deadline"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/headers/deadline"
+                }
+              ]
+            }
+          },
+          {
+            "name": "traceparent",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.header",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/service/headers/trace"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/headers/trace"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Actor-Surface",
+            "type": {
+              "kind": "enum",
+              "enum": "Surface"
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.header",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/service/headers/actorSurface"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/headers/actorSurface"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "idempotency": {
+        "kind": "exempt",
+        "reason": "Relayed calls carry the public key.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/internal/idempotency"
+        }
+      },
+      "deadlineHeader": "X-Deadline",
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    }
+  },
+  "api": {
+    "wire": {
+      "int64": "string",
+      "outputEnums": "enum",
+      "urls": "relative"
+    }
+  }
+}

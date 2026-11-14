@@ -1,0 +1,120 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/shelf/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Shelf"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/shelf/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Shelf"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/shops/member/routes/shelf/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Shelf"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/shops/id/shopId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/shops/member/routes/shelf/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Shelf"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/clerk/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Clerk"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rights/items.cost/subject/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rights/shop.role/params",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ShopRoleParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/scopes/shop/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "level": "owner"
+      },
+      {
+        "kind": "ref",
+        "schema": "ShopRoleParams"
+      }
+    ],
+    "answer": []
+  }
+]

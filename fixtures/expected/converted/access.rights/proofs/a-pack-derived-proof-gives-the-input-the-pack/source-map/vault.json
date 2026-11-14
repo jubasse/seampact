@@ -1,0 +1,96 @@
+{
+  "irRevision": 6,
+  "locations": {
+    "api#/api": {
+      "column": 1,
+      "endColumn": 33,
+      "endLine": 1,
+      "file": "api.yaml",
+      "line": 1
+    },
+    "api#/api/version": {
+      "column": 21,
+      "endColumn": 31,
+      "endLine": 1,
+      "file": "api.yaml",
+      "line": 1
+    },
+    "api#/identities/user": {
+      "column": 3,
+      "endColumn": 83,
+      "endLine": 5,
+      "file": "api.yaml",
+      "line": 5
+    },
+    "api#/schemas/UserPrincipal": {
+      "column": 3,
+      "endColumn": 96,
+      "endLine": 12,
+      "file": "api.yaml",
+      "line": 12
+    },
+    "api#/schemas/UserPrincipal/properties/userId": {
+      "column": 68,
+      "endColumn": 92,
+      "endLine": 12,
+      "file": "api.yaml",
+      "line": 12
+    },
+    "api#/schemes/bearer": {
+      "column": 3,
+      "endColumn": 27,
+      "endLine": 3,
+      "file": "api.yaml",
+      "line": 3
+    },
+    "api#/surfaces/app": {
+      "column": 3,
+      "endColumn": 53,
+      "endLine": 26,
+      "file": "api.yaml",
+      "line": 22
+    },
+    "api#/surfaces/app/identity": {
+      "column": 5,
+      "endColumn": 19,
+      "endLine": 24,
+      "file": "api.yaml",
+      "line": 24
+    },
+    "api#/surfaces/app/routes/ping": {
+      "column": 7,
+      "endColumn": 53,
+      "endLine": 26,
+      "file": "api.yaml",
+      "line": 26
+    },
+    "api#/surfaces/app/routes/ping/responses/204": {
+      "column": 42,
+      "endColumn": 49,
+      "endLine": 26,
+      "file": "api.yaml",
+      "line": 26
+    },
+    "pack:step-up#/derive/0/require": {
+      "column": 5,
+      "endColumn": 30,
+      "endLine": 7,
+      "file": "pack.yaml",
+      "line": 7
+    },
+    "pack:step-up#/rules/stepUp": {
+      "column": 3,
+      "endColumn": 79,
+      "endLine": 3,
+      "file": "pack.yaml",
+      "line": 3
+    },
+    "pack:step-up#/rules/stepUp/proof": {
+      "column": 13,
+      "endColumn": 77,
+      "endLine": 3,
+      "file": "pack.yaml",
+      "line": 3
+    }
+  }
+}

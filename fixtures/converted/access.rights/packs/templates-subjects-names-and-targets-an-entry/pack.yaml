@@ -1,0 +1,14 @@
+pack: { name: odd, version: 1.0.0, extends: [] }
+derive:
+  - entry: reads
+    select: { access: [read] }
+    require: { right: '{resource}.read' }
+  - entry: members
+    select: { op: [get] }
+    declareRight: { name: '{resource}.{op}', subject: { member: resource } }
+  - entry: lists
+    select: { op: [list] }
+    declareRight: { name: '{resource}.{op}', subject: { collection: innermostScope } }
+  - entry: colons
+    select: { op: [list] }
+    declareRight: { name: '{resource}:{op}' }

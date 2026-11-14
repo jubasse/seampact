@@ -1,0 +1,75 @@
+{
+  "irRevision": 6,
+  "locations": {
+    "api#/api": {
+      "column": 1,
+      "endColumn": 33,
+      "endLine": 1,
+      "file": "api.yaml",
+      "line": 1
+    },
+    "api#/api/version": {
+      "column": 21,
+      "endColumn": 31,
+      "endLine": 1,
+      "file": "api.yaml",
+      "line": 1
+    },
+    "api#/schemas/Task": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 8,
+      "file": "api.yaml",
+      "line": 4
+    },
+    "api#/schemas/Task/properties/id": {
+      "column": 19,
+      "endColumn": 39,
+      "endLine": 6,
+      "file": "api.yaml",
+      "line": 6
+    },
+    "api#/schemas/Task/properties/title": {
+      "column": 41,
+      "endColumn": 64,
+      "endLine": 6,
+      "file": "api.yaml",
+      "line": 6
+    },
+    "api#/surfaces/app": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 18,
+      "file": "api.yaml",
+      "line": 9
+    },
+    "api#/surfaces/app/access": {
+      "column": 5,
+      "endColumn": 44,
+      "endLine": 10,
+      "file": "api.yaml",
+      "line": 10
+    },
+    "api#/surfaces/app/routes/tasks/id/taskId": {
+      "column": 15,
+      "endColumn": 39,
+      "endLine": 14,
+      "file": "api.yaml",
+      "line": 14
+    },
+    "api#/surfaces/app/routes/tasks/item": {
+      "column": 9,
+      "endColumn": 19,
+      "endLine": 16,
+      "file": "api.yaml",
+      "line": 16
+    },
+    "api#/surfaces/app/routes/tasks/ops/0": {
+      "column": 15,
+      "endColumn": 18,
+      "endLine": 17,
+      "file": "api.yaml",
+      "line": 17
+    }
+  }
+}

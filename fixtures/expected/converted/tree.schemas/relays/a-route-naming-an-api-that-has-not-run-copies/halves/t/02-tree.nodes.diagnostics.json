@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/relay-target",
+    "message": "The relay route getTask relays pub.getTask, but pub is neither an api of the workspace nor an import.",
+    "fix": "Name an api of the workspace, or add it to workspace.imports.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/internal/routes/getTask/relays"
+    },
+    "related": []
+  }
+]

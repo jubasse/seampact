@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "a",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/fields-schema",
+          "message": "The fields at /surfaces/app/routes/tasks/id name Missing, which is not an object schema, so it has no fields.",
+          "fix": "Name an object schema, or write the fields as a map.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/tasks/id"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

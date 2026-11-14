@@ -1,0 +1,63 @@
+{
+  "rights": {
+    "orgs.manage": {
+      "id": "orgs.manage",
+      "subject": {
+        "kind": "scope",
+        "scope": "org"
+      },
+      "errors": [
+        "shop.denied"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/orgs.manage"
+      }
+    }
+  },
+  "rules": {
+    "throttle": {
+      "id": "throttle",
+      "takesBucket": true,
+      "errors": [
+        "api.rate_limited",
+        "shop.slow_down"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/throttle"
+      }
+    }
+  },
+  "scopes": {
+    "org": {
+      "id": "org",
+      "idSchema": {
+        "kind": "scalar",
+        "type": "string",
+        "refinements": {}
+      },
+      "errors": [
+        "api.not_found",
+        "shop.not_member"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/scopes/org"
+      }
+    }
+  },
+  "operations": {
+    "ping": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    }
+  }
+}

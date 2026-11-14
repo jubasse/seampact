@@ -1,0 +1,32 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/paging-style",
+          "message": "The list listTasks names no paging style, and conventions.paging.default sets none.",
+          "fix": "Declare a paging style and name it, for example `pagings: { pages: { request: { page: { query: page }, limit: { query: limit } }, response: { body: { items: $items, meta: { page: $page, limit: $limit, total: $total } } } } }` with `paging: { pages: { maxLimit: 100 } }` on the list or `conventions: { paging: { default: pages, maxLimit: 100 } }`; or write `paging: none` to serve the whole list.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/tasks/ops/list"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/responses-output",
+          "message": "The route assignTask writes both responses and output; responses replaces output.",
+          "fix": "Move the output schema into a responses entry, or remove responses.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/tasks/member/routes/assign/output"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

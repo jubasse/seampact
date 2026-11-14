@@ -1,0 +1,8 @@
+api: { name: a, version: 1 }
+schemes:
+
+  session: { kind: cookie, name: "s;id" }
+  apiKey: { kind: header, name: "X-Key\r\nSet-Cookie: a" }
+  mapsKey: { kind: query, name: "api key" }
+  plain: { kind: header, name: X-Api-Key }
+  token: { kind: query, name: access_token }

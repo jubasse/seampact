@@ -1,0 +1,9 @@
+
+api: { name: a, version: 1, kind: product }
+schemas:
+  Note: { type: object, properties: { text: { type: string } } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      notes: { method: get, item: Note }

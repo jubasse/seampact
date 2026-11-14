@@ -1,0 +1,14 @@
+api: { name: t, version: 1 }
+schemas:
+  Push: { type: object, properties: { ref: { type: string } }, required: [ref] }
+  Ping: { type: object, properties: { zen: { type: string } }, required: [zen] }
+  Hook:
+    discriminator: { from: header.X-Kind }
+    oneOf: { push: Push, ping: Ping }
+  Upload: { type: object, properties: { content: { file: { media: [image/png] } } } }
+  Inner: { type: object, properties: { count: { type: integer } }, required: [count] }
+  Note:
+    type: object
+    properties:
+      body: { type: string, contentMediaType: application/json, contentSchema: Inner }
+  Maybe: { type: object, nullable: true, properties: { a: { type: string } }, examples: [null] }

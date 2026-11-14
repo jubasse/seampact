@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "shop",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/derive/role-code",
+          "message": "role 'forbidden' is bound to 'shop.denied', which no layer or node declares and which is no default code",
+          "fix": "declare 'shop.denied' in 'errors', or bind the role to a registered code",
+          "origin": {
+            "layer": "api",
+            "pointer": "/conventions/errors/derived/forbidden"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

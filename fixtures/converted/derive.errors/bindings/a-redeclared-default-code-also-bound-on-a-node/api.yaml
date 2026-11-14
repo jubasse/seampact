@@ -1,0 +1,10 @@
+api: { name: shop, version: 1 }
+errors:
+  api.sort_key_forbidden: { status: 403, params: { detail: { type: string } } }
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: The contract checks role bindings only. }
+    errorRoles: { sortKeyForbidden: api.sort_key_forbidden }
+    routes:
+      ping: { method: get }

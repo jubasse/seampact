@@ -1,0 +1,59 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/tasks/ops/update/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "UpdateTask"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/tasks/id/taskId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/tasks/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Task"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/tasks/member/routes/archive/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ArchiveTask"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/tasks/member/routes/note/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "NoteTaskInput"
+    }
+  }
+]

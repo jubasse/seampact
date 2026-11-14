@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "shop",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/derive/role-datum",
+          "message": "role 'rateLimited' requires the datum 'retryAfterMs', which no param of 'shop.slow_down' receives",
+          "fix": "add a param 'retryAfterMs' to 'shop.slow_down', or bind it with params: { retryAfterMs: $retryAfterMs }",
+          "origin": {
+            "layer": "api",
+            "pointer": "/conventions/errors/derived/rateLimited"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

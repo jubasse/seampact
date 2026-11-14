@@ -1,0 +1,21 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/derive/cache-freshness",
+    "message": "cache gives no freshness, so no Cache-Control can be derived from it",
+    "fix": "Write freshness: a family of conventions.cache.families, or never.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/docs/ops/get/cache"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/docs/ops/get"
+        },
+        "message": "a route it reaches"
+      }
+    ]
+  }
+]

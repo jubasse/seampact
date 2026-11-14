@@ -1,0 +1,82 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/tasks/ops/list/query/filter",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ListTasksQueryFilter"
+    }
+  },
+  {
+    "method": "queryWire",
+    "args": [
+      "/surfaces/app/routes/tasks/ops/list/query/filter"
+    ],
+    "answer": {
+      "kind": "object",
+      "style": "form",
+      "explode": true,
+      "brackets": false
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/tasks/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Task"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/tasks/member/routes/assign/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "AssignTaskInput"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/tasks/id/taskId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/tasks/member/routes/assign/headers/X-Context",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "AssignTaskHeadersXContext"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/tasks/member/routes/assign/responses/202/body",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "AssignTaskResponse202"
+    }
+  }
+]

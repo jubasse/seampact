@@ -1,0 +1,35 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/deny-by-default",
+    "message": "route 'search' has no identity and no public access",
+    "fix": "Set 'identity: <name>' on it or an ancestor, or 'access: { public: \"<reason>\" }'.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/search"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/deny-by-default",
+    "message": "route 'strict' has no identity and no public access",
+    "fix": "Set 'identity: <name>' on it or an ancestor, or 'access: { public: \"<reason>\" }'.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/strict"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/deny-by-default",
+    "message": "route 'homePages' has no identity and no public access",
+    "fix": "Set 'identity: <name>' on it or an ancestor, or 'access: { public: \"<reason>\" }'.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/pages/routes/home"
+    },
+    "related": []
+  }
+]

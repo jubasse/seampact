@@ -1,0 +1,15 @@
+
+api: { name: a, version: 1, kind: product }
+schemas:
+  Key: { type: string }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      orgs:
+        kind: single
+        path: 'orgs/{orgId}'
+        routes:
+          show: { method: get }
+          audit: { method: get }
+          pair: { method: get, path: 'pair/{key}/{key}', pathParams: { key: Key } }

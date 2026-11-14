@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-unknown",
+    "message": "no schema 'Missing' is declared",
+    "fix": "declare it under 'schemas', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/A/properties/b"
+    },
+    "related": []
+  }
+]

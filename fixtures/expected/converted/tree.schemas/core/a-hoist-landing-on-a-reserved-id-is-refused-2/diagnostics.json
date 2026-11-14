@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/schema-reserved",
+          "message": "the name 'ApiEmptyBody' is reserved for the empty body of a proof-only input",
+          "fix": "rename the schema or the property",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Api/properties/emptyBody"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/scalar-name",
+    "message": "the named format 'password' takes the name of what 'sensitive' emits, so one name would mean two checks",
+    "fix": "remove it and mark the field 'sensitive: true'",
+    "origin": {
+      "layer": "api",
+      "pointer": "/scalars/password"
+    },
+    "related": []
+  }
+]

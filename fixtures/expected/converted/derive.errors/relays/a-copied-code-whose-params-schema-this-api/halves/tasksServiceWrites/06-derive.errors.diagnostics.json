@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/derive/relay-declaration",
+    "message": "error 'tasks.locked', which tasks.createTask answers, has the params schema 'TasksLockedParams', which this api does not declare",
+    "fix": "declare 'TasksLockedParams' in a shared file both apis load",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/internalWrites/routes/createTask/relays"
+    },
+    "related": []
+  }
+]

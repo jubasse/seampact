@@ -1,0 +1,4 @@
+api: { name: t, version: 1 }
+schemas:
+  Box: { type: object, properties: { owner: Owner } }
+  Owner: { type: object, examples: [{ name: a, origin: south }], properties: { name: { type: string }, origin: { type: string } } }

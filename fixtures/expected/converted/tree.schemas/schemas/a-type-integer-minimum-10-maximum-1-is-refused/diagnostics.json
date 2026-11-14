@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/refinement-range",
+          "message": "no value fits the schema: 'minimum' 10 is above 'maximum' 1",
+          "fix": "lower the minimum or raise the maximum",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/A"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

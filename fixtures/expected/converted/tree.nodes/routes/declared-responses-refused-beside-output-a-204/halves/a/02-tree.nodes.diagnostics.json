@@ -1,0 +1,43 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/responses-output",
+    "message": "The route both writes both responses and output; responses replaces output.",
+    "fix": "Move the output schema into a responses entry, or remove responses.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/both/output"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/no-content-body",
+    "message": "The 204 response of empty has a body, which a 204 No Content never carries.",
+    "fix": "Answer the body with 200, or remove the body.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/empty/responses/204"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/param-unique",
+    "message": "The response header retry-after of twice is declared twice.",
+    "fix": "Remove one of the two declarations.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/twice/responses/202/headers/retry-after"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/twice/responses/202/headers/Retry-After"
+        },
+        "message": "the first declaration"
+      }
+    ]
+  }
+]

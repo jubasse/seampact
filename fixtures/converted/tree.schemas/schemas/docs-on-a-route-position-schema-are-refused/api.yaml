@@ -1,0 +1,9 @@
+api: { name: t, version: 1 }
+schemas:
+  Item: { type: object, properties: { id: { type: string } } }
+surfaces:
+  app:
+    routes:
+      inline:
+        method: post
+        output: { type: array, items: Item, description: The items. }

@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "shop",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/derive/role-param-type",
+          "message": "role 'sortKeyForbidden' fills the param 'reason' of 'shop.sort_denied' with the literal \"c\", but it does not fit its type: 'c' is not a value of Reason",
+          "fix": "fill 'reason' with a value its type provably takes, or change the param's type in 'shop.sort_denied'",
+          "origin": {
+            "layer": "api",
+            "pointer": "/conventions/errors/derived/sortKeyForbidden/params/reason"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

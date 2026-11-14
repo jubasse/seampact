@@ -1,0 +1,230 @@
+{
+  "rights": {
+    "items.cost": {
+      "id": "items.cost",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/items.cost"
+      }
+    },
+    "items.grade": {
+      "id": "items.grade",
+      "params": "ItemsGradeParams",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/items.grade"
+      }
+    },
+    "items.read": {
+      "id": "items.read",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/items.read"
+      }
+    },
+    "items.audit": {
+      "id": "items.audit",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/items.audit"
+      }
+    },
+    "items.margin": {
+      "id": "items.margin",
+      "subject": {
+        "kind": "resource",
+        "type": {
+          "segments": [
+            "item"
+          ],
+          "role": "schema"
+        },
+        "idSchema": {
+          "kind": "scalar",
+          "type": "string",
+          "format": "uuid",
+          "refinements": {}
+        }
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/items.margin"
+      }
+    },
+    "shop.staff": {
+      "id": "shop.staff",
+      "subject": {
+        "kind": "scope",
+        "scope": "shop"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/shop.staff"
+      }
+    }
+  },
+  "scopes": {
+    "shop": {
+      "id": "shop",
+      "idSchema": {
+        "kind": "scalar",
+        "type": "string",
+        "format": "uuid",
+        "refinements": {}
+      },
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/scopes/shop"
+      }
+    }
+  },
+  "operations": {
+    "listItems": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": [
+        {
+          "schema": "Item",
+          "pointer": "/cost",
+          "right": "items.cost",
+          "direction": "output",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/schemas/Item/properties/cost/restrictedTo"
+              }
+            ]
+          }
+        },
+        {
+          "schema": "Item",
+          "pointer": "/grade",
+          "right": "items.grade",
+          "params": {
+            "level": "high"
+          },
+          "direction": "output",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/schemas/Item/properties/grade/restrictedTo"
+              }
+            ]
+          }
+        },
+        {
+          "schema": "Item",
+          "pointer": "/margin",
+          "right": "items.margin",
+          "subject": {
+            "source": {
+              "in": "holderField",
+              "name": "itemId"
+            }
+          },
+          "direction": "output",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/schemas/Item/properties/margin/restrictedTo"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "listMixed": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "listShared": {
+      "paging": {
+        "sortKeys": {
+          "0": {
+            "right": "items.cost",
+            "derivedFrom": {
+              "derivation": "sortKey.restricted",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/schemas/EvA/properties/cost/restrictedTo"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "scopes": [],
+      "requires": [],
+      "fieldRights": [
+        {
+          "schema": "Shared",
+          "pointer": "/cost",
+          "right": "items.cost",
+          "direction": "output",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/schemas/EvA/properties/cost/restrictedTo"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,44 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/shop.counted/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ShopCountedParams"
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "count": 3
+      },
+      {
+        "kind": "ref",
+        "schema": "ShopCountedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "count": "three"
+      },
+      {
+        "kind": "ref",
+        "schema": "ShopCountedParams"
+      }
+    ],
+    "answer": [
+      {
+        "pointer": "/count",
+        "message": "'three' is not a number"
+      }
+    ]
+  }
+]

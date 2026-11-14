@@ -1,0 +1,5 @@
+api: { name: t, version: 1 }
+scalars:
+  money: { type: string }
+schemas:
+  A: { type: string, format: money }

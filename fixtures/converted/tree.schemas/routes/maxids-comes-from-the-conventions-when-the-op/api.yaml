@@ -1,0 +1,17 @@
+api: { name: t, version: 1 }
+schemas:
+  TaskId: { type: string, format: uuid }
+  Task:
+    type: object
+    required: [taskId, version]
+    properties: { taskId: TaskId, version: { type: integer, minimum: 1 } }
+  UpdateTask: { type: object, properties: { title: { type: string } } }
+conventions: { batch: { maxIds: 20 } }
+surfaces:
+  app:
+    routes:
+      tasks:
+        kind: collection
+        id: { taskId: TaskId }
+        item: Task
+        ops: { batch: {} }

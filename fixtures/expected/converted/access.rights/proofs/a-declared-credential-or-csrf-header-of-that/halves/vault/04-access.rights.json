@@ -1,0 +1,176 @@
+{
+  "rules": {
+    "otp": {
+      "id": "otp",
+      "takesBucket": false,
+      "proof": {
+        "in": "header",
+        "name": "X-Otp",
+        "schema": {
+          "kind": "scalar",
+          "type": "string",
+          "refinements": {}
+        }
+      },
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/otp"
+      }
+    },
+    "bearerProof": {
+      "id": "bearerProof",
+      "takesBucket": false,
+      "proof": {
+        "in": "header",
+        "name": "authorization",
+        "schema": {
+          "kind": "scalar",
+          "type": "string",
+          "refinements": {}
+        }
+      },
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/bearerProof"
+      }
+    },
+    "keyProof": {
+      "id": "keyProof",
+      "takesBucket": false,
+      "proof": {
+        "in": "header",
+        "name": "X-API-KEY",
+        "schema": {
+          "kind": "scalar",
+          "type": "string",
+          "refinements": {}
+        }
+      },
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/keyProof"
+      }
+    },
+    "csrfProof": {
+      "id": "csrfProof",
+      "takesBucket": false,
+      "proof": {
+        "in": "header",
+        "name": "x-csrf-token",
+        "schema": {
+          "kind": "scalar",
+          "type": "string",
+          "refinements": {}
+        }
+      },
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/csrfProof"
+      }
+    },
+    "sigProof": {
+      "id": "sigProof",
+      "takesBucket": false,
+      "proof": {
+        "in": "header",
+        "name": "sig",
+        "schema": {
+          "kind": "scalar",
+          "type": "string",
+          "refinements": {}
+        }
+      },
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/sigProof"
+      }
+    }
+  },
+  "operations": {
+    "declared": {
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "otp",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/declared/requires/0"
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "bearer": {
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "bearerProof",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/bearer/requires/0"
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "keyed": {
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "keyProof",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/keys/routes/keyed/requires/0"
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "browser": {
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "csrfProof",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/web/routes/browser/requires/0"
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "hook": {
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "sigProof",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/hooks/routes/hook/requires/0"
+          }
+        }
+      ],
+      "fieldRights": []
+    }
+  }
+}

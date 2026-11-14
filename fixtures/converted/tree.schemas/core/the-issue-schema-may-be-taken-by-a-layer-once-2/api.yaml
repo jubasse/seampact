@@ -1,0 +1,5 @@
+api: { name: t, version: 1 }
+errors:
+  api.schema_invalid: { status: 400, params: { issues: { type: array, items: ApiSchemaInvalidIssue } } }
+schemas:
+  ApiSchemaInvalidIssue: { type: object, properties: { message: { type: string } } }

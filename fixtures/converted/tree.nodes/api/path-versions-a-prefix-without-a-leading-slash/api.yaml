@@ -1,0 +1,9 @@
+
+api: { name: audit, version: 1, kind: product }
+
+surfaces:
+  app:
+    prefix: stripe
+    pathVersion: none
+    routes:
+      auditLog: { method: get }

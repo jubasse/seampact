@@ -1,0 +1,17 @@
+api: { name: t, version: 1 }
+enums:
+  TaxBasis: { values: [inclusive, exclusive], reason: "Tax rules." }
+extensions:
+  acme:
+    tax-basis: { at: [operation, property], schema: { enum: TaxBasis } }
+    owner: { at: [schema, right], schema: { type: string, minLength: 2 } }
+schemas:
+  Price:
+    type: object
+    x-acme-owner: billing
+    properties: { amount: { type: integer, x-acme-tax-basis: inclusive } }
+surfaces:
+  app:
+    x-acme-tax-basis: exclusive
+    routes:
+      prices: { method: get, output: Price }

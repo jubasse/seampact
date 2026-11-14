@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "warning",
+    "rule": "seampact/derive/bucket-limits",
+    "message": "The bucket 'write' sets no limit, so the server binds it.",
+    "fix": "Set limit on the bucket 'write', or bind it in the server.",
+    "origin": {
+      "layer": "shared",
+      "pointer": "/buckets/write"
+    },
+    "related": []
+  }
+]

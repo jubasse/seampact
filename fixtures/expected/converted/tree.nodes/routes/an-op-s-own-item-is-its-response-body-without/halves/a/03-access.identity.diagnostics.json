@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/deny-by-default",
+    "message": "route 'listNotes' has no identity and no public access",
+    "fix": "Set 'identity: <name>' on it or an ancestor, or 'access: { public: \"<reason>\" }'.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/notes/ops/list"
+    },
+    "related": []
+  }
+]

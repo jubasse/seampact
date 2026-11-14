@@ -1,0 +1,102 @@
+{
+  "rights": {
+    "shop.open": {
+      "id": "shop.open",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/shop.open"
+      }
+    },
+    "staff": {
+      "id": "staff",
+      "params": "StaffParams",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/staff"
+      }
+    }
+  },
+  "rules": {
+    "throttle": {
+      "id": "throttle",
+      "takesBucket": true,
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/throttle"
+      }
+    },
+    "audit": {
+      "id": "audit",
+      "takesBucket": false,
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/audit"
+      }
+    },
+    "note": {
+      "id": "note",
+      "params": "NoteParams",
+      "takesBucket": false,
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/note"
+      }
+    }
+  },
+  "buckets": {
+    "perUser": {
+      "id": "perUser",
+      "key": [
+        {
+          "in": "principal",
+          "name": "userId"
+        }
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/buckets/perUser"
+      }
+    }
+  },
+  "operations": {
+    "first": {
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "shop.open",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/requires/0"
+          }
+        }
+      ],
+      "fieldRights": []
+    }
+  }
+}
