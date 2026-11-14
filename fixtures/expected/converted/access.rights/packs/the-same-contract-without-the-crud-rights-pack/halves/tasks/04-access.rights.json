@@ -1,0 +1,268 @@
+{
+  "rights": {
+    "tasks.update": {
+      "id": "tasks.update",
+      "subject": {
+        "kind": "resource",
+        "type": {
+          "segments": [
+            "task"
+          ],
+          "role": "schema"
+        },
+        "idSchema": {
+          "kind": "scalar",
+          "type": "string",
+          "format": "uuid",
+          "refinements": {}
+        }
+      },
+      "errors": [
+        "api.forbidden",
+        "api.not_found"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/tasks.update"
+      }
+    },
+    "channels.member": {
+      "id": "channels.member",
+      "subject": {
+        "kind": "scope",
+        "scope": "channel"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/channels.member"
+      }
+    }
+  },
+  "scopes": {
+    "channel": {
+      "id": "channel",
+      "idSchema": {
+        "kind": "scalar",
+        "type": "string",
+        "format": "uuid",
+        "refinements": {}
+      },
+      "errors": [
+        "api.not_found"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/scopes/channel"
+      }
+    }
+  },
+  "operations": {
+    "getChannel": {
+      "scopes": [
+        {
+          "scope": "channel",
+          "source": {
+            "in": "path",
+            "name": "channelId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "channels.member",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "channel"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "listTasks": {
+      "scopes": [
+        {
+          "scope": "channel",
+          "source": {
+            "in": "path",
+            "name": "channelId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "channels.member",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "channel"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "createTask": {
+      "scopes": [
+        {
+          "scope": "channel",
+          "source": {
+            "in": "path",
+            "name": "channelId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "channels.member",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "channel"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "getTasksBatch": {
+      "scopes": [
+        {
+          "scope": "channel",
+          "source": {
+            "in": "path",
+            "name": "channelId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "channels.member",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "channel"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "updateTask": {
+      "scopes": [
+        {
+          "scope": "channel",
+          "source": {
+            "in": "path",
+            "name": "channelId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "channels.member",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "channel"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "archiveTask": {
+      "scopes": [
+        {
+          "scope": "channel",
+          "source": {
+            "in": "path",
+            "name": "channelId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+          }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "channels.member",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/requires/0"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "channel"
+            },
+            "defaulted": true
+          }
+        }
+      ],
+      "fieldRights": []
+    }
+  }
+}

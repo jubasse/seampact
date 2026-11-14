@@ -1,0 +1,16 @@
+api: { name: shop, version: 1 }
+schemas:
+  OrgId: { type: string }
+scopes:
+  org: { id: OrgId, errors: [api.not_found, shop.not_member] }
+rights:
+  orgs.manage: { subject: { scope: org }, errors: [shop.denied] }
+rules:
+  throttle: { bucket: true, errors: [api.rate_limited, shop.slow_down] }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: The contract checks error declarations and role bindings only. }
+    routes:
+      ping: { method: get }

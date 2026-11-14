@@ -1,0 +1,19 @@
+{
+  "operations": {
+    "getTask": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "legacyTask": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "legacyLink": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    }
+  }
+}

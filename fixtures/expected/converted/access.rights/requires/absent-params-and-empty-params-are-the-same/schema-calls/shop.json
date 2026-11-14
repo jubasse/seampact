@@ -1,0 +1,59 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/user/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "UserPrincipal"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rights/staff/params",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "StaffParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rules/note/params",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "NoteParams"
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "level": 3
+      },
+      {
+        "kind": "ref",
+        "schema": "StaffParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {},
+      {
+        "kind": "ref",
+        "schema": "NoteParams"
+      }
+    ],
+    "answer": []
+  }
+]

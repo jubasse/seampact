@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/csrf-header",
+    "message": "the write schemes of identity 'user' are cookie schemes naming different csrf headers (X-A, X-B), and a route checks one",
+    "fix": "Name one csrf header scheme on every cookie scheme an identity accepts on writes.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/identities/user/schemes/write"
+    },
+    "related": []
+  }
+]

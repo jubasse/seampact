@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/signature-template",
+    "message": "the format 't={ts},v1={sig},id={id}' of signature scheme 'sig' is neither comma-separated 'name={placeholder}' pairs with distinct token names nor a literal prefix and '{sig}', with '{sig}' once and '{ts}' at most once",
+    "fix": "Write the header layout as 't={ts},v1={sig}' pairs or as a prefix and '{sig}', such as 'sha256={sig}' (ADR 0013).",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemes/sig/format"
+    },
+    "related": []
+  }
+]

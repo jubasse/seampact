@@ -1,0 +1,19 @@
+{
+  "operations": {
+    "list": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "poke": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "ping": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    }
+  }
+}

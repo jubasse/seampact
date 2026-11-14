@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/field-right-limit",
+    "message": "route 'deep' reaches more than 1000 restricted fields from its input and responses, more field rights than one operation may list",
+    "fix": "reference the schemas holding restricted fields from fewer places in this route's bodies",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/deep"
+    },
+    "related": []
+  }
+]

@@ -1,0 +1,113 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/formFile/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "FormFileInput"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/tooLarge/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TooLargeInput"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/jsonFile/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "JsonFileInput"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/formScalar/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/formOpaque/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "FormOpaqueInput"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/formJsonText/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "FormJsonTextInput"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/multipartObject/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "MultipartObjectInput"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/multipartPages/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "MultipartPagesInput"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/reports/ops/batch/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "GetReportsBatchInput"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/reports/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Report"
+    }
+  }
+]

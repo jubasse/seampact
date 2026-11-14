@@ -1,0 +1,495 @@
+{
+  "packs": [
+    {
+      "name": "house",
+      "version": "2.1.0"
+    }
+  ],
+  "conventions": {
+    "pathCase": {
+      "value": "snake",
+      "origin": {
+        "layer": "pack:house",
+        "pointer": "/conventions/pathCase"
+      }
+    },
+    "bodyLimit": {
+      "value": "2MiB",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/bodyLimit"
+      }
+    },
+    "query.unknownKeys": {
+      "value": {
+        "ignore": "Gateways add tracking keys."
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/query/unknownKeys"
+      }
+    }
+  },
+  "formats": {
+    "bare": {
+      "id": "bare",
+      "origin": {
+        "layer": "core",
+        "pointer": "/formats/bare"
+      },
+      "media": "application/json",
+      "absent": "omit",
+      "success": {
+        "item": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "table": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "list": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "page": {
+          "body": {
+            "kind": "slot",
+            "slot": "items",
+            "path": []
+          },
+          "headers": []
+        }
+      },
+      "meta": {},
+      "error": {
+        "media": "application/problem+json",
+        "body": {
+          "kind": "object",
+          "members": [
+            {
+              "name": {
+                "kind": "text",
+                "text": "type"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "code",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "title"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "title",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "status"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "status",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "detail"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "detail",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "instance"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "instance",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "code"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "code",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "nature"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "nature",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "traceId"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "traceId",
+                "path": []
+              }
+            }
+          ],
+          "merge": "params"
+        },
+        "headers": []
+      }
+    }
+  },
+  "services": {
+    "ledger": {
+      "id": "ledger",
+      "maturity": "stable",
+      "origin": {
+        "layer": "api",
+        "pointer": "/services/ledger"
+      }
+    },
+    "mailer": {
+      "id": "mailer",
+      "maturity": "experimental",
+      "origin": {
+        "layer": "api",
+        "pointer": "/services/mailer"
+      }
+    }
+  },
+  "operations": [
+    {
+      "kind": "httpOperation",
+      "id": "listInvoices",
+      "name": {
+        "segments": [
+          "list",
+          "invoices"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "resource": {
+        "type": "invoices"
+      },
+      "method": "get",
+      "safe": true,
+      "path": "/v1/invoices/list",
+      "params": {
+        "path": [],
+        "query": [
+          {
+            "name": "apiKey",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/invoices/routes/list/query/apiKey?"
+            },
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            }
+          }
+        ],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "ignore",
+        "reason": "Gateways add tracking keys.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/conventions/query/unknownKeys"
+        }
+      },
+      "responses": [
+        {
+          "status": 204,
+          "shape": "empty",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/invoices/routes/list"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/invoices/routes/list"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "health",
+      "name": {
+        "segments": [
+          "health"
+        ],
+        "role": "operation"
+      },
+      "surface": "ops",
+      "method": "get",
+      "safe": true,
+      "path": "/v1/ops/health",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "ignore",
+        "reason": "Gateways add tracking keys.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/conventions/query/unknownKeys"
+        }
+      },
+      "responses": [
+        {
+          "status": 204,
+          "shape": "empty",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/ops/routes/health"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/ops/routes/health"
+      }
+    }
+  ],
+  "api": {
+    "id": "billing",
+    "name": {
+      "segments": [
+        "billing"
+      ],
+      "role": "schema"
+    },
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "kind": "service",
+    "pathVersion": {
+      "value": "prefix",
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/version"
+      }
+    },
+    "role": "gateway",
+    "maturity": "experimental",
+    "caller": {
+      "identity": "service",
+      "right": "callerService"
+    },
+    "compat": {
+      "policy": "none"
+    },
+    "surfaces": {
+      "app": {
+        "name": {
+          "segments": [
+            "app"
+          ],
+          "role": "schema"
+        },
+        "prefix": "/v1",
+        "pathVersion": "prefix",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app"
+        }
+      },
+      "ops": {
+        "name": {
+          "segments": [
+            "ops"
+          ],
+          "role": "schema"
+        },
+        "prefix": "/v1/ops",
+        "pathVersion": "prefix",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/ops"
+        }
+      }
+    },
+    "documents": {
+      "internalOnly": {
+        "surfaces": [
+          "ops"
+        ],
+        "internal": "include"
+      },
+      "everything": {
+        "surfaces": [
+          "app",
+          "ops"
+        ],
+        "internal": "include"
+      }
+    },
+    "docs": {
+      "summary": "Invoices.",
+      "description": "Invoices sent to customers."
+    },
+    "extensions": {},
+    "origin": {
+      "layer": "api",
+      "pointer": "/api"
+    }
+  },
+  "lint": {
+    "rules": {
+      "seampact/redundant-maturity": {
+        "severity": "disabled",
+        "origin": {
+          "layer": "pack:house",
+          "pointer": "/lint/rules/seampact~1redundant-maturity"
+        }
+      },
+      "seampact/credential-name": {
+        "severity": "error",
+        "origin": {
+          "layer": "api",
+          "pointer": "/lint/rules/seampact~1credential-name"
+        }
+      }
+    },
+    "allows": [
+      {
+        "rule": "seampact/subtree-exception",
+        "at": {
+          "layer": "api",
+          "pointer": "/surfaces/app"
+        },
+        "reason": "Probes are public on purpose.",
+        "subtree": false
+      },
+      {
+        "rule": "seampact/redundant-maturity",
+        "at": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/invoices"
+        },
+        "reason": "Stated for the docs.",
+        "subtree": true
+      },
+      {
+        "rule": "seampact/credential-name",
+        "at": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/invoices/routes/list/query/apiKey?"
+        },
+        "reason": "A public key.",
+        "subtree": false
+      },
+      {
+        "rule": "seampact/unused-declaration",
+        "at": {
+          "layer": "api",
+          "pointer": "/schemas/Invoice"
+        },
+        "reason": "Kept for the next version.",
+        "subtree": false
+      },
+      {
+        "rule": "seampact/credential-name",
+        "at": {
+          "layer": "api",
+          "pointer": "/schemas/Invoice/properties/token"
+        },
+        "reason": "A public share token.",
+        "subtree": false
+      },
+      {
+        "rule": "seampact/credential-name",
+        "at": {
+          "layer": "api",
+          "pointer": "/schemas/Invoice/properties/lines/items/properties/secret"
+        },
+        "reason": "A line label.",
+        "subtree": false
+      }
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/derive/idempotency-exempt-unused",
+    "message": "the idempotency exemption 'Archiving twice leaves the note archived.' reaches no route the idempotency key reaches: conventions.idempotency is unset",
+    "fix": "Remove the exemption, or move it to the non-safe routes the key reaches (a method conventions.idempotency.methods lists, an identity that is not signed).",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/archive/idempotency"
+    },
+    "related": []
+  }
+]

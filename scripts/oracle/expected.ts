@@ -4,7 +4,8 @@ import type { OracleCompilation, OracleCompiler } from "./compiler.ts";
 import { EXPECTED_ROOT, type ExcludedFixtures, type OracleFixture } from "./fixtures.ts";
 
 // The expected outputs of a fixture as files, keyed by their path under `fixtures/expected/<fixture path>/`:
-// `diagnostics.json`, `ir/<api>.json`, `source-map/<api>.json`, `halves/<api>/<NN>-<half>.json`.
+// `diagnostics.json`, `ir/<api>.json`, `source-map/<api>.json`, `halves/<api>/<NN>-<half>.json`, and when not empty
+// `halves/<api>/<NN>-<half>.diagnostics.json` and `schema-calls/<api>.json`.
 
 export type ExpectedFiles = Map<string, string>;
 
@@ -24,11 +25,17 @@ function halveFiles(
   compilation: OracleCompilation,
   files: ExpectedFiles,
 ): void {
-  for (const { api, half, delta } of compilation.halves) {
+  for (const { api, half, delta, diagnostics } of compilation.halves) {
     const number = String(compiler.halveNames.indexOf(half) + 1).padStart(2, "0");
 
     files.set(`halves/${api}/${number}-${half}.json`, jsonText(delta));
+
+    if (diagnostics.length > 0)
+      files.set(`halves/${api}/${number}-${half}.diagnostics.json`, jsonText(diagnostics));
   }
+
+  for (const { api, calls } of compilation.schemaCalls)
+    files.set(`schema-calls/${api}.json`, jsonText(calls));
 }
 
 /** The expected files of one fixture. */
@@ -54,7 +61,7 @@ export function expectedFilesOf(
 export const expectedDirectoryOf = (fixture: OracleFixture): string =>
   join(EXPECTED_ROOT, fixture.path);
 
-const OWN_ENTRIES = ["diagnostics.json", "ir", "source-map", "halves"] as const;
+const OWN_ENTRIES = ["diagnostics.json", "ir", "source-map", "halves", "schema-calls"] as const;
 
 /** The paths under `fixtures/expected/` that hold a `diagnostics.json`: the fixtures that have expected outputs. */
 export function expectedFixturePaths(directory: string = EXPECTED_ROOT, prefix = ""): string[] {

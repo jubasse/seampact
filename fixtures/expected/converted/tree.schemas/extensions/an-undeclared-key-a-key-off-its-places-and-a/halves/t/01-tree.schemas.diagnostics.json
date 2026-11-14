@@ -1,0 +1,73 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/extension-value",
+    "message": "the extension does not fit its schema at '': 'b' is shorter than 2 characters",
+    "fix": "correct the value, or the schema its extension key declares",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Price/x-acme-owner"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/extension-value",
+    "message": "the extension does not fit its schema at '': 'gross' is not a value of TaxBasis",
+    "fix": "correct the value, or the schema its extension key declares",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Price/properties/net/x-acme-tax-basis"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/extension-place",
+    "message": "'x-acme-owner' may sit on schema, right, not on property",
+    "fix": "add 'property' to its 'at', or move it",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Price/properties/code/x-acme-owner"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/extensions/acme/owner"
+        },
+        "message": "its declaration"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/extension-place",
+    "message": "'x-acme-owner' may sit on schema, right, and this mapping is no place an extension extends",
+    "fix": "move it to a place its 'at' lists, or remove it",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Money/x-acme-owner"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/extensions/acme/owner"
+        },
+        "message": "its declaration"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/extension-unknown",
+    "message": "'x-acme-nope' is no declared extension key",
+    "fix": "declare it under 'extensions' with its schema and places, or remove it",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/prices/x-acme-nope"
+    },
+    "related": []
+  }
+]

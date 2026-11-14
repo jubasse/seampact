@@ -1,0 +1,103 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/user/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "UserPrincipal"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rights/edit articles/subject/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rights/ROLE_ADMIN/params",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "RoleAdminParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rules/recentAuth/proof/schema",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {
+        "minLength": 1,
+        "maxLength": 512
+      }
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rules/recentAuth/params",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "RecentAuthParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rules/signedRecently/proof/schema",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "date-time",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/scopes/org/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/scopes/project/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {
+        "minLength": 1
+      }
+    }
+  }
+]

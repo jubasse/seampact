@@ -1,0 +1,63 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/hook/pathParams/raw",
+      "input"
+    ],
+    "answer": {
+      "kind": "file",
+      "media": []
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/hook/headers/X-Files",
+      "input"
+    ],
+    "answer": {
+      "kind": "array",
+      "items": {
+        "kind": "file",
+        "media": []
+      }
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/hook/query/payloads",
+      "input"
+    ],
+    "answer": {
+      "kind": "array",
+      "items": {
+        "kind": "opaque",
+        "reason": "Vendor JSON.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/hook/query/payloads/items"
+        }
+      }
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/hook/responses/200/headers/X-Trace",
+      "output"
+    ],
+    "answer": {
+      "kind": "array",
+      "items": {
+        "kind": "opaque",
+        "reason": "Vendor JSON.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/hook/responses/200/headers/X-Trace/items"
+        }
+      }
+    }
+  }
+]

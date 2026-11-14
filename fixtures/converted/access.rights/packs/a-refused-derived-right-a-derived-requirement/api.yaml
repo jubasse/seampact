@@ -1,0 +1,30 @@
+api: { name: shop, version: 1 }
+pagings:
+  cursor:
+    request: { cursor: { query: cursor }, limit: { query: limit } }
+    response: { body: $items }
+packs: [./pack.yaml]
+conventions:
+  paging: { default: cursor, maxLimit: 50 }
+  rights: { pattern: '^[a-z]+\.[a-z]+$' }
+schemes:
+  bearer: { kind: bearer }
+identities:
+  user: { schemes: { read: [bearer], write: [bearer] }, principal: UserPrincipal }
+schemas:
+  UserPrincipal: { type: object, required: [userId], properties: { userId: { type: string } } }
+  ItemId: { type: string }
+  Item: { type: object, required: [itemId], properties: { itemId: ItemId } }
+rights:
+  shop.audit: {}
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: user
+    routes:
+      items: { kind: collection, id: { itemId: ItemId }, item: Item, ops: [list, get] }
+  open:
+    prefix: /open/v{version}
+    access: { public: The catalogue is open. }
+    routes:
+      things: { kind: collection, id: { thingId: ItemId }, idProperty: itemId, item: Item, ops: [list, get] }

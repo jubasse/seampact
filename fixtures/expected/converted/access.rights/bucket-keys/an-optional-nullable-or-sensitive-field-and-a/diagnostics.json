@@ -1,0 +1,105 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "mail",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/bucket-key",
+          "message": "bucket 'perCc' counts body.cc on route 'send', whose input field 'cc' may be absent or null",
+          "fix": "make the field required and non-null, or count another source",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/send/requires/1"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/buckets/perCc/key/0"
+              },
+              "message": "the key is declared here"
+            }
+          ]
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/bucket-key",
+          "message": "bucket 'perReplyTo' counts body.replyTo on route 'send', whose input field 'replyTo' may be absent or null",
+          "fix": "make the field required and non-null, or count another source",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/send/requires/2"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/buckets/perReplyTo/key/0"
+              },
+              "message": "the key is declared here"
+            }
+          ]
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/bucket-key",
+          "message": "bucket 'perSecret' counts body.secret on route 'send', whose input field 'secret' is sensitive",
+          "fix": "count a field that is not sensitive, or another source",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/send/requires/3"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/buckets/perSecret/key/0"
+              },
+              "message": "the key is declared here"
+            }
+          ]
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/bucket-key",
+          "message": "bucket 'perToken' counts body.reauthToken on route 'send', whose body field 'reauthToken' is a rule proof, which is sensitive",
+          "fix": "count an input field that is not sensitive, or another source",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/send/requires/4"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/buckets/perToken/key/0"
+              },
+              "message": "the key is declared here"
+            }
+          ]
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/bucket-key",
+          "message": "bucket 'perToken' counts body.reauthToken on route 'ping', whose body field 'reauthToken' is a rule proof, which is sensitive",
+          "fix": "count an input field that is not sensitive, or another source",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/ping/requires/1"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/buckets/perToken/key/0"
+              },
+              "message": "the key is declared here"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

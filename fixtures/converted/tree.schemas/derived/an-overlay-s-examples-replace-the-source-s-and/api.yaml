@@ -1,0 +1,18 @@
+api: { name: t, version: 1 }
+schemas:
+
+  Article:
+    type: object
+    required: [articleId, title]
+    properties:
+      articleId: { type: string, format: uuid }
+      title: { type: string, minLength: 1, maxLength: 200, description: The heading. }
+      body: { type: string, maxLength: 20000, sensitive: true }
+      state: { type: string, restrictedTo: articles.seeState }
+
+  Titled:
+    pick: { from: Article, fields: [title] }
+    properties: { title: { examples: [A title] } }
+  Wrong:
+    pick: { from: Article, fields: [title] }
+    properties: { title: { examples: [12] } }

@@ -1,0 +1,29 @@
+api: { name: t, version: 1 }
+enums:
+  State: { values: [open, done], reason: "Local states." }
+scalars:
+  money: { type: string, pattern: '^[0-9]+$' }
+headers:
+  rightsVersion: { semantic: versionToken, response: X-Rights-Version, request: If-Rights-Version, schema: { format: money } }
+  trace: { name: traceparent, in: request, semantic: traceContext, schema: { type: string } }
+schemas:
+  Payload: { type: object, properties: { state: { enum: State }, nested: Nested } }
+  Nested: { type: object, properties: { amount: { format: money } } }
+  Answer: { type: object, properties: { state: { enum: State } } }
+  Unused: { type: object, properties: { a: { type: string } } }
+  Github:
+    type: object
+    unknownKeys: { ignore: "GitHub adds payload fields." }
+    properties: { action: { type: string } }
+surfaces:
+  app:
+    routes:
+      send:
+        method: post
+        input: { $ref: Payload, unknownKeys: { keep: "The handler forwards the rest." } }
+        output: Answer
+      hook:
+        method: post
+        input: Github
+        responses:
+          200: { body: Github }

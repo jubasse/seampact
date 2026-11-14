@@ -1,0 +1,32 @@
+[
+  {
+    "method": "checkExample",
+    "args": [
+      "0",
+      {
+        "kind": "scalar",
+        "type": "string",
+        "format": "decimal",
+        "refinements": {
+          "minimum": "0"
+        }
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      "9007199254740991",
+      {
+        "kind": "scalar",
+        "type": "string",
+        "format": "decimal",
+        "refinements": {
+          "maximum": "9007199254740991"
+        }
+      }
+    ],
+    "answer": []
+  }
+]

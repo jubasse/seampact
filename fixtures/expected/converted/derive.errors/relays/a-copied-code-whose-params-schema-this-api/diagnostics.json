@@ -1,0 +1,65 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "tasks",
+      "diagnostics": []
+    },
+    {
+      "api": "tasksService",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/derive/relay-declaration",
+          "message": "error 'tasks.locked', which tasks.getTask answers, has the params schema 'TasksLockedParams', which this api does not declare",
+          "fix": "declare 'TasksLockedParams' in a shared file both apis load",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/internal/routes/getTask/relays"
+          },
+          "related": []
+        }
+      ]
+    },
+    {
+      "api": "tasksServiceWrites",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/derive/relay-declaration",
+          "message": "error 'tasks.locked', which tasks.createTask answers, has the params schema 'TasksLockedParams', which this api does not declare",
+          "fix": "declare 'TasksLockedParams' in a shared file both apis load",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/internalWrites/routes/createTask/relays"
+          },
+          "related": []
+        }
+      ]
+    },
+    {
+      "api": "tasksDevices",
+      "diagnostics": []
+    },
+    {
+      "api": "tasksOptionalAuth",
+      "diagnostics": []
+    },
+    {
+      "api": "tasksAbsoluteUrls",
+      "diagnostics": []
+    },
+    {
+      "api": "tasksResponses",
+      "diagnostics": []
+    },
+    {
+      "api": "tasksPaging",
+      "diagnostics": []
+    },
+    {
+      "api": "tasksSplitSort",
+      "diagnostics": []
+    }
+  ]
+}

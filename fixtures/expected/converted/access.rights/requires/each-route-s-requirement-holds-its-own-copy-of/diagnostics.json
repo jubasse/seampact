@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "shop",
+      "diagnostics": [
+        {
+          "severity": "warning",
+          "rule": "seampact/derive/bucket-limits",
+          "message": "The bucket 'perUser' sets no limit and window, so the server binds them.",
+          "fix": "Set limit and window on the bucket 'perUser', or bind them in the server.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/buckets/perUser"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

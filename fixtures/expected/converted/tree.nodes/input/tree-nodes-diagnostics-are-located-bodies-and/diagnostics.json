@@ -1,0 +1,59 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "a",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/operation-id-unique",
+          "message": "The operation id listTasks of /surfaces/app/routes/listTasks is also the id of /surfaces/app/routes/tasks/ops/0; operation ids are unique across the api.",
+          "fix": "Rename one of the routes, or set operationId on one of them.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/listTasks"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/tasks/ops/0"
+              },
+              "message": "the operation listTasks"
+            }
+          ]
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/operation-name-unique",
+          "message": "The operation list_tasks of /surfaces/app/routes/archive has the same name words as listTasks of /surfaces/app/routes/tasks/ops/0, so the two collide in every language.",
+          "fix": "Rename one of the routes, or set operationId on one of them.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/archive"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/tasks/ops/0"
+              },
+              "message": "the operation listTasks"
+            }
+          ]
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/collection-singular",
+          "message": "The collection logs declares neither singular nor id, so the operation at /surfaces/app/routes/logs/ops/create has no singular noun for its name.",
+          "fix": "Set singular on the collection (or declare its id).",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/logs"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

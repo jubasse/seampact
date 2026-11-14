@@ -1,0 +1,5 @@
+api: { name: a, version: 1 }
+schemes:
+
+  slack: { kind: signature, verify: application, name: X-Slack-Signature }
+  keyed: { kind: signature, verify: application, name: X-Sig, key: { from: header.X-Key-Id } }

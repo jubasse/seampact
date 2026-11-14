@@ -1,0 +1,14 @@
+api: { name: t, version: 1 }
+scalars:
+  taskCode: { type: string, minLength: 3 }
+enums:
+  TaskState: { values: [open, done], reason: "Task states." }
+  Priority: { values: [low, high], reason: "Priorities." }
+schemas:
+  Task:
+    type: object
+    required: [taskId]
+    properties: { taskId: { format: taskCode }, state: { enum: TaskState }, owner: Owner }
+  Owner: { type: object, properties: { name: { type: string } } }
+  Filter: { type: object, properties: { priority: { enum: Priority } } }
+  Gone: { type: object, properties: { at: { type: string } } }

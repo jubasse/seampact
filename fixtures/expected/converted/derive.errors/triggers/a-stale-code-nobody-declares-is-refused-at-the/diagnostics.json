@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "shop",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/derive/error-unknown",
+          "message": "error code 'shop.nope' is listed here, but no layer or node declares it and it is no default code",
+          "fix": "declare 'shop.nope' with a status in 'errors', or list a declared code",
+          "origin": {
+            "layer": "api",
+            "pointer": "/identities/viewer/headers/rightsVersion/stale"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

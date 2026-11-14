@@ -1,0 +1,5 @@
+api: { name: t, version: 1 }
+scalars:
+  code: { type: string, minLength: 5 }
+schemas:
+  A: { format: code, maxLength: 2 }

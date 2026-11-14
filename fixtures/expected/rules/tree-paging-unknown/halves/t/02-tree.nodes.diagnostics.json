@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/paging-unknown",
+    "message": "The paging style pages of pages is not declared in pagings.",
+    "fix": "Declare pages in pagings, or name a declared style.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/pages/paging"
+    },
+    "related": []
+  }
+]

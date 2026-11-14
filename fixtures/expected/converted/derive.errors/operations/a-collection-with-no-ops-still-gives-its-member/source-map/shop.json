@@ -1,0 +1,89 @@
+{
+  "irRevision": 6,
+  "locations": {
+    "api#/api": {
+      "column": 1,
+      "endColumn": 32,
+      "endLine": 1,
+      "file": "api.yaml",
+      "line": 1
+    },
+    "api#/api/version": {
+      "column": 20,
+      "endColumn": 30,
+      "endLine": 1,
+      "file": "api.yaml",
+      "line": 1
+    },
+    "api#/errors/tasks.not_found": {
+      "column": 3,
+      "endColumn": 35,
+      "endLine": 3,
+      "file": "api.yaml",
+      "line": 3
+    },
+    "api#/schemas/Comment": {
+      "column": 3,
+      "endColumn": 89,
+      "endLine": 8,
+      "file": "api.yaml",
+      "line": 8
+    },
+    "api#/schemas/Comment/properties/commentId": {
+      "column": 65,
+      "endColumn": 85,
+      "endLine": 8,
+      "file": "api.yaml",
+      "line": 8
+    },
+    "api#/surfaces/app": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 27,
+      "file": "api.yaml",
+      "line": 10
+    },
+    "api#/surfaces/app/access": {
+      "column": 5,
+      "endColumn": 66,
+      "endLine": 12,
+      "file": "api.yaml",
+      "line": 12
+    },
+    "api#/surfaces/app/routes/tasks/id/taskId": {
+      "column": 15,
+      "endColumn": 29,
+      "endLine": 16,
+      "file": "api.yaml",
+      "line": 16
+    },
+    "api#/surfaces/app/routes/tasks/member/errorRoles/notFound": {
+      "column": 13,
+      "endColumn": 38,
+      "endLine": 20,
+      "file": "api.yaml",
+      "line": 20
+    },
+    "api#/surfaces/app/routes/tasks/member/routes/comments/item": {
+      "column": 15,
+      "endColumn": 28,
+      "endLine": 25,
+      "file": "api.yaml",
+      "line": 25
+    },
+    "api#/surfaces/app/routes/tasks/member/routes/comments/ops/list": {
+      "column": 22,
+      "endColumn": 44,
+      "endLine": 26,
+      "file": "api.yaml",
+      "line": 26
+    },
+    "api#/surfaces/app/routes/tasks/member/routes/comments/ops/list/paging": {
+      "column": 30,
+      "endColumn": 42,
+      "endLine": 26,
+      "file": "api.yaml",
+      "line": 26
+    }
+  }
+}

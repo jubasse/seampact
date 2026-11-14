@@ -1,0 +1,230 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/notes/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Note"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/notes/headers/Idempotency-Key",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/notes/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Note"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/bigNotes/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "StrictNote",
+      "unknownKeys": {
+        "policy": "refuse",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/bigNotes/input/unknownKeys"
+        }
+      }
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/bigNotes/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Note"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/board/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Note"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/mixed/routes/comments/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Note"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/robots/routes/jobs/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Note"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/robots/routes/jobs/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Note"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/robots/routes/status/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Note"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/robots/routes/feed/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Note"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/partner/routes/tiles/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Note"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/hooks/routes/stripe/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Note"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/hooks/routes/github/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "GithubEvent"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/member/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "MemberPrincipal"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/mixed/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "MemberPrincipal"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/robot/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "MemberPrincipal"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/device/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "MemberPrincipal"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/partner/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "MemberPrincipal"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/stripe/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "MemberPrincipal"
+    }
+  }
+]

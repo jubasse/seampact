@@ -1,0 +1,49 @@
+{
+  "operations": {
+    "getTask": {
+      "access": {
+        "kind": "public",
+        "reason": "Tasks are public.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "legacyTask": {
+      "access": {
+        "kind": "public",
+        "reason": "Tasks are public.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "legacyLink": {
+      "access": {
+        "kind": "public",
+        "reason": "Tasks are public.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    }
+  }
+}

@@ -1,0 +1,8 @@
+api: { name: shop, version: 1 }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: The contract checks error declarations and role bindings only. }
+    routes:
+      ping: { method: get }

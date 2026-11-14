@@ -1,0 +1,74 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/rename/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Rename"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/tag/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "array",
+      "items": {
+        "kind": "scalar",
+        "type": "string",
+        "refinements": {}
+      }
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/user/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "UserPrincipal"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/hook/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "HookCaller"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rules/recentAuth/proof/schema",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rules/pinned/proof/schema",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "integer",
+      "refinements": {}
+    }
+  }
+]

@@ -1,0 +1,4 @@
+api: { name: t, version: 1 }
+schemas:
+  A: { $ref: B, description: An alias. }
+  B: { type: object, properties: { c: { type: string } } }

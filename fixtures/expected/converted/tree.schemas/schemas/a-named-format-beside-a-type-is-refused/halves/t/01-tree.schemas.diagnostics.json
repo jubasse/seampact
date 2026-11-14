@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/format-type",
+    "message": "the named format 'money' already states its type",
+    "fix": "remove 'type' and write 'format: money' alone",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/A/type"
+    },
+    "related": []
+  }
+]

@@ -1,0 +1,5 @@
+api: { name: t, version: 1 }
+conventions:
+  rateLimit: { header: Retry-After, param: delayMs, unit: s }
+schemas:
+  A: { type: object, properties: { a: { type: string } } }

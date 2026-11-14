@@ -1,0 +1,17 @@
+api: { name: shop, version: 1 }
+conventions:
+  errors: { derived: { schemaInvalid: { code: shop.invalid, params: { issues: $issues, notice: { $each: $issues, $as: $item.rule } } } } }
+schemas:
+  Issue: { type: object, properties: { in: { type: string }, pointer: { type: string }, rule: { type: string } } }
+  Notice:
+    discriminator: kind
+    oneOf: { done: { type: object, properties: { at: { type: string } } } }
+errors:
+  shop.invalid: { status: 400, params: { issues: { type: array, items: Issue }, notice: Notice } }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: The contract checks error declarations and role bindings only. }
+    routes:
+      ping: { method: get }

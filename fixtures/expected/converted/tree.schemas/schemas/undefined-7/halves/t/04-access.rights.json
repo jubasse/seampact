@@ -1,0 +1,34 @@
+{
+  "rights": {
+    "tasks.update": {
+      "id": "tasks.update",
+      "params": "TasksUpdateParams",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/tasks.update"
+      }
+    }
+  },
+  "rules": {
+    "recentAuth": {
+      "id": "recentAuth",
+      "params": "Order",
+      "takesBucket": false,
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/recentAuth"
+      }
+    }
+  }
+}

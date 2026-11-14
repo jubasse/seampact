@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/fields-schema",
+          "message": "'Tags' is not an object schema, whose properties would be the fields",
+          "fix": "name an object schema, or write a fields map",
+          "origin": {
+            "layer": "api",
+            "pointer": "/rules/r/params"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

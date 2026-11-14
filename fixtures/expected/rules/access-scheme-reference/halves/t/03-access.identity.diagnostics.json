@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/scheme-reference",
+    "message": "identity 'user' lists scheme 'bearer' twice in 'read'",
+    "fix": "List each scheme once.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/identities/user/schemes/read/1"
+    },
+    "related": []
+  }
+]

@@ -1,0 +1,206 @@
+{
+  "rights": {
+    "roles": {
+      "id": "roles",
+      "params": "RolesParams",
+      "subject": {
+        "kind": "scope",
+        "scope": "channel"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/rights/roles"
+      }
+    },
+    "tasks.read": {
+      "id": "tasks.read",
+      "subject": {
+        "kind": "scope",
+        "scope": "channel"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/rights/tasks.read"
+      }
+    },
+    "tasks.update": {
+      "id": "tasks.update",
+      "subject": {
+        "kind": "resource",
+        "type": {
+          "segments": [
+            "task"
+          ],
+          "role": "schema"
+        },
+        "idSchema": {
+          "kind": "scalar",
+          "type": "string",
+          "format": "uuid",
+          "refinements": {}
+        }
+      },
+      "errors": [
+        "api.forbidden",
+        "api.not_found"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/rights/tasks.update"
+      }
+    },
+    "tasks.seeEffort": {
+      "id": "tasks.seeEffort",
+      "subject": {
+        "kind": "resource",
+        "type": {
+          "segments": [
+            "task"
+          ],
+          "role": "schema"
+        },
+        "idSchema": {
+          "kind": "scalar",
+          "type": "string",
+          "format": "uuid",
+          "refinements": {}
+        }
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/rights/tasks.seeEffort"
+      }
+    },
+    "callerService": {
+      "id": "callerService",
+      "params": "CallerServiceParams",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/rights/callerService"
+      }
+    }
+  },
+  "rules": {
+    "throttle": {
+      "id": "throttle",
+      "takesBucket": true,
+      "errors": [
+        "api.rate_limited"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/rules/throttle"
+      }
+    },
+    "recentAuth": {
+      "id": "recentAuth",
+      "params": "RecentAuthParams",
+      "takesBucket": false,
+      "proof": {
+        "in": "body",
+        "name": "reauthToken",
+        "schema": {
+          "kind": "scalar",
+          "type": "string",
+          "refinements": {
+            "minLength": 1,
+            "maxLength": 512
+          }
+        }
+      },
+      "errors": [
+        "api.reauthentication_required"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/rules/recentAuth"
+      }
+    }
+  },
+  "scopes": {
+    "channel": {
+      "id": "channel",
+      "idSchema": {
+        "kind": "scalar",
+        "type": "string",
+        "format": "uuid",
+        "refinements": {}
+      },
+      "errors": [
+        "api.not_found"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "shared",
+        "pointer": "/scopes/channel"
+      }
+    }
+  },
+  "buckets": {
+    "write": {
+      "id": "write",
+      "key": [
+        {
+          "in": "principal",
+          "name": "userId"
+        }
+      ],
+      "origin": {
+        "layer": "shared",
+        "pointer": "/buckets/write"
+      }
+    }
+  },
+  "operations": {
+    "listNotes": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "listCapped": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "listChanges": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "listEvents": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    }
+  }
+}

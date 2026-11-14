@@ -20,6 +20,9 @@ pub const DIAGNOSTICS_FILE: &str = "diagnostics.json";
 /// The extension of every expected file.
 const JSON_EXTENSION: &str = ".json";
 
+/// The suffix, before the extension, of the diagnostics a half reported.
+const HALF_DIAGNOSTICS_SUFFIX: &str = ".diagnostics.json";
+
 /// The output an expected file belongs to, as `applies.output` names it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -32,6 +35,12 @@ pub enum OutputKind {
     SourceMap,
     /// `halves/<api>/<NN>-<half>.json`.
     Halves,
+    /// `halves/<api>/<NN>-<half>.diagnostics.json`, read by no comparison yet.
+    #[serde(skip_deserializing)]
+    HalfDiagnostics,
+    /// `schema-calls/<api>.json`, read by no comparison yet.
+    #[serde(skip_deserializing)]
+    SchemaCalls,
     /// `OpenAPI` documents, not compared yet.
     Openapi,
     /// Generated files, not compared yet.
@@ -67,11 +76,22 @@ impl OutputFile {
         match segments.as_slice() {
             ["ir", file] => Self::of_api_file(OutputKind::Ir, file),
             ["source-map", file] => Self::of_api_file(OutputKind::SourceMap, file),
-            ["halves", api, file] => Some(Self {
-                output: OutputKind::Halves,
-                api: Some((*api).to_owned()),
-                half: Some(half_of_file_name(file)?.to_owned()),
-            }),
+            ["schema-calls", file] => Self::of_api_file(OutputKind::SchemaCalls, file),
+            ["halves", api, file] => {
+                let (output, half) = match file.strip_suffix(HALF_DIAGNOSTICS_SUFFIX) {
+                    Some(stem) => (OutputKind::HalfDiagnostics, half_of_stem(stem)?),
+                    None => (
+                        OutputKind::Halves,
+                        half_of_stem(file.strip_suffix(JSON_EXTENSION)?)?,
+                    ),
+                };
+
+                Some(Self {
+                    output,
+                    api: Some((*api).to_owned()),
+                    half: Some(half.to_owned()),
+                })
+            }
             _ => None,
         }
     }
@@ -85,9 +105,9 @@ impl OutputFile {
     }
 }
 
-/// The `<half>` of `<NN>-<half>.json`.
-fn half_of_file_name(file_name: &str) -> Option<&str> {
-    let (position, half) = file_name.strip_suffix(JSON_EXTENSION)?.split_once('-')?;
+/// The `<half>` of `<NN>-<half>`.
+fn half_of_stem(stem: &str) -> Option<&str> {
+    let (position, half) = stem.split_once('-')?;
     let is_position = !position.is_empty() && position.chars().all(|digit| digit.is_ascii_digit());
 
     is_position.then_some(half)
@@ -221,6 +241,18 @@ mod tests {
         assert_eq!(
             OutputFile::of(DIAGNOSTICS_FILE).map(|file| file.output),
             Some(OutputKind::Diagnostics)
+        );
+        assert_eq!(
+            OutputFile::of("halves/bigints/03-tree.schemas.diagnostics.json"),
+            Some(OutputFile {
+                output: OutputKind::HalfDiagnostics,
+                api: Some("bigints".to_owned()),
+                half: Some("tree.schemas".to_owned()),
+            })
+        );
+        assert_eq!(
+            OutputFile::of("schema-calls/bigints.json").map(|file| file.output),
+            Some(OutputKind::SchemaCalls)
         );
         assert_eq!(OutputFile::of("notes.txt"), None);
     }

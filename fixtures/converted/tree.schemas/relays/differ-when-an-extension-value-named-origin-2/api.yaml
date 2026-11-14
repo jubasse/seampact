@@ -1,0 +1,7 @@
+api: { name: t, version: 1 }
+extensions:
+  acme:
+    origin: { at: [schema], schema: { type: string } }
+schemas:
+  Box: { type: object, properties: { owner: Owner } }
+  Owner: { type: object, x-acme-origin: south, properties: { name: { type: string }, origin: { type: string } } }

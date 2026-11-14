@@ -1,0 +1,157 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/health/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Event"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/feed/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Note"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/notes/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Note"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/partner/routes/tiles/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Event"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/hooks/routes/stripe/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Event"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/hooks/routes/clerk/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Event"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/hooks/routes/slack/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "SlashCommand"
+    }
+  },
+  {
+    "method": "queryWire",
+    "args": [
+      "/schemas/SlashCommand/properties/command"
+    ],
+    "answer": {
+      "kind": "text",
+      "style": "form",
+      "explode": true,
+      "brackets": false
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/viewer_or_device/principal/variants/viewer",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ViewerPrincipal"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/viewer_or_device/principal/variants/device",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "DevicePrincipal"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/partner/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "PartnerPrincipal"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/stripe/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "WebhookCaller"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/clerk/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "WebhookCaller"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/slack/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "WebhookCaller"
+    }
+  }
+]

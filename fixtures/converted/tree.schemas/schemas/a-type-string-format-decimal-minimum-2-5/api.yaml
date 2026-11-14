@@ -1,0 +1,3 @@
+api: { name: t, version: 1 }
+schemas:
+  A: { type: string, format: decimal, minimum: 2.5, exclusiveMaximum: 2.5 }

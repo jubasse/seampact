@@ -1,0 +1,48 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/query-map",
+          "message": "this body proof holds a map, and a form or multipart route sends it as a field: no field wire encodes its keys",
+          "fix": "declare the keys as the fields of an object, or send the route's input as JSON",
+          "origin": {
+            "layer": "api",
+            "pointer": "/rules/signed/proof/schema"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/upload/inputMedia"
+              },
+              "message": "the route sends its input as a form"
+            }
+          ]
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/query-map",
+          "message": "this body proof holds a map, and a form or multipart route sends it as a field: no field wire encodes its keys",
+          "fix": "declare the keys as the fields of an object, or send the route's input as JSON",
+          "origin": {
+            "layer": "api",
+            "pointer": "/rules/stamped/proof/schema"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/attach/inputMedia"
+              },
+              "message": "the route sends its input as a form"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

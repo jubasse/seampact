@@ -1,0 +1,34 @@
+
+api: { name: a, version: 1, kind: product }
+conventions:
+  paging: { default: cursor, maxLimit: 50 }
+schemas:
+  Note: { type: object, properties: { noteId: { type: string }, text: { type: string } } }
+formats:
+  envelope:
+    media: application/vnd.acme+json
+    absent: null
+    success:
+      item: { body: { data: $payload, self: '/notes/${id}', price: '$$5', meta: $meta }, headers: { X-Kind: $resource } }
+      page: { body: { data: { $each: $items, $as: { id: $itemId, $merge: $itemFields } }, total: 3 } }
+    meta:
+      servedAt: { fill: now }
+      degraded: { fill: degraded }
+  spare: {}
+pagings:
+  cursor:
+    request: { cursor: { query: cursor }, limit: { query: limit }, sort: { query: sort, style: signed } }
+    response: { body: $items, links: { next: $next, prev: $previous } }
+  unused:
+    request: { page: { query: page } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      health: { method: get, output: Note }
+      notes:
+        kind: collection
+        format: envelope
+        id: { noteId: { type: string } }
+        item: Note
+        ops: [list, get]

@@ -1,0 +1,21 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/derive/error-redefined",
+    "message": "error code 'shop.busy' is declared again with a different definition",
+    "fix": "attach the code with {} or { example } here, or give one of the two declarations another code",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/ping/errors/shop.busy"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/errors/shop.busy"
+        },
+        "message": "'shop.busy' is first declared here"
+      }
+    ]
+  }
+]

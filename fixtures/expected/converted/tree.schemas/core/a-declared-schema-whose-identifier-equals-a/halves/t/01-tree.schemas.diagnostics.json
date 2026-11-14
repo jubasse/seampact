@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-reserved",
+    "message": "the schema 'APIEmptyBody' gives the same identifier as 'ApiEmptyBody', reserved for the empty body of a proof-only input",
+    "fix": "declare the schema under another name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/APIEmptyBody"
+    },
+    "related": []
+  }
+]

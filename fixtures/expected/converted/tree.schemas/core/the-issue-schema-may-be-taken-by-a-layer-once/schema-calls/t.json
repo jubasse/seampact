@@ -1,0 +1,13 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/api.rate_limited/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ApiRateLimitedParams"
+    }
+  }
+]

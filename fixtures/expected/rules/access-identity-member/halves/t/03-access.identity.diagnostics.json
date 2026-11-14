@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/identity-member",
+    "message": "identity 'user' has no 'principal'",
+    "fix": "Name the principal schema the authenticate hook answers, or 'variants: { <name>: <schema> }'.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/identities/user"
+    },
+    "related": []
+  }
+]

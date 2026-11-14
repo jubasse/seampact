@@ -1,0 +1,72 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/orphan/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Orphan"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/twin/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Twin"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/clerk/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Clerk"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rights/items.cost/subject/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rights/shop.role/params",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ShopRoleParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/scopes/shop/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  }
+]

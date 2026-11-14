@@ -1,0 +1,51 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "a",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/paging-limit",
+          "message": "The conventions.paging defaultLimit 50 is above its maxLimit 10.",
+          "fix": "Lower conventions.paging.defaultLimit to its maxLimit or less.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/conventions/paging/defaultLimit"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/conventions/paging/maxLimit"
+              },
+              "message": "conventions.paging.maxLimit"
+            }
+          ]
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/paging-limit",
+          "message": "The list own pages with cursor, but its defaultLimit 8 is above its maxLimit 5.",
+          "fix": "Lower defaultLimit on the route's paging to its maxLimit or less.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/own/paging"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/paging-limit",
+          "message": "The list raised pages with cursor, but its defaultLimit 15 is above its maxLimit 10.",
+          "fix": "Lower defaultLimit on the route's paging to its maxLimit or less.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/raised/paging"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

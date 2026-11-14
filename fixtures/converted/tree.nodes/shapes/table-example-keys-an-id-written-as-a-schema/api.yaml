@@ -1,0 +1,28 @@
+
+api: { name: a, version: 1, kind: product }
+
+pagings:
+  cursor:
+    request: { cursor: { query: cursor }, limit: { query: limit }, sort: { query: sort, style: signed } }
+    response: { body: $items }
+  changes:
+    request: { since: { query: since } }
+    response: { body: { items: $items, next: $nextSince } }
+
+conventions:
+  batch: { maxIds: 20 }
+schemas:
+  NoteKey: { type: object, properties: { noteId: { type: integer } } }
+  Note: { type: object, properties: { noteId: { type: integer }, text: { type: string } } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      notes:
+        kind: collection
+        id: NoteKey
+        item: Note
+        ops:
+          batch:
+            examples:
+              table: { status: 200, value: { "1": { noteId: 1, text: a }, "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk": { noteId: 2, text: b } } }

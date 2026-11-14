@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/derive/role-param-required",
+    "message": "role 'forbidden' may leave the required param 'reason' of 'shop.denied' without a value",
+    "fix": "fill it with a literal or a datum role 'forbidden' always supplies, or make it optional in 'shop.denied'",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/errorRoles/forbidden/params/reason"
+    },
+    "related": []
+  }
+]

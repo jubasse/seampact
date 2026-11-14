@@ -1,0 +1,14 @@
+api: { name: shop, version: 1 }
+conventions:
+  errors:
+    derived:
+      schemaInvalid:
+        code: api.schema_invalid
+        params: { issues: { $each: $issues, $as: { all: { $each: $issues, $as: $item.rule } } } }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: The contract checks error declarations and role bindings only. }
+    routes:
+      ping: { method: get }

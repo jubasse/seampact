@@ -1,0 +1,38 @@
+api: { name: shop, version: 1 }
+schemes:
+  bearer: { kind: bearer }
+identities:
+  clerk: { schemes: { read: [bearer], write: [bearer] }, principal: Clerk }
+schemas:
+  ShopId: { type: string, format: uuid }
+  ItemId: { type: string, format: uuid }
+  Clerk: { type: object, required: [clerkId], properties: { clerkId: { type: string } } }
+  VarA:
+    type: object
+    properties: { cost: { type: integer, restrictedTo: audit } }
+  VarB:
+    type: object
+    properties: { cost: { type: integer, restrictedTo: audit2 } }
+  VarC:
+    type: object
+    properties: { cost: { type: integer, restrictedTo: audit } }
+  Ev:
+    discriminator: kind
+    oneOf: { a: VarA, b: VarB }
+  Same:
+    discriminator: kind
+    oneOf: { a: VarA, c: VarC }
+scopes:
+  shop: { id: ShopId }
+rights:
+  items.cost: { subject: { resource: Item, id: ItemId } }
+  shop.role: { params: { level: { type: string } }, subject: { scope: shop } }
+  audit: {}
+  audit2: {}
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: clerk
+    routes:
+      ev: { method: get, output: Ev }
+      same: { method: get, output: Same }

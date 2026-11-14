@@ -1,0 +1,32 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "shop",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/derive/error-default",
+          "message": "default code 'api.not_found' of role 'notFound' is redeclared with status 410, but its status is 404",
+          "fix": "keep status 404, or declare another code and bind role 'notFound' to it",
+          "origin": {
+            "layer": "api",
+            "pointer": "/errors/api.not_found/status"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/derive/error-default",
+          "message": "default code 'api.not_found' of role 'notFound' is redeclared with nature 'unavailable', whose base is not its nature 'refused'",
+          "fix": "leave nature out, or name a nature on the base 'refused'",
+          "origin": {
+            "layer": "api",
+            "pointer": "/errors/api.not_found/nature"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

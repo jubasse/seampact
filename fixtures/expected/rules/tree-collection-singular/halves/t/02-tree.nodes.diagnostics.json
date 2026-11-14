@@ -1,0 +1,24 @@
+[
+  {
+    "severity": "warning",
+    "rule": "seampact/tree/collection-singular",
+    "message": "The collection things has the id parameter id and no singular, so its operation ids read getId and createId.",
+    "fix": "Set singular on the collection (the noun of its operation ids), or name its id parameter with the noun, as in productId.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/things"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/id-property",
+    "message": "The item Note of the collection things has no property id to hold the member id.",
+    "fix": "Set idProperty to the item property that holds the id, or add that property to the item.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/things/id/id"
+    },
+    "related": []
+  }
+]

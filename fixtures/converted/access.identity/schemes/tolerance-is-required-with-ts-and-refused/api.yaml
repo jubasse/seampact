@@ -1,0 +1,20 @@
+api: { name: a, version: 1 }
+schemes:
+
+  timed:
+    kind: signature
+    name: Stripe-Signature
+    algorithm: hmac-sha256
+    encoding: hex
+    key: { value: stripe }
+    format: 't={ts},v1={sig}'
+    payload: '{ts}.{rawBody}'
+  untimed:
+    kind: signature
+    name: Stripe-Signature
+    algorithm: hmac-sha256
+    encoding: hex
+    key: { value: stripe }
+    format: 'sha256={sig}'
+    payload: '{rawBody}'
+    tolerance: 5m

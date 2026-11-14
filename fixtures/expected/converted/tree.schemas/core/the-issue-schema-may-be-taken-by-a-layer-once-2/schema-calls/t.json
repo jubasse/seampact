@@ -1,0 +1,13 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/api.schema_invalid/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ApiSchemaInvalidParams"
+    }
+  }
+]

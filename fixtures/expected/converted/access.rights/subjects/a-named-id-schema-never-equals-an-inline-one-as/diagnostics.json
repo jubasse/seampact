@@ -1,0 +1,32 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "studio",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/requirement-subject",
+          "message": "right 'docs.edit' needs a subject on route 'touchDoc', and no member id of the route has its id schema",
+          "fix": "write the requirement's 'subject', a source whose schema is the right's id schema",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/docs/member/routes/touch/requires/0"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/requirement-subject",
+          "message": "the subject header.X-Doc of right 'docs.edit' is an inline scalar schema, not the right's id schema 'DocId'",
+          "fix": "read the subject from a source whose schema is the right's id schema",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/docs/member/routes/poke/requires/0/subject"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

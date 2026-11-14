@@ -1,0 +1,62 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/hook/pathParams/raw",
+      "input"
+    ],
+    "answer": {
+      "kind": "opaque",
+      "reason": "Vendor JSON.",
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/hook/pathParams/raw"
+      }
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/hook/headers/X-Meta",
+      "input"
+    ],
+    "answer": {
+      "kind": "opaque",
+      "reason": "Vendor JSON.",
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/hook/headers/X-Meta"
+      }
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/hook/query/payload",
+      "input"
+    ],
+    "answer": {
+      "kind": "opaque",
+      "reason": "Vendor JSON.",
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/hook/query/payload"
+      }
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/hook/responses/200/headers/X-Trace",
+      "output"
+    ],
+    "answer": {
+      "kind": "opaque",
+      "reason": "Vendor JSON.",
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/hook/responses/200/headers/X-Trace"
+      }
+    }
+  }
+]

@@ -1,0 +1,31 @@
+api: { name: t, version: 1 }
+schemas:
+
+  Article:
+    type: object
+    required: [articleId, title]
+    properties:
+      articleId: { type: string, format: uuid }
+      title: { type: string, minLength: 1, maxLength: 200, description: The heading. }
+      body: { type: string, maxLength: 20000, sensitive: true }
+      state: { type: string, restrictedTo: articles.seeState }
+
+  Lacks: { pick: { from: Article, fields: [title, missing, title] } }
+  NotKept:
+    pick: { from: Article, fields: [title] }
+    required: [body]
+    properties: { body: { nullable: true } }
+  Required:
+    pick: { from: Article, fields: [title] }
+    properties: { title: { default: Untitled } }
+  StillRequired:
+    pick: { from: Article, fields: [title] }
+    properties: { title: { default: Untitled } }
+  Restricted:
+    pick: { from: Article, fields: [title] }
+    properties: { title: { restrictedTo: articles.seeTitle } }
+  Mapped: { type: object, additionalProperties: { type: string } }
+  FromMap: { pick: { from: Mapped, fields: [a] } }
+  FromNothing: { omit: { from: Nothing, fields: [a] } }
+  CycleA: { pick: { from: CycleB, fields: [a] } }
+  CycleB: { omit: { from: CycleA, fields: [b] } }

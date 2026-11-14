@@ -1,0 +1,29 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/shop.sort_denied/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ShopSortDeniedParams"
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      "c",
+      {
+        "kind": "enum",
+        "enum": "Reason"
+      }
+    ],
+    "answer": [
+      {
+        "pointer": "",
+        "message": "'c' is not a value of Reason"
+      }
+    ]
+  }
+]

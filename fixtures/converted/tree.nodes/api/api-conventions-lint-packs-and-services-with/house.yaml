@@ -1,0 +1,6 @@
+
+pack: { name: house, version: 2.1.0, extends: [] }
+conventions:
+  pathCase: snake
+lint:
+  rules: { seampact/redundant-maturity: disabled }

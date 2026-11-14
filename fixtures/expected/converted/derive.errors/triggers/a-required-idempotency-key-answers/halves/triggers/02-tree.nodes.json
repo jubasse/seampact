@@ -1,0 +1,902 @@
+{
+  "conventions": {
+    "paging.maxLimit": {
+      "value": 50,
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/paging/maxLimit"
+      }
+    },
+    "idempotency.header": {
+      "value": "Idempotency-Key",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/idempotency/header"
+      }
+    },
+    "idempotency.replayHeader": {
+      "value": "Idempotency-Replayed",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/idempotency/replayHeader"
+      }
+    },
+    "idempotency.lifetime": {
+      "value": "1h",
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/idempotency/lifetime"
+      }
+    },
+    "idempotency.methods": {
+      "value": [
+        "post"
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/idempotency/methods"
+      }
+    },
+    "idempotency.required": {
+      "value": false,
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/idempotency/required"
+      }
+    }
+  },
+  "formats": {
+    "bare": {
+      "id": "bare",
+      "origin": {
+        "layer": "core",
+        "pointer": "/formats/bare"
+      },
+      "media": "application/json",
+      "absent": "omit",
+      "success": {
+        "item": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "table": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "list": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "page": {
+          "body": {
+            "kind": "slot",
+            "slot": "items",
+            "path": []
+          },
+          "headers": []
+        }
+      },
+      "meta": {},
+      "error": {
+        "media": "application/problem+json",
+        "body": {
+          "kind": "object",
+          "members": [
+            {
+              "name": {
+                "kind": "text",
+                "text": "type"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "code",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "title"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "title",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "status"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "status",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "detail"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "detail",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "instance"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "instance",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "code"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "code",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "nature"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "nature",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "traceId"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "traceId",
+                "path": []
+              }
+            }
+          ],
+          "merge": "params"
+        },
+        "headers": []
+      }
+    }
+  },
+  "pagings": {
+    "cursor": {
+      "id": "cursor",
+      "origin": {
+        "layer": "api",
+        "pointer": "/pagings/cursor"
+      },
+      "position": "cursor",
+      "absent": "omit",
+      "request": [
+        {
+          "role": "cursor",
+          "in": "query",
+          "name": "cursor"
+        },
+        {
+          "role": "limit",
+          "in": "query",
+          "name": "limit"
+        },
+        {
+          "role": "sort",
+          "in": "query",
+          "name": "sort",
+          "style": "signed"
+        }
+      ],
+      "response": {
+        "body": {
+          "kind": "slot",
+          "slot": "items",
+          "path": []
+        },
+        "meta": [],
+        "headers": [],
+        "links": [
+          {
+            "rel": "next",
+            "role": "next"
+          }
+        ]
+      },
+      "handlerResult": [
+        "nextCursor"
+      ]
+    },
+    "changes": {
+      "id": "changes",
+      "origin": {
+        "layer": "api",
+        "pointer": "/pagings/changes"
+      },
+      "position": "since",
+      "absent": "omit",
+      "request": [
+        {
+          "role": "since",
+          "in": "query",
+          "name": "since"
+        },
+        {
+          "role": "limit",
+          "in": "query",
+          "name": "limit"
+        }
+      ],
+      "response": {
+        "body": {
+          "kind": "object",
+          "members": [
+            {
+              "name": {
+                "kind": "text",
+                "text": "items"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "items",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "next"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "nextSince",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "complete"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "complete",
+                "path": []
+              }
+            }
+          ]
+        },
+        "meta": [],
+        "headers": [],
+        "links": []
+      },
+      "handlerResult": [
+        "nextSince",
+        "complete"
+      ]
+    }
+  },
+  "operations": [
+    {
+      "kind": "httpOperation",
+      "id": "listNotes",
+      "name": {
+        "segments": [
+          "list",
+          "notes"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "op": "list",
+      "resource": {
+        "type": "notes",
+        "idProperty": "noteId"
+      },
+      "method": "get",
+      "safe": true,
+      "path": "/v1/notes",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Note"
+          },
+          "shape": "page",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/notes/item"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "paging": {
+        "style": "cursor",
+        "maxLimit": 50,
+        "defaultLimit": 50,
+        "overLimit": "reject",
+        "sortKeys": [
+          {
+            "key": "title",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/notes/ops/list/sortable/0"
+            }
+          },
+          {
+            "key": "memo",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/notes/ops/list/sortable/1"
+            }
+          }
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/notes/ops/list/paging"
+        }
+      },
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/notes/ops/list"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "updateNote",
+      "name": {
+        "segments": [
+          "update",
+          "note"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "op": "update",
+      "resource": {
+        "type": "notes",
+        "idParam": "noteId",
+        "idProperty": "noteId"
+      },
+      "method": "patch",
+      "safe": false,
+      "path": "/v1/notes/{noteId}",
+      "params": {
+        "path": [
+          {
+            "name": "noteId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/notes/id/noteId"
+            }
+          }
+        ],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "EditNote"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/notes/ops/update/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Note"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/notes/item"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "concurrency": {
+        "version": {
+          "in": "header",
+          "name": "If-Match"
+        },
+        "field": "etag"
+      },
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/notes/ops/update"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "listChanges",
+      "name": {
+        "segments": [
+          "list",
+          "changes"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "op": "list",
+      "resource": {
+        "type": "changes",
+        "idProperty": "noteId"
+      },
+      "method": "get",
+      "safe": true,
+      "path": "/v1/changes",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Note"
+          },
+          "shape": "page",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/changes/item"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "paging": {
+        "style": "changes",
+        "maxLimit": 50,
+        "defaultLimit": 50,
+        "overLimit": "reject",
+        "token": "opaque",
+        "sortKeys": [],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/changes/ops/list/paging"
+        }
+      },
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/changes/ops/list"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "drafts",
+      "name": {
+        "segments": [
+          "drafts"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "method": "post",
+      "safe": false,
+      "path": "/v1/drafts",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "NewNote"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/drafts/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 204,
+          "shape": "empty",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/drafts"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/drafts"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "jobs",
+      "name": {
+        "segments": [
+          "jobs"
+        ],
+        "role": "operation"
+      },
+      "surface": "robots",
+      "method": "get",
+      "safe": true,
+      "path": "/v1/jobs",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": {
+            "kind": "ref",
+            "schema": "Event"
+          },
+          "shape": "item",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/robots/routes/jobs/output"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/robots/routes/jobs"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "stripe",
+      "name": {
+        "segments": [
+          "stripe"
+        ],
+        "role": "operation"
+      },
+      "surface": "hooks",
+      "method": "post",
+      "safe": false,
+      "path": "/v1/stripe",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "Event"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/hooks/routes/stripe/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 204,
+          "shape": "empty",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/hooks/routes/stripe"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/hooks/routes/stripe"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "github",
+      "name": {
+        "segments": [
+          "github"
+        ],
+        "role": "operation"
+      },
+      "surface": "hooks",
+      "method": "post",
+      "safe": false,
+      "path": "/v1/github",
+      "params": {
+        "path": [],
+        "query": [],
+        "header": []
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "input": {
+        "media": "application/json",
+        "schema": {
+          "kind": "ref",
+          "schema": "GithubEvent"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/hooks/routes/github/input"
+        }
+      },
+      "responses": [
+        {
+          "status": 204,
+          "shape": "empty",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/hooks/routes/github"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/hooks/routes/github"
+      }
+    }
+  ],
+  "api": {
+    "id": "triggers",
+    "name": {
+      "segments": [
+        "triggers"
+      ],
+      "role": "schema"
+    },
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "kind": "product",
+    "pathVersion": {
+      "value": "prefix",
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/version"
+      }
+    },
+    "maturity": "experimental",
+    "compat": {
+      "policy": "none"
+    },
+    "surfaces": {
+      "app": {
+        "name": {
+          "segments": [
+            "app"
+          ],
+          "role": "schema"
+        },
+        "prefix": "/v1",
+        "pathVersion": "prefix",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app"
+        }
+      },
+      "robots": {
+        "name": {
+          "segments": [
+            "robots"
+          ],
+          "role": "schema"
+        },
+        "prefix": "/v1",
+        "pathVersion": "prefix",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/robots"
+        }
+      },
+      "hooks": {
+        "name": {
+          "segments": [
+            "hooks"
+          ],
+          "role": "schema"
+        },
+        "prefix": "/v1",
+        "pathVersion": "prefix",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/hooks"
+        }
+      }
+    },
+    "documents": {},
+    "docs": {},
+    "extensions": {},
+    "origin": {
+      "layer": "api",
+      "pointer": "/api"
+    }
+  },
+  "lint": {
+    "rules": {},
+    "allows": []
+  }
+}

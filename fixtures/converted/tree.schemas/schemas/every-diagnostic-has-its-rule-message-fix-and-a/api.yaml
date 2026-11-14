@@ -1,0 +1,7 @@
+api: { name: t, version: 1 }
+scalars:
+  uuid: { type: string }
+schemas:
+  A: { type: object, properties: { b: Missing, c: { format: email }, d: { type: string, pattern: '\b' } } }
+  B: { type: object, properties: { x: { type: string }, X: { type: string } } }
+  U: { discriminator: k, oneOf: { a: B, b: { type: string } } }

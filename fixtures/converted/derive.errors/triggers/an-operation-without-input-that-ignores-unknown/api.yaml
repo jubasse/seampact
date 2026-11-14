@@ -1,0 +1,7 @@
+api: { name: edge, version: 1 }
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: The contract checks the query policy only. }
+    routes:
+      ping: { method: get, unknownQuery: { ignore: "Probes add a cache buster." } }

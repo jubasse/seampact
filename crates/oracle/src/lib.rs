@@ -17,6 +17,7 @@ mod raw_text;
 mod rule_ids;
 mod run;
 mod subject;
+mod time_limit;
 mod verdict;
 mod yaml_value;
 
@@ -44,5 +45,6 @@ pub use run::{Selection, run_oracle};
 pub use subject::{
     ApiDeltas, Compilation, CompiledApi, ExpectedDelta, HalfInput, OracleSubject, SubjectAnswer,
 };
+pub use time_limit::TimeLimitAction;
 pub use verdict::{FirstFailure, Verdict};
 pub use yaml_value::yaml_to_json;

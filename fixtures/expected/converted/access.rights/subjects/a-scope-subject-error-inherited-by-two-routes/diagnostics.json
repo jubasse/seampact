@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "studio",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/requirement-subject",
+          "message": "right 'projectRole' is checked against scope 'project', which route 'firstPing' does not resolve",
+          "fix": "enter scope 'project' on the route or an ancestor, or require the right elsewhere",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/ping/requires/0"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+api: { name: t, version: 1 }
+schemas:
+
+  Article:
+    type: object
+    required: [title, summary]
+    properties:
+      title: { type: string }
+      summary: { type: string, nullable: true }
+      publishOn: { type: string, format: date, nullable: true }
+      tags: { type: array, items: { $ref: Tag, nullable: true } }
+      maybe: MaybeId
+  Tag: { type: object, properties: { name: { type: string } } }
+  MaybeId: { type: string, format: uuid, nullable: true }

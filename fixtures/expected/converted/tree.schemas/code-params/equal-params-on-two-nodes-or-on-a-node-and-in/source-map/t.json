@@ -1,0 +1,26 @@
+{
+  "irRevision": 6,
+  "locations": {
+    "api#/api": {
+      "column": 1,
+      "endColumn": 29,
+      "endLine": 1,
+      "file": "api.yaml",
+      "line": 1
+    },
+    "api#/api/version": {
+      "column": 17,
+      "endColumn": 27,
+      "endLine": 1,
+      "file": "api.yaml",
+      "line": 1
+    },
+    "api#/surfaces/app": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 17,
+      "file": "api.yaml",
+      "line": 5
+    }
+  }
+}

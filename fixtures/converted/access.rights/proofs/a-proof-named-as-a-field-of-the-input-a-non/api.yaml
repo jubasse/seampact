@@ -1,0 +1,35 @@
+api: { name: vault, version: 1 }
+schemes:
+  bearer: { kind: bearer }
+identities:
+  user: { schemes: { read: [bearer], write: [bearer] }, principal: UserPrincipal }
+schemas:
+  Token: { type: string }
+  Note:
+    type: object
+    required: [noteId, token]
+    properties: { noteId: Token, token: { type: string }, count: { type: integer }, flag: { type: boolean } }
+  UserPrincipal: { type: object, required: [userId], properties: { userId: { type: string } } }
+rules:
+  recentAuth: { proof: { in: body, name: token, schema: Token } }
+  numbered: { proof: { in: body, name: reauth, schema: { type: integer } } }
+  worded: { proof: { in: body, name: reauth, schema: Token } }
+  otp: { proof: { in: header, name: X-Otp, schema: Token } }
+  otpAgain: { proof: { in: header, name: x-otp, schema: Token } }
+  otpNumber: { proof: { in: header, name: X-OTP, schema: { type: integer } } }
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: user
+    routes:
+      notes:
+        kind: collection
+        id: { noteId: Token }
+        item: Note
+        ops:
+          update: { input: Note, requires: [{ rule: recentAuth }] }
+          delete: { requires: [{ rule: recentAuth }] }
+        member:
+          routes:
+            peek: { method: get, requires: [{ rule: recentAuth }] }
+            tag: { method: post, input: { type: array, items: Token }, requires: [{ rule: recentAuth }], responses: { 204: {} } }

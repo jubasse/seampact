@@ -1,0 +1,17 @@
+api: { name: t, version: 1 }
+enums:
+  Empty: { reason: "None yet." }
+  Both: { values: [a], source: { enum: Twice } }
+  Twice: { values: [a, a] }
+  Lost: { source: { enum: Missing } }
+  Loop: { source: { enum: Loop } }
+  Sourced: { values: [a], source: { vocabulary: V }, reason: "Local." }
+  Fallback: { values: [a], fallback: b }
+  Named: { values: [a, '-'], codeNames: { b: bee } }
+  Same: { values: [a-b, a_b] }
+  Same2: { values: [x] }
+schemas:
+  Card:
+    type: object
+    properties:
+      all: { enum: { narrow: Named, to: [a, '-'] } }

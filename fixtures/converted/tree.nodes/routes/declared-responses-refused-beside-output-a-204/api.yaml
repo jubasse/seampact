@@ -1,0 +1,14 @@
+
+api: { name: a, version: 1, kind: product }
+schemas:
+  Note: { type: object, properties: { text: { type: string } } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      both: { method: get, output: Note, responses: { 200: { body: Note } } }
+      empty: { method: post, responses: { 204: { body: Note } } }
+      told: { method: get, responses: { 202: { description: Accepted for later. } } }
+      twice:
+        method: get
+        responses: { 202: { headers: { Retry-After: { type: string }, retry-after: { type: string } } } }

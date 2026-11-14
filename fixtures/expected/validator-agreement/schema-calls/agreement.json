@@ -1,0 +1,578 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoNotice/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Notice"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoNotice/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Notice"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoStrictKeys/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "StrictKeys"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoStrictKeys/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "StrictKeys"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoSubtreeKeys/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "SubtreeKeys"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoSubtreeKeys/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "SubtreeKeys"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoIgnoreKeys/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "IgnoreKeys",
+      "unknownKeys": {
+        "policy": "ignore",
+        "reason": "The sender adds fields without notice.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/schemas/IgnoreKeys/unknownKeys"
+        }
+      }
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoIgnoreKeys/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "IgnoreKeys"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoKeepKeys/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "KeepKeys",
+      "unknownKeys": {
+        "policy": "keep",
+        "reason": "The handler stores what it does not read.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/schemas/KeepKeys/unknownKeys"
+        }
+      }
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoKeepKeys/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "KeepKeys"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoProfile/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Profile"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoProfile/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Profile"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoPatchArticle/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "PatchArticle"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoPatchArticle/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "PatchArticle"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoBounds/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Bounds"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoBounds/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Bounds"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoOpaqueItems/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "OpaqueItems"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoOpaqueItems/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "OpaqueItems"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoReceipt/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Receipt"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoReceipt/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Receipt"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoLabelled/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Labelled"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoLabelled/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Labelled"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoTags/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "array",
+      "items": {
+        "kind": "scalar",
+        "type": "string",
+        "refinements": {}
+      },
+      "maxItems": 3
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoTags/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "array",
+      "items": {
+        "kind": "scalar",
+        "type": "string",
+        "refinements": {}
+      },
+      "maxItems": 3
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoPoint/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Point"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoPoint/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Point"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoQuantity/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Quantity"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoQuantity/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Quantity"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoPercent/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Percent"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoPercent/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Percent"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoInstant/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Instant"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoInstant/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Instant"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoDay/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Day"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoDay/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Day"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoEnvelope/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Envelope"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoEnvelope/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Envelope"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoOptionalEnvelope/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "OptionalEnvelope"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoOptionalEnvelope/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "OptionalEnvelope"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoMember/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Member"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoMember/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Member"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoOwner/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Owner"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoOwner/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Owner"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoFormats/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Formats"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoFormats/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Formats"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoPatterns/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Patterns"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoPatterns/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Patterns"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoComment/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Comment"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoComment/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Comment"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoCounts/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Counts"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/echoCounts/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Counts"
+    }
+  }
+]

@@ -1,0 +1,27 @@
+api: { name: shop, version: 1 }
+pagings:
+  cursor:
+    request: { cursor: { query: cursor }, limit: { query: limit } }
+    response: { body: $items }
+packs: [./pack.yaml]
+conventions:
+  paging: { default: cursor, maxLimit: 50 }
+  rights: { pattern: '^[a-z]+\.[a-z]+$' }
+schemas:
+  ItemId: { type: string }
+  Item: { type: object, required: [itemId], properties: { itemId: ItemId } }
+rights:
+  items.get: { subject: { scope: shop } }
+scopes:
+  shop: { id: ItemId }
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: The fixture checks derivations only. }
+    routes:
+      health: { method: get }
+      items:
+        kind: collection
+        id: { itemId: ItemId }
+        item: Item
+        ops: [list, get]

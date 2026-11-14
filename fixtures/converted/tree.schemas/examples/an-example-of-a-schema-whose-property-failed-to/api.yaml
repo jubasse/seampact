@@ -1,0 +1,6 @@
+api: { name: t, version: 1 }
+schemas:
+  Broken:
+    type: object
+    examples: [{ bad: 1 }]
+    properties: { bad: { $ref: Missing } }

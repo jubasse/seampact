@@ -1,0 +1,98 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/items/collection/routes/import/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Item"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/pairs/member/routes/swap/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Item"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/pairs/id/left",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/pairs/id/right",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/clerk/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Clerk"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rights/items.cost/subject/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rights/shop.role/params",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ShopRoleParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/scopes/shop/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  }
+]

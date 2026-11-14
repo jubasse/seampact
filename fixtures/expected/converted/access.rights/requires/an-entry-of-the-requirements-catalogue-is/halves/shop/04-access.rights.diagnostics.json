@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/requirement-target",
+    "message": "the requirement names right 'shop.close', which the rights catalogue does not declare",
+    "fix": "declare the right in 'rights', or name a declared one",
+    "origin": {
+      "layer": "api",
+      "pointer": "/requirements/broken/right"
+    },
+    "related": []
+  }
+]

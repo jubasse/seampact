@@ -1,0 +1,25 @@
+
+api: { name: a, version: 1, kind: product }
+
+schemas:
+  Id: { type: string }
+  Task: { type: object, properties: { taskId: Id } }
+  NewTask: { type: object, properties: { title: { type: string } } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      tasks:
+        kind: collection
+        id: { taskId: Id }
+        item: Task
+        ops: { create: { input: NewTask, output: Task }, delete: { output: Task } }
+        member:
+          routes:
+            archive: { method: post, responses: { 200: { body: { file: {} } } } }
+      logs:
+        kind: collection
+        member:
+          routes:
+            pin: { method: post }
+            unpin: { method: post }

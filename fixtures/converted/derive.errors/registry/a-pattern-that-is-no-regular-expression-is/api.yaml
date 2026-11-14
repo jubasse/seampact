@@ -1,0 +1,11 @@
+api: { name: shop, version: 1 }
+conventions: { errors: { pattern: '[' } }
+errors:
+  shop.failed: { status: 500 }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: The contract checks error declarations and role bindings only. }
+    routes:
+      ping: { method: get }

@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/get-input",
+    "message": "The get route peek declares an input, but a get request carries no body.",
+    "fix": "Move the fields into query, or make the route a post.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/peek/input"
+    },
+    "related": []
+  }
+]

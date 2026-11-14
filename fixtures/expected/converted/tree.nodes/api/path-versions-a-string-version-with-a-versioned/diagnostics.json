@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "audit",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/api-version",
+          "message": "The api version 2024-06-20 is a label, but the surface app puts a version number in its paths.",
+          "fix": "Write an integer version, or set pathVersion: none on every surface (or in conventions).",
+          "origin": {
+            "layer": "api",
+            "pointer": "/api/version"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

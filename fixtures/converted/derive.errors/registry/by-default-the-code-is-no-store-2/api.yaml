@@ -1,0 +1,15 @@
+api: { name: shop, version: 1 }
+conventions: { cache: { sensitiveElsewhere: noStore } }
+schemas:
+  Token: { type: string, sensitive: true }
+errors:
+  shop.keyed: { status: 409, params: { byToken: { type: object, propertyNames: { $ref: Token }, additionalProperties: { type: string } } } }
+  shop.leaked: { status: 409, params: { secret: { type: string, sensitive: true } } }
+  shop.plain: { status: 409, params: { count: { type: integer } } }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: The contract checks error declarations and role bindings only. }
+    routes:
+      ping: { method: get }

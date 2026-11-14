@@ -1,0 +1,16 @@
+
+api: { name: a, version: 1, kind: product }
+schemas:
+  TaskKey: { type: object, properties: { taskId: { type: string } } }
+  Task: { type: object, properties: { taskId: { type: string } } }
+  Note: { type: object, properties: { text: { type: string } } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      tasks:
+        kind: collection
+        id: TaskKey
+        item: Task
+        ops: [get]
+      notes: { kind: collection, id: TaskKey, singular: note, item: Note, ops: [get] }

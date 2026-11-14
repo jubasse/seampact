@@ -1,0 +1,68 @@
+{
+  "irRevision": 6,
+  "locations": {
+    "api#/api": {
+      "column": 1,
+      "endColumn": 32,
+      "endLine": 1,
+      "file": "api.yaml",
+      "line": 1
+    },
+    "api#/api/version": {
+      "column": 20,
+      "endColumn": 30,
+      "endLine": 1,
+      "file": "api.yaml",
+      "line": 1
+    },
+    "api#/conventions/errors/derived": {
+      "column": 13,
+      "endColumn": 53,
+      "endLine": 4,
+      "file": "api.yaml",
+      "line": 4
+    },
+    "api#/conventions/rateLimit/header": {
+      "column": 16,
+      "endColumn": 35,
+      "endLine": 3,
+      "file": "api.yaml",
+      "line": 3
+    },
+    "api#/conventions/rateLimit/param": {
+      "column": 37,
+      "endColumn": 51,
+      "endLine": 3,
+      "file": "api.yaml",
+      "line": 3
+    },
+    "api#/conventions/rateLimit/unit": {
+      "column": 53,
+      "endColumn": 60,
+      "endLine": 3,
+      "file": "api.yaml",
+      "line": 3
+    },
+    "api#/surfaces/app": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 14,
+      "file": "api.yaml",
+      "line": 9
+    },
+    "api#/surfaces/app/access": {
+      "column": 5,
+      "endColumn": 87,
+      "endLine": 11,
+      "file": "api.yaml",
+      "line": 11
+    },
+    "api#/surfaces/app/routes/ping": {
+      "column": 7,
+      "endColumn": 28,
+      "endLine": 13,
+      "file": "api.yaml",
+      "line": 13
+    }
+  }
+}

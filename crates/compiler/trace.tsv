@@ -18,3 +18,6 @@ src/context.rs#context	packages/core/compiler/src/pipeline/context.ts#pipelineCo
 -	packages/core/compiler/src/pipeline/draft-schema.ts#draftIrSchemas	merged: src/oracle/half.rs#run_fixture_half
 -	packages/core/compiler/src/pipeline/draft-schema.ts#createDraftValidator	merged: src/oracle/half.rs#run_fixture_half
 -	packages/core/compiler/src/pipeline/draft-schema.ts#isSchemaObject	merged: src/oracle/half.rs#run_fixture_half
+-	scripts/oracle/compiler.ts#contextKeepingReports	skip: dumps the per-half diagnostics and schema calls for the expected files; the Rust subject compares the dumped files
+-	scripts/oracle/compiler.ts#locationsOf	skip: dumps the per-half diagnostics and schema calls for the expected files; the Rust subject compares the dumped files
+-	scripts/oracle/compiler.ts#loggingSchemaService	skip: dumps the per-half diagnostics and schema calls for the expected files; the Rust subject compares the dumped files

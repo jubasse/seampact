@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/requirement-subject",
+    "message": "the subject principal.nick of right 'docs.edit' is an optional field, which a caller of route 'ping' may omit; the subject must be a required field",
+    "fix": "make the field required, or read the subject from a required one",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/ping/requires/0/subject"
+    },
+    "related": []
+  }
+]

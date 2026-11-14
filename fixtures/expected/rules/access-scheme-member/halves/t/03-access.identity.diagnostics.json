@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/scheme-member",
+    "message": "header scheme 'key' has no 'name'",
+    "fix": "Set 'name' to the header name.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemes/key"
+    },
+    "related": []
+  }
+]

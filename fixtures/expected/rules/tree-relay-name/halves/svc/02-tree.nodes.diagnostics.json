@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/relay-name",
+    "message": "The relay route fetch relays tasks.getTask, so its name must be the public operation id getTask.",
+    "fix": "Rename the route getTask, or set operationId on it.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/internal/routes/fetch"
+    },
+    "related": []
+  }
+]

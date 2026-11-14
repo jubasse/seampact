@@ -1,0 +1,13 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/shop.invalid/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ShopInvalidParams"
+    }
+  }
+]

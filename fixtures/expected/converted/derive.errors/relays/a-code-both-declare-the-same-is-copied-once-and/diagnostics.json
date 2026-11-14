@@ -1,0 +1,45 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "tasks",
+      "diagnostics": []
+    },
+    {
+      "api": "tasksTwo",
+      "diagnostics": []
+    },
+    {
+      "api": "tasksService",
+      "diagnostics": []
+    },
+    {
+      "api": "tasksServiceWrites",
+      "diagnostics": []
+    },
+    {
+      "api": "tasksDevices",
+      "diagnostics": []
+    },
+    {
+      "api": "tasksOptionalAuth",
+      "diagnostics": []
+    },
+    {
+      "api": "tasksAbsoluteUrls",
+      "diagnostics": []
+    },
+    {
+      "api": "tasksResponses",
+      "diagnostics": []
+    },
+    {
+      "api": "tasksPaging",
+      "diagnostics": []
+    },
+    {
+      "api": "tasksSplitSort",
+      "diagnostics": []
+    }
+  ]
+}

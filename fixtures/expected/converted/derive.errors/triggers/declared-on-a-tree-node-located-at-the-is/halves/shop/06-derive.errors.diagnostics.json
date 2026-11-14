@@ -1,0 +1,21 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/derive/retry-param",
+    "message": "conventions.rateLimit.param 'retryAfterMs' is not an integer with a maximum of at most 9007199254740991 of 'shop.slow', which carries the retry header",
+    "fix": "declare 'retryAfterMs' in 'shop.slow' as a required integer with minimum 0 and maximum 9007199254740991",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/ping/errors/shop.slow"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/conventions/rateLimit/param"
+        },
+        "message": "the param is named here"
+      }
+    ]
+  }
+]

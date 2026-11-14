@@ -1,0 +1,4 @@
+api: { name: t, version: 1 }
+schemas:
+  ApiEmptyBody: { type: object, properties: { a: { type: string } } }
+  Holder: { type: object, properties: { x: ApiEmptyBody } }

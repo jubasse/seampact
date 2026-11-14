@@ -1,0 +1,73 @@
+api: { name: shop, version: 1 }
+schemes:
+  bearer: { kind: bearer }
+identities:
+  clerk: { schemes: { read: [bearer], write: [bearer] }, principal: Clerk }
+schemas:
+  ShopId: { type: string, format: uuid }
+  ItemId: { type: string, format: uuid }
+  Clerk: { type: object, required: [clerkId], properties: { clerkId: { type: string } } }
+  L0:
+    type: object
+    properties: { a: L1, b: L1 }
+  L1:
+    type: object
+    properties: { a: L2, b: L2 }
+  L2:
+    type: object
+    properties: { a: L3, b: L3 }
+  L3:
+    type: object
+    properties: { a: L4, b: L4 }
+  L4:
+    type: object
+    properties: { a: L5, b: L5 }
+  L5:
+    type: object
+    properties: { a: L6, b: L6 }
+  L6:
+    type: object
+    properties: { a: L7, b: L7 }
+  L7:
+    type: object
+    properties: { a: L8, b: L8 }
+  L8:
+    type: object
+    properties: { a: L9, b: L9 }
+  L9:
+    type: object
+    properties: { a: L10, b: L10 }
+  L10:
+    type: object
+    properties: { a: L11, b: L11 }
+  L11:
+    type: object
+    properties: { a: L12, b: L12 }
+  L12:
+    type: object
+    properties: { a: L13, b: L13 }
+  L13:
+    type: object
+    properties: { a: L14, b: L14 }
+  L14:
+    type: object
+    properties: { a: L15, b: L15 }
+  L15:
+    type: object
+    properties: { a: L16, b: L16 }
+  L16:
+    type: object
+    properties: { code: { type: string } }
+scopes:
+  shop: { id: ShopId }
+rights:
+  items.cost: { subject: { resource: Item, id: ItemId } }
+  shop.role: { params: { level: { type: string } }, subject: { scope: shop } }
+  audit: {}
+  audit2: {}
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: clerk
+    routes:
+      deep: { method: get, output: L0 }

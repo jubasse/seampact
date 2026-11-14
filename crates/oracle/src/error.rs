@@ -53,6 +53,12 @@ pub enum OracleError {
         /// What selects nothing.
         problem: String,
     },
+    /// The thread that watches the per-fixture time limit could not be started.
+    #[error("cannot start the time limit watcher: {source}")]
+    Thread {
+        /// The I/O failure.
+        source: std::io::Error,
+    },
     /// The differences file is invalid.
     #[error("{path} is invalid:\n{}", problems.iter().map(|problem| format!("  {problem}")).collect::<Vec<_>>().join("\n"))]
     InvalidDifferences {

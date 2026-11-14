@@ -1,0 +1,9 @@
+api: { name: t, version: 1 }
+enums:
+  Region: { values: [eu, us], reason: "Serving regions." }
+formats:
+  house:
+    success:
+      item: { body: { data: $payload, meta: $meta } }
+    meta:
+      region: { fill: handler, schema: { enum: Region } }

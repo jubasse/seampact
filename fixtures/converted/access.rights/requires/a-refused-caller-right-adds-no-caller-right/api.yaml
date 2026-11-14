@@ -1,0 +1,15 @@
+api: { name: billing, version: 1, kind: service, caller: { identity: service, right: callerService } }
+schemes:
+  internalToken: { kind: bearer }
+identities:
+  service: { schemes: { read: [internalToken], write: [internalToken] }, principal: ServicePrincipal }
+schemas:
+  ServicePrincipal: { type: object, required: [service], properties: { service: { type: string } } }
+rights:
+  callerService: { subject: { scope: nowhere } }
+surfaces:
+  internal:
+    prefix: /internal/v{version}
+    routes:
+      first: { method: get }
+      second: { method: get }

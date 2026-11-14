@@ -1,0 +1,7 @@
+
+api: { name: audit, version: 1, kind: product }
+surfaces:
+  app:
+    prefix: ""
+    routes:
+      auditLog: { method: get }

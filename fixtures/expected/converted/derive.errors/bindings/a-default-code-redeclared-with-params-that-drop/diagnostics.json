@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "shop",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/derive/role-datum",
+          "message": "role 'sortKeyForbidden' requires the datum 'key', which no param of 'api.sort_key_forbidden' receives",
+          "fix": "add a param 'key' to 'api.sort_key_forbidden', or bind it with params: { key: $key }",
+          "origin": {
+            "layer": "api",
+            "pointer": "/errors/api.sort_key_forbidden"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

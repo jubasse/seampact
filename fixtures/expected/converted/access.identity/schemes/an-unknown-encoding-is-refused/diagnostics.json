@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "a",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/signature-template",
+          "message": "signature scheme 'sig' has encoding 'base32', which is neither hex nor base64",
+          "fix": "Set 'encoding' to 'hex' or 'base64'.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemes/sig/encoding"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-reserved",
+    "message": "the schema 'ApiForbiddenParams' is reserved for the params of the default code 'api.forbidden'",
+    "fix": "declare the schema under another name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/ApiForbiddenParams"
+    },
+    "related": []
+  }
+]

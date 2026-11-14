@@ -1,0 +1,586 @@
+{
+  "formats": {
+    "bare": {
+      "id": "bare",
+      "origin": {
+        "layer": "core",
+        "pointer": "/formats/bare"
+      },
+      "media": "application/json",
+      "absent": "omit",
+      "success": {
+        "item": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "table": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "list": {
+          "body": {
+            "kind": "slot",
+            "slot": "payload",
+            "path": []
+          },
+          "headers": []
+        },
+        "page": {
+          "body": {
+            "kind": "slot",
+            "slot": "items",
+            "path": []
+          },
+          "headers": []
+        }
+      },
+      "meta": {},
+      "error": {
+        "media": "application/problem+json",
+        "body": {
+          "kind": "object",
+          "members": [
+            {
+              "name": {
+                "kind": "text",
+                "text": "type"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "code",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "title"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "title",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "status"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "status",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "detail"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "detail",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "instance"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "instance",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "code"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "code",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "nature"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "nature",
+                "path": []
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "traceId"
+              },
+              "value": {
+                "kind": "slot",
+                "slot": "traceId",
+                "path": []
+              }
+            }
+          ],
+          "merge": "params"
+        },
+        "headers": []
+      }
+    }
+  },
+  "operations": [
+    {
+      "kind": "httpOperation",
+      "id": "showProjects",
+      "name": {
+        "segments": [
+          "show",
+          "projects"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "resource": {
+        "type": "projects"
+      },
+      "method": "get",
+      "safe": true,
+      "path": "/v1/orgs/{orgId}/projects/{projectId}/show",
+      "params": {
+        "path": [
+          {
+            "name": "orgId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/projects/pathParams/orgId"
+            }
+          },
+          {
+            "name": "projectId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/projects/pathParams/projectId"
+            }
+          }
+        ],
+        "query": [
+          {
+            "name": "verbose",
+            "type": {
+              "kind": "scalar",
+              "type": "boolean",
+              "refinements": {}
+            },
+            "required": false,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/projects/query/verbose?"
+            },
+            "wire": {
+              "kind": "boolean",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            }
+          },
+          {
+            "name": "state",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "origin": {
+              "layer": "api",
+              "pointer": "/schemas/Filter/properties/state"
+            },
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            }
+          }
+        ],
+        "header": [
+          {
+            "name": "X-Tenant",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/headers/X-Tenant"
+            }
+          }
+        ]
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "responses": [
+        {
+          "status": 204,
+          "shape": "empty",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/projects/routes/show"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/projects/routes/show"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "renameProjects",
+      "name": {
+        "segments": [
+          "rename",
+          "projects"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "resource": {
+        "type": "projects"
+      },
+      "method": "post",
+      "safe": false,
+      "path": "/v1/orgs/{orgId}/projects/{projectId}/rename",
+      "params": {
+        "path": [
+          {
+            "name": "orgId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/projects/pathParams/orgId"
+            }
+          },
+          {
+            "name": "projectId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/projects/pathParams/projectId"
+            }
+          }
+        ],
+        "query": [
+          {
+            "name": "dryRun",
+            "type": {
+              "kind": "scalar",
+              "type": "boolean",
+              "refinements": {}
+            },
+            "required": false,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/projects/routes/rename/query/dryRun?"
+            },
+            "wire": {
+              "kind": "boolean",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            }
+          }
+        ],
+        "header": [
+          {
+            "name": "X-Tenant",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/headers/X-Tenant"
+            }
+          }
+        ]
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "responses": [
+        {
+          "status": 204,
+          "shape": "empty",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/projects/routes/rename"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/projects/routes/rename"
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "misplacedProjects",
+      "name": {
+        "segments": [
+          "misplaced",
+          "projects"
+        ],
+        "role": "operation"
+      },
+      "surface": "app",
+      "resource": {
+        "type": "projects"
+      },
+      "method": "get",
+      "safe": true,
+      "path": "/v1/orgs/{orgId}/projects/{projectId}/x/{missing}",
+      "params": {
+        "path": [
+          {
+            "name": "orgId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/projects/pathParams/orgId"
+            }
+          },
+          {
+            "name": "projectId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/projects/pathParams/projectId"
+            }
+          },
+          {
+            "name": "unused",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/projects/routes/misplaced/pathParams/unused"
+            }
+          }
+        ],
+        "query": [
+          {
+            "name": "verbose",
+            "type": {
+              "kind": "scalar",
+              "type": "boolean",
+              "refinements": {}
+            },
+            "required": false,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/projects/query/verbose?"
+            },
+            "wire": {
+              "kind": "boolean",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            }
+          }
+        ],
+        "header": [
+          {
+            "name": "X-Tenant",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/headers/X-Tenant"
+            }
+          }
+        ]
+      },
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "responses": [
+        {
+          "status": 204,
+          "shape": "empty",
+          "headers": [],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/projects/routes/misplaced"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          }
+        }
+      ],
+      "format": "bare",
+      "examples": {},
+      "upstream": [],
+      "internal": false,
+      "tags": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/projects/routes/misplaced"
+      }
+    }
+  ],
+  "api": {
+    "id": "a",
+    "name": {
+      "segments": [
+        "a"
+      ],
+      "role": "schema"
+    },
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "kind": "product",
+    "pathVersion": {
+      "value": "prefix",
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/version"
+      }
+    },
+    "maturity": "experimental",
+    "compat": {
+      "policy": "none"
+    },
+    "surfaces": {
+      "app": {
+        "name": {
+          "segments": [
+            "app"
+          ],
+          "role": "schema"
+        },
+        "prefix": "/v1",
+        "pathVersion": "prefix",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app"
+        }
+      }
+    },
+    "documents": {},
+    "docs": {},
+    "extensions": {},
+    "origin": {
+      "layer": "api",
+      "pointer": "/api"
+    }
+  },
+  "lint": {
+    "rules": {},
+    "allows": []
+  }
+}

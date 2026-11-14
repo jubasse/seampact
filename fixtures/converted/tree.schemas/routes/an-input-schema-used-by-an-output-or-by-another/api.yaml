@@ -1,0 +1,18 @@
+api: { name: t, version: 1 }
+schemas:
+  TaskId: { type: string, format: uuid }
+  Task:
+    type: object
+    required: [taskId, version]
+    properties: { taskId: TaskId, version: { type: integer, minimum: 1 } }
+  UpdateTask: { type: object, properties: { title: { type: string } } }
+  ArchiveTask: { type: object, properties: { reason: { type: string } } }
+surfaces:
+  app:
+    routes:
+      tasks:
+        kind: collection
+        id: { taskId: TaskId }
+        item: Task
+        concurrency: { version: body.expectedVersion, field: version }
+        ops: { update: { input: Task } }

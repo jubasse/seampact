@@ -1,0 +1,23 @@
+
+api: { name: a, version: 1, kind: product }
+
+pagings:
+  cursor:
+    request: { cursor: { query: cursor }, limit: { query: limit }, sort: { query: sort, style: signed } }
+    response: { body: $items }
+  changes:
+    request: { since: { query: since } }
+    response: { body: { items: $items, next: $nextSince } }
+
+conventions:
+  paging: { default: cursor, maxLimit: 10, defaultLimit: 50 }
+schemas:
+  Note: { type: object, properties: { title: { type: string } } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      first: { method: get, item: Note }
+      second: { method: get, item: Note }
+      own: { method: get, item: Note, paging: { cursor: { maxLimit: 5, defaultLimit: 8 } } }
+      raised: { method: get, item: Note, paging: { cursor: { defaultLimit: 15 } } }

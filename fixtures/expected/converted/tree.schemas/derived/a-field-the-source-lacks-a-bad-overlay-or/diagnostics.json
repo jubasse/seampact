@@ -1,0 +1,109 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/derived-field",
+          "message": "'missing' is no property of the source 'Article'",
+          "fix": "remove it from 'fields', or declare it on 'Article'",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Lacks/pick/fields/1"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/derived-field",
+          "message": "the field 'title' is listed twice",
+          "fix": "list each field once",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Lacks/pick/fields/2"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/required-unknown",
+          "message": "'body' is required but is no property the derived object keeps",
+          "fix": "keep the property, or remove it from 'required'",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/NotKept/required"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/required-property",
+          "message": "'title' stays required, but a default fills an absent property",
+          "fix": "leave it out of 'required'",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Required/properties/title"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/required-property",
+          "message": "'title' stays required, but a default fills an absent property",
+          "fix": "leave it out of 'required'",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/StillRequired/properties/title"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/required-property",
+          "message": "'title' stays required, but a restricted property is optional by nature",
+          "fix": "leave it out of 'required'",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Restricted/properties/title"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/derived-source",
+          "message": "the source 'Mapped' of a derived object is not an object schema",
+          "fix": "derive from an object schema: a plain one, an 'allOf' or another derived object",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/FromMap/pick/from"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/schema-unknown",
+          "message": "no schema 'Nothing' is declared",
+          "fix": "declare it under 'schemas', or fix the name",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/FromNothing/omit/from"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/schema-cycle",
+          "message": "the derived object 'CycleA' reaches itself through the sources of its 'pick' or 'omit' chain",
+          "fix": "derive the chain from a schema that is not derived from it",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/CycleA"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

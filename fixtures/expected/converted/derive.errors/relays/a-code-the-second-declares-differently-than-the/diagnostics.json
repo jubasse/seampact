@@ -1,0 +1,65 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "tasks",
+      "diagnostics": []
+    },
+    {
+      "api": "tasksTwo",
+      "diagnostics": []
+    },
+    {
+      "api": "tasksService",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/derive/relay-declaration",
+          "message": "the error 'tasks.locked' that tasksTwo.health answers differs from the one tasks.getTask answers",
+          "fix": "declare it once in a shared file both public apis load, or rename one of them",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/internal/routes/health/relays"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/internal/routes/getTask/relays"
+              },
+              "message": "the route relaying tasks.getTask"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "api": "tasksServiceWrites",
+      "diagnostics": []
+    },
+    {
+      "api": "tasksDevices",
+      "diagnostics": []
+    },
+    {
+      "api": "tasksOptionalAuth",
+      "diagnostics": []
+    },
+    {
+      "api": "tasksAbsoluteUrls",
+      "diagnostics": []
+    },
+    {
+      "api": "tasksResponses",
+      "diagnostics": []
+    },
+    {
+      "api": "tasksPaging",
+      "diagnostics": []
+    },
+    {
+      "api": "tasksSplitSort",
+      "diagnostics": []
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/format-type",
+    "message": "the portable format 'email' is written with its type",
+    "fix": "write 'type: string, format: email'",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/A/format"
+    },
+    "related": []
+  }
+]

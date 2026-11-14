@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/signature-tolerance",
+    "message": "signature scheme 'sig' reads '{ts}' and has no 'tolerance'",
+    "fix": "Set 'tolerance' to the largest distance accepted between the signed timestamp and now, such as '5m'.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemes/sig"
+    },
+    "related": []
+  }
+]

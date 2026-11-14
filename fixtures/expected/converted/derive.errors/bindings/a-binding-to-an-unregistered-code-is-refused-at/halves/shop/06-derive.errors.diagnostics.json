@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/derive/role-code",
+    "message": "role 'notFound' is bound to 'shop.missing', which no layer or node declares and which is no default code",
+    "fix": "declare 'shop.missing' in 'errors', or bind the role to a registered code",
+    "origin": {
+      "layer": "api",
+      "pointer": "/conventions/errors/derived/notFound"
+    },
+    "related": []
+  }
+]

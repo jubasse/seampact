@@ -1,0 +1,72 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/slackCommand/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "SlackCommand"
+    }
+  },
+  {
+    "method": "queryWire",
+    "args": [
+      "/schemas/SlackCommand/properties/text"
+    ],
+    "answer": {
+      "kind": "text",
+      "style": "form",
+      "explode": true,
+      "brackets": false
+    }
+  },
+  {
+    "method": "queryWire",
+    "args": [
+      "/schemas/SlackCommand/properties/count"
+    ],
+    "answer": {
+      "kind": "number",
+      "style": "form",
+      "explode": true,
+      "brackets": false
+    }
+  },
+  {
+    "method": "queryWire",
+    "args": [
+      "/schemas/SlackCommand/properties/tags"
+    ],
+    "answer": {
+      "kind": "list",
+      "style": "form",
+      "explode": true,
+      "brackets": false
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/attach/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "AttachInput"
+    }
+  },
+  {
+    "method": "queryWire",
+    "args": [
+      "/surfaces/app/routes/attach/input/properties/caption"
+    ],
+    "answer": {
+      "kind": "text",
+      "style": "form",
+      "explode": true,
+      "brackets": false
+    }
+  }
+]

@@ -1,0 +1,22 @@
+{
+  "schemes": {
+    "plain": {
+      "id": "plain",
+      "kind": "header",
+      "name": "X-Api-Key",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/plain"
+      }
+    },
+    "token": {
+      "id": "token",
+      "kind": "query",
+      "name": "access_token",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/token"
+      }
+    }
+  }
+}

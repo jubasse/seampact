@@ -1,0 +1,7 @@
+pack: { name: step-up, version: 1.0.0, extends: [] }
+rules:
+  stepUp: { proof: { in: body, name: stepUpToken, schema: { type: string } } }
+derive:
+  - entry: writes
+    select: { access: [write] }
+    require: { rule: stepUp }

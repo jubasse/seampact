@@ -1,0 +1,17 @@
+api: { name: t, version: 1 }
+schemas:
+  Item: { type: object, properties: { id: Id } }
+  Id: { type: string, format: uuid }
+surfaces:
+  app:
+    routes:
+      items:
+        kind: collection
+        id: { itemId: Id }
+        item: Item
+        ops: { create: { input: Item } }
+      inline:
+        method: post
+        input: { type: object, properties: { a: { type: string } } }
+        headers: { X-Trace: { type: string } }
+        output: { type: array, items: Item }

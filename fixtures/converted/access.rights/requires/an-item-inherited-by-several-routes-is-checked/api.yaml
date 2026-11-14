@@ -1,0 +1,27 @@
+api: { name: shop, version: 1 }
+schemes:
+  bearer: { kind: bearer }
+identities:
+  user: { schemes: { read: [bearer], write: [bearer] }, principal: UserPrincipal }
+schemas:
+  UserPrincipal: { type: object, required: [userId], properties: { userId: { type: string } } }
+rights:
+  shop.open: {}
+  staff: { params: { level: { type: integer } } }
+rules:
+  throttle: { bucket: true }
+  audit: {}
+  note: { params: { reason?: { type: string } } }
+buckets:
+  perUser: { key: [principal.userId] }
+requirements:
+  seniorStaff: { right: staff, params: { level: 3 } }
+  writeThrottle: { rule: throttle, bucket: perUser }
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: user
+    requires: [{ right: shop.close }]
+    routes:
+      first: { method: get }
+      second: { method: get }

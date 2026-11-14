@@ -1,0 +1,29 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/name-collision",
+          "message": "the name 'ABC' this schema derives is already the name of another schema",
+          "fix": "rename the schema or the property",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/A/properties/bC"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/A/properties/b/properties/c"
+              },
+              "message": "'ABC' is named here"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

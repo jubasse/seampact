@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/scope-within",
+    "message": "scope 'team' is within 'nowhere', which the scopes catalogue does not declare",
+    "fix": "declare the parent scope, or name a declared one in 'within'",
+    "origin": {
+      "layer": "api",
+      "pointer": "/scopes/team/within"
+    },
+    "related": []
+  }
+]

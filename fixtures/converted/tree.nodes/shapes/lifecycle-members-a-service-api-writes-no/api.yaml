@@ -1,0 +1,9 @@
+
+api: { name: a, version: 1, kind: service, caller: { identity: service, right: caller } }
+surfaces:
+  internal:
+    prefix: /internal/v{version}
+    internal: true
+    routes:
+      ping: { method: get, output: { type: string } }
+      pong: { method: get, output: { type: string } }

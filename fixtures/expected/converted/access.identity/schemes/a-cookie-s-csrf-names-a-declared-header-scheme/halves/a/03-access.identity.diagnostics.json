@@ -1,0 +1,24 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/scheme-reference",
+    "message": "cookie scheme 'session' names 'missing' as its csrf scheme, which is no declared scheme",
+    "fix": "Name a header scheme, the header a cookie write must also present.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemes/session/csrf"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/scheme-kind",
+    "message": "cookie scheme 'other' names 'bearer' as its csrf scheme, a bearer scheme",
+    "fix": "Name a header scheme, the header a cookie write must also present.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemes/other/csrf"
+    },
+    "related": []
+  }
+]

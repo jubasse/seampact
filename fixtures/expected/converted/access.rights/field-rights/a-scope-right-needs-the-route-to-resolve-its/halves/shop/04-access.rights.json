@@ -1,0 +1,170 @@
+{
+  "rights": {
+    "items.cost": {
+      "id": "items.cost",
+      "subject": {
+        "kind": "resource",
+        "type": {
+          "segments": [
+            "item"
+          ],
+          "role": "schema"
+        },
+        "idSchema": {
+          "kind": "scalar",
+          "type": "string",
+          "format": "uuid",
+          "refinements": {}
+        }
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/items.cost"
+      }
+    },
+    "shop.role": {
+      "id": "shop.role",
+      "params": "ShopRoleParams",
+      "subject": {
+        "kind": "scope",
+        "scope": "shop"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/shop.role"
+      }
+    },
+    "audit": {
+      "id": "audit",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/audit"
+      }
+    },
+    "audit2": {
+      "id": "audit2",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/audit2"
+      }
+    }
+  },
+  "scopes": {
+    "shop": {
+      "id": "shop",
+      "idSchema": {
+        "kind": "scalar",
+        "type": "string",
+        "format": "uuid",
+        "refinements": {}
+      },
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/scopes/shop"
+      }
+    }
+  },
+  "operations": {
+    "shelf": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "shelfShop": {
+      "scopes": [
+        {
+          "scope": "shop",
+          "source": {
+            "in": "path",
+            "name": "shopId"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/shops/member/scopes/shop"
+          }
+        }
+      ],
+      "requires": [],
+      "fieldRights": [
+        {
+          "schema": "Shelf",
+          "pointer": "/level",
+          "right": "shop.role",
+          "params": {
+            "level": "owner"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "shop"
+            }
+          },
+          "direction": "input",
+          "inputPolicy": "reject",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/schemas/Shelf/properties/level/restrictedTo"
+              }
+            ]
+          }
+        },
+        {
+          "schema": "Shelf",
+          "pointer": "/level",
+          "right": "shop.role",
+          "params": {
+            "level": "owner"
+          },
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "shop"
+            }
+          },
+          "direction": "output",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/schemas/Shelf/properties/level/restrictedTo"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

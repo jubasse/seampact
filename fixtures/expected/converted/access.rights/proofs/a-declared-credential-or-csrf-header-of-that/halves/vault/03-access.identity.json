@@ -1,0 +1,266 @@
+{
+  "schemes": {
+    "bearer": {
+      "id": "bearer",
+      "kind": "bearer",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/bearer"
+      }
+    },
+    "apiKey": {
+      "id": "apiKey",
+      "kind": "header",
+      "name": "X-Api-Key",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/apiKey"
+      }
+    },
+    "session": {
+      "id": "session",
+      "kind": "cookie",
+      "name": "sid",
+      "csrf": "csrfToken",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/session"
+      }
+    },
+    "csrfToken": {
+      "id": "csrfToken",
+      "kind": "header",
+      "name": "X-Csrf-Token",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/csrfToken"
+      }
+    },
+    "sig": {
+      "id": "sig",
+      "kind": "signature",
+      "name": "Sig",
+      "signature": {
+        "verify": "template",
+        "format": "v1={sig}",
+        "algorithm": "hmac-sha256",
+        "payload": "{rawBody}",
+        "encoding": "hex",
+        "key": {
+          "kind": "value",
+          "value": "hook"
+        }
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/sig"
+      }
+    }
+  },
+  "identities": {
+    "user": {
+      "id": "user",
+      "kind": "credential",
+      "schemes": {
+        "read": [
+          "bearer"
+        ],
+        "write": [
+          "bearer"
+        ],
+        "optionalRead": []
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "Caller"
+      },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/user"
+      }
+    },
+    "keyed": {
+      "id": "keyed",
+      "kind": "credential",
+      "schemes": {
+        "read": [
+          "apiKey"
+        ],
+        "write": [
+          "apiKey"
+        ],
+        "optionalRead": []
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "Caller"
+      },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/keyed"
+      }
+    },
+    "browser": {
+      "id": "browser",
+      "kind": "credential",
+      "schemes": {
+        "read": [
+          "session"
+        ],
+        "write": [
+          "session"
+        ],
+        "optionalRead": []
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "Caller"
+      },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/browser"
+      }
+    },
+    "hook": {
+      "id": "hook",
+      "kind": "signed",
+      "signed": "sig",
+      "principal": {
+        "kind": "schema",
+        "schema": "Caller"
+      },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/hook"
+      }
+    }
+  },
+  "operations": {
+    "declared": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "bearer": {
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "keyed": {
+      "access": {
+        "kind": "identity",
+        "identity": "keyed",
+        "schemes": [
+          "apiKey"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/keys/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "browser": {
+      "access": {
+        "kind": "identity",
+        "identity": "browser",
+        "schemes": [
+          "session"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/web/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "csrf": {
+        "kind": "derived",
+        "header": "X-Csrf-Token",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [
+            {
+              "layer": "api",
+              "pointer": "/identities/browser"
+            },
+            {
+              "layer": "api",
+              "pointer": "/schemes/session"
+            }
+          ]
+        }
+      },
+      "principalRequires": [],
+      "bindings": []
+    },
+    "hook": {
+      "input": {
+        "rawBody": true
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "hook",
+        "schemes": [
+          "sig"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/hooks/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    }
+  }
+}

@@ -1,0 +1,17 @@
+api: { name: t, version: 1 }
+enums:
+  State:
+    values: [open, '+', done]
+    codeNames: { '+': plus }
+    reason: "States belong to this api."
+    fallback: open
+    summary: A task state.
+  Country: { values: [fr, de], source: { vocabulary: ISO 3166-1 } }
+  Open: { source: { enum: State } }
+schemas:
+  Card:
+    type: object
+    properties:
+      state: { enum: State }
+      listed: { enum: { narrow: State, to: [done, open], reason: "Drafts are not listed." } }
+      inherited: { enum: Open }

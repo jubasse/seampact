@@ -1,0 +1,145 @@
+{
+  "irRevision": 6,
+  "locations": {
+    "api#/api": {
+      "column": 1,
+      "endColumn": 34,
+      "endLine": 1,
+      "file": "api.yaml",
+      "line": 1
+    },
+    "api#/api/version": {
+      "column": 22,
+      "endColumn": 32,
+      "endLine": 1,
+      "file": "api.yaml",
+      "line": 1
+    },
+    "api#/identities/member": {
+      "column": 3,
+      "endColumn": 87,
+      "endLine": 5,
+      "file": "api.yaml",
+      "line": 5
+    },
+    "api#/rights/projects.edit": {
+      "column": 3,
+      "endColumn": 67,
+      "endLine": 26,
+      "file": "api.yaml",
+      "line": 26
+    },
+    "api#/schemas/MemberPrincipal": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 16,
+      "file": "api.yaml",
+      "line": 12
+    },
+    "api#/schemas/MemberPrincipal/properties/memberId": {
+      "column": 19,
+      "endColumn": 45,
+      "endLine": 15,
+      "file": "api.yaml",
+      "line": 15
+    },
+    "api#/schemas/MemberPrincipal/properties/nick": {
+      "column": 71,
+      "endColumn": 82,
+      "endLine": 15,
+      "file": "api.yaml",
+      "line": 15
+    },
+    "api#/schemas/MemberPrincipal/properties/profile": {
+      "column": 47,
+      "endColumn": 69,
+      "endLine": 15,
+      "file": "api.yaml",
+      "line": 15
+    },
+    "api#/schemas/MemberProfile": {
+      "column": 3,
+      "endColumn": 83,
+      "endLine": 11,
+      "file": "api.yaml",
+      "line": 11
+    },
+    "api#/schemas/MemberProfile/properties/docId": {
+      "column": 67,
+      "endColumn": 79,
+      "endLine": 11,
+      "file": "api.yaml",
+      "line": 11
+    },
+    "api#/schemes/bearer": {
+      "column": 3,
+      "endColumn": 27,
+      "endLine": 3,
+      "file": "api.yaml",
+      "line": 3
+    },
+    "api#/scopes/org": {
+      "column": 3,
+      "endColumn": 21,
+      "endLine": 17,
+      "file": "api.yaml",
+      "line": 17
+    },
+    "api#/scopes/project": {
+      "column": 3,
+      "endColumn": 42,
+      "endLine": 18,
+      "file": "api.yaml",
+      "line": 18
+    },
+    "api#/surfaces/app": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 40,
+      "file": "api.yaml",
+      "line": 29
+    },
+    "api#/surfaces/app/identity": {
+      "column": 5,
+      "endColumn": 21,
+      "endLine": 31,
+      "file": "api.yaml",
+      "line": 31
+    },
+    "api#/surfaces/app/routes/projects/id/projectId": {
+      "column": 15,
+      "endColumn": 35,
+      "endLine": 35,
+      "file": "api.yaml",
+      "line": 35
+    },
+    "api#/surfaces/app/routes/projects/member/routes/touch": {
+      "column": 13,
+      "endColumn": 98,
+      "endLine": 39,
+      "file": "api.yaml",
+      "line": 39
+    },
+    "api#/surfaces/app/routes/projects/member/routes/touch/requires/0": {
+      "column": 47,
+      "endColumn": 95,
+      "endLine": 39,
+      "file": "api.yaml",
+      "line": 39
+    },
+    "api#/surfaces/app/routes/projects/member/scopes/org": {
+      "column": 46,
+      "endColumn": 60,
+      "endLine": 37,
+      "file": "api.yaml",
+      "line": 37
+    },
+    "api#/surfaces/app/routes/projects/member/scopes/project": {
+      "column": 21,
+      "endColumn": 44,
+      "endLine": 37,
+      "file": "api.yaml",
+      "line": 37
+    }
+  }
+}

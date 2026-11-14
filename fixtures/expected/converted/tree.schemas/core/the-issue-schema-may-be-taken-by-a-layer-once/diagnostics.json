@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/derive/role-param-required",
+          "message": "role 'rateLimited' may leave the required param 'after' of 'api.rate_limited' without a value",
+          "fix": "fill it with a literal or a datum role 'rateLimited' always supplies, or make it optional in 'api.rate_limited'",
+          "origin": {
+            "layer": "api",
+            "pointer": "/errors/api.rate_limited"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

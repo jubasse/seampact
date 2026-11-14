@@ -1,0 +1,19 @@
+api: { name: shop, version: 1 }
+conventions:
+  rateLimit: { header: Retry-After, param: retryAfterMs, unit: s }
+errors:
+  shop.slow: { status: 429, params: { retryAfterMs: { type: string } } }
+rules:
+  slowDown: { bucket: true, errors: [shop.slow] }
+buckets:
+  writes: { key: [address], limit: 60, window: 1m }
+requirements:
+  writeLimit: { rule: slowDown, bucket: writes }
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: The contract checks the retry header only. }
+    routes:
+      ping:
+        method: get
+        requires: [writeLimit]

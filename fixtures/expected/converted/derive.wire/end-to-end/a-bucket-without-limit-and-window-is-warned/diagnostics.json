@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "tasks",
+      "diagnostics": [
+        {
+          "severity": "warning",
+          "rule": "seampact/derive/bucket-limits",
+          "message": "The bucket 'burst' sets no limit and window, so the server binds them.",
+          "fix": "Set limit and window on the bucket 'burst', or bind them in the server.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/buckets/burst"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

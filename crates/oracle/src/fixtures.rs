@@ -19,14 +19,20 @@ pub const EXPECTED_DIRECTORY: &str = "fixtures/expected";
 const EXCLUDED_FILE: &str = "scripts/oracle/excluded.json";
 
 /// The entry files of a fixture, the first present one wins.
+const CONVERTED_PREFIX: &str = "converted/";
 const ENTRY_FILES: [&str; 2] = ["workspace.yaml", "api.yaml"];
 
 /// A directory the fixture walk never enters.
 const NODE_MODULES: &str = "node_modules";
 
 /// The names under a fixture's expected directory that hold its own files.
-pub(crate) const OWN_EXPECTED_ENTRIES: [&str; 4] =
-    ["diagnostics.json", "ir", "source-map", "halves"];
+pub(crate) const OWN_EXPECTED_ENTRIES: [&str; 5] = [
+    "diagnostics.json",
+    "ir",
+    "source-map",
+    "halves",
+    "schema-calls",
+];
 
 /// One fixture.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -128,11 +134,19 @@ fn walk(
     found_fixtures: &mut Vec<Fixture>,
 ) -> Result<(), OracleError> {
     if let Some(entry) = entry_of(directory) {
+        let path = relative_path(directory, fixtures_root)?;
+        let is_converted = path.starts_with(CONVERTED_PREFIX);
+
         found_fixtures.push(Fixture {
-            path: relative_path(directory, fixtures_root)?,
+            path,
             directory: directory.to_owned(),
             entry: entry.to_owned(),
         });
+
+        // A converted fixture is one workspace: the contracts inside it are not fixtures of their own.
+        if is_converted {
+            return Ok(());
+        }
     }
 
     for child in child_directories(directory)? {
@@ -251,5 +265,30 @@ mod tests {
             Err(OracleError::CollidingFixture { fixture, parent }) if fixture == "a/ir/b" && parent == "a"
         ));
         assert!(refuse_colliding_names(&[fixture("a"), fixture("a/irs")]).is_ok());
+    }
+
+    #[test]
+    fn a_contract_inside_a_converted_fixture_is_not_a_fixture() {
+        let root = Utf8Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let fixtures = discover_fixtures(&root).expect("the repository fixtures are readable");
+
+        let converted: Vec<&Fixture> = fixtures
+            .iter()
+            .filter(|found| found.path.starts_with(CONVERTED_PREFIX))
+            .collect();
+
+        assert_ne!(converted.len(), 0);
+
+        for found in &converted {
+            let prefix = format!("{}/", found.path);
+
+            assert!(
+                !converted
+                    .iter()
+                    .any(|other| other.path.starts_with(&prefix)),
+                "{} holds a nested fixture",
+                found.path
+            );
+        }
     }
 }

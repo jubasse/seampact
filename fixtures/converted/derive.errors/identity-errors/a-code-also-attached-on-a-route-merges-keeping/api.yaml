@@ -1,0 +1,21 @@
+api: { name: shop, version: 1 }
+errors:
+  shop.suspended: { status: 403 }
+  shop.banned: { status: 403 }
+schemas:
+  Viewer: { type: object, properties: { id: { type: string } } }
+schemes:
+  bearer: { kind: bearer }
+identities:
+  viewer:
+    schemes: { read: [bearer], write: [bearer] }
+    principal: Viewer
+    errors: [shop.suspended]
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: viewer
+    routes:
+      list: { method: get }
+      poke: { method: post, errors: { shop.suspended: {} } }
+      ping: { method: get, access: { public: No credential is read here. } }

@@ -1,0 +1,129 @@
+{
+  "operations": {
+    "getTask": {
+      "maturity": {
+        "level": "experimental",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        }
+      }
+    },
+    "legacyTask": {
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "Deprecation",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": true,
+              "semantic": "deprecation",
+              "derivedFrom": {
+                "derivation": "deprecation.headers",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/legacyTask/deprecated"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "Sunset",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": true,
+              "semantic": "sunset",
+              "derivedFrom": {
+                "derivation": "deprecation.headers",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/legacyTask/deprecated"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "Link",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": true,
+              "semantic": "successorLink",
+              "derivedFrom": {
+                "derivation": "deprecation.headers",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/legacyTask/deprecated"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "experimental",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        }
+      }
+    },
+    "legacyLink": {
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "Location",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "format": "uri-reference",
+                "refinements": {}
+              },
+              "required": true,
+              "derivedFrom": {
+                "derivation": "redirect.location",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/legacyLink/responses/302"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "experimental",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        }
+      }
+    }
+  },
+  "api": {
+    "wire": {
+      "int64": "string",
+      "outputEnums": "enum",
+      "urls": "relative"
+    }
+  }
+}

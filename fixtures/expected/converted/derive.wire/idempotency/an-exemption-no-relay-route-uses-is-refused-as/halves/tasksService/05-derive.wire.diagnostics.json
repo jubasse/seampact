@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/derive/idempotency-exempt-unused",
+    "message": "the idempotency exemption 'Relayed calls carry the public key.' reaches no route the idempotency key reaches",
+    "fix": "Remove the exemption, or move it to the non-safe routes the key reaches (a method conventions.idempotency.methods lists, an identity that is not signed).",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/internal/idempotency"
+    },
+    "related": []
+  }
+]

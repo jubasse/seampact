@@ -1,0 +1,123 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/viewer/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ViewerPrincipal"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/viewer_or_device/principal/variants/viewer",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ViewerPrincipal"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/viewer_or_device/principal/variants/device",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "DevicePrincipal"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/operator/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "OperatorPrincipal"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/service/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ServicePrincipal"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/service/headers/actorSurface/schema",
+      "input"
+    ],
+    "answer": {
+      "kind": "enum",
+      "enum": "Surface"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/partner/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "PartnerPrincipal"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/stripe/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "WebhookCaller"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/github/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "WebhookCaller"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/clerk/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "WebhookCaller"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/slack/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "WebhookCaller"
+    }
+  }
+]

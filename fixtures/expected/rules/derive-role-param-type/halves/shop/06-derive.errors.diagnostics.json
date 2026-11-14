@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/derive/role-param-type",
+    "message": "role 'forbidden' fills the param 'reason' of 'shop.denied' with $pointer, but the param's type (integer) does not take string",
+    "fix": "fill 'reason' with a value its type provably takes, or change the param's type in 'shop.denied'",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/errorRoles/forbidden/params/reason"
+    },
+    "related": []
+  }
+]

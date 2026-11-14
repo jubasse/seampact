@@ -1,0 +1,24 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/headers/first/schema",
+      "input"
+    ],
+    "answer": {
+      "kind": "enum",
+      "enum": "Surface"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/headers/second/schema",
+      "input"
+    ],
+    "answer": {
+      "kind": "enum",
+      "enum": "Surface"
+    }
+  }
+]

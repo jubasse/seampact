@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-cycle",
+    "message": "the enum 'Loop' takes its values from a cycle of sources: Loop -> Loop",
+    "fix": "give one enum of the cycle its own 'values'",
+    "origin": {
+      "layer": "api",
+      "pointer": "/enums/Loop/source/enum"
+    },
+    "related": []
+  }
+]

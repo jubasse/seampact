@@ -1,0 +1,46 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/scheme-member",
+    "message": "cookie scheme 'session' has no 'name'",
+    "fix": "Set 'name' to the cookie name.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemes/session"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/scheme-member",
+    "message": "header scheme 'apiKey' has no 'name'",
+    "fix": "Set 'name' to the header name.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemes/apiKey"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/scheme-member",
+    "message": "query scheme 'mapsKey' has no 'name'",
+    "fix": "Set 'name' to the query name.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemes/mapsKey"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/scheme-member",
+    "message": "signature scheme 'hook' has no 'name'",
+    "fix": "Set 'name' to the header carrying the signature.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemes/hook"
+    },
+    "related": []
+  }
+]

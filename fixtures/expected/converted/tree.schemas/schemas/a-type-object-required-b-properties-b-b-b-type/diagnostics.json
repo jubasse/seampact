@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/schema-cycle",
+          "message": "the schemas A -> B -> A hold each other through required, non-nullable properties, so no finite value fits",
+          "fix": "make one of those properties optional or nullable",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/A"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

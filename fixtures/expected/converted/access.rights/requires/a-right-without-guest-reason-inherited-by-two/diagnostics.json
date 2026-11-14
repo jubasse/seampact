@@ -1,0 +1,29 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "shop",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/guest-right",
+          "message": "right 'shop.open' is required on public route 'first', where an anonymous caller reaches it, and the right has no 'guest' reason",
+          "fix": "set the right's 'guest' to the reason an anonymous caller may reach it, or require it on an identified route",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/requires/0"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/access"
+              },
+              "message": "the route's access is set here"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

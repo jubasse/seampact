@@ -33,8 +33,10 @@ enum CompileFailure {
 }
 
 /// The compiler the oracle checks.
-#[derive(Debug, Clone, Copy, Default)]
-pub struct CompilerSubject;
+#[derive(Debug, Default)]
+pub struct CompilerSubject {
+    loaded_fixture: half::LoadedFixtureCache,
+}
 
 impl OracleSubject for CompilerSubject {
     fn compile(&self, fixture: &Fixture) -> SubjectAnswer<Compilation> {
@@ -53,7 +55,7 @@ impl OracleSubject for CompilerSubject {
         half: &str,
         input: &HalfInput<'_>,
     ) -> SubjectAnswer<JsonValue> {
-        match half::run_fixture_half(fixture, api, half, input) {
+        match half::run_fixture_half(&self.loaded_fixture, fixture, api, half, input) {
             Ok(answer) => answer,
             Err(failure) => SubjectAnswer::InternalError {
                 message: failure.to_string(),

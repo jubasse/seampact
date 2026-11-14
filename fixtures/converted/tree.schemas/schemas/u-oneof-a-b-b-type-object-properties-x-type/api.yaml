@@ -1,0 +1,4 @@
+api: { name: t, version: 1 }
+schemas:
+  U: { oneOf: { a: B } }
+  B: { type: object, properties: { x: { type: string } } }

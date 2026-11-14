@@ -1,0 +1,133 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/projects/pathParams/orgId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/projects/pathParams/projectId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/headers/X-Tenant",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/projects/query/verbose?",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "boolean",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/projects/routes/show/query",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Filter"
+    }
+  },
+  {
+    "method": "queryWire",
+    "args": [
+      "/surfaces/app/routes/projects/query/verbose?"
+    ],
+    "answer": {
+      "kind": "boolean",
+      "style": "form",
+      "explode": true,
+      "brackets": false
+    }
+  },
+  {
+    "method": "queryWire",
+    "args": [
+      "/schemas/Filter/properties/state"
+    ],
+    "answer": {
+      "kind": "text",
+      "style": "form",
+      "explode": true,
+      "brackets": false
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/projects/routes/rename/headers/x-tenant",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/projects/routes/rename/query/dryRun?",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "boolean",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "queryWire",
+    "args": [
+      "/surfaces/app/routes/projects/routes/rename/query/dryRun?"
+    ],
+    "answer": {
+      "kind": "boolean",
+      "style": "form",
+      "explode": true,
+      "brackets": false
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/projects/routes/misplaced/pathParams/unused",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  }
+]

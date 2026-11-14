@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/sort-key-right",
+    "message": "sort key 'margin' of route 'listChildren' has resource right 'items.margin', whose id schema is a property of the list item 'Child', so the key would be checked against the route's subject, not each item's",
+    "fix": "restrict the key's field to a scope right or a right without subject, or remove the key from 'sortable'",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/items/member/routes/children/ops/list/sortable/0"
+    },
+    "related": []
+  }
+]

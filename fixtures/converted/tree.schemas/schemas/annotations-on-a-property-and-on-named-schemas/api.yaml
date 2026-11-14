@@ -1,0 +1,9 @@
+api: { name: t, version: 1 }
+schemas:
+
+  A:
+    type: object
+    examples: [{ b: { c: x } }]
+    properties:
+      b: { type: object, deprecated: true, description: B., examples: [{ c: x }], properties: { c: { type: string } } }
+      d: { type: string, deprecated: true, title: D }

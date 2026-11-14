@@ -1,0 +1,29 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/concurrency-version",
+          "message": "the input schema 'Task' is used outside the inputs of its versioned routes, which would all take 'expectedVersion'",
+          "fix": "declare a schema for the input of the versioned routes alone",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/tasks/ops/update/input"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/tasks/item"
+              },
+              "message": "'Task' is used here too"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

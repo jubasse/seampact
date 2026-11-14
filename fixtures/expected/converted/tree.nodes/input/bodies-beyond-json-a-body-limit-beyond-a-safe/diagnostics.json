@@ -1,0 +1,32 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "uploads",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/body-limit",
+          "message": "The body limit 99999999999999999999MiB is larger than any size the compiler can check.",
+          "fix": "Write a smaller bodyLimit, at most 8589934591MiB.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/conventions/batch/bodyLimit"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/body-limit",
+          "message": "The body limit 99999999999999999999MiB is larger than any size the compiler can check.",
+          "fix": "Write a smaller bodyLimit, at most 8589934591MiB.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/attach/bodyLimit"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

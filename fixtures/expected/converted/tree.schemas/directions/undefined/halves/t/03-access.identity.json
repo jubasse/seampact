@@ -1,0 +1,40 @@
+{
+  "headers": {
+    "rightsVersion": {
+      "id": "rightsVersion",
+      "semantic": "versionToken",
+      "response": "X-Rights-Version",
+      "request": "If-Rights-Version",
+      "schema": {
+        "kind": "scalar",
+        "type": "string",
+        "scalar": "money",
+        "refinements": {
+          "pattern": {
+            "source": "^[0-9]+$",
+            "normalized": "^[0-9]+$"
+          }
+        }
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/headers/rightsVersion"
+      }
+    },
+    "trace": {
+      "id": "trace",
+      "semantic": "traceContext",
+      "name": "traceparent",
+      "in": "request",
+      "schema": {
+        "kind": "scalar",
+        "type": "string",
+        "refinements": {}
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/headers/trace"
+      }
+    }
+  }
+}

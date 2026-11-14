@@ -1,0 +1,7 @@
+api: { name: t, version: 1 }
+schemas:
+  A:
+    type: object
+    properties:
+      b: { type: object, properties: { c: { type: object, properties: { x: { type: string } } } } }
+      bC: { type: object, properties: { z: { type: string } } }

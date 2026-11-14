@@ -1,0 +1,46 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/opaque-position",
+    "message": "The path parameter raw of hook is a file, which has no text form.",
+    "fix": "Give it a schema with a text form, or move it into the body.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/hook/pathParams/raw"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/opaque-position",
+    "message": "The query field payloads of hook is an opaque value, which has no text form.",
+    "fix": "Give it a schema with a text form, or move it into the body.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/hook/query/payloads"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/opaque-position",
+    "message": "The request header X-Files of hook is a file, which has no text form.",
+    "fix": "Give it a schema with a text form, or move it into the body.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/hook/headers/X-Files"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/opaque-position",
+    "message": "The response header X-Trace of hook is an opaque value, which has no text form.",
+    "fix": "Give it a schema with a text form, or move it into the body.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/hook/responses/200/headers/X-Trace"
+    },
+    "related": []
+  }
+]

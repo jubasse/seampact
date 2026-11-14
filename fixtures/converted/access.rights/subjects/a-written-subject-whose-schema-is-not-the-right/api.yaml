@@ -1,0 +1,38 @@
+api: { name: studio, version: 1 }
+schemes:
+  bearer: { kind: bearer }
+identities:
+  member: { schemes: { read: [bearer], write: [bearer] }, principal: MemberPrincipal }
+schemas:
+  OrgId: { type: string, format: uuid }
+  ProjectId: { type: string, format: uuid }
+  DocId: { type: string, format: uuid }
+  Doc: { type: object, required: [docId], properties: { docId: DocId } }
+  MemberProfile: { type: object, required: [docId], properties: { docId: DocId } }
+  MemberPrincipal:
+    type: object
+    required: [memberId, profile]
+    properties: { memberId: { type: string }, profile: MemberProfile, nick: DocId }
+scopes:
+  org: { id: OrgId }
+  project: { id: ProjectId, within: org }
+  board: { id: ProjectId, within: project }
+rights:
+  orgMember: { subject: { scope: org } }
+  projectRole: { subject: { scope: project } }
+  docs.edit: { subject: { resource: Doc, id: DocId } }
+  docs.read: { subject: { resource: Doc, id: DocId }, guest: Published docs are public. }
+  notes.edit: { subject: { resource: Note, id: { type: string, format: uuid } } }
+  projects.edit: { subject: { resource: Project, id: ProjectId } }
+  audit: {}
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: member
+    routes:
+      projects:
+        kind: collection
+        id: { projectId: ProjectId }
+        member:
+          routes:
+            touch: { method: post, requires: [{ right: docs.edit, subject: path.projectId }] }

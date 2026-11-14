@@ -1,0 +1,19 @@
+{
+  "operations": {
+    "listComments": {
+      "access": {
+        "kind": "public",
+        "reason": "The contract checks member.notFound only.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    }
+  }
+}

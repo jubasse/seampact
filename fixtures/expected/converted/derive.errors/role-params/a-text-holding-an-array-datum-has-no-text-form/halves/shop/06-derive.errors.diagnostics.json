@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/derive/role-param-type",
+    "message": "role 'schemaInvalid' fills the param 'summary' of 'shop.invalid' with a text holding $issues, but it has no text form",
+    "fix": "fill 'summary' with a value its type provably takes, or change the param's type in 'shop.invalid'",
+    "origin": {
+      "layer": "api",
+      "pointer": "/conventions/errors/derived/schemaInvalid/params/summary"
+    },
+    "related": []
+  }
+]

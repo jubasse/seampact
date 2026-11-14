@@ -1,0 +1,7 @@
+
+api: { name: a, version: 1, kind: product }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      ping: { method: get, output: { type: string }, examples: { made: { status: 201, value: x } } }

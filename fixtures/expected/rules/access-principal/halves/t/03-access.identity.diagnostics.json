@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/principal",
+    "message": "the principal of identity 'user' is an inline schema of kind scalar, not a named schema",
+    "fix": "Name an object schema, or write one inline, whose properties are the principal's fields.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/identities/user/principal"
+    },
+    "related": []
+  }
+]

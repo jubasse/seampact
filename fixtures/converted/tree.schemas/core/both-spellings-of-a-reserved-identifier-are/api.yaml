@@ -1,0 +1,4 @@
+api: { name: t, version: 1 }
+schemas:
+  APIEmptyBody: { type: object, properties: { a: { type: string } } }
+  ApiEmptyBody: { type: object, properties: { a: { type: string } } }

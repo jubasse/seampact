@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "a",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/header-declaration",
+          "message": "actorSurface header 'surface' has a schema of kind scalar; an actor surface is a strict enum",
+          "fix": "Name the enum of the product's surfaces as the header's schema, such as 'schema: { enum: Surface }'.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/headers/surface/schema"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

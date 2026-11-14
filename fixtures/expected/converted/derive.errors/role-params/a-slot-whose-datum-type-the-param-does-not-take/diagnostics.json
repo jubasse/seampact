@@ -1,0 +1,32 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "shop",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/derive/role-param-type",
+          "message": "role 'payloadTooLarge' fills the param 'limit' of 'shop.too_large' with $limitBytes, but the param's type (string) does not take integer",
+          "fix": "fill 'limit' with a value its type provably takes, or change the param's type in 'shop.too_large'",
+          "origin": {
+            "layer": "api",
+            "pointer": "/conventions/errors/derived/payloadTooLarge/params/limit"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/derive/role-param-type",
+          "message": "role 'payloadTooLarge' fills the param 'unit' of 'shop.too_large' with the literal 1, but it does not fit its type: 1 is not a string",
+          "fix": "fill 'unit' with a value its type provably takes, or change the param's type in 'shop.too_large'",
+          "origin": {
+            "layer": "api",
+            "pointer": "/conventions/errors/derived/payloadTooLarge/params/unit"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

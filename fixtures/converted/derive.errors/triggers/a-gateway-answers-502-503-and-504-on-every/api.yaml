@@ -1,0 +1,7 @@
+api: { name: edge, version: 1, role: gateway }
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: The contract checks the gateway codes only. }
+    routes:
+      ping: { method: get }

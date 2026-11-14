@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/format-type",
+          "message": "'password' is not authorable: it is what 'sensitive' emits",
+          "fix": "write 'type: string' and mark the field 'sensitive: true'",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/A/format"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

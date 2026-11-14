@@ -1,0 +1,728 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-unknown",
+    "message": "no enum 'Region' with values is declared",
+    "fix": "declare it under 'enums', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Invoice/properties/state/enum"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-unknown",
+    "message": "no enum 'Priority' with values is declared",
+    "fix": "declare it under 'enums', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Invoice/properties/kind/enum"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-unknown",
+    "message": "no schema 'BulkLimit' is declared",
+    "fix": "declare it under 'schemas', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Invoice/properties/detail"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-unknown",
+    "message": "no schema 'BulkMargin' is declared",
+    "fix": "declare it under 'schemas', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Invoice/properties/extra"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-unknown",
+    "message": "no enum 'Stage' with values is declared",
+    "fix": "declare it under 'enums', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Payment/properties/state/enum"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-unknown",
+    "message": "no enum 'Visibility' with values is declared",
+    "fix": "declare it under 'enums', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Payment/properties/kind/enum"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-unknown",
+    "message": "no schema 'FragileVolume' is declared",
+    "fix": "declare it under 'schemas', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Payment/properties/detail"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-unknown",
+    "message": "no schema 'FragileCount' is declared",
+    "fix": "declare it under 'schemas', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Payment/properties/extra"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-unknown",
+    "message": "no enum 'Rating' with values is declared",
+    "fix": "declare it under 'enums', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Refund/properties/state/enum"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-unknown",
+    "message": "no enum 'Condition' with values is declared",
+    "fix": "declare it under 'enums', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Refund/properties/kind/enum"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-unknown",
+    "message": "no schema 'GrossVolume' is declared",
+    "fix": "declare it under 'schemas', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Refund/properties/detail"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-unknown",
+    "message": "no schema 'GrossCount' is declared",
+    "fix": "declare it under 'schemas', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Refund/properties/extra"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-unknown",
+    "message": "no enum 'Priority' with values is declared",
+    "fix": "declare it under 'enums', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/TaxRate/properties/state/enum"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-unknown",
+    "message": "no enum 'Currency' with values is declared",
+    "fix": "declare it under 'enums', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/TaxRate/properties/kind/enum"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-unknown",
+    "message": "no schema 'GrossRate' is declared",
+    "fix": "declare it under 'schemas', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/TaxRate/properties/detail"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-unknown",
+    "message": "no schema 'GrossTally' is declared",
+    "fix": "declare it under 'schemas', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/TaxRate/properties/extra"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-unknown",
+    "message": "no enum 'Visibility' with values is declared",
+    "fix": "declare it under 'enums', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Customer/properties/state/enum"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-unknown",
+    "message": "no enum 'Unit' with values is declared",
+    "fix": "declare it under 'enums', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Customer/properties/kind/enum"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-unknown",
+    "message": "no schema 'NetWeight' is declared",
+    "fix": "declare it under 'schemas', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Customer/properties/detail"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-unknown",
+    "message": "no schema 'NetSpan' is declared",
+    "fix": "declare it under 'schemas', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Customer/properties/extra"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-unknown",
+    "message": "no enum 'Condition' with values is declared",
+    "fix": "declare it under 'enums', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Subscription/properties/state/enum"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-unknown",
+    "message": "no enum 'Origin' with values is declared",
+    "fix": "declare it under 'enums', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Subscription/properties/kind/enum"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-unknown",
+    "message": "no schema 'NetWindow' is declared",
+    "fix": "declare it under 'schemas', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Subscription/properties/detail"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-unknown",
+    "message": "no schema 'NetLimit' is declared",
+    "fix": "declare it under 'schemas', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Subscription/properties/extra"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-unknown",
+    "message": "no enum 'Currency' with values is declared",
+    "fix": "declare it under 'enums', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Plan/properties/state/enum"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-unknown",
+    "message": "no enum 'Grade' with values is declared",
+    "fix": "declare it under 'enums', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Plan/properties/kind/enum"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-unknown",
+    "message": "no schema 'NetMargin' is declared",
+    "fix": "declare it under 'schemas', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Plan/properties/detail"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-unknown",
+    "message": "no schema 'PackedVolume' is declared",
+    "fix": "declare it under 'schemas', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Plan/properties/extra"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-unknown",
+    "message": "no enum 'Unit' with values is declared",
+    "fix": "declare it under 'enums', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Coupon/properties/state/enum"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-unknown",
+    "message": "no enum 'Region' with values is declared",
+    "fix": "declare it under 'enums', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Coupon/properties/kind/enum"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-unknown",
+    "message": "no schema 'PackedCount' is declared",
+    "fix": "declare it under 'schemas', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Coupon/properties/detail"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-unknown",
+    "message": "no schema 'PackedRate' is declared",
+    "fix": "declare it under 'schemas', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Coupon/properties/extra"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-unknown",
+    "message": "no enum 'Origin' with values is declared",
+    "fix": "declare it under 'enums', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/CreditNote/properties/state/enum"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-unknown",
+    "message": "no enum 'Stage' with values is declared",
+    "fix": "declare it under 'enums', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/CreditNote/properties/kind/enum"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-unknown",
+    "message": "no schema 'PackedTally' is declared",
+    "fix": "declare it under 'schemas', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/CreditNote/properties/detail"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-unknown",
+    "message": "no schema 'LooseWeight' is declared",
+    "fix": "declare it under 'schemas', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/CreditNote/properties/extra"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-unknown",
+    "message": "no enum 'Grade' with values is declared",
+    "fix": "declare it under 'enums', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Payout/properties/state/enum"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-unknown",
+    "message": "no enum 'Rating' with values is declared",
+    "fix": "declare it under 'enums', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Payout/properties/kind/enum"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-unknown",
+    "message": "no schema 'LooseSpan' is declared",
+    "fix": "declare it under 'schemas', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Payout/properties/detail"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-unknown",
+    "message": "no schema 'LooseWindow' is declared",
+    "fix": "declare it under 'schemas', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Payout/properties/extra"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-unknown",
+    "message": "no enum 'Region' with values is declared",
+    "fix": "declare it under 'enums', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Dispute/properties/state/enum"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-unknown",
+    "message": "no enum 'Priority' with values is declared",
+    "fix": "declare it under 'enums', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Dispute/properties/kind/enum"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-unknown",
+    "message": "no schema 'LooseLimit' is declared",
+    "fix": "declare it under 'schemas', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Dispute/properties/detail"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-unknown",
+    "message": "no schema 'LooseMargin' is declared",
+    "fix": "declare it under 'schemas', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Dispute/properties/extra"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-unknown",
+    "message": "no enum 'Stage' with values is declared",
+    "fix": "declare it under 'enums', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/PriceList/properties/state/enum"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-unknown",
+    "message": "no enum 'Visibility' with values is declared",
+    "fix": "declare it under 'enums', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/PriceList/properties/kind/enum"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-unknown",
+    "message": "no schema 'SealedVolume' is declared",
+    "fix": "declare it under 'schemas', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/PriceList/properties/detail"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-unknown",
+    "message": "no schema 'SealedCount' is declared",
+    "fix": "declare it under 'schemas', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/PriceList/properties/extra"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-unknown",
+    "message": "no enum 'Rating' with values is declared",
+    "fix": "declare it under 'enums', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/LedgerEntry/properties/state/enum"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-unknown",
+    "message": "no enum 'Condition' with values is declared",
+    "fix": "declare it under 'enums', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/LedgerEntry/properties/kind/enum"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-unknown",
+    "message": "no schema 'SealedRate' is declared",
+    "fix": "declare it under 'schemas', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/LedgerEntry/properties/detail"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-unknown",
+    "message": "no schema 'SealedTally' is declared",
+    "fix": "declare it under 'schemas', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/LedgerEntry/properties/extra"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-unknown",
+    "message": "no enum 'Priority' with values is declared",
+    "fix": "declare it under 'enums', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Statement/properties/state/enum"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-unknown",
+    "message": "no enum 'Currency' with values is declared",
+    "fix": "declare it under 'enums', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Statement/properties/kind/enum"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-unknown",
+    "message": "no schema 'BondedWeight' is declared",
+    "fix": "declare it under 'schemas', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Statement/properties/detail"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-unknown",
+    "message": "no schema 'BondedSpan' is declared",
+    "fix": "declare it under 'schemas', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Statement/properties/extra"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-unknown",
+    "message": "no enum 'Visibility' with values is declared",
+    "fix": "declare it under 'enums', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Receipt/properties/state/enum"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-unknown",
+    "message": "no enum 'Unit' with values is declared",
+    "fix": "declare it under 'enums', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Receipt/properties/kind/enum"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-unknown",
+    "message": "no schema 'BondedWindow' is declared",
+    "fix": "declare it under 'schemas', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Receipt/properties/detail"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-unknown",
+    "message": "no schema 'BondedLimit' is declared",
+    "fix": "declare it under 'schemas', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Receipt/properties/extra"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-unknown",
+    "message": "no enum 'Condition' with values is declared",
+    "fix": "declare it under 'enums', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Reminder/properties/state/enum"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-unknown",
+    "message": "no enum 'Origin' with values is declared",
+    "fix": "declare it under 'enums', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Reminder/properties/kind/enum"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-unknown",
+    "message": "no schema 'BondedMargin' is declared",
+    "fix": "declare it under 'schemas', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Reminder/properties/detail"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-unknown",
+    "message": "no schema 'ChilledVolume' is declared",
+    "fix": "declare it under 'schemas', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Reminder/properties/extra"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-unknown",
+    "message": "no schema 'AccountId' is declared",
+    "fix": "declare it under 'schemas', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/accounts/id/accountId"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-unknown",
+    "message": "no schema 'Account' is declared",
+    "fix": "declare it under 'schemas', or fix the name",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/accounts/item"
+    },
+    "related": []
+  }
+]

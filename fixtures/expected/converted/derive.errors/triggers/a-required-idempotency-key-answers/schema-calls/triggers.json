@@ -1,0 +1,124 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/notes/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Note"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/notes/ops/update/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "EditNote"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/notes/id/noteId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/changes/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Note"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/drafts/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "NewNote"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/robots/routes/jobs/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Event"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/hooks/routes/stripe/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Event"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/hooks/routes/github/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "GithubEvent"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/member/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Member"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/robot/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Member"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/stripe/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Member"
+    }
+  }
+]

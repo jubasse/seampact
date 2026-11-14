@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/derive/role-template",
+    "message": "the params template of role 'schemaInvalid' maps with $each inside another $each, but role data are flat",
+    "fix": "map the role's array datum once, writing each item's members inside $as",
+    "origin": {
+      "layer": "api",
+      "pointer": "/conventions/errors/derived/schemaInvalid/params/issues/$as/all"
+    },
+    "related": []
+  }
+]

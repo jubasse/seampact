@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/schema-unknown",
+          "message": "no schema 'Missing' is declared",
+          "fix": "declare it under 'schemas', or fix the name",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Broken/properties/bad"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

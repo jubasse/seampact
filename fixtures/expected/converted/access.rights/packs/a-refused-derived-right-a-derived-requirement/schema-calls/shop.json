@@ -1,0 +1,59 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/items/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Item"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/items/id/itemId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/open/routes/things/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Item"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/open/routes/things/id/thingId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/user/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "UserPrincipal"
+    }
+  }
+]

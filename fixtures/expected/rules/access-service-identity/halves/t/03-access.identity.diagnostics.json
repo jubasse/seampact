@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/service-identity",
+    "message": "surface 'app' of a service api sets identity \"other\", while every route of the api runs under its caller identity 'service'",
+    "fix": "Remove the identity: the routes of a service api run under 'api.caller.identity', which surfaces need not repeat.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/identity"
+    },
+    "related": []
+  }
+]

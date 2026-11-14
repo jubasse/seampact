@@ -1,0 +1,185 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/projects/id/projectId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/projects/member/routes/docs/collection/routes/copy/headers/X-Source-Doc",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/projects/member/routes/docs/collection/routes/copy/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Doc"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/projects/member/routes/docs/collection/routes/copyHome/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Doc"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/projects/member/routes/docs/id/docId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/projects/member/routes/docs/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Doc"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/projects/member/routes/docs/ops/update/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Doc"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/member/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "MemberPrincipal"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rights/projectRole/params",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ProjectRoleParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rights/docs.edit/subject/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rights/docs.copy/subject/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/scopes/org/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/scopes/project/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/scopes/board/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "role": "editor"
+      },
+      {
+        "kind": "ref",
+        "schema": "ProjectRoleParams"
+      }
+    ],
+    "answer": []
+  }
+]

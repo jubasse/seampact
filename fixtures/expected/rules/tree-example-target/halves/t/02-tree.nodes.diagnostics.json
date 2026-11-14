@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/example-target",
+    "message": "The example bare of ex targets no single status, request or error.",
+    "fix": "Give the example one of status (a success with a body), request: true (on a route with input) or error.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/ex/examples/bare"
+    },
+    "related": []
+  }
+]

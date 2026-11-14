@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/scalar-name",
+          "message": "the named format 'uuid' takes the name of a portable format, so one name would mean two checks",
+          "fix": "remove it and write 'type: string, format: uuid' where it is used",
+          "origin": {
+            "layer": "api",
+            "pointer": "/scalars/uuid"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

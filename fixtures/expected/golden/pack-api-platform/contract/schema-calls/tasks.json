@@ -1,0 +1,541 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/health/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Health"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/channels/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Channel"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/channels/id/channelId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/channels/member/routes/tasks/ops/list/query/state?",
+      "input"
+    ],
+    "answer": {
+      "kind": "array",
+      "items": {
+        "kind": "enum",
+        "enum": "TaskState"
+      }
+    }
+  },
+  {
+    "method": "queryWire",
+    "args": [
+      "/surfaces/app/routes/channels/member/routes/tasks/ops/list/query/state?"
+    ],
+    "answer": {
+      "kind": "list",
+      "style": "form",
+      "explode": true,
+      "brackets": false
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/channels/member/routes/tasks/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Task"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/channels/member/routes/tasks/ops/create/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "CreateTask"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/channels/member/routes/tasks/ops/batch",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "GetTasksBatchInput"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TaskQuery"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TaskSearchResult"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/channels/member/routes/tasks/id/taskId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/channels/member/routes/tasks/ops/update/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "UpdateTask"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/channels/member/routes/tasks/member/routes/assign/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "AssignTaskInput"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/channels/member/routes/tasks/member/routes/assign/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Task"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/channels/member/routes/tasks/member/routes/archive/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ArchiveTask"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/channels/member/routes/tasks/member/routes/archive/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Task"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/me/routes/preferences/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Preferences"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/me/routes/preferences/ops/update/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "UpdatePreferences"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/me/routes/drafts/id/draftId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/me/routes/drafts/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Draft"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/me/routes/drafts/ops/delete/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Draft"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/hooks/routes/payments/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "PaymentEvent"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/user/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "UserPrincipal"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/service/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ServicePrincipal"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/service/headers/actorSurface/schema",
+      "input"
+    ],
+    "answer": {
+      "kind": "enum",
+      "enum": "Surface"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/stripe/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "WebhookCaller"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rights/roles/params",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "RolesParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rights/tasks.update/subject/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rights/tasks.seeEffort/subject/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rights/callerService/params",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "CallerServiceParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rules/recentAuth/proof/schema",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {
+        "minLength": 1,
+        "maxLength": 512
+      }
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rules/recentAuth/params",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "RecentAuthParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/scopes/channel/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "allowed": [
+          "owner",
+          "editor"
+        ]
+      },
+      {
+        "kind": "ref",
+        "schema": "RolesParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/api.validation_failed/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ApiValidationFailedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/api.schema_invalid/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ApiSchemaInvalidParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/api.rate_limited/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ApiRateLimitedParams"
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "allowed": [
+          "owner"
+        ]
+      },
+      {
+        "kind": "ref",
+        "schema": "RolesParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "intent": "purge_task"
+      },
+      {
+        "kind": "ref",
+        "schema": "RecentAuthParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "violations": [
+          {
+            "propertyPath": "/title",
+            "message": "minLength"
+          }
+        ]
+      },
+      {
+        "kind": "ref",
+        "schema": "ApiValidationFailedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "issues": [
+          {
+            "pointer": "/title",
+            "rule": "minLength"
+          }
+        ]
+      },
+      {
+        "kind": "ref",
+        "schema": "ApiSchemaInvalidParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "retryAfterMs": 1500
+      },
+      {
+        "kind": "ref",
+        "schema": "ApiRateLimitedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      "0",
+      {
+        "kind": "scalar",
+        "type": "string",
+        "format": "decimal",
+        "refinements": {
+          "minimum": "0"
+        }
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      "9007199254740991",
+      {
+        "kind": "scalar",
+        "type": "string",
+        "format": "decimal",
+        "refinements": {
+          "maximum": "9007199254740991"
+        }
+      }
+    ],
+    "answer": []
+  }
+]

@@ -1,0 +1,35 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/example-value",
+    "message": "the example does not fit its schema at '/title': 7 is not a string",
+    "fix": "correct the example, or the schema it is parsed against",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Sample/examples/1/title"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/example-value",
+    "message": "the example does not fit its schema at '': 3 is not a string",
+    "fix": "correct the example, or the schema it is parsed against",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Sample/properties/title/examples/1"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/example-value",
+    "message": "the example does not fit its schema at '': 'x' is not a number",
+    "fix": "correct the example, or the schema it is parsed against",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Sample/properties/list/items/examples/0"
+    },
+    "related": []
+  }
+]

@@ -1,0 +1,140 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "vault",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/proof-name",
+          "message": "rule 'otp' reads its header proof 'X-Otp' on route 'declared', which already reads 'x-otp', a declared header",
+          "fix": "give the proof another name",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/declared/requires/0"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/rules/otp/proof"
+              },
+              "message": "the proof is declared here"
+            },
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/declared/headers/x-otp"
+              },
+              "message": "the header is declared here"
+            }
+          ]
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/proof-name",
+          "message": "rule 'bearerProof' reads its header proof 'authorization' on route 'bearer', which already reads 'Authorization', the credential header of scheme 'bearer'",
+          "fix": "give the proof another name",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/bearer/requires/0"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/rules/bearerProof/proof"
+              },
+              "message": "the proof is declared here"
+            },
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemes/bearer"
+              },
+              "message": "the header is declared here"
+            }
+          ]
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/proof-name",
+          "message": "rule 'keyProof' reads its header proof 'X-API-KEY' on route 'keyed', which already reads 'X-Api-Key', the credential header of scheme 'apiKey'",
+          "fix": "give the proof another name",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/keys/routes/keyed/requires/0"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/rules/keyProof/proof"
+              },
+              "message": "the proof is declared here"
+            },
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemes/apiKey"
+              },
+              "message": "the header is declared here"
+            }
+          ]
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/proof-name",
+          "message": "rule 'csrfProof' reads its header proof 'x-csrf-token' on route 'browser', which already reads 'X-Csrf-Token', the CSRF header of scheme 'csrfToken'",
+          "fix": "give the proof another name",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/web/routes/browser/requires/0"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/rules/csrfProof/proof"
+              },
+              "message": "the proof is declared here"
+            },
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemes/csrfToken"
+              },
+              "message": "the header is declared here"
+            }
+          ]
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/proof-name",
+          "message": "rule 'sigProof' reads its header proof 'sig' on route 'hook', which already reads 'Sig', the credential header of scheme 'sig'",
+          "fix": "give the proof another name",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/hooks/routes/hook/requires/0"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/rules/sigProof/proof"
+              },
+              "message": "the proof is declared here"
+            },
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemes/sig"
+              },
+              "message": "the header is declared here"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

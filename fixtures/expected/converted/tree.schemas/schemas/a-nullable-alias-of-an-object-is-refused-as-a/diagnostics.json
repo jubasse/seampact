@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/union-variant",
+          "message": "the variant 'a' is nullable, and a variant is an object that is never null",
+          "fix": "name the object schema itself, without 'nullable'",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/U/oneOf/a"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

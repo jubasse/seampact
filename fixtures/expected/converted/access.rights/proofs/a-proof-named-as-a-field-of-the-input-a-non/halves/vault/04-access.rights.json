@@ -1,0 +1,182 @@
+{
+  "rules": {
+    "recentAuth": {
+      "id": "recentAuth",
+      "takesBucket": false,
+      "proof": {
+        "in": "body",
+        "name": "token",
+        "schema": {
+          "kind": "scalar",
+          "type": "string",
+          "refinements": {}
+        }
+      },
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/recentAuth"
+      }
+    },
+    "numbered": {
+      "id": "numbered",
+      "takesBucket": false,
+      "proof": {
+        "in": "body",
+        "name": "reauth",
+        "schema": {
+          "kind": "scalar",
+          "type": "integer",
+          "refinements": {}
+        }
+      },
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/numbered"
+      }
+    },
+    "worded": {
+      "id": "worded",
+      "takesBucket": false,
+      "proof": {
+        "in": "body",
+        "name": "reauth",
+        "schema": {
+          "kind": "scalar",
+          "type": "string",
+          "refinements": {}
+        }
+      },
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/worded"
+      }
+    },
+    "otp": {
+      "id": "otp",
+      "takesBucket": false,
+      "proof": {
+        "in": "header",
+        "name": "X-Otp",
+        "schema": {
+          "kind": "scalar",
+          "type": "string",
+          "refinements": {}
+        }
+      },
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/otp"
+      }
+    },
+    "otpAgain": {
+      "id": "otpAgain",
+      "takesBucket": false,
+      "proof": {
+        "in": "header",
+        "name": "x-otp",
+        "schema": {
+          "kind": "scalar",
+          "type": "string",
+          "refinements": {}
+        }
+      },
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/otpAgain"
+      }
+    },
+    "otpNumber": {
+      "id": "otpNumber",
+      "takesBucket": false,
+      "proof": {
+        "in": "header",
+        "name": "X-OTP",
+        "schema": {
+          "kind": "scalar",
+          "type": "integer",
+          "refinements": {}
+        }
+      },
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/otpNumber"
+      }
+    }
+  },
+  "operations": {
+    "updateNote": {
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "recentAuth",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/notes/ops/update/requires/0"
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "deleteNote": {
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "recentAuth",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/notes/ops/delete/requires/0"
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "peekNote": {
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "recentAuth",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/notes/member/routes/peek/requires/0"
+          }
+        }
+      ],
+      "fieldRights": []
+    },
+    "tagNote": {
+      "scopes": [],
+      "requires": [
+        {
+          "kind": "rule",
+          "rule": "recentAuth",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/notes/member/routes/tag/requires/0"
+          }
+        }
+      ],
+      "fieldRights": []
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "a",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/collection-id",
+          "message": "The collection logs declares no id, so the operation at /surfaces/app/routes/logs/member/routes/pin in its member scope has no member path.",
+          "fix": "Declare id on logs: its member id path parameter and schema.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/logs"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

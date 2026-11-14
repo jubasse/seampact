@@ -1,0 +1,21 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/concurrency-version",
+    "message": "the input schema 'UpdateTask' is used by a route that adds 'expectedVersion' to it and by one that does not add the same",
+    "fix": "declare two schemas, one for each route",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/tasks/ops/update/input"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/tasks/ops/create/input"
+        },
+        "message": "this route uses 'UpdateTask' too"
+      }
+    ]
+  }
+]

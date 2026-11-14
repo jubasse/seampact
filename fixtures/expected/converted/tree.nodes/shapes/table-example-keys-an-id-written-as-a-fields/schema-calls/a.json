@@ -1,0 +1,93 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/notes/ops/batch",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "GetNotesBatchInput"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/notes/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Note"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/notes/id/noteId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "integer",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "checkTextExample",
+    "args": [
+      "1",
+      {
+        "kind": "scalar",
+        "type": "integer",
+        "refinements": {}
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "noteId": 1,
+        "text": "a"
+      },
+      {
+        "kind": "ref",
+        "schema": "Note"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkTextExample",
+    "args": [
+      "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk",
+      {
+        "kind": "scalar",
+        "type": "integer",
+        "refinements": {}
+      }
+    ],
+    "answer": [
+      {
+        "pointer": "",
+        "message": "'kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk…' is not a number"
+      }
+    ]
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "noteId": 2,
+        "text": "b"
+      },
+      {
+        "kind": "ref",
+        "schema": "Note"
+      }
+    ],
+    "answer": []
+  }
+]

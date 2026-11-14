@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/refinement-precision",
+    "message": "'maximum' has more significant digits than the contract reader keeps",
+    "fix": "write the bound with at most 16 significant digits",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/A/maximum"
+    },
+    "related": []
+  }
+]

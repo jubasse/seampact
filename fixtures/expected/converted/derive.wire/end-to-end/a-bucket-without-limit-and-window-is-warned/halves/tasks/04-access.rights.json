@@ -1,0 +1,23 @@
+{
+  "buckets": {
+    "burst": {
+      "id": "burst",
+      "key": [
+        {
+          "in": "address"
+        }
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/buckets/burst"
+      }
+    }
+  },
+  "operations": {
+    "getTask": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    }
+  }
+}

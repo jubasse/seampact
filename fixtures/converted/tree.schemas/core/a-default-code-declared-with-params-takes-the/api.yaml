@@ -1,0 +1,4 @@
+api: { name: t, version: 1 }
+errors:
+  api.forbidden: { status: 403, params: { pointer: { type: string }, field: { type: string } } }
+  api.sort_key_forbidden: { status: 403, title: Sort key refused }

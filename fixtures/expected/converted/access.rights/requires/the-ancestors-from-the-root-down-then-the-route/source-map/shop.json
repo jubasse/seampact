@@ -1,0 +1,152 @@
+{
+  "irRevision": 6,
+  "locations": {
+    "api#/api": {
+      "column": 1,
+      "endColumn": 32,
+      "endLine": 1,
+      "file": "api.yaml",
+      "line": 1
+    },
+    "api#/api/version": {
+      "column": 20,
+      "endColumn": 30,
+      "endLine": 1,
+      "file": "api.yaml",
+      "line": 1
+    },
+    "api#/buckets/perUser": {
+      "column": 3,
+      "endColumn": 39,
+      "endLine": 16,
+      "file": "api.yaml",
+      "line": 16
+    },
+    "api#/identities/user": {
+      "column": 3,
+      "endColumn": 83,
+      "endLine": 5,
+      "file": "api.yaml",
+      "line": 5
+    },
+    "api#/rights/shop.open": {
+      "column": 3,
+      "endColumn": 16,
+      "endLine": 9,
+      "file": "api.yaml",
+      "line": 9
+    },
+    "api#/rights/staff": {
+      "column": 3,
+      "endColumn": 50,
+      "endLine": 10,
+      "file": "api.yaml",
+      "line": 10
+    },
+    "api#/rights/staff/params": {
+      "column": 12,
+      "endColumn": 48,
+      "endLine": 10,
+      "file": "api.yaml",
+      "line": 10
+    },
+    "api#/rights/staff/params/level": {
+      "column": 22,
+      "endColumn": 46,
+      "endLine": 10,
+      "file": "api.yaml",
+      "line": 10
+    },
+    "api#/rules/audit": {
+      "column": 3,
+      "endColumn": 12,
+      "endLine": 13,
+      "file": "api.yaml",
+      "line": 13
+    },
+    "api#/rules/throttle": {
+      "column": 3,
+      "endColumn": 29,
+      "endLine": 12,
+      "file": "api.yaml",
+      "line": 12
+    },
+    "api#/schemas/UserPrincipal": {
+      "column": 3,
+      "endColumn": 96,
+      "endLine": 7,
+      "file": "api.yaml",
+      "line": 7
+    },
+    "api#/schemas/UserPrincipal/properties/userId": {
+      "column": 68,
+      "endColumn": 92,
+      "endLine": 7,
+      "file": "api.yaml",
+      "line": 7
+    },
+    "api#/schemes/bearer": {
+      "column": 3,
+      "endColumn": 27,
+      "endLine": 3,
+      "file": "api.yaml",
+      "line": 3
+    },
+    "api#/surfaces/app": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 33,
+      "file": "api.yaml",
+      "line": 21
+    },
+    "api#/surfaces/app/identity": {
+      "column": 5,
+      "endColumn": 19,
+      "endLine": 23,
+      "file": "api.yaml",
+      "line": 23
+    },
+    "api#/surfaces/app/requires/0": {
+      "column": 16,
+      "endColumn": 31,
+      "endLine": 24,
+      "file": "api.yaml",
+      "line": 24
+    },
+    "api#/surfaces/app/routes/orders/requires/0": {
+      "column": 20,
+      "endColumn": 31,
+      "endLine": 28,
+      "file": "api.yaml",
+      "line": 28
+    },
+    "api#/surfaces/app/routes/orders/routes/refund": {
+      "column": 11,
+      "endColumn": 1,
+      "endLine": 33,
+      "file": "api.yaml",
+      "line": 30
+    },
+    "api#/surfaces/app/routes/orders/routes/refund/requires/0": {
+      "column": 24,
+      "endColumn": 37,
+      "endLine": 32,
+      "file": "api.yaml",
+      "line": 32
+    },
+    "api#/surfaces/app/routes/orders/routes/refund/requires/1": {
+      "column": 39,
+      "endColumn": 59,
+      "endLine": 32,
+      "file": "api.yaml",
+      "line": 32
+    },
+    "api#/surfaces/app/routes/orders/routes/refund/requires/2": {
+      "column": 61,
+      "endColumn": 99,
+      "endLine": 32,
+      "file": "api.yaml",
+      "line": 32
+    }
+  }
+}

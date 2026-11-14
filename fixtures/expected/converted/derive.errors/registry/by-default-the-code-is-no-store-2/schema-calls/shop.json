@@ -1,0 +1,35 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/shop.keyed/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ShopKeyedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/shop.leaked/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ShopLeakedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/shop.plain/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ShopPlainParams"
+    }
+  }
+]

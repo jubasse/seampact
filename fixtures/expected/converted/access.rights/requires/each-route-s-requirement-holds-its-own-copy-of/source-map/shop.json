@@ -1,0 +1,103 @@
+{
+  "irRevision": 6,
+  "locations": {
+    "api#/api": {
+      "column": 1,
+      "endColumn": 32,
+      "endLine": 1,
+      "file": "api.yaml",
+      "line": 1
+    },
+    "api#/api/version": {
+      "column": 20,
+      "endColumn": 30,
+      "endLine": 1,
+      "file": "api.yaml",
+      "line": 1
+    },
+    "api#/identities/user": {
+      "column": 3,
+      "endColumn": 83,
+      "endLine": 5,
+      "file": "api.yaml",
+      "line": 5
+    },
+    "api#/rights/staff": {
+      "column": 3,
+      "endColumn": 50,
+      "endLine": 10,
+      "file": "api.yaml",
+      "line": 10
+    },
+    "api#/rights/staff/params": {
+      "column": 12,
+      "endColumn": 48,
+      "endLine": 10,
+      "file": "api.yaml",
+      "line": 10
+    },
+    "api#/rights/staff/params/level": {
+      "column": 22,
+      "endColumn": 46,
+      "endLine": 10,
+      "file": "api.yaml",
+      "line": 10
+    },
+    "api#/schemas/UserPrincipal": {
+      "column": 3,
+      "endColumn": 96,
+      "endLine": 7,
+      "file": "api.yaml",
+      "line": 7
+    },
+    "api#/schemas/UserPrincipal/properties/userId": {
+      "column": 68,
+      "endColumn": 92,
+      "endLine": 7,
+      "file": "api.yaml",
+      "line": 7
+    },
+    "api#/schemes/bearer": {
+      "column": 3,
+      "endColumn": 27,
+      "endLine": 3,
+      "file": "api.yaml",
+      "line": 3
+    },
+    "api#/surfaces/app": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 28,
+      "file": "api.yaml",
+      "line": 21
+    },
+    "api#/surfaces/app/identity": {
+      "column": 5,
+      "endColumn": 19,
+      "endLine": 23,
+      "file": "api.yaml",
+      "line": 23
+    },
+    "api#/surfaces/app/requires/0": {
+      "column": 16,
+      "endColumn": 54,
+      "endLine": 24,
+      "file": "api.yaml",
+      "line": 24
+    },
+    "api#/surfaces/app/routes/first": {
+      "column": 7,
+      "endColumn": 29,
+      "endLine": 26,
+      "file": "api.yaml",
+      "line": 26
+    },
+    "api#/surfaces/app/routes/second": {
+      "column": 7,
+      "endColumn": 30,
+      "endLine": 27,
+      "file": "api.yaml",
+      "line": 27
+    }
+  }
+}

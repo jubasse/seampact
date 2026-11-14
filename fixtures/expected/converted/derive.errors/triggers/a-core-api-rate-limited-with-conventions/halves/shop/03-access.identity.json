@@ -1,0 +1,19 @@
+{
+  "operations": {
+    "ping": {
+      "access": {
+        "kind": "public",
+        "reason": "The contract checks the retry header only.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    }
+  }
+}

@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/sort-key-right",
+    "message": "sort key 'count' of route 'listTallies' sorts a list whose item is neither an object nor a union of objects, so its field's restriction cannot be read",
+    "fix": "remove the key from 'sortable', or list an object schema",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/tallies/ops/list/sortable/0"
+    },
+    "related": []
+  }
+]

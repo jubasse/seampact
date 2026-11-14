@@ -1,0 +1,32 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "vault",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/proof-schema",
+          "message": "the proof of rule 'upload' is a file, which a rule cannot read as a proof",
+          "fix": "set the proof's 'schema' to a scalar, an enum or a named schema",
+          "origin": {
+            "layer": "api",
+            "pointer": "/rules/upload/proof/schema"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/proof-schema",
+          "message": "the proof of rule 'blob' is an opaque value, which a rule cannot read as a proof",
+          "fix": "set the proof's 'schema' to a scalar, an enum or a named schema",
+          "origin": {
+            "layer": "api",
+            "pointer": "/rules/blob/proof/schema"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

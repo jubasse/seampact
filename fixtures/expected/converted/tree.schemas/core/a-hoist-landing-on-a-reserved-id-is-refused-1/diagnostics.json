@@ -1,0 +1,29 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/schema-reserved",
+          "message": "the name 'ApiForbiddenParams' is reserved for the params of the default code 'api.forbidden'",
+          "fix": "rename the schema, or the right, rule or error",
+          "origin": {
+            "layer": "api",
+            "pointer": "/rules/apiForbidden/params"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/errors/api.forbidden/params"
+              },
+              "message": "the params of 'ApiForbiddenParams' take the id here"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

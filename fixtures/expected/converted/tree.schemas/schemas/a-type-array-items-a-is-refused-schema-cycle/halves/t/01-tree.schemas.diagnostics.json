@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-cycle",
+    "message": "the schema 'A' reaches itself through schemas that are not objects, maps or unions",
+    "fix": "break the cycle with a named object, or remove the self-reference",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/A"
+    },
+    "related": []
+  }
+]

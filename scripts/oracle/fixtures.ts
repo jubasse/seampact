@@ -7,6 +7,7 @@ export const FIXTURES_ROOT = join(REPO_ROOT, "fixtures");
 export const EXPECTED_ROOT = join(FIXTURES_ROOT, "expected");
 
 const EXCLUDED_FILE = join(dirname(fileURLToPath(import.meta.url)), "excluded.json");
+const CONVERTED_PREFIX = "converted/";
 const ENTRY_FILES = ["workspace.yaml", "api.yaml"] as const;
 
 /** `excluded.json`: fixtures the oracle cannot compile standalone, and fixtures whose halves it skips. */
@@ -61,12 +62,12 @@ function entryOf(directory: string): string | undefined {
 function walk(directory: string, found: OracleFixture[]): void {
   const entry = entryOf(directory);
 
-  if (entry !== undefined)
-    found.push({
-      path: relative(FIXTURES_ROOT, directory).split("\\").join("/"),
-      directory,
-      entry,
-    });
+  const path = relative(FIXTURES_ROOT, directory).split("\\").join("/");
+
+  if (entry !== undefined) found.push({ path, directory, entry });
+
+  // A converted fixture is one workspace: the contracts inside it are not fixtures of their own.
+  if (entry !== undefined && path.startsWith(CONVERTED_PREFIX)) return;
 
   for (const name of readdirSync(directory)) {
     const child = join(directory, name);
@@ -78,7 +79,7 @@ function walk(directory: string, found: OracleFixture[]): void {
 }
 
 // The names under a fixture's expected directory that hold its own files: a nested fixture there would collide.
-const OWN_EXPECTED_NAMES = ["diagnostics.json", "ir", "source-map", "halves"];
+const OWN_EXPECTED_NAMES = ["diagnostics.json", "ir", "source-map", "halves", "schema-calls"];
 
 function refuseCollidingNames(fixtures: readonly OracleFixture[]): void {
   for (const { path } of fixtures) {

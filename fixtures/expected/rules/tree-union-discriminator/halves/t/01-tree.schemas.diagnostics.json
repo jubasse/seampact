@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/union-discriminator",
+    "message": "a union needs a discriminator: its tag property, or '{ from: header.<Name> }'",
+    "fix": "add 'discriminator: <tag property>'",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/U"
+    },
+    "related": []
+  }
+]

@@ -1,0 +1,89 @@
+{
+  "irRevision": 6,
+  "locations": {
+    "api#/api": {
+      "column": 1,
+      "endColumn": 32,
+      "endLine": 1,
+      "file": "api.yaml",
+      "line": 1
+    },
+    "api#/api/version": {
+      "column": 20,
+      "endColumn": 30,
+      "endLine": 1,
+      "file": "api.yaml",
+      "line": 1
+    },
+    "api#/buckets/writes": {
+      "column": 3,
+      "endColumn": 52,
+      "endLine": 9,
+      "file": "api.yaml",
+      "line": 9
+    },
+    "api#/conventions/rateLimit/header": {
+      "column": 16,
+      "endColumn": 35,
+      "endLine": 3,
+      "file": "api.yaml",
+      "line": 3
+    },
+    "api#/conventions/rateLimit/param": {
+      "column": 37,
+      "endColumn": 56,
+      "endLine": 3,
+      "file": "api.yaml",
+      "line": 3
+    },
+    "api#/conventions/rateLimit/unit": {
+      "column": 58,
+      "endColumn": 65,
+      "endLine": 3,
+      "file": "api.yaml",
+      "line": 3
+    },
+    "api#/errors/shop.slow": {
+      "column": 3,
+      "endColumn": 29,
+      "endLine": 5,
+      "file": "api.yaml",
+      "line": 5
+    },
+    "api#/rules/slowDown": {
+      "column": 3,
+      "endColumn": 50,
+      "endLine": 7,
+      "file": "api.yaml",
+      "line": 7
+    },
+    "api#/surfaces/app": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 20,
+      "file": "api.yaml",
+      "line": 13
+    },
+    "api#/surfaces/app/access": {
+      "column": 5,
+      "endColumn": 67,
+      "endLine": 15,
+      "file": "api.yaml",
+      "line": 15
+    },
+    "api#/surfaces/app/routes/ping": {
+      "column": 7,
+      "endColumn": 1,
+      "endLine": 20,
+      "file": "api.yaml",
+      "line": 17
+    },
+    "api#/surfaces/app/routes/ping/requires/0": {
+      "column": 20,
+      "endColumn": 30,
+      "endLine": 19,
+      "file": "api.yaml",
+      "line": 19
+    }
+  }
+}

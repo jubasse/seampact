@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/map-keys",
+          "message": "the keys of a map are strings",
+          "fix": "write a string schema (with a format, a pattern or a length) or an enum",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/A/propertyNames"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

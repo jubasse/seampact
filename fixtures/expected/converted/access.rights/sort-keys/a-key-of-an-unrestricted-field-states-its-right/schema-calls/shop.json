@@ -1,0 +1,74 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/items/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Item"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/clerk/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Clerk"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rights/items.grade/params",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ItemsGradeParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rights/items.margin/subject/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/scopes/shop/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "level": "high"
+      },
+      {
+        "kind": "ref",
+        "schema": "ItemsGradeParams"
+      }
+    ],
+    "answer": []
+  }
+]

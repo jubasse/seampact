@@ -1,0 +1,28 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/shop.slow_down/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ShopSlowDownParams"
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      "0",
+      {
+        "kind": "scalar",
+        "type": "string",
+        "format": "decimal",
+        "refinements": {
+          "minimum": "-1"
+        }
+      }
+    ],
+    "answer": []
+  }
+]

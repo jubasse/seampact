@@ -1,0 +1,9 @@
+api: { name: shop, version: 1 }
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: The contract checks error declarations only. }
+    errors:
+      shop.busy: { status: 503 }
+    routes:
+      ping: { method: get, errors: { shop.busy: { status: 503, title: Busy. } } }

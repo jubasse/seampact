@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "shop",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/derive/role-param-type",
+          "message": "role 'schemaInvalid' fills the param 'issues' of 'shop.invalid' with $issues, but for an item, for its member 'in', 'Issue' has no such member",
+          "fix": "fill 'issues' with a value its type provably takes, or change the param's type in 'shop.invalid'",
+          "origin": {
+            "layer": "api",
+            "pointer": "/conventions/errors/derived/schemaInvalid/params/issues"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

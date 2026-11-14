@@ -1,0 +1,35 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/derive/error-unknown",
+    "message": "error code 'shop.not_member' is listed here, but no layer or node declares it and it is no default code",
+    "fix": "declare 'shop.not_member' with a status in 'errors', or list a declared code",
+    "origin": {
+      "layer": "api",
+      "pointer": "/scopes/org/errors/1"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/derive/error-unknown",
+    "message": "error code 'shop.denied' is listed here, but no layer or node declares it and it is no default code",
+    "fix": "declare 'shop.denied' with a status in 'errors', or list a declared code",
+    "origin": {
+      "layer": "api",
+      "pointer": "/rights/orgs.manage/errors/0"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/derive/error-unknown",
+    "message": "error code 'shop.slow_down' is listed here, but no layer or node declares it and it is no default code",
+    "fix": "declare 'shop.slow_down' with a status in 'errors', or list a declared code",
+    "origin": {
+      "layer": "api",
+      "pointer": "/rules/throttle/errors/1"
+    },
+    "related": []
+  }
+]

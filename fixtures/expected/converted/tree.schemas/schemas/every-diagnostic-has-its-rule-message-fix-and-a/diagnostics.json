@@ -1,0 +1,84 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/scalar-name",
+          "message": "the named format 'uuid' takes the name of a portable format, so one name would mean two checks",
+          "fix": "remove it and write 'type: string, format: uuid' where it is used",
+          "origin": {
+            "layer": "api",
+            "pointer": "/scalars/uuid"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/schema-unknown",
+          "message": "no schema 'Missing' is declared",
+          "fix": "declare it under 'schemas', or fix the name",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/A/properties/b"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/format-type",
+          "message": "the portable format 'email' is written with its type",
+          "fix": "write 'type: string, format: email'",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/A/properties/c/format"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/pattern",
+          "message": "the pattern is not portable: '\\b' is not portable; only a metacharacter may be escaped",
+          "fix": "rewrite it in the portable subset of ADR 0003 section 9",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/A/properties/d/pattern"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/name-collision",
+          "message": "the properties 'X' and 'x' give the same identifier",
+          "fix": "rename one, or set a 'codeName'",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/B/properties/X"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/B/properties/x"
+              },
+              "message": "'x' is here"
+            }
+          ]
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/union-variant",
+          "message": "the variant 'b' is not an object schema",
+          "fix": "make the variant an object, or name an object schema",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/U/oneOf/b"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

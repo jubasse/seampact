@@ -1,0 +1,21 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/name-collision",
+    "message": "the enums 'HTTPCode' and 'HttpCode' give the same identifier",
+    "fix": "rename one of them",
+    "origin": {
+      "layer": "api",
+      "pointer": "/enums/HTTPCode"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/enums/HttpCode"
+        },
+        "message": "'HttpCode' is declared here"
+      }
+    ]
+  }
+]

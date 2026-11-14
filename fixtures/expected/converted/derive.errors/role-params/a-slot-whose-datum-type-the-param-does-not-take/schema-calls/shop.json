@@ -1,0 +1,30 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/shop.too_large/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ShopTooLargeParams"
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      1,
+      {
+        "kind": "scalar",
+        "type": "string",
+        "refinements": {}
+      }
+    ],
+    "answer": [
+      {
+        "pointer": "",
+        "message": "1 is not a string"
+      }
+    ]
+  }
+]

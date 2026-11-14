@@ -1,0 +1,29 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "shop",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/field-right-conflict",
+          "message": "output field 'Ev/cost' of route 'ev' is restricted in 'VarA' and in 'VarB' with a different right, params, input policy or subject, and one field right cannot hold both",
+          "fix": "give the fields at this pointer the same restrictedTo and subject, or rename one of them",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/VarB/properties/cost/restrictedTo"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/VarA/properties/cost/restrictedTo"
+              },
+              "message": "the field of 'VarA' is restricted here"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

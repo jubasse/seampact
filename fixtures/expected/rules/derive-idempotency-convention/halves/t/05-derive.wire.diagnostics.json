@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/derive/idempotency-convention",
+    "message": "conventions.idempotency sets no replayHeader, lifetime, so no idempotency key can be derived",
+    "fix": "Write header, replayHeader and lifetime in conventions.idempotency (Idempotency-Key, Idempotency-Replayed, 24h), or remove it.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/conventions/idempotency"
+    },
+    "related": []
+  }
+]

@@ -1,0 +1,15 @@
+api: { name: shop, version: 1 }
+conventions:
+  rateLimit: { header: Retry-After, param: delayMs, unit: s }
+  errors: { derived: { rateLimited: { code: shop.slow_down, params: { delayMs: $retryAfterMs } } } }
+errors:
+  shop.slow_down:
+    status: 429
+    params: { delayMs?: { type: integer, minimum: 0 }, wait?: { type: integer, minimum: 0 } }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: The contract checks error declarations and role bindings only. }
+    routes:
+      ping: { method: get }

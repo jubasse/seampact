@@ -1,0 +1,14 @@
+{
+  "operations": {
+    "first": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "second": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    }
+  }
+}

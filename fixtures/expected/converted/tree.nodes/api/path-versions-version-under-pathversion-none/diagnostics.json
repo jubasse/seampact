@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "audit",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/path-version",
+          "message": "The prefix /v{version} of the surface app holds {version}, but its pathVersion is none.",
+          "fix": "Remove {version} from the prefix, or set pathVersion: prefix.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/prefix"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

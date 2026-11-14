@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/signature-key",
+    "message": "signature scheme 'sig' verifies by template and has no 'key'",
+    "fix": "Name the key id the secret lookup receives: 'key: { value: <id> }' or 'key: { from: <path, query or header source> }'.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemes/sig"
+    },
+    "related": []
+  }
+]

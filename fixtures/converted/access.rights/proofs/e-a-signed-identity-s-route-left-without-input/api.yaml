@@ -1,0 +1,17 @@
+api: { name: hooks, version: 1 }
+schemes:
+  sig: { kind: signature, name: Sig, format: 'v1={sig}', algorithm: hmac-sha256, payload: '{rawBody}', encoding: hex, key: { value: hook } }
+identities:
+  hook: { kind: signed, scheme: sig, principal: Caller }
+schemas:
+  Caller: { type: object, required: [account], properties: { account: { type: string } } }
+rules:
+  recentAuth: { proof: { in: body, name: token, schema: { type: string } } }
+surfaces:
+  hooks:
+    identity: hook
+    routes:
+      ping: { method: post, responses: { 204: {} } }
+      pong: { method: post, requires: [{ rule: recentAuth }], responses: { 204: {} } }
+      peek: { method: get }
+      drop: { method: delete, responses: { 204: {} } }

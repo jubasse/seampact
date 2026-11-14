@@ -1,0 +1,104 @@
+{
+  "schemes": {
+    "bearer": {
+      "id": "bearer",
+      "kind": "bearer",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/bearer"
+      }
+    }
+  },
+  "headers": {
+    "rightsVersion": {
+      "id": "rightsVersion",
+      "semantic": "versionToken",
+      "response": "X-Rights-Version",
+      "request": "If-Rights-Version",
+      "origin": {
+        "layer": "api",
+        "pointer": "/headers/rightsVersion"
+      }
+    }
+  },
+  "identities": {
+    "viewer": {
+      "id": "viewer",
+      "kind": "credential",
+      "schemes": {
+        "read": [
+          "bearer"
+        ],
+        "write": [
+          "bearer"
+        ],
+        "optionalRead": []
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "Viewer"
+      },
+      "errors": [],
+      "headers": [
+        {
+          "header": "rightsVersion",
+          "for": "writes",
+          "required": false,
+          "from": {
+            "in": "principal",
+            "name": "rightsVersion"
+          },
+          "stale": "shop.nope",
+          "origin": {
+            "layer": "api",
+            "pointer": "/identities/viewer/headers/rightsVersion"
+          }
+        }
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/viewer"
+      }
+    }
+  },
+  "operations": {
+    "ping": {
+      "access": {
+        "kind": "identity",
+        "identity": "viewer",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "poke": {
+      "access": {
+        "kind": "identity",
+        "identity": "viewer",
+        "schemes": [
+          "bearer"
+        ],
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        }
+      },
+      "callerKinds": [
+        "identified"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    }
+  }
+}

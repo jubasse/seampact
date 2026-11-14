@@ -1,0 +1,43 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/param-unique",
+    "message": "The request header x-tenant of renameProjects is declared twice.",
+    "fix": "Remove one of the two declarations.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/projects/routes/rename/headers/x-tenant"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/headers/X-Tenant"
+        },
+        "message": "the first declaration"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/path-param",
+    "message": "The path /v1/orgs/{orgId}/projects/{projectId}/x/{missing} of misplacedProjects holds {missing}, which no pathParams or id declares.",
+    "fix": "Declare missing in pathParams.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/projects/routes/misplaced/path"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/path-param",
+    "message": "The path parameter unused of misplacedProjects is not in its path /v1/orgs/{orgId}/projects/{projectId}/x/{missing}.",
+    "fix": "Write {unused} in the path, or remove the parameter.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/projects/routes/misplaced/pathParams/unused"
+    },
+    "related": []
+  }
+]

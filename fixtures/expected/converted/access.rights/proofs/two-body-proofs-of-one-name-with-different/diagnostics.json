@@ -1,0 +1,43 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "vault",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/proof-name",
+          "message": "rules 'numbered' and 'worded' read the body proof 'reauth' on route 'ping' with different schemas",
+          "fix": "give one of the proofs another name, or the same schema",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/ping/requires/1"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/rules/worded/proof"
+              },
+              "message": "this proof is declared here"
+            },
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/ping/requires/0"
+              },
+              "message": "the first requirement reading that name"
+            },
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/rules/numbered/proof"
+              },
+              "message": "whose proof is declared here"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

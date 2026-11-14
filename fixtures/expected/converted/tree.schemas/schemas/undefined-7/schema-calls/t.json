@@ -1,0 +1,35 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/rights/tasks.update/params",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TasksUpdateParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rules/recentAuth/params",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Order"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/404-gone/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "_404GoneParams"
+    }
+  }
+]

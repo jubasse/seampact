@@ -1,0 +1,16 @@
+api: { name: t, version: 1 }
+errors:
+  tasks.locked: { status: 423, params: { until: { type: string } } }
+surfaces:
+  app:
+    routes:
+      tasks:
+        kind: collection
+        id: { taskId: { type: string } }
+        errors:
+          tasks.locked: { status: 423, params: { until: { type: string } } }
+      boards:
+        kind: collection
+        id: { boardId: { type: string } }
+        errors:
+          tasks.locked: { status: 423, params: { until: { type: string } } }

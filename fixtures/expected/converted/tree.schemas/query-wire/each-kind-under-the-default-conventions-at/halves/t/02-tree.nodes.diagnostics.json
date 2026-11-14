@@ -1,0 +1,24 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/op-item",
+    "message": "The list op of items answers its item, but items declares no item.",
+    "fix": "Declare item on items, or give the op an output.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/items/ops/list"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/paging-style",
+    "message": "The list listItems names no paging style, and conventions.paging.default sets none.",
+    "fix": "Declare a paging style and name it, for example `pagings: { pages: { request: { page: { query: page }, limit: { query: limit } }, response: { body: { items: $items, meta: { page: $page, limit: $limit, total: $total } } } } }` with `paging: { pages: { maxLimit: 100 } }` on the list or `conventions: { paging: { default: pages, maxLimit: 100 } }`; or write `paging: none` to serve the whole list.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/items/ops/list"
+    },
+    "related": []
+  }
+]

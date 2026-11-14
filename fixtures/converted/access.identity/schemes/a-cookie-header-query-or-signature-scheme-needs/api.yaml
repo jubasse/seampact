@@ -1,0 +1,9 @@
+api: { name: a, version: 1 }
+schemes:
+
+  session: { kind: cookie }
+  apiKey: { kind: header }
+  mapsKey: { kind: query }
+  hook: { kind: signature, verify: application }
+  bearer: { kind: bearer }
+  basic: { kind: basic }

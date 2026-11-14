@@ -1,0 +1,163 @@
+{
+  "operations": {
+    "ping": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "X-Rights-Version",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": true,
+              "semantic": "versionToken",
+              "derivedFrom": {
+                "derivation": "identity.versionToken",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/identities/viewer/headers/rightsVersion"
+                  },
+                  {
+                    "layer": "api",
+                    "pointer": "/headers/rightsVersion"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "experimental",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        }
+      }
+    },
+    "poke": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "If-Rights-Version",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.versionToken",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/identities/viewer/headers/rightsVersion"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/headers/rightsVersion"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "X-Rights-Version",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": true,
+              "semantic": "versionToken",
+              "derivedFrom": {
+                "derivation": "identity.versionToken",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/identities/viewer/headers/rightsVersion"
+                  },
+                  {
+                    "layer": "api",
+                    "pointer": "/headers/rightsVersion"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "experimental",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api"
+        }
+      }
+    }
+  },
+  "api": {
+    "wire": {
+      "int64": "string",
+      "outputEnums": "enum",
+      "urls": "relative"
+    }
+  }
+}

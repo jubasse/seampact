@@ -1,0 +1,22 @@
+api: { name: tasks, version: 1 }
+
+conventions: { format: plain }
+formats:
+  plain:
+    error: { body: { type: 'https://errors.example.com/${code}' } }
+
+schemas:
+  Task:
+    type: object
+    properties: { id: { type: string }, title: { type: string } }
+    required: [id, title]
+surfaces:
+  app:
+    access: { public: "Tasks are public." }
+    routes:
+      tasks:
+        kind: collection
+        id: { taskId: { type: string } }
+        idProperty: id
+        item: Task
+        ops: [get]

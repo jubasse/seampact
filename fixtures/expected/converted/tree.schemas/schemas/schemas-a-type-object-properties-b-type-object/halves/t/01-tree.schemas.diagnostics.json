@@ -1,0 +1,21 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/name-collision",
+    "message": "the name 'AB' this schema derives is already the name of another schema",
+    "fix": "rename the schema or the property",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/A/properties/b"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/schemas/AB"
+        },
+        "message": "'AB' is named here"
+      }
+    ]
+  }
+]

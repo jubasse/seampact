@@ -1,0 +1,170 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/user/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "UserPrincipal"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/service/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ServicePrincipal"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/service/headers/actorSurface/schema",
+      "input"
+    ],
+    "answer": {
+      "kind": "enum",
+      "enum": "Surface"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/stripe/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "WebhookCaller"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rights/roles/params",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "RolesParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rights/tasks.update/subject/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rights/tasks.seeEffort/subject/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rights/callerService/params",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "CallerServiceParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rules/recentAuth/proof/schema",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {
+        "minLength": 1,
+        "maxLength": 512
+      }
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rules/recentAuth/params",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "RecentAuthParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/scopes/channel/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/api.schema_invalid/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ApiSchemaInvalidParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/api.rate_limited/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ApiRateLimitedParams"
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "allowed": [
+          "catalog"
+        ]
+      },
+      {
+        "kind": "ref",
+        "schema": "CallerServiceParams"
+      }
+    ],
+    "answer": []
+  }
+]

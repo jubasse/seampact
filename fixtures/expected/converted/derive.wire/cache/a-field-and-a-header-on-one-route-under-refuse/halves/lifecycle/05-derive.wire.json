@@ -1,0 +1,2537 @@
+{
+  "operations": {
+    "listNotes": {
+      "params": {
+        "query": [
+          {
+            "name": "page",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "1"
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/notes/ops/list/paging"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/pagings/githubPages"
+                }
+              ]
+            }
+          },
+          {
+            "name": "per_page",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "1",
+                "maximum": "50"
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/notes/ops/list/paging"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/pagings/githubPages"
+                }
+              ]
+            }
+          },
+          {
+            "name": "sort",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {
+                "pattern": {
+                  "source": "^(?:revision)$",
+                  "normalized": "^(?:revision)$"
+                }
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/notes/ops/list/paging"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/pagings/githubPages"
+                }
+              ]
+            }
+          },
+          {
+            "name": "direction",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {
+                "pattern": {
+                  "source": "^(?:asc|desc)$",
+                  "normalized": "^(?:asc|desc)$"
+                }
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/notes/ops/list/paging"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/pagings/githubPages"
+                }
+              ]
+            }
+          }
+        ],
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Device-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/deviceToken"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "X-Total-Count",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": false,
+              "derivedFrom": {
+                "derivation": "paging.params",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/notes/ops/list/paging"
+                  },
+                  {
+                    "layer": "api",
+                    "pointer": "/pagings/githubPages"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "Link",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": false,
+              "derivedFrom": {
+                "derivation": "paging.params",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/notes/ops/list/paging"
+                  },
+                  {
+                    "layer": "api",
+                    "pointer": "/pagings/githubPages"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "getNote": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Device-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/deviceToken"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "updateNote": {
+      "params": {
+        "query": [
+          {
+            "name": "revision",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {}
+            },
+            "required": true,
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "concurrency.version",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/notes/concurrency"
+                }
+              ]
+            }
+          }
+        ],
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "concurrency": {
+        "derivedFrom": {
+          "derivation": "concurrency.version",
+          "from": [
+            {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/notes/concurrency"
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "deleteNote": {
+      "params": {
+        "query": [
+          {
+            "name": "revision",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {}
+            },
+            "required": true,
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "concurrency.version",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/notes/concurrency"
+                }
+              ]
+            }
+          }
+        ],
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "concurrency": {
+        "derivedFrom": {
+          "derivation": "concurrency.version",
+          "from": [
+            {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/notes/concurrency"
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "listDocs": {
+      "params": {
+        "query": [
+          {
+            "name": "starting_after",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/docs/ops/list/paging"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/pagings/stripeList"
+                }
+              ]
+            }
+          },
+          {
+            "name": "ending_before",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/docs/ops/list/paging"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/pagings/stripeList"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "1"
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/docs/ops/list/paging"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/pagings/stripeList"
+                }
+              ]
+            }
+          }
+        ],
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Device-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/deviceToken"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "getDoc": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Device-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/deviceToken"
+                }
+              ]
+            }
+          },
+          {
+            "name": "If-None-Match",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "cache.etag",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/docs/ops/get/cache"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "ETag",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": true,
+              "derivedFrom": {
+                "derivation": "concurrency.version",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/docs/concurrency"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "1": {
+          "status": 304,
+          "shape": "empty",
+          "headers": [
+            {
+              "name": "ETag",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": true,
+              "derivedFrom": {
+                "derivation": "cache.etag",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/docs/ops/get/cache"
+                  }
+                ]
+              }
+            }
+          ],
+          "derivedFrom": {
+            "derivation": "cache.etag",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/docs/ops/get/cache"
+              }
+            ]
+          }
+        }
+      },
+      "cache": {
+        "family": "minute",
+        "directives": {
+          "maxAgeMs": 60000,
+          "immutable": false,
+          "noCache": false,
+          "mustRevalidate": false
+        },
+        "anonymous": "private",
+        "vary": [
+          "Authorization",
+          "X-Device-Token",
+          "Cookie"
+        ],
+        "etag": true,
+        "perCallerKind": [
+          {
+            "caller": "identified",
+            "cacheControl": "private, max-age=60"
+          }
+        ],
+        "noStore": false,
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/docs/ops/get/cache"
+        },
+        "derivedFrom": {
+          "derivation": "cache.headers",
+          "from": [
+            {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/docs/ops/get/cache"
+            },
+            {
+              "layer": "api",
+              "pointer": "/conventions/cache/families/minute"
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "updateDoc": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "If-Match",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "concurrency.version",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/docs/concurrency"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "ETag",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": true,
+              "derivedFrom": {
+                "derivation": "concurrency.version",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/docs/concurrency"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "concurrency": {
+        "derivedFrom": {
+          "derivation": "concurrency.version",
+          "from": [
+            {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/docs/concurrency"
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "listDrafts": {
+      "params": {
+        "query": [
+          {
+            "name": "offset",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "0"
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/drafts/ops/list/paging"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/pagings/offsets"
+                }
+              ]
+            }
+          },
+          {
+            "name": "order[revision]",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {
+                "pattern": {
+                  "source": "^(?:asc|desc)$",
+                  "normalized": "^(?:asc|desc)$"
+                }
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/drafts/ops/list/paging"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/pagings/offsets"
+                }
+              ]
+            }
+          },
+          {
+            "name": "order[text]",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {
+                "pattern": {
+                  "source": "^(?:asc|desc)$",
+                  "normalized": "^(?:asc|desc)$"
+                }
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/drafts/ops/list/paging"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/pagings/offsets"
+                }
+              ]
+            }
+          }
+        ],
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Device-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/deviceToken"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Limit",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "1",
+                "maximum": "100"
+              }
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/drafts/ops/list/paging"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/pagings/offsets"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "updateDraft": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "concurrency": {
+        "derivedFrom": {
+          "derivation": "concurrency.version",
+          "from": [
+            {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/drafts/concurrency"
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "deleteDraft": {
+      "params": {
+        "query": [
+          {
+            "name": "expectedRevision",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {}
+            },
+            "required": true,
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "concurrency.version",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/drafts/concurrency"
+                }
+              ]
+            }
+          }
+        ],
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "concurrency": {
+        "derivedFrom": {
+          "derivation": "concurrency.version",
+          "from": [
+            {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/drafts/concurrency"
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "publishDraft": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "concurrency": {
+        "derivedFrom": {
+          "derivation": "concurrency.version",
+          "from": [
+            {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/drafts/concurrency"
+            },
+            {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/drafts/member/routes/publish/concurrency"
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "feed": {
+      "params": {
+        "query": [
+          {
+            "name": "since",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "date-time",
+              "refinements": {}
+            },
+            "required": false,
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/feed/paging"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/pagings/changes"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "1",
+                "maximum": "100"
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/feed/paging"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/pagings/changes"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "cache": {
+        "family": "shared",
+        "directives": {
+          "maxAgeMs": 300000,
+          "sharedMaxAgeMs": 600000,
+          "staleWhileRevalidateMs": 60000,
+          "staleIfErrorMs": 3600000,
+          "immutable": true,
+          "noCache": true,
+          "mustRevalidate": true
+        },
+        "anonymous": "public",
+        "vary": [
+          "Accept-Language"
+        ],
+        "etag": false,
+        "perCallerKind": [
+          {
+            "caller": "anonymous",
+            "cacheControl": "public, max-age=300, s-maxage=600, stale-while-revalidate=60, stale-if-error=3600, immutable, no-cache, must-revalidate"
+          }
+        ],
+        "noStore": false,
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/feed/cache"
+        },
+        "derivedFrom": {
+          "derivation": "cache.headers",
+          "from": [
+            {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/feed/cache"
+            },
+            {
+              "layer": "api",
+              "pointer": "/conventions/cache/families/shared"
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "board": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/board/access"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Device-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/board/access"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/deviceToken"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "cache": {
+        "family": "shared",
+        "directives": {
+          "maxAgeMs": 300000,
+          "sharedMaxAgeMs": 600000,
+          "staleWhileRevalidateMs": 60000,
+          "staleIfErrorMs": 3600000,
+          "immutable": true,
+          "noCache": true,
+          "mustRevalidate": true
+        },
+        "anonymous": "public",
+        "vary": [
+          "Authorization",
+          "X-Device-Token",
+          "Cookie"
+        ],
+        "etag": false,
+        "perCallerKind": [
+          {
+            "caller": "anonymous",
+            "cacheControl": "public, max-age=300, s-maxage=600, stale-while-revalidate=60, stale-if-error=3600, immutable, no-cache, must-revalidate"
+          },
+          {
+            "caller": "identified",
+            "cacheControl": "private, max-age=300, stale-while-revalidate=60, stale-if-error=3600, immutable, no-cache, must-revalidate"
+          }
+        ],
+        "noStore": false,
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/board/cache"
+        },
+        "derivedFrom": {
+          "derivation": "cache.headers",
+          "from": [
+            {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/board/cache"
+            },
+            {
+              "layer": "api",
+              "pointer": "/conventions/cache/families/shared"
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "history": {
+      "params": {
+        "query": [
+          {
+            "name": "page",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "0"
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/history/paging"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/pagings/pairs"
+                }
+              ]
+            }
+          },
+          {
+            "name": "sort",
+            "type": {
+              "kind": "array",
+              "items": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {
+                  "pattern": {
+                    "source": "^(?:revision),(?:asc|desc)$",
+                    "normalized": "^(?:revision),(?:asc|desc)$"
+                  }
+                }
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "list",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/history/paging"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/pagings/pairs"
+                }
+              ]
+            }
+          }
+        ],
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Device-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/deviceToken"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "mixed": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "plain": {
+      "params": {
+        "query": [
+          {
+            "name": "cursor",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "wire": {
+              "kind": "text",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "1",
+                "maximum": "100"
+              }
+            },
+            "required": false,
+            "wire": {
+              "kind": "number",
+              "style": "form",
+              "explode": true,
+              "brackets": false
+            },
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          }
+        ],
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Device-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/deviceToken"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "Link",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": false,
+              "derivedFrom": {
+                "derivation": "paging.params",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/conventions/paging/default"
+                  },
+                  {
+                    "layer": "api",
+                    "pointer": "/pagings/cursor"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "keys": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Device-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/deviceToken"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "cache": {
+        "family": "never",
+        "anonymous": "private",
+        "vary": [],
+        "etag": false,
+        "perCallerKind": [
+          {
+            "caller": "identified",
+            "cacheControl": "no-store"
+          }
+        ],
+        "noStore": true,
+        "origin": {
+          "layer": "api",
+          "pointer": "/schemas/Key/properties/secret"
+        },
+        "derivedFrom": {
+          "derivation": "cache.sensitive",
+          "from": [
+            {
+              "layer": "api",
+              "pointer": "/schemas/Key/properties/secret"
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "rotateKey": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "cache": {
+        "family": "never",
+        "anonymous": "private",
+        "vary": [],
+        "etag": false,
+        "perCallerKind": [
+          {
+            "caller": "identified",
+            "cacheControl": "no-store"
+          }
+        ],
+        "noStore": true,
+        "origin": {
+          "layer": "api",
+          "pointer": "/schemas/Key/properties/secret"
+        },
+        "derivedFrom": {
+          "derivation": "cache.sensitive",
+          "from": [
+            {
+              "layer": "api",
+              "pointer": "/schemas/Key/properties/secret"
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "neverKeys": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Device-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/deviceToken"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "cache": {
+        "family": "never",
+        "anonymous": "private",
+        "vary": [
+          "Authorization",
+          "X-Device-Token",
+          "Cookie"
+        ],
+        "etag": false,
+        "perCallerKind": [
+          {
+            "caller": "identified",
+            "cacheControl": "no-store"
+          }
+        ],
+        "noStore": true,
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/neverKeys/cache"
+        },
+        "derivedFrom": {
+          "derivation": "cache.sensitive",
+          "from": [
+            {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/neverKeys/cache"
+            },
+            {
+              "layer": "api",
+              "pointer": "/schemas/Key/properties/secret"
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "legacy": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Device-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/deviceToken"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "X-Deprecated",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": true,
+              "semantic": "deprecation",
+              "derivedFrom": {
+                "derivation": "deprecation.headers",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/legacy/deprecated"
+                  },
+                  {
+                    "layer": "api",
+                    "pointer": "/conventions/deprecation/header"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "X-Sunset",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": true,
+              "semantic": "sunset",
+              "derivedFrom": {
+                "derivation": "deprecation.headers",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/legacy/deprecated"
+                  },
+                  {
+                    "layer": "api",
+                    "pointer": "/conventions/deprecation/sunsetHeader"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "Link",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": true,
+              "semantic": "successorLink",
+              "derivedFrom": {
+                "derivation": "deprecation.headers",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/legacy/deprecated"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "retired": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Device-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/deviceToken"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "X-Deprecated",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": true,
+              "semantic": "deprecation",
+              "derivedFrom": {
+                "derivation": "deprecation.headers",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/retired/deprecated"
+                  },
+                  {
+                    "layer": "api",
+                    "pointer": "/conventions/deprecation/header"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "X-Sunset",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": true,
+              "semantic": "sunset",
+              "derivedFrom": {
+                "derivation": "deprecation.headers",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/retired/deprecated"
+                  },
+                  {
+                    "layer": "api",
+                    "pointer": "/conventions/deprecation/sunsetHeader"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "prices": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Device-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/deviceToken"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "maturity": {
+        "level": "experimental",
+        "source": "upstream",
+        "origin": {
+          "layer": "api",
+          "pointer": "/services/billing"
+        }
+      }
+    },
+    "beta": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Device-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/deviceToken"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "export": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          },
+          {
+            "name": "X-Device-Token",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/deviceToken"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "Content-Type",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": true,
+              "derivedFrom": {
+                "derivation": "response.download",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/export/output"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "Content-Disposition",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {}
+              },
+              "required": false,
+              "derivedFrom": {
+                "derivation": "response.download",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/export/output"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "callback": {
+      "responses": {
+        "0": {
+          "headers": [
+            {
+              "name": "Location",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "format": "uri-reference",
+                "refinements": {}
+              },
+              "required": true,
+              "derivedFrom": {
+                "derivation": "redirect.location",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/callback/responses/302"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    },
+    "moved": {
+      "params": {
+        "header": [
+          {
+            "name": "Authorization",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "input": {
+        "bodyLimitBytes": 1048576
+      },
+      "responses": {
+        "1": {
+          "headers": [
+            {
+              "name": "Location",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "format": "uri-reference",
+                "refinements": {}
+              },
+              "required": true,
+              "derivedFrom": {
+                "derivation": "redirect.location",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/moved/responses/303"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "maturity": {
+        "level": "provisional",
+        "source": "api",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        }
+      }
+    }
+  },
+  "api": {
+    "wire": {
+      "int64": "string",
+      "outputEnums": "enum",
+      "urls": "relative"
+    }
+  }
+}

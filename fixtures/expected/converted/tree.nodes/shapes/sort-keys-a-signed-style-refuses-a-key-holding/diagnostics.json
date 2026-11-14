@@ -1,0 +1,32 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "a",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/sort-key-signed",
+          "message": "The sort key a,b of signed holds a ',' or starts with '-', which the signed sort style signed cannot send.",
+          "fix": "Rename a,b, or use a paging style whose sort role is pair, keyed or split.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/signed/sortable/0"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/sort-key-signed",
+          "message": "The sort key -c of signed holds a ',' or starts with '-', which the signed sort style signed cannot send.",
+          "fix": "Rename -c, or use a paging style whose sort role is pair, keyed or split.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/signed/sortable/1"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

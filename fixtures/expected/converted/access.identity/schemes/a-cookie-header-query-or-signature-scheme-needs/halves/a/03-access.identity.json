@@ -1,0 +1,20 @@
+{
+  "schemes": {
+    "bearer": {
+      "id": "bearer",
+      "kind": "bearer",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/bearer"
+      }
+    },
+    "basic": {
+      "id": "basic",
+      "kind": "basic",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/basic"
+      }
+    }
+  }
+}

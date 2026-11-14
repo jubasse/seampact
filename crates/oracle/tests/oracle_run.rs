@@ -5,6 +5,8 @@
 mod support;
 
 use std::cell::RefCell;
+use std::sync::Mutex;
+use std::time::Duration;
 
 use seampact_json::JsonValue;
 use seampact_oracle::{
@@ -122,6 +124,7 @@ fn the_exact_integers_of_the_rust_port_are_accepted_by_the_committed_differences
     let selection = Selection {
         fixture_glob: Some(FixtureGlob::new("big-integers/**")),
         half: None,
+        ..Selection::default()
     };
 
     let verdict = run_oracle(&repository_root(), &selection, &subject).unwrap();
@@ -139,6 +142,7 @@ fn an_accepted_value_does_not_excuse_other_bytes_of_the_file() {
     let selection = Selection {
         fixture_glob: Some(FixtureGlob::new("big-integers/**")),
         half: None,
+        ..Selection::default()
     };
 
     let verdict = run_oracle(&repository_root(), &selection, &subject).unwrap();
@@ -163,6 +167,7 @@ fn one_changed_value_is_the_first_mismatch_at_its_pointer() {
     let selection = Selection {
         fixture_glob: Some(FixtureGlob::new(FIXTURE_WITH_DIAGNOSTICS)),
         half: None,
+        ..Selection::default()
     };
 
     let verdict = run_oracle(&repository_root(), &selection, &subject).unwrap();
@@ -198,6 +203,7 @@ fn a_half_run_compares_that_half_only() {
     let selection = Selection {
         fixture_glob: Some(FixtureGlob::new("big-integers/**")),
         half: Some("derive.errors".to_owned()),
+        ..Selection::default()
     };
 
     let verdict = run_oracle(&repository_root(), &selection, &subject).unwrap();
@@ -211,10 +217,12 @@ fn a_glob_matching_no_fixture_and_an_unknown_half_are_usage_errors() {
     let no_fixture = Selection {
         fixture_glob: Some(FixtureGlob::new("no-such-fixture")),
         half: None,
+        ..Selection::default()
     };
     let no_half = Selection {
         fixture_glob: None,
         half: Some("no.such-half".to_owned()),
+        ..Selection::default()
     };
 
     for selection in [no_fixture, no_half] {
@@ -290,6 +298,7 @@ fn a_half_starts_from_the_expected_halves_before_it_and_the_other_apis_deltas() 
     let selection = Selection {
         fixture_glob: Some(FixtureGlob::new("scale")),
         half: Some("access.identity".to_owned()),
+        ..Selection::default()
     };
 
     let verdict = run_oracle(&repository_root(), &selection, &subject).unwrap();
@@ -361,6 +370,7 @@ fn an_internal_error_of_the_subject_fails_the_run_naming_the_fixture() {
     let selection = Selection {
         fixture_glob: Some(FixtureGlob::new(FIXTURE_WITH_DIAGNOSTICS)),
         half: None,
+        ..Selection::default()
     };
 
     let verdict = run_oracle(&repository_root(), &selection, &AlwaysBreaks).unwrap();
@@ -378,6 +388,7 @@ fn an_internal_error_of_a_half_names_the_fixture_the_api_and_the_half() {
     let selection = Selection {
         fixture_glob: Some(FixtureGlob::new("scale")),
         half: Some("tree.nodes".to_owned()),
+        ..Selection::default()
     };
 
     let verdict = run_oracle(&repository_root(), &selection, &AlwaysBreaks).unwrap();
@@ -428,4 +439,85 @@ fn an_expected_file_under_halves_with_no_half_name_is_a_problem() {
             "expected/one/halves/stray.json is not named halves/<api>/<NN>-<half>.json: rename or delete it"
         ]
     );
+}
+
+/// A subject that takes its time on every compile.
+struct SlowSubject {
+    delay: Duration,
+}
+
+impl OracleSubject for SlowSubject {
+    fn compile(&self, _fixture: &Fixture) -> SubjectAnswer<Compilation> {
+        std::thread::sleep(self.delay);
+
+        SubjectAnswer::NotPorted
+    }
+
+    fn run_half(
+        &self,
+        _fixture: &Fixture,
+        _api: &str,
+        _half: &str,
+        _input: &HalfInput<'_>,
+    ) -> SubjectAnswer<JsonValue> {
+        SubjectAnswer::NotPorted
+    }
+
+    fn rule_id_registry(&self) -> RuleIdRegistry {
+        RuleIdRegistry::empty()
+    }
+}
+
+/// The fixtures the time limit action was called for.
+static FIXTURES_OVER_THE_LIMIT: Mutex<Vec<String>> = Mutex::new(Vec::new());
+
+fn note_fixture_over_the_limit(fixture: &str, _limit: Duration) {
+    FIXTURES_OVER_THE_LIMIT
+        .lock()
+        .unwrap()
+        .push(fixture.to_owned());
+}
+
+#[test]
+fn a_slow_subject_fails_the_run_naming_the_fixture_and_calls_the_time_limit_action() {
+    let subject = SlowSubject {
+        delay: Duration::from_millis(400),
+    };
+    let selection = Selection {
+        fixture_glob: Some(FixtureGlob::new("big-integers/above-2-pow-53")),
+        fixture_time_limit: Some(Duration::from_millis(50)),
+        on_time_limit: Some(note_fixture_over_the_limit),
+        ..Selection::default()
+    };
+
+    let verdict = run_oracle(&repository_root(), &selection, &subject).unwrap();
+
+    assert!(!verdict.passed(), "{verdict}");
+    assert!(
+        verdict
+            .problems
+            .iter()
+            .any(|problem| problem.starts_with("big-integers/above-2-pow-53 took ")),
+        "{verdict}"
+    );
+    assert_eq!(
+        *FIXTURES_OVER_THE_LIMIT.lock().unwrap(),
+        ["big-integers/above-2-pow-53"]
+    );
+}
+
+#[test]
+fn a_subject_within_the_time_limit_passes() {
+    let subject = SlowSubject {
+        delay: Duration::from_millis(1),
+    };
+    let selection = Selection {
+        fixture_glob: Some(FixtureGlob::new("big-integers/above-2-pow-53")),
+        fixture_time_limit: Some(Duration::from_secs(60)),
+        ..Selection::default()
+    };
+
+    let verdict = run_oracle(&repository_root(), &selection, &subject).unwrap();
+
+    assert!(verdict.passed(), "{verdict}");
 }

@@ -1,0 +1,48 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "shop",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/field-right-subject",
+          "message": "output field 'Orphan/cost' of route 'orphan' is restricted to right 'items.cost', and its holder 'Orphan' has no property of the right's id schema",
+          "fix": "give 'Orphan' exactly one required property of the right's id schema, or restrict the field to another right",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/orphan"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/Orphan/properties/cost/restrictedTo"
+              },
+              "message": "the field is restricted to 'items.cost' here"
+            }
+          ]
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/field-right-subject",
+          "message": "output field 'Orphan/price' of route 'orphan' is restricted to right 'items.cost', and its holder 'Orphan' has no property of the right's id schema",
+          "fix": "give 'Orphan' exactly one required property of the right's id schema, or restrict the field to another right",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/orphan"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/Orphan/properties/price/restrictedTo"
+              },
+              "message": "the field is restricted to 'items.cost' here"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "a",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/signature-template",
+          "message": "signature scheme 'none' has algorithm 'none', which is not hmac-sha256",
+          "fix": "Set 'algorithm' to 'hmac-sha256', or set 'verify: application' to verify any other MAC in the authenticate hook.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemes/none/algorithm"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/signature-template",
+          "message": "signature scheme 'sha1' has algorithm 'sha1', which is not hmac-sha256",
+          "fix": "Set 'algorithm' to 'hmac-sha256', or set 'verify: application' to verify any other MAC in the authenticate hook.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemes/sha1/algorithm"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

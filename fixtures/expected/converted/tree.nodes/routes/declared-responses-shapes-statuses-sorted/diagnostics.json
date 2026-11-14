@@ -1,0 +1,76 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "a",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/deny-by-default",
+          "message": "route 'listTasks' has no identity and no public access",
+          "fix": "Set 'identity: <name>' on it or an ancestor, or 'access: { public: \"<reason>\" }'.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/tasks/ops/list"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/deny-by-default",
+          "message": "route 'getTask' has no identity and no public access",
+          "fix": "Set 'identity: <name>' on it or an ancestor, or 'access: { public: \"<reason>\" }'.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/tasks/ops/get"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/deny-by-default",
+          "message": "route 'deleteTask' has no identity and no public access",
+          "fix": "Set 'identity: <name>' on it or an ancestor, or 'access: { public: \"<reason>\" }'.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/tasks/ops/delete"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/deny-by-default",
+          "message": "route 'export' has no identity and no public access",
+          "fix": "Set 'identity: <name>' on it or an ancestor, or 'access: { public: \"<reason>\" }'.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/export"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/deny-by-default",
+          "message": "route 'download' has no identity and no public access",
+          "fix": "Set 'identity: <name>' on it or an ancestor, or 'access: { public: \"<reason>\" }'.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/download"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/deny-by-default",
+          "message": "route 'feed' has no identity and no public access",
+          "fix": "Set 'identity: <name>' on it or an ancestor, or 'access: { public: \"<reason>\" }'.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/feed"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "rights": {
+    "shop.open": {
+      "id": "shop.open",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "shop.denied"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/shop.open"
+      }
+    },
+    "shop.close": {
+      "id": "shop.close",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/shop.close"
+      }
+    }
+  },
+  "operations": {
+    "ping": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    }
+  }
+}

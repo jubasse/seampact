@@ -1,0 +1,69 @@
+{
+  "operations": {
+    "notes": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "bigNotes": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "archive": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "board": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "comments": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "comment": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "jobs": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "status": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "feed": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "ping": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "tiles": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "stripe": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "github": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    }
+  }
+}

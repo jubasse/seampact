@@ -1,0 +1,25 @@
+api: { name: shop, version: 1 }
+schemes:
+  bearer: { kind: bearer }
+identities:
+  clerk: { schemes: { read: [bearer], write: [bearer] }, principal: Clerk }
+schemas:
+  ShopId: { type: string, format: uuid }
+  ItemId: { type: string, format: uuid }
+  Clerk: { type: object, required: [clerkId], properties: { clerkId: { type: string } } }
+  Loose:
+    type: object
+    properties: { itemId: ItemId, cost: { type: integer, restrictedTo: items.cost } }
+scopes:
+  shop: { id: ShopId }
+rights:
+  items.cost: { subject: { resource: Item, id: ItemId } }
+  shop.role: { params: { level: { type: string } }, subject: { scope: shop } }
+  audit: {}
+  audit2: {}
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: clerk
+    routes:
+      loose: { method: get, output: Loose }

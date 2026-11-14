@@ -1,0 +1,12 @@
+api: { name: shop, version: 1 }
+conventions:
+  errors: { derived: { rateLimited: shop.slow_down } }
+errors:
+  shop.slow_down: { status: 429 }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: The contract checks error declarations and role bindings only. }
+    routes:
+      ping: { method: get }

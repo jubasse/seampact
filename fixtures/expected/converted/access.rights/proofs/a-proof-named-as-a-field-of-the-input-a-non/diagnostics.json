@@ -1,0 +1,93 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "vault",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/proof-name",
+          "message": "rule 'recentAuth' reads its proof 'token' from the body of route 'updateNote', whose input already has a field 'token'",
+          "fix": "rename the input's field, or give the proof another name",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/notes/ops/update/requires/0"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/rules/recentAuth/proof"
+              },
+              "message": "the proof is declared here"
+            },
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/Note/properties/token"
+              },
+              "message": "the input's field is declared here"
+            }
+          ]
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/proof-input",
+          "message": "rule 'recentAuth' reads its proof 'token' from the body of route 'deleteNote', a delete without input",
+          "fix": "declare the route's `input`, read the proof in a header, or require the rule elsewhere",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/notes/ops/delete/requires/0"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/rules/recentAuth/proof"
+              },
+              "message": "the proof is declared here"
+            }
+          ]
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/proof-input",
+          "message": "rule 'recentAuth' reads its proof 'token' from the body of route 'peekNote', a get without input",
+          "fix": "read the proof in a header, or require the rule on a route with a body",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/notes/member/routes/peek/requires/0"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/rules/recentAuth/proof"
+              },
+              "message": "the proof is declared here"
+            }
+          ]
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/proof-input",
+          "message": "rule 'recentAuth' reads its proof 'token' from the body of route 'tagNote', whose input is no named object schema",
+          "fix": "make the route's input an object schema, or read the proof in a header",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/notes/member/routes/tag/requires/0"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/notes/member/routes/tag/input"
+              },
+              "message": "the route's input is declared here"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

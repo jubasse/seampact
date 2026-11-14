@@ -1,0 +1,32 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "studio",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/requirement-subject",
+          "message": "the subject query.docId of right 'docs.edit' is an optional field, which a caller of route 'ping' may omit; the subject must be a required field",
+          "fix": "make the field required, or read the subject from a required one",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/ping/requires/0/subject"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/requirement-subject",
+          "message": "the subject header.X-Doc of right 'docs.edit' is an optional field, which a caller of route 'ping' may omit; the subject must be a required field",
+          "fix": "make the field required, or read the subject from a required one",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/ping/requires/1/subject"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

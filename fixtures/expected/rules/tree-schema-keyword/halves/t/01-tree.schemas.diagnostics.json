@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/schema-keyword",
+    "message": "'items' has no meaning on a scalar",
+    "fix": "remove 'items'",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/A/items"
+    },
+    "related": []
+  }
+]

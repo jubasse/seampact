@@ -1,0 +1,4 @@
+api: { name: t, version: 1 }
+enums:
+  Clash: { values: ['+', value1] }
+  Blank: { values: [a], codeNames: { a: '-' } }

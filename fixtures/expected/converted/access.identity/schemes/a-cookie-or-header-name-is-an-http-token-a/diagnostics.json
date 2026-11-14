@@ -1,0 +1,43 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "a",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/scheme-member",
+          "message": "cookie scheme 'session' has name \"s;id\", which is not an HTTP token",
+          "fix": "Write the name as an HTTP token: letters, digits and !#$%&'*+-.^_`|~, without spaces, ';' or line breaks.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemes/session/name"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/scheme-member",
+          "message": "header scheme 'apiKey' has name \"X-Key\\r\\nSet-Cookie: a\", which is not an HTTP token",
+          "fix": "Write the name as an HTTP token: letters, digits and !#$%&'*+-.^_`|~, without spaces, ';' or line breaks.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemes/apiKey/name"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/scheme-member",
+          "message": "query scheme 'mapsKey' has name \"api key\", which is not letters, digits and -._~",
+          "fix": "Write the query parameter name with letters, digits and -._~ only.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemes/mapsKey/name"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

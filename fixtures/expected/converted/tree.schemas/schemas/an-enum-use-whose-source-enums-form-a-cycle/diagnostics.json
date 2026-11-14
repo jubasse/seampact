@@ -1,0 +1,43 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/enum-cycle",
+          "message": "the enum 'B' takes its values from a cycle of sources: A -> B -> A",
+          "fix": "give one enum of the cycle its own 'values'",
+          "origin": {
+            "layer": "api",
+            "pointer": "/enums/A/source/enum"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/enum-cycle",
+          "message": "the enum 'A' takes its values from a cycle of sources: B -> A -> B",
+          "fix": "give one enum of the cycle its own 'values'",
+          "origin": {
+            "layer": "api",
+            "pointer": "/enums/B/source/enum"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/tree/enum-cycle",
+          "message": "the enum 'A' takes its values from a cycle of sources: A -> B -> A",
+          "fix": "give one enum of the cycle its own 'values'",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/S/properties/a/enum"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

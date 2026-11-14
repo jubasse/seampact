@@ -1,0 +1,35 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/mixed/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Mixed"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/mixed/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Mixed"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/event/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Event"
+    }
+  }
+]

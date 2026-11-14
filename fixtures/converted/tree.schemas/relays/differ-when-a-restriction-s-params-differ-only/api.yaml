@@ -1,0 +1,4 @@
+api: { name: t, version: 1 }
+schemas:
+  Box: { type: object, properties: { owner: Owner } }
+  Owner: { type: object, properties: { name: { type: string, restrictedTo: { right: notes.read, params: { origin: north } } } } }

@@ -1,0 +1,144 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/workspaces/id/workspaceId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/workspaces/member/routes/notes/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Note"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/workspaces/member/routes/notes/ops/create/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "CreateNote"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/workspaces/member/routes/notes/collection/routes/feed/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Feed"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/workspaces/member/routes/notes/collection/routes/byLabel/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "NotesByLabel"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/workspaces/member/routes/notes/ops/update/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "UpdateNote"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/workspaces/member/routes/notes/id/noteId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/identities/member/principal",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Member"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rights/workspaceRole/params",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "WorkspaceRoleParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/rights/notes.seeCost/subject/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/scopes/workspace/id",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "format": "uuid",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "level": "owner"
+      },
+      {
+        "kind": "ref",
+        "schema": "WorkspaceRoleParams"
+      }
+    ],
+    "answer": []
+  }
+]

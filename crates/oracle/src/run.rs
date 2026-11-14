@@ -2,6 +2,7 @@
 //! files under the intended differences, then the whole-tree and rule-id checks.
 
 use std::collections::HashSet;
+use std::time::Duration;
 
 use camino::Utf8Path;
 use indexmap::IndexMap;
@@ -20,10 +21,11 @@ use crate::fixtures::{discover_fixtures, read_excluded};
 use crate::matcher::{ComparedFile, DifferenceLedger, MatchOutcome};
 use crate::raw_text::{AcceptedPointers, identical_outside_accepted};
 use crate::rule_ids::check_rule_ids;
+use crate::time_limit::FixtureTimer;
 use crate::verdict::{FirstFailure, Verdict};
 use crate::{
     ApiDeltas, ExcludedFixtures, ExpectedDelta, Fixture, FixtureGlob, HalfInput, OracleError,
-    OracleSubject, OutputFile, SubjectAnswer,
+    OracleSubject, OutputFile, OutputKind, SubjectAnswer, TimeLimitAction,
 };
 
 /// What a run compares.
@@ -33,6 +35,12 @@ pub struct Selection {
     pub fixture_glob: Option<FixtureGlob>,
     /// The pass half compared alone, every output when absent.
     pub half: Option<String>,
+    /// The time one fixture may take, no limit when absent. A fixture past it fails the run, the
+    /// fixture named in the verdict.
+    pub fixture_time_limit: Option<Duration>,
+    /// Run on a watching thread when a fixture passes the limit and the subject has not returned:
+    /// the place to name the fixture and stop a subject that hangs.
+    pub on_time_limit: Option<TimeLimitAction>,
 }
 
 impl Selection {
@@ -43,6 +51,9 @@ impl Selection {
 
 /// The halves directory of a fixture's expected files.
 const HALVES_PREFIX: &str = "halves/";
+
+/// The schema service call logs of a fixture's expected files, read by no comparison yet.
+const SCHEMA_CALLS_PREFIX: &str = "schema-calls/";
 
 /// Runs the oracle on the repository at `repository_root` with `subject` as the compiler.
 ///
@@ -73,9 +84,25 @@ pub fn run_oracle(
 
     refuse_unknown_half(selection, &expected_by_fixture)?;
 
+    let timer = FixtureTimer::start(selection.fixture_time_limit, selection.on_time_limit)?;
+
     for (fixture, expected_files) in selected_fixtures.iter().zip(&expected_by_fixture) {
-        run.compare_fixture(fixture, expected_files)?;
+        let started = timer.begin(&fixture.path);
+        let compared = run.compare_fixture(fixture, expected_files);
+
+        if let Some(overrun) = timer.end(started) {
+            run.verdict.problems.push(format!(
+                "{} took {:.1} s, over the {:.1} s limit of one fixture",
+                fixture.path,
+                overrun.elapsed.as_secs_f64(),
+                overrun.limit.as_secs_f64()
+            ));
+        }
+
+        compared?;
     }
+
+    drop(timer);
 
     run.verdict
         .problems
@@ -346,7 +373,9 @@ impl Run<'_> {
 
         let compiled_names = expected_files
             .keys()
-            .filter(|name| !name.starts_with(HALVES_PREFIX))
+            .filter(|name| {
+                !name.starts_with(HALVES_PREFIX) && !name.starts_with(SCHEMA_CALLS_PREFIX)
+            })
             .chain(actual_files.keys())
             .cloned()
             .collect::<indexmap::IndexSet<String>>();
@@ -440,9 +469,9 @@ impl Run<'_> {
 
         for (name, expected_text) in expected_files {
             let Some(OutputFile {
+                output: OutputKind::Halves,
                 api: Some(api),
                 half: Some(half),
-                ..
             }) = OutputFile::of(name)
             else {
                 continue;

@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/enum-values",
+    "message": "the enum 'Empty' declares no values",
+    "fix": "write 'values', or 'source: { enum: <Enum> }'",
+    "origin": {
+      "layer": "api",
+      "pointer": "/enums/Empty"
+    },
+    "related": []
+  }
+]

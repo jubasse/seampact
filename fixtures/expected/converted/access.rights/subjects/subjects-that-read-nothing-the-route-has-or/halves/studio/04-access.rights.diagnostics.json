@@ -1,0 +1,46 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/requirement-subject",
+    "message": "the subject header.X-Missing of right 'docs.edit' names nothing route 'ping' reads",
+    "fix": "read the subject from a parameter, header, principal field or scope of the route",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/ping/requires/0/subject"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/requirement-subject",
+    "message": "right 'audit' has no subject, but this requirement reads one from path.orgId",
+    "fix": "remove 'subject', or declare a subject on the right",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/ping/requires/1/subject"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/requirement-subject",
+    "message": "right 'orgMember' takes the route's scope 'org' as its subject, not principal.memberId",
+    "fix": "remove 'subject', or write 'scope.org'",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/ping/requires/2/subject"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/access/requirement-subject",
+    "message": "right 'projectRole' is checked against scope 'project', which route 'ping' does not resolve",
+    "fix": "enter scope 'project' on the route or an ancestor, or require the right elsewhere",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/ping/requires/3"
+    },
+    "related": []
+  }
+]

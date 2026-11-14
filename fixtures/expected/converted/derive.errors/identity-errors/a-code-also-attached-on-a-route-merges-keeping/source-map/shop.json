@@ -1,0 +1,103 @@
+{
+  "irRevision": 6,
+  "locations": {
+    "api#/api": {
+      "column": 1,
+      "endColumn": 32,
+      "endLine": 1,
+      "file": "api.yaml",
+      "line": 1
+    },
+    "api#/api/version": {
+      "column": 20,
+      "endColumn": 30,
+      "endLine": 1,
+      "file": "api.yaml",
+      "line": 1
+    },
+    "api#/errors/shop.suspended": {
+      "column": 3,
+      "endColumn": 34,
+      "endLine": 3,
+      "file": "api.yaml",
+      "line": 3
+    },
+    "api#/identities/viewer": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 14,
+      "file": "api.yaml",
+      "line": 10
+    },
+    "api#/identities/viewer/errors/0": {
+      "column": 14,
+      "endColumn": 28,
+      "endLine": 13,
+      "file": "api.yaml",
+      "line": 13
+    },
+    "api#/schemas/Viewer": {
+      "column": 3,
+      "endColumn": 65,
+      "endLine": 6,
+      "file": "api.yaml",
+      "line": 6
+    },
+    "api#/schemas/Viewer/properties/id": {
+      "column": 41,
+      "endColumn": 61,
+      "endLine": 6,
+      "file": "api.yaml",
+      "line": 6
+    },
+    "api#/schemes/bearer": {
+      "column": 3,
+      "endColumn": 27,
+      "endLine": 8,
+      "file": "api.yaml",
+      "line": 8
+    },
+    "api#/surfaces/app": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 22,
+      "file": "api.yaml",
+      "line": 15
+    },
+    "api#/surfaces/app/identity": {
+      "column": 5,
+      "endColumn": 21,
+      "endLine": 17,
+      "file": "api.yaml",
+      "line": 17
+    },
+    "api#/surfaces/app/routes/list": {
+      "column": 7,
+      "endColumn": 28,
+      "endLine": 19,
+      "file": "api.yaml",
+      "line": 19
+    },
+    "api#/surfaces/app/routes/ping": {
+      "column": 7,
+      "endColumn": 77,
+      "endLine": 21,
+      "file": "api.yaml",
+      "line": 21
+    },
+    "api#/surfaces/app/routes/ping/access": {
+      "column": 28,
+      "endColumn": 75,
+      "endLine": 21,
+      "file": "api.yaml",
+      "line": 21
+    },
+    "api#/surfaces/app/routes/poke": {
+      "column": 7,
+      "endColumn": 61,
+      "endLine": 20,
+      "file": "api.yaml",
+      "line": 20
+    }
+  }
+}

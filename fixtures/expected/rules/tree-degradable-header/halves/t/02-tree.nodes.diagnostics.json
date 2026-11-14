@@ -1,0 +1,24 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/degradable-header",
+    "message": "The route partial is degradable, but its format bare has no degraded meta field and conventions.degradedHeader is unset.",
+    "fix": "Set conventions.degradedHeader, or use a format with a meta field filled with degraded.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/partial/degradable"
+    },
+    "related": []
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/tree/degradable-path",
+    "message": "The degradable path text of partial names a required property; only an optional part can be left out.",
+    "fix": "Name an optional object property of the success data, or make the property optional.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/partial/degradable/0"
+    },
+    "related": []
+  }
+]

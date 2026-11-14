@@ -1,0 +1,177 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/tasks/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Task"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/tasks/id/taskId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/tasks/ops/update/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Assignment"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/tasks/member/routes/assign/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Assignment"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/tasks/member/routes/comments/item",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Comment"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/tasks/member/routes/comments/ops/update/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Assignment"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/tasks/member/routes/comments/id/commentId",
+      "input"
+    ],
+    "answer": {
+      "kind": "scalar",
+      "type": "string",
+      "refinements": {}
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/api.rate_limited/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ApiRateLimitedParams"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/tasks/member/errors/tasks.locked/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "TasksLockedParams"
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "retryAfterMs": 30000
+      },
+      {
+        "kind": "ref",
+        "schema": "ApiRateLimitedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "retryAfterMs": 1000
+      },
+      {
+        "kind": "ref",
+        "schema": "ApiRateLimitedParams"
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      "0",
+      {
+        "kind": "scalar",
+        "type": "string",
+        "format": "decimal",
+        "refinements": {
+          "minimum": "0"
+        }
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      "9007199254740991",
+      {
+        "kind": "scalar",
+        "type": "string",
+        "format": "decimal",
+        "refinements": {
+          "maximum": "9007199254740991"
+        }
+      }
+    ],
+    "answer": []
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "lockedBy": 7
+      },
+      {
+        "kind": "ref",
+        "schema": "TasksLockedParams"
+      }
+    ],
+    "answer": [
+      {
+        "pointer": "/lockedBy",
+        "message": "7 is not a string"
+      }
+    ]
+  }
+]

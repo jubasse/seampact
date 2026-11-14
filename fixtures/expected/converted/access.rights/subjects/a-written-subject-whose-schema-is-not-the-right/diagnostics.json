@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "studio",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/requirement-subject",
+          "message": "the subject path.projectId of right 'docs.edit' is 'ProjectId', not the right's id schema 'DocId'",
+          "fix": "read the subject from a source whose schema is the right's id schema",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/projects/member/routes/touch/requires/0/subject"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

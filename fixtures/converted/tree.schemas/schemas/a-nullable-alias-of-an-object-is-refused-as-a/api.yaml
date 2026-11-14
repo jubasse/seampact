@@ -1,0 +1,6 @@
+api: { name: t, version: 1 }
+schemas:
+
+  Foo: { type: object, properties: { a: { type: string } } }
+  MaybeFoo: { $ref: Foo, nullable: true }
+  U: { discriminator: k, oneOf: { a: MaybeFoo } }

@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/deprecated-since",
+    "message": "The deprecation that reaches late starts on '2027-07-01', after its sunset '2027-06-30'.",
+    "fix": "Write a since date on or before the sunset date.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/surfaces/app/routes/late/deprecated/since"
+    },
+    "related": []
+  }
+]

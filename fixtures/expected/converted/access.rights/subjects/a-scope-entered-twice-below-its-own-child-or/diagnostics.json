@@ -1,0 +1,59 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "studio",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/scope-twice",
+          "message": "scope 'project' is entered twice on the routes below this node",
+          "fix": "enter the scope once, on the highest node that needs it",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/projects/member/scopes/project"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/projects/scopes/project"
+              },
+              "message": "first entered here"
+            }
+          ]
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/scope-nesting",
+          "message": "scope 'org' is entered below 'project', which is within it",
+          "fix": "enter 'org' on 'project''s node or above it",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/projects/member/scopes/org"
+          },
+          "related": [
+            {
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/projects/scopes/project"
+              },
+              "message": "'project' is entered here"
+            }
+          ]
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/scope-unknown",
+          "message": "scope 'team' is entered here, but the scopes catalogue does not declare it",
+          "fix": "declare the scope in 'scopes', or enter a declared one",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/projects/member/scopes/team"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

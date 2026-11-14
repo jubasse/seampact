@@ -1,0 +1,21 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "t",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/tree/annotation-position",
+          "message": "'description' on an array here is not kept by the contract model",
+          "fix": "remove 'description' here; document the property or the schema that holds this one",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/inline/output/description"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

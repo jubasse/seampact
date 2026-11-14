@@ -1,0 +1,16 @@
+api: { name: t, version: 1 }
+schemas:
+  Answer: { type: object, properties: { a: { type: string } } }
+  Out:
+    type: object
+    properties: { inner: { $ref: Answer, unknownKeys: refuse } }
+  Text: { type: string }
+surfaces:
+  app:
+    routes:
+      send:
+        method: post
+        input: { type: object, properties: { t: { $ref: Text, unknownKeys: refuse } } }
+        output: { $ref: Answer, unknownKeys: { ignore: "Not for output." } }
+        responses:
+          201: { body: Out }

@@ -1,0 +1,32 @@
+
+api: { name: a, version: 1, kind: product }
+
+pagings:
+  cursor:
+    request: { cursor: { query: cursor }, limit: { query: limit } }
+    response: { body: $items }
+conventions:
+  paging: { default: cursor, maxLimit: 50 }
+
+schemas:
+  TaskId: { type: string }
+  Task: { type: object, properties: { taskId: TaskId } }
+formats:
+  envelope: { media: application/vnd.acme+json }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      tasks:
+        kind: collection
+        id: { taskId: TaskId }
+        item: Task
+        ops: { list: { paging: none }, get: {}, delete: {} }
+      export:
+        method: post
+        format: envelope
+        responses:
+          202: { headers: { Location: { type: string } } }
+          200: { body: Task }
+      download: { method: get, output: { file: { media: [text/csv] } } }
+      feed: { method: get, item: Task }

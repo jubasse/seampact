@@ -1,0 +1,19 @@
+api: { name: t, version: 1 }
+schemas:
+  TaskId: { type: string, format: uuid }
+  Task: { type: object, required: [taskId], properties: { taskId: TaskId } }
+surfaces:
+  app:
+    routes:
+      tasks:
+        kind: collection
+        id: { taskId: TaskId }
+        item: Task
+        ops:
+          list:
+            query:
+              limit?: { type: integer, minimum: 1, default: 20 }
+              page?: { type: integer, default: first }
+              raw?: { opaque: "Free-form.", default: {} }
+              sort: { type: string, default: title }
+            headers: { X-Trace?: { type: string, default: none } }

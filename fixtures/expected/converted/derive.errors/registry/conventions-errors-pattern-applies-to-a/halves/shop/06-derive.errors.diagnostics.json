@@ -1,0 +1,40 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/derive/error-pattern",
+    "message": "error code 'api.not_found' does not match conventions.errors.pattern '^(shop|api)[.][a-z]+$'",
+    "fix": "rename the code to match the pattern, or change the pattern",
+    "origin": {
+      "layer": "api",
+      "pointer": "/errors/api.not_found"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/conventions/errors/pattern"
+        },
+        "message": "the pattern is set here"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "rule": "seampact/derive/error-pattern",
+    "message": "error code 'api.rate_limited' does not match conventions.errors.pattern '^(shop|api)[.][a-z]+$'",
+    "fix": "rename the code to match the pattern, or change the pattern",
+    "origin": {
+      "layer": "api",
+      "pointer": "/errors/api.rate_limited"
+    },
+    "related": [
+      {
+        "origin": {
+          "layer": "api",
+          "pointer": "/conventions/errors/pattern"
+        },
+        "message": "the pattern is set here"
+      }
+    ]
+  }
+]

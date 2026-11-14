@@ -1,0 +1,32 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "shop",
+      "diagnostics": [
+        {
+          "severity": "error",
+          "rule": "seampact/access/sort-key-right",
+          "message": "sort key 'margin' of route 'listItems' has right 'items.margin', whose subject the route does not resolve",
+          "fix": "remove the key from 'sortable', or restrict its field to a right whose subject the route resolves",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/items/ops/list/sortable/0"
+          },
+          "related": []
+        },
+        {
+          "severity": "error",
+          "rule": "seampact/access/sort-key-right",
+          "message": "sort key 'name' of route 'listItems' has right 'shop.staff', whose subject the route does not resolve",
+          "fix": "remove the key from 'sortable', or restrict its field to a right whose subject the route resolves",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/items/ops/list/sortable/1"
+          },
+          "related": []
+        }
+      ]
+    }
+  ]
+}

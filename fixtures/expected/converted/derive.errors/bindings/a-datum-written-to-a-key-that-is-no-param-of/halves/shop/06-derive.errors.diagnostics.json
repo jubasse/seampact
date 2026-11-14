@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/derive/role-param",
+    "message": "the params template of role 'sortKeyForbidden' writes 'other', which is no param of 'shop.sort_denied'",
+    "fix": "write only params of 'shop.sort_denied' as keys, or add a param 'other' to it",
+    "origin": {
+      "layer": "api",
+      "pointer": "/conventions/errors/derived/sortKeyForbidden/params/other"
+    },
+    "related": []
+  }
+]

@@ -1,0 +1,41 @@
+# tasks-split-sort/api.yaml
+api:
+  name: tasksSplitSort
+  version: 1
+  kind: product
+  maturity: provisional
+  summary: Notes listed by GitHub-style pages, sorted by one key and its direction.
+
+pagings:
+  githubPages:
+    request:
+      page: { query: page }
+      limit: { query: per_page }
+      sort: { query: sort, style: split, direction: direction }
+    response:
+      body: $items
+      links: { next: $next, prev: $previous, first: $first, last: $last }
+
+schemas:
+  NoteId: { type: string, format: uuid }
+  Note:
+    type: object
+    required: [noteId, text, created]
+    properties:
+      noteId: NoteId
+      text: { type: string, minLength: 1, maxLength: 500 }
+      created: { type: string, format: date-time }
+
+surfaces:
+  notes:
+    prefix: /split-sort/v{version}
+    identity: user
+    routes:
+      notes:
+        kind: collection
+        id: { noteId: NoteId }
+        item: Note
+        ops:
+          list:
+            paging: { githubPages: { maxLimit: 100, defaultLimit: 30, overLimit: clamp } }
+            sortable: [created]
