@@ -149,7 +149,8 @@ fn operation_position(operations: &[JsonValue], id: &str) -> Option<usize> {
 }
 
 /// The members a half wrote, in the convention [`draft_apply`] reads (its inverse): `before` is
-/// the draft before the half, `after` the draft after it.
+/// the draft before the half, `after` the draft after it. In each object, the members the half
+/// added come after the members it changed, as JavaScript orders a member added to an object.
 ///
 /// # Errors
 ///
@@ -180,11 +181,15 @@ fn object_delta(
         }
     }
 
+    // A JavaScript object keeps a member it held in place and puts an added one last; a typed
+    // draft serialises in struct order, so the added members are written after the changed ones.
+    let mut added = Vec::new();
+
     for (key, member) in after {
         let at = join(path, key);
 
         let Some(present) = before.get(key) else {
-            delta.insert(key.clone(), member.clone());
+            added.push((key, member));
 
             continue;
         };
@@ -192,6 +197,10 @@ fn object_delta(
         if let Some(change) = member_delta(present, member, &at)? {
             delta.insert(key.clone(), change);
         }
+    }
+
+    for (key, member) in added {
+        delta.insert(key.clone(), member.clone());
     }
 
     Ok((!delta.is_empty()).then_some(delta))
@@ -485,6 +494,29 @@ mod tests {
         assert_inverse(
             json!({"l": [{"a": 1}]}),
             json!({"l": {"0": {"b": 2}, "1": {"c": 3}}}),
+        );
+    }
+
+    #[test]
+    fn delta_writes_added_members_after_changed_ones() {
+        // A typed draft serialises `access` before `input`; JavaScript inserted `access` last.
+        let before = value(json!({"operations": [{"id": "x", "input": {"media": "m"}}]}));
+        let after = value(json!({
+            "operations": [{"id": "x", "access": {"kind": "public"}, "input": {"media": "m", "rawBody": true}}]
+        }));
+
+        let delta = draft_delta(&before, &after).unwrap();
+        let Some(JsonValue::Object(operations)) = delta.get("operations") else {
+            panic!("no operations edit: {delta:?}");
+        };
+        let Some(JsonValue::Object(operation)) = operations.get("x") else {
+            panic!("no edit of operation x: {operations:?}");
+        };
+
+        assert_eq!(
+            operation.keys().collect::<Vec<_>>(),
+            ["input", "access"],
+            "{operation:?}"
         );
     }
 
