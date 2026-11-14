@@ -48,7 +48,7 @@ const COMPILER_MANIFEST: &str = "crates/compiler/Cargo.toml";
     reason = "the plug point stays an Option: the gate refuses a compiler crate with no subject"
 )]
 fn compiler_subject() -> Option<Box<dyn OracleSubject>> {
-    Some(Box::new(CompilerSubject))
+    Some(Box::new(CompilerSubject::default()))
 }
 
 /// Why the oracle cannot vouch for the workspace: a compiler crate exists and no subject is

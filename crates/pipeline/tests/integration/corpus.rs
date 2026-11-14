@@ -15,10 +15,17 @@ struct ApiHalves {
     files: Vec<PathBuf>,
 }
 
+/// The suffix of the diagnostics sidecar of a half, which is no delta.
+const DIAGNOSTICS_SUFFIX: &str = ".diagnostics.json";
+
 fn half_files_by_api(root: &Path) -> Result<Vec<ApiHalves>, String> {
     let files = files_under(&root.join("fixtures/expected"), &|path| {
         path.extension()
             .is_some_and(|extension| extension == "json")
+            && !path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .is_some_and(|name| name.ends_with(DIAGNOSTICS_SUFFIX))
             && path
                 .parent()
                 .and_then(Path::parent)

@@ -3,9 +3,10 @@
 use indexmap::IndexMap;
 use seampact_diagnostics::{DiagnosticSink, InternalError, Severity};
 use seampact_json::JsonValue;
-use seampact_load::{FsReader, LoadOptions, load_workspace};
+use seampact_load::{FsReader, LoadOptions, LoadOutput, load_workspace};
 use seampact_oracle::{ApiDeltas, ExpectedDelta, Fixture, HalfInput, SubjectAnswer};
 use seampact_pipeline::{DraftIr, Half, draft_apply, draft_delta};
+use std::cell::RefCell;
 
 use super::CompileFailure;
 use crate::{HalfReaders, HalfRun, run_half};
@@ -13,11 +14,53 @@ use crate::{HalfReaders, HalfRun, run_half};
 /// The number of halves an api's expected deltas must hold for another api to be relayed from.
 const HALF_COUNT: usize = Half::RUN_ORDER.len();
 
+/// The loaded workspace of the one fixture whose halves run now.
+///
+/// The oracle asks a fixture's halves together, so one load serves them all; a call for another
+/// fixture replaces it.
+#[derive(Debug, Default)]
+pub(super) struct LoadedFixtureCache {
+    current: RefCell<Option<(String, LoadOutput)>>,
+}
+
+impl LoadedFixtureCache {
+    /// Calls `use_loaded` on the workspace of `fixture`, loading it only when the cache holds
+    /// another fixture.
+    fn with_loaded<T>(
+        &self,
+        fixture: &Fixture,
+        use_loaded: impl FnOnce(&LoadOutput) -> Result<T, CompileFailure>,
+    ) -> Result<T, CompileFailure> {
+        let mut current = self.current.try_borrow_mut().map_err(|failure| {
+            InternalError::new(format!("the load cache is in use: {failure}"))
+        })?;
+
+        if current
+            .as_ref()
+            .is_none_or(|(path, _)| *path != fixture.path)
+        {
+            let reader = FsReader::new(&fixture.directory)?;
+            let loaded = load_workspace(&LoadOptions {
+                reader: &reader,
+                entry: &fixture.entry,
+            })?;
+
+            *current = Some((fixture.path.clone(), loaded));
+        }
+
+        match current.as_ref() {
+            Some((_, loaded)) => use_loaded(loaded),
+            None => Err(InternalError::new("the load cache is empty after a load").into()),
+        }
+    }
+}
+
 /// Runs `half` of `api` from the expected deltas before it and answers the delta it wrote.
 ///
 /// Every [`InternalError`] answers as a failure; only a half or a stage that is not ported
 /// answers [`SubjectAnswer::NotPorted`].
 pub(super) fn run_fixture_half(
+    cache: &LoadedFixtureCache,
     fixture: &Fixture,
     api: &str,
     half: &str,
@@ -25,12 +68,17 @@ pub(super) fn run_fixture_half(
 ) -> Result<SubjectAnswer<JsonValue>, CompileFailure> {
     let half = Half::from_name(half)
         .ok_or_else(|| InternalError::new(format!("'{half}' is no pass half")))?;
-    let reader = FsReader::new(&fixture.directory)?;
+
+    cache.with_loaded(fixture, |loaded| run_loaded_half(loaded, api, half, input))
+}
+
+fn run_loaded_half(
+    loaded: &LoadOutput,
+    api: &str,
+    half: Half,
+    input: &HalfInput<'_>,
+) -> Result<SubjectAnswer<JsonValue>, CompileFailure> {
     let no_imports = IndexMap::new();
-    let loaded = load_workspace(&LoadOptions {
-        reader: &reader,
-        entry: &fixture.entry,
-    })?;
 
     if loaded
         .diagnostics
@@ -42,19 +90,20 @@ pub(super) fn run_fixture_half(
 
     let input_json = draft_json_after(input.deltas_before)?;
     let input_draft = DraftIr::from_json_value(&input_json)?;
-    let relayed = relayed_drafts(&input.other_apis)?;
     let raw = loaded
         .workspace
         .apis
         .iter()
         .find(|raw| raw.name == api)
         .ok_or_else(|| InternalError::new(format!("the fixture has no api named {api}")))?;
-    let readers = HalfReaders::new(raw)?;
 
     // The schema service of the later halves is what the Rust `tree.schemas` builds.
     if half != Half::TreeSchemas {
         return Ok(SubjectAnswer::NotPorted);
     }
+
+    let readers = HalfReaders::new(raw)?;
+    let relayed = relayed_drafts(&input.other_apis)?;
 
     let mut output_draft = input_draft;
     let mut sink = DiagnosticSink::new();
@@ -142,8 +191,14 @@ mod tests {
             other_apis: Vec::new(),
         };
 
-        run_fixture_half(&reference_fixture(), "tasks", half, &input)
-            .map_err(|failure| failure.to_string())
+        run_fixture_half(
+            &LoadedFixtureCache::default(),
+            &reference_fixture(),
+            "tasks",
+            half,
+            &input,
+        )
+        .map_err(|failure| failure.to_string())
     }
 
     #[test]
@@ -159,6 +214,28 @@ mod tests {
         )];
 
         assert_eq!(run("tree.nodes", &before), Ok(SubjectAnswer::NotPorted));
+    }
+
+    #[test]
+    fn the_cache_serves_two_fixtures_in_a_row_without_leaking_the_first() {
+        let cache = LoadedFixtureCache::default();
+        let reference = reference_fixture();
+        let other = Fixture {
+            path: "other".to_owned(),
+            directory: reference.directory.join("../does-not-exist"),
+            entry: "workspace.yaml".to_owned(),
+        };
+        let input = HalfInput {
+            deltas_before: &[],
+            other_apis: Vec::new(),
+        };
+
+        assert!(run_fixture_half(&cache, &reference, "tasks", "tree.schemas", &input).is_ok());
+        assert!(run_fixture_half(&cache, &reference, "tasks", "tree.schemas", &input).is_ok());
+        assert!(
+            run_fixture_half(&cache, &other, "tasks", "tree.schemas", &input).is_err(),
+            "the second fixture must be loaded, not answered from the first"
+        );
     }
 
     #[test]
