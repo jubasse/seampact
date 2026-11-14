@@ -23,6 +23,12 @@ const OUTPUT_DIRECTORY = join(REPO_ROOT, "docs/maintainers/rust-design/passes");
 export const BRIEF_LINES = 1000;
 /** A function reached by at least this share of a crate's pairs is in its spine. */
 export const SPINE_SHARE = 0.9;
+/** Rust lines of one stubbed signature with its types, measured by the derive.wire skeleton spike (1,558 for 101). */
+export const RUST_LINES_PER_SIGNATURE = 15;
+/** Rust code lines per TypeScript line, measured on the first port layer (17,093 for about 8,600). */
+export const RUST_LINES_PER_TYPESCRIPT_LINE = 2;
+/** The top of the PR size rule (A47), in Rust lines: brief 1 holds the skeleton and as much as fits under it. */
+export const PR_RUST_LINES = 4000;
 
 /** One table: a crate and the TypeScript functions it ports, with what its pairs are. */
 export interface CrateSpec {
@@ -37,19 +43,33 @@ export interface CrateSpec {
   movedIn?: readonly string[];
   /** Order the functions other halves' crates call right after the spine (a direct import, not the schema service). */
   pullCalledElsewhere?: boolean;
+  /** `file#function` another half's crate imports, ordered right after the spine (rule 2 by name). */
+  importedElsewhere?: readonly string[];
 }
 
 const COMPILE = "compile";
+const TREE_SCHEMAS = "tree.schemas";
+// The directory the schema service runs in: its reach inside a later half is reach of the api's tree.schemas pair,
+// which the service replay compares.
+const SERVICE_DIRECTORY = "passes/tree/schemas/";
 
 // The crate split of the design note, section 1.
 export const CRATES: readonly CrateSpec[] = [
   {
     crate: "pass-tree-shared",
-    pairs: "tree.schemas",
+    pairs: TREE_SCHEMAS,
     sources: ["passes/tree/nodes/names.ts", "passes/tree/nodes/raw.ts"],
     movedIn: ["passes/tree/nodes/relays.ts#treeNodesRelayOrigin"],
   },
-  { crate: "pass-tree-schemas", pairs: "tree.schemas", sources: ["passes/tree/schemas/"] },
+  {
+    crate: "pass-tree-schemas",
+    pairs: TREE_SCHEMAS,
+    sources: [SERVICE_DIRECTORY],
+    importedElsewhere: [
+      "passes/tree/schemas/pattern.ts#treeSchemasEscapePatternLiteral",
+      "passes/tree/schemas/pattern.ts#treeSchemasNormalizePattern",
+    ],
+  },
   {
     crate: "pass-tree-nodes",
     pairs: "tree.nodes",
@@ -103,14 +123,20 @@ export interface CrateCoverage {
   rows: CoverageRow[];
   pairCount: number;
   spineLines: number;
+  /** The Rust lines of every signature as a stub, at the spike's ratio. */
+  skeletonRustLines: number;
+  /** Brief 1 is the skeleton alone: with the spine it would pass `PR_RUST_LINES`. */
+  skeletonAlone: boolean;
   comparableAfterBrief: number[];
 }
 
 /**
- * Orders a crate's functions into briefs: the spine (reached by `SPINE_SHARE` of the pairs) first, then the
- * functions that complete the most nearly complete pairs per line, then never-reached functions in file
- * order. Each brief holds about `BRIEF_LINES` lines; the spine stays whole in brief 1. `reachedElsewhere` (functions
- * another half's crate calls) come right after the spine, so the other half's pairs do not wait for them.
+ * Orders a crate's functions into briefs: brief 1 writes every signature as a stub, then the spine (reached by
+ * `SPINE_SHARE` of the pairs), then the functions that complete the most nearly complete pairs per line, then
+ * never-reached functions in file order. `reachedElsewhere` (functions another half's crate calls) come right after
+ * the spine, so the other half's pairs do not wait for them. Each brief holds about `BRIEF_LINES` lines and the
+ * spine stays whole; brief 1 also stays under `PR_RUST_LINES` with the skeleton, and is the skeleton alone when the
+ * spine does not fit beside it (the spine then opens brief 2).
  */
 export function cutBriefs(
   units: readonly FunctionUnit[],
@@ -124,7 +150,14 @@ export function cutBriefs(
   const neverReached = units.filter((unit) => (reachCount[unit.id] ?? 0) === 0);
   const briefOf = new Map<number, number>();
   const spineLines = spine.reduce((sum, unit) => sum + unit.lines, 0);
-  let brief = 1;
+  const skeletonRustLines = units.length * RUST_LINES_PER_SIGNATURE;
+  const firstBriefBudget = Math.floor(
+    (PR_RUST_LINES - skeletonRustLines) / RUST_LINES_PER_TYPESCRIPT_LINE,
+  );
+  const skeletonAlone = spineLines > firstBriefBudget;
+  const budgetOf = (brief: number): number =>
+    brief === 1 ? Math.min(BRIEF_LINES, firstBriefBudget) : BRIEF_LINES;
+  let brief = skeletonAlone ? 2 : 1;
   let briefLines = spineLines;
 
   for (const unit of spine) briefOf.set(unit.id, brief);
@@ -132,7 +165,7 @@ export function cutBriefs(
   for (const unit of [...order, ...neverReached]) {
     if (briefOf.has(unit.id)) continue;
 
-    if (briefLines > 0 && briefLines + unit.lines > BRIEF_LINES) {
+    if ((briefLines > 0 || brief === 1) && briefLines + unit.lines > budgetOf(brief)) {
       brief += 1;
       briefLines = 0;
     }
@@ -153,6 +186,8 @@ export function cutBriefs(
     rows,
     pairCount: pairs.length,
     spineLines,
+    skeletonRustLines,
+    skeletonAlone,
     comparableAfterBrief: comparableCurve(pairs, briefOf, brief),
   };
 }
@@ -267,6 +302,7 @@ interface ReachedFunction {
   startLine: number;
 }
 
+// One half run; a tree.schemas record also holds what the api's later halves reached through its service.
 interface HalfRecord {
   half: string;
   reached: ReachedFunction[];
@@ -477,6 +513,8 @@ async function collect(): Promise<Collected> {
 
     const outsideHalves: ReachedFunction[] = [];
     const recordHalves = !(fixture.path in excluded.halves);
+    // The halves run per api in order, so the latest tree.schemas record is the one whose service a later half calls.
+    let serviceOwner: HalfRecord | undefined;
     const passes = Object.fromEntries(
       pipeline.pipelineHalves.map((half) => {
         const part = pipeline.pipelineDefaultParts().passes[half];
@@ -488,8 +526,12 @@ async function collect(): Promise<Collected> {
 
           const result = part.run(draft, context);
           const reached = probe.take();
+          const record: HalfRecord = { half, reached: [...reached] };
 
-          if (recordHalves) collected.halves.push({ half, reached });
+          if (recordHalves) collected.halves.push(record);
+
+          if (half === TREE_SCHEMAS) serviceOwner = record;
+          else serviceOwner?.reached.push(...reached.filter(isServiceReach));
 
           return result;
         };
@@ -512,6 +554,10 @@ async function collect(): Promise<Collected> {
 }
 
 // Every function of the crate's sources, moved functions applied.
+function isServiceReach(reached: ReachedFunction): boolean {
+  return reached.file.startsWith(SERVICE_DIRECTORY);
+}
+
 function unitsOf(spec: CrateSpec): FunctionUnit[] {
   const files = spec.sources.flatMap((source) =>
     source.endsWith("/") ? filesUnder(source) : [source],
@@ -599,6 +645,28 @@ function calledElsewhere(
   return new Set(pairsOf(units, otherRuns).flatMap((pair) => [...pair]));
 }
 
+// Rule 2: the functions other halves' crates call, by run window or by name.
+function pulledOf(
+  spec: CrateSpec,
+  units: readonly FunctionUnit[],
+  collected: Collected,
+): Set<number> {
+  const pulled = spec.pullCalledElsewhere
+    ? calledElsewhere(spec, units, collected)
+    : new Set<number>();
+
+  for (const imported of spec.importedElsewhere ?? []) {
+    const found = units.find((unit) => `${unit.file}#${unit.name}` === imported);
+
+    if (found === undefined)
+      throw new Error(`${spec.crate}: ${imported} names no function of the crate`);
+
+    pulled.add(found.id);
+  }
+
+  return pulled;
+}
+
 function recordsOf(spec: CrateSpec, collected: Collected): ReachedFunction[][] {
   if (spec.pairs === COMPILE) return collected.compiles;
 
@@ -656,11 +724,7 @@ async function main(): Promise<void> {
     // A pair counts for a crate when it reaches one of its functions: a compile stopped by load is no pair of
     // validate.
     const pairs = pairsOf(units, recordsOf(spec, collected)).filter((pair) => pair.size > 0);
-    const coverage = cutBriefs(
-      units,
-      pairs,
-      spec.pullCalledElsewhere ? calledElsewhere(spec, units, collected) : new Set(),
-    );
+    const coverage = cutBriefs(units, pairs, pulledOf(spec, units, collected));
     const lines = units.reduce((sum, unit) => sum + unit.lines, 0);
     const briefLines = coverage.comparableAfterBrief.map((_, index) =>
       coverage.rows
@@ -670,7 +734,7 @@ async function main(): Promise<void> {
 
     writeFileSync(join(OUTPUT_DIRECTORY, `${spec.crate}.tsv`), coverageTable(coverage));
     console.log(
-      `${spec.crate}: ${units.length} functions, ${lines} lines, ${coverage.pairCount} pairs, spine ${coverage.spineLines} lines, brief lines ${briefLines.join(" ")}, comparable after each brief ${coverage.comparableAfterBrief.join(" ")}`,
+      `${spec.crate}: ${units.length} functions, ${lines} lines, ${coverage.pairCount} pairs, spine ${coverage.spineLines} lines, skeleton about ${coverage.skeletonRustLines} Rust lines${coverage.skeletonAlone ? " (alone in brief 1)" : ""}, brief lines ${briefLines.join(" ")}, comparable after each brief ${coverage.comparableAfterBrief.join(" ")}`,
     );
   }
 
