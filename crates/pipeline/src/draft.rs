@@ -17,12 +17,10 @@ use seampact_ir::{
     PackRef, Paging, PagingId, PagingStyle, Params, PathVersion, PrincipalRequirement, Requirement,
     Response, Right, RightId, Rule, RuleId, Scalar, ScalarId, Schema, SchemaId, Scheme, SchemeId,
     Scope, ScopeId, Service, ServiceId, Surface, SurfaceId, TypeUse, UnknownQuery, ValueSource,
-    WireFormat,
+    WireFormat, optional_count,
 };
 use seampact_json::{JsonValue, escape_pointer};
 use serde::{Deserialize, Serialize};
-
-use crate::count::optional_count;
 
 /// The request body of an operation in the draft: the members of later halves are optional.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

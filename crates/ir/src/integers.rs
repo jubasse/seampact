@@ -33,9 +33,11 @@ pub(crate) fn count<'de, D: Deserializer<'de>>(deserializer: D) -> Result<i64, D
 }
 
 /// An optional [`count`].
-pub(crate) fn optional_count<'de, D: Deserializer<'de>>(
-    deserializer: D,
-) -> Result<Option<i64>, D::Error> {
+///
+/// # Errors
+///
+/// The deserializer error when the value is no integer from 0 to 2^53 - 1.
+pub fn optional_count<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Option<i64>, D::Error> {
     optional_js_integer::<D, 0, MAX_SAFE_INTEGER>(deserializer)
 }
 
