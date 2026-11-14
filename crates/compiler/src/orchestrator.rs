@@ -16,11 +16,11 @@ use seampact_authoring::{Locations, RawApi, RawWorkspace};
 use seampact_diagnostics::{Diagnostic, DiagnosticSink, InternalError, Severity, diagnostic_sort};
 use seampact_ir::ContractIr;
 use seampact_load::{LoadOptions, LoadOutput, load_workspace};
-use seampact_pipeline::{DraftIr, Half, pipeline_declared};
+use seampact_pipeline::{DraftIr, Half, LaterHalf, pipeline_declared};
 use seampact_span::SourceFiles;
 
 use crate::context::HalfReaders;
-use crate::half_run::{HalfRun, run_half};
+use crate::half_run::{HalfRun, TreeSchemasRun, run_half, run_tree_schemas};
 use crate::relay::{check_relay_order, relays_to_stopped};
 use crate::result::{PipelineApiResult, PipelineResult};
 use crate::stages::{
@@ -274,7 +274,7 @@ impl Run {
     fn link(&mut self, imports: &IndexMap<String, ContractIr>) -> Result<Progress, InternalError> {
         self.check_every_api_has_a_draft()?;
 
-        let StageAnswer::Ported(reported) = link_workspace(&self.drafts, &self.workspace, imports)
+        let StageAnswer::Ported(reported) = link_workspace(&self.drafts, &self.workspace, imports)?
         else {
             return Ok(Progress::NotPorted(Stage::Link));
         };
@@ -375,7 +375,8 @@ impl Run {
     }
 }
 
-fn sorted(
+/// The diagnostics in the order users see, their spans read in `spans`.
+pub(crate) fn sorted(
     diagnostics: Vec<Diagnostic>,
     spans: &Locations,
     source_files: &SourceFiles,
@@ -386,7 +387,7 @@ fn sorted(
 }
 
 // The six halves of one api, each a step of the stop rule: one that reports an error completes,
-// and no later half runs.
+// and no later half runs. Each half reports into a fresh sink, kept only when the half ran.
 fn run_halves(
     raw: &RawApi,
     workspace: &RawWorkspace,
@@ -397,27 +398,43 @@ fn run_halves(
     let mut draft = DraftIr::new();
     let mut diagnostics: Vec<Diagnostic> = Vec::new();
 
-    for half in Half::RUN_ORDER {
+    let mut sink = DiagnosticSink::new();
+    let schemas_run = {
+        let mut context = readers.context(workspace, relayed, imports, &mut sink);
+
+        run_tree_schemas(&mut draft, &mut context)?
+    };
+
+    let TreeSchemasRun::Merged(service) = schemas_run else {
+        return Ok(HalvesRun {
+            diagnostics,
+            end: HalvesEnd::NotPorted(Half::TreeSchemas),
+        });
+    };
+
+    if keep_or_stop(sink, &mut diagnostics) == HalfStep::Stop {
+        return Ok(HalvesRun {
+            diagnostics,
+            end: HalvesEnd::Stopped,
+        });
+    }
+
+    for half in LaterHalf::RUN_ORDER {
         let mut sink = DiagnosticSink::new();
         let ran = {
             let mut context = readers.context(workspace, relayed, imports, &mut sink);
 
-            run_half(half, &mut draft, &mut context)?
+            run_half(half, &mut draft, &mut context, &*service)?
         };
 
         if ran == HalfRun::NotPorted {
             return Ok(HalvesRun {
                 diagnostics,
-                end: HalvesEnd::NotPorted(half),
+                end: HalvesEnd::NotPorted(half.into()),
             });
         }
 
-        let reported = sink.into_diagnostics();
-        let failed = has_error(&reported);
-
-        diagnostics.extend(reported);
-
-        if failed {
+        if keep_or_stop(sink, &mut diagnostics) == HalfStep::Stop {
             return Ok(HalvesRun {
                 diagnostics,
                 end: HalvesEnd::Stopped,
@@ -429,6 +446,27 @@ fn run_halves(
         diagnostics,
         end: HalvesEnd::Complete(Box::new(draft)),
     })
+}
+
+/// Whether the next half of an api runs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum HalfStep {
+    Continue,
+    Stop,
+}
+
+// Keeps what a half that ran reported; an error stops the api.
+fn keep_or_stop(sink: DiagnosticSink, diagnostics: &mut Vec<Diagnostic>) -> HalfStep {
+    let reported = sink.into_diagnostics();
+    let failed = has_error(&reported);
+
+    diagnostics.extend(reported);
+
+    if failed {
+        HalfStep::Stop
+    } else {
+        HalfStep::Continue
+    }
 }
 
 #[cfg(test)]

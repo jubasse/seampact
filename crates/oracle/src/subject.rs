@@ -2,7 +2,7 @@
 
 use seampact_json::JsonValue;
 
-use crate::{Fixture, RuleIdRegistry};
+use crate::{Fixture, RecordedCall, RuleIdRegistry};
 
 /// A subject's answer: the output, that the stage producing it is not ported yet, or that it failed.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -74,6 +74,17 @@ pub struct HalfInput<'input> {
     pub other_apis: Vec<ApiDeltas<'input>>,
 }
 
+/// What one pass half gave: the delta it wrote and the diagnostics it reported.
+#[derive(Debug, Clone, PartialEq)]
+pub struct HalfOutput {
+    /// The members the half wrote, in the convention of
+    /// `packages/core/compiler/src/pipeline/draft-fixture.ts`.
+    pub delta: JsonValue,
+    /// The diagnostics the half reported, a JSON array of entries in the shape and the order of
+    /// `diagnostics.json`; empty when it reported none.
+    pub diagnostics: JsonValue,
+}
+
 /// The compiler the oracle checks.
 ///
 /// `cargo xtask oracle` plugs one in; every answer may be [`SubjectAnswer::NotPorted`] while its
@@ -85,19 +96,36 @@ pub trait OracleSubject {
     /// names every fixture with `workspace.imports` in `excluded.json`.
     fn compile(&self, fixture: &Fixture) -> SubjectAnswer<Compilation>;
 
-    /// Runs one pass half of `api` in `fixture` and gives the delta it wrote, in the convention of
-    /// `packages/core/compiler/src/pipeline/draft-fixture.ts`.
+    /// Runs one pass half of `api` in `fixture` and gives the delta it wrote and the diagnostics
+    /// it reported.
     ///
     /// `input` holds the expected deltas the half starts from: those of the halves before it in
-    /// `api`, and those of the other apis, the relayed ones among them. As for `compile`, no
-    /// workspace import is resolved.
+    /// `api`, and those of the other apis, the relayed ones among them. A half after
+    /// `tree.schemas` reads schemas from `calls`, the calls the TypeScript halves of `api` made
+    /// to the schema service, with their answers. As for `compile`, no workspace import is
+    /// resolved.
     fn run_half(
         &self,
         fixture: &Fixture,
         api: &str,
         half: &str,
         input: &HalfInput<'_>,
-    ) -> SubjectAnswer<JsonValue>;
+        calls: &[RecordedCall],
+    ) -> SubjectAnswer<HalfOutput>;
+
+    /// Answers every call of `calls` with the subject's own schema service of `api`, in order,
+    /// each answer encoded as the `answer` member of `schema-calls/<api>.json` (`None` where the
+    /// TypeScript omits it).
+    ///
+    /// The service is the one `tree.schemas` builds; `input` holds the expected deltas of the
+    /// other apis, which it reads for relayed and imported schemas.
+    fn replay_schema_calls(
+        &self,
+        fixture: &Fixture,
+        api: &str,
+        input: &HalfInput<'_>,
+        calls: &[RecordedCall],
+    ) -> SubjectAnswer<Vec<Option<JsonValue>>>;
 
     /// The rule ids each ported stage declares, and whether every stage is ported.
     fn rule_id_registry(&self) -> RuleIdRegistry;

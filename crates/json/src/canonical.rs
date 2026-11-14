@@ -114,6 +114,26 @@ pub fn canonical_json(value: &JsonValue) -> String {
     text
 }
 
+/// The text `JSON.stringify(value)` writes: no white space, members in the object's own order
+/// (array-index keys first, then insertion order), numbers as the `f64` JavaScript holds.
+///
+/// Diagnostics quote a non-string authored value with it. An integer above 2^53 is rounded, as
+/// the TypeScript reads it into a JavaScript number before writing it.
+#[must_use]
+pub fn stringify_json(value: &JsonValue) -> String {
+    let mut text = String::new();
+
+    let format = Format {
+        layout: Layout::Compact,
+        order: MemberOrder::OwnKeys,
+        numbers: NumberText::AsJavaScriptHolds,
+    };
+
+    write_value(&mut text, value, format, "");
+
+    text
+}
+
 /// Appends `text` as `JSON.stringify` writes a string: quoted, with `"`, `\` and the control
 /// characters escaped, every other character as itself (U+2028 and U+2029 included).
 pub fn write_json_string(output: &mut String, text: &str) {
@@ -363,6 +383,25 @@ mod tests {
             text,
             "{\n  \"9\": 0,\n  \"b\": [\n    1,\n    {}\n  ],\n  \"a\": null\n}\n"
         );
+    }
+
+    #[test]
+    fn the_stringify_text_keeps_the_own_key_order_and_rounds_large_integers() {
+        let text = stringify_json(&value(
+            r#"{"b": [1, {}], "été": "ça", "10": 2, "9": -0, "big": 9007199254740993}"#,
+        ));
+
+        assert_eq!(
+            text,
+            r#"{"9":0,"10":2,"b":[1,{}],"été":"ça","big":9007199254740992}"#
+        );
+    }
+
+    #[test]
+    fn the_stringify_text_writes_astral_characters_as_themselves() {
+        let text = stringify_json(&value(r#"{"😀": "𝄞", "": [1e21, 1e-7]}"#));
+
+        assert_eq!(text, r#"{"😀":"𝄞","":[1e+21,1e-7]}"#);
     }
 
     #[test]

@@ -17,7 +17,7 @@ mod text;
 pub use diagnostic::{
     Diagnostic, DiagnosticLayer, DiagnosticOrigin, RelatedLocation, RuleId, Severity,
 };
-pub use diagnostics_json::{ApiDiagnostics, diagnostics_json};
+pub use diagnostics_json::{ApiDiagnostics, diagnostic_list_json, diagnostics_json};
 pub use internal::{EXIT_INTERNAL, EXIT_REFUSED, EXIT_SUCCESS, EXIT_USAGE, InternalError};
 pub use mapping_keys::mapping_keys_hint;
 pub use print::{
@@ -25,3 +25,4 @@ pub use print::{
     diagnostic_sort, print_diagnostics,
 };
 pub use sink::DiagnosticSink;
+pub use text::{access_rights_quoted, quote, quote_text};

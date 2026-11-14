@@ -114,7 +114,7 @@ A type the seam reads that has no serde form gets a reader in `seampact_compiler
   ```rust
   // seampact-pass-tree-schemas
   pub fn run(draft: &DraftIr, context: &mut HalfContext<'_>)
-      -> Result<(TreeSchemasOutput, Box<dyn TreeSchemaService>), PassError>;
+      -> Result<TreeSchemasOutput, PassError>; // holds the service (`into_parts`)
   // the five later halves, <Half>Output from seampact-pipeline outputs/
   pub fn run(draft: &DraftIr, context: &mut HalfContext<'_>, schemas: &dyn TreeSchemaService)
       -> Result<<Half>Output, PassError>;
@@ -164,7 +164,7 @@ The halves after `tree.schemas` are compared against the recorded service; the R
 ## 6. Coverage tables
 
 - `scripts/rust/pass-coverage.ts` writes one TSV per crate in `docs/maintainers/rust-design/passes/` (`pass-<half>.tsv`, `pass-tree-shared.tsv`, `pass-link.tsv`, `validate.tsv`, `compiler-relay-order.tsv`, `templates.tsv`) plus `foreign.tsv`. Columns: `brief`, `function`, `file`, `lines`, `size`, `pairs` (pairs reaching the function over the pairs of the half). Function names are those of `trace.tsv` (`listTypeScriptFunctionRanges` of `scripts/rust/trace.ts`).
-- Rerun after a fixture change: `node --experimental-transform-types --no-warnings --import ./scripts/ir-models/register.ts scripts/rust/pass-coverage.ts`. The lead reruns it once the converted test fixtures land; the brief numbers and counts below are measured on the current fixtures.
+- Rerun after a fixture change: `node --experimental-transform-types --no-warnings --import ./scripts/ir-models/register.ts scripts/rust/pass-coverage.ts`. The brief numbers and counts below include the converted test fixtures.
 - A pair is one run of the half on one (fixture, api). For `tree.schemas`, a pair also reaches the `passes/tree/schemas/` functions the api's later halves run through the service: the service replay (section 5) compares them under that pair.
 - A function no fixture reaches has `pairs` 0 and sits in the last brief; its behaviour comes from the converted fixtures or a hand-ported test (section 9).
 
@@ -184,20 +184,20 @@ Measured (function lines per brief, 0 for a skeleton-only brief 1; skeleton in e
 
 | Crate | Lines | Skeleton | Briefs | Lines per brief | Comparable pairs after each brief | Share after each brief |
 |---|---|---|---|---|---|---|
-| `pass-tree-schemas` | 4,721 | 4,080 | 6 | 0 1,218 969 999 995 540 | 0 2 29 179 265 284 of 284 | 0 1 10 63 93 100% |
-| `pass-tree-nodes` | 4,725 | 4,245 | 6 | 0 1,016 961 993 990 765 | 0 2 25 112 207 229 of 229 | 0 1 11 49 90 100% |
-| `pass-access-identity` | 1,956 | 1,470 | 2 | 995 961 | 79 171 of 171 | 46 100% |
-| `pass-access-rights` | 3,458 | 2,295 | 5 | 0 1,070 1,000 959 429 | 0 5 98 111 123 of 123 | 0 4 80 90 100% |
-| `pass-derive-wire` | 1,820 | 1,470 | 2 | 985 835 | 58 116 of 116 | 50 100% |
-| `pass-derive-errors` | 2,788 | 2,145 | 4 | 0 1,136 998 654 | 0 17 41 109 of 109 | 0 16 38 100% |
-| `pass-tree-shared` | 239 | 420 | 1 | 239 | reached by 284 pairs | |
-| `templates` | 276 | 240 | 1 | 276 | reached by 166 `tree.nodes` pairs | |
-| `validate` | 589 | 450 | 1 | 589 | 242 fixtures | |
-| relay order | 163 | 105 | 1 | 163 | 231 fixtures | |
-| `pass-link` | 71 | 105 | 1 | 71 | 40 fixtures | |
+| `pass-tree-schemas` | 4,721 | 4,080 | 6 | 0 996 991 996 988 750 | 0 25 129 499 778 896 of 896 | 0 3 14 56 87 100% |
+| `pass-tree-nodes` | 4,725 | 4,245 | 6 | 0 996 990 993 990 756 | 0 73 92 386 656 730 of 730 | 0 10 13 53 90 100% |
+| `pass-access-identity` | 1,956 | 1,470 | 2 | 964 992 | 221 639 of 639 | 35 100% |
+| `pass-access-rights` | 3,458 | 2,295 | 5 | 0 1,043 986 973 456 | 0 45 443 516 546 of 546 | 0 8 81 95 100% |
+| `pass-derive-wire` | 1,820 | 1,470 | 2 | 977 843 | 245 488 of 488 | 50 100% |
+| `pass-derive-errors` | 2,788 | 2,145 | 3 | 919 995 874 | 43 165 456 of 456 | 9 36 100% |
+| `pass-tree-shared` | 239 | 420 | 1 | 239 | reached by 896 pairs | |
+| `templates` | 276 | 240 | 1 | 276 | reached by 443 `tree.nodes` pairs | |
+| `validate` | 589 | 450 | 1 | 589 | 699 pairs | |
+| relay order | 163 | 105 | 1 | 163 | 688 pairs | |
+| `pass-link` | 71 | 105 | 1 | 71 | 149 pairs | |
 
 - The skeletons of `tree.schemas` and `tree.nodes` alone are estimated at the PR size (4,080 and 4,245 Rust lines); the spike's ratio counts the rustdoc of public functions, which most pass functions (`pub(crate)`) do not carry.
-- The progressive oracle of the two largest halves is a cliff: a pair reaches about a third of a half's lines, and the gain order completes few pairs until the shared middle is in. The earlier estimate of 65-83% of pairs at half a half's lines reads the same curve at 50% of the whole files' lines (6,111 and 6,973, types, imports and the shared files included), that is about 3,000 to 3,500 function lines: the end of brief 4 here for `tree.schemas` (63%), inside brief 5 for `tree.nodes` (49% after brief 4). Counting the service reach under `tree.schemas` pairs lowers its share after brief 4 from 80% to 63%.
+- The progressive oracle of the two largest halves is a cliff: a pair reaches about a third of a half's lines, and the gain order completes few pairs until the shared middle is in. The earlier estimate of 65-83% of pairs at half a half's lines reads the same curve at 50% of the whole files' lines (6,111 and 6,973, types, imports and the shared files included), that is about 3,000 to 3,500 function lines: the end of brief 4 here for `tree.schemas` (56%) and `tree.nodes` (53%). The `tree.schemas` shares count the service reach under its pairs (section 6).
 - `access.identity` and `tree.nodes` keep their TypeScript tests as hand-ported Rust tests: no fixture conversion covers them.
 - Validate keeps the TypeScript messages: the spike shows the ajv-shaped conversion ports nearly one to one over `jsonschema`.
 
@@ -205,14 +205,14 @@ Measured (function lines per brief, 0 for a skeleton-only brief 1; skeleton in e
 
 - Wave 1: the seam PR (Opus, effort high); lane `stages`: validate, the relay order and link (about 820 lines); lane `shared`: naming, `pass-tree-shared` and templates (about 970 lines). Validate and the relay order come first because `compile` reaches them on every fixture.
 - Wave 2: `tree.nodes`, `tree.schemas` and `access.rights`, longest first, three lanes at a time, one PR per brief, Sonnet at effort medium. The first two lanes are the pilot.
-- The oracle gives little early feedback on the two largest halves: for `tree.schemas` and `tree.nodes` it compares 0 pairs after brief 1, 2 after brief 2 and about 10% after brief 3; most pairs come with briefs 4 and 5. Briefs 1 to 3 of those halves (the skeleton and about 2,000 TypeScript lines) are checked only by `cargo check`, clippy, the unit tests of their bricks and the 2 to 29 pairs they complete; a mismatch found in brief 4 may sit in code merged by brief 2 or 3, and the restart rule of PORTING.md applies to the brief that finds it. `access.rights` and `derive.errors` compare nothing after their skeleton-only brief 1.
+- The oracle gives little early feedback on the two largest halves: for `tree.schemas` and `tree.nodes` it compares 0 pairs after brief 1, 25 and 73 after brief 2, 129 of 896 and 92 of 730 after brief 3; most pairs come with briefs 4 and 5. Briefs 1 to 3 of those halves (the skeleton and about 2,000 TypeScript lines) are checked only by `cargo check`, clippy, the unit tests of their bricks and the 25 to 129 pairs they complete; a mismatch found in brief 4 may sit in code merged by brief 2 or 3, and the restart rule of PORTING.md applies to the brief that finds it. `access.rights` compares nothing after its skeleton-only brief 1, then 443 of 546 pairs after brief 2.
 - An Opus pattern review after the first merged brief that ports function bodies; its findings amend this note before the next briefs.
 - Wave 3, as lanes free up: `derive.errors`, `access.identity`, `derive.wire`.
 - A lane rebases on its base branch between briefs and reruns the whole oracle, not only its half.
 
 ## 9. Tests
 
-- The oracle compares each half's delta and diagnostics; converted TypeScript tests are fixtures. A lane hand-ports only what no fixture reaches: cases built on a fake service or context, the PORTING.md section 2 edge rows its functions touch, the stable bricks (naming, templates, `text.rs`, the `seampact-ir` helpers), and `checkTextExample`, which no fixture calls.
+- The oracle compares each half's delta and diagnostics; converted TypeScript tests are fixtures. A lane hand-ports only what no fixture reaches: cases built on a fake service or context, the PORTING.md section 2 edge rows its functions touch, the stable bricks (naming, templates, `text.rs`, the `seampact-ir` helpers), and the `checkTextExample` cases beyond the four calls the fixtures record.
 - PORTING.md section 6 says the same.
 
 ## Spike evidence

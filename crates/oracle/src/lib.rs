@@ -28,8 +28,8 @@ pub use differences::{
 };
 pub use error::OracleError;
 pub use expected::{
-    DIAGNOSTICS_FILE, ExpectedFiles, OutputFile, OutputKind, expected_directory_of,
-    expected_fixture_paths, read_expected_files,
+    DIAGNOSTICS_FILE, ExpectedFiles, OutputFile, OutputKind, RecordedCall, expected_directory_of,
+    expected_fixture_paths, read_expected_files, read_schema_calls, schema_calls_file,
 };
 pub use fixtures::{
     EXPECTED_DIRECTORY, ExcludedFixtures, FIXTURES_DIRECTORY, Fixture, discover_fixtures,
@@ -43,8 +43,9 @@ pub use rule_ids::{
 };
 pub use run::{Selection, run_oracle};
 pub use subject::{
-    ApiDeltas, Compilation, CompiledApi, ExpectedDelta, HalfInput, OracleSubject, SubjectAnswer,
+    ApiDeltas, Compilation, CompiledApi, ExpectedDelta, HalfInput, HalfOutput, OracleSubject,
+    SubjectAnswer,
 };
 pub use time_limit::TimeLimitAction;
-pub use verdict::{FirstFailure, Verdict};
+pub use verdict::{FirstFailure, ServiceCalls, Verdict};
 pub use yaml_value::yaml_to_json;

@@ -60,7 +60,10 @@ fn diagnostic_value(diagnostic: &Diagnostic) -> JsonValue {
     ])
 }
 
-fn list_value(diagnostics: &[Diagnostic]) -> JsonValue {
+/// The value of a list of diagnostics as `diagnostics.json` writes one: an array of entries in
+/// the given order. The oracle compares one half's diagnostics with it.
+#[must_use]
+pub fn diagnostic_list_json(diagnostics: &[Diagnostic]) -> JsonValue {
     JsonValue::Array(diagnostics.iter().map(diagnostic_value).collect())
 }
 
@@ -78,13 +81,13 @@ pub fn diagnostics_json(workspace: &[Diagnostic], apis: &[ApiDiagnostics<'_>]) -
         .map(|entry| {
             object_of(vec![
                 ("api", JsonValue::String(entry.api.to_owned())),
-                ("diagnostics", list_value(entry.diagnostics)),
+                ("diagnostics", diagnostic_list_json(entry.diagnostics)),
             ])
         })
         .collect();
 
     object_of(vec![
-        ("workspace", list_value(workspace)),
+        ("workspace", diagnostic_list_json(workspace)),
         ("apis", JsonValue::Array(api_values)),
     ])
 }

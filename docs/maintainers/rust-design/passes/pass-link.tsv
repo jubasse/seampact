@@ -1,8 +1,8 @@
 brief	function	file	lines	size	pairs
-1	linkPass.run	passes/link/pass.ts	18-18	1	40/40
-1	linkRelaySuperset	passes/link/relays.ts	116-129	14	40/40
-1	isGatewayOwn	passes/link/relays.ts	85-86	2	7/40
-1	isOperation	passes/link/relays.ts	53-56	4	7/40
-1	publicErrorsOf	passes/link/relays.ts	59-83	25	7/40
-1	rolesText	passes/link/relays.ts	88-92	5	1/40
-1	supersetDiagnostic	passes/link/relays.ts	94-113	20	1/40
+1	linkPass.run	passes/link/pass.ts	18-18	1	149/149
+1	linkRelaySuperset	passes/link/relays.ts	116-129	14	149/149
+1	isGatewayOwn	passes/link/relays.ts	85-86	2	20/149
+1	isOperation	passes/link/relays.ts	53-56	4	20/149
+1	publicErrorsOf	passes/link/relays.ts	59-83	25	20/149
+1	rolesText	passes/link/relays.ts	88-92	5	1/149
+1	supersetDiagnostic	passes/link/relays.ts	94-113	20	1/149
