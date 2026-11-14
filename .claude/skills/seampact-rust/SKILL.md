@@ -1,11 +1,11 @@
 ---
 name: seampact-rust
-description: Seampact's overrides of general Rust practice for the 2.0.0 Rust core. Use when writing, reviewing or fixing any Rust code, Cargo.toml or Rust test in the seampact repository; where it disagrees with rust-best-practices, this skill wins.
+description: Seampact's overrides of general Rust practice for the 2.0.0 Rust core. Use when writing, reviewing or fixing any Rust code, Cargo.toml or Rust test in the seampact repository; where it disagrees with seampact-rust-practice or rust-best-practices, this skill wins.
 ---
 
 # Rust in seampact
 
-General idiom comes from `rust-best-practices` and `rust-review`. This skill lists where seampact differs or is stricter. The porting rules are in [PORTING.md](../../../PORTING.md); a port follows the `seampact-rust-port-ts` skill.
+General idiom comes from `seampact-rust-practice` in port lanes (condensed from `rust-best-practices`), and from `rust-best-practices` and `rust-review` in design notes and layer reviews. This skill lists where seampact differs or is stricter. The porting rules are in [PORTING.md](../../../PORTING.md); a port follows the `seampact-rust-port-ts` skill.
 
 ## Stricter than the general guide
 

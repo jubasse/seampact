@@ -2,7 +2,7 @@
 
 The rulebook every port lane follows. What the port is and how it is checked: [the 2.0.0 Rust rewrite](docs/maintainers/rust-rewrite.md); what it changes: [ADR 0031](docs/adr/0031-rust-core.md). The first layers amend it.
 
-The skills `seampact-rust` (how Rust is written here) and `seampact-rust-port-ts` (the port procedure) apply these rules; this file is the source.
+The skills `seampact-rust` (how Rust is written here), `seampact-rust-practice` (general Rust practice, condensed) and `seampact-rust-port-ts` (the port procedure) apply these rules; this file is the source.
 
 ## 1. Shape of a port
 

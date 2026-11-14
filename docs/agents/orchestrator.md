@@ -24,6 +24,7 @@ Spawn and message agents as the global AGENTS.md "Sub-agents" table says (Herdr 
 
 - Grid: Sonnet medium for port lanes, each brief listing the TypeScript test cases and what covers each (see "Port lessons"); Sonnet high for derive and the loader; Opus high for design notes, seams (IR and authoring types, diagnostic type, writer) and freeze reviews. The lead runs Sonnet medium during port waves and Opus at freezes.
 - One agent per 500-1,000 TypeScript lines, from a complete brief (template in the `seampact-rust-port-ts` skill).
+- Lane prompts invoke `seampact-rust`, `seampact-rust-port-ts` and `seampact-rust-practice`; the full `rust-best-practices` and `rust-review` are for design notes and layer reviews only.
 - For lane PRs merged into the port branch `feat/rust-core`: one review per layer, not per PR; every PR to develop keeps its fresh-agent review. The mechanical checks (`clippy::indexing_slicing`, the trace check, cargo deny and machete) carry the rest.
 
 ### Port lessons
