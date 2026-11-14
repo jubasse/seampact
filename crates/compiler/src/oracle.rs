@@ -15,7 +15,9 @@ use seampact_oracle::{
 use seampact_pipeline::Half;
 use thiserror::Error;
 
-use crate::{PipelineApiResult, PipelineOptions, PipelineResult, PipelineRun, compile_workspace};
+use crate::{
+    PipelineApiResult, PipelineOptions, PipelineResult, PipelineRun, compile_workspace, relay,
+};
 
 mod half;
 mod recorded_service;
@@ -24,6 +26,12 @@ pub use recorded_service::RecordedSchemaService;
 
 /// The stage name of the load rules: the second segment of their ids.
 const LOAD_STAGE: &str = "load";
+
+/// The stage name of the validate rules.
+const VALIDATE_STAGE: &str = "validate";
+
+/// The stage name of the relay order rule.
+const WORKSPACE_STAGE: &str = "workspace";
 
 /// The stage name of the link rules.
 const LINK_STAGE: &str = "link";
@@ -103,6 +111,14 @@ fn rule_id_stages() -> Vec<StageRuleIds> {
         StageRuleIds {
             stage: LOAD_STAGE,
             rule_ids: LoadRule::RULE_IDS,
+        },
+        StageRuleIds {
+            stage: VALIDATE_STAGE,
+            rule_ids: seampact_validate::RULE_IDS,
+        },
+        StageRuleIds {
+            stage: WORKSPACE_STAGE,
+            rule_ids: relay::RULE_IDS,
         },
         half_stage(Half::TreeSchemas, seampact_pass_tree_schemas::RULE_IDS),
         half_stage(Half::TreeNodes, seampact_pass_tree_nodes::RULE_IDS),

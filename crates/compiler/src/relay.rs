@@ -23,6 +23,9 @@ const WORKSPACE_RELAY_CYCLE_RULE: &str = "seampact/workspace/relay-cycle";
 /// The rule id a relay cycle is reported under.
 pub(crate) const RELAY_CYCLE_RULE_ID: RuleId = RuleId::from_static(WORKSPACE_RELAY_CYCLE_RULE);
 
+/// Every rule id the relay order reports, read by the oracle's rule id registry.
+pub(crate) const RULE_IDS: &[RuleId] = &[RELAY_CYCLE_RULE_ID];
+
 const RELAYS_MEMBER: &str = "relays";
 
 /// A relay route of an api that names a workspace api, located at its `relays` member.
