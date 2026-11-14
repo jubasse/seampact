@@ -3,7 +3,7 @@
 //! their checks. It reads `schemas` for the principal schemas and input fields tree.schemas wrote,
 //! and the operations tree.nodes wrote.
 
-use seampact_ir::{HeaderId, IrMap};
+use seampact_ir::{HeaderId, Identity, IrMap, Scheme};
 use seampact_pipeline::{AccessIdentityOutput, DraftIr, HalfContext, PassError, TreeSchemaService};
 
 use crate::access::AccessIdentityBuilt;
@@ -40,10 +40,19 @@ pub(crate) fn access_identity_pass_run(
         header_declarations.insert(HeaderId::new(id), header.declaration);
     }
 
+    // The half holds its catalogues in their closed forms until it writes them.
     Ok(AccessIdentityOutput {
-        schemes: built.schemes,
+        schemes: built
+            .schemes
+            .into_iter()
+            .map(|(id, scheme)| (id, Scheme::from(scheme)))
+            .collect(),
         headers: header_declarations,
-        identities: built.identities,
+        identities: built
+            .identities
+            .into_iter()
+            .map(|(id, identity)| (id, Identity::from(identity)))
+            .collect(),
         operations,
     })
 }

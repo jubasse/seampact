@@ -5,23 +5,18 @@ use std::collections::HashMap;
 
 use indexmap::IndexMap;
 use seampact_diagnostics::{Diagnostic, InternalError};
-use seampact_ir::{CallerKind, Direction, SchemeId};
+use seampact_ir::{Direction, SchemeId};
 use seampact_pipeline::PassError;
 use seampact_pipeline::testing::{FakeSchemaService, HalfFixture, raw_api_from_json};
 
-use crate::access::{access_identity_access_schemes, access_identity_caller_kinds};
-use crate::identities::{
-    AccessIdentityCatalogues, IdentityEntry, credential_members, is_header_use_for,
-};
+use crate::identities::{AccessIdentityCatalogues, IdentityEntry, credential_members};
 use crate::read::access_identity_entries;
 use crate::report::{
     AccessIdentityProblem, AccessIdentityRelated, AccessIdentityReporter, AccessIdentityRule,
     access_identity_once_reporter, access_identity_reporter,
 };
 use crate::schema_use::access_identity_schema_use;
-use crate::schemes::{
-    access_identity_scheme_kinds, count_of, is_signature_encoding, placeholders_of,
-};
+use crate::schemes::{count_of, placeholders_of};
 
 // Runs `body` over a reporter of an api written as `text`, and answers what it reported.
 fn with_reporter<R>(
@@ -97,8 +92,8 @@ fn a_pointer_without_an_origin_is_an_internal_error_and_reports_nothing() {
 }
 
 #[test]
-fn the_once_reporter_reports_a_repeated_problem_once_and_counts_every_one() {
-    let ((errors, base_errors), reported) = with_reporter(TWO_POINTERS, |base| {
+fn the_once_reporter_reports_a_repeated_problem_once_through_the_wrapped_reporter() {
+    let (base_errors, reported) = with_reporter(TWO_POINTERS, |base| {
         let mut once = access_identity_once_reporter(base);
 
         for _ in 0..3 {
@@ -107,12 +102,11 @@ fn the_once_reporter_reports_a_repeated_problem_once_and_counts_every_one() {
 
         assert!(once.error(problem("/b")).is_ok());
 
-        (once.errors(), base.errors())
+        base.errors()
     })
     .unwrap();
 
-    assert_eq!(errors, 4);
-    assert_eq!(base_errors, 0);
+    assert_eq!(base_errors, 2);
     assert_eq!(reported.len(), 2);
 }
 
@@ -163,17 +157,6 @@ fn a_placeholder_is_counted_by_whole_name() {
 }
 
 #[test]
-fn signature_encodings_and_header_use_values_are_matched_exactly() {
-    assert!(is_signature_encoding("hex"));
-    assert!(is_signature_encoding("base64"));
-    assert!(!is_signature_encoding("Hex"));
-    assert!(!is_signature_encoding(""));
-    assert!(is_header_use_for(Some("writes")));
-    assert!(!is_header_use_for(Some("write")));
-    assert!(!is_header_use_for(None));
-}
-
-#[test]
 fn entries_come_in_javascript_key_order_and_skip_what_is_no_mapping() {
     let raw = raw_api_from_json(r#"{"schemes":{"b":{},"10":{},"2":{},"é":{},"a":{},"skipped":1}}"#)
         .unwrap();
@@ -183,16 +166,6 @@ fn entries_come_in_javascript_key_order_and_skip_what_is_no_mapping() {
         .collect();
 
     assert_eq!(names, ["2", "10", "b", "\u{e9}", "a"]);
-}
-
-#[test]
-fn scheme_kinds_are_kept_for_every_written_scheme() {
-    let raw = raw_api_from_json(r#"{"schemes":{"a":{"kind":"basic"},"b":{}}}"#).unwrap();
-    let kinds = access_identity_scheme_kinds(&raw);
-
-    assert_eq!(kinds.get("a"), Some(&Some("basic".to_owned())));
-    assert_eq!(kinds.get("b"), Some(&None));
-    assert_eq!(kinds.len(), 2);
 }
 
 #[test]
@@ -286,36 +259,5 @@ fn a_credential_scheme_naming_an_undeclared_or_signature_scheme_is_reported() {
     assert_eq!(
         reported.first().map(|d| d.origin.pointer.as_str()),
         Some("/identities/user/schemes/read/0")
-    );
-}
-
-#[test]
-fn caller_kinds_follow_the_access_kind() {
-    use seampact_ir::{Access, IdentityAccess, IdentityId, PublicAccess, Reason};
-    use seampact_pipeline::testing::api_layer_origin;
-
-    let origin = api_layer_origin("/x");
-    let public = Access::Public(PublicAccess {
-        reason: Reason::new("open".to_owned()),
-        origin: origin.clone(),
-    });
-    let identified = Access::Identity(IdentityAccess {
-        identity: IdentityId::new("user".to_owned()),
-        schemes: vec![SchemeId::new("token".to_owned())],
-        origin,
-    });
-
-    assert_eq!(
-        access_identity_caller_kinds(&public),
-        Ok(vec![CallerKind::Anonymous])
-    );
-    assert_eq!(
-        access_identity_caller_kinds(&identified),
-        Ok(vec![CallerKind::Identified])
-    );
-    assert_eq!(access_identity_access_schemes(&public), Ok(None));
-    assert_eq!(
-        access_identity_access_schemes(&identified).map(|schemes| schemes.map(<[SchemeId]>::len)),
-        Ok(Some(1))
     );
 }

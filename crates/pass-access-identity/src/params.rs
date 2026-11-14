@@ -1,14 +1,13 @@
 //! The parameters a route declares, as access reads them: a binding's or a signature key's source
 //! among them, and a query scheme's parameter, which is never a declared query field.
 
-use seampact_ir::Scheme;
+use seampact_ir::KnownScheme;
 use seampact_pipeline::{DraftOperation, PassError, pointer_below};
 
 use crate::access::{
     AccessIdentityResolved, AccessIdentityRoute, AccessIdentityScope,
     access_identity_access_schemes,
 };
-use crate::not_ported::not_ported_yet;
 use crate::report::{AccessIdentityProblem, AccessIdentityRelated, AccessIdentityRule};
 
 /// Where a route declares parameters.
@@ -19,38 +18,53 @@ pub(crate) enum AccessIdentityParameterLocation {
     Header,
 }
 
-/// The parameter locations by name.
-pub(crate) const PARAMETER_LOCATIONS: &[&str] = &["path", "query", "header"];
-
 /// The location a value source's location names, when a route declares parameters there.
 pub(crate) fn access_identity_is_parameter_location(
-    _location: &str,
-) -> Result<Option<AccessIdentityParameterLocation>, PassError> {
-    Err(not_ported_yet("accessIdentityIsParameterLocation"))
+    location: &str,
+) -> Option<AccessIdentityParameterLocation> {
+    match location {
+        "path" => Some(AccessIdentityParameterLocation::Path),
+        "query" => Some(AccessIdentityParameterLocation::Query),
+        "header" => Some(AccessIdentityParameterLocation::Header),
+        _ => None,
+    }
 }
 
 /// Whether the operation declares the parameter; header names compare without case (RFC 9110).
 pub(crate) fn access_identity_route_has_parameter(
-    _operation: &DraftOperation,
-    _location: AccessIdentityParameterLocation,
-    _name: &str,
-) -> Result<bool, PassError> {
-    Err(not_ported_yet("accessIdentityRouteHasParameter"))
+    operation: &DraftOperation,
+    location: AccessIdentityParameterLocation,
+    name: &str,
+) -> bool {
+    let Some(params) = &operation.params else {
+        return false;
+    };
+
+    match location {
+        AccessIdentityParameterLocation::Path => params.path.iter().any(|param| param.name == name),
+        AccessIdentityParameterLocation::Query => {
+            params.query.iter().any(|param| param.name == name)
+        }
+        AccessIdentityParameterLocation::Header => params
+            .header
+            .iter()
+            .any(|param| param.name.to_lowercase() == name.to_lowercase()),
+    }
 }
 
 /// Reports a declared query field named as a query scheme's parameter the route accepts.
 pub(crate) fn access_identity_check_query_schemes(
     route: &AccessIdentityRoute<'_, '_>,
     resolved: &AccessIdentityResolved<'_>,
-    scope: &mut AccessIdentityScope<'_, '_, '_>,
+    scope: &mut AccessIdentityScope<'_, '_, '_, '_>,
 ) -> Result<(), PassError> {
-    let Some(schemes) = access_identity_access_schemes(&resolved.access)? else {
+    let Some(schemes) = access_identity_access_schemes(&resolved.access) else {
         return Ok(());
     };
     let built = scope.built;
 
     for id in schemes {
-        let Some(Scheme::Query(scheme)) = built.schemes.get(id) else {
+        let Some(KnownScheme::Query(scheme)) = built.schemes.get(id) else {
             continue;
         };
 
@@ -58,7 +72,7 @@ pub(crate) fn access_identity_check_query_schemes(
             route.operation,
             AccessIdentityParameterLocation::Query,
             &scheme.name,
-        )? {
+        ) {
             continue;
         }
 

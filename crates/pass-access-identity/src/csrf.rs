@@ -5,17 +5,20 @@
 //! exempt: a safe operation (a batch read included), a public route, a route without such a
 //! cookie, and a signed identity's route, which never derives it (ADR 0013).
 
+use indexmap::IndexSet;
 use seampact_diagnostics::InternalError;
-use seampact_ir::{Access, CookieScheme, Csrf, ExemptCsrf, Reason, Scheme};
-use seampact_pipeline::{NearestSetting, PassError};
+use seampact_ir::{
+    CookieScheme, Csrf, DerivationId, DerivedCsrf, DerivedFrom, ExemptCsrf, KnownAccess,
+    KnownIdentityRef, KnownScheme, Reason,
+};
+use seampact_pipeline::{NearestSetting, pointer_below};
 
 use crate::access::{
     AccessIdentityResolved, AccessIdentityRoute, AccessIdentityScope,
-    access_identity_access_schemes,
+    access_identity_access_schemes, access_identity_id, access_identity_origin_of,
 };
-use crate::known::KnownIdentity;
-use crate::not_ported::not_ported_yet;
 use crate::read::{access_identity_is_object, access_identity_string};
+use crate::report::{AccessIdentityProblem, AccessIdentityRule};
 
 /// The derivation of a derived `csrf`.
 pub(crate) const CSRF_DERIVATION: &str = "csrf.cookieWrite";
@@ -25,9 +28,9 @@ pub(crate) const CSRF_DERIVATION: &str = "csrf.cookieWrite";
 pub(crate) fn access_identity_csrf(
     route: &AccessIdentityRoute<'_, '_>,
     resolved: &AccessIdentityResolved<'_>,
-    scope: &mut AccessIdentityScope<'_, '_, '_>,
-) -> Result<Option<Csrf>, PassError> {
-    if route.safe || matches!(resolved.access, Access::Public(_)) {
+    scope: &mut AccessIdentityScope<'_, '_, '_, '_>,
+) -> Result<Option<Csrf>, InternalError> {
+    if route.safe || matches!(resolved.access, KnownAccess::Public(_)) {
         return Ok(None);
     }
 
@@ -35,16 +38,16 @@ pub(crate) fn access_identity_csrf(
         return Ok(None);
     };
 
-    if matches!(identity, KnownIdentity::Signed(_)) {
+    if matches!(identity, KnownIdentityRef::Signed(_)) {
         return Ok(None);
     }
 
     let built = scope.built;
-    let schemes = access_identity_access_schemes(&resolved.access)?.unwrap_or(&[]);
+    let schemes = access_identity_access_schemes(&resolved.access).unwrap_or(&[]);
     let cookies: Vec<&CookieScheme> = schemes
         .iter()
         .filter_map(|id| match built.schemes.get(id) {
-            Some(Scheme::Cookie(cookie)) if cookie.csrf.is_some() => Some(cookie),
+            Some(KnownScheme::Cookie(cookie)) if cookie.csrf.is_some() => Some(cookie),
             _ => None,
         })
         .collect();
@@ -67,8 +70,7 @@ pub(crate) fn access_identity_csrf(
         return Err(InternalError::new(format!(
             "the csrf set at {} has no exempt reason",
             node.pointer
-        ))
-        .into());
+        )));
     };
 
     Ok(Some(Csrf::Exempt(ExemptCsrf {
@@ -78,9 +80,68 @@ pub(crate) fn access_identity_csrf(
 }
 
 fn derived_csrf(
-    _cookies: &[&CookieScheme],
-    _identity: KnownIdentity<'_>,
-    _scope: &mut AccessIdentityScope<'_, '_, '_>,
-) -> Result<Option<Csrf>, PassError> {
-    Err(not_ported_yet("derivedCsrf"))
+    cookies: &[&CookieScheme],
+    identity: KnownIdentityRef<'_>,
+    scope: &mut AccessIdentityScope<'_, '_, '_, '_>,
+) -> Result<Option<Csrf>, InternalError> {
+    // A csrf header scheme left out of the catalogue for an error of its own is already
+    // reported.
+    let headers: Vec<Option<&str>> = cookies
+        .iter()
+        .map(|cookie| {
+            let header = cookie
+                .csrf
+                .as_ref()
+                .and_then(|csrf| scope.built.schemes.get(csrf));
+
+            match header {
+                Some(KnownScheme::Header(header)) => Some(header.name.as_str()),
+                _ => None,
+            }
+        })
+        .collect();
+    let mut names: IndexSet<Option<&str>> = IndexSet::new();
+
+    names.extend(headers);
+
+    let Some(Some(name)) = names.first().copied() else {
+        return Ok(None);
+    };
+
+    if names.contains(&None) {
+        return Ok(None);
+    }
+
+    // The fault is the identity's, so it is located at its write list and reported once for all
+    // its routes.
+    let id = access_identity_id(identity);
+
+    if names.len() > 1 {
+        let listed: Vec<&str> = names.iter().flatten().copied().collect();
+
+        scope.reporter.error(AccessIdentityProblem {
+            rule: AccessIdentityRule::CsrfHeader,
+            message: format!(
+                "the write schemes of identity '{id}' are cookie schemes naming different csrf headers ({}), and a route checks one",
+                listed.join(", ")
+            ),
+            fix: "Name one csrf header scheme on every cookie scheme an identity accepts on writes.".to_owned(),
+            pointer: pointer_below("", &["identities", id.as_str(), "schemes", "write"]),
+            related: Vec::new(),
+        })?;
+
+        return Ok(None);
+    }
+
+    let mut from = vec![access_identity_origin_of(identity).clone()];
+
+    from.extend(cookies.iter().map(|cookie| cookie.origin.clone()));
+
+    Ok(Some(Csrf::Derived(DerivedCsrf {
+        header: name.to_owned(),
+        derived_from: DerivedFrom {
+            derivation: DerivationId::new(CSRF_DERIVATION.to_owned()),
+            from,
+        },
+    })))
 }

@@ -8,14 +8,26 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 
 use seampact_diagnostics::InternalError;
-use seampact_ir::{Binding, PrincipalRequirement, ValueSource};
-use seampact_json::JsonValue;
+use seampact_ir::{
+    Binding, KnownPrincipalRef, PrincipalRequirement, TypeUse, ValueSource, ValueSourceIn,
+};
+use seampact_js::cmp_utf16;
+use seampact_json::{JsonValue, stringify_json};
 use seampact_pipeline::{
     InheritedEntry, OrderedSetting, PassError, TreeNodes, UnionSetting, pointer_below,
 };
 
-use crate::access::{AccessIdentityResolved, AccessIdentityRoute, AccessIdentityScope};
-use crate::not_ported::not_ported_yet;
+use crate::access::{
+    AccessIdentityResolved, AccessIdentityRoute, AccessIdentityScope, access_identity_id,
+    access_identity_principal_of,
+};
+use crate::params::{AccessIdentityParameterLocation, access_identity_route_has_parameter};
+use crate::principal::{
+    access_identity_principal_field, access_identity_principal_field_refusal,
+    access_identity_schema_field,
+};
+use crate::read::{access_identity_object, access_identity_strings};
+use crate::report::{AccessIdentityProblem, AccessIdentityRelated, AccessIdentityRule};
 use crate::source::access_identity_value_source;
 
 /// Who reads a principal field, for the messages: `'principal.requires' names`,
@@ -46,7 +58,7 @@ impl ReaderVerb {
 pub(crate) fn access_identity_principal_requires(
     route: &AccessIdentityRoute<'_, '_>,
     resolved: &AccessIdentityResolved<'_>,
-    scope: &mut AccessIdentityScope<'_, '_, '_>,
+    scope: &mut AccessIdentityScope<'_, '_, '_, '_>,
 ) -> Result<Vec<PrincipalRequirement>, PassError> {
     let inherited = scope.reporter.inherited();
     let entries = inherited
@@ -86,7 +98,7 @@ pub(crate) fn access_identity_principal_requires(
 pub(crate) fn access_identity_bindings(
     route: &AccessIdentityRoute<'_, '_>,
     resolved: &AccessIdentityResolved<'_>,
-    scope: &mut AccessIdentityScope<'_, '_, '_>,
+    scope: &mut AccessIdentityScope<'_, '_, '_, '_>,
 ) -> Result<Vec<Binding>, PassError> {
     let inherited = scope.reporter.inherited();
     let entries = inherited
@@ -138,82 +150,187 @@ pub(crate) fn access_identity_bindings(
         }
     }
 
-    sort_by_source(&mut bindings)?;
+    bindings.sort_by(by_source);
 
     Ok(bindings)
 }
 
-// `Array.prototype.sort` with `bySource`: a failing comparator stops the sort with its error.
-fn sort_by_source(bindings: &mut [Binding]) -> Result<(), PassError> {
-    let mut failure = None;
-
-    bindings.sort_by(|left, right| match by_source(left, right) {
-        Ok(order) => order,
-        Err(error) => {
-            failure.get_or_insert(error);
-
-            Ordering::Equal
-        }
-    });
-
-    failure.map_or(Ok(()), Err)
+// A source as text: `path.workspaceId`, or the location alone when it has no name.
+fn source_text(source: &ValueSource) -> String {
+    match &source.name {
+        Some(name) => format!("{}.{name}", source.r#in),
+        None => source.r#in.to_string(),
+    }
 }
 
-fn source_text(_source: &ValueSource) -> Result<String, PassError> {
-    Err(not_ported_yet("sourceText"))
-}
-
-fn by_source(_left: &Binding, _right: &Binding) -> Result<Ordering, PassError> {
-    Err(not_ported_yet("bySource"))
+// Strings compare by UTF-16 code unit, as `<` does.
+fn by_source(left: &Binding, right: &Binding) -> Ordering {
+    cmp_utf16(&source_text(&left.from), &source_text(&right.from))
 }
 
 // The pointer of a written requirement: the first item naming the field on the node that set it.
 fn requirement_pointer(
-    _entry: &InheritedEntry<'_>,
-    _field: &str,
-    _nodes: &TreeNodes<'_>,
-) -> Result<String, PassError> {
-    Err(not_ported_yet("requirementPointer"))
+    entry: &InheritedEntry<'_>,
+    field: &str,
+    nodes: &TreeNodes<'_>,
+) -> Result<String, InternalError> {
+    let node = nodes.get(entry.node)?;
+    let requires = access_identity_object(node.settings, "principal")
+        .and_then(|principal| access_identity_strings(principal, "requires"))
+        .unwrap_or_default();
+    let index = requires.iter().position(|candidate| candidate == field);
+
+    let Some(index) = index else {
+        return Err(InternalError::new(format!(
+            "the principal requirement '{field}' is not written at {}",
+            node.pointer
+        )));
+    };
+
+    Ok(pointer_below(
+        &node.pointer,
+        &["principal", "requires", &index.to_string()],
+    ))
 }
 
 // The messages name the identity, never the route, so a setting reaching many routes is reported
 // once.
 fn principal_holds(
-    _route: &AccessIdentityRoute<'_, '_>,
-    _resolved: &AccessIdentityResolved<'_>,
-    _field: &str,
-    _pointer: &str,
-    _reader: &Reader,
-    _scope: &mut AccessIdentityScope<'_, '_, '_>,
-) -> Result<bool, PassError> {
-    Err(not_ported_yet("principalHolds"))
+    route: &AccessIdentityRoute<'_, '_>,
+    resolved: &AccessIdentityResolved<'_>,
+    field: &str,
+    pointer: &str,
+    reader: &Reader,
+    scope: &mut AccessIdentityScope<'_, '_, '_, '_>,
+) -> Result<bool, InternalError> {
+    let Some(identity) = resolved.identity else {
+        scope.reporter.error(AccessIdentityProblem {
+            rule: AccessIdentityRule::PrincipalField,
+            message: format!(
+                "{} {} principal field '{field}' on a public route, which has no principal",
+                reader.subject,
+                reader.verb.as_str()
+            ),
+            fix: "Remove it from the public route, or give the route an identity.".to_owned(),
+            pointer: pointer.to_owned(),
+            related: vec![AccessIdentityRelated {
+                pointer: route.node.pointer.clone(),
+                message: "a public route it reaches".to_owned(),
+            }],
+        })?;
+
+        return Ok(false);
+    };
+
+    let principal = KnownPrincipalRef::try_from(access_identity_principal_of(identity))?;
+    let fault = access_identity_principal_field(scope.schemas, principal, field)?;
+
+    let Some(fault) = fault else {
+        return Ok(true);
+    };
+
+    let subject = format!(
+        "{} under identity '{}' {}",
+        reader.subject,
+        access_identity_id(identity),
+        reader.verb.as_str()
+    );
+    let refusal = access_identity_principal_field_refusal(&subject, field, principal, &fault);
+
+    scope.reporter.error(AccessIdentityProblem {
+        rule: AccessIdentityRule::PrincipalField,
+        message: refusal.message,
+        fix: refusal.fix,
+        pointer: pointer.to_owned(),
+        related: Vec::new(),
+    })?;
+
+    Ok(false)
 }
 
 fn report_conflict(
-    _key: &str,
-    _pointer: &str,
-    _first: &InheritedEntry<'_>,
-    _scope: &mut AccessIdentityScope<'_, '_, '_>,
-) -> Result<(), PassError> {
-    Err(not_ported_yet("reportConflict"))
+    key: &str,
+    pointer: &str,
+    first: &InheritedEntry<'_>,
+    scope: &mut AccessIdentityScope<'_, '_, '_, '_>,
+) -> Result<(), InternalError> {
+    let first_node = scope.reporter.inherited().nodes().get(first.node)?;
+
+    scope.reporter.error(AccessIdentityProblem {
+        rule: AccessIdentityRule::BindingConflict,
+        message: format!(
+            "'{key}' is bound to {} above and to another principal field here",
+            stringify_json(first.value)
+        ),
+        fix: "Bind each request value to one principal field: remove one of the two bindings."
+            .to_owned(),
+        pointer: pointer.to_owned(),
+        related: vec![AccessIdentityRelated {
+            pointer: pointer_below(&first_node.pointer, &["bindings", key]),
+            message: "the first binding".to_owned(),
+        }],
+    })
 }
 
 // A binding's source on the route: a path placeholder, a declared query field, or a field of the
 // body input.
 fn binding_source_found(
-    _route: &AccessIdentityRoute<'_, '_>,
-    _key: &str,
-    _source: &ValueSource,
-    _pointer: &str,
-    _scope: &mut AccessIdentityScope<'_, '_, '_>,
-) -> Result<bool, PassError> {
-    Err(not_ported_yet("bindingSourceFound"))
+    route: &AccessIdentityRoute<'_, '_>,
+    key: &str,
+    source: &ValueSource,
+    pointer: &str,
+    scope: &mut AccessIdentityScope<'_, '_, '_, '_>,
+) -> Result<bool, InternalError> {
+    let name = source.name.as_deref().unwrap_or("");
+    let found = match source.r#in {
+        ValueSourceIn::Path => access_identity_route_has_parameter(
+            route.operation,
+            AccessIdentityParameterLocation::Path,
+            name,
+        ),
+        ValueSourceIn::Query => access_identity_route_has_parameter(
+            route.operation,
+            AccessIdentityParameterLocation::Query,
+            name,
+        ),
+        _ => body_has_field(route, name, scope)?,
+    };
+
+    if found {
+        return Ok(true);
+    }
+
+    let location = match source.r#in {
+        ValueSourceIn::Body => format!("no input body field '{name}'"),
+        ValueSourceIn::Path => format!("no path placeholder '{name}'"),
+        _ => format!("no declared query field '{name}'"),
+    };
+
+    scope.reporter.error(AccessIdentityProblem {
+        rule: AccessIdentityRule::BindingSource,
+        message: format!(
+            "binding '{key}' reads a value route '{}' does not carry: it has {location}",
+            route.id
+        ),
+        fix: "Bind a value the route declares (a path placeholder, a query field or a field of its object input), or move the binding to the routes that carry it.".to_owned(),
+        pointer: pointer.to_owned(),
+        related: Vec::new(),
+    })?;
+
+    Ok(false)
 }
 
 fn body_has_field(
-    _route: &AccessIdentityRoute<'_, '_>,
-    _field: &str,
-    _scope: &AccessIdentityScope<'_, '_, '_>,
-) -> Result<bool, PassError> {
-    Err(not_ported_yet("bodyHasField"))
+    route: &AccessIdentityRoute<'_, '_>,
+    field: &str,
+    scope: &AccessIdentityScope<'_, '_, '_, '_>,
+) -> Result<bool, InternalError> {
+    let Some(TypeUse::Ref(schema)) = route.operation.input.as_ref().map(|input| &input.schema)
+    else {
+        return Ok(false);
+    };
+    let segments: Vec<&str> = field.split('.').collect();
+    let fault = access_identity_schema_field(scope.schemas, schema.schema.as_str(), &segments)?;
+
+    Ok(fault.is_none())
 }

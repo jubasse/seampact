@@ -5,13 +5,12 @@
 
 use seampact_diagnostics::InternalError;
 use seampact_ir::{
-    DerivationId, DerivedFrom, KeysPolicy, Scheme, SignatureVerify, TypeUse, UnknownKeys,
-    UnknownKeysPolicy,
+    DerivationId, DerivedFrom, KnownIdentityRef, KnownKeysPolicyRef, KnownScheme,
+    KnownSchemeKeyRef, KnownSignatureVerifyRef, TypeUse, UnknownKeys, UnknownKeysPolicy,
 };
 use seampact_pipeline::{DraftOperation, PassError, pointer_below};
 
 use crate::access::{AccessIdentityResolved, AccessIdentityRoute, AccessIdentityScope};
-use crate::known::KnownIdentity;
 use crate::params::{access_identity_is_parameter_location, access_identity_route_has_parameter};
 use crate::report::{AccessIdentityProblem, AccessIdentityRelated, AccessIdentityRule};
 
@@ -31,13 +30,13 @@ pub(crate) struct AccessIdentityInputFacts {
 /// only use carrying `unknownKeys`).
 pub(crate) fn access_identity_input_facts(
     operation: &DraftOperation,
-    identity: Option<KnownIdentity<'_>>,
+    identity: Option<KnownIdentityRef<'_>>,
 ) -> Result<Option<AccessIdentityInputFacts>, InternalError> {
     let Some(input) = &operation.input else {
         return Ok(None);
     };
 
-    let Some(KnownIdentity::Signed(signed)) = identity else {
+    let Some(KnownIdentityRef::Signed(signed)) = identity else {
         return Ok(Some(AccessIdentityInputFacts {
             raw_body: false,
             unknown_keys: None,
@@ -59,15 +58,9 @@ pub(crate) fn access_identity_input_facts(
         return Ok(raw_body_only);
     }
 
-    let (policy, reason) = match policy {
-        KeysPolicy::Ignore(ignore) => (UnknownKeysPolicy::Ignore, ignore.reason.clone()),
-        KeysPolicy::Keep(keep) => (UnknownKeysPolicy::Keep, keep.reason.clone()),
-        KeysPolicy::Unknown(unknown) => {
-            return Err(InternalError::new(format!(
-                "access.identity read an unknown-key policy of unknown kind '{}'",
-                unknown.tag()
-            )));
-        }
+    let (policy, reason) = match KnownKeysPolicyRef::try_from(policy)? {
+        KnownKeysPolicyRef::Ignore(ignore) => (UnknownKeysPolicy::Ignore, ignore.reason.clone()),
+        KnownKeysPolicyRef::Keep(keep) => (UnknownKeysPolicy::Keep, keep.reason.clone()),
     };
 
     Ok(Some(AccessIdentityInputFacts {
@@ -89,28 +82,28 @@ pub(crate) fn access_identity_input_facts(
 pub(crate) fn access_identity_check_signature_key(
     route: &AccessIdentityRoute<'_, '_>,
     resolved: &AccessIdentityResolved<'_>,
-    scope: &mut AccessIdentityScope<'_, '_, '_>,
+    scope: &mut AccessIdentityScope<'_, '_, '_, '_>,
 ) -> Result<(), PassError> {
-    let Some(KnownIdentity::Signed(identity)) = resolved.identity else {
+    let Some(KnownIdentityRef::Signed(identity)) = resolved.identity else {
         return Ok(());
     };
 
     // A scheme left out of the catalogue for an error of its own is already reported.
-    let Some(Scheme::Signature(scheme)) = scope.built.schemes.get(&identity.signed) else {
+    let Some(KnownScheme::Signature(scheme)) = scope.built.schemes.get(&identity.signed) else {
         return Ok(());
     };
-    let key = match &scheme.signature {
-        SignatureVerify::Template(template) => Some(&template.key),
-        SignatureVerify::Application(application) => application.key.as_ref(),
-        SignatureVerify::Unknown(_) => None,
+    let key = match KnownSignatureVerifyRef::try_from(&scheme.signature)? {
+        KnownSignatureVerifyRef::Template(template) => Some(&template.key),
+        KnownSignatureVerifyRef::Application(application) => application.key.as_ref(),
     };
-    let Some(seampact_ir::SchemeKey::Source(key)) = key else {
+    let Some(KnownSchemeKeyRef::Source(key)) = key.map(KnownSchemeKeyRef::try_from).transpose()?
+    else {
         return Ok(());
     };
 
     // The authoring schema reads a key from a named path, query or header source.
     let source = &key.from;
-    let location = access_identity_is_parameter_location(source.r#in.as_str())?;
+    let location = access_identity_is_parameter_location(source.r#in.as_str());
     let (Some(name), Some(location)) = (source.name.as_deref(), location) else {
         return Err(InternalError::new(format!(
             "signature scheme '{}' reads its key from an unnamed or {} source",
@@ -119,7 +112,7 @@ pub(crate) fn access_identity_check_signature_key(
         .into());
     };
 
-    if access_identity_route_has_parameter(route.operation, location, name)? {
+    if access_identity_route_has_parameter(route.operation, location, name) {
         return Ok(());
     }
 

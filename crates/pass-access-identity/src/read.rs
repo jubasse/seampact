@@ -3,9 +3,6 @@
 
 use seampact_json::{JsonObject, JsonValue};
 
-use crate::not_ported::not_ported_yet;
-use seampact_pipeline::PassError;
-
 /// The value as an object; `None` for another type or an absent value.
 pub(crate) fn access_identity_is_object(value: Option<&JsonValue>) -> Option<&JsonObject> {
     match value {
@@ -34,11 +31,11 @@ pub(crate) fn access_identity_string<'raw>(
 }
 
 /// A boolean member; `None` when absent or of another type.
-pub(crate) fn access_identity_boolean(
-    _object: &JsonObject,
-    _key: &str,
-) -> Result<Option<bool>, PassError> {
-    Err(not_ported_yet("accessIdentityBoolean"))
+pub(crate) fn access_identity_boolean(object: &JsonObject, key: &str) -> Option<bool> {
+    match access_identity_member(object, key) {
+        Some(JsonValue::Bool(flag)) => Some(*flag),
+        _ => None,
+    }
 }
 
 /// A list of strings, copied; `None` when absent or not a list.
