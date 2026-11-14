@@ -9,7 +9,6 @@ use seampact_pipeline::{AccessIdentityOutput, DraftIr, HalfContext, PassError, T
 use crate::access::AccessIdentityBuilt;
 use crate::headers::access_identity_headers;
 use crate::identities::{AccessIdentityCatalogues, access_identity_identities};
-use crate::not_ported::not_ported_yet;
 use crate::operations::access_identity_operations;
 use crate::report::access_identity_reporter;
 use crate::schemes::{access_identity_scheme_kinds, access_identity_schemes};
@@ -34,11 +33,7 @@ pub(crate) fn access_identity_pass_run(
         schemes: written_schemes,
         identities,
     };
-    let written = access_identity_operations(draft, &built, &mut reporter)?;
-    // The output has no entry for a route whose access was refused: left to the lead.
-    let Some(operations) = written.into_iter().collect::<Option<Vec<_>>>() else {
-        return Err(not_ported_yet("accessIdentityOperations"));
-    };
+    let operations = access_identity_operations(draft, &built, &mut reporter)?;
     let mut header_declarations = IrMap::new();
 
     for (id, header) in headers {
