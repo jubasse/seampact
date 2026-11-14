@@ -998,8 +998,13 @@ dependencies = [
 name = "seampact-pass-tree-nodes"
 version = "2.0.0"
 dependencies = [
+ "indexmap",
  "seampact-diagnostics",
+ "seampact-ir",
+ "seampact-json",
+ "seampact-pass-tree-shared",
  "seampact-pipeline",
+ "seampact-templates",
 ]
 
 [[package]]
