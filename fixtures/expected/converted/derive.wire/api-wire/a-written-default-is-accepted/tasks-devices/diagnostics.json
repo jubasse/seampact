@@ -1,9 +1,0 @@
-{
-  "workspace": [],
-  "apis": [
-    {
-      "api": "tasksDevices",
-      "diagnostics": []
-    }
-  ]
-}

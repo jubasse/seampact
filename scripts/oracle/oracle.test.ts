@@ -54,3 +54,12 @@ test("a half that reports gets a diagnostics file and an api with schema calls g
     names.filter((name) => name.startsWith("halves/")).length,
   );
 });
+
+test("a converted fixture is one workspace: no fixture is found below it", () => {
+  const converted = discoverFixtures().filter(({ path }) => path.startsWith("converted/"));
+
+  expect(converted.length).toBeGreaterThan(0);
+
+  for (const { path } of converted)
+    expect(converted.filter((other) => other.path.startsWith(`${path}/`))).toEqual([]);
+});

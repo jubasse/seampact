@@ -70,6 +70,10 @@ fn unplugged_compiler_problem(
 const DEFAULT_FIXTURE_TIME_LIMIT: Duration = Duration::from_secs(120);
 
 /// Names the fixture that passed the limit and ends the run: a subject that hangs never returns.
+#[expect(
+    clippy::exit,
+    reason = "a subject that hangs never returns: the watcher thread can only end the process"
+)]
 fn stop_on_time_limit(fixture: &str, limit: Duration) {
     eprintln!(
         "{ORACLE_STEP}: fixture {fixture} ran past the {} s limit of one fixture: stopping",
