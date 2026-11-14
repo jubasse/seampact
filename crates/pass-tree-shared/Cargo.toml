@@ -1,0 +1,26 @@
+[package]
+name = "seampact-pass-tree-shared"
+description = "The code of the `tree.nodes` half that earlier halves reach: operation names, raw tree readers and the relay origin."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+indexmap.workspace = true
+seampact-authoring.workspace = true
+seampact-diagnostics.workspace = true
+seampact-ir.workspace = true
+seampact-js.workspace = true
+seampact-json.workspace = true
+seampact-naming.workspace = true
+seampact-pipeline.workspace = true
+
+[dev-dependencies]
+camino.workspace = true
+seampact-load.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

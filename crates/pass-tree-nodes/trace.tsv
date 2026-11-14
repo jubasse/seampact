@@ -1,0 +1,56 @@
+-	packages/core/compiler/src/passes/tree/nodes/names.ts#treeNodesIsOperation	skip: ported in seampact-pass-tree-shared (crates/pass-tree-shared/src/names.rs#tree_nodes_is_operation)
+-	packages/core/compiler/src/passes/tree/nodes/names.ts#treeNodesIdParam	skip: ported in seampact-pass-tree-shared (crates/pass-tree-shared/src/names.rs#tree_nodes_id_param)
+-	packages/core/compiler/src/passes/tree/nodes/names.ts#declaresId	skip: ported in seampact-pass-tree-shared (crates/pass-tree-shared/src/names.rs#declares_id)
+-	packages/core/compiler/src/passes/tree/nodes/names.ts#singularWords	skip: ported in seampact-pass-tree-shared (crates/pass-tree-shared/src/names.rs#singular_words)
+-	packages/core/compiler/src/passes/tree/nodes/names.ts#treeNodesSingularIsBareId	skip: ported in seampact-pass-tree-shared (crates/pass-tree-shared/src/names.rs#tree_nodes_singular_is_bare_id)
+-	packages/core/compiler/src/passes/tree/nodes/names.ts#treeNodesOpShorthand	skip: ported in seampact-pass-tree-shared (crates/pass-tree-shared/src/names.rs#tree_nodes_op_shorthand)
+-	packages/core/compiler/src/passes/tree/nodes/names.ts#treeNodesOpOwner	skip: ported in seampact-pass-tree-shared (crates/pass-tree-shared/src/names.rs#tree_nodes_op_owner)
+-	packages/core/compiler/src/passes/tree/nodes/names.ts#treeNodesIdlessCollection	skip: ported in seampact-pass-tree-shared (crates/pass-tree-shared/src/names.rs#tree_nodes_idless_collection)
+-	packages/core/compiler/src/passes/tree/nodes/names.ts#treeNodesSingularOwner	skip: ported in seampact-pass-tree-shared (crates/pass-tree-shared/src/names.rs#tree_nodes_singular_owner)
+-	packages/core/compiler/src/passes/tree/nodes/names.ts#wordsOf	skip: ported in seampact-pass-tree-shared (crates/pass-tree-shared/src/names.rs#words_of)
+-	packages/core/compiler/src/passes/tree/nodes/names.ts#opWords	skip: ported in seampact-pass-tree-shared (crates/pass-tree-shared/src/names.rs#op_words)
+-	packages/core/compiler/src/passes/tree/nodes/names.ts#routeWords	skip: ported in seampact-pass-tree-shared (crates/pass-tree-shared/src/names.rs#route_words)
+-	packages/core/compiler/src/passes/tree/nodes/names.ts#idOrder	skip: ported in seampact-pass-tree-shared (crates/pass-tree-shared/src/names.rs#id_order)
+-	packages/core/compiler/src/passes/tree/nodes/names.ts#idCase	skip: ported in seampact-pass-tree-shared (crates/pass-tree-shared/src/names.rs#id_case)
+-	packages/core/compiler/src/passes/tree/nodes/names.ts#treeNodesOperationName	skip: ported in seampact-pass-tree-shared (crates/pass-tree-shared/src/names.rs#tree_nodes_operation_name)
+-	packages/core/compiler/src/passes/tree/nodes/names.ts#named	skip: ported in seampact-pass-tree-shared (crates/pass-tree-shared/src/names.rs#named)
+-	packages/core/compiler/src/passes/tree/nodes/names.ts#treeNodesOperationNames	skip: ported in seampact-pass-tree-shared (crates/pass-tree-shared/src/names.rs#tree_nodes_operation_names)
+-	packages/core/compiler/src/passes/tree/nodes/raw.ts#treeNodesAnsweredUse	skip: ported in seampact-pass-tree-shared (crates/pass-tree-shared/src/raw.rs#tree_nodes_answered_use)
+-	packages/core/compiler/src/passes/tree/nodes/raw.ts#treeNodesWrittenConvention	skip: ported in seampact-pass-tree-shared (crates/pass-tree-shared/src/raw.rs#tree_nodes_written_convention)
+-	packages/core/compiler/src/passes/tree/nodes/raw.ts#treeNodesMember	skip: ported in seampact-pass-tree-shared (crates/pass-tree-shared/src/raw.rs#tree_nodes_member)
+-	packages/core/compiler/src/passes/tree/nodes/raw.ts#treeNodesSetting	skip: ported in seampact-pass-tree-shared (crates/pass-tree-shared/src/raw.rs#tree_nodes_setting)
+-	packages/core/compiler/src/passes/tree/nodes/raw.ts#treeNodesText	skip: ported in seampact-pass-tree-shared (crates/pass-tree-shared/src/raw.rs#tree_nodes_text)
+-	packages/core/compiler/src/passes/tree/nodes/raw.ts#treeNodesOriginAt	skip: ported in seampact-pass-tree-shared (crates/pass-tree-shared/src/raw.rs#tree_nodes_origin_at)
+-	packages/core/compiler/src/passes/tree/nodes/raw.ts#treeNodesSchema	skip: ported in seampact-pass-tree-shared (crates/pass-tree-shared/src/raw.rs#tree_nodes_schema)
+-	packages/core/compiler/src/passes/tree/nodes/raw.ts#treeNodesDraftSchema	skip: ported in seampact-pass-tree-shared (crates/pass-tree-shared/src/raw.rs#tree_nodes_draft_schema)
+-	packages/core/compiler/src/passes/tree/nodes/raw.ts#treeNodesObjectOf	skip: ported in seampact-pass-tree-shared (crates/pass-tree-shared/src/raw.rs#tree_nodes_object_of)
+-	packages/core/compiler/src/passes/tree/nodes/raw.ts#treeNodesTagHeader	skip: ported in seampact-pass-tree-shared (crates/pass-tree-shared/src/raw.rs#tree_nodes_tag_header)
+-	packages/core/compiler/src/passes/tree/nodes/relays.ts#treeNodesRelayOrigin	skip: ported in seampact-pass-tree-shared (crates/pass-tree-shared/src/relays.rs#tree_nodes_relay_origin)
+-	packages/core/compiler/src/passes/tree/nodes/relays.ts#treeNodesRelayShape	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
+-	packages/core/compiler/src/passes/tree/nodes/relays.ts#treeNodesJoinRelayDeclarations	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
+-	packages/core/compiler/src/passes/tree/nodes/relays.ts#heldDeclaration	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
+-	packages/core/compiler/src/passes/tree/nodes/relays.ts#addDeclaration	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
+-	packages/core/compiler/src/passes/tree/nodes/relays.ts#sameDeclaration	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
+-	packages/core/compiler/src/passes/tree/nodes/relays.ts#reportDifferentDeclaration	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
+-	packages/core/compiler/src/passes/tree/nodes/relays.ts#pushDeclarations	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
+-	packages/core/compiler/src/passes/tree/nodes/relays.ts#stamped	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
+-	packages/core/compiler/src/passes/tree/nodes/relays.ts#isCopied	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
+-	packages/core/compiler/src/passes/tree/nodes/relays.ts#copiedParams	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
+-	packages/core/compiler/src/passes/tree/nodes/relays.ts#copiedInput	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
+-	packages/core/compiler/src/passes/tree/nodes/relays.ts#copiedResponses	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
+-	packages/core/compiler/src/passes/tree/nodes/relays.ts#copiedPaging	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
+-	packages/core/compiler/src/passes/tree/nodes/relays.ts#pathUnderPrefix	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
+-	packages/core/compiler/src/passes/tree/nodes/relays.ts#relayPath	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
+-	packages/core/compiler/src/passes/tree/nodes/relays.ts#relayTarget	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
+-	packages/core/compiler/src/passes/tree/nodes/relays.ts#relaySource	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
+-	packages/core/compiler/src/passes/tree/nodes/relays.ts#relayedSource	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
+-	packages/core/compiler/src/passes/tree/nodes/relays.ts#importedSource	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
+-	packages/core/compiler/src/passes/tree/nodes/relays.ts#importInconsistency	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
+-	packages/core/compiler/src/passes/tree/nodes/relays.ts#importedOperationIndex	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
+-	packages/core/compiler/src/passes/tree/nodes/relays.ts#importedDeclaration	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
+-	packages/core/compiler/src/passes/tree/nodes/relays.ts#namedUnknowns	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
+-	packages/core/compiler/src/passes/tree/nodes/relays.ts#ownEntry	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
+-	packages/core/compiler/src/passes/tree/nodes/relays.ts#checkRouteName	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
+-	packages/core/compiler/src/passes/tree/nodes/relays.ts#reportNoOperation	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
+-	packages/core/compiler/src/passes/tree/nodes/relays.ts#reportTarget	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts
+-	packages/core/compiler/src/passes/tree/nodes/relays.ts#relaysOrigin	skip: deferred: ported by the tree.nodes briefs, which own the rest of relays.ts

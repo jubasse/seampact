@@ -7,10 +7,12 @@
 
 use std::sync::LazyLock;
 
+use seampact_diagnostics::InternalError;
 use seampact_ir::{
     ArrayTypeUse, DecimalLiteral, ErrorRole, NatureBase, Pattern, RefTypeUse, Refinements,
     ScalarType, ScalarTypeUse, SchemaId, TypeUse,
 };
+use seampact_naming::{CanonicalIdOptions, Name, Role, canonical_id, split_name};
 
 /// Whether a datum must reach a param of the bound code (ADR 0006 section 6, the Data column).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -95,6 +97,25 @@ pub const ISSUE_SCHEMA_ID: &str = "ApiSchemaInvalidIssue";
 /// The schema id of a proof-only input's body: an object schema with no property (ADR 0004
 /// section 13).
 pub const EMPTY_BODY_SCHEMA_ID: &str = "ApiEmptyBody";
+
+/// The ADR 0007 params schema id of an error code: `api.rate_limited` gives
+/// `ApiRateLimitedParams`.
+///
+/// # Errors
+///
+/// An [`InternalError`] when the naming refuses the code's name, or gives no id for it.
+pub fn derivation_params_schema_id(code: &str) -> Result<SchemaId, InternalError> {
+    let name = Name {
+        segments: split_name(code),
+        role: Role::Params,
+        status: None,
+    };
+    let id = canonical_id(&name, CanonicalIdOptions::default())
+        .map_err(|error| InternalError::new(error.to_string()))?;
+
+    id.map(SchemaId::new)
+        .ok_or_else(|| InternalError::new(format!("the error code {code} names no params schema")))
+}
 
 // The largest integer a JSON number holds exactly: the bound a Retry-After header value must fit
 // (ir.error.retry-header).

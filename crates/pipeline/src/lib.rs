@@ -22,7 +22,8 @@ pub use derivations::{
     DERIVATION_TABLE, DatumRequired, DerivationRole, DerivationRoles, DerivationRow,
     EMPTY_BODY_SCHEMA_ID, ISSUE_SCHEMA_ID, IssueLocation, IssueMember, PACK_DERIVATION_ROW,
     RoleDatum, derivation_datum_always, derivation_issue_members, derivation_param_of_datum,
-    derivation_role_of, derivation_roles, derivation_row_of, is_derivation_id,
+    derivation_params_schema_id, derivation_role_of, derivation_roles, derivation_row_of,
+    is_derivation_id,
 };
 pub use draft::{
     ApiDeclaration, DraftApi, DraftConcurrency, DraftIr, DraftOperation, DraftOperationInput,

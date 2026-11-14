@@ -310,6 +310,7 @@ In pipeline order (ADR 0006 section 1).
 - `crates/js`: JavaScript semantics shared by every port lane: UTF-16 string order, JavaScript object key order and ECMAScript number text.
 - `crates/json`: JSON values as JavaScript holds them, their canonical text (IR, source map and OpenAPI bytes), the indented text of the oracle's diagnostics and halves, the JS-integer reader and the JSON Pointer escape.
 - `crates/load`: The load stage: the workspace readers (disk and memory), authored paths and pack files, the load limits and budget, the load diagnostics, the include fragments, the YAML tree with its plain-scalar resolver, the file store that parses each file and reports its pitfalls, the expansion of `$include`, `$file` and the file form of `$ref` into one layer build per file, the composition of an api's layer builds into its raw tree, and the loader entry that reads a workspace into its raw trees, files, sorted diagnostics and fragments.
+- `crates/naming`: The cross-language naming of ADR 0007: splitting a written name, name roles, reserved words and identifiers per language.
 - `crates/oracle`: The oracle harness of the Rust port: reads fixtures/expected/, compares a compiler subject's outputs with it under differences.yaml, and gives the verdict of `cargo xtask oracle`.
 - `crates/pass-access-identity`: The `access.identity` pass half: identities, schemes and each operation's authentication.
 - `crates/pass-access-rights`: The `access.rights` pass half: rights, rules, scopes and each operation's requirements.
@@ -318,8 +319,10 @@ In pipeline order (ADR 0006 section 1).
 - `crates/pass-link`: The link pass: diagnostics over the derived draft of every api, the relay superset check.
 - `crates/pass-tree-nodes`: The `tree.nodes` pass half: the operations, the conventions, packs and lint settings of the api.
 - `crates/pass-tree-schemas`: The `tree.schemas` pass half: the schema catalogues and the schema service every later half reads.
+- `crates/pass-tree-shared`: The code of the `tree.nodes` half that earlier halves reach: operation names, raw tree readers and the relay origin.
 - `crates/pipeline`: The pass pipeline: half names, the draft IR, the half outputs and their merge (with the element-owner rule), the derivation table and roles, the schema service trait, the draft delta convention, the readers over the loaded tree (pointers and origins, tree nodes, inherited settings, conventions, units, declared entries) and the half context.
 - `crates/span`: Source spans of the Rust port: file ids, byte ranges, the file table and the conversion to line and UTF-16 column.
+- `crates/templates`: The template reader of ADR 0002 section 13: a raw template read into the IR's template, with the slots of its place.
 
 ### `scripts`
 

@@ -919,6 +919,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "seampact-naming"
+version = "2.0.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "seampact-oracle"
 version = "2.0.0"
 dependencies = [
@@ -994,6 +1003,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "seampact-pass-tree-shared"
+version = "2.0.0"
+dependencies = [
+ "camino",
+ "indexmap",
+ "seampact-authoring",
+ "seampact-diagnostics",
+ "seampact-ir",
+ "seampact-js",
+ "seampact-json",
+ "seampact-load",
+ "seampact-naming",
+ "seampact-pipeline",
+ "serde_json",
+]
+
+[[package]]
 name = "seampact-pipeline"
 version = "2.0.0"
 dependencies = [
@@ -1005,6 +1031,7 @@ dependencies = [
  "seampact-ir",
  "seampact-js",
  "seampact-json",
+ "seampact-naming",
  "serde",
  "serde_json",
  "thiserror",
@@ -1018,6 +1045,17 @@ dependencies = [
  "line-index",
  "text-size",
  "thiserror",
+]
+
+[[package]]
+name = "seampact-templates"
+version = "2.0.0"
+dependencies = [
+ "seampact-diagnostics",
+ "seampact-ir",
+ "seampact-js",
+ "seampact-json",
+ "serde_json",
 ]
 
 [[package]]

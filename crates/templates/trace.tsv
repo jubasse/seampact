@@ -1,0 +1,16 @@
+src/reader.rs#template_read	packages/core/compiler/src/templates/reader.ts#templateRead
+src/slots.rs#template_slots	packages/core/compiler/src/templates/reader.ts#templateSlots
+src/slots.rs#template_uses	packages/core/compiler/src/templates/reader.ts#templateUses
+src/reader.rs#template_of	packages/core/compiler/src/templates/reader.ts#templateOf
+src/reader.rs#string_template	packages/core/compiler/src/templates/reader.ts#stringTemplate
+src/slot_syntax.rs#path_of	packages/core/compiler/src/templates/reader.ts#pathOf
+src/reader.rs#text_parts	packages/core/compiler/src/templates/reader.ts#textParts
+src/reader.rs#object_template	packages/core/compiler/src/templates/reader.ts#objectTemplate
+src/reader.rs#member_name	packages/core/compiler/src/templates/reader.ts#memberName
+src/reader.rs#each_template	packages/core/compiler/src/templates/reader.ts#eachTemplate
+src/reader.rs#slot_name	packages/core/compiler/src/templates/reader.ts#slotName
+src/checks.rs#readable_slots	packages/core/compiler/src/templates/reader.ts#readableSlots
+src/checks.rs#slot_of	packages/core/compiler/src/templates/reader.ts#slotOf
+src/checks.rs#check_stand	packages/core/compiler/src/templates/reader.ts#checkStand
+src/checks.rs#check_slot	packages/core/compiler/src/templates/reader.ts#checkSlot
+src/checks.rs#refuse_syntax	packages/core/compiler/src/templates/reader.ts#refuseSyntax
