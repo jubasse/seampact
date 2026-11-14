@@ -19,6 +19,13 @@ seampact-js = { path = "crates/js", version = "2.0.0" }
 seampact-json = { path = "crates/json", version = "2.0.0" }
 seampact-load = { path = "crates/load", version = "2.0.0" }
 seampact-oracle = { path = "crates/oracle", version = "2.0.0" }
+seampact-pass-access-identity = { path = "crates/pass-access-identity", version = "2.0.0" }
+seampact-pass-access-rights = { path = "crates/pass-access-rights", version = "2.0.0" }
+seampact-pass-derive-errors = { path = "crates/pass-derive-errors", version = "2.0.0" }
+seampact-pass-derive-wire = { path = "crates/pass-derive-wire", version = "2.0.0" }
+seampact-pass-link = { path = "crates/pass-link", version = "2.0.0" }
+seampact-pass-tree-nodes = { path = "crates/pass-tree-nodes", version = "2.0.0" }
+seampact-pass-tree-schemas = { path = "crates/pass-tree-schemas", version = "2.0.0" }
 seampact-pipeline = { path = "crates/pipeline", version = "2.0.0" }
 seampact-span = { path = "crates/span", version = "2.0.0" }
 # Parse surface and ordered maps; the number features follow the IR types design note, section 3.

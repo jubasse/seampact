@@ -926,6 +926,65 @@ dependencies = [
 ]
 
 [[package]]
+name = "seampact-pass-access-identity"
+version = "2.0.0"
+dependencies = [
+ "seampact-diagnostics",
+ "seampact-pipeline",
+]
+
+[[package]]
+name = "seampact-pass-access-rights"
+version = "2.0.0"
+dependencies = [
+ "seampact-diagnostics",
+ "seampact-pipeline",
+]
+
+[[package]]
+name = "seampact-pass-derive-errors"
+version = "2.0.0"
+dependencies = [
+ "seampact-diagnostics",
+ "seampact-pipeline",
+]
+
+[[package]]
+name = "seampact-pass-derive-wire"
+version = "2.0.0"
+dependencies = [
+ "seampact-diagnostics",
+ "seampact-pipeline",
+]
+
+[[package]]
+name = "seampact-pass-link"
+version = "2.0.0"
+dependencies = [
+ "indexmap",
+ "seampact-authoring",
+ "seampact-diagnostics",
+ "seampact-ir",
+ "seampact-pipeline",
+]
+
+[[package]]
+name = "seampact-pass-tree-nodes"
+version = "2.0.0"
+dependencies = [
+ "seampact-diagnostics",
+ "seampact-pipeline",
+]
+
+[[package]]
+name = "seampact-pass-tree-schemas"
+version = "2.0.0"
+dependencies = [
+ "seampact-diagnostics",
+ "seampact-pipeline",
+]
+
+[[package]]
 name = "seampact-pipeline"
 version = "2.0.0"
 dependencies = [
@@ -939,6 +998,7 @@ dependencies = [
  "seampact-json",
  "serde",
  "serde_json",
+ "thiserror",
 ]
 
 [[package]]
