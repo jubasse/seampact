@@ -1,2 +1,11 @@
 src/unions.rs#union_tags	packages/core/spec/src/ir/unions.ts#irUnionTags
 -	packages/core/spec/src/ir/unions.ts#isKnownVariant	skip: a match on the union's Unknown arm tells a known variant apart
+src/sensitive_field.rs#find_ir_sensitive_reaches	packages/core/spec/src/ir/sensitive-field.ts#findIrSensitiveReaches
+src/sensitive_field.rs#find_ir_sensitive_param_reaches	packages/core/spec/src/ir/sensitive-field.ts#findIrSensitiveParamReaches
+src/sensitive_field.rs#walk_use	packages/core/spec/src/ir/sensitive-field.ts#walkUse
+src/sensitive_field.rs#walk_schema	packages/core/spec/src/ir/sensitive-field.ts#walkSchema
+src/sensitive_field.rs#walk_properties	packages/core/spec/src/ir/sensitive-field.ts#walkProperties
+src/sensitive_field.rs#sensitive_reach_text	packages/core/spec/src/ir/sensitive-field.ts#sensitiveReachText
+-	packages/core/spec/src/ir/sensitive-field.ts#isRecord	skip: the typed IR has no untyped JSON to test
+-	packages/core/spec/src/ir/sensitive-field.ts#listOf	skip: the typed IR holds a list, never a non-list
+-	packages/core/spec/src/ir/sensitive-field.ts#walkVariants	skip: merged into walk_schema (src/sensitive_field.rs), the union arm
