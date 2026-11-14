@@ -68,16 +68,25 @@
           "items": { "type": "string", "minLength": 1 }
         },
         "output": {
-          "description": "The expected output the mismatch is in.",
-          "enum": ["ir", "diagnostics", "source-map", "halves", "openapi", "generated"]
+          "description": "The expected output the mismatch is in: half-diagnostics is halves/<api>/<NN>-<half>.diagnostics.json (an absent file reads as []), schema-calls is schema-calls/<api>.json, whose mismatches sit at /<index>/answer.",
+          "enum": [
+            "ir",
+            "diagnostics",
+            "source-map",
+            "halves",
+            "half-diagnostics",
+            "schema-calls",
+            "openapi",
+            "generated"
+          ]
         },
         "api": {
-          "description": "The api the file belongs to (the file name of ir/<api>.json, source-map/<api>.json, halves/<api>/...); any api when absent.",
+          "description": "The api the file belongs to (the file name of ir/<api>.json, source-map/<api>.json, schema-calls/<api>.json, halves/<api>/...); any api when absent.",
           "type": "string",
           "minLength": 1
         },
         "half": {
-          "description": "The pass half the file belongs to (the <half> of halves/<api>/<NN>-<half>.json); any half when absent.",
+          "description": "The pass half the file belongs to (the <half> of halves/<api>/<NN>-<half>.json and of its .diagnostics.json); any half when absent.",
           "type": "string",
           "minLength": 1
         },

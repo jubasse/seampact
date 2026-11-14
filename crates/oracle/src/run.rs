@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use camino::Utf8Path;
 use indexmap::IndexMap;
-use seampact_json::{JsonValue, indented_json};
+use seampact_json::{JsonObject, JsonValue, indented_json};
 use serde_json::Value;
 
 use crate::compare::{
@@ -14,15 +14,15 @@ use crate::compare::{
 };
 use crate::differences::{DIFFERENCES_FILE, read_differences};
 use crate::expected::{
-    DIAGNOSTICS_FILE, ExpectedFiles, expected_directory_of, expected_fixture_paths,
-    read_expected_files,
+    DIAGNOSTICS_FILE, ExpectedFiles, RecordedCall, expected_directory_of, expected_fixture_paths,
+    read_expected_files, read_schema_calls, schema_calls_file,
 };
 use crate::fixtures::{discover_fixtures, read_excluded};
 use crate::matcher::{ComparedFile, DifferenceLedger, MatchOutcome};
 use crate::raw_text::{AcceptedPointers, identical_outside_accepted};
 use crate::rule_ids::check_rule_ids;
 use crate::time_limit::FixtureTimer;
-use crate::verdict::{FirstFailure, Verdict};
+use crate::verdict::{FirstFailure, ServiceCalls, Verdict};
 use crate::{
     ApiDeltas, ExcludedFixtures, ExpectedDelta, Fixture, FixtureGlob, HalfInput, OracleError,
     OracleSubject, OutputFile, OutputKind, SubjectAnswer, TimeLimitAction,
@@ -47,13 +47,29 @@ impl Selection {
     fn is_whole_run(&self) -> bool {
         self.fixture_glob.is_none() && self.half.is_none()
     }
+
+    fn includes_half(&self, half: &str) -> bool {
+        self.half.as_ref().is_none_or(|selected| selected == half)
+    }
 }
 
 /// The halves directory of a fixture's expected files.
 const HALVES_PREFIX: &str = "halves/";
 
-/// The schema service call logs of a fixture's expected files, read by no comparison yet.
+/// The schema service call logs of a fixture's expected files, compared by the service replay.
 const SCHEMA_CALLS_PREFIX: &str = "schema-calls/";
+
+/// The half that builds the schema service: the replay of the recorded calls runs with it.
+const TREE_SCHEMAS_HALF: &str = "tree.schemas";
+
+/// The extension of a half's delta file.
+const DELTA_EXTENSION: &str = ".json";
+
+/// The extension of a half's diagnostics file, which replaces the delta's.
+const HALF_DIAGNOSTICS_EXTENSION: &str = ".diagnostics.json";
+
+/// The text of an absent half diagnostics file: the half reported nothing.
+const NO_HALF_DIAGNOSTICS: &str = "[]\n";
 
 /// Runs the oracle on the repository at `repository_root` with `subject` as the compiler.
 ///
@@ -77,7 +93,12 @@ pub fn run_oracle(
         subject,
         excluded: &excluded,
         ledger: DifferenceLedger::new(differences.differences),
-        verdict: Verdict::default(),
+        verdict: Verdict {
+            service_calls: selection
+                .includes_half(TREE_SCHEMAS_HALF)
+                .then(ServiceCalls::default),
+            ..Verdict::default()
+        },
     };
 
     let expected_by_fixture = expected_files_of(repository_root, &selected_fixtures)?;
@@ -333,6 +354,17 @@ impl Run<'_> {
                 fixture.path
             ));
         }
+
+        let orphan_diagnostics_files = expected_files.keys().filter(|name| {
+            delta_name_of(name).is_some_and(|delta_name| !expected_files.contains_key(&delta_name))
+        });
+
+        for name in orphan_diagnostics_files {
+            self.verdict.problems.push(format!(
+                "expected/{}/{name} has no delta file beside it: rewrite the fixture's expected files",
+                fixture.path
+            ));
+        }
     }
 
     fn compare_compilation(
@@ -414,48 +446,177 @@ impl Run<'_> {
                         .map(String::as_str),
                 })
                 .collect();
+            let calls = self.recorded_calls(fixture, api, expected_files)?;
 
-            for DeltaStep {
-                name,
-                expected,
-                before,
-            } in deltas.steps()
-            {
-                let is_selected = self
-                    .selection
-                    .half
-                    .as_ref()
-                    .is_none_or(|selected| *selected == expected.half);
-
-                if !is_selected {
+            for step in deltas.steps() {
+                if !self.selection.includes_half(&step.expected.half) {
                     continue;
                 }
 
                 let input = HalfInput {
-                    deltas_before: before,
+                    deltas_before: step.before,
                     other_apis: other_apis.clone(),
                 };
 
-                let delta = match self.subject.run_half(fixture, api, &expected.half, &input) {
-                    SubjectAnswer::Ported(delta) => delta,
-                    SubjectAnswer::NotPorted => continue,
-                    SubjectAnswer::InternalError { message } => {
-                        let at = format!("{} (api {api}, half {})", fixture.path, expected.half);
+                self.compare_half(fixture, api, &step, &input, &calls, expected_files, tally)?;
+            }
 
-                        self.note_internal_error(&at, &message, tally);
-
-                        continue;
-                    }
+            if self.selection.includes_half(TREE_SCHEMAS_HALF) && !calls.is_empty() {
+                let input = HalfInput {
+                    deltas_before: &[],
+                    other_apis,
                 };
 
-                let expected_text = expected_files.get(name).map(String::as_str);
-                let actual_text = indented_json(&delta);
-
-                self.compare_file(fixture, name, expected_text, Some(&actual_text), tally)?;
+                self.compare_service_replay(fixture, api, &input, &calls, expected_files, tally)?;
             }
         }
 
         Ok(())
+    }
+
+    /// The recorded schema service calls of `api`, none when the fixture has no file for it.
+    fn recorded_calls(
+        &self,
+        fixture: &Fixture,
+        api: &str,
+        expected_files: &ExpectedFiles,
+    ) -> Result<Vec<RecordedCall>, OracleError> {
+        let name = schema_calls_file(api);
+
+        match expected_files.get(&name) {
+            Some(text) => read_schema_calls(&self.expected_path(fixture, &name), text),
+            None => Ok(Vec::new()),
+        }
+    }
+
+    /// Compares one half's delta and diagnostics with their expected files.
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "the half's place in the run: the fixture, the api, the step and what it reads"
+    )]
+    fn compare_half(
+        &mut self,
+        fixture: &Fixture,
+        api: &str,
+        step: &DeltaStep<'_>,
+        input: &HalfInput<'_>,
+        calls: &[RecordedCall],
+        expected_files: &ExpectedFiles,
+        tally: &mut FixtureTally,
+    ) -> Result<(), OracleError> {
+        let half = &step.expected.half;
+
+        let output = match self.subject.run_half(fixture, api, half, input, calls) {
+            SubjectAnswer::Ported(output) => output,
+            SubjectAnswer::NotPorted => return Ok(()),
+            SubjectAnswer::InternalError { message } => {
+                let at = format!("{} (api {api}, half {half})", fixture.path);
+
+                self.note_internal_error(&at, &message, tally);
+
+                return Ok(());
+            }
+        };
+
+        let expected_delta = expected_files.get(step.name).map(String::as_str);
+        let actual_delta = indented_json(&output.delta);
+
+        self.compare_file(
+            fixture,
+            step.name,
+            expected_delta,
+            Some(&actual_delta),
+            tally,
+        )?;
+
+        let diagnostics_name =
+            half_diagnostics_name(step.name).ok_or_else(|| OracleError::Shape {
+                path: self.expected_path(fixture, step.name),
+                problem: format!("a delta file name ends with {DELTA_EXTENSION}"),
+            })?;
+        let expected_diagnostics = expected_files
+            .get(&diagnostics_name)
+            .map_or(NO_HALF_DIAGNOSTICS, String::as_str);
+        let actual_diagnostics = indented_json(&output.diagnostics);
+
+        self.compare_file(
+            fixture,
+            &diagnostics_name,
+            Some(expected_diagnostics),
+            Some(&actual_diagnostics),
+            tally,
+        )
+    }
+
+    /// Answers the recorded calls of `api` with the subject's schema service and compares the
+    /// answers with the recorded ones.
+    fn compare_service_replay(
+        &mut self,
+        fixture: &Fixture,
+        api: &str,
+        input: &HalfInput<'_>,
+        calls: &[RecordedCall],
+        expected_files: &ExpectedFiles,
+        tally: &mut FixtureTally,
+    ) -> Result<(), OracleError> {
+        let at = format!("{} (api {api}, schema service replay)", fixture.path);
+
+        let answers = match self.subject.replay_schema_calls(fixture, api, input, calls) {
+            SubjectAnswer::Ported(answers) => answers,
+            SubjectAnswer::NotPorted => {
+                self.count_service_calls(|counts| {
+                    counts.not_ported += calls.len();
+                    counts.total += calls.len();
+                });
+
+                return Ok(());
+            }
+            SubjectAnswer::InternalError { message } => {
+                self.note_internal_error(&at, &message, tally);
+
+                return Ok(());
+            }
+        };
+
+        if answers.len() != calls.len() {
+            let message = format!(
+                "{} answers to {} recorded calls",
+                answers.len(),
+                calls.len()
+            );
+
+            self.note_internal_error(&at, &message, tally);
+
+            return Ok(());
+        }
+
+        let matched = calls
+            .iter()
+            .zip(&answers)
+            .filter(|(call, answer)| call.answer.as_ref() == answer.as_ref())
+            .count();
+
+        self.count_service_calls(|counts| {
+            counts.matched += matched;
+            counts.total += calls.len();
+        });
+
+        let name = schema_calls_file(api);
+        let actual_text = indented_json(&replayed_calls_value(calls, answers));
+
+        self.compare_file(
+            fixture,
+            &name,
+            expected_files.get(&name).map(String::as_str),
+            Some(&actual_text),
+            tally,
+        )
+    }
+
+    fn count_service_calls(&mut self, count: impl FnOnce(&mut ServiceCalls)) {
+        if let Some(counts) = self.verdict.service_calls.as_mut() {
+            count(counts);
+        }
     }
 
     /// The expected deltas of each api with expected halves, in run order, keyed by api in file
@@ -623,6 +784,50 @@ impl Run<'_> {
             (None, None) => Ok(Vec::new()),
         }
     }
+}
+
+/// The diagnostics file beside the delta file `delta_name`, `None` for a name with no `.json`.
+fn half_diagnostics_name(delta_name: &str) -> Option<String> {
+    delta_name
+        .strip_suffix(DELTA_EXTENSION)
+        .map(|stem| format!("{stem}{HALF_DIAGNOSTICS_EXTENSION}"))
+}
+
+/// The delta file beside the half diagnostics file `name`, `None` for any other file.
+fn delta_name_of(name: &str) -> Option<String> {
+    let Some(OutputFile {
+        output: OutputKind::HalfDiagnostics,
+        ..
+    }) = OutputFile::of(name)
+    else {
+        return None;
+    };
+
+    name.strip_suffix(HALF_DIAGNOSTICS_EXTENSION)
+        .map(|stem| format!("{stem}{DELTA_EXTENSION}"))
+}
+
+/// The schema-calls file the subject's answers give: the recorded calls with their answers
+/// replaced, an absent answer omitted.
+fn replayed_calls_value(calls: &[RecordedCall], answers: Vec<Option<JsonValue>>) -> JsonValue {
+    let entries = calls
+        .iter()
+        .zip(answers)
+        .map(|(call, answer)| {
+            let mut entry = JsonObject::new();
+
+            entry.insert("method".to_owned(), JsonValue::String(call.method.clone()));
+            entry.insert("args".to_owned(), JsonValue::Array(call.args.clone()));
+
+            if let Some(answer) = answer {
+                entry.insert("answer".to_owned(), answer);
+            }
+
+            JsonValue::Object(entry)
+        })
+        .collect();
+
+    JsonValue::Array(entries)
 }
 
 /// The mismatch of a file only the compiler wrote.

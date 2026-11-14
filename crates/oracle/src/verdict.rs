@@ -21,6 +21,17 @@ pub struct FirstFailure {
     pub actual_context: Vec<String>,
 }
 
+/// The schema service calls replayed against the subject's service.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct ServiceCalls {
+    /// The calls answered as the TypeScript service answered them.
+    pub matched: usize,
+    /// Every recorded call of the compared apis.
+    pub total: usize,
+    /// The calls of the apis whose service is not ported.
+    pub not_ported: usize,
+}
+
 /// The outcome of one oracle run.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Verdict {
@@ -38,6 +49,8 @@ pub struct Verdict {
     pub problems: Vec<String>,
     /// The rule ids of the subject's stages against the coverage keys.
     pub rule_ids: Option<RuleIdCheck>,
+    /// The schema service replay, when the selection includes `tree.schemas`.
+    pub service_calls: Option<ServiceCalls>,
 }
 
 impl Verdict {
@@ -70,6 +83,14 @@ impl fmt::Display for Verdict {
             self.differing,
             self.not_ported
         )?;
+
+        if let Some(calls) = &self.service_calls {
+            write!(
+                formatter,
+                "\nservice calls: {} of {}, {} not ported",
+                calls.matched, calls.total, calls.not_ported
+            )?;
+        }
 
         if let Some(check) = &self.rule_ids {
             if check.porting == StagePorting::Partial {

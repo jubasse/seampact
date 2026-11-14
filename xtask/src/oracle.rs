@@ -6,8 +6,8 @@ use camino::Utf8Path;
 use seampact_compiler::oracle::CompilerSubject;
 use seampact_json::JsonValue;
 use seampact_oracle::{
-    Compilation, Fixture, HalfInput, OracleError, OracleSubject, RuleIdRegistry, Selection,
-    SubjectAnswer, Verdict, run_oracle,
+    Compilation, Fixture, HalfInput, HalfOutput, OracleError, OracleSubject, RecordedCall,
+    RuleIdRegistry, Selection, SubjectAnswer, Verdict, run_oracle,
 };
 
 use crate::outcome::StepOutcome;
@@ -29,7 +29,18 @@ impl OracleSubject for NothingPortedSubject {
         _api: &str,
         _half: &str,
         _input: &HalfInput<'_>,
-    ) -> SubjectAnswer<JsonValue> {
+        _calls: &[RecordedCall],
+    ) -> SubjectAnswer<HalfOutput> {
+        SubjectAnswer::NotPorted
+    }
+
+    fn replay_schema_calls(
+        &self,
+        _fixture: &Fixture,
+        _api: &str,
+        _input: &HalfInput<'_>,
+        _calls: &[RecordedCall],
+    ) -> SubjectAnswer<Vec<Option<JsonValue>>> {
         SubjectAnswer::NotPorted
     }
 

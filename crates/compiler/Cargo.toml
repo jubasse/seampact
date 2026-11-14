@@ -8,7 +8,7 @@ license.workspace = true
 publish.workspace = true
 
 [features]
-oracle = ["dep:seampact-oracle"]
+oracle = ["dep:seampact-oracle", "dep:serde", "dep:serde_json"]
 
 [dependencies]
 indexmap.workspace = true
@@ -18,8 +18,17 @@ seampact-ir.workspace = true
 seampact-json.workspace = true
 seampact-load.workspace = true
 seampact-oracle = { workspace = true, optional = true }
+seampact-pass-access-identity.workspace = true
+seampact-pass-access-rights.workspace = true
+seampact-pass-derive-errors.workspace = true
+seampact-pass-derive-wire.workspace = true
+seampact-pass-link.workspace = true
+seampact-pass-tree-nodes.workspace = true
+seampact-pass-tree-schemas.workspace = true
 seampact-pipeline.workspace = true
 seampact-span.workspace = true
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
 thiserror.workspace = true
 
 [dev-dependencies]

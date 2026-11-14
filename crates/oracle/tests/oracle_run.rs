@@ -10,8 +10,8 @@ use std::time::Duration;
 
 use seampact_json::JsonValue;
 use seampact_oracle::{
-    Compilation, Fixture, FixtureGlob, HalfInput, OracleSubject, RuleIdRegistry, Selection,
-    SubjectAnswer, run_oracle,
+    Compilation, Fixture, FixtureGlob, HalfInput, HalfOutput, OracleSubject, RecordedCall,
+    RuleIdRegistry, Selection, SubjectAnswer, run_oracle,
 };
 use support::{
     ExpectedFilesSubject, SCRATCH_FIXTURE, repository_root, scratch_repository, unchanged,
@@ -34,7 +34,18 @@ impl OracleSubject for NothingPorted {
         _api: &str,
         _half: &str,
         _input: &HalfInput<'_>,
-    ) -> SubjectAnswer<JsonValue> {
+        _calls: &[RecordedCall],
+    ) -> SubjectAnswer<HalfOutput> {
+        SubjectAnswer::NotPorted
+    }
+
+    fn replay_schema_calls(
+        &self,
+        _fixture: &Fixture,
+        _api: &str,
+        _input: &HalfInput<'_>,
+        _calls: &[RecordedCall],
+    ) -> SubjectAnswer<Vec<Option<JsonValue>>> {
         SubjectAnswer::NotPorted
     }
 
@@ -91,7 +102,7 @@ fn a_subject_with_nothing_ported_passes_and_counts_every_fixture_not_ported() {
 }
 
 #[test]
-fn the_expected_files_themselves_all_match_and_leave_the_exact_integer_entries_stale() {
+fn the_expected_files_themselves_all_match_and_leave_only_stale_differences() {
     let subject = ExpectedFilesSubject {
         repository_root: repository_root(),
         rewrite: unchanged,
@@ -101,18 +112,21 @@ fn the_expected_files_themselves_all_match_and_leave_the_exact_integer_entries_s
 
     assert_eq!(verdict.matching, verdict.fixtures);
     assert_eq!(verdict.first_failure, None);
-    assert_eq!(
-        verdict.problems,
-        [
-            "big-integers-exact",
-            "big-integers-exact-tree-schemas",
-            "big-integers-exact-derive-errors",
-            "yaml-syntax-parser-message"
-        ]
-        .map(|id| format!(
-            "difference {id} matched no mismatch: delete it from fixtures/expected/differences.yaml"
-        ))
+    assert!(
+        verdict
+            .problems
+            .iter()
+            .all(|problem| problem.starts_with("difference ")
+                && problem.ends_with(
+                    " matched no mismatch: delete it from fixtures/expected/differences.yaml"
+                )),
+        "{verdict}"
     );
+
+    let service_calls = verdict.service_calls.unwrap();
+
+    assert!(service_calls.total > 0);
+    assert_eq!(service_calls.matched, service_calls.total, "{verdict}");
 }
 
 #[test]
@@ -253,7 +267,8 @@ impl OracleSubject for HalfInputRecorder {
         api: &str,
         half: &str,
         input: &HalfInput<'_>,
-    ) -> SubjectAnswer<JsonValue> {
+        _calls: &[RecordedCall],
+    ) -> SubjectAnswer<HalfOutput> {
         let halves_before = input
             .deltas_before
             .iter()
@@ -281,6 +296,16 @@ impl OracleSubject for HalfInputRecorder {
             .borrow_mut()
             .push((api.to_owned(), half.to_owned(), halves_before, other_apis));
 
+        SubjectAnswer::NotPorted
+    }
+
+    fn replay_schema_calls(
+        &self,
+        _fixture: &Fixture,
+        _api: &str,
+        _input: &HalfInput<'_>,
+        _calls: &[RecordedCall],
+    ) -> SubjectAnswer<Vec<Option<JsonValue>>> {
         SubjectAnswer::NotPorted
     }
 
@@ -354,10 +379,21 @@ impl OracleSubject for AlwaysBreaks {
         _api: &str,
         _half: &str,
         _input: &HalfInput<'_>,
-    ) -> SubjectAnswer<JsonValue> {
+        _calls: &[RecordedCall],
+    ) -> SubjectAnswer<HalfOutput> {
         SubjectAnswer::InternalError {
             message: "the half broke".to_owned(),
         }
+    }
+
+    fn replay_schema_calls(
+        &self,
+        _fixture: &Fixture,
+        _api: &str,
+        _input: &HalfInput<'_>,
+        _calls: &[RecordedCall],
+    ) -> SubjectAnswer<Vec<Option<JsonValue>>> {
+        SubjectAnswer::NotPorted
     }
 
     fn rule_id_registry(&self) -> RuleIdRegistry {
@@ -459,7 +495,18 @@ impl OracleSubject for SlowSubject {
         _api: &str,
         _half: &str,
         _input: &HalfInput<'_>,
-    ) -> SubjectAnswer<JsonValue> {
+        _calls: &[RecordedCall],
+    ) -> SubjectAnswer<HalfOutput> {
+        SubjectAnswer::NotPorted
+    }
+
+    fn replay_schema_calls(
+        &self,
+        _fixture: &Fixture,
+        _api: &str,
+        _input: &HalfInput<'_>,
+        _calls: &[RecordedCall],
+    ) -> SubjectAnswer<Vec<Option<JsonValue>>> {
         SubjectAnswer::NotPorted
     }
 

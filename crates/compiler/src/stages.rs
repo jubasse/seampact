@@ -1,13 +1,14 @@
 //! The stages the orchestrator runs besides the halves, and the answer of one that is not ported.
 //!
 //! Validate, the relay order, link and finalize are ported by later lanes; until then each answers
-//! [`StageAnswer::NotPorted`], so the run stops there and says where.
+//! [`StageAnswer::NotPorted`], so the run stops there and says where. Link calls its crate, whose
+//! stub answers not ported yet.
 
 use indexmap::IndexMap;
 use seampact_authoring::{RawApi, RawWorkspace};
-use seampact_diagnostics::Diagnostic;
+use seampact_diagnostics::{Diagnostic, InternalError};
 use seampact_ir::{ContractIr, SourceMap};
-use seampact_pipeline::{DraftIr, Half};
+use seampact_pipeline::{DraftIr, Half, PassError};
 
 /// A stage of the orchestrator, named where a run reaches one that is not ported.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -86,13 +87,20 @@ pub fn workspace_relay_order(_workspace: &RawWorkspace) -> StageAnswer<RelayOrde
 
 /// Links every api's derived draft, in workspace order; answers the diagnostics it reports, each
 /// under the api it belongs to.
-#[must_use]
+///
+/// # Errors
+///
+/// An [`InternalError`] from the link pass.
 pub fn link_workspace(
-    _drafts: &IndexMap<String, DraftIr>,
-    _workspace: &RawWorkspace,
-    _imports: &IndexMap<String, ContractIr>,
-) -> StageAnswer<Vec<(String, Diagnostic)>> {
-    StageAnswer::NotPorted
+    drafts: &IndexMap<String, DraftIr>,
+    workspace: &RawWorkspace,
+    imports: &IndexMap<String, ContractIr>,
+) -> Result<StageAnswer<Vec<(String, Diagnostic)>>, InternalError> {
+    match seampact_pass_link::run(drafts, workspace, imports) {
+        Ok(reported) => Ok(StageAnswer::Ported(reported)),
+        Err(PassError::NotPortedYet { .. }) => Ok(StageAnswer::NotPorted),
+        Err(PassError::Internal(internal)) => Err(internal),
+    }
 }
 
 /// Finalizes one api's complete draft, which it takes by value: its parts move into the IR.

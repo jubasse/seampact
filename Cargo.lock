@@ -838,8 +838,17 @@ dependencies = [
  "seampact-json",
  "seampact-load",
  "seampact-oracle",
+ "seampact-pass-access-identity",
+ "seampact-pass-access-rights",
+ "seampact-pass-derive-errors",
+ "seampact-pass-derive-wire",
+ "seampact-pass-link",
+ "seampact-pass-tree-nodes",
+ "seampact-pass-tree-schemas",
  "seampact-pipeline",
  "seampact-span",
+ "serde",
+ "serde_json",
  "thiserror",
 ]
 

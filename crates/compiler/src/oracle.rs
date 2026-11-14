@@ -9,17 +9,24 @@ use seampact_ir::{ContractIr, IrError, SourceMap};
 use seampact_json::JsonValue;
 use seampact_load::{FsReader, FsReaderError, LoadOptions, LoadRule};
 use seampact_oracle::{
-    Compilation, CompiledApi, Fixture, HalfInput, OracleSubject, RuleIdRegistry, StagePorting,
-    StageRuleIds, SubjectAnswer,
+    Compilation, CompiledApi, Fixture, HalfInput, HalfOutput, OracleSubject, RecordedCall,
+    RuleIdRegistry, StagePorting, StageRuleIds, SubjectAnswer,
 };
+use seampact_pipeline::Half;
 use thiserror::Error;
 
 use crate::{PipelineApiResult, PipelineOptions, PipelineResult, PipelineRun, compile_workspace};
 
 mod half;
+mod recorded_service;
+
+pub use recorded_service::RecordedSchemaService;
 
 /// The stage name of the load rules: the second segment of their ids.
 const LOAD_STAGE: &str = "load";
+
+/// The stage name of the link rules.
+const LINK_STAGE: &str = "link";
 
 /// Why a fixture could not be compiled at all.
 #[derive(Debug, Error)]
@@ -54,8 +61,11 @@ impl OracleSubject for CompilerSubject {
         api: &str,
         half: &str,
         input: &HalfInput<'_>,
-    ) -> SubjectAnswer<JsonValue> {
-        match half::run_fixture_half(&self.loaded_fixture, fixture, api, half, input) {
+        calls: &[RecordedCall],
+    ) -> SubjectAnswer<HalfOutput> {
+        let answer = half::run_fixture_half(&self.loaded_fixture, fixture, api, half, input, calls);
+
+        match answer {
             Ok(answer) => answer,
             Err(failure) => SubjectAnswer::InternalError {
                 message: failure.to_string(),
@@ -63,15 +73,51 @@ impl OracleSubject for CompilerSubject {
         }
     }
 
+    fn replay_schema_calls(
+        &self,
+        _fixture: &Fixture,
+        _api: &str,
+        _input: &HalfInput<'_>,
+        _calls: &[RecordedCall],
+    ) -> SubjectAnswer<Vec<Option<JsonValue>>> {
+        // The replay builds the service with `run_tree_schemas`, which has no port yet.
+        SubjectAnswer::NotPorted
+    }
+
     fn rule_id_registry(&self) -> RuleIdRegistry {
         RuleIdRegistry {
-            stages: vec![StageRuleIds {
-                stage: LOAD_STAGE,
-                rule_ids: LoadRule::RULE_IDS,
-            }],
+            stages: rule_id_stages(),
             porting: StagePorting::Partial,
         }
     }
+}
+
+/// The rule ids of every stage, each from the crate that reports them.
+fn rule_id_stages() -> Vec<StageRuleIds> {
+    let half_stage = |half: Half, rule_ids| StageRuleIds {
+        stage: half.pass().as_str(),
+        rule_ids,
+    };
+
+    vec![
+        StageRuleIds {
+            stage: LOAD_STAGE,
+            rule_ids: LoadRule::RULE_IDS,
+        },
+        half_stage(Half::TreeSchemas, seampact_pass_tree_schemas::RULE_IDS),
+        half_stage(Half::TreeNodes, seampact_pass_tree_nodes::RULE_IDS),
+        half_stage(
+            Half::AccessIdentity,
+            seampact_pass_access_identity::RULE_IDS,
+        ),
+        half_stage(Half::AccessRights, seampact_pass_access_rights::RULE_IDS),
+        half_stage(Half::DeriveWire, seampact_pass_derive_wire::RULE_IDS),
+        half_stage(Half::DeriveErrors, seampact_pass_derive_errors::RULE_IDS),
+        StageRuleIds {
+            stage: LINK_STAGE,
+            rule_ids: seampact_pass_link::RULE_IDS,
+        },
+    ]
 }
 
 /// Compiles the fixture, without the `imports` option: a fixture whose workspace declares

@@ -21,6 +21,8 @@ export type DifferenceOutput =
   | "diagnostics"
   | "source-map"
   | "halves"
+  | "half-diagnostics"
+  | "schema-calls"
   | "openapi"
   | "generated";
 

@@ -4,6 +4,7 @@
 use camino::{Utf8Path, Utf8PathBuf};
 use indexmap::IndexMap;
 use seampact_js::cmp_utf16;
+use seampact_json::JsonValue;
 
 use crate::fixtures::{
     EXPECTED_DIRECTORY, OWN_EXPECTED_ENTRIES, child_directories, child_entries, file_name_of,
@@ -35,11 +36,9 @@ pub enum OutputKind {
     SourceMap,
     /// `halves/<api>/<NN>-<half>.json`.
     Halves,
-    /// `halves/<api>/<NN>-<half>.diagnostics.json`, read by no comparison yet.
-    #[serde(skip_deserializing)]
+    /// `halves/<api>/<NN>-<half>.diagnostics.json`.
     HalfDiagnostics,
-    /// `schema-calls/<api>.json`, read by no comparison yet.
-    #[serde(skip_deserializing)]
+    /// `schema-calls/<api>.json`.
     SchemaCalls,
     /// `OpenAPI` documents, not compared yet.
     Openapi,
@@ -111,6 +110,81 @@ fn half_of_stem(stem: &str) -> Option<&str> {
     let is_position = !position.is_empty() && position.chars().all(|digit| digit.is_ascii_digit());
 
     is_position.then_some(half)
+}
+
+/// One call a half after `tree.schemas` made to the schema service, read from
+/// `schema-calls/<api>.json`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RecordedCall {
+    /// The TypeScript method name: `typeUse`, `queryWire`, `checkExample`, `checkTextExample`.
+    pub method: String,
+    /// The positional arguments, as the TypeScript passed them.
+    pub args: Vec<JsonValue>,
+    /// What the TypeScript service answered, `None` where it answered `undefined`.
+    pub answer: Option<JsonValue>,
+}
+
+/// The schema-calls file of `api`, relative to the fixture's expected directory.
+#[must_use]
+pub fn schema_calls_file(api: &str) -> String {
+    format!("schema-calls/{api}.json")
+}
+
+/// The recorded calls of a schema-calls file, in file order.
+///
+/// # Errors
+///
+/// A [`OracleError::Json`] when `text` is no JSON, a [`OracleError::Shape`] naming `path` when it
+/// is not an array of `{ "method", "args", "answer"? }`.
+pub fn read_schema_calls(path: &Utf8Path, text: &str) -> Result<Vec<RecordedCall>, OracleError> {
+    let value: JsonValue = serde_json::from_str(text).map_err(|source| OracleError::Json {
+        path: path.to_owned(),
+        source,
+    })?;
+    let shape_error = |problem: String| OracleError::Shape {
+        path: path.to_owned(),
+        problem,
+    };
+
+    let JsonValue::Array(entries) = value else {
+        return Err(shape_error(
+            "a schema-calls file is a JSON array: rewrite it with the oracle dump".to_owned(),
+        ));
+    };
+
+    entries
+        .into_iter()
+        .enumerate()
+        .map(|(index, entry)| {
+            recorded_call_of(entry).map_err(|problem| shape_error(format!("/{index}: {problem}")))
+        })
+        .collect()
+}
+
+fn recorded_call_of(entry: JsonValue) -> Result<RecordedCall, String> {
+    let JsonValue::Object(mut members) = entry else {
+        return Err("a call is an object".to_owned());
+    };
+
+    let Some(JsonValue::String(method)) = members.remove("method") else {
+        return Err("a call has a string method".to_owned());
+    };
+
+    let Some(JsonValue::Array(args)) = members.remove("args") else {
+        return Err("a call has an args array".to_owned());
+    };
+
+    let answer = members.remove("answer");
+
+    if let Some(unknown) = members.keys().next() {
+        return Err(format!("a call has no member {unknown}"));
+    }
+
+    Ok(RecordedCall {
+        method,
+        args,
+        answer,
+    })
 }
 
 /// The expected directory of a fixture.
@@ -255,5 +329,36 @@ mod tests {
             Some(OutputKind::SchemaCalls)
         );
         assert_eq!(OutputFile::of("notes.txt"), None);
+    }
+
+    #[test]
+    fn a_schema_calls_file_reads_its_calls_with_an_absent_answer_as_none() {
+        let text = r#"[
+            {"method": "typeUse", "args": ["/a", "input"], "answer": {"kind": "ref", "schema": "A"}},
+            {"method": "queryWire", "args": ["/b"]}
+        ]"#;
+        let calls = read_schema_calls(Utf8Path::new("calls.json"), text).unwrap();
+
+        assert_eq!(calls.len(), 2);
+        assert_eq!(calls[0].method, "typeUse");
+        assert_eq!(calls[0].args.len(), 2);
+        assert!(calls[0].answer.is_some());
+        assert_eq!(calls[1].answer, None);
+    }
+
+    #[test]
+    fn a_schema_calls_file_of_another_shape_is_refused_with_the_call_named() {
+        for (text, problem) in [
+            ("{}", "a JSON array"),
+            (r#"[{"method": "typeUse"}]"#, "/0: a call has an args array"),
+            (
+                r#"[{"method": "typeUse", "args": [], "extra": 1}]"#,
+                "/0: a call has no member extra",
+            ),
+        ] {
+            let failure = read_schema_calls(Utf8Path::new("calls.json"), text).unwrap_err();
+
+            assert!(failure.to_string().contains(problem), "{text}: {failure}");
+        }
     }
 }

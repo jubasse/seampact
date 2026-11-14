@@ -10,8 +10,8 @@ use std::fs;
 use camino::{Utf8Path, Utf8PathBuf};
 use seampact_json::JsonValue;
 use seampact_oracle::{
-    Compilation, CompiledApi, DIAGNOSTICS_FILE, Fixture, HalfInput, OracleSubject, RuleIdRegistry,
-    SubjectAnswer, expected_directory_of,
+    Compilation, CompiledApi, DIAGNOSTICS_FILE, Fixture, HalfInput, HalfOutput, OracleSubject,
+    RecordedCall, RuleIdRegistry, SubjectAnswer, expected_directory_of,
 };
 
 /// The repository root, two levels above this crate.
@@ -101,11 +101,31 @@ impl OracleSubject for ExpectedFilesSubject {
         api: &str,
         half: &str,
         _input: &HalfInput<'_>,
-    ) -> SubjectAnswer<JsonValue> {
+        _calls: &[RecordedCall],
+    ) -> SubjectAnswer<HalfOutput> {
         let name = self.half_file_name(fixture, api, half);
         let text = self.expected_text(fixture, &name).unwrap();
+        let diagnostics_name = name.replace(".json", ".diagnostics.json");
+        let diagnostics = self
+            .expected_text(fixture, &diagnostics_name)
+            .map_or(JsonValue::Array(Vec::new()), |text| {
+                serde_json::from_str(&text).unwrap()
+            });
 
-        SubjectAnswer::Ported(serde_json::from_str(&text).unwrap())
+        SubjectAnswer::Ported(HalfOutput {
+            delta: serde_json::from_str(&text).unwrap(),
+            diagnostics,
+        })
+    }
+
+    fn replay_schema_calls(
+        &self,
+        _fixture: &Fixture,
+        _api: &str,
+        _input: &HalfInput<'_>,
+        calls: &[RecordedCall],
+    ) -> SubjectAnswer<Vec<Option<JsonValue>>> {
+        SubjectAnswer::Ported(calls.iter().map(|call| call.answer.clone()).collect())
     }
 
     fn rule_id_registry(&self) -> RuleIdRegistry {
