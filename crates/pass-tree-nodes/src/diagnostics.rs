@@ -259,11 +259,6 @@ pub(crate) struct TreeNodesDiagnosticOptions {
     pub(crate) related: Vec<RelatedLocation>,
 }
 
-/// Whether the origin is a layer a diagnostic can point at, which no core declaration is.
-pub(crate) fn is_diagnostic_origin(_origin: &Origin) -> Result<bool, PassError> {
-    Err(not_ported_yet("isDiagnosticOrigin"))
-}
-
 /// The origin a diagnostic is located at: `origin`, or `fallback` for a core declaration.
 pub(crate) fn tree_nodes_locate(
     _origin: &Origin,

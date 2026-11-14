@@ -4,7 +4,6 @@
 use std::collections::HashSet;
 
 use seampact_diagnostics::RuleId;
-use seampact_ir::Origin;
 use seampact_pipeline::PassError;
 
 use crate::not_ported::not_ported_yet;
@@ -151,8 +150,4 @@ pub(crate) fn access_rights_reporter() -> AccessRightsReporter {
         reported: HashSet::new(),
         queued: Vec::new(),
     }
-}
-
-pub(crate) fn is_diagnostic_origin(_origin: &Origin) -> Result<bool, PassError> {
-    Err(not_ported_yet("isDiagnosticOrigin"))
 }
