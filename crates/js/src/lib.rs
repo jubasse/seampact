@@ -10,6 +10,7 @@
 //! lint; use `.get(&key)` and handle the absence.
 
 mod key_order;
+mod list_index;
 mod number_text;
 mod utf16_order;
 mod white_space;
@@ -17,6 +18,7 @@ mod white_space;
 pub use key_order::{
     InsertionOrderedMap, MAX_ARRAY_INDEX, array_index_value, js_key_order, reorder_in_js_key_order,
 };
+pub use list_index::list_index_of_number_text;
 pub use number_text::FiniteNumber;
 pub use utf16_order::{Utf16Key, cmp_utf16};
 pub use white_space::is_ecmascript_white_space;

@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use seampact_js::array_index_value;
+use seampact_js::list_index_of_number_text;
 use seampact_json::JsonValue;
 
 use super::Expander;
@@ -112,8 +112,8 @@ impl Expander<'_, '_> {
     /// The node `fragment` (a JSON Pointer) points at in `file`: its root when there is no
     /// fragment. `None` when it points at nothing.
     ///
-    /// A list segment is read as an array index (a canonical decimal): the TypeScript took
-    /// `Number(segment)`, which also read `1.0`, ` 1` and `0x1`.
+    /// A list segment is read as `Number(segment)` is, so `01`, `1.0`, ` 1`, `0x1` and the empty
+    /// segment are indexes.
     pub(crate) fn navigate<'file>(
         &mut self,
         file: &'file ParsedFile,
@@ -134,7 +134,7 @@ impl Expander<'_, '_> {
                     pairs.get(position)?.value.as_ref()?
                 }
                 YamlKind::Sequence(items) => {
-                    items.get(usize::try_from(array_index_value(&segment)?).ok()?)?
+                    items.get(list_index_of_number_text(&segment, items.len())?)?
                 }
                 YamlKind::Scalar { .. } | YamlKind::Alias(_) => return None,
             };
