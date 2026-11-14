@@ -58,7 +58,7 @@ Each row is a known trap. Use the shared helper named in the row, never a local 
 - Acceptance is the oracle: the expected outputs in `fixtures/expected/` (IR, diagnostics, source maps, per-half deltas), compared by the Rust harness. A difference is accepted only when exactly one entry of `fixtures/expected/differences.yaml` covers it; an entry that covers no difference is stale and fails the gate.
 - Loop: build, run the touched crate's tests and the oracle on the brief's fixture subset, read the first mismatch (fixture, file, JSON pointer), fix, repeat. Never print whole IR or OpenAPI files.
 - Restart rule: a module that still fails the oracle after 3 loops on the same mismatch is stopped. Commit what is green, write the mismatch and what was tried in the report, and hand back. The lead amends the brief or this file and a fresh agent ports the module again from the branch tip, after the lead's commit that deletes the failed module's files; the failed attempt is not repaired.
-- A pass half starts from the expected delta of the half before it and compares its own delta.
+- A pass half starts from the expected deltas of the halves before it, reads the schema service from the recorded calls (`schema-calls/<api>.json`), and compares its own delta and diagnostics (`<NN>-<half>.diagnostics.json`); the Rust schema service is checked against the same records ([passes](docs/maintainers/rust-design/passes.md), sections 4 and 5).
 
 ## 5. No shortcuts
 
@@ -70,7 +70,7 @@ Each row is a known trap. Use the shared helper named in the row, never a local 
 ## 6. Tests
 
 - The fixtures, goldens and spec vectors are the main suite.
-- Port as Rust tests of the same behaviour (not copies) the TypeScript tests that fixtures do not cover: finalize (collisions, prune, canonical order, serialisation, source map, reference, published packs), link relays, derive errors and wire diagnostics, access diagnostics, the load limits and positions (CPU timing tests become benchmarks), validate diagnostics. Tree and pipeline: only their stable bricks (names, paths, pointers, the draft format).
+- The oracle compares each half's delta and diagnostics, and the TypeScript tests of the passes, link and validate are converted to fixtures. Port as Rust tests of the same behaviour (not copies) only what no fixture reaches: cases built on a fake service or context, the section 2 edge rows below, the stable bricks (naming, templates, the diagnostic text helpers, the IR helpers, names, paths, pointers, the draft format), and the TypeScript tests outside the passes that fixtures do not cover: finalize (collisions, prune, canonical order, serialisation, source map, reference, published packs), the load limits and positions (CPU timing tests become benchmarks).
 - Read a TypeScript test only to list the behaviours it checks, then write the Rust tests.
 - Each section 2 row a ported function touches gets Rust tests on its edge values (`1e-17`, `-0`, `2^53 + 1`, a non-ASCII key, an astral character), even when the TypeScript tests have none: the oracle holds only what the fixtures produce, so a green first run proves nothing about them.
 - A helper function in a `tests/` crate returns `Result` or carries `#[expect(clippy::unwrap_used, reason = "...")]`: the test exemptions of `clippy.toml` cover `#[test]` functions only.
