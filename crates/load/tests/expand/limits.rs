@@ -378,8 +378,8 @@ fn the_text_limit_counts_utf16_units_not_characters() {
 }
 
 /// Loads `entry` of a memory workspace: the merge of layers is the loader's, not the expander's.
-fn load_memory_workspace(files: &[(&str, &str)], entry: &str) -> seampact_load::LoadOutput {
-    let reader = MemoryReader::new(owned(files));
+fn load_memory_workspace(files: Vec<(String, String)>, entry: &str) -> seampact_load::LoadOutput {
+    let reader = MemoryReader::new(files);
 
     load_workspace(&LoadOptions {
         reader: &reader,
@@ -423,12 +423,7 @@ fn many_apis_over_one_shared_layer_end_at_the_expansion_limit() {
     files.push(("workspace.yaml".to_owned(), workspace));
     files.push(("shared.yaml".to_owned(), format!("conventions:\n{shared}")));
 
-    let reader = MemoryReader::new(files);
-    let output = load_workspace(&LoadOptions {
-        reader: &reader,
-        entry: "workspace.yaml",
-    })
-    .expect("no internal error");
+    let output = load_memory_workspace(files, "workspace.yaml");
 
     assert_eq!(rules_of(&output), ["expansion-limit"]);
     assert!(output.workspace.apis.len() < apis);
@@ -445,7 +440,7 @@ fn an_api_overriding_every_leaf_of_a_large_pack_merges_in_work_linear_in_its_siz
             .collect()
     };
     let output = load_memory_workspace(
-        &[
+        owned(&[
             (
                 "api.yaml",
                 &format!(
@@ -460,7 +455,7 @@ fn an_api_overriding_every_leaf_of_a_large_pack_merges_in_work_linear_in_its_siz
                     conventions(1)
                 ),
             ),
-        ],
+        ]),
         "api.yaml",
     );
 
