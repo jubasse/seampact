@@ -84,10 +84,31 @@ fn tag_of(value: &serde_json::Value, definition: &str, tag_member: &str) -> Resu
     }
 }
 
-/// Writes a known variant: the tag member, then the variant's members.
+/// The unions TypeScript writes with `id` before the tag: the `schemes` and `identities`
+/// declarations. A draft keeps the member order its writer gave, so the half oracle sees it.
+const TAG_AFTER_ID_UNIONS: &[&str] = &["Scheme", "Identity"];
+
+/// Where a union writes its tag member among the variant's members.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TagPlace {
+    First,
+    AfterId,
+}
+
+fn tag_place(definition: &str) -> TagPlace {
+    if TAG_AFTER_ID_UNIONS.contains(&definition) {
+        TagPlace::AfterId
+    } else {
+        TagPlace::First
+    }
+}
+
+/// Writes a known variant: the tag member, then the variant's members, or the tag right after
+/// `id` for the unions [`TAG_AFTER_ID_UNIONS`] names.
 fn serialize_tagged<T: Serialize, S: Serializer>(
     tag_member: &str,
     tag: &str,
+    place: TagPlace,
     variant: &T,
     serializer: S,
 ) -> Result<S::Ok, S::Error> {
@@ -99,8 +120,16 @@ fn serialize_tagged<T: Serialize, S: Serializer>(
         )));
     };
 
+    let position = match place {
+        TagPlace::First => 0,
+        TagPlace::AfterId => members
+            .keys()
+            .position(|member| member == "id")
+            .map_or(0, |id_position| id_position + 1),
+    };
+
     members.shift_insert(
-        0,
+        position,
         tag_member.to_owned(),
         serde_json::Value::String(tag.to_owned()),
     );
@@ -114,7 +143,7 @@ pub(crate) mod scalar_type_use_member {
     use serde::de::Error as _;
     use serde::{Deserialize, Deserializer, Serializer};
 
-    use super::serialize_tagged;
+    use super::{TagPlace, serialize_tagged};
     use crate::{ScalarTypeUse, TypeUse};
 
     /// The tag member of a type use.
@@ -127,7 +156,13 @@ pub(crate) mod scalar_type_use_member {
         type_use: &ScalarTypeUse,
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
-        serialize_tagged(TAG_MEMBER, SCALAR_TAG, type_use, serializer)
+        serialize_tagged(
+            TAG_MEMBER,
+            SCALAR_TAG,
+            TagPlace::First,
+            type_use,
+            serializer,
+        )
     }
 
     pub(crate) fn deserialize<'de, D: Deserializer<'de>>(
@@ -185,7 +220,7 @@ macro_rules! ir_unions {
                 fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
                     match self {
                         $(Self::$variant(variant) => {
-                            serialize_tagged($tag_member, $tag, variant, serializer)
+                            serialize_tagged($tag_member, $tag, tag_place(stringify!($name)), variant, serializer)
                         })+
                         Self::Unknown(variant) => variant.raw().serialize(serializer),
                     }
@@ -358,6 +393,14 @@ mod tests {
         assert!(matches!(&key, SchemeKey::Value(variant) if variant.value == "secret"));
         assert_eq!(key.tag(), "value");
         assert_eq!(serde_json::to_string(&key).unwrap(), text);
+    }
+
+    #[test]
+    fn a_scheme_writes_its_tag_after_its_id_as_typescript_does() {
+        let text = r#"{"id":"bearer","kind":"bearer","origin":{"layer":"api","pointer":"/schemes/bearer"}}"#;
+        let scheme: Scheme = serde_json::from_str(text).unwrap();
+
+        assert_eq!(serde_json::to_string(&scheme).unwrap(), text);
     }
 
     #[test]
