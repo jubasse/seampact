@@ -60,7 +60,7 @@ Repository conventions every agent follows. Your task prompt adds the task, the 
 
 ## Rust (2.0.0 port)
 
-- Rust work follows [PORTING.md](PORTING.md) and the skills `seampact-rust` (how Rust is written here, over `rust-best-practices`) and `seampact-rust-port-ts` (the port procedure).
+- Rust work follows [PORTING.md](PORTING.md) and the skills `seampact-rust` (how Rust is written here), `seampact-rust-practice` (general Rust practice, condensed from `rust-best-practices`) and `seampact-rust-port-ts` (the port procedure).
 - Toolchain from rustup (`export PATH=$HOME/.cargo/bin:$PATH`); the target dir stays inside your worktree (`unset CARGO_TARGET_DIR RUSTC_WRAPPER`).
 - The gate of a Rust change is PORTING.md section 8 plus the oracle.
 
