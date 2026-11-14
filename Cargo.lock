@@ -1006,7 +1006,12 @@ dependencies = [
 name = "seampact-pass-tree-schemas"
 version = "2.0.0"
 dependencies = [
+ "indexmap",
  "seampact-diagnostics",
+ "seampact-ir",
+ "seampact-json",
+ "seampact-naming",
+ "seampact-pass-tree-shared",
  "seampact-pipeline",
 ]
 
