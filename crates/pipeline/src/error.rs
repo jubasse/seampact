@@ -1,6 +1,7 @@
 //! How a half fails: a function not ported yet, or a bug.
 
 use seampact_diagnostics::InternalError;
+use seampact_ir::NarrowUnionError;
 
 /// Why a half or a schema service call gave no answer.
 ///
@@ -19,8 +20,18 @@ pub enum PassError {
     Internal(#[from] InternalError),
 }
 
+/// A failed narrowing is a bug, as [`InternalError`]'s conversion says.
+impl From<NarrowUnionError> for PassError {
+    #[track_caller]
+    fn from(error: NarrowUnionError) -> Self {
+        Self::Internal(InternalError::from(error))
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use seampact_ir::{KnownSignatureVerify, SignatureVerify};
+
     use super::*;
 
     #[test]
@@ -35,6 +46,20 @@ mod tests {
             }
             .to_string(),
             "not ported yet: treeNodesRun"
+        );
+    }
+
+    #[test]
+    fn a_failed_narrowing_is_an_internal_error_naming_the_union_and_tag() {
+        let open: SignatureVerify = serde_json::from_str(r#"{"verify":"hardware"}"#).unwrap();
+        let narrowed = KnownSignatureVerify::try_from(open).map_err(PassError::from);
+        let Err(PassError::Internal(error)) = narrowed else {
+            panic!("an internal error expected, got {narrowed:?}");
+        };
+
+        assert_eq!(
+            error.what(),
+            "the SignatureVerify variant `hardware` is not known to this compiler"
         );
     }
 }
