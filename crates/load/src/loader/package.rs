@@ -7,7 +7,6 @@
 //! `*`, which npm allows, are refused too: `progra~1` is a Windows short name for another
 //! directory, and `*` a wildcard for any tool that globs the path.
 
-use seampact_authoring::JsonObjectExt;
 use seampact_diagnostics::{InternalError, diagnostic_inert};
 use seampact_js::FiniteNumber;
 use seampact_json::JsonValue;
@@ -16,6 +15,7 @@ use seampact_span::Span;
 use super::Loader;
 use crate::ROOT_BOUNDARY;
 use crate::budget::utf16_length;
+use crate::expand::parse_json_document;
 use crate::paths::join_path;
 use crate::report::LoadRule;
 use crate::source::{CheckedFile, FileKind, OnMissing, PathContext};
@@ -24,6 +24,10 @@ const PACKAGE_NAME_MAX: u64 = 214;
 const NODE_MODULES: &str = "node_modules";
 const PACKAGE_MANIFEST: &str = "package.json";
 const PACK_ROLE: &str = "pack";
+
+/// The nesting of a `package.json` past which it is refused instead of parsed: `JSON.parse` has no
+/// limit short of the stack, and the recursive reader and drop of the parsed value need one.
+const PACKAGE_MAX_NESTING: usize = 1_000;
 
 /// A pack package the walk found.
 pub(super) struct PackageFound {
@@ -194,24 +198,36 @@ impl Loader<'_, '_> {
         let Some(text) = self.package_text(&manifest_path)? else {
             return Ok(PackageStep::Continue);
         };
-        let Ok(json) = serde_json::from_str::<JsonValue>(&text) else {
-            self.report(
-                LoadRule::PackPackage,
-                format!("'{manifest_path}' is not valid JSON"),
-                "fix the package.json",
-                at,
-            )?;
+        let json = match parse_json_document(&text, PACKAGE_MAX_NESTING) {
+            Ok(Some(json)) => json,
+            Ok(None) => {
+                self.report(
+                    LoadRule::PackPackage,
+                    format!("'{manifest_path}' nests deeper than {PACKAGE_MAX_NESTING} levels"),
+                    "flatten the package.json",
+                    at,
+                )?;
 
-            return Ok(PackageStep::Refused);
+                return Ok(PackageStep::Refused);
+            }
+            Err(_) => {
+                self.report(
+                    LoadRule::PackPackage,
+                    format!("'{manifest_path}' is not valid JSON"),
+                    "fix the package.json",
+                    at,
+                )?;
+
+                return Ok(PackageStep::Refused);
+            }
         };
-        let package_json = match &json {
-            JsonValue::Object(object) => Some(object),
-            _ => None,
-        };
-        let seampact = package_json.and_then(|object| object.object("seampact"));
+        let seampact = json.get("seampact");
         let entry = seampact
-            .filter(|seampact| seampact.string("role") == Some(PACK_ROLE))
-            .and_then(|seampact| seampact.string("pack"));
+            .filter(|seampact| {
+                seampact.get("role").and_then(serde_json::Value::as_str) == Some(PACK_ROLE)
+            })
+            .and_then(|seampact| seampact.get("pack"))
+            .and_then(serde_json::Value::as_str);
 
         let Some(entry) = entry else {
             self.report(
@@ -223,9 +239,23 @@ impl Loader<'_, '_> {
 
             return Ok(PackageStep::Refused);
         };
-        let version = package_json
-            .and_then(|object| object.member("version"))
-            .cloned();
+        let Ok(version) = json
+            .get("version")
+            .cloned()
+            .map(JsonValue::try_from)
+            .transpose()
+        else {
+            self.report(
+                LoadRule::PackPackage,
+                format!(
+                    "the 'version' of '{manifest_path}' is a number beyond what a contract can hold"
+                ),
+                "write the version as a string such as \"1.0.0\"",
+                at,
+            )?;
+
+            return Ok(PackageStep::Refused);
+        };
         let from = PathContext {
             path: &manifest_path,
             boundary: dir,

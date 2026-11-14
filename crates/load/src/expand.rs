@@ -35,6 +35,7 @@ use crate::source::{FileStore, ParsedFile, node_span, pair_span};
 use crate::yaml::{YamlKind, YamlNode, YamlPair};
 
 pub use self::finish_refs::VisibleDeclaration;
+pub(crate) use self::json_file::parse_json_document;
 pub use self::mapping_index::{MappingIndex, key_string};
 
 /// The parts of one load an [`Expander`] borrows, for the loader that works between two expansions.

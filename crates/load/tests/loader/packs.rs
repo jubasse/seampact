@@ -293,3 +293,45 @@ fn a_pack_found_through_two_names_of_a_clash_keeps_the_first() {
     assert_eq!(load.diagnostic(0).related.len(), 1);
     assert_eq!(load.diagnostic(0).related[0].message, "also named here");
 }
+
+fn pack_in_package_with_manifest(manifest: &str) -> Load {
+    run(&[
+        ("api.yaml", "api: { name: t }\npacks: ['@acme/p']\n"),
+        ("node_modules/@acme/p/package.json", manifest),
+        (
+            "node_modules/@acme/p/pack.yaml",
+            "pack: { name: '@acme/p', version: 1.0.0 }\nrights: { r: {} }\n",
+        ),
+    ])
+}
+
+#[test]
+fn a_package_json_nested_deeper_than_serde_allows_by_default_still_loads() {
+    let depth = 200;
+    let nested = format!("{}1{}", "[".repeat(depth), "]".repeat(depth));
+    let manifest = package_json(&format!(r#","deep":{nested}"#));
+
+    pack_in_package_with_manifest(&manifest).assert_clean();
+}
+
+#[test]
+fn a_package_json_holding_a_number_beyond_f64_in_an_unread_member_still_loads() {
+    let manifest = package_json(r#","engines":{"node":1e999}"#);
+
+    pack_in_package_with_manifest(&manifest).assert_clean();
+}
+
+#[test]
+fn a_package_json_nested_past_the_cap_is_refused_by_name() {
+    let depth = 1_001;
+    let nested = format!("{}1{}", "[".repeat(depth), "]".repeat(depth));
+    let manifest = package_json(&format!(r#","deep":{nested}"#));
+    let load = pack_in_package_with_manifest(&manifest);
+
+    assert_eq!(load.rules(), ["pack-package"]);
+    assert!(
+        load.diagnostic(0)
+            .message
+            .contains("nests deeper than 1000")
+    );
+}
