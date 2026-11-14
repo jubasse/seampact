@@ -1,14 +1,16 @@
 //! The stages the orchestrator runs besides the halves, and the answer of one that is not ported.
 //!
-//! Validate, the relay order, link and finalize are ported by later lanes; until then each answers
-//! [`StageAnswer::NotPorted`], so the run stops there and says where. Link calls its crate, whose
-//! stub answers not ported yet.
+//! Validate, the relay order and link are ported; finalize answers [`StageAnswer::NotPorted`] until
+//! its lane lands, so the run stops there and says where. Link calls its crate, which answers not
+//! ported yet for a relay to an imported operation.
 
 use indexmap::IndexMap;
 use seampact_authoring::{RawApi, RawWorkspace};
 use seampact_diagnostics::{Diagnostic, InternalError};
 use seampact_ir::{ContractIr, SourceMap};
 use seampact_pipeline::{DraftIr, Half, PassError};
+
+use crate::relay;
 
 /// A stage of the orchestrator, named where a run reaches one that is not ported.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -74,15 +76,34 @@ pub struct FinalizeRun {
 }
 
 /// Validates the loaded workspace.
-#[must_use]
-pub fn validate_workspace(_workspace: &RawWorkspace) -> StageAnswer<Validated> {
-    StageAnswer::NotPorted
+///
+/// # Errors
+///
+/// An [`InternalError`] from the validate stage.
+pub fn validate_workspace(
+    workspace: &RawWorkspace,
+) -> Result<StageAnswer<Validated>, InternalError> {
+    let validated = seampact_validate::validate_workspace(workspace)?;
+
+    Ok(StageAnswer::Ported(Validated {
+        workspace: validated.workspace,
+        apis: validated
+            .apis
+            .into_iter()
+            .map(|entry| (entry.api, entry.diagnostics))
+            .collect(),
+    }))
 }
 
 /// The relay order of the workspace's apis.
-#[must_use]
-pub fn workspace_relay_order(_workspace: &RawWorkspace) -> StageAnswer<RelayOrder> {
-    StageAnswer::NotPorted
+///
+/// # Errors
+///
+/// An [`InternalError`] from the relay order.
+pub fn workspace_relay_order(
+    workspace: &RawWorkspace,
+) -> Result<StageAnswer<RelayOrder>, InternalError> {
+    relay::workspace_relay_order(workspace).map(StageAnswer::Ported)
 }
 
 /// Links every api's derived draft, in workspace order; answers the diagnostics it reports, each

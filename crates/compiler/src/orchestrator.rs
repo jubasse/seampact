@@ -64,7 +64,7 @@ pub fn compile_workspace(options: &PipelineOptions<'_>) -> Result<PipelineRun, I
 
     run.register_apis();
 
-    let StageAnswer::Ported(validated) = validate_workspace(&run.workspace) else {
+    let StageAnswer::Ported(validated) = validate_workspace(&run.workspace)? else {
         return Ok(PipelineRun::NotPorted(Stage::Validate));
     };
 
@@ -74,7 +74,7 @@ pub fn compile_workspace(options: &PipelineOptions<'_>) -> Result<PipelineRun, I
             .map(|result| PipelineRun::Finished(Box::new(result)));
     }
 
-    let StageAnswer::Ported(relay) = workspace_relay_order(&run.workspace) else {
+    let StageAnswer::Ported(relay) = workspace_relay_order(&run.workspace)? else {
         return Ok(PipelineRun::NotPorted(Stage::RelayOrder));
     };
 

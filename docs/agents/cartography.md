@@ -323,6 +323,7 @@ In pipeline order (ADR 0006 section 1).
 - `crates/pipeline`: The pass pipeline: half names, the draft IR, the half outputs and their merge (with the element-owner rule), the derivation table and roles, the schema service trait, the draft delta convention, the readers over the loaded tree (pointers and origins, tree nodes, inherited settings, conventions, units, declared entries) and the half context.
 - `crates/span`: Source spans of the Rust port: file ids, byte ranges, the file table and the conversion to line and UTF-16 column.
 - `crates/templates`: The template reader of ADR 0002 section 13: a raw template read into the IR's template, with the slots of its place.
+- `crates/validate`: The validate stage: the authoring tree checked against the authoring JSON Schemas, ported from packages/core/compiler/src/validate.
 
 ### `scripts`
 

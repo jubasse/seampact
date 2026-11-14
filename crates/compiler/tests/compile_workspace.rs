@@ -12,6 +12,7 @@ use seampact_compiler::{
 };
 use seampact_diagnostics::Severity;
 use seampact_load::{FsReader, LoadOptions};
+use seampact_pipeline::Half;
 
 fn fixture_directory(path: &str) -> Utf8PathBuf {
     Utf8PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -55,11 +56,12 @@ fn a_load_error_stops_the_run_with_the_sorted_workspace_diagnostics_and_no_api()
 }
 
 #[test]
-fn a_clean_load_reaches_validate_which_is_not_ported() -> Result<(), Box<dyn Error>> {
+fn a_clean_load_passes_validate_and_the_relay_order_and_stops_at_the_first_unported_half()
+-> Result<(), Box<dyn Error>> {
     let run = compile_fixture("reference", "workspace.yaml")?;
 
     assert!(
-        matches!(run, PipelineRun::NotPorted(Stage::Validate)),
+        matches!(run, PipelineRun::NotPorted(Stage::Half(Half::TreeSchemas))),
         "{run:?}"
     );
 

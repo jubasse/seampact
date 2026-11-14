@@ -31,6 +31,7 @@ seampact-pass-tree-shared = { path = "crates/pass-tree-shared", version = "2.0.0
 seampact-pipeline = { path = "crates/pipeline", version = "2.0.0" }
 seampact-span = { path = "crates/span", version = "2.0.0" }
 seampact-templates = { path = "crates/templates", version = "2.0.0" }
+seampact-validate = { path = "crates/validate", version = "2.0.0" }
 # Parse surface and ordered maps; the number features follow the IR types design note, section 3.
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.154", features = ["preserve_order", "arbitrary_precision", "float_roundtrip", "unbounded_depth"] }
