@@ -6,12 +6,14 @@ use camino::Utf8Path;
 
 use crate::oracle::oracle_gate_step;
 use crate::outcome::StepOutcome;
+use crate::prerequisite::missing_node_modules_problem;
 
 /// One gate step that runs a command from the workspace root.
 struct CommandStep {
     name: &'static str,
     program: &'static str,
     arguments: &'static [&'static str],
+    needs_node_modules: bool,
 }
 
 /// The commands of PORTING.md section 8, then the trace check, in run order.
@@ -20,6 +22,7 @@ const COMMAND_STEPS: &[CommandStep] = &[
         name: "fmt",
         program: "cargo",
         arguments: &["fmt", "--all", "--check"],
+        needs_node_modules: false,
     },
     CommandStep {
         name: "clippy",
@@ -33,27 +36,32 @@ const COMMAND_STEPS: &[CommandStep] = &[
             "-D",
             "warnings",
         ],
+        needs_node_modules: false,
     },
     CommandStep {
         name: "nextest",
         program: "cargo",
         arguments: &["nextest", "run", "--workspace", "--run-ignored", "all"],
+        needs_node_modules: false,
     },
     CommandStep {
         name: "deny",
         program: "cargo",
         arguments: &["deny", "check"],
+        needs_node_modules: false,
     },
     CommandStep {
         name: "machete",
         // Started as `cargo machete` under `cargo run`, it reads `machete` as a path to scan.
         program: "cargo-machete",
         arguments: &[],
+        needs_node_modules: false,
     },
     CommandStep {
         name: "trace",
         program: "node",
         arguments: &["scripts/rust/trace-check.ts"],
+        needs_node_modules: true,
     },
 ];
 
@@ -72,6 +80,14 @@ pub fn run_gate(workspace_root: &Utf8Path) -> Vec<StepOutcome> {
 }
 
 fn run_command_step(step: &CommandStep, workspace_root: &Utf8Path) -> StepOutcome {
+    if step.needs_node_modules
+        && let Some(problem) = missing_node_modules_problem(workspace_root)
+    {
+        eprintln!("{}: {problem}", step.name);
+
+        return StepOutcome::Failed { step: step.name };
+    }
+
     let status = Command::new(step.program)
         .args(step.arguments)
         .current_dir(workspace_root)

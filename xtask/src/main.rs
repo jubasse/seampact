@@ -9,6 +9,7 @@
 mod gate;
 mod oracle;
 mod outcome;
+mod prerequisite;
 
 use std::path::Path;
 use std::process::ExitCode;
