@@ -6,7 +6,22 @@
     reason = "functions reached only by stubs until the half's last brief"
 )]
 
+mod attached;
+mod bindings;
+mod examples;
+mod natures;
 mod not_ported;
+mod operations;
+mod read;
+mod registry;
+mod relays;
+mod report;
+mod retry_param;
+mod role_param_fit;
+mod role_param_types;
+mod role_params;
+mod sensitive_params;
+mod triggers;
 
 use seampact_diagnostics::RuleId;
 use seampact_pipeline::{DeriveErrorsOutput, DraftIr, HalfContext, PassError, TreeSchemaService};
