@@ -1,0 +1,32 @@
+src/authoring_validators.rs#validator_for	packages/core/compiler/src/validate/validate.ts#validatorFor
+src/validate.rs#sort_diagnostics	packages/core/compiler/src/validate/validate.ts#sortDiagnostics
+src/validate.rs#validate_document	packages/core/compiler/src/validate/validate.ts#validateDocument
+src/validate.rs#validate_layer	packages/core/compiler/src/validate/validate.ts#validateLayer
+src/validate.rs#validate_workspace	packages/core/compiler/src/validate/validate.ts#validateWorkspace
+src/pointer_text.rs#subject_of	packages/core/compiler/src/validate/diagnostics.ts#subjectOf
+src/problem.rs#marker_of	packages/core/compiler/src/validate/diagnostics.ts#markerOf
+src/pointer_text.rs#last_segment	packages/core/compiler/src/validate/diagnostics.ts#lastSegment
+src/convert.rs#convert_errors	packages/core/compiler/src/validate/diagnostics.ts#convertErrors
+src/convert.rs#convert_one	packages/core/compiler/src/validate/diagnostics.ts#convertOne
+src/convert.rs#invalid_value	packages/core/compiler/src/validate/diagnostics.ts#invalidValue
+src/pointer_text.rs#where_	packages/core/compiler/src/validate/diagnostics.ts#where
+src/problem.rs#mapping_keys_of	packages/core/compiler/src/validate/diagnostics.ts#mappingKeysOf
+src/convert.rs#article	packages/core/compiler/src/validate/diagnostics.ts#article
+src/convert.rs#under	packages/core/compiler/src/validate/diagnostics.ts#under
+src/keyword_problems.rs#invalid_key	packages/core/compiler/src/validate/diagnostics.ts#invalidKey
+src/keyword_problems.rs#reason_required	packages/core/compiler/src/validate/diagnostics.ts#reasonRequired
+src/keyword_problems.rs#example_for	packages/core/compiler/src/validate/diagnostics.ts#exampleFor
+src/problem.rs#description	packages/core/compiler/src/validate/diagnostics.ts#description
+src/marked.rs#convert_marked	packages/core/compiler/src/validate/diagnostics.ts#convertMarked
+src/sentence.rs#sentence	packages/core/compiler/src/validate/diagnostics.ts#sentence
+src/keyword_problems.rs#refused_keyword	packages/core/compiler/src/validate/diagnostics.ts#refusedKeyword
+src/problem.rs#known_keywords	packages/core/compiler/src/validate/diagnostics.ts#knownKeywords
+src/suggest.rs#closest_keyword	packages/core/compiler/src/validate/suggest.ts#closestKeyword
+src/suggest.rs#distance	packages/core/compiler/src/validate/suggest.ts#distance
+src/keyword_problems.rs#unknown_keyword	packages/core/compiler/src/validate/diagnostics.ts#unknownKeyword
+-	packages/core/compiler/src/validate/diagnostics.ts#isHolder	merged: src/roles.rs#role_of
+src/roles.rs#holder_form	packages/core/compiler/src/validate/diagnostics.ts#holderForm
+src/keyword_problems.rs#reserved_name	packages/core/compiler/src/validate/diagnostics.ts#reservedName
+src/sentence.rs#lower_first	packages/core/compiler/src/validate/diagnostics.ts#lowerFirst
+-	packages/core/compiler/src/validate/diagnostics.ts#quote	skip: ported in seampact-diagnostics (src/text.rs)
+-	packages/core/compiler/src/validate/diagnostics.ts#unsafe	skip: ported in seampact-diagnostics (src/text.rs)

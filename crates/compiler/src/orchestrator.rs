@@ -64,7 +64,7 @@ pub fn compile_workspace(options: &PipelineOptions<'_>) -> Result<PipelineRun, I
 
     run.register_apis();
 
-    let StageAnswer::Ported(validated) = validate_workspace(&run.workspace) else {
+    let StageAnswer::Ported(validated) = validate_workspace(&run.workspace)? else {
         return Ok(PipelineRun::NotPorted(Stage::Validate));
     };
 
