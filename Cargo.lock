@@ -963,7 +963,11 @@ dependencies = [
 name = "seampact-pass-access-rights"
 version = "2.0.0"
 dependencies = [
+ "indexmap",
+ "regress",
  "seampact-diagnostics",
+ "seampact-ir",
+ "seampact-json",
  "seampact-pipeline",
 ]
 
