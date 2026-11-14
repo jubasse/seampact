@@ -3,16 +3,11 @@
 
 use std::collections::HashMap;
 
-use camino::Utf8PathBuf;
 use indexmap::IndexMap;
-use seampact_authoring::{ApiLayer, RawApi, RawLayer, RawWorkspace};
-use seampact_diagnostics::{Diagnostic, DiagnosticSink};
-use seampact_ir::{CallerKind, Direction, Layer, Origin, SchemeId, TypeUse};
-use seampact_json::JsonValue;
-use seampact_pipeline::{
-    DraftIr, HalfContext, Inherited, PassError, TreeSchemaExampleIssue, TreeSchemaService,
-    pipeline_conventions,
-};
+use seampact_diagnostics::{Diagnostic, InternalError};
+use seampact_ir::{CallerKind, Direction, SchemeId};
+use seampact_pipeline::PassError;
+use seampact_pipeline::testing::{FakeSchemaService, HalfFixture, raw_api_from_json};
 
 use crate::access::{access_identity_access_schemes, access_identity_caller_kinds};
 use crate::identities::{
@@ -28,119 +23,19 @@ use crate::schemes::{
     access_identity_scheme_kinds, count_of, is_signature_encoding, placeholders_of,
 };
 
-struct SilentService;
-
-impl TreeSchemaService for SilentService {
-    fn type_use(
-        &self,
-        _pointer: &str,
-        _direction: Direction,
-    ) -> Result<Option<TypeUse>, PassError> {
-        Ok(None)
-    }
-
-    fn query_wire(&self, _pointer: &str) -> Result<Option<seampact_ir::QueryWire>, PassError> {
-        Ok(None)
-    }
-
-    fn check_example(
-        &self,
-        _value: &JsonValue,
-        _schema_use: &TypeUse,
-    ) -> Result<Vec<TreeSchemaExampleIssue>, PassError> {
-        Ok(Vec::new())
-    }
-
-    fn check_text_example(
-        &self,
-        _text: &str,
-        _schema_use: &TypeUse,
-    ) -> Result<Vec<TreeSchemaExampleIssue>, PassError> {
-        Ok(Vec::new())
-    }
-}
-
-fn raw_api(text: &str) -> RawApi {
-    let JsonValue::Object(merged) =
-        serde_json::from_str::<JsonValue>(text).expect("the test text is JSON")
-    else {
-        panic!("the test text is not an object");
-    };
-    let mut leaf_origins = IndexMap::new();
-
-    for (key, value) in &merged {
-        collect_origins(value, &format!("/{key}"), &mut leaf_origins);
-    }
-
-    RawApi {
-        name: "a".to_owned(),
-        layers: vec![RawLayer {
-            layer: ApiLayer::Api,
-            file: "layer.yaml".to_owned(),
-            tree: merged.clone(),
-        }],
-        merged,
-        leaf_origins,
-        locations: IndexMap::new(),
-        visibility: IndexMap::new(),
-    }
-}
-
-fn collect_origins(value: &JsonValue, pointer: &str, origins: &mut IndexMap<String, Origin>) {
-    if let JsonValue::Object(object) = value
-        && !object.is_empty()
-    {
-        for (key, item) in object {
-            collect_origins(item, &format!("{pointer}/{key}"), origins);
-        }
-
-        return;
-    }
-
-    origins.insert(
-        pointer.to_owned(),
-        Origin {
-            api: None,
-            layer: Layer::Api,
-            pointer: pointer.to_owned(),
-        },
-    );
-}
-
 // Runs `body` over a reporter of an api written as `text`, and answers what it reported.
 fn with_reporter<R>(
     text: &str,
     body: impl FnOnce(&mut AccessIdentityReporter<'_, '_>) -> R,
-) -> (R, Vec<Diagnostic>) {
-    let raw = raw_api(text);
-    let workspace = RawWorkspace {
-        root: Utf8PathBuf::from("."),
-        apis: vec![raw.clone()],
-        locations: IndexMap::new(),
-        entry: None,
-        config: None,
-    };
-    let conventions = pipeline_conventions(&raw);
-    let inherited = Inherited::new(&raw).expect("the test api has a tree");
-    let relayed: IndexMap<String, DraftIr> = IndexMap::new();
-    let imports = IndexMap::new();
-    let mut sink = DiagnosticSink::new();
-    let result = {
-        let mut context = HalfContext::new(
-            &raw,
-            &workspace,
-            &conventions,
-            &inherited,
-            &relayed,
-            &imports,
-            &mut sink,
-        );
-        let mut reporter = access_identity_reporter(&mut context);
+) -> Result<(R, Vec<Diagnostic>), InternalError> {
+    let mut fixture = HalfFixture::from_json(text)?;
+    let result = fixture.with_context(|context| {
+        let mut reporter = access_identity_reporter(context);
 
         body(&mut reporter)
-    };
+    })?;
 
-    (result, sink.into_diagnostics())
+    Ok((result, fixture.into_diagnostics()))
 }
 
 fn problem(pointer: &str) -> AccessIdentityProblem {
@@ -164,7 +59,8 @@ fn a_problem_is_reported_at_its_pointer_with_its_related_locations() {
         reporter.error(problem("/a/x"))?;
 
         Ok::<_, seampact_diagnostics::InternalError>(reporter.errors())
-    });
+    })
+    .unwrap();
 
     assert_eq!(result, Ok(1));
 
@@ -190,7 +86,8 @@ fn a_pointer_without_an_origin_is_an_internal_error_and_reports_nothing() {
         reporter
             .error(problem("/nowhere"))
             .map_err(|error| error.what().to_owned())
-    });
+    })
+    .unwrap();
 
     let message = result.err().unwrap_or_default();
 
@@ -211,7 +108,8 @@ fn the_once_reporter_reports_a_repeated_problem_once_and_counts_every_one() {
         assert!(once.error(problem("/b")).is_ok());
 
         (once.errors(), base.errors())
-    });
+    })
+    .unwrap();
 
     assert_eq!(errors, 4);
     assert_eq!(base_errors, 0);
@@ -221,7 +119,7 @@ fn the_once_reporter_reports_a_repeated_problem_once_and_counts_every_one() {
 #[test]
 fn a_schema_the_service_does_not_answer_is_an_internal_error_naming_the_pointer() {
     let result = access_identity_schema_use(
-        &SilentService,
+        &FakeSchemaService::new(),
         "/identities/user/principal",
         &Direction::Output,
     );
@@ -277,7 +175,8 @@ fn signature_encodings_and_header_use_values_are_matched_exactly() {
 
 #[test]
 fn entries_come_in_javascript_key_order_and_skip_what_is_no_mapping() {
-    let raw = raw_api(r#"{"schemes":{"b":{},"10":{},"2":{},"é":{},"a":{},"skipped":1}}"#);
+    let raw = raw_api_from_json(r#"{"schemes":{"b":{},"10":{},"2":{},"é":{},"a":{},"skipped":1}}"#)
+        .unwrap();
     let names: Vec<&str> = access_identity_entries(&raw.merged, "schemes")
         .into_iter()
         .map(|(name, _)| name)
@@ -288,7 +187,7 @@ fn entries_come_in_javascript_key_order_and_skip_what_is_no_mapping() {
 
 #[test]
 fn scheme_kinds_are_kept_for_every_written_scheme() {
-    let raw = raw_api(r#"{"schemes":{"a":{"kind":"basic"},"b":{}}}"#);
+    let raw = raw_api_from_json(r#"{"schemes":{"a":{"kind":"basic"},"b":{}}}"#).unwrap();
     let kinds = access_identity_scheme_kinds(&raw);
 
     assert_eq!(kinds.get("a"), Some(&Some("basic".to_owned())));
@@ -322,12 +221,13 @@ fn credential_scheme_lists_are_sorted_by_utf16_code_unit() {
             pointer: "/identities/user".to_owned(),
             raw: written,
             catalogues: &catalogues,
-            schemas: &SilentService,
+            schemas: &FakeSchemaService::new(),
             reporter,
         };
 
         credential_members(&mut entry)
-    });
+    })
+    .unwrap();
     let Ok(Some(lists)) = result else {
         panic!("credential schemes expected, got {result:?}");
     };
@@ -364,12 +264,13 @@ fn a_credential_scheme_naming_an_undeclared_or_signature_scheme_is_reported() {
             pointer: "/identities/user".to_owned(),
             raw: written,
             catalogues: &catalogues,
-            schemas: &SilentService,
+            schemas: &FakeSchemaService::new(),
             reporter,
         };
 
         credential_members(&mut entry)
-    });
+    })
+    .unwrap();
 
     assert!(matches!(result, Ok(None)), "result {result:?}");
 
@@ -391,12 +292,9 @@ fn a_credential_scheme_naming_an_undeclared_or_signature_scheme_is_reported() {
 #[test]
 fn caller_kinds_follow_the_access_kind() {
     use seampact_ir::{Access, IdentityAccess, IdentityId, PublicAccess, Reason};
+    use seampact_pipeline::testing::api_layer_origin;
 
-    let origin = Origin {
-        api: None,
-        layer: Layer::Api,
-        pointer: "/x".to_owned(),
-    };
+    let origin = api_layer_origin("/x");
     let public = Access::Public(PublicAccess {
         reason: Reason::new("open".to_owned()),
         origin: origin.clone(),

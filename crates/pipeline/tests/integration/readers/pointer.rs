@@ -5,7 +5,7 @@ use seampact_pipeline::{
     is_json_list, is_json_object, json_at_pointer, pipeline_origin, pointer_below,
 };
 
-use super::raw_api::{api_origin, single_layer_api};
+use seampact_pipeline::testing::{api_layer_origin, raw_api_from_json, raw_api_from_layers};
 
 fn tree() -> JsonValue {
     serde_json::from_str(r#"{"a":{"b/c":[10,{"~":true}]},"list":[1,2]}"#).unwrap()
@@ -78,21 +78,22 @@ fn json_kind_tests_tell_an_object_from_a_list() {
 
 #[test]
 fn origins_of_nodes_leaves_list_items_and_absent_pointers() {
-    let raw = single_layer_api(
+    let raw = raw_api_from_json(
         r#"{"surfaces":{"app":{"identity":"user","tags":["app"]}},"a~b":{"c/d":1}}"#,
-    );
+    )
+    .unwrap();
 
     assert_eq!(
         pipeline_origin(&raw, "/surfaces/app/identity"),
-        Some(api_origin("/surfaces/app/identity"))
+        Some(api_layer_origin("/surfaces/app/identity"))
     );
     assert_eq!(
         pipeline_origin(&raw, "/surfaces/app/tags/0"),
-        Some(api_origin("/surfaces/app/tags/0"))
+        Some(api_layer_origin("/surfaces/app/tags/0"))
     );
     assert_eq!(
         pipeline_origin(&raw, "/a~0b/c~1d"),
-        Some(api_origin("/a~0b/c~1d"))
+        Some(api_layer_origin("/a~0b/c~1d"))
     );
     assert_eq!(pipeline_origin(&raw, "/surfaces/app/nothing"), None);
     assert_eq!(pipeline_origin(&raw, "no-slash"), None);
@@ -103,10 +104,11 @@ fn an_object_no_leaf_covers_takes_the_last_layer_that_writes_it() {
     use seampact_authoring::ApiLayer;
     use seampact_ir::Layer;
 
-    let raw = super::raw_api::raw_api(&[
+    let raw = raw_api_from_layers(&[
         (ApiLayer::Shared, r#"{"surfaces":{"app":{"identity":"a"}}}"#),
         (ApiLayer::Api, r#"{"surfaces":{"app":{"csrf":true}}}"#),
-    ]);
+    ])
+    .unwrap();
     let origin = pipeline_origin(&raw, "/surfaces/app").unwrap();
 
     assert_eq!(origin.layer, Layer::Api);

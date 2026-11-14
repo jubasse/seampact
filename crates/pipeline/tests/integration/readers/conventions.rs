@@ -7,15 +7,15 @@ use seampact_pipeline::{
     derivation_roles, pipeline_conventions, pipeline_rate_limit_param,
 };
 
-use super::raw_api::{api_origin, raw_api};
 use crate::support::repository_root;
+use seampact_pipeline::testing::{api_layer_origin, raw_api_from_layers};
 
 fn json(text: &str) -> JsonValue {
     serde_json::from_str(text).unwrap()
 }
 
 fn two_layers() -> seampact_authoring::RawApi {
-    raw_api(&[
+    raw_api_from_layers(&[
         (
             ApiLayer::Shared,
             r#"{"conventions":{"bodyLimit":"2MiB","paging":{"maxLimit":100,"default":"cursor"}}}"#,
@@ -24,7 +24,7 @@ fn two_layers() -> seampact_authoring::RawApi {
             ApiLayer::Api,
             r#"{"conventions":{"paging":{"maxLimit":50},"errors":{"derived":{"forbidden":"a.denied"}}}}"#,
         ),
-    ])
+    ]).unwrap()
 }
 
 #[test]
@@ -37,7 +37,7 @@ fn written_values_come_with_their_origins_else_the_core_defaults() {
     assert_eq!(max_limit.value, &json("50"));
     assert_eq!(
         max_limit.origin,
-        Some(api_origin("/conventions/paging/maxLimit"))
+        Some(api_layer_origin("/conventions/paging/maxLimit"))
     );
     assert_eq!(
         conventions
@@ -104,16 +104,17 @@ fn an_unset_key_has_no_default_and_idempotency_defaults_need_idempotency() {
     assert_eq!(conventions.get("rateLimit.header").unwrap(), None);
     assert_eq!(conventions.get("cache.families.minute").unwrap(), None);
     assert_eq!(
-        pipeline_conventions(&raw_api(&[(ApiLayer::Api, "{}")]))
+        pipeline_conventions(&raw_api_from_layers(&[(ApiLayer::Api, "{}")]).unwrap())
             .get("errors.derived")
             .unwrap(),
         None
     );
 
-    let idempotent = raw_api(&[(
+    let idempotent = raw_api_from_layers(&[(
         ApiLayer::Api,
         r#"{"conventions":{"idempotency":{"header":"Idempotency-Key"}}}"#,
-    )]);
+    )])
+    .unwrap();
 
     assert_eq!(
         pipeline_conventions(&idempotent)
@@ -127,7 +128,7 @@ fn an_unset_key_has_no_default_and_idempotency_defaults_need_idempotency() {
 
 #[test]
 fn only_a_leaf_or_an_entry_of_a_map_leaf_is_read() {
-    let raw = raw_api(&[(ApiLayer::Api, "{}")]);
+    let raw = raw_api_from_layers(&[(ApiLayer::Api, "{}")]).unwrap();
     let conventions = pipeline_conventions(&raw);
 
     // A typo, an object, an entry below a value leaf, a key a map leaf refuses, `$include`,
@@ -166,15 +167,17 @@ fn only_a_leaf_or_an_entry_of_a_map_leaf_is_read() {
 
 #[test]
 fn the_rate_limit_param_is_the_written_string_only() {
-    let named = raw_api(&[(
+    let named = raw_api_from_layers(&[(
         ApiLayer::Api,
         r#"{"conventions":{"rateLimit":{"param":"retryAfter"}}}"#,
-    )]);
-    let none = raw_api(&[(ApiLayer::Api, "{}")]);
-    let not_text = raw_api(&[(
+    )])
+    .unwrap();
+    let none = raw_api_from_layers(&[(ApiLayer::Api, "{}")]).unwrap();
+    let not_text = raw_api_from_layers(&[(
         ApiLayer::Api,
         r#"{"conventions":{"rateLimit":{"param":3}}}"#,
-    )]);
+    )])
+    .unwrap();
 
     assert_eq!(
         pipeline_rate_limit_param(pipeline_conventions(&named)).unwrap(),
@@ -220,7 +223,7 @@ fn the_schema_leaves_are_the_default_paths_parents_and_the_two_maps() {
 
 #[test]
 fn every_default_path_is_a_readable_convention_path() {
-    let raw = raw_api(&[(ApiLayer::Api, "{}")]);
+    let raw = raw_api_from_layers(&[(ApiLayer::Api, "{}")]).unwrap();
     let conventions = pipeline_conventions(&raw);
 
     for entry in convention_defaults().unwrap() {
