@@ -278,3 +278,38 @@ fn unique_items_message(instance: &Value) -> Result<String, InternalError> {
         "uniqueItems failed on a list of distinct items",
     ))
 }
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::*;
+
+    #[test]
+    fn a_limit_is_written_as_ecmascript_number_text() -> Result<(), InternalError> {
+        let cases = [
+            (json!(1), "1"),
+            (json!(100), "100"),
+            (json!(0.1), "0.1"),
+            (json!(-0.0), "0"),
+            (json!(1e21), "1e+21"),
+            (json!(1e-7), "1e-7"),
+            (
+                json!(123_456_789_012_345_680_000.0),
+                "123456789012345680000",
+            ),
+            (json!(-2.5), "-2.5"),
+        ];
+
+        for (limit, text) in cases {
+            assert_eq!(number_text(&limit)?, text, "limit {limit}");
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn a_limit_that_is_not_a_number_is_an_internal_error() {
+        assert!(number_text(&json!("3")).is_err());
+    }
+}

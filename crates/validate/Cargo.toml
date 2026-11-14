@@ -18,6 +18,7 @@ serde_json.workspace = true
 
 [dev-dependencies]
 regress.workspace = true
+seampact-span.workspace = true
 
 [lints]
 workspace = true

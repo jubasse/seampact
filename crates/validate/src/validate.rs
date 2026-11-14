@@ -159,6 +159,10 @@ mod tests {
 
     use super::*;
 
+    use seampact_diagnostics::{DiagnosticOrigin, Severity};
+
+    use crate::rules::ValidateRule;
+
     type PointerMessageFix = (String, String, String);
 
     fn tree(text: &str) -> Result<JsonValue, Box<dyn std::error::Error>> {
@@ -244,5 +248,33 @@ mod tests {
         );
 
         Ok(())
+    }
+
+    fn diagnostic_at(pointer: &str) -> Diagnostic {
+        Diagnostic {
+            severity: Severity::Error,
+            rule: ValidateRule::UnknownKeyword.rule_id(),
+            message: String::new(),
+            fix: String::new(),
+            origin: DiagnosticOrigin {
+                layer: DiagnosticLayer::Api,
+                pointer: pointer.to_owned(),
+                api: None,
+            },
+            related: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn pointers_sort_in_utf16_order_not_code_point_order() {
+        // U+FF5E is one unit (0xFF5E), U+1F600 two units starting 0xD83D: UTF-16 puts the astral
+        // character first, byte (code point) order puts it last.
+        let sorted = sort_diagnostics(vec![
+            diagnostic_at("/\u{FF5E}"),
+            diagnostic_at("/\u{1F600}"),
+        ]);
+        let pointers: Vec<&str> = sorted.iter().map(|d| d.origin.pointer.as_str()).collect();
+
+        assert_eq!(pointers, ["/\u{1F600}", "/\u{FF5E}"]);
     }
 }

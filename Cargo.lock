@@ -847,6 +847,7 @@ dependencies = [
  "seampact-pass-tree-schemas",
  "seampact-pipeline",
  "seampact-span",
+ "seampact-validate",
  "serde",
  "serde_json",
  "thiserror",
@@ -1055,6 +1056,21 @@ dependencies = [
  "seampact-ir",
  "seampact-js",
  "seampact-json",
+ "serde_json",
+]
+
+[[package]]
+name = "seampact-validate"
+version = "2.0.0"
+dependencies = [
+ "jsonschema",
+ "regress",
+ "seampact-authoring",
+ "seampact-diagnostics",
+ "seampact-js",
+ "seampact-json",
+ "seampact-load",
+ "seampact-span",
  "serde_json",
 ]
 

@@ -117,4 +117,14 @@ mod tests {
         // Three units allow a distance of one.
         assert_eq!(closest_keyword("abc", &known(&["abd"])), Some("abd"));
     }
+
+    #[test]
+    fn an_astral_character_costs_two_units_in_the_distance() {
+        let astral: Vec<u16> = "a\u{1F600}".encode_utf16().collect();
+        let plain: Vec<u16> = "a".encode_utf16().collect();
+        let other_astral: Vec<u16> = "a\u{1F601}".encode_utf16().collect();
+
+        assert_eq!(distance(&astral, &plain), 2);
+        assert_eq!(distance(&astral, &other_astral), 1);
+    }
 }
