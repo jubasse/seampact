@@ -302,3 +302,40 @@ fn op_part(
         None => Err(InternalError::new(format!("conventions.{key} resolves to no path")).into()),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn refusal_of(text: &str) -> Option<&'static str> {
+        PATH_SEGMENT_CHECKS
+            .iter()
+            .find(|check| (check.refuses)(text))
+            .map(|check| check.why)
+    }
+
+    #[test]
+    fn a_written_path_is_relative_segments_a_router_reads_as_written() {
+        assert_eq!(refusal_of(""), None);
+        assert_eq!(refusal_of("batch"), None);
+        assert_eq!(refusal_of("a/b"), None);
+        assert_eq!(refusal_of("/a"), Some("starts with /"));
+        assert_eq!(refusal_of("a//b"), Some("holds an empty segment"));
+        assert_eq!(refusal_of("a/"), Some("holds an empty segment"));
+        assert_eq!(refusal_of("a/./b"), Some("holds a . or .. segment"));
+        assert_eq!(refusal_of(".."), Some("holds a . or .. segment"));
+        assert_eq!(refusal_of("a.b"), None);
+        assert_eq!(refusal_of("a?b"), Some("holds ?, # or %"));
+        assert_eq!(refusal_of("a%20b"), Some("holds ?, # or %"));
+        assert_eq!(refusal_of("\u{e9}/\u{1f600}"), None);
+    }
+
+    #[test]
+    fn a_segment_follows_the_path_case() -> Result<(), NamingError> {
+        assert_eq!(segment_of_name("taskList", PathCase::Kebab)?, "task-list");
+        assert_eq!(segment_of_name("taskList", PathCase::Snake)?, "task_list");
+        assert_eq!(segment_of_name("task-list", PathCase::Camel)?, "taskList");
+
+        Ok(())
+    }
+}

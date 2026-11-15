@@ -163,3 +163,15 @@ fn check_file_field(
 ) -> Result<(), PassError> {
     Err(not_ported_yet("checkFileField"))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::join_path;
+
+    #[test]
+    fn a_path_below_the_top_level_is_dot_joined() {
+        assert_eq!(join_path("", "file"), "file");
+        assert_eq!(join_path("a", "b"), "a.b");
+        assert_eq!(join_path("a.b", ""), "a.b.");
+    }
+}
