@@ -86,3 +86,47 @@ pub(crate) fn access_rights_schema_name(
 ) -> Result<Option<String>, PassError> {
     Err(not_ported_yet("accessRightsSchemaName"))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn mapping_of(members: Vec<(&str, JsonValue)>) -> JsonValue {
+        let mut object = JsonObject::new();
+
+        for (key, value) in members {
+            object.insert(key.to_owned(), value);
+        }
+
+        JsonValue::Object(object)
+    }
+
+    fn text(value: &str) -> JsonValue {
+        JsonValue::String(value.to_owned())
+    }
+
+    #[test]
+    fn member_reads_own_keys_and_nothing_from_a_non_mapping() {
+        let value = mapping_of(vec![("__proto__", text("own")), ("name", text("x"))]);
+        let object = access_rights_object(Some(&value));
+
+        assert_eq!(access_rights_string(object, "__proto__"), Some("own"));
+        assert_eq!(access_rights_string(object, "missing"), None);
+        assert_eq!(access_rights_member(None, "name"), None);
+        assert_eq!(access_rights_string(object, "name"), Some("x"));
+    }
+
+    #[test]
+    fn entries_keep_written_order_and_skip_non_mappings() {
+        let catalogue = mapping_of(vec![
+            ("zeta", mapping_of(vec![])),
+            ("skip", text("no")),
+            ("alpha", mapping_of(vec![])),
+        ]);
+        let value = mapping_of(vec![("rights", catalogue)]);
+        let entries = access_rights_entries(access_rights_object(Some(&value)), "rights");
+        let names: Vec<&str> = entries.iter().map(|(name, _)| *name).collect();
+
+        assert_eq!(names, ["zeta", "alpha"]);
+    }
+}

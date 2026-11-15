@@ -1,10 +1,10 @@
 //! The rights of each sort key of a route's paging (ADR 0002 section 9).
 
 use indexmap::IndexMap;
+use seampact_diagnostics::access_rights_quoted;
 use seampact_ir::{
     DerivedFrom, FieldRestriction, FieldRightSubject, ObjectSchema, OperationScope, SortKey,
 };
-use seampact_diagnostics::access_rights_quoted;
 use seampact_pipeline::{PassError, TreeNodeKind};
 
 use crate::catalogues::AccessRightsCatalogues;
