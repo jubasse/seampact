@@ -10,7 +10,8 @@ use seampact_json::{JsonObject, JsonValue, indented_json};
 use serde_json::Value;
 
 use crate::compare::{
-    Mismatch, MismatchKind, mismatch_context, only_in_one, text_beyond_accepted, text_mismatches,
+    Mismatch, MismatchKind, mismatch_context, only_in_one, pointer_segments, text_beyond_accepted,
+    text_mismatches,
 };
 use crate::differences::{DIFFERENCES_FILE, read_differences};
 use crate::expected::{
@@ -54,6 +55,9 @@ impl Selection {
 }
 
 /// The halves directory of a fixture's expected files.
+/// The draft member that holds the operations.
+const OPERATIONS_MEMBER: &str = "operations";
+
 const HALVES_PREFIX: &str = "halves/";
 
 /// The schema service call logs of a fixture's expected files, compared by the service replay.
@@ -665,8 +669,12 @@ impl Run<'_> {
         actual_text: Option<&str>,
         tally: &mut FixtureTally,
     ) -> Result<(), OracleError> {
-        let mismatches = self.file_mismatches(fixture, name, expected_text, actual_text)?;
         let output_file = OutputFile::of(name);
+        let mismatches: Vec<Mismatch> = self
+            .file_mismatches(fixture, name, expected_text, actual_text)?
+            .into_iter()
+            .filter(|mismatch| !is_unobservable_operation_order(output_file.as_ref(), mismatch))
+            .collect();
 
         tally.compared_files += 1;
 
@@ -786,6 +794,28 @@ impl Run<'_> {
     }
 }
 
+/// The member order of one draft operation in a half delta. The IR serialiser sorts a record's
+/// members, so that order never reaches an output; it follows each half's write path in
+/// TypeScript and the struct in Rust. The order of a map's keys reaches the output and stays
+/// compared.
+fn is_unobservable_operation_order(output_file: Option<&OutputFile>, mismatch: &Mismatch) -> bool {
+    let is_half_delta = output_file.is_some_and(|file| file.output == OutputKind::Halves);
+
+    if !is_half_delta || mismatch.kind != MismatchKind::MemberOrder {
+        return false;
+    }
+
+    let Some(pointer) = &mismatch.pointer else {
+        return false;
+    };
+    let segments = pointer_segments(pointer);
+
+    segments.len() == 2
+        && segments
+            .first()
+            .is_some_and(|first| first == OPERATIONS_MEMBER)
+}
+
 /// The diagnostics file beside the delta file `delta_name`, `None` for a name with no `.json`.
 fn half_diagnostics_name(delta_name: &str) -> Option<String> {
     delta_name
@@ -868,5 +898,64 @@ fn first_failure(
         summary,
         expected_context,
         actual_context,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn member_order_at(pointer: &str) -> Mismatch {
+        Mismatch {
+            pointer: Some(pointer.to_owned()),
+            kind: MismatchKind::MemberOrder,
+            expected: None,
+            actual: None,
+        }
+    }
+
+    fn file(output: OutputKind) -> OutputFile {
+        OutputFile {
+            output,
+            api: Some("a".to_owned()),
+            half: Some("access.identity".to_owned()),
+        }
+    }
+
+    #[test]
+    fn the_member_order_of_a_delta_operation_is_not_compared() {
+        let halves = file(OutputKind::Halves);
+
+        assert!(is_unobservable_operation_order(
+            Some(&halves),
+            &member_order_at("/operations/browser")
+        ));
+    }
+
+    #[test]
+    fn member_order_stays_compared_elsewhere() {
+        let halves = file(OutputKind::Halves);
+        let ir = file(OutputKind::Ir);
+
+        for pointer in [
+            "/schemes/bearer",
+            "/operations",
+            "/operations/browser/examples",
+            "",
+        ] {
+            assert!(
+                !is_unobservable_operation_order(Some(&halves), &member_order_at(pointer)),
+                "{pointer}"
+            );
+        }
+
+        assert!(!is_unobservable_operation_order(
+            Some(&ir),
+            &member_order_at("/operations/browser")
+        ));
+        assert!(!is_unobservable_operation_order(
+            None,
+            &member_order_at("/operations/browser")
+        ));
     }
 }
