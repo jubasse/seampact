@@ -1,6 +1,7 @@
 //! The path of an operation: each part of it, written or derived, and the checks of the parts a router reads.
 
 use seampact_ir::Origin;
+use seampact_naming::{NamingError, OperationIdCase, operation_id, split_name};
 use seampact_pipeline::{PassError, ResolvedConventions, TreeNode};
 
 use crate::api::TreeNodesSurfacePrefixes;
@@ -71,10 +72,15 @@ struct PathSite {
     path_case: PathCase,
 }
 
-fn segment_of_name(_name: &str, _path_case: PathCase) -> Result<String, PassError> {
-    Err(not_ported_yet("segmentOfName"))
-}
+fn segment_of_name(name: &str, path_case: PathCase) -> Result<String, NamingError> {
+    let words = split_name(name);
 
+    match path_case {
+        PathCase::Camel => operation_id(&words, OperationIdCase::Camel),
+        PathCase::Kebab => Ok(words.join("-")),
+        PathCase::Snake => Ok(words.join("_")),
+    }
+}
 fn path_case_of(_conventions: ResolvedConventions<'_>) -> Result<PathCase, PassError> {
     Err(not_ported_yet("pathCaseOf"))
 }

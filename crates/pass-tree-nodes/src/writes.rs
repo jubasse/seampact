@@ -2,7 +2,9 @@
 
 use seampact_ir::{OpShorthand, Origin, Owner, OwnerKind, Param, Params, TypeUse};
 use seampact_json::JsonValue;
-use seampact_pipeline::{DraftConcurrency, PassError, TreeNode};
+use seampact_diagnostics::InternalError;
+use seampact_pass_tree_shared::tree_nodes_op_owner;
+use seampact_pipeline::{DraftConcurrency, PassError, TreeNode, TreeNodeKind, TreeNodes};
 
 use crate::fields::TreeNodesSite;
 use crate::not_ported::not_ported_yet;
@@ -31,20 +33,46 @@ struct VersionSource {
     name: String,
 }
 
+// A caller-owned record has no version. That `field` names an item property is tree.schemas' check, made
+// where it adds the version.
 fn check_declaration(
-    _site: &TreeNodesSite<'_, '_>,
-    _resource: Option<&TreeNode<'_>>,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    resource: Option<&TreeNode<'_>>,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("checkDeclaration"))
-}
+    let Some(resource) = resource else {
+        return Ok(());
+    };
 
-fn resource_node_of<'node, 'raw>(
-    _node: &'node TreeNode<'raw>,
-) -> Result<Option<&'node TreeNode<'raw>>, PassError> {
-    Err(not_ported_yet("resourceNodeOf"))
-}
+    if !resource.settings.contains_key("concurrency") {
+        return Ok(());
+    }
 
+    check_owner_alone(site, resource, scope)
+}
+/// The collection or single an operation writes: the owner of its op, else its nearest one.
+fn resource_node_of<'nodes, 'raw>(
+    node: &TreeNode<'raw>,
+    nodes: &'nodes TreeNodes<'raw>,
+) -> Result<Option<&'nodes TreeNode<'raw>>, InternalError> {
+    if node.kind == TreeNodeKind::Op {
+        return tree_nodes_op_owner(nodes, node);
+    }
+
+    let mut at = node.parent;
+
+    while let Some(at_id) = at {
+        let current = nodes.get(at_id)?;
+
+        if matches!(current.kind, TreeNodeKind::Collection | TreeNodeKind::Single) {
+            return Ok(Some(current));
+        }
+
+        at = current.parent;
+    }
+
+    Ok(None)
+}
 pub(crate) fn tree_nodes_owner(
     _site: &TreeNodesSite<'_, '_>,
     _scope: &mut TreeNodesScope<'_, '_, '_>,

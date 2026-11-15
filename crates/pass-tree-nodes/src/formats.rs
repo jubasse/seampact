@@ -1,14 +1,18 @@
 //! The `formats` catalogue: every declared wire format and the core `bare`, and the check of each payload against its templates.
 
+use std::mem;
+
 use indexmap::IndexMap;
 use seampact_ir::{
-    Absent, EachTemplate, ErrorShape, HeaderTemplate, MemberName, MetaFill, MetaMember,
-    ObjectSchema, ObjectTemplate, ObjectTemplateMember, Origin, ResponseShape, Shape,
-    SuccessShapes, Template, TypeUse, WireFormat,
+    Layer, Absent, EachTemplate, ErrorShape, FormatId, HeaderTemplate, IrMap, MemberName, MetaFill,
+    MetaMember, ObjectSchema, ObjectTemplate, ObjectTemplateMember, Origin, PlainMemberName,
+    ResponseShape, Shape, Slot, SlotTemplate, SuccessShapes, Template, TypeUse, WireFormat,
 };
 use seampact_json::JsonValue;
-use seampact_pipeline::{DraftOperation, PassError};
+use seampact_pass_tree_shared::tree_nodes_member;
+use seampact_pipeline::{DraftOperation, PassError, pointer_below};
 
+use crate::api::text_of;
 use crate::not_ported::not_ported_yet;
 use crate::pass::TreeNodesScope;
 use crate::templates::{TreeNodesTemplatePlace, TreeNodesTemplateSite};
@@ -22,6 +26,19 @@ pub(crate) const TREE_NODES_DEFAULT_MEDIA: &str = "application/json";
 const BARE_ERROR_MEDIA: &str = "application/problem+json";
 const NULL_ABSENT: Absent = Absent::Null;
 const DEFAULT_ABSENT: Absent = Absent::Omit;
+/// The slot the bare error spreads the error's params into.
+const PARAMS_SLOT: &str = "params";
+/// The slots of the bare error, each the member of the same name but `type`, which holds the code.
+const BARE_ERROR_MEMBERS: &[(&str, &str)] = &[
+    ("type", "code"),
+    ("title", "title"),
+    ("status", "status"),
+    ("detail", "detail"),
+    ("instance", "instance"),
+    ("code", "code"),
+    ("nature", "nature"),
+    ("traceId", "traceId"),
+];
 /// A shape left out writes the payload (the page's records for `page`) and no header.
 const DEFAULT_BODY_SLOT: &[(ShapeName, &str)] = &[
     (ShapeName::Item, "payload"),
@@ -114,48 +131,137 @@ pub(crate) struct FormatReader<'scope, 'draft, 'half, 'run> {
     pub(crate) owner: String,
 }
 
-fn slot(_name: &str) -> Result<Template, PassError> {
-    Err(not_ported_yet("slot"))
+fn slot(name: &str) -> Template {
+    Template::Slot(SlotTemplate {
+        slot: Slot::new(name.to_owned()),
+        path: Vec::new(),
+    })
+}
+fn bare_error_member(name: &str, slot_name: &str) -> ObjectTemplateMember {
+    ObjectTemplateMember {
+        name: MemberName::Text(PlainMemberName {
+            text: name.to_owned(),
+        }),
+        value: slot(slot_name),
+    }
 }
 
-fn bare_error_member(
-    _name: &str,
-    _slot_name: Option<&str>,
-) -> Result<ObjectTemplateMember, PassError> {
-    Err(not_ported_yet("bareErrorMember"))
+// The RFC 9457 members of the bare error, its params spread beside them.
+fn bare_error() -> ErrorShape {
+    ErrorShape {
+        media: BARE_ERROR_MEDIA.to_owned(),
+        body: Template::Object(ObjectTemplate {
+            members: BARE_ERROR_MEMBERS
+                .iter()
+                .map(|(name, slot_name)| bare_error_member(name, slot_name))
+                .collect(),
+            merge: Some(Slot::new(PARAMS_SLOT.to_owned())),
+        }),
+        headers: Vec::new(),
+    }
 }
+/// Writes `formats`: every declared format, used or not, and `bare`, from the core where no layer declares it.
+pub(crate) fn tree_nodes_formats(scope: &mut TreeNodesScope<'_, '_, '_>) -> Result<(), PassError> {
+    // A declared `bare` is read first, since a format without `error` takes its error.
+    let bare = format_of(TREE_NODES_BARE_FORMAT, Some(&bare_error()), scope)?;
+    let bare_error = bare.as_ref().map(|bare| bare.error.clone());
 
-pub(crate) fn tree_nodes_formats(_scope: &mut TreeNodesScope<'_, '_, '_>) -> Result<(), PassError> {
-    Err(not_ported_yet("treeNodesFormats"))
+    if let Some(bare) = bare {
+        scope
+            .output
+            .formats
+            .insert(FormatId::new(TREE_NODES_BARE_FORMAT.to_owned()), bare);
+    }
+
+    let declared = scope.context.raw.merged.get("formats");
+    let Some(JsonValue::Object(declared)) = declared else {
+        return Ok(());
+    };
+
+    for id in declared.keys() {
+        if id == TREE_NODES_BARE_FORMAT {
+            continue;
+        }
+
+        if let Some(format) = format_of(id, bare_error.as_ref(), scope)? {
+            scope.output.formats.insert(FormatId::new(id.clone()), format);
+        }
+    }
+
+    Ok(())
 }
-
 fn declared_format<'run>(
-    _id: &str,
-    _scope: &TreeNodesScope<'_, '_, 'run>,
-) -> Result<Option<&'run JsonValue>, PassError> {
-    Err(not_ported_yet("declaredFormat"))
+    id: &str,
+    scope: &TreeNodesScope<'_, '_, 'run>,
+) -> Option<&'run JsonValue> {
+    tree_nodes_member(scope.context.raw.merged.get("formats"), id)
 }
+fn core_bare() -> WireFormat {
+    let shape = |body: &str| Shape {
+        body: slot(body),
+        headers: Vec::new(),
+    };
 
-fn core_bare(_scope: &TreeNodesScope<'_, '_, '_>) -> Result<WireFormat, PassError> {
-    Err(not_ported_yet("coreBare"))
+    WireFormat {
+        id: FormatId::new(TREE_NODES_BARE_FORMAT.to_owned()),
+        origin: Origin {
+            api: None,
+            layer: Layer::Core,
+            pointer: TREE_NODES_BARE_POINTER.to_owned(),
+        },
+        media: TREE_NODES_DEFAULT_MEDIA.to_owned(),
+        absent: DEFAULT_ABSENT,
+        success: SuccessShapes {
+            item: shape("payload"),
+            table: shape("payload"),
+            list: shape("payload"),
+            page: shape("items"),
+        },
+        meta: IrMap::new(),
+        error: bare_error(),
+    }
 }
-
+/// Reads a declared format; absent when it is refused (reported) or declared nowhere (`format-unknown`).
 fn format_of(
-    _id: &str,
-    _bare_error: Option<&ErrorShape>,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    id: &str,
+    bare_error: Option<&ErrorShape>,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<Option<WireFormat>, PassError> {
-    Err(not_ported_yet("formatOf"))
-}
+    let pointer = pointer_below("/formats", &[id]);
+    let declared = declared_format(id, scope);
+    let origin = scope.context.origin(&pointer);
 
-pub(crate) fn tree_nodes_absent(_written: Option<&JsonValue>) -> Result<Absent, PassError> {
-    Err(not_ported_yet("treeNodesAbsent"))
-}
+    let (Some(declared), Some(origin)) = (declared, origin) else {
+        return Ok((id == TREE_NODES_BARE_FORMAT).then(core_bare));
+    };
 
-fn text_of(_value: Option<&JsonValue>) -> Result<Option<String>, PassError> {
-    Err(not_ported_yet("textOf"))
-}
+    let mut reader = FormatReader::new(scope, id, &pointer)?;
+    let media = text_of(tree_nodes_member(Some(declared), "media")).unwrap_or(TREE_NODES_DEFAULT_MEDIA);
+    let success = reader.success(tree_nodes_member(Some(declared), "success"))?;
+    let meta = reader.meta(tree_nodes_member(Some(declared), "meta"))?;
+    let error = reader.error(tree_nodes_member(Some(declared), "error"), media, bare_error)?;
 
+    let (Some(success), Some(meta), Some(error)) = (success, meta, error) else {
+        return Ok(None);
+    };
+
+    Ok(Some(WireFormat {
+        id: FormatId::new(id.to_owned()),
+        origin,
+        media: media.to_owned(),
+        absent: tree_nodes_absent(tree_nodes_member(Some(declared), "absent")),
+        success,
+        meta: meta.into_iter().collect(),
+        error,
+    }))
+}
+/// What a slot with no value writes: `null` when `absent` is written null, else omitted.
+pub(crate) fn tree_nodes_absent(written: Option<&JsonValue>) -> Absent {
+    match written {
+        Some(JsonValue::Null) => NULL_ABSENT,
+        _ => DEFAULT_ABSENT,
+    }
+}
 pub(crate) fn tree_nodes_named_templates(
     _owner: &str,
     _place: TreeNodesTemplatePlace,
@@ -248,23 +354,62 @@ fn meta_fill(_fill: &str) -> Result<MetaFill, PassError> {
     Err(not_ported_yet("metaFill"))
 }
 
+/// Checks each success response of each operation against the templates its format and paging style write.
 pub(crate) fn tree_nodes_check_payloads(
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("treeNodesCheckPayloads"))
-}
+    let operations = mem::take(&mut scope.output.operations);
+    let formats = mem::take(&mut scope.output.formats);
 
+    for operation in &operations {
+        let Some(format) = operation.format.as_ref().and_then(|id| own_of(&formats, id)) else {
+            continue;
+        };
+
+        for response in operation.responses.iter().flatten() {
+            let Some(body) = &response.body else {
+                continue;
+            };
+            let Some(shape) = success_shape_of(&response.shape) else {
+                continue;
+            };
+
+            let check = PayloadCheck {
+                operation,
+                shape,
+                payload: payload_of(shape, body, scope)?,
+                record: record_of(shape, body),
+            };
+
+            for written in written_templates(operation, format, shape, scope)? {
+                check_id_slots(&check, &written, scope)?;
+                check_item_collection_slot(&check, &written, scope)?;
+                check_member_names(&check, &written, scope)?;
+                check_slot_values(&check, &written, &written.template, None, scope)?;
+            }
+        }
+    }
+
+    scope.output.operations = operations;
+    scope.output.formats = formats;
+
+    Ok(())
+}
 fn own_of<'catalogue, Value>(
-    _catalogue: &'catalogue IndexMap<String, Value>,
-    _id: &str,
-) -> Result<Option<&'catalogue Value>, PassError> {
-    Err(not_ported_yet("ownOf"))
+    catalogue: &'catalogue IrMap<FormatId, Value>,
+    id: &FormatId,
+) -> Option<&'catalogue Value> {
+    catalogue.get(id)
 }
-
-fn is_success_shape(_shape: &ResponseShape) -> Result<bool, PassError> {
-    Err(not_ported_yet("isSuccessShape"))
+fn success_shape_of(shape: &ResponseShape) -> Option<ShapeName> {
+    match shape {
+        ResponseShape::Item => Some(ShapeName::Item),
+        ResponseShape::Table => Some(ShapeName::Table),
+        ResponseShape::List => Some(ShapeName::List),
+        ResponseShape::Page => Some(ShapeName::Page),
+        _ => None,
+    }
 }
-
 fn slot_value_of_use(
     _type_use: &TypeUse,
     _scope: &TreeNodesScope<'_, '_, '_>,
@@ -280,10 +425,14 @@ fn payload_of(
     Err(not_ported_yet("payloadOf"))
 }
 
-fn record_of(_shape: ShapeName, _body: &TypeUse) -> Result<TypeUse, PassError> {
-    Err(not_ported_yet("recordOf"))
+fn record_of(shape: ShapeName, body: &TypeUse) -> TypeUse {
+    match body {
+        TypeUse::Array(array) if matches!(shape, ShapeName::List | ShapeName::Page) => {
+            (*array.items).clone()
+        }
+        _ => body.clone(),
+    }
 }
-
 fn written_templates(
     _operation: &DraftOperation,
     _format: &WireFormat,

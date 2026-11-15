@@ -2,7 +2,12 @@
 
 use seampact_ir::{Docs, OpShorthand, Origin, Response, ResponseHeader, ResponseShape};
 use seampact_json::JsonValue;
-use seampact_pipeline::{PassError, TreeNode};
+use seampact_diagnostics::InternalError;
+use seampact_pass_tree_shared::tree_nodes_member;
+use seampact_pipeline::{NearestSetting, PassError, TreeNode};
+
+use crate::api::text_of;
+use crate::formats::TREE_NODES_DEFAULT_MEDIA;
 
 use crate::fields::{TreeNodesField, TreeNodesSite};
 use crate::not_ported::not_ported_yet;
@@ -32,25 +37,47 @@ enum BodyMember {
     Item,
 }
 
-fn empty_response(_status: i64, _origin: &Origin) -> Result<Response, PassError> {
-    Err(not_ported_yet("emptyResponse"))
+fn empty_response(status: i64, origin: &Origin) -> Response {
+    Response {
+        status,
+        media: None,
+        body: None,
+        shape: ResponseShape::Empty,
+        headers: Vec::new(),
+        origin: Some(origin.clone()),
+        derived_from: None,
+        docs: None,
+    }
 }
+// A format's success media: as its declaration writes it, else JSON, which the core `bare` format uses.
+fn media_of(format: &str, scope: &TreeNodesScope<'_, '_, '_>) -> String {
+    let declared = tree_nodes_member(scope.context.raw.merged.get("formats"), format);
 
-fn media_of(
-    _site: &TreeNodesSite<'_, '_>,
-    _format: &str,
-    _scope: &TreeNodesScope<'_, '_, '_>,
-) -> Result<String, PassError> {
-    Err(not_ported_yet("mediaOf"))
+    text_of(tree_nodes_member(declared, "media"))
+        .unwrap_or(TREE_NODES_DEFAULT_MEDIA)
+        .to_owned()
 }
-
+/// The wire format of an operation: the nearest `format`, else `conventions.format`.
 pub(crate) fn tree_nodes_format(
-    _site: &TreeNodesSite<'_, '_>,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
-) -> Result<String, PassError> {
-    Err(not_ported_yet("treeNodesFormat"))
-}
+    site: &TreeNodesSite<'_, '_>,
+    scope: &TreeNodesScope<'_, '_, '_>,
+) -> Result<String, InternalError> {
+    let nearest = scope
+        .context
+        .inherited
+        .nearest(site.node_id, &NearestSetting::Format)?
+        .map(|entry| entry.value);
+    let convention = scope.context.conventions.get("format")?;
+    let format = nearest.or_else(|| convention.map(|reading| reading.value));
 
+    match format {
+        Some(JsonValue::String(format)) => Ok(format.clone()),
+        _ => Err(InternalError::new(format!(
+            "the operation {} resolves no format",
+            site.operation_id
+        ))),
+    }
+}
 pub(crate) fn tree_nodes_is_list(_node: &TreeNode<'_>) -> Result<bool, PassError> {
     Err(not_ported_yet("treeNodesIsList"))
 }
