@@ -5,10 +5,11 @@ use std::collections::HashMap;
 
 use indexmap::IndexMap;
 use seampact_diagnostics::{Diagnostic, InternalError};
-use seampact_ir::{Direction, SchemeId};
+use seampact_ir::{Direction, RefTypeUse, SchemaId, SchemeId, TypeUse};
 use seampact_pipeline::PassError;
 use seampact_pipeline::testing::{FakeSchemaService, HalfFixture, raw_api_from_json};
 
+use crate::headers::access_identity_headers;
 use crate::identities::{AccessIdentityCatalogues, IdentityEntry, credential_members};
 use crate::read::access_identity_entries;
 use crate::report::{
@@ -260,4 +261,50 @@ fn a_credential_scheme_naming_an_undeclared_or_signature_scheme_is_reported() {
         reported.first().map(|d| d.origin.pointer.as_str()),
         Some("/identities/user/schemes/read/0")
     );
+}
+
+const ACTOR_SURFACE_HEADER: &str = r#"{"headers":{"surface":{"semantic":"actorSurface","name":"x-surface","in":"request","schema":{}}}}"#;
+
+#[test]
+fn an_actor_surface_declaration_whose_schema_is_no_enum_is_refused_and_left_out() {
+    let service = FakeSchemaService::new().with_type_use(
+        "/headers/surface/schema",
+        TypeUse::Ref(RefTypeUse {
+            schema: SchemaId::new("Surface".to_owned()),
+            unknown_keys: None,
+            nullable: None,
+            docs: None,
+            examples: None,
+        }),
+    );
+    let (result, reported) = with_reporter(ACTOR_SURFACE_HEADER, |reporter| {
+        access_identity_headers(&service, reporter).map(|headers| headers.len())
+    })
+    .unwrap();
+
+    assert!(matches!(result, Ok(0)), "result {result:?}");
+
+    let [diagnostic] = reported.as_slice() else {
+        panic!("one diagnostic expected, got {reported:?}");
+    };
+
+    assert_eq!(
+        diagnostic.rule.as_str(),
+        "seampact/access/header-declaration"
+    );
+    assert_eq!(diagnostic.origin.pointer, "/headers/surface/schema");
+}
+
+#[test]
+fn a_header_declaration_the_service_cannot_type_is_an_internal_error() {
+    let (result, reported) = with_reporter(ACTOR_SURFACE_HEADER, |reporter| {
+        access_identity_headers(&FakeSchemaService::new(), reporter).map(|headers| headers.len())
+    })
+    .unwrap();
+
+    assert!(
+        matches!(result, Err(PassError::Internal(_))),
+        "result {result:?}"
+    );
+    assert_eq!(reported, Vec::new());
 }
