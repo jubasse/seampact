@@ -3,19 +3,23 @@
 use seampact_ir::{Direction, Origin, TypeUse};
 use seampact_js::js_key_order;
 use seampact_json::JsonValue;
-use seampact_pass_tree_shared::{tree_nodes_answered_use, tree_nodes_member};
+use seampact_pass_tree_shared::{tree_nodes_answered_use, tree_nodes_member, tree_nodes_object_of};
 use seampact_pipeline::{PassError, TreeNode, TreeNodeId, TreeNodes, pointer_below};
 
-use crate::not_ported::not_ported_yet;
+use crate::diagnostics::{
+    TreeNodesDiagnosticOptions, TreeNodesRule, tree_nodes_error, tree_nodes_locate,
+    tree_nodes_node_origin, tree_nodes_report_once,
+};
 use crate::pass::TreeNodesScope;
 
 /// The suffix of a field name that makes the field optional.
 const OPTIONAL_SUFFIX: &str = "?";
 /// The member a field's default is written under.
 const DEFAULT_KEY: &str = "default";
-/// The kinds of type that never sit in a query, a path parameter or a header, nor do their lists, with how
-/// a message names them.
-const TEXTLESS_KINDS: &[(&str, &str)] = &[("opaque", "an opaque value"), ("file", "a file")];
+/// How a message names an opaque value, which never sits in a query, a path parameter or a header, nor does a list of them.
+const OPAQUE_PHRASE: &str = "an opaque value";
+/// How a message names a file, which never sits in a query, a path parameter or a header, nor does a list of them.
+const FILE_PHRASE: &str = "a file";
 
 /// The operation a check reports for: its tree node, the tree it sits in and its id.
 ///
@@ -95,27 +99,104 @@ pub(crate) fn tree_nodes_fields(
     })
 }
 
+// `query: TaskQuery`: the properties of the named object schema, each asked for its wire at its position there.
 fn named_schema_fields(
-    _site: &TreeNodesSite<'_, '_>,
-    _schema_name: &str,
-    _pointer: &str,
-    _direction: &Direction,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    schema_name: &str,
+    pointer: &str,
+    direction: &Direction,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<TreeNodesFields, PassError> {
-    Err(not_ported_yet("namedSchemaFields"))
+    let used = tree_nodes_answered_use(scope.schemas, pointer, direction)?;
+    let Some(schema) = tree_nodes_object_of(scope.draft, Some(&used)) else {
+        let origin = scope
+            .context
+            .origin(pointer)
+            .unwrap_or_else(|| site.node.origin.clone());
+        let diagnostic = tree_nodes_error(TreeNodesDiagnosticOptions {
+            rule: TreeNodesRule::FieldsSchema,
+            origin: tree_nodes_node_origin(&origin)?,
+            message: format!(
+                "The fields at {pointer} name {schema_name}, which is not an object schema, so it has no fields."
+            ),
+            fix: "Name an object schema, or write the fields as a map.".to_owned(),
+            related: Vec::new(),
+        });
+
+        tree_nodes_report_once(&format!("fields-schema:{pointer}"), diagnostic, scope);
+
+        return Ok(TreeNodesFields {
+            fields: Vec::new(),
+            complete: false,
+        });
+    };
+    let schema_pointer = pointer_below("/schemas", &[schema.id.as_str()]);
+    let fields = schema
+        .properties
+        .iter()
+        .map(|property| TreeNodesField {
+            name: property.name.clone(),
+            required: !property.optional,
+            field_type: property.r#type.clone(),
+            default: property.default.clone(),
+            origin: property.origin.clone(),
+            wire_pointer: pointer_below(&schema_pointer, &["properties", &property.name]),
+        })
+        .collect();
+
+    Ok(TreeNodesFields {
+        fields,
+        complete: true,
+    })
 }
 
+/// Whether a field may travel in a parameter or a header: an opaque value or a file, or a list of them, has no
+/// text form. Reports the field otherwise.
 pub(crate) fn tree_nodes_field_travels(
-    _site: &TreeNodesSite<'_, '_>,
-    _field: &TreeNodesField,
-    _place: &str,
-    _scope: &TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    field: &TreeNodesField,
+    place: &str,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<bool, PassError> {
-    Err(not_ported_yet("treeNodesFieldTravels"))
+    let node_origin = tree_nodes_node_origin(&site.node.origin)?;
+    let origin = tree_nodes_locate(&field.origin, &node_origin);
+    let key = format!("{}#{}:{}", origin.layer, origin.pointer, field.name);
+    let Some(textless) = tree_nodes_innermost(Some(&field.field_type)).and_then(textless_phrase)
+    else {
+        return Ok(true);
+    };
+    let diagnostic = tree_nodes_error(TreeNodesDiagnosticOptions {
+        rule: TreeNodesRule::OpaquePosition,
+        origin,
+        message: format!(
+            "The {place} {} of {} is {textless}, which has no text form.",
+            field.name, site.operation_id
+        ),
+        fix: "Give it a schema with a text form, or move it into the body.".to_owned(),
+        related: Vec::new(),
+    });
+
+    tree_nodes_report_once(&format!("opaque-position:{key}"), diagnostic, scope);
+
+    Ok(false)
 }
 
-pub(crate) fn tree_nodes_innermost(
-    _type_use: Option<&TypeUse>,
-) -> Result<Option<TypeUse>, PassError> {
-    Err(not_ported_yet("treeNodesInnermost"))
+/// How a message names a kind of type that has no text form.
+fn textless_phrase(type_use: &TypeUse) -> Option<&'static str> {
+    match type_use {
+        TypeUse::Opaque(_) => Some(OPAQUE_PHRASE),
+        TypeUse::File(_) => Some(FILE_PHRASE),
+        _ => None,
+    }
+}
+
+/// The innermost item of a list use: a list of files is still a file in an item position.
+pub(crate) fn tree_nodes_innermost(type_use: Option<&TypeUse>) -> Option<&TypeUse> {
+    let mut at = type_use;
+
+    while let Some(TypeUse::Array(array)) = at {
+        at = Some(&array.items);
+    }
+
+    at
 }
