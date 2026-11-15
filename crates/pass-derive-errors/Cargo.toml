@@ -18,6 +18,7 @@ seampact-json.workspace = true
 seampact-pass-tree-shared.workspace = true
 seampact-pipeline.workspace = true
 seampact-templates.workspace = true
+serde_json.workspace = true
 
 [dev-dependencies]
 seampact-pipeline = { workspace = true, features = ["test-support"] }

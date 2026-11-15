@@ -985,6 +985,7 @@ dependencies = [
  "seampact-pass-tree-shared",
  "seampact-pipeline",
  "seampact-templates",
+ "serde_json",
 ]
 
 [[package]]
