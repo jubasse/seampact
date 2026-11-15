@@ -539,6 +539,13 @@ mod tests {
     use super::*;
 
     #[test]
+    fn a_pattern_matches_by_code_point_under_the_unicode_flag() {
+        assert_eq!(pattern_matches("^.$", "\u{1F600}"), Ok(true));
+        assert_eq!(pattern_matches("^.$", "ab"), Ok(false));
+        assert!(pattern_matches("(", "a").is_err());
+    }
+
+    #[test]
     fn a_decimal_text_is_a_plain_integer_part_and_an_optional_fraction() {
         let cases = [
             ("0", true),

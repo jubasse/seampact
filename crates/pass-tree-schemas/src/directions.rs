@@ -30,9 +30,19 @@ struct DirectionTargets<'declared> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct DirectionHolder {
+pub(crate) struct DirectionHolder {
     pointer: String,
     directions: Vec<Direction>,
+}
+
+#[cfg(test)]
+impl DirectionHolder {
+    pub(crate) fn new(pointer: &str, directions: &[Direction]) -> Self {
+        Self {
+            pointer: pointer.to_owned(),
+            directions: directions.to_vec(),
+        }
+    }
 }
 
 /// Adds a direction in the fixed order; `false` when it was already there, which ends the walk of a
@@ -177,7 +187,7 @@ fn positions_by_id<'id>(ids: impl Iterator<Item = &'id str>) -> HashMap<String, 
         .collect()
 }
 
-fn within(pointer: &str, holder: &str) -> bool {
+pub(crate) fn within(pointer: &str, holder: &str) -> bool {
     pointer == holder
         || pointer
             .strip_prefix(holder)
@@ -186,7 +196,7 @@ fn within(pointer: &str, holder: &str) -> bool {
 
 /// The directions of the nearest position or written schema holding `pointer`; none when no use
 /// reaches it yet.
-fn directions_at<'holders>(
+pub(crate) fn directions_at<'holders>(
     holders: &'holders [DirectionHolder],
     pointer: &str,
 ) -> &'holders [Direction] {

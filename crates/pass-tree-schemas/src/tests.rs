@@ -2,11 +2,14 @@
 //! escaping, the reporter over a fake context, and the text the pattern and extension key
 //! functions read by code point.
 
-use seampact_ir::{ExtensionKey, ExtensionPrefix};
+use indexmap::IndexMap;
+use seampact_ir::{Direction, ExtensionKey, ExtensionPrefix, Schema, TypeUse};
 use seampact_json::{JsonObject, JsonValue};
 use seampact_pipeline::testing::{HalfFixture, raw_api_from_json};
 
 use crate::compile::TreeSchemasCompiler;
+use crate::directions::{DirectionHolder, directions_at, within};
+use crate::example_check::TreeSchemasExampleChecker;
 use crate::extensions::{
     extension_key_parts, tree_schemas_extension_slot, tree_schemas_has_extensions,
 };
@@ -212,4 +215,108 @@ fn a_mark_on_a_declared_object_is_refused_in_written_order() {
             "'default' sits on an optional property or an optional query field"
         ]
     );
+}
+
+/// What compiling the catalogue of `text` gave: the schemas, the uses at each declaration and the
+/// reported messages.
+fn compiled_catalogue(
+    text: &str,
+) -> (
+    IndexMap<String, Schema>,
+    IndexMap<String, TypeUse>,
+    Vec<String>,
+) {
+    let mut fixture = HalfFixture::from_json(text).expect("fixture");
+
+    fixture
+        .with_context(|context| {
+            let merged = &context.raw.merged;
+            let mut compiler = TreeSchemasCompiler::new(merged, TreeSchemasReporter::new(context))
+                .expect("compiler");
+
+            compiler.compile_catalogue().expect("catalogue");
+
+            let messages = compiler
+                .reporter
+                .into_reported()
+                .into_iter()
+                .map(|diagnostic| diagnostic.message)
+                .collect();
+
+            (compiler.schemas, compiler.uses, messages)
+        })
+        .expect("context")
+}
+
+#[test]
+fn union_variants_sort_by_utf16_code_units_not_code_points() {
+    let (schemas, _, messages) = compiled_catalogue(
+        r#"{"schemas":{
+            "A":{"type":"object","properties":{"a":{"type":"string"}}},
+            "B":{"type":"object","properties":{"b":{"type":"string"}}},
+            "U":{"oneOf":{"～":"A","😀":"B"},"discriminator":"kind"}
+        }}"#,
+    );
+    let Some(Schema::Union(union)) = schemas.get("U") else {
+        panic!("the union U expected, reported {messages:?}");
+    };
+    let tags: Vec<&str> = union
+        .variants
+        .iter()
+        .map(|variant| variant.tag.as_str())
+        .collect();
+
+    assert_eq!(tags, ["\u{1F600}", "\u{FF5E}"]);
+}
+
+#[test]
+fn an_array_range_message_prints_numbers_as_javascript_does() {
+    let (_, _, messages) = compiled_catalogue(
+        r#"{"schemas":{"L":{"type":"array","items":{"type":"string"},"minItems":1e21,"maxItems":2}}}"#,
+    );
+
+    assert_eq!(
+        messages,
+        ["no value fits the schema: 'minItems' 1e+21 is above 'maxItems' 2"]
+    );
+}
+
+#[test]
+fn an_example_string_is_measured_in_code_points() {
+    let (schemas, uses, messages) = compiled_catalogue(
+        r#"{"schemas":{
+            "Long":{"type":"string","minLength":2}
+        }}"#,
+    );
+    let checker = TreeSchemasExampleChecker::new(schemas, IndexMap::new());
+    let emoji = JsonValue::String("\u{1F600}".to_owned());
+    let long = uses.get("/schemas/Long").expect("Long use");
+    let shorter = checker.check(&emoji, long).expect("check");
+
+    assert_eq!(messages, Vec::<String>::new());
+    assert_eq!(
+        shorter
+            .iter()
+            .map(|issue| issue.message.as_str())
+            .collect::<Vec<_>>(),
+        ["'\u{1F600}' is shorter than 2 characters"]
+    );
+}
+
+#[test]
+fn the_nearest_direction_holder_is_the_longest_in_utf16_units_and_the_first_on_a_tie() {
+    let holders = [
+        DirectionHolder::new("/a", &[Direction::Input]),
+        DirectionHolder::new("/a/\u{1F600}", &[Direction::Output]),
+        DirectionHolder::new("/a/\u{1F600}", &[Direction::Input]),
+    ];
+
+    assert_eq!(
+        directions_at(&holders, "/a/\u{1F600}/x"),
+        [Direction::Output]
+    );
+    assert_eq!(directions_at(&holders, "/a/b"), [Direction::Input]);
+    assert_eq!(directions_at(&holders, "/ab"), []);
+    assert!(within("/a", "/a"));
+    assert!(!within("/ab", "/a"));
 }
