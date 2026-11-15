@@ -1,16 +1,26 @@
 //! The `params` of an operation: path, query and header parameters, read from fields and checked against the path.
 
-use seampact_diagnostics::{DiagnosticOrigin, InternalError};
+use std::collections::HashMap;
+
+use seampact_diagnostics::{DiagnosticOrigin, InternalError, RelatedLocation};
 use seampact_ir::{
-    IgnoreUnknownQuery, KnownUnknownQuery, Origin, Param, Params, Reason, RefuseUnknownQuery,
+    Direction, IgnoreUnknownQuery, KnownUnknownQuery, Origin, Param, Params, Reason, RefuseUnknownQuery,
     TypeUse, UnknownQuery,
 };
 use seampact_json::{JsonValue, stringify_json};
-use seampact_pass_tree_shared::tree_nodes_member;
-use seampact_pipeline::{NearestSetting, PassError, TreeNode, TreeNodeId, TreeNodes};
+use seampact_pass_tree_shared::{tree_nodes_member, tree_nodes_tag_header};
+use seampact_pipeline::{
+    NearestSetting, OrderedSetting, PassError, TreeNode, TreeNodeId, TreeNodeKind, TreeNodes,
+};
 
 use crate::api::text_of;
-use crate::fields::{TreeNodesField, TreeNodesFields, TreeNodesSite};
+use crate::diagnostics::{
+    TreeNodesDiagnosticOptions, TreeNodesRule, tree_nodes_error, tree_nodes_locate,
+    tree_nodes_node_origin, tree_nodes_report_once,
+};
+use crate::fields::{
+    TreeNodesField, TreeNodesFields, TreeNodesSite, tree_nodes_field_travels, tree_nodes_fields,
+};
 use crate::not_ported::not_ported_yet;
 use crate::pass::TreeNodesScope;
 use crate::paths::TreeNodesPath;
@@ -23,12 +33,29 @@ enum ParamList {
     Header,
 }
 
-/// How a message names each list.
-const PLACE: &[(ParamList, &str)] = &[
-    (ParamList::Path, "path parameter"),
-    (ParamList::Query, "query field"),
-    (ParamList::Header, "request header"),
-];
+/// The inherited fields maps a route reads.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum FieldsSetting {
+    Query,
+    Headers,
+}
+
+impl FieldsSetting {
+    const fn as_str(self) -> &'static str {
+        match self {
+            Self::Query => "query",
+            Self::Headers => "headers",
+        }
+    }
+
+    const fn ordered(self) -> OrderedSetting {
+        match self {
+            Self::Query => OrderedSetting::Query,
+            Self::Headers => OrderedSetting::Headers,
+        }
+    }
+}
+
 /// The `unknownQuery` policy value that refuses.
 const REFUSE: &str = "refuse";
 
@@ -111,66 +138,314 @@ fn policy_of(
     })
     .into())
 }
+// An inherited fields map (`query`, `headers`): each node that writes one, from the root down, kept by `reaches`.
 fn inherited_fields(
-    _site: &TreeNodesSite<'_, '_>,
-    _setting: &str,
-    _reaches: &dyn Fn(&TreeNode<'_>) -> bool,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    setting: FieldsSetting,
+    reaches: impl Fn(TreeNodeId) -> bool,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<Vec<TreeNodesField>, PassError> {
-    Err(not_ported_yet("inheritedFields"))
+    let inherited = scope.context.inherited;
+    let Some(entries) = inherited.ordered(site.node_id, setting.ordered())? else {
+        return Ok(Vec::new());
+    };
+    let mut writers: Vec<TreeNodeId> = Vec::new();
+
+    for entry in entries {
+        if !writers.contains(&entry.node) && reaches(entry.node) {
+            writers.push(entry.node);
+        }
+    }
+
+    let mut fields = Vec::new();
+
+    for writer in writers {
+        let at = site.nodes.get(writer)?;
+        let pointer = format!("{}/{}", at.pointer, setting.as_str());
+        let read = tree_nodes_fields(
+            site,
+            at.settings.get(setting.as_str()),
+            &pointer,
+            &Direction::Input,
+            scope,
+        )?;
+
+        fields.extend(read.fields);
+    }
+
+    Ok(fields)
 }
 
+// A header-tagged input adds its tag header itself (ADR 0003 section 4), so the route declares it no second time.
 fn check_tag_header_not_declared(
-    _site: &TreeNodesSite<'_, '_>,
-    _headers: &[Param],
-    _input: Option<&TypeUse>,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    headers: &[Param],
+    input: Option<&TypeUse>,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("checkTagHeaderNotDeclared"))
+    let Some(tag_header) = tree_nodes_tag_header(scope.draft, input).map(str::to_lowercase) else {
+        return Ok(());
+    };
+    let declared = headers
+        .iter()
+        .find(|header| header.name.to_lowercase() == tag_header);
+    let Some((declared, declared_origin)) =
+        declared.and_then(|header| Some((header, header.origin.as_ref()?)))
+    else {
+        return Ok(());
+    };
+    let fallback = tree_nodes_node_origin(&site.node.origin)?;
+    let origin = tree_nodes_locate(declared_origin, &fallback);
+    let key = format!(
+        "union-header:{}#{}:{}",
+        origin.layer, origin.pointer, site.node.pointer
+    );
+    let diagnostic = tree_nodes_error(TreeNodesDiagnosticOptions {
+        rule: TreeNodesRule::UnionHeader,
+        origin,
+        message: format!(
+            "The request header {} of {} is the tag of its input union, which adds it.",
+            declared.name, site.operation_id
+        ),
+        fix: "Remove the header; the union's discriminator adds it.".to_owned(),
+        related: Vec::new(),
+    });
+
+    tree_nodes_report_once(&key, diagnostic, scope);
+
+    Ok(())
 }
 
+// Each field once per list (a header name in any case), with a type the service answers, and that may travel there.
 fn params_of(
-    _site: &TreeNodesSite<'_, '_>,
-    _fields: &[TreeNodesField],
-    _list: ParamList,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    fields: &[TreeNodesField],
+    list: ParamList,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<Vec<Param>, PassError> {
-    Err(not_ported_yet("paramsOf"))
+    let mut params: Vec<Param> = Vec::new();
+    let mut seen: HashMap<String, &TreeNodesField> = HashMap::new();
+
+    for field in fields {
+        let key = if list == ParamList::Header {
+            field.name.to_lowercase()
+        } else {
+            field.name.clone()
+        };
+
+        if let Some(first) = seen.get(&key) {
+            report_twice(site, field, first, list, scope)?;
+            continue;
+        }
+
+        seen.insert(key, field);
+
+        if !tree_nodes_field_travels(site, field, place_of(list), scope)? {
+            continue;
+        }
+
+        if let Some(param) = param_of(site, field, &field.field_type, list, scope)? {
+            params.push(param);
+        }
+    }
+
+    Ok(params)
 }
 
+/// How a message names each list.
+fn place_of(list: ParamList) -> &'static str {
+    match list {
+        ParamList::Path => "path parameter",
+        ParamList::Query => "query field",
+        ParamList::Header => "request header",
+    }
+}
+
+/// One route's declared parameters.
 pub(crate) fn tree_nodes_params(
-    _site: &TreeNodesSite<'_, '_>,
-    _path: Option<&TreeNodesPath>,
-    _safe: bool,
-    _input: Option<&TypeUse>,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    path: Option<&TreeNodesPath>,
+    safe: bool,
+    input: Option<&TypeUse>,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<Params, PassError> {
-    Err(not_ported_yet("treeNodesParams"))
+    let path_fields = path_param_fields(site, scope)?;
+
+    if let Some(path) = path {
+        check_placeholders(site, path, &path_fields, scope)?;
+    }
+
+    let header_fields = inherited_fields(site, FieldsSetting::Headers, |_| true, scope)?;
+    let header = params_of(site, &header_fields, ParamList::Header, scope)?;
+
+    check_tag_header_not_declared(site, &header, input, scope)?;
+
+    let own_node = site.node_id;
+    let query_fields = inherited_fields(
+        site,
+        FieldsSetting::Query,
+        |at| at == own_node || safe,
+        scope,
+    )?;
+
+    check_query_not_named_like_path(site, &path_fields.fields, &query_fields, scope)?;
+
+    Ok(Params {
+        path: params_of(site, &path_fields.fields, ParamList::Path, scope)?,
+        query: params_of(site, &query_fields, ParamList::Query, scope)?,
+        header,
+    })
 }
 
+// Merged-bag frameworks read a path parameter and a query key of one name as one value, so a query field takes no
+// path parameter's name (a stricter rule than the grammar's). Body and form fields may.
 fn check_query_not_named_like_path(
-    _site: &TreeNodesSite<'_, '_>,
-    _path_fields: &[TreeNodesField],
-    _query_fields: &[TreeNodesField],
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    path_fields: &[TreeNodesField],
+    query_fields: &[TreeNodesField],
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("checkQueryNotNamedLikePath"))
+    let fallback = tree_nodes_node_origin(&site.node.origin)?;
+
+    for query in query_fields {
+        let Some(path) = path_fields.iter().find(|field| field.name == query.name) else {
+            continue;
+        };
+        let origin = tree_nodes_locate(&query.origin, &fallback);
+        let key = format!(
+            "param-unique:{}#{}:{}:path",
+            origin.layer, origin.pointer, query.name
+        );
+        let diagnostic = tree_nodes_error(TreeNodesDiagnosticOptions {
+            rule: TreeNodesRule::ParamUnique,
+            origin,
+            message: format!(
+                "The query field {} of {} has the name of its path parameter, which frameworks merging both read as one value.",
+                query.name, site.operation_id
+            ),
+            fix: "Rename one of the two.".to_owned(),
+            related: vec![RelatedLocation {
+                origin: tree_nodes_locate(&path.origin, &fallback),
+                message: "the path parameter".to_owned(),
+            }],
+        });
+
+        tree_nodes_report_once(&key, diagnostic, scope);
+    }
+
+    Ok(())
 }
 
+// The member id of each collection whose member scope the route sits in, and each node's `pathParams`, from the
+// surface down: the order the placeholders appear in the path.
 fn path_param_fields(
-    _site: &TreeNodesSite<'_, '_>,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<TreeNodesFields, PassError> {
-    Err(not_ported_yet("pathParamFields"))
+    let mut fields: Vec<TreeNodesField> = Vec::new();
+    let mut complete = true;
+
+    for (_, at) in site.nodes.chain(site.node_id)? {
+        let collection = match at.parent {
+            Some(parent) if at.kind == TreeNodeKind::Scope && at.name == "member" => {
+                Some(site.nodes.get(parent)?)
+            }
+            _ => None,
+        };
+
+        if let Some(collection) = collection {
+            let id = tree_nodes_fields(
+                site,
+                collection.settings.get("id"),
+                &format!("{}/id", collection.pointer),
+                &Direction::Input,
+                scope,
+            )?;
+
+            fields.extend(required(id.fields));
+        }
+
+        let declared = tree_nodes_fields(
+            site,
+            at.settings.get("pathParams"),
+            &format!("{}/pathParams", at.pointer),
+            &Direction::Input,
+            scope,
+        )?;
+
+        complete = complete && declared.complete;
+        fields.extend(required(declared.fields));
+    }
+
+    Ok(TreeNodesFields { fields, complete })
 }
 
+fn required(fields: Vec<TreeNodesField>) -> impl Iterator<Item = TreeNodesField> {
+    fields.into_iter().map(|field| TreeNodesField {
+        required: true,
+        ..field
+    })
+}
+
+// Every placeholder of the path names a path parameter, once, and every path parameter has its placeholder. A
+// placeholder is reported where its path part is written, so a parent's path is reported once, not per route.
 fn check_placeholders(
-    _site: &TreeNodesSite<'_, '_>,
-    _path: &TreeNodesPath,
-    _path_fields: &TreeNodesFields,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    path: &TreeNodesPath,
+    path_fields: &TreeNodesFields,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("checkPlaceholders"))
+    let node_origin = tree_nodes_node_origin(&site.node.origin)?;
+    let mut placeholders: Vec<&str> = Vec::new();
+
+    for part in &path.parts {
+        for placeholder in placeholders_of(&part.text) {
+            let origin = tree_nodes_locate(&part.origin, &node_origin);
+            let repeated = placeholders.contains(&placeholder);
+
+            placeholders.push(placeholder);
+
+            if repeated {
+                report_repeated_placeholder(site, &path.full, placeholder, &origin, scope)?;
+            } else if path_fields.complete
+                && !path_fields
+                    .fields
+                    .iter()
+                    .any(|field| field.name == placeholder)
+            {
+                report_undeclared_placeholder(site, &path.full, placeholder, &origin, scope)?;
+            }
+        }
+    }
+
+    for field in path_fields
+        .fields
+        .iter()
+        .filter(|field| !placeholders.contains(&field.name.as_str()))
+    {
+        let origin = tree_nodes_locate(&field.origin, &node_origin);
+        let key = format!(
+            "path-param:{}#{}:{}",
+            origin.layer, origin.pointer, field.name
+        );
+        let diagnostic = tree_nodes_error(TreeNodesDiagnosticOptions {
+            rule: TreeNodesRule::PathParam,
+            origin,
+            message: format!(
+                "The path parameter {} of {} is not in its path {}.",
+                field.name, site.operation_id, path.full
+            ),
+            fix: format!(
+                "Write {{{}}} in the path, or remove the parameter.",
+                field.name
+            ),
+            related: Vec::new(),
+        });
+
+        tree_nodes_report_once(&key, diagnostic, scope);
+    }
+
+    Ok(())
 }
 
 fn param_of(
