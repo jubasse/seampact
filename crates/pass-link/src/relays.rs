@@ -6,10 +6,11 @@ use indexmap::IndexMap;
 use seampact_diagnostics::{
     Diagnostic, DiagnosticOrigin, InternalError, RuleId, Severity, quote_text,
 };
-use seampact_ir::{ContractIr, DeclarationKind, OperationError, OperationId, OperationRef};
+use seampact_ir::{
+    ContractIr, DeclarationKind, IrClosedCheck, OperationError, OperationId, OperationRef,
+    check_ir_closed_declaration,
+};
 use seampact_pipeline::{DraftIr, DraftOperation, PassError, pointer_below};
-
-use crate::not_ported::not_ported_yet;
 
 const LINK_RELAY_SUPERSET_RULE: &str = "seampact/link/relay-superset";
 
@@ -69,16 +70,20 @@ fn public_errors_of<'run>(
         return Ok(operation.errors.as_deref().unwrap_or(&[]));
     }
 
-    let imported = imports.get(&relays.api).is_some_and(|contract| {
+    let imported = imports.get(&relays.api).and_then(|contract| {
         contract
             .operations
             .iter()
-            .any(|operation| is_operation(Some(&operation.kind), Some(&operation.id), id))
+            .enumerate()
+            .find(|(_, operation)| is_operation(Some(&operation.kind), Some(&operation.id), id))
     });
 
-    if imported {
-        // The closed check of an imported operation is the foreign `checkIrClosedDeclaration`.
-        return Err(not_ported_yet("checkIrClosedDeclaration"));
+    if let Some((index, operation)) = imported {
+        let pointer = format!("/operations/{index}");
+
+        if let IrClosedCheck::Closed(closed) = check_ir_closed_declaration(operation, &pointer)? {
+            return Ok(&closed.errors);
+        }
     }
 
     Err(InternalError::new(format!(
@@ -149,7 +154,7 @@ fn superset_diagnostic(
 ///
 /// # Errors
 ///
-/// [`PassError::NotPortedYet`] for a relay to an imported operation, else an internal error.
+/// An internal error for a relay to no closed operation of a workspace api or an import.
 pub(crate) fn link_relay_superset(
     drafts: &IndexMap<String, DraftIr>,
     imports: &IndexMap<String, ContractIr>,

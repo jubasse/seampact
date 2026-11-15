@@ -11,7 +11,7 @@ use seampact_ir::{
 };
 use seampact_pipeline::{
     DeriveWireOperation, DeriveWireOutput, DraftIr, DraftOperation, HalfContext, OperationIndex,
-    TreeNode, TreeNodeId, TreeSchemaService,
+    TreeNode, TreeNodeId, TreeSchemaService, place_derived_responses,
 };
 
 use crate::report::{
@@ -153,7 +153,7 @@ impl<'draft, 'half, 'run> DeriveWireScope<'draft, 'half, 'run> {
             })?;
         let mut responses = draft_operation.responses.clone().unwrap_or_default();
 
-        responses.extend(written.responses.iter().cloned());
+        place_derived_responses(&mut responses, written.responses.iter().cloned())?;
 
         for addition in &written.response_headers {
             let total = responses.len();

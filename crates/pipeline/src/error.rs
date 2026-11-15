@@ -1,7 +1,7 @@
 //! How a half fails: a function not ported yet, or a bug.
 
 use seampact_diagnostics::InternalError;
-use seampact_ir::NarrowUnionError;
+use seampact_ir::{IrError, NarrowUnionError};
 
 /// Why a half or a schema service call gave no answer.
 ///
@@ -25,6 +25,14 @@ impl From<NarrowUnionError> for PassError {
     #[track_caller]
     fn from(error: NarrowUnionError) -> Self {
         Self::Internal(InternalError::from(error))
+    }
+}
+
+/// An IR value that does not encode, or broken embedded IR schemas, is a bug of the compiler.
+impl From<IrError> for PassError {
+    #[track_caller]
+    fn from(error: IrError) -> Self {
+        Self::Internal(InternalError::new(error.to_string()))
     }
 }
 

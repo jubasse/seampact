@@ -4,11 +4,11 @@
 use seampact_authoring::{ApiLayer, FileLayer, JsonObjectExt};
 use seampact_diagnostics::{InternalError, diagnostic_inert};
 use seampact_ir::PackName;
-use seampact_json::{JsonValue, escape_pointer};
+use seampact_json::{JsonValue, escape_pointer, js_text_of};
 use seampact_span::Span;
 
 use super::builds::{BuildId, root_site_of, site_in};
-use super::package::{PackageFound, js_text_of};
+use super::package::PackageFound;
 use super::{ApiState, Loader};
 use crate::limits::LOAD_MAX_DEPTH;
 use crate::pack_files::pack_layer_id_of;

@@ -14,14 +14,92 @@ use crate::{DraftIr, Half};
 
 /// Headers `derive.wire` adds to one response.
 ///
-/// `response` is the index in the operation's `responses` after the merge of the earlier halves;
-/// the responses this half appends itself come after them, in their order.
+/// `response` is the index in the operation's merged `responses`: the earlier halves' responses
+/// with every response this half derives placed (`merged_response_order`).
 #[derive(Debug, Clone, PartialEq)]
 pub struct ResponseHeaderAdditions {
     /// The index of the response.
     pub response: usize,
     /// The headers appended to it.
     pub headers: Vec<ResponseHeader>,
+}
+
+/// Where a response `derive.wire` derives goes in the operation's `responses`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ResponsePosition {
+    /// After every response, as `push` writes it.
+    End,
+    /// At this index of the responses as they stand when the response merges, as
+    /// `splice(index, 0, response)` writes it: the earlier halves' responses and the responses
+    /// this half derived before it.
+    At(usize),
+}
+
+/// A response `derive.wire` derives, and where it goes.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DerivedResponse {
+    /// Where the response goes.
+    pub position: ResponsePosition,
+    /// The response.
+    pub response: Response,
+}
+
+/// Where one response of the merged `responses` comes from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MergedResponse {
+    /// The response at this index of the draft's responses.
+    Draft(usize),
+    /// The response at this index of the half's derived responses.
+    Derived(usize),
+}
+
+/// The origin of each response of the merged `responses`, in merged order: the draft's
+/// `draft_count` responses with each derived response placed as its position says.
+///
+/// # Errors
+///
+/// An [`InternalError`] for a position past the responses it is placed among.
+pub fn merged_response_order(
+    draft_count: usize,
+    derived: &[DerivedResponse],
+) -> Result<Vec<MergedResponse>, InternalError> {
+    let mut order: Vec<MergedResponse> = (0..draft_count).map(MergedResponse::Draft).collect();
+
+    for (index, response) in derived.iter().enumerate() {
+        let at = place_of(response.position, order.len())?;
+
+        order.insert(at, MergedResponse::Derived(index));
+    }
+
+    Ok(order)
+}
+
+/// Places each derived response among `responses`, in order, as its position says.
+///
+/// # Errors
+///
+/// An [`InternalError`] for a position past the responses it is placed among.
+pub fn place_derived_responses(
+    responses: &mut Vec<Response>,
+    derived: impl IntoIterator<Item = DerivedResponse>,
+) -> Result<(), InternalError> {
+    for DerivedResponse { position, response } in derived {
+        let at = place_of(position, responses.len())?;
+
+        responses.insert(at, response);
+    }
+
+    Ok(())
+}
+
+fn place_of(position: ResponsePosition, count: usize) -> Result<usize, InternalError> {
+    match position {
+        ResponsePosition::End => Ok(count),
+        ResponsePosition::At(at) if at <= count => Ok(at),
+        ResponsePosition::At(at) => Err(InternalError::new(format!(
+            "derive.wire places a response at {at}, past the {count} responses"
+        ))),
+    }
 }
 
 /// What `derive.wire` writes on one operation.
@@ -33,8 +111,8 @@ pub struct DeriveWireOperation {
     pub query_params: Vec<Param>,
     /// The derived header parameters, appended to `params.header`.
     pub header_params: Vec<Param>,
-    /// The derived responses, appended to `responses`.
-    pub responses: Vec<Response>,
+    /// The derived responses, placed in `responses` in order.
+    pub responses: Vec<DerivedResponse>,
     /// The headers added to responses, of either kind.
     pub response_headers: Vec<ResponseHeaderAdditions>,
     /// The `input.bodyLimitBytes` member.
@@ -86,8 +164,8 @@ impl DeriveWireOutput {
     /// # Errors
     ///
     /// An [`InternalError`] naming the member and the operation when the draft already holds a
-    /// value there, when the api or a list has nothing to land on, when a response index is past
-    /// the earlier and the appended responses, or when the output has another number of
+    /// value there, when the api or a list has nothing to land on, when a response position or
+    /// index is past the merged responses, or when the output has another number of
     /// operations than the draft.
     pub fn merge_into(self, draft: &mut DraftIr) -> Result<(), InternalError> {
         let site = Site::of_draft(Half::DeriveWire);
@@ -177,19 +255,21 @@ fn merge_parameters(
 
 fn merge_responses(
     operation: &mut crate::DraftOperation,
-    appended: Vec<Response>,
+    derived: Vec<DerivedResponse>,
     header_additions: Vec<ResponseHeaderAdditions>,
     site: &Site,
 ) -> Result<(), InternalError> {
-    if appended.is_empty() && header_additions.is_empty() {
+    if derived.is_empty() && header_additions.is_empty() {
         return Ok(());
     }
 
-    check_responses(&appended, site)?;
+    for item in &derived {
+        check_responses(std::slice::from_ref(&item.response), site)?;
+    }
 
     let responses = existing(&mut operation.responses, "responses", site)?;
 
-    responses.extend(appended);
+    place_derived_responses(responses, derived)?;
 
     for addition in header_additions {
         check_response_headers(&addition.headers, site)?;

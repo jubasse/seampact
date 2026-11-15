@@ -13,11 +13,11 @@ use seampact_ir::{
     ExtensionKeyDecl, ExtensionKeyId, Extensions, FieldRight, FormatId, HeaderDecl, HeaderId,
     HttpMethod, Idempotency, Identity, IdentityId, InputField, InputMediaType, InputProof, IrMap,
     Lint, Maturity, Name, NatureDecl, NatureId, OpShorthand, OperationError, OperationExample,
-    OperationId, OperationMaturity, OperationRef, OperationResource, OperationScope, Origin, Owner,
-    PackRef, Paging, PagingId, PagingStyle, Params, PathVersion, PrincipalRequirement, Requirement,
-    Response, Right, RightId, Rule, RuleId, Scalar, ScalarId, Schema, SchemaId, Scheme, SchemeId,
-    Scope, ScopeId, Service, ServiceId, Surface, SurfaceId, TypeUse, UnknownQuery, ValueSource,
-    WireFormat, optional_count,
+    OperationId, OperationInput, OperationMaturity, OperationRef, OperationResource,
+    OperationScope, Origin, Owner, PackRef, Paging, PagingId, PagingStyle, Params, PathVersion,
+    PrincipalRequirement, Requirement, Response, Right, RightId, Rule, RuleId, Scalar, ScalarId,
+    Schema, SchemaId, Scheme, SchemeId, Scope, ScopeId, Service, ServiceId, Surface, SurfaceId,
+    TypeUse, UnknownQuery, ValueSource, WireFormat, optional_count,
 };
 use seampact_json::{JsonValue, escape_pointer};
 use serde::{Deserialize, Serialize};
@@ -56,6 +56,56 @@ pub struct DraftOperationInput {
 
     /// The `origin` member.
     pub origin: Origin,
+}
+
+/// A request body in the draft shape, borrowed from a draft operation or from an IR operation.
+///
+/// A relay route reads the input of a draft operation and of an imported operation alike through
+/// it; the IR's required members read as present ones.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DraftOperationInputRef<'input> {
+    /// The `media` member.
+    pub media: &'input InputMediaType,
+    /// The `schema` member.
+    pub schema: &'input TypeUse,
+    /// The `bodyLimitBytes` member.
+    pub body_limit_bytes: Option<i64>,
+    /// The `rawBody` member.
+    pub raw_body: Option<bool>,
+    /// The `fields` member.
+    pub fields: Option<&'input [InputField]>,
+    /// The `proofs` member.
+    pub proofs: Option<&'input [InputProof]>,
+    /// The `origin` member.
+    pub origin: &'input Origin,
+}
+
+impl<'input> From<&'input DraftOperationInput> for DraftOperationInputRef<'input> {
+    fn from(input: &'input DraftOperationInput) -> Self {
+        Self {
+            media: &input.media,
+            schema: &input.schema,
+            body_limit_bytes: input.body_limit_bytes,
+            raw_body: input.raw_body,
+            fields: input.fields.as_deref(),
+            proofs: input.proofs.as_deref(),
+            origin: &input.origin,
+        }
+    }
+}
+
+impl<'input> From<&'input OperationInput> for DraftOperationInputRef<'input> {
+    fn from(input: &'input OperationInput) -> Self {
+        Self {
+            media: &input.media,
+            schema: &input.schema,
+            body_limit_bytes: Some(input.body_limit_bytes),
+            raw_body: Some(input.raw_body),
+            fields: input.fields.as_deref(),
+            proofs: input.proofs.as_deref(),
+            origin: &input.origin,
+        }
+    }
 }
 
 /// The concurrency of an operation in the draft: `derivedFrom` is written by `derive.wire`.
@@ -539,6 +589,31 @@ mod tests {
         }
 
         assert_eq!(first_difference(&nested, &nested.clone(), ""), None);
+    }
+
+    #[test]
+    fn an_ir_input_reads_in_the_draft_shape_with_its_required_members_present() {
+        let ir_input: OperationInput = serde_json::from_value(serde_json::json!({
+            "media": "json",
+            "schema": {"kind": "ref", "schema": "Task"},
+            "bodyLimitBytes": 1024,
+            "rawBody": false,
+            "origin": {"layer": "api", "pointer": "/operations/createTask"}
+        }))
+        .unwrap();
+        let draft_input = DraftOperationInput {
+            media: ir_input.media.clone(),
+            schema: ir_input.schema.clone(),
+            body_limit_bytes: Some(1024),
+            raw_body: Some(false),
+            fields: None,
+            proofs: None,
+            origin: ir_input.origin.clone(),
+        };
+        let from_ir = DraftOperationInputRef::from(&ir_input);
+
+        assert_eq!(from_ir, DraftOperationInputRef::from(&draft_input));
+        assert!(std::ptr::eq(from_ir.schema, &raw const ir_input.schema));
     }
 
     fn assert_send_and_sync<T: Send + Sync>() {}

@@ -8,7 +8,7 @@ use seampact_ir::{
     MaturitySource, OperationId, OperationMaturity, OperationRef, Origin, Reason,
 };
 use seampact_js::js_key_order;
-use seampact_json::{JsonObject, JsonValue};
+use seampact_json::{JsonObject, JsonValue, js_text_of};
 use seampact_pass_tree_shared::{
     TREE_NODES_BATCH_OP, TREE_NODES_MATURITIES, tree_nodes_member, tree_nodes_op_shorthand,
 };
@@ -22,7 +22,6 @@ use crate::diagnostics::{
     tree_nodes_report_once,
 };
 use crate::fields::TreeNodesSite;
-use crate::js_text::js_text_of;
 use crate::not_ported::not_ported_yet;
 use crate::pass::TreeNodesScope;
 

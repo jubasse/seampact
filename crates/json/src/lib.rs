@@ -5,11 +5,12 @@
 //! [`canonical_document`] writes the IR and source-map bytes, [`canonical_json`] the compact key
 //! of a value, [`indented_json`] the `JSON.stringify(value, null, 2)` text. [`js_integer`] reads an IR integer member with JavaScript semantics, [`present`]
 //! an optional opaque member that keeps a present `null`, and [`escape_pointer`] escapes a JSON
-//! Pointer segment.
+//! Pointer segment. [`js_text_of`] is `String(value)`.
 
 mod canonical;
 mod error;
 mod js_integer;
+mod js_text;
 mod number;
 mod object;
 mod pointer;
@@ -22,6 +23,7 @@ pub use error::JsonError;
 pub use js_integer::{
     MAX_SAFE_INTEGER, MIN_SAFE_INTEGER, js_integer, js_integer_in_range, optional_js_integer,
 };
+pub use js_text::js_text_of;
 pub use number::JsonNumber;
 pub use object::JsonObject;
 pub use pointer::escape_pointer;

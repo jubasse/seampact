@@ -1,12 +1,6 @@
 //! The link pass (ADR 0006 section 3), ported from `packages/core/compiler/src/passes/link`: checks
 //! over the derived draft of every api, reported as diagnostics only.
 
-#![allow(
-    dead_code,
-    reason = "functions reached only by stubs until the half's last brief"
-)]
-
-mod not_ported;
 mod relays;
 
 use indexmap::IndexMap;
@@ -26,7 +20,6 @@ pub const RULE_IDS: &[RuleId] = &[RELAY_SUPERSET_RULE_ID];
 ///
 /// # Errors
 ///
-/// [`PassError::NotPortedYet`] when the run reaches a function not ported yet, else
 /// [`PassError::Internal`] for a bug.
 pub fn run(
     drafts: &IndexMap<String, DraftIr>,

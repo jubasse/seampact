@@ -5,6 +5,7 @@
 //! and unions keep an unknown value or variant as read, and their registries ([`OPEN_ENUMS`],
 //! [`UNIONS`]) list every definition. [`IR_SCHEMA_FILES`] embeds the schema files.
 
+mod closed_declaration;
 mod common;
 mod contract;
 mod declarations;
@@ -12,11 +13,13 @@ mod document;
 mod error;
 mod formats;
 mod ids;
+mod instance_walk;
 mod integers;
 mod ir_map;
 mod layer;
 mod open_enums;
 mod operation;
+mod same_type_use;
 mod schema_files;
 mod schemas;
 mod sensitive_field;
@@ -24,6 +27,10 @@ mod source_map;
 mod unions;
 mod version;
 
+pub use closed_declaration::{
+    IrClosedCheck, IrClosedDeclaration, IrClosedUnknown, bounded_unknown_text,
+    bounded_unknown_value, check_ir_closed_declaration,
+};
 pub use common::{DerivedFrom, Docs, Extensions, Name, Origin, SchemaRef, ValueSource};
 pub use contract::{
     Api, ApiCaller, ApiDocument, ApiWire, Compat, ContractIr, ConventionValue, Conventions,
@@ -74,6 +81,7 @@ pub use operation::{
     PrincipalRequirement, PublicAccess, QueryWire, RefuseUnknownQuery, RequirementSubject,
     Response, ResponseHeader, RetryHeader, RightRequirement, RuleRequirement, SortKey,
 };
+pub use same_type_use::is_ir_same_type_use;
 pub use schema_files::{IR_SCHEMA_FILES, IrSchemaFile};
 pub use schemas::{
     ArrayTypeUse, BodyUnionTag, EnumNarrowing, EnumTypeUse, FieldRestriction, FileTypeUse,
