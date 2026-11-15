@@ -60,7 +60,14 @@ pub(crate) fn tree_nodes_degradable(
     for (index, path) in paths.iter().enumerate() {
         let path_pointer = format!("{pointer}/{index}");
 
-        check_path(site, path, &path_pointer, success_body, header.is_some(), scope)?;
+        check_path(
+            site,
+            path,
+            &path_pointer,
+            success_body,
+            header.is_some(),
+            scope,
+        )?;
     }
 
     if !format_fills_degraded(site, format, scope)? && header.is_none() {

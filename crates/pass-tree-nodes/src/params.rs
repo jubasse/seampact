@@ -4,8 +4,8 @@ use std::collections::HashMap;
 
 use seampact_diagnostics::{DiagnosticOrigin, InternalError, RelatedLocation};
 use seampact_ir::{
-    Direction, IgnoreUnknownQuery, KnownUnknownQuery, Origin, Param, Params, Reason, RefuseUnknownQuery,
-    TypeUse, UnknownQuery,
+    Direction, IgnoreUnknownQuery, KnownUnknownQuery, Origin, Param, Params, Reason,
+    RefuseUnknownQuery, TypeUse, UnknownQuery,
 };
 use seampact_json::{JsonValue, stringify_json};
 use seampact_pass_tree_shared::{tree_nodes_member, tree_nodes_tag_header};

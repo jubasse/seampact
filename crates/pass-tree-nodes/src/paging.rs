@@ -2,8 +2,8 @@
 
 use seampact_diagnostics::RelatedLocation;
 use seampact_ir::{
-    Origin, OverLimitPolicy, Paging, PagingId, PagingParamStyle, PagingToken, Param, Response, SortKey,
-    TypeUse,
+    Origin, OverLimitPolicy, Paging, PagingId, PagingParamStyle, PagingToken, Param, Response,
+    SortKey, TypeUse,
 };
 use seampact_json::JsonValue;
 use seampact_pipeline::PassError;
@@ -12,9 +12,9 @@ use crate::diagnostics::{
     TreeNodesDiagnosticOptions, TreeNodesRule, tree_nodes_error, tree_nodes_node_origin,
 };
 use crate::fields::TreeNodesSite;
-use crate::responses::tree_nodes_is_list;
 use crate::not_ported::not_ported_yet;
 use crate::pass::TreeNodesScope;
+use crate::responses::tree_nodes_is_list;
 
 const DEFAULT_OVER_LIMIT: OverLimitPolicy = OverLimitPolicy::Reject;
 const OVER_LIMITS: &[OverLimitPolicy] = &[OverLimitPolicy::Reject, OverLimitPolicy::Clamp];
