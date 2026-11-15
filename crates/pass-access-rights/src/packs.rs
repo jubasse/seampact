@@ -1,11 +1,13 @@
 //! The rights a pack derives per route, and the entries that select them (ADR 0002 section 12).
 
+use seampact_diagnostics::InternalError;
 use seampact_ir::{Name, OperationScope, PackRef, Right, RightSubject};
 use seampact_json::{JsonObject, JsonValue};
-use seampact_pipeline::{PassError, TreeNodeId};
+use seampact_pipeline::{PassError, TreeNodeId, pointer_below};
 
 use crate::catalogues::AccessRightsCatalogues;
 use crate::not_ported::not_ported_yet;
+use crate::read::{access_rights_member, access_rights_object, access_rights_string};
 use crate::report::AccessRightsReporter;
 use crate::restricted_fields::AccessRightsDraftSchemas;
 use crate::routes::{AccessRightsApi, AccessRightsRoute};
@@ -77,11 +79,59 @@ const RESOURCE_SLOT: &str = "{resource}";
 
 const OP_SLOT: &str = "{op}";
 
+/// The derive entries of the api, in application order: the packs in order, each pack's entries
+/// in written order. Each pack must be one `tree.nodes` recorded in `packs`, since the derivation
+/// id names it.
+///
+/// # Errors
+///
+/// An internal error for an entry of no pack, of an unrecorded pack, or with no `entry` name.
 pub(crate) fn access_rights_derive_entries<'run>(
-    _context: &AccessRightsContext<'_, '_, 'run>,
-    _packs: &[PackRef],
-) -> Result<Vec<AccessRightsDeriveEntry<'run>>, PassError> {
-    Err(not_ported_yet("accessRightsDeriveEntries"))
+    context: &AccessRightsContext<'_, '_, 'run>,
+    packs: &[PackRef],
+) -> Result<Vec<AccessRightsDeriveEntry<'run>>, InternalError> {
+    let raw = context.context.raw;
+    let Some(JsonValue::Array(written)) = access_rights_member(Some(&raw.merged), "derive") else {
+        return Ok(Vec::new());
+    };
+    let mut entries = Vec::new();
+
+    for (index, settings) in written.iter().enumerate() {
+        let Some(settings) = access_rights_object(Some(settings)) else {
+            continue;
+        };
+        let pointer = pointer_below("/derive", &[&index.to_string()]);
+        let layer = context
+            .context
+            .origin(&pointer)
+            .map_or_else(String::new, |origin| origin.layer.to_string());
+        let Some(pack) = layer.strip_prefix(PACK_LAYER) else {
+            return Err(InternalError::new(format!(
+                "the derive entry at {pointer} comes from layer '{layer}', which is no pack"
+            )));
+        };
+
+        if !packs.iter().any(|applied| applied.name == pack) {
+            return Err(InternalError::new(format!(
+                "the derive entry at {pointer} comes from pack '{pack}', which tree.nodes did not record in packs"
+            )));
+        }
+
+        let Some(entry) = access_rights_string(Some(settings), "entry") else {
+            return Err(InternalError::new(format!(
+                "the derive entry at {pointer} has no 'entry' name"
+            )));
+        };
+
+        entries.push(AccessRightsDeriveEntry {
+            derivation: format!("pack.{pack}.{entry}"),
+            entry: entry.to_owned(),
+            pointer,
+            settings,
+        });
+    }
+
+    Ok(entries)
 }
 
 pub(crate) fn access_rights_selects(

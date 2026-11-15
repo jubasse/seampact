@@ -25,3 +25,8 @@ pub(crate) fn access_rights_value_source(_text: &str) -> Result<Option<ValueSour
 pub(crate) fn access_rights_source_text(_source: &ValueSource) -> Result<String, PassError> {
     Err(not_ported_yet("accessRightsSourceText"))
 }
+
+/// Whether `text` is `address/<digits>`, the key source of an address prefix.
+fn address_prefix_bits_of(_text: &str) -> Result<Option<&str>, PassError> {
+    Err(not_ported_yet("ADDRESS_PREFIX"))
+}

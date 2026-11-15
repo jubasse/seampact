@@ -30,10 +30,14 @@ mod source;
 mod subjects;
 
 use seampact_diagnostics::RuleId;
-use seampact_pipeline::{AccessRightsOutput, DraftIr, HalfContext, PassError, TreeSchemaService};
+use seampact_ir::IrMap;
+use seampact_pipeline::{
+    AccessRightsOperation, AccessRightsOutput, DraftIr, HalfContext, PassError, TreeSchemaService,
+    pipeline_tree_nodes,
+};
 
-use crate::not_ported::not_ported_yet;
 use crate::report::AccessRightsRule;
+use crate::schema_use::AccessRightsContext;
 
 /// Every rule id the half reports, read by the oracle's rule id registry.
 pub const RULE_IDS: &[RuleId] = &[
@@ -78,9 +82,26 @@ pub const RULE_IDS: &[RuleId] = &[
 /// [`PassError::NotPortedYet`] when the run reaches a function not ported yet, else
 /// [`PassError::Internal`] for a bug.
 pub fn run(
-    _draft: &DraftIr,
-    _context: &mut HalfContext<'_>,
-    _schemas: &dyn TreeSchemaService,
+    draft: &DraftIr,
+    context: &mut HalfContext<'_>,
+    schemas: &dyn TreeSchemaService,
 ) -> Result<AccessRightsOutput, PassError> {
-    Err(not_ported_yet("accessRightsPass.run"))
+    let nodes = pipeline_tree_nodes(context.raw)?;
+    let mut scope = AccessRightsContext {
+        draft,
+        context,
+        schemas,
+        nodes,
+        output: AccessRightsOutput {
+            rights: IrMap::new(),
+            rules: IrMap::new(),
+            scopes: IrMap::new(),
+            buckets: IrMap::new(),
+            operations: vec![AccessRightsOperation::default(); draft.operations.len()],
+        },
+    };
+
+    pass::access_rights_run(&mut scope)?;
+
+    Ok(scope.output)
 }

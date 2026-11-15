@@ -1,17 +1,21 @@
 //! The rule proofs of a route: the header params and body fields its rules read, and the input a
 //! proof-only route gets (ADR 0002 section 9, "Proofs").
 
+use indexmap::{IndexMap, IndexSet};
+use seampact_diagnostics::InternalError;
 use seampact_ir::{
-    DerivedFrom, FieldWire, Identity, IdentityId, InputMediaType, InputProof, IrMap, Origin, Param,
-    ProofPlacement, Requirement, RuleProof, Scheme, SchemeId, SignedIdentity, UnknownKeys,
+    DerivationId, DerivedFrom, FieldWire, Identity, IdentityId, InputMediaType, InputProof, IrMap,
+    KnownIdentityRef, KnownRequirementRef, Origin, Param, ProofPlacement, Requirement, RuleProof,
+    Scheme, SchemeId, SignedIdentity, UnknownKeys,
 };
-use seampact_pipeline::{DraftOperationInput, PassError};
+use seampact_pipeline::{DraftOperationInput, PassError, pointer_below};
 
 use crate::catalogues::AccessRightsCatalogues;
 use crate::not_ported::not_ported_yet;
+use crate::read::access_rights_origin_of;
 use crate::report::AccessRightsReporter;
 use crate::restricted_fields::AccessRightsDraftSchemas;
-use crate::routes::AccessRightsRoute;
+use crate::routes::{AccessRightsRoute, access_rights_operation_of};
 use crate::schema_use::AccessRightsContext;
 
 /// What one route's proofs need besides the catalogues.
@@ -52,9 +56,9 @@ pub(crate) struct ProofUse {
     pub(crate) from: Vec<Origin>,
 }
 
-const PROOF_DERIVATION: &str = "rule.proof";
+const PROOF_DERIVATION: DerivationId = DerivationId::from_static("rule.proof");
 
-const UNKNOWN_KEYS_DERIVATION: &str = "identity.unknownKeys";
+const UNKNOWN_KEYS_DERIVATION: DerivationId = DerivationId::from_static("identity.unknownKeys");
 
 const PROOF_ONLY_MEDIA: &str = "application/json";
 
@@ -73,21 +77,145 @@ const FIELD_MEDIA: &[InputMediaType] = &[
     InputMediaType::MultipartFormData,
 ];
 
+/// The proofs of one route: header params, body proofs and the input a proof-only route gets.
+///
+/// # Errors
+///
+/// An internal error, or a [`PassError::NotPortedYet`] from a builder.
 pub(crate) fn access_rights_proofs(
-    _context: &AccessRightsContext,
-    _reporter: &mut AccessRightsReporter,
-    _catalogues: &AccessRightsCatalogues,
-    _input: &AccessRightsProofsInput<'_>,
+    context: &AccessRightsContext,
+    reporter: &mut AccessRightsReporter,
+    catalogues: &AccessRightsCatalogues,
+    input: &AccessRightsProofsInput<'_>,
 ) -> Result<AccessRightsProofs, PassError> {
-    Err(not_ported_yet("accessRightsProofs"))
+    let uses = proof_uses(context, catalogues, &input.requires)?;
+    let taken_headers = route_headers(context, input)?;
+    let mut headers = Vec::new();
+    let mut header_uses = Vec::new();
+
+    for header_use in shared_by_name(reporter, &input.route, &uses, &ProofPlacement::Header)? {
+        if !takes_route_header(reporter, &input.route, &taken_headers, &header_use)? {
+            header_uses.push(header_use);
+        }
+    }
+
+    for header_use in &header_uses {
+        headers.push(header_param_of(header_use)?);
+    }
+
+    let body_uses = shared_by_name(reporter, &input.route, &uses, &ProofPlacement::Body)?;
+    let declared = access_rights_operation_of(context, &input.route)?
+        .input
+        .as_ref();
+    let identity = signed_identity_of(input)?;
+    let refused_body_proofs: Vec<String> = body_uses
+        .iter()
+        .map(|body_use| body_use.proof.name.clone())
+        .collect();
+
+    if body_uses.is_empty() {
+        if let (None, Some(identity)) = (declared, identity) {
+            report_signed_without_input(reporter, &input.route, identity)?;
+        }
+
+        return Ok(AccessRightsProofs {
+            headers,
+            proofs: Vec::new(),
+            created_input: None,
+            refused_body_proofs: Vec::new(),
+        });
+    }
+
+    let refused = AccessRightsProofs {
+        headers,
+        proofs: Vec::new(),
+        created_input: None,
+        refused_body_proofs,
+    };
+
+    let Some(declared) = declared else {
+        let created = created_input(reporter, input, &body_uses, identity)?;
+
+        return Ok(match created {
+            None => refused,
+            Some(created) => AccessRightsProofs {
+                created_input: Some(created),
+                refused_body_proofs: Vec::new(),
+                ..refused
+            },
+        });
+    };
+
+    if !fits_declared_input(reporter, input, declared, &body_uses)? {
+        return Ok(refused);
+    }
+
+    let field_media = FIELD_MEDIA.contains(&declared.media);
+    let mut proofs = Vec::with_capacity(body_uses.len());
+
+    for body_use in &body_uses {
+        let mut proof = input_proof_of(body_use)?;
+
+        if field_media {
+            proof.wire = Some(proof_wire(context, body_use)?);
+        }
+
+        proofs.push(proof);
+    }
+
+    Ok(AccessRightsProofs {
+        proofs,
+        refused_body_proofs: Vec::new(),
+        ..refused
+    })
 }
 
+/// The proof of each rule the requirements use, with the origins of its use and its declaration.
+///
+/// # Errors
+///
+/// An internal error for a rule requirement with no origin.
 pub(crate) fn proof_uses(
-    _context: &AccessRightsContext,
-    _catalogues: &AccessRightsCatalogues,
-    _requires: &[Requirement],
+    context: &AccessRightsContext,
+    catalogues: &AccessRightsCatalogues,
+    requires: &[Requirement],
 ) -> Result<Vec<ProofUse>, PassError> {
-    Err(not_ported_yet("proofUses"))
+    let mut uses = Vec::new();
+
+    for requirement in requires {
+        let KnownRequirementRef::Rule(rule) = KnownRequirementRef::try_from(requirement)? else {
+            continue;
+        };
+        let Some(proof) = catalogues
+            .rules
+            .get(&rule.rule)
+            .and_then(|declared| declared.proof.as_ref())
+        else {
+            continue;
+        };
+
+        let mut origins = requirement_origins(requirement)?;
+        let proof_pointer = pointer_below("/rules", &[rule.rule.as_str(), "proof"]);
+        let Some(first) = origins.first() else {
+            return Err(InternalError::new(format!(
+                "access.rights built a requirement on rule '{}' with no origin",
+                rule.rule
+            ))
+            .into());
+        };
+        let use_pointer = first.pointer.clone();
+
+        origins.push(access_rights_origin_of(context, &proof_pointer)?);
+        uses.push(ProofUse {
+            rule: rule.rule.as_str().to_owned(),
+            proof: proof.clone(),
+            use_pointer,
+            proof_pointer,
+            from: origins,
+        });
+    }
+
+    Ok(uses)
 }
 
 pub(crate) fn requirement_origins(_requirement: &Requirement) -> Result<Vec<Origin>, PassError> {
@@ -98,25 +226,114 @@ pub(crate) fn name_key(_placement: &ProofPlacement, _name: &str) -> Result<Strin
     Err(not_ported_yet("nameKey"))
 }
 
+/// The uses of one placement merged by name, in requirement order: a later use with the first
+/// one's schema adds its origins to it; one with another schema is an error naming both, and adds
+/// nothing.
+///
+/// # Errors
+///
+/// What the name key and the clash report fail with.
 pub(crate) fn shared_by_name(
-    _reporter: &mut AccessRightsReporter,
-    _route: &AccessRightsRoute,
-    _uses: &[ProofUse],
-    _placement: &ProofPlacement,
+    reporter: &mut AccessRightsReporter,
+    route: &AccessRightsRoute,
+    uses: &[ProofUse],
+    placement: &ProofPlacement,
 ) -> Result<Vec<ProofUse>, PassError> {
-    Err(not_ported_yet("sharedByName"))
+    let mut by_name: IndexMap<String, ProofUse> = IndexMap::new();
+
+    for use_of in uses {
+        if use_of.proof.r#in != *placement {
+            continue;
+        }
+
+        let key = name_key(placement, &use_of.proof.name)?;
+        let Some(first) = by_name.get_mut(&key) else {
+            by_name.insert(key, use_of.clone());
+
+            continue;
+        };
+
+        // Typed IR values compare by member, as their canonical texts do.
+        if first.proof.schema != use_of.proof.schema {
+            report_schema_clash(reporter, route, first, use_of)?;
+
+            continue;
+        }
+
+        for origin in &use_of.from {
+            if !first.from.contains(origin) {
+                first.from.push(origin.clone());
+            }
+        }
+    }
+
+    Ok(by_name.into_values().collect())
 }
 
+// The declared request headers, then the credential and CSRF headers of the route identity's
+// schemes.
 pub(crate) fn route_headers(
-    _input: &AccessRightsProofsInput<'_>,
+    context: &AccessRightsContext,
+    input: &AccessRightsProofsInput<'_>,
 ) -> Result<Vec<RouteHeader>, PassError> {
-    Err(not_ported_yet("routeHeaders"))
+    let route = &input.route;
+    let operation = access_rights_operation_of(context, route)?;
+    let node = context.nodes.get(route.node)?;
+    let mut headers: Vec<RouteHeader> = operation
+        .params
+        .iter()
+        .flat_map(|params| &params.header)
+        .map(|param| RouteHeader {
+            name: param.name.clone(),
+            role: "a declared header".to_owned(),
+            pointer: param
+                .origin
+                .as_ref()
+                .map(|origin| origin.pointer.clone())
+                .or_else(|| {
+                    let derived_from = param.derived_from.as_ref()?;
+
+                    derived_from
+                        .from
+                        .first()
+                        .map(|origin| origin.pointer.clone())
+                })
+                .unwrap_or_else(|| node.pointer.clone()),
+        })
+        .collect();
+
+    for id in identity_scheme_ids(input)? {
+        headers.extend(scheme_headers(input.schemes, &id)?);
+    }
+
+    Ok(headers)
 }
 
 pub(crate) fn identity_scheme_ids(
-    _input: &AccessRightsProofsInput<'_>,
-) -> Result<Vec<String>, PassError> {
-    Err(not_ported_yet("identitySchemeIds"))
+    input: &AccessRightsProofsInput<'_>,
+) -> Result<Vec<String>, InternalError> {
+    let Some(name) = &input.route.identity else {
+        return Ok(Vec::new());
+    };
+    let Some(identity) = input.identities.get(name) else {
+        return Ok(Vec::new());
+    };
+
+    Ok(match KnownIdentityRef::try_from(identity)? {
+        KnownIdentityRef::Signed(signed) => vec![signed.signed.as_str().to_owned()],
+        KnownIdentityRef::Credential(credential) => {
+            let schemes = &credential.schemes;
+            let ids: IndexSet<&str> = schemes
+                .read
+                .iter()
+                .chain(&schemes.write)
+                .chain(&schemes.optional_read)
+                .map(SchemeId::as_str)
+                .collect();
+
+            ids.into_iter().map(str::to_owned).collect()
+        }
+    })
 }
 
 pub(crate) fn scheme_headers(
@@ -171,9 +388,19 @@ pub(crate) fn proof_wire(
 }
 
 pub(crate) fn signed_identity_of<'draft>(
-    _input: &AccessRightsProofsInput<'draft>,
-) -> Result<Option<&'draft SignedIdentity>, PassError> {
-    Err(not_ported_yet("signedIdentityOf"))
+    input: &AccessRightsProofsInput<'draft>,
+) -> Result<Option<&'draft SignedIdentity>, InternalError> {
+    let Some(name) = &input.route.identity else {
+        return Ok(None);
+    };
+    let Some(identity) = input.identities.get(name) else {
+        return Ok(None);
+    };
+
+    Ok(match KnownIdentityRef::try_from(identity)? {
+        KnownIdentityRef::Signed(signed) => Some(signed),
+        KnownIdentityRef::Credential(_) => None,
+    })
 }
 
 pub(crate) fn report_signed_without_input(

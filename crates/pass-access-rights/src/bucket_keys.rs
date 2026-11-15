@@ -1,15 +1,20 @@
 //! The key sources of each bucket a route counts in, checked at that use (ADR 0002 section 9,
 //! "Buckets").
 
+use seampact_diagnostics::InternalError;
 use seampact_ir::IrMap;
-use seampact_ir::{InputProof, Property, Requirement, Schema, SchemaId, ValueSource};
-use seampact_pipeline::{DraftOperationInput, PassError};
+use seampact_ir::{
+    InputProof, KnownRequirementRef, Property, Requirement, Schema, SchemaId, ValueSource,
+};
+use seampact_pipeline::{DraftOperationInput, PassError, pointer_below};
 
 use crate::catalogues::AccessRightsCatalogues;
 use crate::not_ported::not_ported_yet;
-use crate::report::AccessRightsReporter;
+use crate::report::{
+    AccessRightsProblem, AccessRightsRelated, AccessRightsReporter, AccessRightsRule,
+};
 use crate::routes::AccessRightsRoute;
-use crate::schema_use::AccessRightsContext;
+use crate::source::access_rights_source_text;
 
 /// What one route's bucket uses need besides the catalogues.
 #[derive(Debug, Clone)]
@@ -33,13 +38,71 @@ pub(crate) struct KeyProblem {
 
 const COUNTABLE_TYPES: &[&str] = &["string", "integer"];
 
+/// Reports each key of a bucket the route counts in that the route cannot fill.
+///
+/// # Errors
+///
+/// An internal error for a bucket requirement it cannot place, and what its callees fail with.
 pub(crate) fn access_rights_check_bucket_keys(
-    _context: &AccessRightsContext,
-    _reporter: &mut AccessRightsReporter,
-    _catalogues: &AccessRightsCatalogues,
-    _input: &AccessRightsBucketKeysInput<'_>,
+    reporter: &mut AccessRightsReporter,
+    catalogues: &AccessRightsCatalogues,
+    input: &AccessRightsBucketKeysInput<'_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("accessRightsCheckBucketKeys"))
+    for requirement in &input.requires {
+        let KnownRequirementRef::Rule(rule) = KnownRequirementRef::try_from(requirement)? else {
+            continue;
+        };
+        let Some(bucket_id) = &rule.bucket else {
+            continue;
+        };
+
+        let bucket = catalogues.buckets.get(bucket_id);
+        let use_pointer = rule
+            .origin
+            .as_ref()
+            .map(|origin| origin.pointer.as_str())
+            .or_else(|| {
+                let derived_from = rule.derived_from.as_ref()?;
+
+                derived_from
+                    .from
+                    .first()
+                    .map(|origin| origin.pointer.as_str())
+            });
+        let (Some(bucket), Some(use_pointer)) = (bucket, use_pointer) else {
+            return Err(InternalError::new(format!(
+                "access.rights built a requirement counting in bucket '{bucket_id}' it cannot place"
+            ))
+            .into());
+        };
+
+        for (index, source) in bucket.key.iter().enumerate() {
+            let Some(problem) = key_problem(input, source)? else {
+                continue;
+            };
+            let source_text = access_rights_source_text(source)?;
+
+            reporter.error(AccessRightsProblem {
+                rule: AccessRightsRule::BucketKey,
+                message: format!(
+                    "bucket '{}' counts {source_text} on route '{}', {}",
+                    bucket.id, input.route.id, problem.why
+                ),
+                fix: problem.fix,
+                pointer: use_pointer.to_owned(),
+                distinct_by: Some(source_text),
+                related: vec![AccessRightsRelated {
+                    pointer: pointer_below(
+                        "/buckets",
+                        &[bucket.id.as_str(), "key", &index.to_string()],
+                    ),
+                    message: "the key is declared here".to_owned(),
+                }],
+            });
+        }
+    }
+
+    Ok(())
 }
 
 pub(crate) fn key_problem(

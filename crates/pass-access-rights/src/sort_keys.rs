@@ -1,17 +1,19 @@
 //! The rights of each sort key of a route's paging (ADR 0002 section 9).
 
 use indexmap::IndexMap;
+use seampact_diagnostics::access_rights_quoted;
 use seampact_ir::{
-    DerivedFrom, FieldRestriction, FieldRightSubject, ObjectSchema, OperationScope, SortKey,
+    DerivationId, DerivedFrom, FieldRestriction, FieldRightSubject, ObjectSchema, OperationScope,
+    SortKey,
 };
-use seampact_pipeline::PassError;
+use seampact_pipeline::{PassError, TreeNodeKind};
 
 use crate::catalogues::AccessRightsCatalogues;
 use crate::not_ported::not_ported_yet;
-use crate::report::AccessRightsReporter;
+use crate::report::{AccessRightsProblem, AccessRightsReporter, AccessRightsRule};
 use crate::restricted_fields::AccessRightsDraftSchemas;
 use crate::restrictions::AccessRightsRestrictionChecks;
-use crate::routes::AccessRightsRoute;
+use crate::routes::{AccessRightsRoute, access_rights_operation_of};
 use crate::schema_use::AccessRightsContext;
 use crate::subjects::AccessRightsSubjectResult;
 
@@ -75,14 +77,85 @@ pub(crate) enum WrittenRight {
 
 const LIST_SHAPES: &[&str] = &["page", "list"];
 
+const SORT_KEY_DERIVATION: DerivationId = DerivationId::from_static("sortKey.restricted");
+
+/// The right and subject of each sort key that names a restricted field, by the key's position.
+///
+/// # Errors
+///
+/// An internal error, or a [`PassError::NotPortedYet`] from a key reader.
 pub(crate) fn access_rights_sort_key_rights(
-    _context: &AccessRightsContext,
-    _reporter: &mut AccessRightsReporter,
-    _catalogues: &AccessRightsCatalogues,
-    _checks: &mut AccessRightsRestrictionChecks,
-    _input: &AccessRightsSortKeysInput<'_>,
+    context: &AccessRightsContext,
+    reporter: &mut AccessRightsReporter,
+    catalogues: &AccessRightsCatalogues,
+    checks: &mut AccessRightsRestrictionChecks,
+    input: &AccessRightsSortKeysInput<'_>,
 ) -> Result<AccessRightsSortKeyRights, PassError> {
-    Err(not_ported_yet("accessRightsSortKeyRights"))
+    let mut rights = IndexMap::new();
+    let route = &input.route;
+    let node = context.nodes.get(route.node)?;
+    let operation = access_rights_operation_of(context, route)?;
+    let Some(paging) = &operation.paging else {
+        return Ok(rights);
+    };
+
+    if node.kind == TreeNodeKind::Relay {
+        return Ok(rights);
+    }
+
+    let key_pointer = |sort_key: &SortKey| {
+        sort_key
+            .origin
+            .as_ref()
+            .map_or_else(|| node.pointer.clone(), |origin| origin.pointer.clone())
+    };
+    let Some(items) = item_objects_of(route, input.schemas)? else {
+        for sort_key in &paging.sort_keys {
+            reporter.error(AccessRightsProblem {
+                rule: AccessRightsRule::SortKeyRight,
+                message: format!(
+                    "sort key '{}' of route '{}' sorts a list whose item is neither an object nor a union of objects, so its field's restriction cannot be read",
+                    access_rights_quoted(&sort_key.key),
+                    route.id
+                ),
+                fix: "remove the key from 'sortable', or list an object schema".to_owned(),
+                pointer: key_pointer(sort_key),
+                distinct_by: None,
+                related: Vec::new(),
+            });
+        }
+
+        return Ok(rights);
+    };
+
+    for (index, sort_key) in paging.sort_keys.iter().enumerate() {
+        let key_use = KeyUse {
+            route,
+            scopes: &input.scopes,
+            items: items.clone(),
+            key: sort_key.key.clone(),
+            pointer: key_pointer(sort_key),
+        };
+        let Some(right) = key_right(context, reporter, catalogues, checks, &key_use, sort_key)?
+        else {
+            continue;
+        };
+        let found = key_subject(context, reporter, catalogues, &key_use, &right.right)?;
+        let AccessRightsSubjectResult::Resolved { subject } = found else {
+            continue;
+        };
+
+        rights.insert(
+            index,
+            AccessRightsSortKeyRight {
+                right: right.right,
+                subject,
+                derived_from: right.derived_from,
+            },
+        );
+    }
+
+    Ok(rights)
 }
 
 pub(crate) fn key_right(

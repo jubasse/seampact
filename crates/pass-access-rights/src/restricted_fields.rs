@@ -1,8 +1,12 @@
 //! The fields of a schema graph a restriction reaches, and the positions that refuse them.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
-use seampact_ir::{FieldRestriction, IrMap, ObjectSchema, Property, Schema, SchemaId, TypeUse};
+use seampact_diagnostics::InternalError;
+use seampact_ir::{
+    FieldRestriction, IrMap, KnownSchemaRef, KnownTypeUseRef, ObjectSchema, Property, Schema,
+    SchemaId, TypeUse,
+};
 use seampact_pipeline::PassError;
 
 use crate::not_ported::not_ported_yet;
@@ -65,18 +69,84 @@ pub(crate) fn access_rights_field_walk_exceeded(
     Err(not_ported_yet("accessRightsFieldWalkExceeded"))
 }
 
+/// The schemas from which a restricted field can be reached, through any reference or JSON
+/// content.
+///
+/// # Errors
+///
+/// An internal error for a schema or type use of a kind this revision does not know.
 pub(crate) fn access_rights_restriction_reaching(
-    _schemas: &AccessRightsDraftSchemas,
-) -> Result<HashSet<String>, PassError> {
-    Err(not_ported_yet("accessRightsRestrictionReaching"))
+    schemas: &AccessRightsDraftSchemas,
+) -> Result<HashSet<String>, InternalError> {
+    let mut referenced_by: HashMap<String, Vec<String>> = HashMap::new();
+    let mut reaching = HashSet::new();
+    let mut pending: Vec<String> = Vec::new();
+
+    for (id, schema) in schemas {
+        for target in schema_references(schema)? {
+            referenced_by
+                .entry(target)
+                .or_default()
+                .push(id.as_str().to_owned());
+        }
+
+        let KnownSchemaRef::Object(object) = KnownSchemaRef::try_from(schema)? else {
+            continue;
+        };
+
+        if object
+            .properties
+            .iter()
+            .any(|property| property.restricted_to.is_some())
+        {
+            reaching.insert(id.as_str().to_owned());
+            pending.push(id.as_str().to_owned());
+        }
+    }
+
+    while let Some(id) = pending.pop() {
+        for referrer in referenced_by.get(&id).into_iter().flatten() {
+            if reaching.insert(referrer.clone()) {
+                pending.push(referrer.clone());
+            }
+        }
+    }
+
+    Ok(reaching)
 }
 
-pub(crate) fn schema_references(_schema: &Schema) -> Result<Vec<String>, PassError> {
-    Err(not_ported_yet("schemaReferences"))
+pub(crate) fn schema_references(schema: &Schema) -> Result<Vec<String>, InternalError> {
+    match KnownSchemaRef::try_from(schema)? {
+        KnownSchemaRef::Object(object) => {
+            let mut references = Vec::new();
+
+            for property in &object.properties {
+                references.extend(use_references(&property.r#type)?);
+            }
+
+            Ok(references)
+        }
+        KnownSchemaRef::Map(map) => use_references(&map.values),
+        KnownSchemaRef::Union(union) => Ok(union
+            .variants
+            .iter()
+            .map(|variant| variant.schema.as_str().to_owned())
+            .collect()),
+    }
 }
 
-pub(crate) fn use_references(_use: &TypeUse) -> Result<Vec<String>, PassError> {
-    Err(not_ported_yet("useReferences"))
+pub(crate) fn use_references(type_use: &TypeUse) -> Result<Vec<String>, InternalError> {
+    match KnownTypeUseRef::try_from(type_use)? {
+        KnownTypeUseRef::Array(array) => use_references(&array.items),
+        KnownTypeUseRef::Ref(reference) => Ok(vec![reference.schema.as_str().to_owned()]),
+        KnownTypeUseRef::Scalar(scalar) => match &scalar.content {
+            Some(content) => use_references(&content.schema),
+            None => Ok(Vec::new()),
+        },
+        KnownTypeUseRef::Opaque(_) | KnownTypeUseRef::File(_) | KnownTypeUseRef::Enum(_) => {
+            Ok(Vec::new())
+        }
+    }
 }
 
 pub(crate) fn schema_of<'draft>(
