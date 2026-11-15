@@ -2,8 +2,10 @@
 
 use indexmap::IndexMap;
 use seampact_ir::{OperationExample, Response, ResponseShape, TypeUse};
+use seampact_js::js_key_order;
 use seampact_json::JsonValue;
-use seampact_pipeline::PassError;
+use seampact_pass_tree_shared::tree_nodes_member;
+use seampact_pipeline::{PassError, pointer_below};
 
 use crate::fields::TreeNodesSite;
 use crate::not_ported::not_ported_yet;
@@ -44,13 +46,36 @@ struct ExampleIssue {
     message: String,
 }
 
+/// The examples a route writes, each checked where it targets the request or a success status.
 pub(crate) fn tree_nodes_examples(
-    _site: &TreeNodesSite<'_, '_>,
-    _input: Option<&TypeUse>,
-    _responses: &[Response],
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    input: Option<&TypeUse>,
+    responses: &[Response],
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<IndexMap<String, OperationExample>, PassError> {
-    Err(not_ported_yet("treeNodesExamples"))
+    let mut examples = IndexMap::new();
+    let Some(JsonValue::Object(written)) = site.node.settings.get("examples") else {
+        return Ok(examples);
+    };
+    let targets = ExampleTargets { input, responses };
+
+    for (name, entry) in js_key_order(written.iter()) {
+        let example = example_of(entry)?;
+        let pointer = pointer_below(&format!("{}/examples", site.node.pointer), &[name]);
+
+        examples.insert(name.clone(), example.clone());
+
+        let checked = WrittenExample {
+            name: name.clone(),
+            pointer,
+            example,
+            value: tree_nodes_member(Some(entry), "value"),
+        };
+
+        check_example(site, &checked, &targets, scope)?;
+    }
+
+    Ok(examples)
 }
 
 fn example_of(_entry: &JsonValue) -> Result<OperationExample, PassError> {
