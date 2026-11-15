@@ -748,6 +748,9 @@ fn member_misfit(
 
 #[cfg(test)]
 mod tests {
+    use seampact_pipeline::testing::FakeSchemaService;
+    use serde_json::{Value, json};
+
     use super::*;
 
     fn kinds_of_scalar(scalar_type: ScalarType, nullable: bool) -> DeriveErrorsKinds {
@@ -797,5 +800,405 @@ mod tests {
             &DeriveErrorsKinds::Any,
             &DeriveErrorsKinds::Any
         ));
+    }
+
+    #[test]
+    fn the_kinds_of_a_message_are_listed_in_code_unit_order() {
+        assert_eq!(
+            derive_errors_describe_kinds(&kinds_of_scalar(ScalarType::Number, true)),
+            "integer or null or number"
+        );
+        assert_eq!(
+            derive_errors_describe_kinds(&DeriveErrorsKinds::Any),
+            "any JSON value"
+        );
+    }
+
+    fn property(name: &str, type_use: &Value, optional: bool, nullable: bool) -> Value {
+        json!({
+            "name": name,
+            "type": type_use,
+            "optional": optional,
+            "nullable": nullable,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": { "layer": "api", "pointer": format!("/schemas/{name}") }
+        })
+    }
+
+    fn object_schema(id: &str, properties: &[Value]) -> Value {
+        json!({
+            "kind": "object",
+            "id": id,
+            "name": { "segments": [id], "role": "schema" },
+            "properties": properties,
+            "directions": [],
+            "examples": [],
+            "docs": {},
+            "extensions": {},
+            "origin": { "layer": "api", "pointer": format!("/schemas/{id}") }
+        })
+    }
+
+    fn scalar(refinements: &Value, format: Option<&str>) -> Value {
+        let mut use_ = json!({ "kind": "scalar", "type": "string", "refinements": refinements });
+
+        if let Some(format) = format {
+            use_["format"] = json!(format);
+        }
+
+        use_
+    }
+
+    fn string_use() -> Value {
+        scalar(&json!({}), None)
+    }
+
+    fn count_use() -> Value {
+        json!({ "kind": "scalar", "type": "integer", "refinements": {} })
+    }
+
+    fn enum_use(name: &str, narrowed_to: Option<&[&str]>) -> Value {
+        let mut use_ = json!({ "kind": "enum", "enum": name });
+
+        if let Some(values) = narrowed_to {
+            use_["narrowedTo"] = json!({ "values": values });
+        }
+
+        use_
+    }
+
+    fn array_use(items: &Value, bounds: &Value) -> Value {
+        let mut use_ = json!({ "kind": "array", "items": items });
+
+        if let Value::Object(bounds) = bounds {
+            for (key, bound) in bounds {
+                use_[key] = bound.clone();
+            }
+        }
+
+        use_
+    }
+
+    fn reference(schema: &str) -> Value {
+        json!({ "kind": "ref", "schema": schema })
+    }
+
+    // `Holder` may leave `owner` out, which `Wanted` requires; `Counted` holds a count, not a
+    // string.
+    fn schemas() -> IrMap<SchemaId, Schema> {
+        serde_json::from_value(json!({
+            "Holder": object_schema("Holder", &[property("owner", &string_use(), true, false)]),
+            "Wanted": object_schema("Wanted", &[property("owner", &string_use(), false, false)]),
+            "Counted": object_schema("Counted", &[property("owner", &count_use(), false, false)])
+        }))
+        .unwrap()
+    }
+
+    #[derive(Default)]
+    struct Nullability {
+        rendered: bool,
+        accepted: bool,
+    }
+
+    fn misfit_of(
+        rendered: &Value,
+        accepted: &Value,
+        nullability: &Nullability,
+    ) -> Result<Option<DeriveErrorsMisfitReason>, PassError> {
+        let schemas = schemas();
+        let examples = FakeSchemaService::new();
+        let fit = DeriveErrorsFit {
+            schemas: &schemas,
+            examples: &examples,
+        };
+        let rendered_use: TypeUse = serde_json::from_value(rendered.clone()).unwrap();
+        let accepted_use: TypeUse = serde_json::from_value(accepted.clone()).unwrap();
+
+        derive_errors_misfit(
+            &fit,
+            &DeriveErrorsTyped {
+                use_: KnownTypeUseRef::try_from(&rendered_use).unwrap(),
+                nullable: nullability.rendered,
+            },
+            &DeriveErrorsTyped {
+                use_: KnownTypeUseRef::try_from(&accepted_use).unwrap(),
+                nullable: nullability.accepted,
+            },
+        )
+    }
+
+    #[test]
+    fn an_optional_member_into_a_required_one_is_omittable_through_the_member() {
+        let reason = misfit_of(
+            &reference("Holder"),
+            &reference("Wanted"),
+            &Nullability::default(),
+        )
+        .unwrap();
+
+        assert_eq!(
+            reason,
+            Some(DeriveErrorsMisfitReason {
+                kind: DeriveErrorsMisfitKind::Omittable,
+                text: "for its member 'owner', it may be left out, but the param requires it"
+                    .to_owned(),
+            })
+        );
+    }
+
+    #[test]
+    fn a_member_or_schema_of_another_type_is_a_misfit() {
+        for (rendered, accepted) in [("Wanted", "Counted"), ("Counted", "Wanted")] {
+            let reason = misfit_of(
+                &reference(rendered),
+                &reference(accepted),
+                &Nullability::default(),
+            )
+            .unwrap()
+            .unwrap();
+
+            assert_eq!(
+                reason.kind,
+                DeriveErrorsMisfitKind::Misfit,
+                "{rendered} into {accepted}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_datum_that_fits_its_param_has_no_reason() {
+        let cases = [
+            (
+                "the same enum",
+                enum_use("Role", None),
+                enum_use("Role", None),
+            ),
+            (
+                "an enum narrowed to a subset of the param's narrowing",
+                enum_use("Role", Some(&["a"])),
+                enum_use("Role", Some(&["a", "b"])),
+            ),
+            (
+                "a string of the same format",
+                scalar(&json!({}), Some("uuid")),
+                scalar(&json!({}), Some("uuid")),
+            ),
+            (
+                "a longer minimum length than the param's",
+                scalar(&json!({ "minLength": 5 }), None),
+                scalar(&json!({ "minLength": 3 }), None),
+            ),
+            (
+                "a shorter maximum length than the param's",
+                scalar(&json!({ "maxLength": 5 }), None),
+                scalar(&json!({ "maxLength": 9 }), None),
+            ),
+            (
+                "the same pattern",
+                scalar(
+                    &json!({ "pattern": { "source": "^a$", "normalized": "^a$" } }),
+                    None,
+                ),
+                scalar(
+                    &json!({ "pattern": { "source": "^a$", "normalized": "^a$" } }),
+                    None,
+                ),
+            ),
+            (
+                "an array with tighter item bounds",
+                array_use(&string_use(), &json!({ "minItems": 2, "maxItems": 4 })),
+                array_use(&string_use(), &json!({ "minItems": 1, "maxItems": 5 })),
+            ),
+        ];
+
+        for (name, rendered, accepted) in cases {
+            let reason = misfit_of(&rendered, &accepted, &Nullability::default()).unwrap();
+
+            assert_eq!(reason, None, "{name}");
+        }
+
+        let nullable = Nullability {
+            rendered: true,
+            accepted: true,
+        };
+
+        assert_eq!(
+            misfit_of(&string_use(), &string_use(), &nullable).unwrap(),
+            None,
+            "a nullable datum into a nullable param"
+        );
+    }
+
+    #[test]
+    fn a_datum_that_may_not_fit_its_param_has_a_misfit_reason_naming_why() {
+        let cases = [
+            (
+                "an enum not narrowed into a narrowed one",
+                enum_use("Role", None),
+                enum_use("Role", Some(&["a"])),
+                "values of the enum 'Role'",
+            ),
+            (
+                "a wider narrowing",
+                enum_use("Role", Some(&["a", "b"])),
+                enum_use("Role", Some(&["a"])),
+                "values of the enum 'Role'",
+            ),
+            (
+                "another enum",
+                enum_use("Other", None),
+                enum_use("Role", None),
+                "values of the enum 'Role'",
+            ),
+            (
+                "a string of another format",
+                scalar(&json!({}), Some("email")),
+                scalar(&json!({}), Some("uuid")),
+                "format 'uuid'",
+            ),
+            (
+                "a string with no format into a formatted one",
+                scalar(&json!({}), None),
+                scalar(&json!({}), Some("uuid")),
+                "format 'uuid'",
+            ),
+            (
+                "a shorter minimum length",
+                scalar(&json!({ "minLength": 1 }), None),
+                scalar(&json!({ "minLength": 3 }), None),
+                "its minLength is not provably within the param's minLength 3",
+            ),
+            (
+                "no minimum length",
+                scalar(&json!({}), None),
+                scalar(&json!({ "minLength": 3 }), None),
+                "minLength",
+            ),
+            (
+                "a longer maximum length",
+                scalar(&json!({ "maxLength": 20 }), None),
+                scalar(&json!({ "maxLength": 9 }), None),
+                "its maxLength is not provably within the param's maxLength 9",
+            ),
+            (
+                "no maximum length",
+                scalar(&json!({}), None),
+                scalar(&json!({ "maxLength": 9 }), None),
+                "maxLength",
+            ),
+            (
+                "another pattern",
+                scalar(
+                    &json!({ "pattern": { "source": "^b$", "normalized": "^b$" } }),
+                    None,
+                ),
+                scalar(
+                    &json!({ "pattern": { "source": "^a$", "normalized": "^a$" } }),
+                    None,
+                ),
+                "pattern",
+            ),
+            (
+                "fewer minimum items",
+                array_use(&string_use(), &json!({ "minItems": 0 })),
+                array_use(&string_use(), &json!({ "minItems": 1 })),
+                "minItems",
+            ),
+            (
+                "no maximum items",
+                array_use(&string_use(), &json!({})),
+                array_use(&string_use(), &json!({ "maxItems": 3 })),
+                "maxItems",
+            ),
+            (
+                "items of another type",
+                array_use(&count_use(), &json!({})),
+                array_use(&string_use(), &json!({})),
+                "for an item",
+            ),
+        ];
+
+        for (name, rendered, accepted, reason_part) in cases {
+            let reason = misfit_of(&rendered, &accepted, &Nullability::default())
+                .unwrap()
+                .unwrap();
+
+            assert_eq!(reason.kind, DeriveErrorsMisfitKind::Misfit, "{name}");
+            assert!(
+                reason.text.contains(reason_part),
+                "{name}: {:?} lacks {reason_part:?}",
+                reason.text
+            );
+        }
+    }
+
+    #[test]
+    fn a_nullable_datum_into_a_param_that_does_not_take_null_is_a_misfit() {
+        let nullable = Nullability {
+            rendered: true,
+            accepted: false,
+        };
+        let reason = misfit_of(&string_use(), &string_use(), &nullable)
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(reason.kind, DeriveErrorsMisfitKind::Misfit);
+    }
+
+    #[test]
+    fn a_datum_of_a_schema_the_draft_does_not_hold_is_a_compiler_error_not_a_fit() {
+        let failure = misfit_of(
+            &reference("Ghost"),
+            &reference("Wanted"),
+            &Nullability::default(),
+        )
+        .unwrap_err();
+
+        assert!(
+            failure
+                .to_string()
+                .contains("the draft holds no schema Ghost"),
+            "{failure}"
+        );
+    }
+
+    #[test]
+    fn a_misfit_between_exact_decimal_bounds_goes_through_the_example_validator() {
+        let tight = scalar(&json!({ "minimum": "5" }), None);
+        let wide = scalar(&json!({ "minimum": "1" }), None);
+        let schemas = schemas();
+        let refusing = FakeSchemaService::new().with_example_issues(vec![
+            seampact_pipeline::TreeSchemaExampleIssue {
+                pointer: String::new(),
+                message: "below".to_owned(),
+            },
+        ]);
+        let tight_use: TypeUse = serde_json::from_value(tight).unwrap();
+        let wide_use: TypeUse = serde_json::from_value(wide).unwrap();
+        let fit = DeriveErrorsFit {
+            schemas: &schemas,
+            examples: &refusing,
+        };
+        let reason = derive_errors_misfit(
+            &fit,
+            &DeriveErrorsTyped {
+                use_: KnownTypeUseRef::try_from(&tight_use).unwrap(),
+                nullable: false,
+            },
+            &DeriveErrorsTyped {
+                use_: KnownTypeUseRef::try_from(&wide_use).unwrap(),
+                nullable: false,
+            },
+        )
+        .unwrap()
+        .unwrap();
+
+        assert_eq!(
+            reason.text,
+            "its minimum is not provably within the param's minimum 1"
+        );
     }
 }

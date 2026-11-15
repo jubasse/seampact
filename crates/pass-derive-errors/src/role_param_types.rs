@@ -924,3 +924,103 @@ fn check_merged(
 
     Ok(filled_names)
 }
+
+#[cfg(test)]
+mod tests {
+    use seampact_ir::{ErrorCode, IrMap, Schema, SchemaId};
+    use seampact_pipeline::testing::FakeSchemaService;
+    use seampact_pipeline::{TreeSchemaExampleIssue, derivation_roles};
+
+    use super::*;
+    use crate::tests::with_reporter;
+
+    const RAW: &str = r#"{"a":{"b":1}}"#;
+
+    fn literal_diagnostics(
+        value: &str,
+        accepted_nullable: bool,
+        issues: Vec<TreeSchemaExampleIssue>,
+    ) -> (String, Vec<seampact_diagnostics::Diagnostic>) {
+        let schemas: IrMap<SchemaId, Schema> = IrMap::new();
+        let examples = FakeSchemaService::new().with_example_issues(issues);
+        let code = ErrorCode::new("shop.code".to_owned());
+        let role = derivation_roles().first().unwrap();
+        let site = DeriveErrorsRoleParamsSite {
+            schemas: &schemas,
+            examples: &examples,
+            role,
+            code: &code,
+            params_schema: None,
+            template: None,
+            rate_limit_param: None,
+            pointer: "/a".to_owned(),
+        };
+        let mut check = TypedCheck {
+            site: &site,
+            fit: DeriveErrorsFit {
+                schemas: &schemas,
+                examples: &examples,
+            },
+            faults: 0,
+        };
+        let string = string_use();
+        let accepted = DeriveErrorsTyped {
+            use_: KnownTypeUseRef::Scalar(&string),
+            nullable: accepted_nullable,
+        };
+        let position = Position {
+            param: "p".to_owned(),
+            pointer: "/a".to_owned(),
+            item: None,
+        };
+        let literal: JsonValue =
+            JsonValue::try_from(serde_json::from_str::<serde_json::Value>(value).unwrap()).unwrap();
+        let (result, reported) = with_reporter(RAW, |reporter| {
+            check_literal(&mut check, &literal, &accepted, &position, reporter)
+        })
+        .unwrap();
+
+        result.unwrap();
+
+        (role.role.to_string(), reported)
+    }
+
+    #[test]
+    fn a_literal_is_quoted_as_javascript_writes_it_and_located_inside_itself() {
+        let issue = TreeSchemaExampleIssue {
+            pointer: "/b".to_owned(),
+            message: "bad".to_owned(),
+        };
+        let (role, reported) = literal_diagnostics(
+            r#"{"b":1,"2":2,"big":1e21,"neg":-0,"huge":9007199254740993}"#,
+            false,
+            vec![issue],
+        );
+        let [diagnostic] = reported.as_slice() else {
+            panic!("one diagnostic expected, got {reported:?}");
+        };
+
+        assert_eq!(
+            diagnostic.message,
+            format!(
+                "role '{role}' fills the param 'p' of 'shop.code' with the literal {{\"2\":2,\"b\":1,\"big\":1e+21,\"neg\":0,\"huge\":9007199254740992}}, but it does not fit its type: bad"
+            )
+        );
+        assert_eq!(diagnostic.origin.pointer, "/a/b");
+    }
+
+    #[test]
+    fn a_null_literal_fits_a_nullable_param_whatever_the_validator_says() {
+        let issue = TreeSchemaExampleIssue {
+            pointer: String::new(),
+            message: "bad".to_owned(),
+        };
+        let (_, reported) = literal_diagnostics("null", true, vec![issue.clone()]);
+
+        assert!(reported.is_empty(), "{reported:?}");
+
+        let (_, refused) = literal_diagnostics("null", false, vec![issue]);
+
+        assert_eq!(refused.len(), 1, "{refused:?}");
+    }
+}

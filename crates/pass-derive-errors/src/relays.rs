@@ -550,3 +550,59 @@ pub(crate) fn derive_errors_relay_copies(
 
     Ok(copier.copies)
 }
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::*;
+
+    fn nature(base: &str, pointer: &str, description: &str) -> NatureDecl {
+        serde_json::from_value(json!({
+            "id": "slow",
+            "base": base,
+            "docs": { "description": description },
+            "origin": { "layer": "api", "pointer": pointer }
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn two_declarations_agree_on_everything_but_the_origin() {
+        let first = nature("unavailable", "/natures/slow", "Takes long");
+        let elsewhere = nature("unavailable", "/shared/natures/slow", "Takes long");
+        let other_base = nature("failed", "/natures/slow", "Takes long");
+        let other_docs = nature("unavailable", "/natures/slow", "Takes longer");
+        let content = |declaration: &NatureDecl| content_of(Declaration::Nature(declaration));
+
+        assert_eq!(content(&first).unwrap(), content(&elsewhere).unwrap());
+        assert_ne!(content(&first).unwrap(), content(&other_base).unwrap());
+        assert_ne!(content(&first).unwrap(), content(&other_docs).unwrap());
+    }
+
+    #[test]
+    fn the_content_of_a_declaration_is_its_canonical_json_without_the_origin() {
+        let declaration = nature("unavailable", "/natures/slow", "Takes long");
+
+        assert_eq!(
+            content_of(Declaration::Nature(&declaration)).unwrap(),
+            r#"{"base":"unavailable","docs":{"description":"Takes long"},"id":"slow"}"#
+        );
+    }
+
+    #[test]
+    fn a_domain_code_is_derived_from_a_domain_row_or_a_pack() {
+        let derived = |derivation: &str| -> OperationError {
+            serde_json::from_value(json!({
+                "code": "shop.code",
+                "derivedFrom": { "derivation": derivation, "from": [] }
+            }))
+            .unwrap()
+        };
+
+        assert!(is_domain_code(&derived("relay.route")));
+        assert!(is_domain_code(&derived("member.notFound")));
+        assert!(is_domain_code(&derived("pack.errors-pack")));
+        assert!(!is_domain_code(&derived("body.limits")));
+    }
+}
