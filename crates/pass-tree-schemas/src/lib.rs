@@ -30,6 +30,7 @@ mod property;
 mod query_wire;
 mod raw;
 mod relays;
+mod rule;
 mod scalars;
 
 use seampact_diagnostics::RuleId;
