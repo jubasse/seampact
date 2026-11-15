@@ -966,6 +966,7 @@ dependencies = [
  "regress",
  "seampact-diagnostics",
  "seampact-ir",
+ "seampact-js",
  "seampact-json",
  "seampact-pipeline",
 ]
