@@ -78,7 +78,7 @@ fn declared_operation(draft: DraftOperation) -> Result<TreeNodesOperation, Inter
         upstream: written(draft.upstream, "upstream")?,
         maturity: draft.maturity,
         internal: written(draft.internal, "internal")?,
-        format: written(draft.format, "format")?,
+        format: draft.format,
         tags: written(draft.tags, "tags")?,
         examples: written(draft.examples, "examples")?,
         docs: written(draft.docs, "docs")?,

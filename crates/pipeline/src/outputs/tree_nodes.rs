@@ -114,8 +114,8 @@ pub struct TreeNodesOperation {
     pub maturity: Option<OperationMaturity>,
     /// The `internal` member.
     pub internal: bool,
-    /// The `format` member.
-    pub format: FormatId,
+    /// The `format` member; absent on a relay route whose target was refused.
+    pub format: Option<FormatId>,
     /// The `tags` member.
     pub tags: Vec<String>,
     /// The `examples` member.
@@ -235,7 +235,7 @@ impl From<TreeNodesOperation> for DraftOperation {
             upstream: Some(operation.upstream),
             maturity: operation.maturity,
             internal: Some(operation.internal),
-            format: Some(operation.format),
+            format: operation.format,
             tags: Some(operation.tags),
             examples: Some(operation.examples),
             docs: Some(operation.docs),
@@ -366,7 +366,7 @@ mod tests {
             upstream: Vec::new(),
             maturity: None,
             internal: false,
-            format: FormatId::new("bare".to_owned()),
+            format: None,
             tags: Vec::new(),
             examples: IrMap::new(),
             docs: Docs::default(),
