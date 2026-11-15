@@ -145,3 +145,22 @@ fn report_path(
 ) -> Result<(), PassError> {
     Err(not_ported_yet("reportPath"))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::name_unfit_for_header;
+
+    #[test]
+    fn a_header_name_holds_printable_ascii_without_comma_or_edge_space() {
+        let fit = ["x-request-id", "a b", "~", "!"];
+        let unfit = ["a,b", " a", "a ", "é", "a\tb", "\u{7f}", "a\u{1F600}"];
+
+        for name in fit {
+            assert!(!name_unfit_for_header(name), "name {name:?}");
+        }
+
+        for name in unfit {
+            assert!(name_unfit_for_header(name), "name {name:?}");
+        }
+    }
+}

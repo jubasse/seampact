@@ -506,3 +506,37 @@ fn report_convention_contradiction(
 ) -> Result<(), PassError> {
     Err(not_ported_yet("reportConventionContradiction"))
 }
+
+#[cfg(test)]
+mod tests {
+    use seampact_ir::PagingParamStyle;
+    use seampact_json::JsonValue;
+
+    use super::{request_roles, sort_style_of};
+
+    fn json(text: &str) -> JsonValue {
+        serde_json::from_str(text).expect("test json")
+    }
+
+    #[test]
+    fn request_roles_come_in_javascript_key_order() {
+        let style = json(r#"{"request":{"sort":{},"10":{},"limit":{},"2":{}}}"#);
+
+        assert_eq!(request_roles(&style), ["2", "10", "sort", "limit"]);
+    }
+
+    #[test]
+    fn a_sort_style_falls_back_to_signed_on_absent_or_null() {
+        for text in [r"{}", r#"{"request":{"sort":{"style":null}}}"#] {
+            assert_eq!(
+                sort_style_of(&json(text)),
+                Some(PagingParamStyle::Signed),
+                "style {text}"
+            );
+        }
+
+        let pair = json(r#"{"request":{"sort":{"style":"pair"}}}"#);
+
+        assert_eq!(sort_style_of(&pair), Some(PagingParamStyle::Pair));
+    }
+}
