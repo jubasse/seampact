@@ -104,7 +104,7 @@ cargo deny check
 cargo machete
 ```
 
-plus the trace check (`node scripts/rust/trace-check.ts`) and the oracle harness on every fixture (`cargo xtask oracle`). `cargo xtask gate` runs all seven from the workspace root and prints one result line per step: `<step>: ok`, `<step>: failed` or `<step>: not run: <reason>`; it exits non-zero when a step fails. Report the result line of each; a step with nothing to run yet is reported `not run: <reason>`, a tool that cannot start is `failed`, and no step is left out.
+plus the trace check (`node scripts/rust/trace-check.ts`) and the oracle harness on every fixture (`cargo xtask oracle`). `cargo xtask gate` runs all seven from the workspace root, at the same time (cargo's own lock orders the builds), and prints each step's output then one result line per step, always in the order above: `<step>: ok`, `<step>: failed` or `<step>: not run: <reason>`; it exits non-zero when a step fails. Report the result line of each; a step with nothing to run yet is reported `not run: <reason>`, a tool that cannot start is `failed`, and no step is left out. `cargo xtask gate --fail-fast` is for iterating: when a read-only step fails (fmt, clippy, deny, machete, trace) it leaves nextest and the oracle out as `not run: an earlier step failed under --fail-fast`; the gate before hand-back runs without the flag.
 
 ## 9. Dependencies
 

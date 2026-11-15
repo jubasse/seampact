@@ -188,6 +188,17 @@ mod tests {
     }
 
     #[test]
+    fn the_gate_takes_only_the_fail_fast_flag() {
+        assert_eq!(gate_mode(&[]), Some(GateMode::Full));
+        assert_eq!(
+            gate_mode(&arguments("--fail-fast")),
+            Some(GateMode::FailFast)
+        );
+        assert_eq!(gate_mode(&arguments("--fast")), None);
+        assert_eq!(gate_mode(&arguments("--fail-fast extra")), None);
+    }
+
+    #[test]
     fn the_oracle_takes_one_glob_and_one_half_in_any_order() {
         let selection = oracle_selection(&arguments("--half tree.nodes golden/*")).unwrap();
 
