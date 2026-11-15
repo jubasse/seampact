@@ -255,7 +255,9 @@ fn empty_between(lower: &Bound, upper: &Bound, scalar_type: &ScalarType) -> Opti
     }
 
     if *scalar_type == ScalarType::Integer && lowest_integer(lower) > highest_integer(upper) {
-        return Some(format!("no integer lies between {lower_text} and {upper_text}"));
+        return Some(format!(
+            "no integer lies between {lower_text} and {upper_text}"
+        ));
     }
 
     None
@@ -443,7 +445,9 @@ impl<'raw> TreeSchemasScalars<'raw> {
             let (taken, fix) = match &portable {
                 Some(portable) => (
                     "a portable format".to_owned(),
-                    format!("remove it and write 'type: {portable}, format: {id}' where it is used"),
+                    format!(
+                        "remove it and write 'type: {portable}, format: {id}' where it is used"
+                    ),
                 ),
                 None => (
                     "what 'sensitive' emits".to_owned(),
@@ -499,7 +503,7 @@ impl<'raw> TreeSchemasScalars<'raw> {
                 examples: None,
             },
             directions: Vec::new(),
-            docs: docs_of_mapping(value),
+            docs: tree_schemas_mapping_docs(value),
             origin: reporter.origin(pointer)?,
         }))
     }
@@ -655,7 +659,8 @@ impl<'raw> TreeSchemasScalars<'raw> {
                 refuse_misplaced(key, None, pointer, target, reporter)?;
                 refused = true;
             } else if key == "multipleOf" && target.scalar_type == ScalarType::Number {
-                let fix = "use 'type: integer', or 'type: string, format: decimal' for an exact step";
+                let fix =
+                    "use 'type: integer', or 'type: string, format: decimal' for an exact step";
 
                 refuse_misplaced(key, Some(fix), pointer, target, reporter)?;
                 refused = true;
@@ -720,12 +725,13 @@ impl<'raw> TreeSchemasScalars<'raw> {
 /// The docs of a schema: its `title` as the summary, and its `description`.
 pub(crate) fn tree_schemas_docs(value: Option<&JsonValue>) -> Docs {
     match value {
-        Some(JsonValue::Object(mapping)) => docs_of_mapping(mapping),
+        Some(JsonValue::Object(mapping)) => tree_schemas_mapping_docs(mapping),
         _ => Docs::default(),
     }
 }
 
-fn docs_of_mapping(value: &JsonObject) -> Docs {
+/// The docs of a schema mapping.
+pub(crate) fn tree_schemas_mapping_docs(value: &JsonObject) -> Docs {
     let written_text = |key: &str| match value.get(key) {
         Some(JsonValue::String(text)) => Some(text.clone()),
         _ => None,

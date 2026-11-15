@@ -68,9 +68,9 @@ const FIELDS_MAPS: [RouteFieldsMap; 4] = [
     },
 ];
 
-fn position_at(
-    compiler: &mut TreeSchemasCompiler<'_, '_, '_>,
-    value: Option<&JsonValue>,
+fn position_at<'raw>(
+    compiler: &mut TreeSchemasCompiler<'raw, '_, '_>,
+    value: Option<&'raw JsonValue>,
     pointer: &str,
     directions: &[Direction],
 ) -> Result<(), PassError> {
@@ -101,9 +101,9 @@ fn header_directions(declaration: Option<&JsonValue>) -> &'static [Direction] {
 }
 
 /// The params of a right, rule or error: a fields map hoisted as `<owner>Params`.
-fn params_at(
-    compiler: &mut TreeSchemasCompiler<'_, '_, '_>,
-    declaration: &JsonValue,
+fn params_at<'raw>(
+    compiler: &mut TreeSchemasCompiler<'raw, '_, '_>,
+    declaration: &'raw JsonValue,
     pointer: &str,
     segments: &[String],
     directions: &[Direction],
@@ -128,9 +128,9 @@ fn params_at(
     )
 }
 
-pub(crate) fn tree_schemas_compile_declarations(
-    compiler: &mut TreeSchemasCompiler<'_, '_, '_>,
-    merged: &JsonObject,
+pub(crate) fn tree_schemas_compile_declarations<'raw>(
+    compiler: &mut TreeSchemasCompiler<'raw, '_, '_>,
+    merged: &'raw JsonObject,
 ) -> Result<(), PassError> {
     for (id, identity) in tree_schemas_entries(merged.get("identities")) {
         compile_identity(compiler, merged, id, identity)?;
@@ -177,11 +177,11 @@ pub(crate) fn tree_schemas_compile_declarations(
     Ok(())
 }
 
-fn compile_identity(
-    compiler: &mut TreeSchemasCompiler<'_, '_, '_>,
-    merged: &JsonObject,
+fn compile_identity<'raw>(
+    compiler: &mut TreeSchemasCompiler<'raw, '_, '_>,
+    merged: &'raw JsonObject,
     id: &str,
-    identity: &JsonValue,
+    identity: &'raw JsonValue,
 ) -> Result<(), PassError> {
     let at = tree_schemas_pointer("/identities", &[id]);
     let principal = tree_schemas_member(Some(identity), "principal");
@@ -218,10 +218,10 @@ fn compile_identity(
     Ok(())
 }
 
-fn compile_right(
-    compiler: &mut TreeSchemasCompiler<'_, '_, '_>,
+fn compile_right<'raw>(
+    compiler: &mut TreeSchemasCompiler<'raw, '_, '_>,
     id: &str,
-    right: &JsonValue,
+    right: &'raw JsonValue,
 ) -> Result<(), PassError> {
     let at = tree_schemas_pointer("/rights", &[id]);
     let code_name = match tree_schemas_member(Some(right), "codeName") {
@@ -253,10 +253,10 @@ fn compile_right(
     )
 }
 
-fn compile_rule(
-    compiler: &mut TreeSchemasCompiler<'_, '_, '_>,
+fn compile_rule<'raw>(
+    compiler: &mut TreeSchemasCompiler<'raw, '_, '_>,
     id: &str,
-    rule: &JsonValue,
+    rule: &'raw JsonValue,
 ) -> Result<(), PassError> {
     let at = tree_schemas_pointer("/rules", &[id]);
 
@@ -305,7 +305,8 @@ fn route_name(
 ) -> Result<Option<seampact_naming::Name>, PassError> {
     operation
         .map(|operation| {
-            derive_name(&operation.segments, role.naming_role(), None).map_err(|error| naming_fault(&error))
+            derive_name(&operation.segments, role.naming_role(), None)
+                .map_err(|error| naming_fault(&error))
         })
         .transpose()
 }
@@ -331,9 +332,9 @@ fn response_name(
 }
 
 /// A fields map entry: an inline schema there is named as a property of the map's derived name.
-fn route_fields_at(
-    compiler: &mut TreeSchemasCompiler<'_, '_, '_>,
-    fields: Option<&JsonValue>,
+fn route_fields_at<'raw>(
+    compiler: &mut TreeSchemasCompiler<'raw, '_, '_>,
+    fields: Option<&'raw JsonValue>,
     pointer: &str,
     owner: Option<&seampact_naming::Name>,
     directions: &[Direction],
@@ -388,9 +389,9 @@ fn route_fields_at(
 /// Compiles the route positions of the tree, an inline schema hoisted under the name its operation
 /// derives. A relay route writes none; neither does an operation `names` lacks, whose naming problem
 /// `tree.nodes` reports.
-pub(crate) fn tree_schemas_compile_routes(
-    compiler: &mut TreeSchemasCompiler<'_, '_, '_>,
-    nodes: &TreeNodes<'_>,
+pub(crate) fn tree_schemas_compile_routes<'raw>(
+    compiler: &mut TreeSchemasCompiler<'raw, '_, '_>,
+    nodes: &TreeNodes<'raw>,
     names: &IndexMap<String, TreeNodesOperationName>,
 ) -> Result<(), PassError> {
     for (_, node) in nodes.iter() {
@@ -411,9 +412,9 @@ fn is_operation_kind(kind: TreeNodeKind) -> bool {
     matches!(kind, TreeNodeKind::Route | TreeNodeKind::Op)
 }
 
-fn compile_route(
-    compiler: &mut TreeSchemasCompiler<'_, '_, '_>,
-    node: &TreeNode<'_>,
+fn compile_route<'raw>(
+    compiler: &mut TreeSchemasCompiler<'raw, '_, '_>,
+    node: &TreeNode<'raw>,
     operation: Option<&Name>,
 ) -> Result<(), PassError> {
     let settings = node.settings;

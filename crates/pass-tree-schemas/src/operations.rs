@@ -116,14 +116,10 @@ fn version_of<'tree, 'raw>(
         return Ok(None);
     }
 
-    let (
-        Some(JsonValue::String(version)),
-        Some(JsonValue::String(field)),
-    ) = (
+    let (Some(JsonValue::String(version)), Some(JsonValue::String(field))) = (
         tree_schemas_member(concurrency, "version"),
         tree_schemas_member(concurrency, "field"),
-    )
-    else {
+    ) else {
         return Ok(None);
     };
     let inherited = if node.kind == TreeNodeKind::Op {

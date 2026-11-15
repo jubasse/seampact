@@ -4,8 +4,8 @@
 
 use seampact_diagnostics::InternalError;
 use seampact_ir::{
-    Direction, Docs, ErrorRole, Extensions, Layer, Name as IrName, NameRole, ObjectSchema, Origin,
-    Property, SchemaId, TypeUse,
+    Direction, Docs, ErrorRole, Extensions, Layer, ObjectSchema, Origin, Property, SchemaId,
+    TypeUse,
 };
 use seampact_naming::{Name, Role, split_name};
 use seampact_pipeline::{
@@ -15,6 +15,7 @@ use seampact_pipeline::{
 };
 
 use crate::code_params::TreeSchemasCodeParamsDeclarations;
+use crate::compile::ir_name;
 use crate::property::{TreeSchemasWrittenProperty, tree_schemas_derived_property};
 use crate::raw::tree_schemas_pointer;
 
@@ -66,22 +67,10 @@ fn core_object(
     pointer: &str,
     properties: Vec<Property>,
 ) -> Result<ObjectSchema, PassError> {
-    let role = NameRole::known(name.role.as_str()).ok_or_else(|| {
-        InternalError::new(format!(
-            "the core schema {} has the unknown name role {}",
-            id.as_ref(),
-            name.role.as_str()
-        ))
-    })?;
-
     Ok(ObjectSchema {
         properties,
         id: id.clone(),
-        name: IrName {
-            segments: name.segments.clone(),
-            role,
-            status: None,
-        },
+        name: ir_name(name)?,
         type_name: None,
         // A core schema's only uses are written by later halves (error params, the proof-only
         // input), so its direction is the one those uses have.

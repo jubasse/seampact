@@ -231,7 +231,7 @@ pub(crate) fn tree_schemas_query_wires(
             })))?
             .unwrap_or_default();
 
-        for property in &properties {
+        for property in properties {
             record_wire(
                 compiler,
                 &mut wires,
@@ -302,7 +302,7 @@ fn wire_of(
         return Ok(None);
     };
 
-    for property in &properties {
+    for property in properties {
         if single_kind(&property.r#type)?.is_none() && !is_list_of_singles(&property.r#type)? {
             return Ok(None);
         }

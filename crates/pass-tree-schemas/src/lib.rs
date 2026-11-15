@@ -34,6 +34,7 @@ mod rule;
 mod scalars;
 #[cfg(test)]
 mod tests;
+mod use_members;
 
 use seampact_diagnostics::RuleId;
 use seampact_pipeline::{DraftIr, HalfContext, PassError, TreeSchemasOutput};

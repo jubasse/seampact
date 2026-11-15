@@ -54,7 +54,9 @@ fn reach(
     targets: &mut DirectionTargets<'_>,
 ) -> Result<(), PassError> {
     match KnownTypeUseRef::try_from(use_)? {
-        KnownTypeUseRef::Ref(reference) => reach_schema(reference.schema.as_str(), direction, targets),
+        KnownTypeUseRef::Ref(reference) => {
+            reach_schema(reference.schema.as_str(), direction, targets)
+        }
         KnownTypeUseRef::Enum(enum_use) => {
             let declared = targets
                 .enum_positions

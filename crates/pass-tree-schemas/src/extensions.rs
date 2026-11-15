@@ -103,9 +103,9 @@ pub(crate) fn tree_schemas_extension_slot(value: &JsonObject) -> Extensions {
     slot
 }
 
-pub(crate) fn tree_schemas_compile_extension_keys(
-    compiler: &mut TreeSchemasCompiler<'_, '_, '_>,
-    merged: &JsonObject,
+pub(crate) fn tree_schemas_compile_extension_keys<'raw>(
+    compiler: &mut TreeSchemasCompiler<'raw, '_, '_>,
+    merged: &'raw JsonObject,
 ) -> Result<Vec<ExtensionKeyDecl>, PassError> {
     let mut declarations = Vec::new();
 

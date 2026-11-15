@@ -28,8 +28,6 @@ const DATE: &str = r"^([0-9]{4})-([0-9]{2})-([0-9]{2})$";
 const DATE_TIME: &str = r"^([0-9]{4}-[0-9]{2}-[0-9]{2})[Tt]([0-9]{2}):([0-9]{2}):([0-9]{2})(?:\.[0-9]{1,9})?(?:[Zz]|[+-]([0-9]{2}):([0-9]{2}))$";
 /// ECMAScript source of an int64 text.
 const INT64: &str = r"^-?(0|[1-9][0-9]*)$";
-/// ECMAScript source of a decimal text.
-const DECIMAL: &str = r"^-?(0|[1-9][0-9]*)(\.[0-9]+)?$";
 /// ECMAScript source of a JSON number text.
 const NUMBER_TEXT: &str = r"^-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?$";
 const INT64_MIN: i64 = i64::MIN;
@@ -135,8 +133,30 @@ fn format_check_uuid(text: &str) -> Result<bool, PassError> {
     Err(not_ported_yet("FORMAT_CHECKS.uuid"))
 }
 
+/// A written integer without a leading zero: `0|[1-9][0-9]*`.
+fn is_canonical_integer(text: &str) -> bool {
+    text == "0"
+        || text
+            .strip_prefix(|lead: char| ('1'..='9').contains(&lead))
+            .is_some_and(|rest| rest.chars().all(|digit| digit.is_ascii_digit()))
+}
+
+/// `^-?(0|[1-9][0-9]*)(\.[0-9]+)?$`.
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "an entry of FORMAT_CHECKS, whose other entries are stubs until their brief"
+)]
 fn format_check_decimal(text: &str) -> Result<bool, PassError> {
-    Err(not_ported_yet("FORMAT_CHECKS.decimal"))
+    let unsigned = text.strip_prefix('-').unwrap_or(text);
+    let (whole, fraction) = match unsigned.split_once('.') {
+        Some((whole, fraction)) => (whole, Some(fraction)),
+        None => (unsigned, None),
+    };
+    let fraction_is_digits = fraction.is_none_or(|digits| {
+        !digits.is_empty() && digits.chars().all(|digit| digit.is_ascii_digit())
+    });
+
+    Ok(is_canonical_integer(whole) && fraction_is_digits)
 }
 
 fn format_check_int64(text: &str) -> Result<bool, PassError> {
