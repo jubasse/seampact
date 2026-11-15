@@ -233,7 +233,7 @@ fn check_pattern(
 
 /// What `RegExp.prototype.source` answers for a pattern written as `written`: `(?:)` for the empty
 /// pattern, a `/` outside a class written `\/`, a line terminator written as its escape.
-fn regexp_source(written: &str) -> String {
+pub(crate) fn regexp_source(written: &str) -> String {
     if written.is_empty() {
         return "(?:)".to_owned();
     }

@@ -22,6 +22,8 @@ mod role_param_fit;
 mod role_param_types;
 mod role_params;
 mod sensitive_params;
+#[cfg(test)]
+mod tests;
 mod triggers;
 
 use seampact_diagnostics::RuleId;
@@ -60,20 +62,4 @@ pub fn run(
     schemas: &dyn TreeSchemaService,
 ) -> Result<DeriveErrorsOutput, PassError> {
     pass::derive_errors_pass_run(draft, context, schemas)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::report::DeriveErrorsRule;
-
-    #[test]
-    fn rule_ids_are_every_rule_of_the_half() {
-        let from_rules: Vec<RuleId> = DeriveErrorsRule::ALL
-            .iter()
-            .map(|rule| rule.rule_id())
-            .collect();
-
-        assert_eq!(RULE_IDS, from_rules.as_slice());
-    }
 }

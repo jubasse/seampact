@@ -261,7 +261,7 @@ fn origin_key(origin: &Origin) -> String {
     )
 }
 
-fn dedupe(origins: &[Origin]) -> Vec<Origin> {
+pub(crate) fn dedupe(origins: &[Origin]) -> Vec<Origin> {
     let mut seen = HashSet::new();
     let mut unique = Vec::new();
 
