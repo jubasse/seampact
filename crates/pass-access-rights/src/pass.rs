@@ -194,8 +194,8 @@ fn build_route<'run>(
         &AccessRightsRequiresInput {
             route: &route,
             scopes: &scopes,
-            api: api,
-            entries: entries,
+            api,
+            entries,
             schemas: &draft.schemas,
         },
     )?;
