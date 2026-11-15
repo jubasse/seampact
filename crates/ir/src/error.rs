@@ -26,4 +26,12 @@ pub enum IrError {
         /// The text found.
         found: String,
     },
+
+    /// The embedded IR schema files do not read as the instance walk expects: a bug of the
+    /// bundle, never a fault of the IR read.
+    #[error("the embedded IR schemas are broken: {what}")]
+    BrokenSchemas {
+        /// What is wrong.
+        what: String,
+    },
 }

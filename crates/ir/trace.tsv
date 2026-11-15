@@ -9,3 +9,16 @@ src/sensitive_field.rs#sensitive_reach_text	packages/core/spec/src/ir/sensitive-
 -	packages/core/spec/src/ir/sensitive-field.ts#isRecord	skip: the typed IR has no untyped JSON to test
 -	packages/core/spec/src/ir/sensitive-field.ts#listOf	skip: the typed IR holds a list, never a non-list
 -	packages/core/spec/src/ir/sensitive-field.ts#walkVariants	skip: merged into walk_schema (src/sensitive_field.rs), the union arm
+src/instance_walk.rs#ir_definition	packages/core/spec/src/ir/instance-walk.ts#irDefinition
+-	packages/core/spec/src/ir/instance-walk.ts#irDefinitionNames	skip: no Rust caller lists the definitions
+src/instance_walk.rs#resolve	packages/core/spec/src/ir/instance-walk.ts#resolve
+-	packages/core/spec/src/ir/instance-walk.ts#isRecord	skip: a match on JsonValue::Object tells a record apart
+src/instance_walk.rs#variant_tags	packages/core/spec/src/ir/instance-walk.ts#variantTags
+src/instance_walk.rs#walk_ir_instance	packages/core/spec/src/ir/instance-walk.ts#walkIrInstance
+src/instance_walk.rs#visit_ir_unknown	packages/core/spec/src/ir/instance-walk.ts#visitIrUnknown
+-	packages/core/spec/src/ir/instance-walk.ts#listIrUnknowns	skip: no Rust caller lists the unknowns of a whole IR yet
+src/closed_declaration.rs#bounded_unknown_value	packages/core/spec/src/ir/closed-declaration.ts#boundedUnknownValue
+src/closed_declaration.rs#push_unknown	packages/core/spec/src/ir/closed-declaration.ts#pushUnknown
+src/closed_declaration.rs#push_unknown_members	packages/core/spec/src/ir/closed-declaration.ts#pushUnknownMembers
+src/closed_declaration.rs#closed_unknowns	packages/core/spec/src/ir/closed-declaration.ts#isClosedAs
+src/closed_declaration.rs#check_ir_closed_declaration	packages/core/spec/src/ir/closed-declaration.ts#checkIrClosedDeclaration
