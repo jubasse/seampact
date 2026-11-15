@@ -20,13 +20,16 @@ use anyhow::Context;
 use camino::Utf8PathBuf;
 use seampact_oracle::{FixtureGlob, Selection};
 
+use crate::gate::GateMode;
 use crate::outcome::StepOutcome;
 
-const USAGE: &str =
-    "usage: cargo xtask (gate | oracle [<glob>] [--half <name>] [--time-limit <seconds>])";
+const USAGE: &str = "usage: cargo xtask (gate [--fail-fast] | oracle [<glob>] [--half <name>] [--time-limit <seconds>])";
 
 /// The exit code of a command line that names no known task or selects nothing.
 const EXIT_USAGE: u8 = 2;
+
+/// The flag that leaves out the build and test steps once a read-only step fails.
+const FAIL_FAST_FLAG: &str = "--fail-fast";
 
 /// The flag that compares one pass half alone.
 const HALF_FLAG: &str = "--half";
@@ -50,7 +53,10 @@ fn run() -> anyhow::Result<ExitCode> {
     let workspace_root = workspace_root()?;
 
     match arguments.split_first() {
-        Some((task, [])) if task == "gate" => Ok(gate_task(&workspace_root)),
+        Some((task, gate_arguments)) if task == "gate" => Ok(match gate_mode(gate_arguments) {
+            Some(mode) => gate_task(&workspace_root, mode),
+            None => usage_error(None),
+        }),
         Some((task, oracle_arguments)) if task == "oracle" => {
             match oracle_selection(oracle_arguments) {
                 Some(selection) => oracle_task(&workspace_root, &selection),
@@ -61,16 +67,34 @@ fn run() -> anyhow::Result<ExitCode> {
     }
 }
 
-fn gate_task(workspace_root: &camino::Utf8Path) -> ExitCode {
+/// The mode of `gate [--fail-fast]`, or `None` when the arguments are not that.
+fn gate_mode(arguments: &[String]) -> Option<GateMode> {
+    match arguments {
+        [] => Some(GateMode::Full),
+        [flag] if flag == FAIL_FAST_FLAG => Some(GateMode::FailFast),
+        _ => None,
+    }
+}
+
+fn gate_task(workspace_root: &camino::Utf8Path, mode: GateMode) -> ExitCode {
     gate_stamp::clear_gate_stamp(workspace_root);
 
-    let outcomes = gate::run_gate(workspace_root);
+    let reports = gate::run_gate(workspace_root, mode);
 
-    for outcome in &outcomes {
-        println!("{outcome}");
+    for report in &reports {
+        print!("{}", report.stdout);
+        eprint!("{}", report.stderr);
     }
 
-    if outcomes.iter().any(StepOutcome::is_failure) {
+    for report in &reports {
+        println!("{}", report.outcome);
+    }
+
+    // A step left out only follows a failure, but the stamp still needs every step to have passed.
+    if reports
+        .iter()
+        .any(|report| !matches!(report.outcome, StepOutcome::Passed { .. }))
+    {
         return ExitCode::FAILURE;
     }
 
