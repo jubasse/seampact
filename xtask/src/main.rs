@@ -7,6 +7,7 @@
 )]
 
 mod gate;
+mod gate_stamp;
 mod oracle;
 mod outcome;
 mod prerequisite;
@@ -61,6 +62,8 @@ fn run() -> anyhow::Result<ExitCode> {
 }
 
 fn gate_task(workspace_root: &camino::Utf8Path) -> ExitCode {
+    gate_stamp::clear_gate_stamp(workspace_root);
+
     let outcomes = gate::run_gate(workspace_root);
 
     for outcome in &outcomes {
@@ -68,10 +71,12 @@ fn gate_task(workspace_root: &camino::Utf8Path) -> ExitCode {
     }
 
     if outcomes.iter().any(StepOutcome::is_failure) {
-        ExitCode::FAILURE
-    } else {
-        ExitCode::SUCCESS
+        return ExitCode::FAILURE;
     }
+
+    gate_stamp::write_gate_stamp(workspace_root);
+
+    ExitCode::SUCCESS
 }
 
 fn oracle_task(
