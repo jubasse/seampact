@@ -41,7 +41,7 @@ pub(crate) struct TreeSchemasExtensionSite<'tree, 'raw> {
 
 /// The prefix and the key of `x-<prefix>-<key>` (`^x-([a-z][a-z0-9]*)-(.+)$`): the prefix holds no
 /// dash, so the key is everything after it, and `.` matches no line terminator.
-fn extension_key_parts(written: &str) -> Option<(&str, &str)> {
+pub(crate) fn extension_key_parts(written: &str) -> Option<(&str, &str)> {
     let (prefix, key) = written.strip_prefix("x-")?.split_once('-')?;
     let mut prefix_characters = prefix.chars();
     let prefix_is_word = prefix_characters
