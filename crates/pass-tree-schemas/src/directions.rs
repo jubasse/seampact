@@ -3,22 +3,30 @@
 //! and values, variants and JSON content schemas. `unknownKeys` acts on input uses only: one written
 //! where every use is output is refused.
 
+use std::collections::HashMap;
+
 use indexmap::IndexMap;
-use seampact_ir::{Direction, Enum, Scalar, Schema, TypeUse};
+use seampact_ir::{Direction, Enum, KnownSchemaRef, Scalar, Schema, TypeUse};
 use seampact_pipeline::PassError;
 
 use crate::compile::TreeSchemasCompiler;
 use crate::not_ported::not_ported_yet;
-use crate::relays::TreeSchemasRelayCopies;
+use crate::raw::TreeSchemasProblem;
+use crate::relays::TreeSchemasRelayUse;
+use crate::rule::TreeSchemasRule;
 
 const DIRECTION_ORDER: [Direction; 2] = [Direction::Input, Direction::Output];
 
-/// The declarations a walk reaches, by id.
+/// The declarations a walk reaches, by id. An enum or a named format is written in place, in the
+/// list the run goes on to write; where two share an id the last one is the target, as a map keyed
+/// by id has it.
 #[derive(Debug)]
 struct DirectionTargets<'declared> {
     schemas: &'declared mut IndexMap<String, Schema>,
-    enums: &'declared mut IndexMap<String, Enum>,
-    scalars: &'declared mut IndexMap<String, Scalar>,
+    enums: &'declared mut [Enum],
+    enum_positions: HashMap<String, usize>,
+    scalars: &'declared mut [Scalar],
+    scalar_positions: HashMap<String, usize>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -51,10 +59,41 @@ fn reach_schema(
 
 pub(crate) fn tree_schemas_write_directions(
     compiler: &mut TreeSchemasCompiler<'_, '_, '_>,
-    enums: &[Enum],
-    relays: &TreeSchemasRelayCopies,
+    enums: &mut [Enum],
+    scalars: &mut [Scalar],
+    relay_uses: &[TreeSchemasRelayUse],
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("treeSchemasWriteDirections"))
+    let enum_positions = positions_by_id(enums.iter().map(|declared| declared.id.as_str()));
+    let scalar_positions = positions_by_id(scalars.iter().map(|scalar| scalar.id.as_str()));
+    let mut targets = DirectionTargets {
+        schemas: &mut compiler.schemas,
+        enums,
+        enum_positions,
+        scalars,
+        scalar_positions,
+    };
+
+    for (pointer, directions) in &compiler.position_directions {
+        let Some(schema_use) = compiler.uses.get(pointer) else {
+            continue;
+        };
+
+        for direction in directions {
+            reach(schema_use, direction, &mut targets)?;
+        }
+    }
+
+    for relay_use in relay_uses {
+        reach(&relay_use.schema_use, &relay_use.direction, &mut targets)?;
+    }
+
+    Ok(())
+}
+
+fn positions_by_id<'id>(ids: impl Iterator<Item = &'id str>) -> HashMap<String, usize> {
+    ids.enumerate()
+        .map(|(position, id)| (id.to_owned(), position))
+        .collect()
 }
 
 fn within(pointer: &str, holder: &str) -> Result<bool, PassError> {
@@ -70,5 +109,69 @@ fn directions_at(holders: &[DirectionHolder], pointer: &str) -> Result<Vec<Direc
 pub(crate) fn tree_schemas_refuse_output_unknown_keys(
     compiler: &mut TreeSchemasCompiler<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("treeSchemasRefuseOutputUnknownKeys"))
+    let mut holders: Vec<DirectionHolder> = compiler
+        .position_directions
+        .iter()
+        .map(|(pointer, directions)| DirectionHolder {
+            pointer: pointer.clone(),
+            directions: directions.clone(),
+        })
+        .collect();
+
+    for (id, pointer) in &compiler.written_at {
+        let directions = match compiler.schemas.get(id) {
+            Some(schema) => schema_directions(schema)?.to_vec(),
+            None => Vec::new(),
+        };
+
+        holders.push(DirectionHolder {
+            pointer: pointer.clone(),
+            directions,
+        });
+    }
+
+    for written in &compiler.written_unknown_keys {
+        let own = directions_at(&holders, written)?;
+        let directions = if own.is_empty() {
+            let mut carried = Vec::new();
+
+            for schema_use in compiler
+                .unknown_keys_uses
+                .get(written)
+                .into_iter()
+                .flatten()
+            {
+                carried.extend(directions_at(&holders, schema_use)?);
+            }
+
+            carried
+        } else {
+            own
+        };
+
+        if directions.is_empty() || directions.contains(&Direction::Input) {
+            continue;
+        }
+
+        compiler.reporter.error(TreeSchemasProblem {
+            rule: TreeSchemasRule::UnknownKeys,
+            pointer: written.clone(),
+            message: "'unknownKeys' acts on input uses only, and every use here is output"
+                .to_owned(),
+            fix: "remove 'unknownKeys' here; an output use strips unknown keys on emit".to_owned(),
+            related: None,
+        })?;
+    }
+
+    Ok(())
+}
+
+fn schema_directions(schema: &Schema) -> Result<&[Direction], PassError> {
+    let directions = match KnownSchemaRef::try_from(schema)? {
+        KnownSchemaRef::Object(object) => &object.directions,
+        KnownSchemaRef::Map(map) => &map.directions,
+        KnownSchemaRef::Union(union) => &union.directions,
+    };
+
+    Ok(directions)
 }

@@ -7,7 +7,7 @@ use seampact_json::JsonValue;
 use seampact_pipeline::PassError;
 
 use crate::not_ported::not_ported_yet;
-use crate::raw::TreeSchemasReporter;
+use crate::raw::{TreeSchemasReporter, tree_schemas_entries};
 
 /// The values of an enum: its own, or the cycle its `source.enum` chain closes.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -57,7 +57,15 @@ pub(crate) fn tree_schemas_compile_enums(
     enums: Option<&JsonValue>,
     reporter: &mut TreeSchemasReporter<'_, '_>,
 ) -> Result<Vec<Enum>, PassError> {
-    Err(not_ported_yet("treeSchemasCompileEnums"))
+    let mut compiled = Vec::new();
+
+    for (id, declared) in tree_schemas_entries(enums) {
+        if let Some(declared_enum) = compile_enum(enums, id, declared, reporter)? {
+            compiled.push(declared_enum);
+        }
+    }
+
+    Ok(compiled)
 }
 
 fn compile_enum(
