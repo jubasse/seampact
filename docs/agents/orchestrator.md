@@ -34,7 +34,7 @@ Spawn and message agents as the global AGENTS.md "Sub-agents" table says (Herdr 
   Fixture subset and oracle command: <fixtures>, <command>.
   Skip list: <functions or files never ported>.
   Call cap: <60 | 100 | 140>.
-  Hand-back: tip, gate and oracle result, functions against trace.tsv, loops used, items for the lead.
+  Hand-back: tip, gate and oracle result (counts), functions against trace.tsv, loops used, items for the lead.
   ```
 
 - Lane prompts invoke `seampact-rust` and `seampact-rust-port-ts`; the full `rust-best-practices` and `rust-review` are for design notes and layer reviews only.
