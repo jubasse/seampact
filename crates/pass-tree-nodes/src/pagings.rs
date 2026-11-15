@@ -816,3 +816,23 @@ fn check_formats(scope: &mut TreeNodesScope<'_, '_, '_>) -> Result<(), PassError
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use seampact_ir::PagingParamStyle;
+    use seampact_json::JsonValue;
+
+    use super::sort_fault;
+
+    #[test]
+    fn a_sort_role_is_refused_by_what_its_style_reads() {
+        let direction = JsonValue::String("dir".to_owned());
+
+        assert!(sort_fault("sort", Some(&PagingParamStyle::Split), Some(&direction)).is_none());
+        assert!(sort_fault("sort", Some(&PagingParamStyle::Split), None).is_some());
+        assert!(sort_fault("sort", Some(&PagingParamStyle::Signed), Some(&direction)).is_some());
+        assert!(sort_fault("sort", None, Some(&JsonValue::Null)).is_some());
+        assert!(sort_fault("order[{key}]", Some(&PagingParamStyle::Keyed), None).is_none());
+        assert!(sort_fault("order", Some(&PagingParamStyle::Keyed), None).is_some());
+    }
+}

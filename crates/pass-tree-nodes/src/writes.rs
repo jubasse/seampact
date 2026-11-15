@@ -403,3 +403,35 @@ fn report_nothing_to_inherit(
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use seampact_json::JsonValue;
+
+    use super::{VersionPlace, parse_source};
+
+    #[test]
+    fn a_source_name_is_one_or_more_characters_with_no_line_terminator() {
+        let parsed = |text: &str| parse_source(Some(&JsonValue::String(text.to_owned())));
+
+        let source = parsed("header.If-Match").expect("a header source");
+
+        assert_eq!(source.place, VersionPlace::Header);
+        assert_eq!(source.name, "If-Match");
+        assert_eq!(parsed("body.a.b").expect("a body source").name, "a.b");
+
+        for text in [
+            "body.",
+            "body",
+            "cookie.v",
+            "body.a\nb",
+            "body.a\rb",
+            "body.a\u{2028}b",
+            "body.a\u{2029}b",
+        ] {
+            assert!(parsed(text).is_none(), "text {text:?}");
+        }
+
+        assert!(parse_source(Some(&JsonValue::Null)).is_none());
+    }
+}

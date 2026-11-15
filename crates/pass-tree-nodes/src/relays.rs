@@ -651,3 +651,27 @@ fn relays_origin(
 
     tree_nodes_node_origin(&origin)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::path_under_prefix;
+
+    #[test]
+    fn a_path_is_under_a_prefix_at_a_segment_boundary_only() {
+        for (path, prefix, expected) in [
+            ("/v1", Some("/v1"), true),
+            ("/v1/tasks", Some("/v1"), true),
+            ("/v10/tasks", Some("/v1"), false),
+            ("/v1", Some("/v1/"), false),
+            ("/tasks", Some(""), true),
+            ("", Some(""), true),
+            ("/v1", None, false),
+        ] {
+            assert_eq!(
+                path_under_prefix(path, prefix),
+                expected,
+                "path {path:?} prefix {prefix:?}"
+            );
+        }
+    }
+}
