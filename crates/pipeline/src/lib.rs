@@ -35,10 +35,11 @@ pub use error::PassError;
 pub use halves::{Half, LaterHalf, PassName};
 pub use outputs::{
     AccessIdentityOperation, AccessIdentityOutput, AccessRightsOperation, AccessRightsOutput,
-    DeriveErrorsOutput, DeriveWireOperation, DeriveWireOutput, OperationIndex, ProofOnlyInput,
-    ResponseHeaderAdditions, SortKeyRights, TreeNodesConcurrency, TreeNodesInput,
-    TreeNodesOperation, TreeNodesOutput, TreeNodesPaging, TreeNodesSortKey, TreeSchemasMembers,
-    TreeSchemasOutput,
+    DeriveErrorsOutput, DeriveWireOperation, DeriveWireOutput, DerivedResponse, MergedResponse,
+    OperationIndex, ProofOnlyInput, ResponseHeaderAdditions, ResponsePosition, SortKeyRights,
+    TreeNodesConcurrency, TreeNodesInput, TreeNodesOperation, TreeNodesOutput, TreeNodesPaging,
+    TreeNodesSortKey, TreeSchemasMembers, TreeSchemasOutput, merged_response_order,
+    place_derived_responses,
 };
 pub use readers::{
     ConventionDefault, ConventionDefaultValue, ConventionReading, Inherited, InheritedEntry,

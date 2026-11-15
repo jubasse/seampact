@@ -11,7 +11,7 @@ use seampact_ir::{
     DerivedFrom, Origin, Param, QueryStyle, QueryWire, QueryWireKind, Refinements, Response,
     ResponseHeader, ResponseHeaderSemantic, ScalarType, ScalarTypeUse, TypeUse,
 };
-use seampact_pipeline::{OperationIndex, PassError};
+use seampact_pipeline::{MergedResponse, OperationIndex, PassError, merged_response_order};
 
 use crate::not_ported::not_ported_yet;
 use crate::report::DeriveWireRelated;
@@ -244,16 +244,21 @@ fn elements_of<'list>(
         }
         DeriveWireElementList::ResponseHeaders { response } => {
             let draft_responses = draft_operation.responses.as_deref().unwrap_or_default();
+            let order = merged_response_order(draft_responses.len(), &written.responses)?;
+            let own_headers = match order.get(response) {
+                Some(MergedResponse::Draft(index)) => draft_responses
+                    .get(*index)
+                    .map(|draft_response| &draft_response.headers),
+                Some(MergedResponse::Derived(index)) => written
+                    .responses
+                    .get(*index)
+                    .map(|derived| &derived.response.headers),
+                None => None,
+            };
             let mut elements: Vec<NamedRef<'list>> = Vec::new();
 
-            if let Some(draft_response) = draft_responses.get(response) {
-                elements.extend(draft_response.headers.iter().map(NamedRef::from));
-            } else {
-                let appended = response.saturating_sub(draft_responses.len());
-
-                if let Some(appended_response) = written.responses.get(appended) {
-                    elements.extend(appended_response.headers.iter().map(NamedRef::from));
-                }
+            if let Some(headers) = own_headers {
+                elements.extend(headers.iter().map(NamedRef::from));
             }
 
             let draft_count = elements.len();
@@ -285,6 +290,7 @@ fn accumulated_derived_from<'scope>(
         .as_deref()
         .map_or(0, <[Response]>::len);
     let written = scope.output_of(operation)?;
+    let order = merged_response_order(draft_responses, &written.responses)?;
     let added = position.saturating_sub(draft_count);
     let found = match list {
         DeriveWireElementList::Params(DeriveWireParamPlace::Query) => written
@@ -295,7 +301,9 @@ fn accumulated_derived_from<'scope>(
             .header_params
             .get_mut(added)
             .and_then(|param| param.derived_from.as_mut()),
-        DeriveWireElementList::ResponseHeaders { response } if response < draft_responses => {
+        DeriveWireElementList::ResponseHeaders { response }
+            if !matches!(order.get(response), Some(MergedResponse::Derived(_))) =>
+        {
             let mut headers = written
                 .response_headers
                 .iter_mut()
@@ -307,17 +315,21 @@ fn accumulated_derived_from<'scope>(
                 .and_then(|header| header.derived_from.as_mut())
         }
         DeriveWireElementList::ResponseHeaders { response } => {
-            let own = response - draft_responses;
+            let Some(MergedResponse::Derived(own)) = order.get(response).copied() else {
+                return Err(InternalError::new(format!(
+                    "derive.wire read response {response}, which it did not derive"
+                )));
+            };
             let own_count = written
                 .responses
                 .get(own)
-                .map_or(0, |item| item.headers.len());
+                .map_or(0, |item| item.response.headers.len());
 
             if added < own_count {
                 written
                     .responses
                     .get_mut(own)
-                    .and_then(|item| item.headers.get_mut(added))
+                    .and_then(|item| item.response.headers.get_mut(added))
                     .and_then(|header| header.derived_from.as_mut())
             } else {
                 let mut headers = written

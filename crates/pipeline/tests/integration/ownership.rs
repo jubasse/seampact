@@ -3,9 +3,9 @@
 use seampact_ir::{ApiWire, IrMap, Origin, Param, Response, ResponseHeader};
 use seampact_pipeline::{
     AccessIdentityOperation, AccessIdentityOutput, AccessRightsOperation, AccessRightsOutput,
-    ApiDeclaration, DeriveErrorsOutput, DeriveWireOperation, DeriveWireOutput, DraftApi, DraftIr,
-    DraftOperation, ProofOnlyInput, ResponseHeaderAdditions, SortKeyRights, TreeNodesOutput,
-    TreeSchemasMembers,
+    ApiDeclaration, DeriveErrorsOutput, DeriveWireOperation, DeriveWireOutput, DerivedResponse,
+    DraftApi, DraftIr, DraftOperation, MergedResponse, ProofOnlyInput, ResponseHeaderAdditions,
+    ResponsePosition, SortKeyRights, TreeNodesOutput, TreeSchemasMembers, merged_response_order,
 };
 use serde::de::DeserializeOwned;
 use serde_json::json;
@@ -48,6 +48,13 @@ fn derived_response(status: u16, derivation: &str) -> Result<Response, String> {
         "status": status, "shape": "item", "headers": [], "origin": origin(),
         "derivedFrom": derived_from(derivation),
     }))
+}
+
+fn appended(response: Response) -> DerivedResponse {
+    DerivedResponse {
+        position: ResponsePosition::End,
+        response,
+    }
 }
 
 fn derived_header(name: &str, derivation: &str) -> Result<ResponseHeader, String> {
@@ -441,7 +448,7 @@ fn lists_concatenate_in_run_order_and_headers_address_either_kind_of_response() 
 
     let wire = DeriveWireOperation {
         header_params: vec![derived_param("derived", "idempotency.write")?],
-        responses: vec![derived_response(404, "cache.etag")?],
+        responses: vec![appended(derived_response(404, "cache.etag")?)],
         response_headers: vec![
             ResponseHeaderAdditions {
                 response: 0,
@@ -491,7 +498,7 @@ fn a_response_index_past_both_lists_is_an_internal_error() -> Outcome {
 
     let mut draft = draft_with(vec![declared])?;
     let wire = DeriveWireOperation {
-        responses: vec![derived_response(404, "cache.etag")?],
+        responses: vec![appended(derived_response(404, "cache.etag")?)],
         response_headers: vec![ResponseHeaderAdditions {
             response: 2,
             headers: vec![derived_header("A", "cache.etag")?],
@@ -502,6 +509,74 @@ fn a_response_index_past_both_lists_is_an_internal_error() -> Outcome {
 
     assert!(
         failure.contains("response index 2 is past the 2 responses"),
+        "{failure}"
+    );
+
+    Ok(())
+}
+
+#[test]
+fn a_placed_response_lands_at_its_position_and_header_indexes_read_the_merged_list() -> Outcome {
+    let mut declared = operation(json!({}))?;
+    let responses = declared.responses.as_mut().ok_or("responses")?;
+
+    responses.push(response(200)?);
+    responses.push(response(404)?);
+
+    let mut draft = draft_with(vec![declared])?;
+    let not_modified = DerivedResponse {
+        position: ResponsePosition::At(1),
+        response: derived_response(304, "cache.etag")?,
+    };
+    let wire = DeriveWireOperation {
+        responses: vec![not_modified.clone()],
+        response_headers: vec![ResponseHeaderAdditions {
+            response: 2,
+            headers: vec![derived_header("A", "cache.etag")?],
+        }],
+        ..DeriveWireOperation::default()
+    };
+
+    assert_eq!(
+        merged_response_order(2, &[not_modified]).map_err(|failure| failure.to_string())?,
+        [
+            MergedResponse::Draft(0),
+            MergedResponse::Derived(0),
+            MergedResponse::Draft(1),
+        ]
+    );
+
+    derive_wire_output(vec![wire])?
+        .merge_into(&mut draft)
+        .map_err(|failure| failure.to_string())?;
+
+    let operation = draft.operations.first().ok_or("an operation")?;
+    let statuses_and_headers: Vec<(i64, usize)> = operation
+        .responses
+        .iter()
+        .flatten()
+        .map(|response| (response.status, response.headers.len()))
+        .collect();
+
+    assert_eq!(statuses_and_headers, [(200, 0), (304, 0), (404, 1)]);
+
+    Ok(())
+}
+
+#[test]
+fn a_response_position_past_the_responses_is_an_internal_error() -> Outcome {
+    let mut draft = draft_with(vec![operation(json!({}))?])?;
+    let wire = DeriveWireOperation {
+        responses: vec![DerivedResponse {
+            position: ResponsePosition::At(1),
+            response: derived_response(304, "cache.etag")?,
+        }],
+        ..DeriveWireOperation::default()
+    };
+    let failure = failure_of(derive_wire_output(vec![wire])?.merge_into(&mut draft))?;
+
+    assert!(
+        failure.contains("places a response at 1, past the 0 responses"),
         "{failure}"
     );
 
@@ -611,7 +686,7 @@ fn a_half_appends_no_declared_element_and_none_of_another_halfs_derivation() -> 
         ..DeriveWireOperation::default()
     };
     let in_a_list_it_does_not_derive_into = DeriveWireOperation {
-        responses: vec![derived_response(404, "rule.proof")?],
+        responses: vec![appended(derived_response(404, "rule.proof")?)],
         ..DeriveWireOperation::default()
     };
     let rights_in_a_path = AccessRightsOutput {
