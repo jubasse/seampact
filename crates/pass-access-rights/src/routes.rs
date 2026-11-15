@@ -5,7 +5,8 @@ use std::collections::HashMap;
 use seampact_diagnostics::InternalError;
 use seampact_ir::{IdentityId, KnownAccessRef, OperationId};
 use seampact_pipeline::{
-    DraftOperation, OperationIndex, PassError, TreeNode, TreeNodeId, TreeNodeKind, TreeNodes,
+    DraftIr, DraftOperation, OperationIndex, PassError, TreeNode, TreeNodeId, TreeNodeKind,
+    TreeNodes,
 };
 
 use crate::not_ported::not_ported_yet;
@@ -64,9 +65,34 @@ pub(crate) struct AccessRightsScopeNodes {
 
 const API_KIND_DEFAULT: &str = "product";
 
+/// The draft operation a route stands for.
+///
+/// # Errors
+///
+/// An internal error for a route of another draft.
+pub(crate) fn access_rights_operation_of<'draft>(
+    context: &AccessRightsContext<'draft, '_, '_>,
+    route: &AccessRightsRoute,
+) -> Result<&'draft DraftOperation, InternalError> {
+    let draft: &'draft DraftIr = context.draft;
+
+    draft
+        .operations
+        .get(route.operation.position())
+        .ok_or_else(|| {
+            InternalError::new(format!(
+                "operation {} is not in the draft",
+                route.operation.position()
+            ))
+        })
+}
+
 /// The api's kind and caller, from the merged raw tree.
 pub(crate) fn access_rights_api(context: &AccessRightsContext) -> AccessRightsApi {
-    let api = access_rights_object(access_rights_member(Some(&context.context.raw.merged), "api"));
+    let api = access_rights_object(access_rights_member(
+        Some(&context.context.raw.merged),
+        "api",
+    ));
     let caller = access_rights_object(access_rights_member(api, "caller"));
     let identity = access_rights_string(caller, "identity");
     let right = access_rights_string(caller, "right");
@@ -107,9 +133,15 @@ pub(crate) fn access_rights_routes(
             .operations
             .get(index.position())
             .ok_or_else(|| {
-                InternalError::new(format!("operation {} is not in the draft", index.position()))
+                InternalError::new(format!(
+                    "operation {} is not in the draft",
+                    index.position()
+                ))
             })?;
-        let pointer = operation.origin.as_ref().map(|origin| origin.pointer.as_str());
+        let pointer = operation
+            .origin
+            .as_ref()
+            .map(|origin| origin.pointer.as_str());
         let node_id = pointer.and_then(|pointer| nodes.get(pointer));
         let (Some(id), Some(node_id)) = (&operation.id, node_id) else {
             return Err(InternalError::new(format!(

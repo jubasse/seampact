@@ -4,11 +4,11 @@
 use std::collections::{HashMap, HashSet};
 
 use regress::Regex;
+use seampact_diagnostics::InternalError;
+use seampact_ir::IrMap;
 use seampact_ir::{
     Bucket, BucketId, ProofPlacement, Right, RightId, RightSubject, Rule, RuleId, Scope, ScopeId,
 };
-use seampact_diagnostics::InternalError;
-use seampact_ir::IrMap;
 use seampact_json::{JsonObject, JsonValue, stringify_json};
 use seampact_pipeline::{ConventionReading, PassError};
 

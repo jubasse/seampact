@@ -10,7 +10,9 @@ use seampact_pipeline::{DraftOperationInput, PassError, pointer_below};
 
 use crate::catalogues::AccessRightsCatalogues;
 use crate::not_ported::not_ported_yet;
-use crate::report::{AccessRightsProblem, AccessRightsRelated, AccessRightsReporter, AccessRightsRule};
+use crate::report::{
+    AccessRightsProblem, AccessRightsRelated, AccessRightsReporter, AccessRightsRule,
+};
 use crate::routes::AccessRightsRoute;
 use crate::source::access_rights_source_text;
 
@@ -55,11 +57,18 @@ pub(crate) fn access_rights_check_bucket_keys(
         };
 
         let bucket = catalogues.buckets.get(bucket_id);
-        let use_pointer = rule.origin.as_ref().map(|origin| origin.pointer.as_str()).or_else(|| {
-            let derived_from = rule.derived_from.as_ref()?;
+        let use_pointer = rule
+            .origin
+            .as_ref()
+            .map(|origin| origin.pointer.as_str())
+            .or_else(|| {
+                let derived_from = rule.derived_from.as_ref()?;
 
-            derived_from.from.first().map(|origin| origin.pointer.as_str())
-        });
+                derived_from
+                    .from
+                    .first()
+                    .map(|origin| origin.pointer.as_str())
+            });
         let (Some(bucket), Some(use_pointer)) = (bucket, use_pointer) else {
             return Err(InternalError::new(format!(
                 "access.rights built a requirement counting in bucket '{bucket_id}' it cannot place"
@@ -83,7 +92,10 @@ pub(crate) fn access_rights_check_bucket_keys(
                 pointer: use_pointer.to_owned(),
                 distinct_by: Some(source_text),
                 related: vec![AccessRightsRelated {
-                    pointer: pointer_below("/buckets", &[bucket.id.as_str(), "key", &index.to_string()]),
+                    pointer: pointer_below(
+                        "/buckets",
+                        &[bucket.id.as_str(), "key", &index.to_string()],
+                    ),
                     message: "the key is declared here".to_owned(),
                 }],
             });

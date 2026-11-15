@@ -1,7 +1,7 @@
 //! The positions a field restriction is refused at: route params, headers and error params.
 
-use seampact_ir::{Origin, TypeUse};
 use seampact_diagnostics::access_rights_quoted;
+use seampact_ir::{Origin, TypeUse};
 use seampact_pipeline::{PassError, pointer_below};
 
 use crate::not_ported::not_ported_yet;
