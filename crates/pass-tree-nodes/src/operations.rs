@@ -4,25 +4,42 @@ use std::collections::HashMap;
 use std::mem;
 
 use seampact_diagnostics::{InternalError, RelatedLocation};
-use seampact_ir::{HttpMethod, OpShorthand, OperationResource, Params, TypeUse};
+use seampact_ir::{
+    FormatId, HttpMethod, IrMap, OpShorthand, OperationId, OperationResource, Params, ServiceId,
+    SurfaceId, TypeUse,
+};
 use seampact_json::JsonValue;
 use seampact_pass_tree_shared::{
-    TreeNodesOperationName, tree_nodes_id_param, tree_nodes_idless_collection,
-    tree_nodes_is_operation, tree_nodes_operation_name,
+    TREE_NODES_BATCH_OP, TREE_NODES_OPERATION_KIND, TreeNodesOperationName, tree_nodes_id_param,
+    tree_nodes_idless_collection, tree_nodes_is_operation, tree_nodes_op_shorthand,
+    tree_nodes_operation_name, tree_nodes_singular_is_bare_id, tree_nodes_singular_owner,
+    tree_nodes_text,
 };
 use seampact_pipeline::{DraftOperation, PassError, TreeNode, TreeNodeId, TreeNodeKind, TreeNodes};
 
 use crate::api::TreeNodesSurfacePrefixes;
+use crate::api::tree_nodes_docs_of_object;
 use crate::collections::tree_nodes_report_idless_collection;
+use crate::degradable::tree_nodes_degradable;
 use crate::diagnostics::{
     TreeNodesDiagnosticOptions, TreeNodesRule, tree_nodes_error, tree_nodes_node_origin,
+    tree_nodes_report_once, tree_nodes_warning,
 };
+use crate::examples::tree_nodes_examples;
 use crate::fields::TreeNodesSite;
-use crate::lifecycle::tree_nodes_check_successor;
+use crate::input::{tree_nodes_batch_input, tree_nodes_input};
+use crate::lifecycle::{
+    tree_nodes_budget_ms, tree_nodes_check_successor, tree_nodes_deprecated, tree_nodes_extensions,
+    tree_nodes_internal, tree_nodes_stated_maturity, tree_nodes_tags, tree_nodes_upstream,
+};
 use crate::not_ported::not_ported_yet;
-use crate::params::blank_placeholders;
+use crate::paging::tree_nodes_paging;
+use crate::params::{blank_placeholders, tree_nodes_params, tree_nodes_unknown_query};
 use crate::pass::TreeNodesScope;
-use crate::relays::TreeNodesRelayDeclaration;
+use crate::paths::{tree_nodes_check_path_parts, tree_nodes_path};
+use crate::relays::{TreeNodesRelayDeclaration, tree_nodes_relay_shape};
+use crate::responses::{tree_nodes_format, tree_nodes_responses};
+use crate::writes::{tree_nodes_concurrency, tree_nodes_owner};
 
 const HTTP_METHODS: &[HttpMethod] = &[
     HttpMethod::Get,
@@ -104,11 +121,12 @@ pub(crate) fn tree_nodes_operations<'node, 'raw>(
             continue;
         };
 
-        warn_bare_id_singular(node, scope)?;
+        warn_bare_id_singular(node, nodes, scope)?;
 
         let site = TreeNodesSite {
             node_id,
             node,
+            nodes,
             operation_id: name.id.clone(),
         };
         let operation = if node.kind == TreeNodeKind::Relay {
@@ -224,38 +242,191 @@ fn report_route_clashes(
     Ok(())
 }
 fn operation_of(
-    _site: &TreeNodesSite<'_, '_>,
-    _name: &TreeNodesOperationName,
-    _prefixes: &TreeNodesSurfacePrefixes,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    name: &TreeNodesOperationName,
+    prefixes: &TreeNodesSurfacePrefixes,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<DraftOperation, PassError> {
-    Err(not_ported_yet("operationOf"))
+    let node = site.node;
+    let op = tree_nodes_op_shorthand(node);
+    let resource = resource_of(node, site.nodes, scope.context.raw.merged.get("schemas"))?;
+    let method = method_of(node, op.as_ref(), scope)?;
+    let safe = method == SAFE_METHOD || op == Some(TREE_NODES_BATCH_OP);
+    let writes_input = node.settings.contains_key("input");
+    let input = if op == Some(TREE_NODES_BATCH_OP) && !writes_input {
+        tree_nodes_batch_input(node, scope)?
+    } else {
+        tree_nodes_input(node, &name.id, scope)?
+    };
+
+    if let Some(op) = &op
+        && OPS_NEEDING_INPUT.contains(op)
+        && !writes_input
+    {
+        report_no_input(site, op, scope)?;
+    }
+
+    if method == SAFE_METHOD && writes_input {
+        report_get_input(site, scope)?;
+    }
+
+    let path = tree_nodes_path(node, site.nodes, prefixes, scope)?;
+
+    tree_nodes_check_path_parts(site, &path, scope)?;
+
+    let input_schema = input.as_ref().map(|input| &input.schema);
+    let params = tree_nodes_params(site, Some(&path), safe, input_schema, scope)?;
+    let unknown_query = tree_nodes_unknown_query(site, scope)?;
+    let shape = shape_of(site, input_schema, &params, scope)?;
+    let lifecycle = lifecycle_of(site, scope)?;
+
+    Ok(with_lifecycle(
+        DraftOperation {
+            kind: Some(TREE_NODES_OPERATION_KIND),
+            id: Some(OperationId::new(name.id.clone())),
+            name: Some(name.name.clone()),
+            surface: Some(SurfaceId::new(surface_of(site.node_id, site.nodes)?)),
+            op,
+            resource,
+            method: Some(method),
+            safe: Some(safe),
+            path: Some(path.full),
+            params: Some(params),
+            unknown_query: Some(unknown_query),
+            input,
+            origin: Some(node.origin.clone()),
+            ..with_shape(DraftOperation::default(), shape)
+        },
+        lifecycle,
+    ))
 }
 
+// A relay route's method, path, params, input and shape are copied from the operation it relays; a refused target
+// leaves it with empty params and responses (reported).
 fn relay_operation_of<'node, 'raw>(
-    _site: &TreeNodesSite<'node, 'raw>,
-    _name: &TreeNodesOperationName,
-    _prefixes: &TreeNodesSurfacePrefixes,
-    _relay_declarations: &mut Vec<TreeNodesRelayDeclaration<'node, 'raw>>,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'node, 'raw>,
+    name: &TreeNodesOperationName,
+    prefixes: &TreeNodesSurfacePrefixes,
+    relay_declarations: &mut Vec<TreeNodesRelayDeclaration<'node, 'raw>>,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<DraftOperation, PassError> {
-    Err(not_ported_yet("relayOperationOf"))
+    let node = site.node;
+    let surface = surface_of(site.node_id, site.nodes)?;
+    let Some(prefix) = prefixes.get(&surface) else {
+        return Err(InternalError::new(format!("the surface {surface} has no prefix")).into());
+    };
+    let copied =
+        tree_nodes_relay_shape(site, prefix, relay_declarations, scope)?.unwrap_or_default();
+    let unknown_query = tree_nodes_unknown_query(site, scope)?;
+    let lifecycle = lifecycle_of(site, scope)?;
+
+    Ok(with_lifecycle(
+        DraftOperation {
+            kind: Some(TREE_NODES_OPERATION_KIND),
+            id: Some(OperationId::new(name.id.clone())),
+            name: Some(name.name.clone()),
+            surface: Some(SurfaceId::new(surface)),
+            params: copied.params.or_else(|| Some(empty_params())),
+            responses: copied.responses.or_else(|| Some(Vec::new())),
+            unknown_query: Some(unknown_query),
+            examples: Some(IrMap::new()),
+            origin: Some(node.origin.clone()),
+            ..copied
+        },
+        lifecycle,
+    ))
 }
 
+fn empty_params() -> Params {
+    Params {
+        path: Vec::new(),
+        query: Vec::new(),
+        header: Vec::new(),
+    }
+}
+
+// The members a route's own shape gives: format, responses, write semantics, paging, degradable and examples.
 fn shape_of(
-    _site: &TreeNodesSite<'_, '_>,
-    _input: Option<&TypeUse>,
-    _params: &Params,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    input: Option<&TypeUse>,
+    params: &Params,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<DraftOperation, PassError> {
-    Err(not_ported_yet("shapeOf"))
+    let format = tree_nodes_format(site, scope)?;
+    let responses = tree_nodes_responses(site, &format, scope)?;
+    let owner = tree_nodes_owner(site, scope)?;
+    let concurrency = tree_nodes_concurrency(site, input, params, scope)?;
+    let paging = tree_nodes_paging(site, &responses, &params.query, scope)?;
+    let degradable = tree_nodes_degradable(site, &format, &responses, scope)?;
+    let examples = tree_nodes_examples(site, input, &responses, scope)?;
+
+    Ok(DraftOperation {
+        responses: Some(responses),
+        concurrency,
+        owner,
+        paging,
+        degradable,
+        format: Some(FormatId::new(format)),
+        examples: Some(examples.into_iter().collect()),
+        ..DraftOperation::default()
+    })
 }
 
+/// The base with the members `shape_of` wrote.
+fn with_shape(base: DraftOperation, shape: DraftOperation) -> DraftOperation {
+    DraftOperation {
+        responses: shape.responses,
+        concurrency: shape.concurrency,
+        owner: shape.owner,
+        paging: shape.paging,
+        degradable: shape.degradable,
+        format: shape.format,
+        examples: shape.examples,
+        ..base
+    }
+}
+
+// The lifecycle members (ADR 0002 section 10), docs and extensions, on every operation, a relay route's too.
 fn lifecycle_of(
-    _site: &TreeNodesSite<'_, '_>,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<DraftOperation, PassError> {
-    Err(not_ported_yet("lifecycleOf"))
+    let budget_ms = tree_nodes_budget_ms(site, scope)?;
+    let deprecated = tree_nodes_deprecated(site, scope)?;
+    let maturity = tree_nodes_stated_maturity(site, scope)?;
+    let upstream: Vec<ServiceId> = tree_nodes_upstream(site, scope)?
+        .into_iter()
+        .map(ServiceId::new)
+        .collect();
+    let internal = tree_nodes_internal(site, scope)?;
+    let tags = tree_nodes_tags(site, scope)?;
+
+    Ok(DraftOperation {
+        budget_ms,
+        deprecated,
+        upstream: Some(upstream),
+        maturity,
+        internal: Some(internal),
+        tags: Some(tags),
+        docs: Some(tree_nodes_docs_of_object(site.node.settings)),
+        extensions: Some(tree_nodes_extensions(site.node_id, site.nodes)?),
+        ..DraftOperation::default()
+    })
+}
+
+/// The base with the members `lifecycle_of` wrote.
+fn with_lifecycle(base: DraftOperation, lifecycle: DraftOperation) -> DraftOperation {
+    DraftOperation {
+        budget_ms: lifecycle.budget_ms,
+        deprecated: lifecycle.deprecated,
+        upstream: lifecycle.upstream,
+        maturity: lifecycle.maturity,
+        internal: lifecycle.internal,
+        tags: lifecycle.tags,
+        docs: lifecycle.docs,
+        extensions: lifecycle.extensions,
+        ..base
+    }
 }
 
 fn report_no_input(
@@ -281,27 +452,124 @@ fn surface_of(node_id: TreeNodeId, nodes: &TreeNodes<'_>) -> Result<String, Inte
 
     root.ok_or_else(|| InternalError::new("a tree node has no root"))
 }
+// The method a route writes, an op's own or `conventions.ops.<op>.method`.
 fn method_of(
-    _node: &TreeNode<'_>,
-    _op: Option<&OpShorthand>,
-    _site: &TreeNodesSite<'_, '_>,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    node: &TreeNode<'_>,
+    op: Option<&OpShorthand>,
+    scope: &TreeNodesScope<'_, '_, '_>,
 ) -> Result<HttpMethod, PassError> {
-    Err(not_ported_yet("methodOf"))
+    // The TypeScript's `??`: a written null falls through to the convention.
+    let own = node
+        .settings
+        .get("method")
+        .filter(|written| **written != JsonValue::Null);
+    let convention = match (own, op) {
+        (None, Some(op)) => scope
+            .context
+            .conventions
+            .get(&format!("ops.{}.method", op.as_str()))?
+            .map(|reading| reading.value),
+        _ => None,
+    };
+    let method = own.or(convention).and_then(|written| {
+        HTTP_METHODS
+            .iter()
+            .find(|method| is_method_text(method, written))
+    });
+
+    method.cloned().ok_or_else(|| {
+        InternalError::new(format!(
+            "the operation at {} has no method the grammar admits",
+            node.pointer
+        ))
+        .into()
+    })
 }
 
+fn is_method_text(method: &HttpMethod, written: &JsonValue) -> bool {
+    matches!(written, JsonValue::String(text) if method.as_str() == text)
+}
+
+// The collection or single an operation belongs to (its nearest one), with the member id parameter when the
+// operation sits on the member scope, and the item property holding the id: `idProperty`, else the id parameter.
 fn resource_of(
-    _node: &TreeNode<'_>,
-    _schemas: Option<&JsonValue>,
+    node: &TreeNode<'_>,
+    nodes: &TreeNodes<'_>,
+    schemas: Option<&JsonValue>,
 ) -> Result<Option<OperationResource>, PassError> {
-    Err(not_ported_yet("resourceOf"))
+    let mut on_member = false;
+    let mut at = node.parent;
+
+    while let Some(at_id) = at {
+        let current = nodes.get(at_id)?;
+
+        if current.kind == TreeNodeKind::Scope {
+            on_member = current.name == "member";
+        }
+
+        if !matches!(
+            current.kind,
+            TreeNodeKind::Collection | TreeNodeKind::Single
+        ) {
+            at = current.parent;
+            continue;
+        }
+
+        let resource_type = tree_nodes_text(current, "resourceType").unwrap_or(&current.name);
+
+        if current.kind == TreeNodeKind::Single {
+            return Ok(Some(OperationResource {
+                r#type: resource_type.to_owned(),
+                id_param: None,
+                id_property: None,
+            }));
+        }
+
+        let id_param = tree_nodes_id_param(current, schemas);
+        let id_property = tree_nodes_text(current, "idProperty")
+            .map(str::to_owned)
+            .or_else(|| id_param.clone());
+
+        return Ok(Some(OperationResource {
+            r#type: resource_type.to_owned(),
+            id_param: if on_member { id_param } else { None },
+            id_property,
+        }));
+    }
+
+    Ok(None)
 }
 
+// A collection whose id parameter is `id` and sets no `singular` names its member operations `getId`, `createId`.
+// Warned once per collection, at its first operation that takes the singular.
 fn warn_bare_id_singular(
-    _node: &TreeNode<'_>,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    node: &TreeNode<'_>,
+    nodes: &TreeNodes<'_>,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("warnBareIdSingular"))
+    let Some(collection) = tree_nodes_singular_owner(nodes, node)? else {
+        return Ok(());
+    };
+
+    if !tree_nodes_singular_is_bare_id(collection, scope.context.raw.merged.get("schemas")) {
+        return Ok(());
+    }
+
+    let key = format!("collection-singular-bare-id:{}", collection.pointer);
+    let diagnostic = tree_nodes_warning(TreeNodesDiagnosticOptions {
+        rule: TreeNodesRule::CollectionSingular,
+        origin: tree_nodes_node_origin(&collection.origin)?,
+        message: format!(
+            "The collection {} has the id parameter id and no singular, so its operation ids read getId and createId.",
+            collection.name
+        ),
+        fix: "Set singular on the collection (the noun of its operation ids), or name its id parameter with the noun, as in productId.".to_owned(),
+        related: Vec::new(),
+    });
+
+    tree_nodes_report_once(&key, diagnostic, scope);
+
+    Ok(())
 }
 
 fn report_no_singular(

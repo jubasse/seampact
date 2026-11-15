@@ -24,6 +24,15 @@ pub(crate) const TREE_NODES_BARE_FORMAT: &str = "bare";
 pub(crate) const TREE_NODES_BARE_POINTER: &str = "/formats/bare";
 /// The success media of a format that writes none, and of the core `bare`.
 pub(crate) const TREE_NODES_DEFAULT_MEDIA: &str = "application/json";
+/// The origin of the core `bare` format.
+pub(crate) fn tree_nodes_bare_origin() -> Origin {
+    Origin {
+        api: None,
+        layer: Layer::Core,
+        pointer: TREE_NODES_BARE_POINTER.to_owned(),
+    }
+}
+
 const BARE_ERROR_MEDIA: &str = "application/problem+json";
 const NULL_ABSENT: Absent = Absent::Null;
 const DEFAULT_ABSENT: Absent = Absent::Omit;
@@ -208,11 +217,7 @@ fn core_bare() -> WireFormat {
 
     WireFormat {
         id: FormatId::new(TREE_NODES_BARE_FORMAT.to_owned()),
-        origin: Origin {
-            api: None,
-            layer: Layer::Core,
-            pointer: TREE_NODES_BARE_POINTER.to_owned(),
-        },
+        origin: tree_nodes_bare_origin(),
         media: TREE_NODES_DEFAULT_MEDIA.to_owned(),
         absent: DEFAULT_ABSENT,
         success: SuccessShapes {

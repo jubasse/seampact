@@ -2,7 +2,7 @@
 
 use seampact_ir::{Direction, Origin, TypeUse};
 use seampact_json::JsonValue;
-use seampact_pipeline::{PassError, TreeNode, TreeNodeId};
+use seampact_pipeline::{PassError, TreeNode, TreeNodeId, TreeNodes};
 
 use crate::not_ported::not_ported_yet;
 use crate::pass::TreeNodesScope;
@@ -15,7 +15,7 @@ const DEFAULT_KEY: &str = "default";
 /// a message names them.
 const TEXTLESS_KINDS: &[(&str, &str)] = &[("opaque", "an opaque value"), ("file", "a file")];
 
-/// The operation a check reports for: its tree node and id.
+/// The operation a check reports for: its tree node, the tree it sits in and its id.
 ///
 /// The draft, the context and the report-once registry the TypeScript site carries are the scope, which every
 /// function takes beside the site.
@@ -23,6 +23,7 @@ const TEXTLESS_KINDS: &[(&str, &str)] = &[("opaque", "an opaque value"), ("file"
 pub(crate) struct TreeNodesSite<'node, 'raw> {
     pub(crate) node_id: TreeNodeId,
     pub(crate) node: &'node TreeNode<'raw>,
+    pub(crate) nodes: &'node TreeNodes<'raw>,
     pub(crate) operation_id: String,
 }
 

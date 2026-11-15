@@ -13,8 +13,8 @@ use seampact_pass_tree_shared::{
     TREE_NODES_BATCH_OP, TREE_NODES_MATURITIES, tree_nodes_member, tree_nodes_op_shorthand,
 };
 use seampact_pipeline::{
-    DraftOperation, InheritedEntry, NearestSetting, PassError, TreeNodeId, TreeNodes,
-    UnionSetting, parse_duration,
+    DraftOperation, InheritedEntry, NearestSetting, PassError, TreeNodeId, TreeNodes, UnionSetting,
+    parse_duration,
 };
 
 use crate::diagnostics::{
@@ -185,7 +185,8 @@ pub(crate) fn tree_nodes_upstream(
             ))
             .into());
         };
-        let declared = matches!(services, Some(JsonValue::Object(declared)) if declared.contains_key(service));
+        let declared =
+            matches!(services, Some(JsonValue::Object(declared)) if declared.contains_key(service));
 
         if !declared {
             report_unknown_service(site, service, &entry, index, scope)?;
@@ -407,13 +408,15 @@ pub(crate) fn tree_nodes_check_successor(
         return report_successor_params(&origin, operation, successor, scope);
     }
 
-    scope.context.report(tree_nodes_error(TreeNodesDiagnosticOptions {
-        rule: TreeNodesRule::DeprecatedSuccessor,
-        origin,
-        message: format!("The successor {successor_id} of {id} is no operation of the api."),
-        fix: "Name the operation id of the route that replaces this one.".to_owned(),
-        related: Vec::new(),
-    }));
+    scope
+        .context
+        .report(tree_nodes_error(TreeNodesDiagnosticOptions {
+            rule: TreeNodesRule::DeprecatedSuccessor,
+            origin,
+            message: format!("The successor {successor_id} of {id} is no operation of the api."),
+            fix: "Name the operation id of the route that replaces this one.".to_owned(),
+            related: Vec::new(),
+        }));
 
     Ok(())
 }
