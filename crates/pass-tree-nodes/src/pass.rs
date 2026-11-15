@@ -38,9 +38,9 @@ fn declared_operation(draft: DraftOperation) -> Result<TreeNodesOperation, Inter
         surface: written(draft.surface, "surface")?,
         op: draft.op,
         resource: draft.resource,
-        method: written(draft.method, "method")?,
-        path: written(draft.path, "path")?,
-        safe: written(draft.safe, "safe")?,
+        method: draft.method,
+        path: draft.path,
+        safe: draft.safe,
         params: written(draft.params, "params")?,
         unknown_query: written(draft.unknown_query, "unknownQuery")?,
         input: draft.input.map(|input| TreeNodesInput {
