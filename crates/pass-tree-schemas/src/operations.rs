@@ -391,7 +391,9 @@ fn use_outside_inputs(
 }
 
 /// An IR value as the JSON the walk of `refers_to_schema` reads.
-fn encoded(value: serde_json::Result<serde_json::Value>) -> Result<JsonValue, PassError> {
+pub(crate) fn encoded(
+    value: serde_json::Result<serde_json::Value>,
+) -> Result<JsonValue, PassError> {
     let value = value.map_err(|failure| {
         PassError::from(InternalError::new(format!(
             "tree.schemas cannot encode an IR value: {failure}"

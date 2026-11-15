@@ -4,12 +4,10 @@
 use std::cmp::Ordering;
 
 use seampact_diagnostics::InternalError;
+use seampact_js::FiniteNumber;
 use seampact_pipeline::PassError;
 
 use crate::not_ported::not_ported_yet;
-
-/// The ECMAScript source of the decimal text the value is read from, for the body to compile.
-const DECIMAL_TEXT: &str = r"^(-?)([0-9]+)(?:\.([0-9]+))?(?:[eE]([+-]?[0-9]+))?$";
 
 /// The ten the units are scaled by.
 const TEN: i128 = 10;
@@ -36,7 +34,101 @@ pub(crate) enum TreeSchemasDecimalSource<'text> {
 pub(crate) fn tree_schemas_decimal_of(
     value: TreeSchemasDecimalSource<'_>,
 ) -> Result<Option<TreeSchemasDecimal>, PassError> {
-    Err(not_ported_yet("treeSchemasDecimalOf"))
+    let text = match value {
+        TreeSchemasDecimalSource::Number(number) => match FiniteNumber::new(number) {
+            Some(finite) => finite.to_string(),
+            None => return Ok(None),
+        },
+        TreeSchemasDecimalSource::Text(text) => text.to_owned(),
+    };
+    let Some(parts) = DecimalParts::read(&text) else {
+        return Ok(None);
+    };
+    let digits = format!("{}{}{}", parts.sign, parts.whole, parts.fraction);
+    let units: i128 = digits.parse().map_err(|_| beyond_128_bits(&text))?;
+    let exponent: i64 = parts.exponent.parse().map_err(|_| beyond_128_bits(&text))?;
+    let fraction_length =
+        i64::try_from(parts.fraction.len()).map_err(|_| beyond_128_bits(&text))?;
+    let scale = fraction_length
+        .checked_sub(exponent)
+        .ok_or_else(|| beyond_128_bits(&text))?;
+
+    if scale >= 0 {
+        return Ok(Some(TreeSchemasDecimal { units, scale }));
+    }
+
+    let scaled_units = scale
+        .checked_neg()
+        .and_then(|steps| u32::try_from(steps).ok())
+        .and_then(|steps| TEN.checked_pow(steps))
+        .and_then(|factor| units.checked_mul(factor))
+        .ok_or_else(|| beyond_128_bits(&text))?;
+
+    Ok(Some(TreeSchemasDecimal {
+        units: scaled_units,
+        scale: 0,
+    }))
+}
+
+fn beyond_128_bits(text: &str) -> PassError {
+    PassError::from(InternalError::new(format!(
+        "tree.schemas reads the decimal {text:?} past 128 bits, which no example reaches"
+    )))
+}
+
+/// The groups of the decimal text: sign, whole digits, fraction digits and exponent, as written.
+struct DecimalParts<'text> {
+    sign: &'text str,
+    whole: &'text str,
+    fraction: &'text str,
+    exponent: &'text str,
+}
+
+impl<'text> DecimalParts<'text> {
+    /// Splits a text of the form `-?[0-9]+(.[0-9]+)?([eE][+-]?[0-9]+)?`, else `None`.
+    fn read(text: &'text str) -> Option<Self> {
+        let (sign, unsigned) = match text.strip_prefix('-') {
+            Some(rest) => ("-", rest),
+            None => ("", text),
+        };
+        let (whole, after_whole) = split_digits(unsigned)?;
+        let (fraction, after_fraction) = match after_whole.strip_prefix('.') {
+            Some(rest) => split_digits(rest)?,
+            None => ("", after_whole),
+        };
+        let exponent = match after_fraction.strip_prefix(['e', 'E']) {
+            Some(rest) => {
+                let digits_at = usize::from(rest.starts_with(['+', '-']));
+                let (_, after_digits) = split_digits(rest.get(digits_at..)?)?;
+
+                if !after_digits.is_empty() {
+                    return None;
+                }
+
+                rest
+            }
+            None if after_fraction.is_empty() => "0",
+            None => return None,
+        };
+
+        Some(Self {
+            sign,
+            whole,
+            fraction,
+            exponent,
+        })
+    }
+}
+
+/// The leading run of ASCII digits (at least one) and what follows it.
+fn split_digits(text: &str) -> Option<(&str, &str)> {
+    let length = text.bytes().take_while(u8::is_ascii_digit).count();
+
+    if length == 0 {
+        return None;
+    }
+
+    text.split_at_checked(length)
 }
 
 fn aligned(a: &TreeSchemasDecimal, b: &TreeSchemasDecimal) -> Result<(i128, i128), PassError> {

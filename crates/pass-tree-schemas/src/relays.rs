@@ -10,11 +10,12 @@ use std::collections::HashSet;
 use seampact_ir::{
     ContractIr, Direction, Enum, ExtensionKeyDecl, Operation, Scalar, Schema, TypeUse,
 };
-use seampact_json::JsonValue;
+use seampact_json::{JsonValue, canonical_json};
 use seampact_pipeline::{DraftIr, DraftOperation, HalfContext, PassError, TreeNodeKind, TreeNodes};
 
 use crate::compile::TreeSchemasCompiler;
 use crate::not_ported::not_ported_yet;
+use crate::operations::encoded;
 use crate::raw::tree_schemas_pointer;
 
 /// A use of a relay route's copied shape, in the direction its position is read or written.
@@ -201,7 +202,14 @@ fn without_origin_api(origin: &JsonValue) -> Result<JsonValue, PassError> {
 }
 
 fn content_of(declaration: &Declaration) -> Result<String, PassError> {
-    Err(not_ported_yet("contentOf"))
+    let encoded_declaration = match declaration {
+        Declaration::Schema(schema) => encoded(serde_json::to_value(schema.as_ref())),
+        Declaration::Enum(declared) => encoded(serde_json::to_value(declared)),
+        Declaration::Scalar(declared) => encoded(serde_json::to_value(declared)),
+        Declaration::ExtensionKey(declared) => encoded(serde_json::to_value(declared)),
+    }?;
+
+    Ok(canonical_json(&without_ignored(&encoded_declaration)?))
 }
 
 fn extension_key_ids(schema: &Schema) -> Result<Vec<String>, PassError> {

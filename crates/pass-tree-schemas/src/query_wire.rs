@@ -13,8 +13,9 @@ use seampact_pipeline::{
 };
 
 use crate::compile::TreeSchemasCompiler;
-use crate::not_ported::not_ported_yet;
-use crate::raw::{TreeSchemasProblem, tree_schemas_member, tree_schemas_pointer};
+use crate::raw::{
+    TreeSchemasProblem, TreeSchemasRelated, tree_schemas_member, tree_schemas_pointer,
+};
 use crate::rule::TreeSchemasRule;
 
 /// How a query field is written on the wire, besides its kind.
@@ -361,5 +362,14 @@ fn refuse_map_form_proof(
     pointer: &str,
     route: &str,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("refuseMapFormProof"))
+    compiler.reporter.error(TreeSchemasProblem {
+        rule: TreeSchemasRule::QueryMap,
+        pointer: pointer.to_owned(),
+        message: "this body proof holds a map, and a form or multipart route sends it as a field: no field wire encodes its keys".to_owned(),
+        fix: "declare the keys as the fields of an object, or send the route's input as JSON".to_owned(),
+        related: Some(vec![TreeSchemasRelated {
+            pointer: route.to_owned(),
+            message: "the route sends its input as a form".to_owned(),
+        }]),
+    })
 }
