@@ -24,13 +24,32 @@ const PLACE: &[(ParamList, &str)] = &[
     (ParamList::Query, "query field"),
     (ParamList::Header, "request header"),
 ];
-/// A path placeholder: `{name}`.
-const PLACEHOLDER: &str = r"\{([^{}]+)\}";
 /// The `unknownQuery` policy value that refuses.
 const REFUSE: &str = "refuse";
 
-fn placeholders_of(_text: &str) -> Result<Vec<String>, PassError> {
-    Err(not_ported_yet("placeholdersOf"))
+/// The names of the `{name}` placeholders of a text, in order, repeats included.
+///
+/// A name holds no brace; the TypeScript's `/\{([^{}]+)\}/g`.
+pub(crate) fn placeholders_of(text: &str) -> Vec<&str> {
+    let mut names = Vec::new();
+    let mut rest = text;
+
+    while let Some((_, after_open)) = rest.split_once('{') {
+        let Some(close) = after_open.find(['{', '}']) else {
+            break;
+        };
+        let (name, from_close) = after_open.split_at(close);
+
+        match from_close.strip_prefix('}') {
+            Some(after_close) if !name.is_empty() => {
+                names.push(name);
+                rest = after_close;
+            }
+            _ => rest = after_open,
+        }
+    }
+
+    names
 }
 
 pub(crate) fn tree_nodes_unknown_query(
@@ -154,4 +173,32 @@ fn report_repeated_placeholder(
     _scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
     Err(not_ported_yet("reportRepeatedPlaceholder"))
+}
+
+/// The text with each `{name}` placeholder written `{}`: a path compared by position only.
+pub(crate) fn blank_placeholders(text: &str) -> String {
+    let mut blanked = String::new();
+    let mut rest = text;
+
+    while let Some((before, after_open)) = rest.split_once('{') {
+        blanked.push_str(before);
+
+        let close = after_open.find(['{', '}']);
+        let name_and_rest = close.map(|close| after_open.split_at(close));
+
+        match name_and_rest.and_then(|(name, from_close)| Some((name, from_close.strip_prefix('}')?))) {
+            Some((name, after_close)) if !name.is_empty() => {
+                blanked.push_str("{}");
+                rest = after_close;
+            }
+            _ => {
+                blanked.push('{');
+                rest = after_open;
+            }
+        }
+    }
+
+    blanked.push_str(rest);
+
+    blanked
 }

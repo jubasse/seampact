@@ -15,6 +15,7 @@ mod field_wire;
 mod fields;
 mod formats;
 mod input;
+mod js_text;
 mod lifecycle;
 mod limits;
 mod not_ported;

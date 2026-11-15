@@ -2,9 +2,68 @@
 
 use std::collections::HashSet;
 
-use seampact_pipeline::{DraftIr, HalfContext, PassError, TreeNodesOutput, TreeSchemaService};
+use seampact_diagnostics::InternalError;
+use seampact_ir::{Conventions, FormatId, IrMap, Lint, PackRef, PagingId, Service, ServiceId, WireFormat, PagingStyle};
+use seampact_pipeline::{
+    ApiDeclaration, DraftIr, DraftOperation, HalfContext, PassError, TreeNodesOperation, TreeNodesOutput,
+    TreeSchemaService, pipeline_tree_nodes,
+};
 
+use crate::api::tree_nodes_api;
 use crate::not_ported::not_ported_yet;
+use crate::collections::tree_nodes_check_id_properties;
+use crate::formats::{tree_nodes_check_payloads, tree_nodes_formats};
+use crate::limits::tree_nodes_check_body_limits;
+use crate::operations::tree_nodes_operations;
+use crate::pagings::tree_nodes_pagings;
+use crate::relays::tree_nodes_join_relay_declarations;
+use crate::settings::tree_nodes_api_settings;
+
+/// The operations as the output declares them, from the drafts `operationOf` builds.
+fn declared_operations(
+    _drafts: Vec<DraftOperation>,
+) -> Result<Vec<TreeNodesOperation>, PassError> {
+    Err(not_ported_yet("operationOf"))
+}
+
+/// What the half writes, built up member by member: `api` is written first, so the output only
+/// exists once it is.
+#[derive(Debug, Default)]
+pub(crate) struct TreeNodesAccumulator {
+    pub(crate) conventions: Conventions,
+    pub(crate) lint: Option<Lint>,
+    pub(crate) packs: Vec<PackRef>,
+    pub(crate) formats: IrMap<FormatId, WireFormat>,
+    pub(crate) pagings: IrMap<PagingId, PagingStyle>,
+    pub(crate) services: IrMap<ServiceId, Service>,
+    pub(crate) api: Option<ApiDeclaration>,
+    pub(crate) operations: Vec<DraftOperation>,
+}
+
+impl TreeNodesAccumulator {
+    /// The output, once the api and the lint are written.
+    fn into_output(self) -> Result<TreeNodesOutput, PassError> {
+        let (Some(api), Some(lint)) = (self.api, self.lint) else {
+            return Err(InternalError::new(
+                "tree.nodes ended without writing the api and the lint",
+            )
+            .into());
+        };
+
+        let operations = declared_operations(self.operations)?;
+
+        Ok(TreeNodesOutput {
+            conventions: self.conventions,
+            lint,
+            packs: self.packs,
+            formats: self.formats,
+            pagings: self.pagings,
+            services: self.services,
+            api,
+            operations,
+        })
+    }
+}
 
 /// What every function of the half reads and writes during one run.
 ///
@@ -13,9 +72,25 @@ pub(crate) struct TreeNodesScope<'draft, 'half, 'run> {
     pub(crate) draft: &'draft DraftIr,
     pub(crate) context: &'half mut HalfContext<'run>,
     pub(crate) schemas: &'half dyn TreeSchemaService,
-    pub(crate) output: TreeNodesOutput,
+    pub(crate) output: TreeNodesAccumulator,
     /// The keys of the diagnostics `treeNodesReportOnce` already reported; looked up, never iterated.
     pub(crate) reported_once: HashSet<String>,
+}
+
+impl<'draft, 'half, 'run> TreeNodesScope<'draft, 'half, 'run> {
+    fn new(
+        draft: &'draft DraftIr,
+        context: &'half mut HalfContext<'run>,
+        schemas: &'half dyn TreeSchemaService,
+    ) -> Self {
+        Self {
+            draft,
+            context,
+            schemas,
+            output: TreeNodesAccumulator::default(),
+            reported_once: HashSet::new(),
+        }
+    }
 }
 
 /// Runs `tree.nodes` over the draft, reading schemas through the service `tree.schemas` built.
@@ -25,9 +100,23 @@ pub(crate) struct TreeNodesScope<'draft, 'half, 'run> {
 /// [`PassError::NotPortedYet`] when the run reaches a function not ported yet, else
 /// [`PassError::Internal`] for a bug.
 pub fn run(
-    _draft: &DraftIr,
-    _context: &mut HalfContext<'_>,
-    _schemas: &dyn TreeSchemaService,
+    draft: &DraftIr,
+    context: &mut HalfContext<'_>,
+    schemas: &dyn TreeSchemaService,
 ) -> Result<TreeNodesOutput, PassError> {
-    Err(not_ported_yet("treeNodesPass.run"))
+    let nodes = pipeline_tree_nodes(context.raw)?;
+    let mut scope = TreeNodesScope::new(draft, context, schemas);
+    let prefixes = tree_nodes_api(&mut scope)?;
+
+    tree_nodes_api_settings(&mut scope)?;
+    tree_nodes_check_body_limits(&mut scope)?;
+    let relay_declarations = tree_nodes_operations(&nodes, &prefixes, &mut scope)?;
+
+    tree_nodes_check_id_properties(&mut scope)?;
+    tree_nodes_formats(&mut scope)?;
+    tree_nodes_pagings(&mut scope)?;
+    tree_nodes_join_relay_declarations(&relay_declarations, &mut scope)?;
+    tree_nodes_check_payloads(&mut scope)?;
+
+    Ok(scope.output.into_output()?)
 }

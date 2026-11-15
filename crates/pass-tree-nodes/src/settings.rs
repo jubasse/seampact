@@ -1,11 +1,18 @@
 //! The api settings: conventions, lint rules and allows, packs and services, written to the output.
 
-use indexmap::IndexMap;
-use seampact_ir::{LintAllow, LintRule, LintSeverity, PackRef};
-use seampact_json::JsonValue;
-use seampact_pipeline::PassError;
+use seampact_authoring::ApiLayer;
+use seampact_diagnostics::InternalError;
+use seampact_ir::{
+    ConventionValue, IrMap, Lint, LintAllow, LintRule, LintSeverity, Maturity, PackRef, Reason, Service,
+    ServiceId,
+};
+use seampact_json::{JsonObject, JsonValue};
+use seampact_pass_tree_shared::{
+    TREE_NODES_MATURITIES, tree_nodes_member, tree_nodes_written_convention,
+};
+use seampact_pipeline::{convention_schema_leaves, pipeline_tree_nodes, pointer_below};
 
-use crate::not_ported::not_ported_yet;
+use crate::api::text_of;
 use crate::pass::TreeNodesScope;
 
 const LINT_SEVERITIES: &[LintSeverity] = &[
@@ -41,64 +48,280 @@ enum AllowOwner {
 }
 
 /// Adds the allows an owner writes at a pointer.
-type AddAllows<'add> = &'add mut dyn FnMut(Option<&JsonValue>, &str, AllowOwner);
+type AddAllows<'add> = &'add mut dyn FnMut(Option<&JsonObject>, &str, AllowOwner);
 
+/// A mapping, `None` for any other value.
+fn object_of(value: Option<&JsonValue>) -> Option<&JsonObject> {
+    match value {
+        Some(JsonValue::Object(object)) => Some(object),
+        _ => None,
+    }
+}
+
+/// Writes `conventions`, `lint`, `packs` and `services` to the output.
 pub(crate) fn tree_nodes_api_settings(
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
-) -> Result<(), PassError> {
-    Err(not_ported_yet("treeNodesApiSettings"))
+    scope: &mut TreeNodesScope<'_, '_, '_>,
+) -> Result<(), InternalError> {
+    write_conventions(scope)?;
+    scope.output.lint = Some(Lint {
+        rules: lint_rules(scope)?,
+        allows: lint_allows(scope)?,
+    });
+
+    let packs = packs_of(scope)?;
+
+    scope.output.packs.extend(packs);
+
+    write_services(scope)
 }
 
-fn write_conventions(_scope: &mut TreeNodesScope<'_, '_, '_>) -> Result<(), PassError> {
-    Err(not_ported_yet("writeConventions"))
+// Written conventions only, keyed by leaf: a core default, or a default read from another key
+// (`batch.bodyLimit` from `bodyLimit`), is no written value at that leaf.
+fn write_conventions(scope: &mut TreeNodesScope<'_, '_, '_>) -> Result<(), InternalError> {
+    let conventions = scope.context.conventions;
+
+    for path in convention_schema_leaves()?.keys() {
+        let Some(reading) = tree_nodes_written_convention(*conventions, path)? else {
+            continue;
+        };
+
+        scope.output.conventions.insert(
+            path.clone(),
+            ConventionValue {
+                value: reading.value.clone(),
+                origin: reading.origin,
+            },
+        );
+    }
+
+    Ok(())
 }
 
-fn lint_rules(
-    _scope: &TreeNodesScope<'_, '_, '_>,
-) -> Result<IndexMap<String, LintRule>, PassError> {
-    Err(not_ported_yet("lintRules"))
+fn lint_rules(scope: &TreeNodesScope<'_, '_, '_>) -> Result<IrMap<String, LintRule>, InternalError> {
+    let mut rules = IrMap::new();
+    let lint = scope.context.raw.merged.get("lint");
+    let Some(written) = object_of(tree_nodes_member(lint, "rules")) else {
+        return Ok(rules);
+    };
+
+    for (rule, value) in written.iter() {
+        let severity = LINT_SEVERITIES
+            .iter()
+            .find(|candidate| text_of(Some(value)) == Some(candidate.as_str()));
+        let origin = scope.context.origin(&pointer_below("/lint/rules", &[rule]));
+
+        let (Some(severity), Some(origin)) = (severity, origin) else {
+            return Err(InternalError::new(format!(
+                "the lint rule {rule} has no severity or origin the grammar admits"
+            )));
+        };
+
+        rules.insert(
+            rule.clone(),
+            LintRule {
+                severity: severity.clone(),
+                origin,
+            },
+        );
+    }
+
+    Ok(rules)
 }
 
-fn lint_allows(_scope: &TreeNodesScope<'_, '_, '_>) -> Result<Vec<LintAllow>, PassError> {
-    Err(not_ported_yet("lintAllows"))
+// Every `lint.allow`: on a tree node (reaching the nodes below it, except the subtree-exception rule), then on a
+// catalogue entry, on a property of a declared schema at any depth, and on an inline schema a route writes and its
+// properties (holding there only).
+fn lint_allows(scope: &TreeNodesScope<'_, '_, '_>) -> Result<Vec<LintAllow>, InternalError> {
+    let raw = scope.context.raw;
+    let mut allows: Vec<LintAllow> = Vec::new();
+    let mut add = |owner: Option<&JsonObject>, pointer: &str, allow_owner: AllowOwner| {
+        let written = owner
+            .and_then(|owner| object_of(owner.get("lint")))
+            .and_then(|lint| object_of(lint.get("allow")));
+        let at = scope.context.origin(pointer);
+
+        let (Some(written), Some(at)) = (written, at) else {
+            return;
+        };
+
+        for (rule, reason) in written.iter() {
+            let Some(reason) = text_of(Some(reason)) else {
+                continue;
+            };
+
+            allows.push(LintAllow {
+                rule: rule.clone(),
+                at: at.clone(),
+                reason: Reason::new(reason.to_owned()),
+                subtree: allow_owner == AllowOwner::Node && rule != NODE_ONLY_RULE,
+            });
+        }
+    };
+
+    for (_, node) in pipeline_tree_nodes(raw)?.iter() {
+        add(Some(node.settings), &node.pointer, AllowOwner::Node);
+        add_route_position_allows(node.settings, &node.pointer, &mut add);
+    }
+
+    for catalogue in ALLOWING_CATALOGUES {
+        let Some(entries) = object_of(raw.merged.get(catalogue)) else {
+            continue;
+        };
+
+        for (id, entry) in entries.iter() {
+            let pointer = pointer_below(&format!("/{catalogue}"), &[id]);
+
+            add(object_of(Some(entry)), &pointer, AllowOwner::Entry);
+
+            if *catalogue == "schemas" {
+                add_nested_allows(Some(entry), &pointer, &mut add);
+            }
+        }
+    }
+
+    Ok(allows)
 }
 
-fn add_route_position_allows(
-    _settings: &JsonValue,
-    _pointer: &str,
-    _add: AddAllows<'_>,
-) -> Result<(), PassError> {
-    Err(not_ported_yet("addRoutePositionAllows"))
+fn add_route_position_allows(settings: &JsonObject, pointer: &str, add: AddAllows<'_>) {
+    for position in ROUTE_SCHEMA_POSITIONS {
+        add_inline_schema_allows(settings.get(position), &format!("{pointer}/{position}"), add);
+    }
+
+    for map in ROUTE_FIELDS_MAPS {
+        add_fields_map_allows(settings.get(map), &format!("{pointer}/{map}"), add);
+    }
+
+    let Some(responses) = object_of(settings.get("responses")) else {
+        return;
+    };
+
+    for (status, response) in responses.iter() {
+        let at = pointer_below(&format!("{pointer}/responses"), &[status]);
+
+        add_inline_schema_allows(
+            tree_nodes_member(Some(response), "body"),
+            &format!("{at}/body"),
+            add,
+        );
+        add_fields_map_allows(
+            tree_nodes_member(Some(response), "headers"),
+            &format!("{at}/headers"),
+            add,
+        );
+    }
 }
 
-fn add_inline_schema_allows(
-    _schema: Option<&JsonValue>,
-    _pointer: &str,
-    _add: AddAllows<'_>,
-) -> Result<(), PassError> {
-    Err(not_ported_yet("addInlineSchemaAllows"))
+// A schema name holds no allow of its own; its declaration does.
+fn add_inline_schema_allows(schema: Option<&JsonValue>, pointer: &str, add: AddAllows<'_>) {
+    let Some(object) = object_of(schema) else {
+        return;
+    };
+
+    add(Some(object), pointer, AllowOwner::Entry);
+    add_nested_allows(schema, pointer, add);
 }
 
-fn add_fields_map_allows(
-    _fields: Option<&JsonValue>,
-    _pointer: &str,
-    _add: AddAllows<'_>,
-) -> Result<(), PassError> {
-    Err(not_ported_yet("addFieldsMapAllows"))
+fn add_fields_map_allows(fields: Option<&JsonValue>, pointer: &str, add: AddAllows<'_>) {
+    let Some(object) = object_of(fields) else {
+        return;
+    };
+
+    for (name, field) in object.iter() {
+        add_inline_schema_allows(Some(field), &pointer_below(pointer, &[name]), add);
+    }
 }
 
-fn packs_of(_scope: &TreeNodesScope<'_, '_, '_>) -> Result<Vec<PackRef>, PassError> {
-    Err(not_ported_yet("packsOf"))
+// The pack layers in application order (the loader's layer order), each with its manifest's name and version.
+fn packs_of(scope: &TreeNodesScope<'_, '_, '_>) -> Result<Vec<PackRef>, InternalError> {
+    let mut packs = Vec::new();
+
+    for layer in &scope.context.raw.layers {
+        let ApiLayer::Pack(pack) = &layer.layer else {
+            continue;
+        };
+        let manifest = layer.tree.get("pack");
+        let name = text_of(tree_nodes_member(manifest, "name"));
+        let version = text_of(tree_nodes_member(manifest, "version"));
+
+        let (Some(name), Some(version)) = (name, version) else {
+            return Err(InternalError::new(format!(
+                "the pack layer {PACK_LAYER_PREFIX}{pack} has no manifest name and version"
+            )));
+        };
+
+        packs.push(PackRef {
+            name: name.to_owned(),
+            version: version.to_owned(),
+        });
+    }
+
+    Ok(packs)
 }
 
-fn write_services(_scope: &mut TreeNodesScope<'_, '_, '_>) -> Result<(), PassError> {
-    Err(not_ported_yet("writeServices"))
+fn write_services(scope: &mut TreeNodesScope<'_, '_, '_>) -> Result<(), InternalError> {
+    let Some(written) = object_of(scope.context.raw.merged.get("services")) else {
+        return Ok(());
+    };
+
+    // A service that states no maturity is as mature as the api it serves: the grammar states none for it.
+    let api_maturity: Option<Maturity> = scope.output.api.as_ref().map(|api| api.maturity.clone());
+
+    for (id, service) in written.iter() {
+        let stated = TREE_NODES_MATURITIES
+            .iter()
+            .find(|level| text_of(tree_nodes_member(Some(service), "maturity")) == Some(level.as_str()))
+            .cloned();
+        let maturity = stated.or_else(|| api_maturity.clone());
+        let origin = scope.context.origin(&pointer_below("/services", &[id]));
+
+        let (Some(maturity), Some(origin)) = (maturity, origin) else {
+            return Err(InternalError::new(format!(
+                "the service {id} has no maturity or origin: write the api before its services"
+            )));
+        };
+
+        scope.output.services.insert(
+            ServiceId::new(id.clone()),
+            Service {
+                id: ServiceId::new(id.clone()),
+                maturity,
+                origin,
+            },
+        );
+    }
+
+    Ok(())
 }
 
-fn add_nested_allows(
-    _schema: Option<&JsonValue>,
-    _pointer: &str,
-    _add: AddAllows<'_>,
-) -> Result<(), PassError> {
-    Err(not_ported_yet("addNestedAllows"))
+// The allows below a schema: on each property, list item, variant and member, at any depth (ADR 0003).
+fn add_nested_allows(schema: Option<&JsonValue>, pointer: &str, add: AddAllows<'_>) {
+    for member in NESTED_SCHEMA_MAPS {
+        let Some(entries) = object_of(tree_nodes_member(schema, member)) else {
+            continue;
+        };
+
+        for (key, nested) in entries.iter() {
+            add_inline_schema_allows(Some(nested), &pointer_below(pointer, &[member, key]), add);
+        }
+    }
+
+    for member in NESTED_SCHEMA_LISTS {
+        let Some(JsonValue::Array(entries)) = tree_nodes_member(schema, member) else {
+            continue;
+        };
+
+        for (index, nested) in entries.iter().enumerate() {
+            let position = index.to_string();
+
+            add_inline_schema_allows(Some(nested), &pointer_below(pointer, &[member, &position]), add);
+        }
+    }
+
+    for member in NESTED_SCHEMAS {
+        add_inline_schema_allows(
+            tree_nodes_member(schema, member),
+            &pointer_below(pointer, &[member]),
+            add,
+        );
+    }
 }
