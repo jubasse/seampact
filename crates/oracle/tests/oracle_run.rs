@@ -60,9 +60,11 @@ fn exact_big_integers(_name: &str, text: &str) -> String {
         .replace("9007199254740992", "9007199254740993")
 }
 
-/// The wording of regress for the syntax error V8 words as an unterminated character class.
+/// The wording of regress for the syntax errors V8 words as an unterminated character class or
+/// group.
 fn regress_pattern_message(_name: &str, text: &str) -> String {
     text.replace("Unterminated character class", "Unbalanced bracket")
+        .replace("Unterminated group", "Unbalanced parenthesis")
 }
 
 /// The exact integers, and the IR written with tabs in place of two spaces.
@@ -163,6 +165,26 @@ fn the_regress_wording_of_a_pattern_error_is_accepted_by_the_committed_differenc
             "converted/derive.errors/registry/a-pattern-that-is-no-regular-expression-is",
         )),
         half: Some("derive.errors".to_owned()),
+        ..Selection::default()
+    };
+
+    let verdict = run_oracle(&repository_root(), &selection, &subject).unwrap();
+
+    assert!(verdict.passed(), "{verdict}");
+    assert_eq!(verdict.matching, verdict.fixtures);
+}
+
+#[test]
+fn the_regress_wording_of_a_right_pattern_error_is_accepted_by_the_committed_differences() {
+    let subject = ExpectedFilesSubject {
+        repository_root: repository_root(),
+        rewrite: regress_pattern_message,
+    };
+    let selection = Selection {
+        fixture_glob: Some(FixtureGlob::new(
+            "converted/access.rights/catalogues/a-rights-pattern-that-is-no-regular-expression",
+        )),
+        half: Some("access.rights".to_owned()),
         ..Selection::default()
     };
 

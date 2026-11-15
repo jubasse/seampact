@@ -62,6 +62,7 @@ pub(crate) fn access_rights_field_rights(
     let mut reached: IndexMap<String, Vec<Reached<'_>>> = IndexMap::new();
 
     access_rights_refuse_route_positions(
+        context,
         &mut AccessRightsPositionWalk {
             reporter: &mut *reporter,
             schemas: input.schemas,
@@ -96,7 +97,7 @@ pub(crate) fn access_rights_field_rights(
         }
     }
 
-    if access_rights_field_walk_exceeded(&walk)? {
+    if access_rights_field_walk_exceeded(&walk) {
         reporter.error(AccessRightsProblem {
             rule: AccessRightsRule::FieldRightLimit,
             message: format!(

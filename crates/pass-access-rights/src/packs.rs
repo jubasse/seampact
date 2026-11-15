@@ -1,16 +1,20 @@
 //! The rights a pack derives per route, and the entries that select them (ADR 0002 section 12).
 
 use seampact_diagnostics::InternalError;
-use seampact_ir::{Name, OperationScope, PackRef, Right, RightSubject};
+use seampact_ir::{IdentityId, Name, OpShorthand, OperationScope, PackRef, Right, RightSubject};
 use seampact_json::{JsonObject, JsonValue};
-use seampact_pipeline::{PassError, TreeNodeId, pointer_below};
+use seampact_pipeline::{PassError, TreeNodeId, UnionSetting, pointer_below};
 
 use crate::catalogues::AccessRightsCatalogues;
 use crate::not_ported::not_ported_yet;
-use crate::read::{access_rights_member, access_rights_object, access_rights_string};
+use crate::read::{
+    access_rights_member, access_rights_object, access_rights_string, access_rights_strings,
+};
 use crate::report::AccessRightsReporter;
 use crate::restricted_fields::AccessRightsDraftSchemas;
-use crate::routes::{AccessRightsApi, AccessRightsRoute};
+use crate::routes::{
+    AccessRightsAccessKind, AccessRightsApi, AccessRightsRoute, access_rights_operation_of,
+};
 use crate::schema_use::AccessRightsContext;
 
 /// One `derive` entry of a pack, with the pointer it is written at.
@@ -134,13 +138,61 @@ pub(crate) fn access_rights_derive_entries<'run>(
     Ok(entries)
 }
 
+/// True when the route matches every criterion of the entry's selector (ADR 0002 section 2).
+///
+/// # Errors
+///
+/// An internal error from the inherited-setting reader or for a route of another draft.
 pub(crate) fn access_rights_selects(
-    _context: &AccessRightsContext,
-    _entry: &AccessRightsDeriveEntry<'_>,
-    _route: &AccessRightsRoute,
-    _api: &AccessRightsApi,
-) -> Result<bool, PassError> {
-    Err(not_ported_yet("accessRightsSelects"))
+    context: &AccessRightsContext,
+    entry: &AccessRightsDeriveEntry<'_>,
+    route: &AccessRightsRoute,
+    api: &AccessRightsApi,
+) -> Result<bool, InternalError> {
+    let select = access_rights_object(access_rights_member(Some(entry.settings), "select"));
+    let accepts = |criterion: &str, value: Option<&str>| -> bool {
+        if access_rights_member(select, criterion).is_none() {
+            return true;
+        }
+
+        value.is_some_and(|value| {
+            access_rights_strings(select, criterion)
+                .iter()
+                .any(|accepted| accepted == value)
+        })
+    };
+    let inherited = context.context.inherited;
+    let tags: Vec<&JsonValue> = inherited
+        .union(route.node, UnionSetting::Tags)?
+        .unwrap_or_default()
+        .into_iter()
+        .map(|tag| tag.value)
+        .collect();
+    let tag_accepted = access_rights_member(select, "tag").is_none()
+        || access_rights_strings(select, "tag").iter().any(|wanted| {
+            tags.iter()
+                .any(|tag| matches!(tag, JsonValue::String(text) if text == wanted))
+        });
+    let operation = access_rights_operation_of(context, route)?;
+    let access = if operation.safe == Some(true) {
+        "read"
+    } else {
+        "write"
+    };
+    let identity = match route.access {
+        AccessRightsAccessKind::Public => None,
+        AccessRightsAccessKind::Identity | AccessRightsAccessKind::Optional => {
+            route.identity.as_ref().map(IdentityId::as_str)
+        }
+    };
+
+    Ok(
+        accepts("op", operation.op.as_ref().map(OpShorthand::as_str))
+            && accepts("access", Some(access))
+            && accepts("apiKind", Some(&api.kind))
+            && accepts("identity", identity)
+            && tag_accepted,
+    )
 }
 
 pub(crate) fn access_rights_expand(
