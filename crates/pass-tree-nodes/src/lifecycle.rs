@@ -4,16 +4,25 @@ use indexmap::IndexMap;
 use seampact_diagnostics::DiagnosticOrigin;
 use seampact_diagnostics::InternalError;
 use seampact_ir::{
-    ApiKind, Deprecation, ExtensionKey, ExtensionPrefix, Extensions, IrMap, MaturitySource,
-    OperationMaturity, Origin,
+    ApiKind, DeclarationKind, Deprecation, ExtensionKey, ExtensionPrefix, Extensions, IrMap,
+    MaturitySource, OperationId, OperationMaturity, OperationRef, Origin, Reason,
 };
 use seampact_js::js_key_order;
 use seampact_json::{JsonObject, JsonValue};
+use seampact_pass_tree_shared::{
+    TREE_NODES_BATCH_OP, TREE_NODES_MATURITIES, tree_nodes_member, tree_nodes_op_shorthand,
+};
 use seampact_pipeline::{
-    DraftOperation, InheritedEntry, PassError, TreeNodeId, TreeNodes, UnionSetting,
+    DraftOperation, InheritedEntry, NearestSetting, PassError, TreeNodeId, TreeNodes,
+    UnionSetting, parse_duration,
 };
 
+use crate::diagnostics::{
+    TreeNodesDiagnosticOptions, TreeNodesRule, tree_nodes_error, tree_nodes_node_origin,
+    tree_nodes_report_once,
+};
 use crate::fields::TreeNodesSite;
+use crate::js_text::js_text_of;
 use crate::not_ported::not_ported_yet;
 use crate::pass::TreeNodesScope;
 
@@ -152,47 +161,261 @@ pub(crate) fn tree_nodes_tags(
 
     Ok(tags)
 }
+/// The nearest `upstream`, each service declared in `services`.
 pub(crate) fn tree_nodes_upstream(
-    _site: &TreeNodesSite<'_, '_>,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<Vec<String>, PassError> {
-    Err(not_ported_yet("treeNodesUpstream"))
+    let inherited = scope.context.inherited;
+    let raw = scope.context.raw;
+    let Some(entry) = inherited.nearest(site.node_id, &NearestSetting::Upstream)? else {
+        return Ok(Vec::new());
+    };
+    let JsonValue::Array(written) = entry.value else {
+        return Ok(Vec::new());
+    };
+    let services = raw.merged.get("services");
+    let mut upstream: Vec<String> = Vec::new();
+
+    for (index, service) in written.iter().enumerate() {
+        let JsonValue::String(service) = service else {
+            return Err(InternalError::new(format!(
+                "the upstream at {} holds no service name",
+                entry.origin.pointer
+            ))
+            .into());
+        };
+        let declared = matches!(services, Some(JsonValue::Object(declared)) if declared.contains_key(service));
+
+        if !declared {
+            report_unknown_service(site, service, &entry, index, scope)?;
+        }
+
+        upstream.push(service.clone());
+    }
+
+    Ok(upstream)
 }
 
+/// The nearest `internal`, false when unset; a service api has no documents to keep a route out of.
 pub(crate) fn tree_nodes_internal(
-    _site: &TreeNodesSite<'_, '_>,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<bool, PassError> {
-    Err(not_ported_yet("treeNodesInternal"))
+    let inherited = scope.context.inherited;
+    let Some(entry) = inherited.nearest(site.node_id, &NearestSetting::Internal)? else {
+        return Ok(false);
+    };
+    let service_api_id = scope
+        .output
+        .api
+        .as_ref()
+        .filter(|api| api.kind == SERVICE_API)
+        .map(|api| api.id.clone());
+
+    if let Some(api_id) = service_api_id {
+        let key = format!(
+            "internal-product:{}#{}",
+            entry.origin.layer, entry.origin.pointer
+        );
+        let diagnostic = tree_nodes_error(TreeNodesDiagnosticOptions {
+            rule: TreeNodesRule::InternalProduct,
+            origin: tree_nodes_node_origin(&entry.origin)?,
+            message: format!(
+                "The service api {api_id} writes internal, which only a product api's documents read."
+            ),
+            fix: "Remove internal; a service api is internal as a whole.".to_owned(),
+            related: Vec::new(),
+        });
+
+        tree_nodes_report_once(&key, diagnostic, scope);
+    }
+
+    Ok(*entry.value == JsonValue::Bool(true))
 }
 
+/// A stated `maturity`, the nearest; derive.wire derives the others.
 pub(crate) fn tree_nodes_stated_maturity(
-    _site: &TreeNodesSite<'_, '_>,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<Option<OperationMaturity>, PassError> {
-    Err(not_ported_yet("treeNodesStatedMaturity"))
+    let Some(entry) = scope
+        .context
+        .inherited
+        .nearest(site.node_id, &NearestSetting::Maturity)?
+    else {
+        return Ok(None);
+    };
+    let written = match entry.value {
+        JsonValue::Object(_) => tree_nodes_member(Some(entry.value), "level"),
+        whole => Some(whole),
+    };
+    let level = TREE_NODES_MATURITIES
+        .iter()
+        .find(|candidate| written == Some(&JsonValue::String(candidate.as_str().to_owned())));
+    let Some(level) = level else {
+        return Err(InternalError::new(format!(
+            "the maturity at {} is no level the grammar admits",
+            entry.origin.pointer
+        ))
+        .into());
+    };
+    let reason = match tree_nodes_member(Some(entry.value), "reason") {
+        Some(JsonValue::String(reason)) => Some(Reason::new(reason.clone())),
+        _ => None,
+    };
+
+    Ok(Some(OperationMaturity {
+        level: level.clone(),
+        source: STATED,
+        reason,
+        origin: entry.origin,
+    }))
 }
 
+/// `budget` in milliseconds: the nearest, else `conventions.batch.budget` for a batch.
 pub(crate) fn tree_nodes_budget_ms(
-    _site: &TreeNodesSite<'_, '_>,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<Option<i64>, PassError> {
-    Err(not_ported_yet("treeNodesBudgetMs"))
+    let inherited = scope.context.inherited;
+    let conventions = scope.context.conventions;
+    let is_batch = tree_nodes_op_shorthand(site.node) == Some(TREE_NODES_BATCH_OP);
+    let entry = inherited.nearest(site.node_id, &NearestSetting::Budget)?;
+    let reading = if is_batch {
+        conventions.get(BATCH_BUDGET)?
+    } else {
+        None
+    };
+    // The TypeScript's `??`: a written null falls through to the convention.
+    let written = match &entry {
+        Some(entry) if *entry.value != JsonValue::Null => Some(entry.value),
+        _ => reading.as_ref().map(|reading| reading.value),
+    };
+    let origin = entry
+        .as_ref()
+        .map(|entry| entry.origin.clone())
+        .or_else(|| reading.and_then(|reading| reading.origin));
+    let Some(written) = written else {
+        return Ok(None);
+    };
+
+    if let JsonValue::String(text) = written
+        && let Some(milliseconds) = parse_duration(text)?
+    {
+        let budget = i64::try_from(milliseconds).map_err(|_| {
+            InternalError::new(format!(
+                "the budget {text} of {} does not fit in 64 bits",
+                site.operation_id
+            ))
+        })?;
+
+        return Ok(Some(budget));
+    }
+
+    let Some(origin) = origin else {
+        return Err(InternalError::new(format!(
+            "the core budget of {} does not parse",
+            site.operation_id
+        ))
+        .into());
+    };
+    let key = format!("budget-duration:{}#{}", origin.layer, origin.pointer);
+    let diagnostic = tree_nodes_error(TreeNodesDiagnosticOptions {
+        rule: TreeNodesRule::BudgetDuration,
+        origin: tree_nodes_node_origin(&origin)?,
+        message: format!(
+            "The budget {} of {} is too long to hold in milliseconds.",
+            js_text_of(Some(written)),
+            site.operation_id
+        ),
+        fix: "Write a shorter budget.".to_owned(),
+        related: Vec::new(),
+    });
+
+    tree_nodes_report_once(&key, diagnostic, scope);
+
+    Ok(None)
 }
 
+/// The nearest `deprecated` whose dates hold; its successor is checked once every operation is written.
 pub(crate) fn tree_nodes_deprecated(
-    _site: &TreeNodesSite<'_, '_>,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<Option<Deprecation>, PassError> {
-    Err(not_ported_yet("treeNodesDeprecated"))
+    let inherited = scope.context.inherited;
+    let Some(entry) = inherited.nearest(site.node_id, &NearestSetting::Deprecated)? else {
+        return Ok(None);
+    };
+    let since = tree_nodes_member(Some(entry.value), "since");
+    let sunset = tree_nodes_member(Some(entry.value), "sunset");
+    let successor = tree_nodes_member(Some(entry.value), "successor");
+    let dates_hold = deprecation_dates_hold(site, &entry.origin, since, sunset, scope)?;
+
+    let (true, Some(JsonValue::String(since)), Some(JsonValue::String(sunset))) =
+        (dates_hold, since, sunset)
+    else {
+        return Ok(None);
+    };
+    let Some(api_id) = scope.output.api.as_ref().map(|api| api.id.clone()) else {
+        return Err(InternalError::new("write the api before its operations").into());
+    };
+    let (successor, successor_rel) = match successor {
+        Some(JsonValue::String(id)) => (
+            Some(OperationRef {
+                kind: DeclarationKind::HttpOperation,
+                api: api_id,
+                id: OperationId::new(id.clone()),
+            }),
+            Some(successor_rel_of(site, scope)?),
+        ),
+        _ => (None, None),
+    };
+
+    Ok(Some(Deprecation {
+        since: since.clone(),
+        sunset: sunset.clone(),
+        successor,
+        successor_rel,
+        origin: entry.origin,
+    }))
 }
 
+/// A deprecated operation whose successor names no operation of the api, or one its path params cannot fill.
 pub(crate) fn tree_nodes_check_successor(
-    _operation: &DraftOperation,
-    _operations: &[DraftOperation],
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    operation: &DraftOperation,
+    operations: &[DraftOperation],
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("treeNodesCheckSuccessor"))
+    let (Some(id), Some(deprecated)) = (&operation.id, &operation.deprecated) else {
+        return Ok(());
+    };
+    let Some(successor_id) = deprecated.successor.as_ref().map(|successor| &successor.id) else {
+        return Ok(());
+    };
+    let pointer = format!("{}/successor", deprecated.origin.pointer);
+    let located = scope
+        .context
+        .origin(&pointer)
+        .unwrap_or_else(|| deprecated.origin.clone());
+    let origin = tree_nodes_node_origin(&located)?;
+    let successor = operations
+        .iter()
+        .find(|candidate| candidate.id.as_ref() == Some(successor_id));
+
+    if let Some(successor) = successor {
+        return report_successor_params(&origin, operation, successor, scope);
+    }
+
+    scope.context.report(tree_nodes_error(TreeNodesDiagnosticOptions {
+        rule: TreeNodesRule::DeprecatedSuccessor,
+        origin,
+        message: format!("The successor {successor_id} of {id} is no operation of the api."),
+        fix: "Name the operation id of the route that replaces this one.".to_owned(),
+        related: Vec::new(),
+    }));
+
+    Ok(())
 }
 
 fn successor_rel_of(
