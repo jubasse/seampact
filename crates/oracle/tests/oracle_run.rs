@@ -60,6 +60,11 @@ fn exact_big_integers(_name: &str, text: &str) -> String {
         .replace("9007199254740992", "9007199254740993")
 }
 
+/// The wording of regress for the syntax error V8 words as an unterminated character class.
+fn regress_pattern_message(_name: &str, text: &str) -> String {
+    text.replace("Unterminated character class", "Unbalanced bracket")
+}
+
 /// The exact integers, and the IR written with tabs in place of two spaces.
 fn exact_integers_in_tab_indented_ir(name: &str, text: &str) -> String {
     let exact = exact_big_integers(name, text);
@@ -138,6 +143,26 @@ fn the_exact_integers_of_the_rust_port_are_accepted_by_the_committed_differences
     let selection = Selection {
         fixture_glob: Some(FixtureGlob::new("big-integers/**")),
         half: None,
+        ..Selection::default()
+    };
+
+    let verdict = run_oracle(&repository_root(), &selection, &subject).unwrap();
+
+    assert!(verdict.passed(), "{verdict}");
+    assert_eq!(verdict.matching, verdict.fixtures);
+}
+
+#[test]
+fn the_regress_wording_of_a_pattern_error_is_accepted_by_the_committed_differences() {
+    let subject = ExpectedFilesSubject {
+        repository_root: repository_root(),
+        rewrite: regress_pattern_message,
+    };
+    let selection = Selection {
+        fixture_glob: Some(FixtureGlob::new(
+            "converted/derive.errors/registry/a-pattern-that-is-no-regular-expression-is",
+        )),
+        half: Some("derive.errors".to_owned()),
         ..Selection::default()
     };
 
