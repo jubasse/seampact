@@ -19,6 +19,7 @@ mod ir_map;
 mod layer;
 mod open_enums;
 mod operation;
+mod same_type_use;
 mod schema_files;
 mod schemas;
 mod sensitive_field;
@@ -80,6 +81,7 @@ pub use operation::{
     PrincipalRequirement, PublicAccess, QueryWire, RefuseUnknownQuery, RequirementSubject,
     Response, ResponseHeader, RetryHeader, RightRequirement, RuleRequirement, SortKey,
 };
+pub use same_type_use::is_ir_same_type_use;
 pub use schema_files::{IR_SCHEMA_FILES, IrSchemaFile};
 pub use schemas::{
     ArrayTypeUse, BodyUnionTag, EnumNarrowing, EnumTypeUse, FieldRestriction, FileTypeUse,

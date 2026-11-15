@@ -22,3 +22,5 @@ src/closed_declaration.rs#push_unknown	packages/core/spec/src/ir/closed-declarat
 src/closed_declaration.rs#push_unknown_members	packages/core/spec/src/ir/closed-declaration.ts#pushUnknownMembers
 src/closed_declaration.rs#closed_unknowns	packages/core/spec/src/ir/closed-declaration.ts#isClosedAs
 src/closed_declaration.rs#check_ir_closed_declaration	packages/core/spec/src/ir/closed-declaration.ts#checkIrClosedDeclaration
+src/same_type_use.rs#is_ir_same_type_use	packages/core/spec/src/ir/type-use.ts#isIrSameTypeUse
+src/same_type_use.rs#canonical_without_annotations	packages/core/spec/src/ir/type-use.ts#canonicalWithoutAnnotations
