@@ -3,13 +3,16 @@
 //! (derivation `concurrency.version`). Both run once every route position is compiled.
 
 use indexmap::IndexMap;
-use seampact_ir::{Property, TypeUse};
+use seampact_diagnostics::InternalError;
+use seampact_ir::{Direction, KnownTypeUseRef, Property, TypeUse};
 use seampact_json::JsonValue;
+use seampact_naming::{Role, derive_name};
 use seampact_pass_tree_shared::TreeNodesOperationName;
-use seampact_pipeline::{PassError, ResolvedConventions, TreeNode, TreeNodes};
+use seampact_pipeline::{PassError, ResolvedConventions, TreeNode, TreeNodeKind, TreeNodes};
 
 use crate::compile::TreeSchemasCompiler;
 use crate::not_ported::not_ported_yet;
+use crate::raw::tree_schemas_pointer;
 
 const BATCH_OP: &str = "batch";
 const VERSIONED_OPS: [&str; 2] = ["update", "delete"];
@@ -42,7 +45,28 @@ pub(crate) fn tree_schemas_compile_batch_inputs(
     names: &IndexMap<String, TreeNodesOperationName>,
     conventions: &ResolvedConventions<'_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("treeSchemasCompileBatchInputs"))
+    for (_, node) in nodes.iter() {
+        let Some(operation) = names.get(&node.pointer).map(|named| &named.name) else {
+            continue;
+        };
+
+        if node.kind != TreeNodeKind::Op || node.name != BATCH_OP {
+            continue;
+        }
+
+        if node.settings.contains_key("input") {
+            continue;
+        }
+
+        if let Some(ids) = batch_ids(compiler, nodes, node, conventions)? {
+            let name = derive_name(&operation.segments, Role::Input, None)
+                .map_err(|error| PassError::from(InternalError::new(error.to_string())))?;
+
+            compiler.derived_object(vec![ids], &node.pointer, &name, &[Direction::Input])?;
+        }
+    }
+
+    Ok(())
 }
 
 fn batch_ids(
@@ -83,7 +107,53 @@ pub(crate) fn tree_schemas_compile_version_properties(
     nodes: &TreeNodes<'_>,
     names: &IndexMap<String, TreeNodesOperationName>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("treeSchemasCompileVersionProperties"))
+    let mut routes_by_schema: IndexMap<String, Vec<BodyRoute<'_, '_>>> = IndexMap::new();
+
+    for (_, node) in nodes.iter() {
+        check_version_field(compiler, node)?;
+    }
+
+    for (_, node) in nodes.iter() {
+        if node.kind == TreeNodeKind::Relay || !names.contains_key(&node.pointer) {
+            continue;
+        }
+
+        let pointer = tree_schemas_pointer(&node.pointer, &["input"]);
+        let version = version_of(nodes, node)?;
+        let Some(schema_use) = compiler.uses.get(&pointer) else {
+            continue;
+        };
+        let target = match KnownTypeUseRef::try_from(schema_use)? {
+            KnownTypeUseRef::Ref(reference)
+                if compiler.object_properties(Some(schema_use))?.is_some() =>
+            {
+                Some(reference.schema.as_str().to_owned())
+            }
+            _ => None,
+        };
+
+        let Some(schema) = target else {
+            if version
+                .as_ref()
+                .is_some_and(|written| written.property.is_some())
+            {
+                refuse_non_object_input(compiler, &pointer)?;
+            }
+
+            continue;
+        };
+
+        routes_by_schema
+            .entry(schema)
+            .or_default()
+            .push(BodyRoute { pointer, version });
+    }
+
+    for (schema, routes) in &routes_by_schema {
+        add_version_property(compiler, schema, routes)?;
+    }
+
+    Ok(())
 }
 
 fn refuse_non_object_input(

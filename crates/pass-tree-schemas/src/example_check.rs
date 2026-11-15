@@ -6,6 +6,7 @@
 use std::cmp::Ordering;
 
 use indexmap::IndexMap;
+use seampact_diagnostics::quote_text;
 use seampact_ir::{
     ArrayTypeUse, Enum, EnumTypeUse, JsonContent, MapSchema, ObjectSchema, Refinements,
     ScalarTypeUse, Schema, TypeUse, UnionSchema,
@@ -16,7 +17,8 @@ use seampact_pipeline::{PassError, TreeSchemaExampleIssue};
 use crate::compile::{TreeSchemasExampleCheck, TreeSchemasWrittenValue};
 use crate::decimal::{TreeSchemasDecimal, TreeSchemasDecimalSource};
 use crate::not_ported::not_ported_yet;
-use crate::raw::TreeSchemasReporter;
+use crate::raw::{TreeSchemasProblem, TreeSchemasReporter};
+use crate::rule::TreeSchemasRule;
 
 /// ECMAScript source of an RFC 4122 shaped uuid text.
 const UUID: &str = r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$";
@@ -86,11 +88,20 @@ const FORMAT_CHECKS: [(&str, FormatCheck); 5] = [
 ];
 
 /// The rule a problem of a written value is reported under.
-fn written_rule(written: TreeSchemasWrittenValue) -> &'static str {
+fn written_rule(written: TreeSchemasWrittenValue) -> TreeSchemasRule {
     match written {
-        TreeSchemasWrittenValue::Example => "example-value",
-        TreeSchemasWrittenValue::Default => "default-value",
-        TreeSchemasWrittenValue::Extension => "extension-value",
+        TreeSchemasWrittenValue::Example => TreeSchemasRule::ExampleValue,
+        TreeSchemasWrittenValue::Default => TreeSchemasRule::DefaultValue,
+        TreeSchemasWrittenValue::Extension => TreeSchemasRule::ExtensionValue,
+    }
+}
+
+/// How a message names the written value.
+const fn written_name(written: TreeSchemasWrittenValue) -> &'static str {
+    match written {
+        TreeSchemasWrittenValue::Example => "example",
+        TreeSchemasWrittenValue::Default => "default",
+        TreeSchemasWrittenValue::Extension => "extension",
     }
 }
 
@@ -140,11 +151,11 @@ pub(crate) struct TreeSchemasExampleChecker {
 }
 
 impl TreeSchemasExampleChecker {
-    pub(crate) fn new(
+    pub(crate) const fn new(
         schemas: IndexMap<String, Schema>,
         enums: IndexMap<String, Enum>,
-    ) -> Result<Self, PassError> {
-        Err(not_ported_yet("TreeSchemasExampleChecker.constructor"))
+    ) -> Self {
+        Self { schemas, enums }
     }
 
     /// The issues of `value` against `schema_use`, each at its pointer inside the value; empty when
@@ -298,5 +309,29 @@ pub(crate) fn tree_schemas_check_written_examples(
     checker: &TreeSchemasExampleChecker,
     reporter: &mut TreeSchemasReporter<'_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("treeSchemasCheckWrittenExamples"))
+    for check in checks {
+        for issue in checker.check(&check.value, &check.schema_use)? {
+            let inside = format!("{}{}", check.pointer, issue.pointer);
+            let pointer = if reporter.resolves(&inside) {
+                inside
+            } else {
+                check.pointer.clone()
+            };
+
+            reporter.error(TreeSchemasProblem {
+                rule: written_rule(check.written),
+                pointer,
+                message: format!(
+                    "the {} does not fit its schema at {}: {}",
+                    written_name(check.written),
+                    quote_text(&issue.pointer),
+                    issue.message
+                ),
+                fix: written_fix(check.written).to_owned(),
+                related: None,
+            })?;
+        }
+    }
+
+    Ok(())
 }

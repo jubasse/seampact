@@ -4,22 +4,28 @@
 //! `omit`) and `allOf` are merged into plain objects.
 
 use indexmap::{IndexMap, IndexSet};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
+use seampact_diagnostics::InternalError;
 use seampact_ir::Name as IrName;
 use seampact_ir::{
     Direction, Docs, FieldRestriction, Property, Schema, TypeUse, UnionTag, UnionVariant,
     UnknownKeys,
 };
+use seampact_ir::{KnownSchemaRef, KnownTypeUseRef};
 use seampact_json::{JsonObject, JsonValue};
-use seampact_naming::{Name, Role};
+use seampact_naming::{Name, Role, split_name, suffix_words};
 use seampact_pipeline::PassError;
 
 use crate::core::TreeSchemasReservation;
 use crate::derived::TreeSchemasDerivedHost;
 use crate::extensions::TreeSchemasExtensionHolder;
 use crate::not_ported::not_ported_yet;
-use crate::raw::{TreeSchemasProblem, TreeSchemasReporter};
+use crate::raw::{
+    TreeSchemasProblem, TreeSchemasRelated, TreeSchemasReporter, tree_schemas_entries,
+    tree_schemas_pointer,
+};
+use crate::rule::TreeSchemasRule;
 use crate::scalars::TreeSchemasScalars;
 
 /// Where a schema sits, which decides the marks it may carry and the unions it may be.
@@ -354,7 +360,19 @@ fn words_of(name: Option<&Name>) -> Result<Option<Vec<String>>, PassError> {
 /// The keys a schema claims: its id, and the identifier it gives in every language as its words,
 /// since two names with equal words collide whatever their spelling.
 fn claim_keys(id: &str, name: &Name) -> Result<Vec<String>, PassError> {
-    Err(not_ported_yet("claimKeys"))
+    let suffixes = suffix_words(name, None)
+        .map_err(|error| PassError::from(InternalError::new(error.to_string())))?;
+    let words: Vec<&str> = name
+        .segments
+        .iter()
+        .chain(&suffixes)
+        .map(String::as_str)
+        .collect();
+
+    Ok(vec![
+        format!("id {id}"),
+        format!("words {}", words.join(" ")),
+    ])
 }
 
 fn reserved_message(
@@ -395,6 +413,112 @@ fn mark_sensitive(compiled: &mut TreeSchemasCompiled) -> Result<(), PassError> {
 /// A property's own type use: `nullable` and `sensitive` move to the property.
 fn own_type_use(schema_use: &TypeUse) -> Result<NullableSplit, PassError> {
     Err(not_ported_yet("ownTypeUse"))
+}
+
+/// The depth-first walk over required, non-nullable object properties that finds a cycle.
+#[derive(Debug, Default)]
+struct RequiredCycleWalk {
+    done: HashSet<String>,
+    path: Vec<String>,
+}
+
+impl RequiredCycleWalk {
+    fn visit(
+        &mut self,
+        id: &str,
+        schemas: &IndexMap<String, Schema>,
+        reporter: &mut TreeSchemasReporter<'_, '_>,
+    ) -> Result<(), PassError> {
+        if let Some(open) = self.path.iter().position(|entry| entry == id) {
+            return Self::report_cycle(
+                self.path.get(open..).unwrap_or_default(),
+                id,
+                schemas,
+                reporter,
+            );
+        }
+
+        if self.done.contains(id) {
+            return Ok(());
+        }
+
+        self.path.push(id.to_owned());
+
+        for target in required_object_targets(id, schemas)? {
+            self.visit(&target, schemas, reporter)?;
+        }
+
+        self.path.pop();
+        self.done.insert(id.to_owned());
+
+        Ok(())
+    }
+
+    fn report_cycle(
+        open_path: &[String],
+        id: &str,
+        schemas: &IndexMap<String, Schema>,
+        reporter: &mut TreeSchemasReporter<'_, '_>,
+    ) -> Result<(), PassError> {
+        let Some(first) = schemas.get(id) else {
+            return Ok(());
+        };
+        let cycle: Vec<&str> = open_path.iter().map(String::as_str).chain([id]).collect();
+
+        reporter.error(TreeSchemasProblem {
+            rule: TreeSchemasRule::SchemaCycle,
+            pointer: schema_origin_pointer(first)?,
+            message: format!(
+                "the schemas {} hold each other through required, non-nullable properties, so no finite value fits",
+                cycle.join(" -> ")
+            ),
+            fix: "make one of those properties optional or nullable".to_owned(),
+            related: None,
+        })
+    }
+}
+
+// The object schemas an object schema holds through required, non-nullable properties.
+fn required_object_targets(
+    id: &str,
+    schemas: &IndexMap<String, Schema>,
+) -> Result<Vec<String>, PassError> {
+    let Some(schema) = schemas.get(id) else {
+        return Ok(Vec::new());
+    };
+    let KnownSchemaRef::Object(object) = KnownSchemaRef::try_from(schema)? else {
+        return Ok(Vec::new());
+    };
+    let mut targets = Vec::new();
+
+    for property in &object.properties {
+        if property.optional || property.nullable {
+            continue;
+        }
+
+        let KnownTypeUseRef::Ref(reference) = KnownTypeUseRef::try_from(&property.r#type)? else {
+            continue;
+        };
+        let Some(target) = schemas.get(reference.schema.as_str()) else {
+            continue;
+        };
+
+        if matches!(KnownSchemaRef::try_from(target)?, KnownSchemaRef::Object(_)) {
+            targets.push(reference.schema.as_str().to_owned());
+        }
+    }
+
+    Ok(targets)
+}
+
+fn schema_origin_pointer(schema: &Schema) -> Result<String, PassError> {
+    let pointer = match KnownSchemaRef::try_from(schema)? {
+        KnownSchemaRef::Object(object) => &object.origin.pointer,
+        KnownSchemaRef::Map(map) => &map.origin.pointer,
+        KnownSchemaRef::Union(union) => &union.origin.pointer,
+    };
+
+    Ok(pointer.clone())
 }
 
 /// The schemas of one api, compiled once each, and the type use at each schema position compiled.
@@ -442,18 +566,116 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
         merged: &'raw JsonObject,
         reporter: TreeSchemasReporter<'half, 'run>,
     ) -> Result<Self, PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.constructor"))
+        let catalogue = merged.get("schemas");
+        let mut declared_claims = Vec::new();
+        let mut claims = IndexMap::new();
+
+        for (id, _) in tree_schemas_entries(catalogue) {
+            let claim = Claim {
+                id: id.to_owned(),
+                pointer: tree_schemas_pointer("/schemas", &[id]),
+                reservation: None,
+            };
+            let name = Name {
+                segments: split_name(id),
+                role: Role::Schema,
+                status: None,
+            };
+            let keys = claim_keys(id, &name)?;
+
+            for key in &keys {
+                claims.entry(key.clone()).or_insert_with(|| claim.clone());
+            }
+
+            declared_claims.push(DeclaredClaim { claim, keys });
+        }
+
+        Ok(Self {
+            schemas: IndexMap::new(),
+            uses: IndexMap::new(),
+            written_at: IndexMap::new(),
+            query_positions: IndexSet::new(),
+            body_proof_positions: HashSet::new(),
+            position_directions: IndexMap::new(),
+            example_checks: Vec::new(),
+            extension_holders: IndexMap::new(),
+            written_unknown_keys: Vec::new(),
+            unknown_keys_uses: IndexMap::new(),
+            scalars: TreeSchemasScalars::new(merged.get("scalars")),
+            reporter,
+            catalogue,
+            enums: merged.get("enums"),
+            declared: IndexMap::new(),
+            claims,
+            declared_claims,
+            refused_reserved: HashSet::new(),
+            body_tags: Vec::new(),
+        })
     }
 
     pub(crate) fn reserve(
         &mut self,
         reservations: &[TreeSchemasReservation],
     ) -> Result<(), PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.reserve"))
+        for reservation in reservations {
+            let keys = claim_keys(reservation.id.as_str(), &reservation.name)?;
+
+            self.seed_reservation(reservation);
+
+            if reservation.yields {
+                continue;
+            }
+
+            self.refuse_declared_matching(&keys, reservation)?;
+
+            let claim = Claim {
+                id: reservation.id.as_str().to_owned(),
+                pointer: reservation.pointer.clone(),
+                reservation: Some(reservation.clone()),
+            };
+
+            for key in keys {
+                self.claims.insert(key, claim.clone());
+            }
+        }
+
+        Ok(())
     }
 
-    fn seed_reservation(&mut self, reservation: &TreeSchemasReservation) -> Result<(), PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.seedReservation"))
+    // Refuses every declared schema not yet compiled that holds a key of the reservation.
+    fn refuse_declared_matching(
+        &mut self,
+        keys: &[String],
+        reservation: &TreeSchemasReservation,
+    ) -> Result<(), PassError> {
+        for index in 0..self.declared_claims.len() {
+            let Some(entry) = self.declared_claims.get(index) else {
+                continue;
+            };
+
+            if self.declared.contains_key(&entry.claim.id) {
+                continue;
+            }
+
+            if !entry.keys.iter().any(|key| keys.contains(key)) {
+                continue;
+            }
+
+            let declared = entry.claim.clone();
+
+            self.refuse_declared_reserved(&declared, reservation)?;
+        }
+
+        Ok(())
+    }
+
+    fn seed_reservation(&mut self, reservation: &TreeSchemasReservation) {
+        if let Some(seed) = &reservation.seed {
+            self.schemas.insert(
+                reservation.id.as_str().to_owned(),
+                Schema::Object(seed.clone()),
+            );
+        }
     }
 
     fn refuse_declared_reserved(
@@ -465,7 +687,16 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
     }
 
     pub(crate) fn compile_catalogue(&mut self) -> Result<(), PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.compileCatalogue"))
+        let catalogue = self.catalogue;
+
+        for (id, _) in tree_schemas_entries(catalogue) {
+            if let Some(compiled) = self.compile_declared(id)? {
+                self.uses
+                    .insert(tree_schemas_pointer("/schemas", &[id]), compiled.schema_use);
+            }
+        }
+
+        Ok(())
     }
 
     pub(crate) fn position(
@@ -523,7 +754,34 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
     }
 
     pub(crate) fn finish(&mut self) -> Result<(), PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.finish"))
+        self.check_body_tags()?;
+        self.check_required_cycles()?;
+
+        let catalogue = self.catalogue;
+        let schema_ids: Vec<String> = tree_schemas_entries(catalogue)
+            .into_iter()
+            .map(|(id, _)| id.to_owned())
+            .filter(|id| !self.refused_reserved.contains(id))
+            .collect();
+
+        self.check_names(&schema_ids, "/schemas", "schemas")?;
+
+        let scalar_ids: Vec<String> = self
+            .scalars
+            .all(&mut self.reporter)?
+            .iter()
+            .map(|scalar| scalar.id.as_str().to_owned())
+            .collect();
+
+        self.check_names(&scalar_ids, "/scalars", "named formats")?;
+
+        let enums = self.enums;
+        let enum_ids: Vec<String> = tree_schemas_entries(enums)
+            .into_iter()
+            .map(|(id, _)| id.to_owned())
+            .collect();
+
+        self.check_names(&enum_ids, "/enums", "enums")
     }
 
     fn compile_at(
@@ -899,11 +1157,47 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
     }
 
     fn check_body_tags(&mut self) -> Result<(), PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.checkBodyTags"))
+        for tag in &self.body_tags {
+            for variant in &tag.variants {
+                let Some(schema) = self.schemas.get(variant.schema.as_str()) else {
+                    continue;
+                };
+                let KnownSchemaRef::Object(object) = KnownSchemaRef::try_from(schema)? else {
+                    continue;
+                };
+
+                if !object
+                    .properties
+                    .iter()
+                    .any(|property| property.name == tag.property)
+                {
+                    continue;
+                }
+
+                self.reporter.error(TreeSchemasProblem {
+                    rule: TreeSchemasRule::UnionTag,
+                    pointer: tree_schemas_pointer(&tag.pointer, &["oneOf", &variant.tag]),
+                    message: format!(
+                        "the variant '{}' declares the tag property '{}'",
+                        variant.tag, tag.property
+                    ),
+                    fix: "remove it from the variant; the union adds it".to_owned(),
+                    related: None,
+                })?;
+            }
+        }
+
+        Ok(())
     }
 
     fn check_required_cycles(&mut self) -> Result<(), PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.checkRequiredCycles"))
+        let mut walk = RequiredCycleWalk::default();
+
+        for id in self.schemas.keys() {
+            walk.visit(id, &self.schemas, &mut self.reporter)?;
+        }
+
+        Ok(())
     }
 
     fn check_names(
@@ -912,7 +1206,29 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
         catalogue: &str,
         what: &str,
     ) -> Result<(), PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.checkNames"))
+        let mut seen: HashMap<String, &str> = HashMap::new();
+
+        for id in ids {
+            let segments = split_name(id).join(" ");
+            let Some(other) = seen.get(&segments) else {
+                seen.insert(segments, id);
+
+                continue;
+            };
+
+            self.reporter.error(TreeSchemasProblem {
+                rule: TreeSchemasRule::NameCollision,
+                pointer: tree_schemas_pointer(catalogue, &[id]),
+                message: format!("the {what} '{id}' and '{other}' give the same identifier"),
+                fix: "rename one of them".to_owned(),
+                related: Some(vec![TreeSchemasRelated {
+                    pointer: tree_schemas_pointer(catalogue, &[other]),
+                    message: format!("'{other}' is declared here"),
+                }]),
+            })?;
+        }
+
+        Ok(())
     }
 }
 

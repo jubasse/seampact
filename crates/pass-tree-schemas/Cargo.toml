@@ -16,5 +16,8 @@ seampact-naming.workspace = true
 seampact-pass-tree-shared.workspace = true
 seampact-pipeline.workspace = true
 
+[dev-dependencies]
+seampact-pipeline = { workspace = true, features = ["test-support"] }
+
 [lints]
 workspace = true

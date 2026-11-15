@@ -7,7 +7,7 @@ use seampact_json::{JsonObject, JsonValue};
 use seampact_pipeline::PassError;
 
 use crate::not_ported::not_ported_yet;
-use crate::raw::TreeSchemasReporter;
+use crate::raw::{TreeSchemasReporter, tree_schemas_entries};
 
 /// The portable formats, each with the type it is written beside.
 const PORTABLE_FORMATS: [(&str, ScalarType); 8] = [
@@ -95,8 +95,11 @@ pub(crate) struct TreeSchemasScalars<'raw> {
 }
 
 impl<'raw> TreeSchemasScalars<'raw> {
-    pub(crate) fn new(catalogue: Option<&'raw JsonValue>) -> Result<Self, PassError> {
-        Err(not_ported_yet("TreeSchemasScalars.constructor"))
+    pub(crate) fn new(catalogue: Option<&'raw JsonValue>) -> Self {
+        Self {
+            catalogue,
+            declarations: IndexMap::new(),
+        }
     }
 
     /// Every named format of the `scalars` catalogue, in written order; a refused one is left out.
@@ -104,7 +107,16 @@ impl<'raw> TreeSchemasScalars<'raw> {
         &mut self,
         reporter: &mut TreeSchemasReporter<'_, '_>,
     ) -> Result<Vec<Scalar>, PassError> {
-        Err(not_ported_yet("TreeSchemasScalars.all"))
+        let catalogue = self.catalogue;
+        let mut scalars = Vec::new();
+
+        for (id, _) in tree_schemas_entries(catalogue) {
+            if let Some(scalar) = self.declaration(id, reporter)? {
+                scalars.push(scalar);
+            }
+        }
+
+        Ok(scalars)
     }
 
     pub(crate) fn use_of(
