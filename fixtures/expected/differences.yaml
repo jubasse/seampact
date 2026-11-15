@@ -56,3 +56,15 @@ differences:
     change: message
     from: "conventions.errors.pattern '[' is no regular expression: 'SyntaxError: Invalid regular expression: /[/u: Unterminated character class'"
     to: "conventions.errors.pattern '[' is no regular expression: 'SyntaxError: Invalid regular expression: /[/u: Unbalanced bracket'"
+  - id: right-pattern-regex-message
+    reason: The Rust core compiles `conventions.rights.pattern` with regress, whose syntax error wording replaces V8's in the message.
+    decision: docs/maintainers/rust-design/loader-and-pipeline.md#10-out-of-scope-and-differences-to-record
+    applies:
+      fixtures: ["converted/access.rights/catalogues/a-rights-pattern-that-is-no-regular-expression"]
+      output: half-diagnostics
+      api: shop
+      half: access.rights
+      pointer: /0/message
+    change: message
+    from: "conventions.rights.pattern '(' is no regular expression: SyntaxError: Invalid regular expression: /(/u: Unterminated group"
+    to: "conventions.rights.pattern '(' is no regular expression: SyntaxError: Invalid regular expression: /(/u: Unbalanced parenthesis"
