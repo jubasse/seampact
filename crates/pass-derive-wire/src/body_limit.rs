@@ -3,8 +3,8 @@
 //! op, else `conventions.bodyLimit` (1 MiB). A limit that does not parse is reported by tree.nodes,
 //! so the compile already fails and the input is left without one.
 
+use seampact_diagnostics::InternalError;
 use seampact_pass_tree_nodes::{TreeNodesBodyLimitContext, tree_nodes_body_limit};
-use seampact_pipeline::PassError;
 
 use crate::routes::{DeriveWireRoute, DeriveWireScope};
 
@@ -12,11 +12,11 @@ use crate::routes::{DeriveWireRoute, DeriveWireScope};
 ///
 /// # Errors
 ///
-/// [`PassError::NotPortedYet`] while `tree.nodes` has not ported its body limit.
+/// An internal error from the body limit reader.
 pub(crate) fn derive_wire_body_limit(
     route: &DeriveWireRoute,
     scope: &mut DeriveWireScope<'_, '_, '_>,
-) -> Result<(), PassError> {
+) -> Result<(), InternalError> {
     if scope.operation_of(route.operation)?.input.is_none() {
         return Ok(());
     }
@@ -26,7 +26,7 @@ pub(crate) fn derive_wire_body_limit(
         inherited: scope.context.inherited,
         conventions: scope.context.conventions,
     };
-    let limit = tree_nodes_body_limit(node, &context)?;
+    let limit = tree_nodes_body_limit(route.node, node, &context)?;
 
     if let Some(limit) = limit {
         scope.output_of(route.operation)?.body_limit_bytes = Some(limit.bytes);

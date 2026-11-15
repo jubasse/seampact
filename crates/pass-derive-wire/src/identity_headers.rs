@@ -86,7 +86,7 @@ pub(crate) fn derive_wire_identity_headers(
     Ok(())
 }
 
-fn applies(use_for: &HeaderUseFor, safe: bool) -> bool {
+pub(crate) fn applies(use_for: &HeaderUseFor, safe: bool) -> bool {
     *use_for == HeaderUseFor::All || (*use_for == HeaderUseFor::Reads) == safe
 }
 

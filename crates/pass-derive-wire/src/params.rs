@@ -194,7 +194,7 @@ impl From<&NamedRef<'_>> for DeriveWireNamed {
     }
 }
 
-fn same_name(place: DeriveWireParamPlace, left: &str, right: &str) -> bool {
+pub(crate) fn same_name(place: DeriveWireParamPlace, left: &str, right: &str) -> bool {
     match place {
         DeriveWireParamPlace::Query => left == right,
         DeriveWireParamPlace::Header => left.to_lowercase() == right.to_lowercase(),

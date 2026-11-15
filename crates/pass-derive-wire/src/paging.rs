@@ -165,7 +165,7 @@ fn position_use(role: &PagingRequestRole, paging: &Paging) -> TypeUse {
 }
 
 // The bounds are safe integers, whose `to_string` is `String(n)` of the number.
-fn integer_use(minimum: i64, maximum: Option<i64>) -> ScalarTypeUse {
+pub(crate) fn integer_use(minimum: i64, maximum: Option<i64>) -> ScalarTypeUse {
     derive_wire_scalar_use(
         ScalarType::Integer,
         None,
