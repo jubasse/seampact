@@ -7,7 +7,7 @@ use seampact_authoring::RawApi;
 use seampact_diagnostics::{
     Diagnostic, DiagnosticOrigin, InternalError, RelatedLocation, RuleId, Severity,
 };
-use seampact_ir::{ContractIr, Origin};
+use seampact_ir::{ImportedIr, Origin};
 use seampact_pipeline::{DraftIr, HalfContext, Inherited, ResolvedConventions, pipeline_origin};
 
 /// The rules this half reports, each `seampact/derive/<rule>`.
@@ -140,9 +140,9 @@ impl<'run> DeriveErrorsReporter<'_, 'run> {
         self.context.relayed(api)
     }
 
-    /// The IR of an imported api, in the open reader types.
-    pub(crate) fn imported(&self, api: &str) -> Option<&'run ContractIr> {
-        self.context.imported(api)
+    /// The IR of an imported api, in the open reader types, with the document it was read from.
+    pub(crate) fn imported(&self, api: &str) -> Option<&'run ImportedIr> {
+        self.context.imported_ir(api)
     }
 
     // Every pointer reported is one the half read from an authored layer, so it has an authored

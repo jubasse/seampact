@@ -3,7 +3,7 @@
 use indexmap::IndexMap;
 use seampact_authoring::{RawApi, RawWorkspace};
 use seampact_diagnostics::{DiagnosticSink, InternalError};
-use seampact_ir::ContractIr;
+use seampact_ir::ImportedIr;
 use seampact_pipeline::{
     HalfContext, Inherited, RelayedDrafts, ResolvedConventions, pipeline_conventions,
 };
@@ -36,7 +36,7 @@ impl<'run> HalfReaders<'run> {
         &'half self,
         workspace: &'half RawWorkspace,
         relayed: &'half dyn RelayedDrafts,
-        imports: &'half IndexMap<String, ContractIr>,
+        imports: &'half IndexMap<String, ImportedIr>,
         sink: &'half mut DiagnosticSink,
     ) -> HalfContext<'half> {
         HalfContext::new(

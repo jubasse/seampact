@@ -13,6 +13,7 @@ mod document;
 mod error;
 mod formats;
 mod ids;
+mod imported;
 mod instance_walk;
 mod integers;
 mod ir_map;
@@ -58,6 +59,7 @@ pub use ids::{
     OperationId, PackName, PagingId, Reason, RightId, RuleId, ScalarId, SchemaId, SchemeId,
     ScopeId, ServiceId, Slot, SurfaceId, VariantId,
 };
+pub use imported::ImportedIr;
 pub use integers::optional_count;
 pub use ir_map::IrMap;
 pub use layer::Layer;

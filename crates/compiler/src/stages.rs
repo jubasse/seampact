@@ -7,7 +7,7 @@
 use indexmap::IndexMap;
 use seampact_authoring::{RawApi, RawWorkspace};
 use seampact_diagnostics::{Diagnostic, InternalError};
-use seampact_ir::{ContractIr, SourceMap};
+use seampact_ir::{ContractIr, ImportedIr, SourceMap};
 use seampact_pipeline::{DraftIr, Half, PassError};
 
 use crate::relay;
@@ -115,7 +115,7 @@ pub fn workspace_relay_order(
 pub fn link_workspace(
     drafts: &IndexMap<String, DraftIr>,
     workspace: &RawWorkspace,
-    imports: &IndexMap<String, ContractIr>,
+    imports: &IndexMap<String, ImportedIr>,
 ) -> Result<StageAnswer<Vec<(String, Diagnostic)>>, InternalError> {
     match seampact_pass_link::run(drafts, workspace, imports) {
         Ok(reported) => Ok(StageAnswer::Ported(reported)),

@@ -14,7 +14,7 @@ use std::collections::HashSet;
 use indexmap::IndexMap;
 use seampact_authoring::{Locations, RawApi, RawWorkspace};
 use seampact_diagnostics::{Diagnostic, DiagnosticSink, InternalError, Severity, diagnostic_sort};
-use seampact_ir::ContractIr;
+use seampact_ir::ImportedIr;
 use seampact_load::{LoadOptions, LoadOutput, load_workspace};
 use seampact_pipeline::{DraftIr, Half, LaterHalf, pipeline_declared};
 use seampact_span::SourceFiles;
@@ -34,7 +34,7 @@ pub struct PipelineOptions<'run> {
     pub load: LoadOptions<'run>,
     /// The IRs of imported apis by name, which a half's `imported` returns; empty without the
     /// `imports` option.
-    pub imports: &'run IndexMap<String, ContractIr>,
+    pub imports: &'run IndexMap<String, ImportedIr>,
 }
 
 /// How a run ended.
@@ -193,7 +193,7 @@ impl Run {
     fn complete(
         mut self,
         relay: &RelayOrder,
-        imports: &IndexMap<String, ContractIr>,
+        imports: &IndexMap<String, ImportedIr>,
     ) -> Result<PipelineRun, InternalError> {
         let workspace_apis: Vec<&str> = self.runs.keys().map(String::as_str).collect();
 
@@ -234,7 +234,7 @@ impl Run {
     fn run_apis(
         &mut self,
         relay: &RelayOrder,
-        imports: &IndexMap<String, ContractIr>,
+        imports: &IndexMap<String, ImportedIr>,
     ) -> Result<Progress, InternalError> {
         let mut stopped: HashSet<String> = HashSet::new();
 
@@ -271,7 +271,7 @@ impl Run {
     }
 
     // The link pass over every api's derived draft, in workspace order.
-    fn link(&mut self, imports: &IndexMap<String, ContractIr>) -> Result<Progress, InternalError> {
+    fn link(&mut self, imports: &IndexMap<String, ImportedIr>) -> Result<Progress, InternalError> {
         self.check_every_api_has_a_draft()?;
 
         let StageAnswer::Ported(reported) = link_workspace(&self.drafts, &self.workspace, imports)?
@@ -392,7 +392,7 @@ fn run_halves(
     raw: &RawApi,
     workspace: &RawWorkspace,
     relayed: &IndexMap<String, DraftIr>,
-    imports: &IndexMap<String, ContractIr>,
+    imports: &IndexMap<String, ImportedIr>,
 ) -> Result<HalvesRun, InternalError> {
     let readers = HalfReaders::new(raw)?;
     let mut draft = DraftIr::new();

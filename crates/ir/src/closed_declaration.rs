@@ -2,8 +2,7 @@
 //! revision knows, so a pass may copy it into the IR it writes.
 
 use seampact_js::utf16_prefix;
-use seampact_json::{JsonObject, JsonValue, canonical_document, escape_pointer};
-use serde::Serialize;
+use seampact_json::{JsonObject, JsonValue, escape_pointer, json_at_pointer};
 
 use crate::instance_walk::{
     IrInstanceNode, IrUnknown, ir_definition, visit_ir_unknown, walk_ir_instance,
@@ -20,7 +19,7 @@ mod sealed {
 /// A declaration a compiler pass may copy from an IR it read into the IR it writes.
 ///
 /// Implemented for the eight definitions the TypeScript `IrClosedDeclarations` lists, and sealed.
-pub trait IrClosedDeclaration: Serialize + sealed::Sealed {
+pub trait IrClosedDeclaration: sealed::Sealed {
     /// The definition name of the IR schema files.
     const DEFINITION: &'static str;
 }
@@ -211,35 +210,31 @@ fn closed_unknowns(
     Ok(unknowns)
 }
 
-/// The declaration as an imported IR file holds it: the canonical document text read back, so
-/// its members come in the order `JSON.parse` gives the TypeScript walk, not in the order of the
-/// Rust fields.
-fn in_document_order<T: Serialize>(declaration: &T) -> Result<JsonValue, IrError> {
-    let encoded = serde_json::to_value(declaration).map_err(IrError::Encode)?;
-    let text = canonical_document(&JsonValue::try_from(encoded)?);
-
-    serde_json::from_str(&text).map_err(IrError::Decode)
-}
-
 /// Checks that a declaration read in the open form (an imported api's IR) holds only what this
-/// IR revision knows: every union tag a known variant, every open-enum value a known value.
+/// IR revision knows: every union tag a known variant, every open-enum value a known value, every
+/// object member one the schema declares (a member name is reported as the value), and every tag
+/// and open-enum value present as a string.
 ///
-/// When it holds, the declaration is answered as given, for the caller to copy before storing
-/// it; else every unknown, with its pointer below `pointer`, for the caller to refuse by name.
-///
-/// The typed IR drops on decode an object member its types do not declare, so an unknown member
-/// of the document read never reaches this check.
+/// The check reads the declaration in `document`, the IR document it was decoded from, at
+/// `pointer`: the typed form drops an unknown member on decode, the document keeps it. When it
+/// holds, `declaration` is answered as given, for the caller to copy before storing it; else
+/// every unknown, with its pointer below `pointer`, for the caller to refuse by name.
 ///
 /// # Errors
 ///
-/// [`IrError::Encode`] or [`IrError::Value`] when the declaration does not encode, and
+/// [`IrError::DeclarationNotInDocument`] when `pointer` names nothing in `document`, and
 /// [`IrError::BrokenSchemas`] when the embedded IR schemas do not read as the walk expects.
 pub fn check_ir_closed_declaration<'declaration, T: IrClosedDeclaration>(
     declaration: &'declaration T,
+    document: &JsonValue,
     pointer: &str,
 ) -> Result<IrClosedCheck<'declaration, T>, IrError> {
-    let instance = in_document_order(declaration)?;
-    let unknowns = closed_unknowns(T::DEFINITION, &instance, pointer)?;
+    let Some(read) = json_at_pointer(document, pointer) else {
+        return Err(IrError::DeclarationNotInDocument {
+            pointer: pointer.to_owned(),
+        });
+    };
+    let unknowns = closed_unknowns(T::DEFINITION, read, pointer)?;
 
     if unknowns.is_empty() {
         return Ok(IrClosedCheck::Closed(declaration));

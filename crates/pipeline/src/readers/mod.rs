@@ -19,9 +19,7 @@ pub use declared::{PipelineDeclared, pipeline_declared};
 pub use inherited::{
     Inherited, InheritedEntry, NearestSetting, OrderedSetting, PerKeySetting, UnionSetting,
 };
-pub use pointer::{
-    is_json_list, is_json_object, json_at, json_at_object, json_at_pointer, pipeline_origin,
-    pointer_below,
-};
+pub use pointer::{is_json_list, is_json_object, pipeline_origin, pointer_below};
+pub use seampact_json::{json_at, json_at_object, json_at_pointer};
 pub use tree::{TreeNode, TreeNodeId, TreeNodeKind, TreeNodes, pipeline_tree_nodes};
 pub use units::{UnitKind, parse_duration, parse_size, unit_pattern, unit_table};

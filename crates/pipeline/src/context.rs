@@ -3,7 +3,7 @@
 use indexmap::IndexMap;
 use seampact_authoring::{RawApi, RawWorkspace};
 use seampact_diagnostics::{Diagnostic, DiagnosticSink};
-use seampact_ir::{ContractIr, Origin};
+use seampact_ir::{ContractIr, ImportedIr, Origin};
 
 use crate::draft::DraftIr;
 use crate::readers::{Inherited, ResolvedConventions, pipeline_origin};
@@ -36,7 +36,7 @@ pub struct HalfContext<'run> {
     /// The api's inherited-setting reader.
     pub inherited: &'run Inherited<'run>,
     relayed: &'run dyn RelayedDrafts,
-    imports: &'run IndexMap<String, ContractIr>,
+    imports: &'run IndexMap<String, ImportedIr>,
     sink: &'run mut DiagnosticSink,
 }
 
@@ -49,7 +49,7 @@ impl<'run> HalfContext<'run> {
         conventions: &'run ResolvedConventions<'run>,
         inherited: &'run Inherited<'run>,
         relayed: &'run dyn RelayedDrafts,
-        imports: &'run IndexMap<String, ContractIr>,
+        imports: &'run IndexMap<String, ImportedIr>,
         sink: &'run mut DiagnosticSink,
     ) -> Self {
         Self {
@@ -83,7 +83,14 @@ impl<'run> HalfContext<'run> {
     /// It borrows the run, not the context, so it outlives a report.
     #[must_use]
     pub fn imported(&self, api: &str) -> Option<&'run ContractIr> {
-        let imports: &'run IndexMap<String, ContractIr> = self.imports;
+        self.imported_ir(api).map(ImportedIr::contract)
+    }
+
+    /// The imported api's IR with the document it was read from, for the closed check of a
+    /// declaration copied from it. It borrows the run, not the context.
+    #[must_use]
+    pub fn imported_ir(&self, api: &str) -> Option<&'run ImportedIr> {
+        let imports: &'run IndexMap<String, ImportedIr> = self.imports;
 
         imports.get(api)
     }

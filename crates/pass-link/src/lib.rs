@@ -6,7 +6,7 @@ mod relays;
 use indexmap::IndexMap;
 use seampact_authoring::RawWorkspace;
 use seampact_diagnostics::{Diagnostic, RuleId};
-use seampact_ir::ContractIr;
+use seampact_ir::ImportedIr;
 use seampact_pipeline::{DraftIr, PassError};
 
 pub use relays::LINK_GATEWAY_DERIVATIONS;
@@ -24,7 +24,7 @@ pub const RULE_IDS: &[RuleId] = &[RELAY_SUPERSET_RULE_ID];
 pub fn run(
     drafts: &IndexMap<String, DraftIr>,
     _workspace: &RawWorkspace,
-    imports: &IndexMap<String, ContractIr>,
+    imports: &IndexMap<String, ImportedIr>,
 ) -> Result<Vec<(String, Diagnostic)>, PassError> {
     link_relay_superset(drafts, imports)
 }
