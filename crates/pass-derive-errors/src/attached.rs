@@ -6,13 +6,17 @@
 //! nearest node attaching it, and the nearest narrowed example wins. The codes an identity lists in
 //! `errors` attach to every route it guards (grammar section 9).
 
+use indexmap::IndexMap;
 use seampact_diagnostics::InternalError;
 use seampact_ir::{DerivationId, ErrorCode, KnownAccessRef, Origin};
 use seampact_json::{JsonObject, JsonValue};
-use seampact_pipeline::{PassError, TreeNode, TreeNodeId, TreeNodes, pointer_below};
+use seampact_pipeline::{
+    ConventionReading, TreeNode, TreeNodeId, TreeNodeKind, TreeNodes, pointer_below,
+};
 
-use crate::not_ported::not_ported_yet;
-use crate::read::{derive_errors_member, derive_errors_origin_of};
+use crate::read::{
+    derive_errors_entries, derive_errors_member, derive_errors_origin_of, derive_errors_string,
+};
 use crate::report::DeriveErrorsContext;
 use crate::triggers::DeriveErrorsRoute;
 
@@ -46,6 +50,14 @@ pub(crate) struct DeriveErrorsAttachedCode {
     pub(crate) example: Option<JsonValue>,
 }
 
+const RESOURCE_REACH: &str = "resource";
+
+const READS: &str = "reads";
+
+const WRITES: &str = "writes";
+
+const EVERY_POINTER: &str = "/conventions/errors/every";
+
 // The ancestors of a node, nearest first, the node itself included.
 fn lineage<'nodes, 'raw>(
     nodes: &'nodes TreeNodes<'raw>,
@@ -62,8 +74,12 @@ fn lineage<'nodes, 'raw>(
     Ok(chain)
 }
 
-fn for_reaches(_attachment: &JsonObject, _safe: bool) -> Result<bool, PassError> {
-    Err(not_ported_yet("forReaches"))
+fn for_reaches(attachment: &JsonObject, safe: bool) -> bool {
+    match derive_errors_string(attachment, "for") {
+        Some(READS) => safe,
+        Some(WRITES) => !safe,
+        _ => true,
+    }
 }
 
 /// The codes the identity of an operation's access lists in `errors`: attached to every route it
@@ -121,11 +137,94 @@ pub(crate) fn derive_errors_identity_attached(
 ///
 /// # Errors
 ///
-/// A [`PassError`] when the attachments cannot be read yet.
+/// An internal error when a node is missing from the tree or an attached code has no origin.
 pub(crate) fn derive_errors_attached(
-    _context: DeriveErrorsContext<'_>,
-    _nodes: &TreeNodes<'_>,
-    _route: &DeriveErrorsRoute<'_>,
-) -> Result<Vec<DeriveErrorsAttachedCode>, PassError> {
-    Err(not_ported_yet("deriveErrorsAttached"))
+    context: DeriveErrorsContext<'_>,
+    nodes: &TreeNodes<'_>,
+    route: &DeriveErrorsRoute<'_>,
+) -> Result<Vec<DeriveErrorsAttachedCode>, InternalError> {
+    let default_reach = context.conventions.get("errors.reach")?;
+    let default_is_resource = matches!(
+        default_reach,
+        Some(ConventionReading { value: JsonValue::String(reach), .. }) if reach == RESOURCE_REACH
+    );
+    let safe = route.operation.safe == Some(true);
+    let mut attached: IndexMap<ErrorCode, DeriveErrorsAttachedCode> = IndexMap::new();
+    let mut crossed_resource = false;
+
+    for node in lineage(nodes, route.node_id)? {
+        for (code, attachment) in
+            derive_errors_entries(derive_errors_member(node.settings, "errors"))
+        {
+            let reach_is_resource = match derive_errors_string(attachment, "reach") {
+                Some(reach) => reach == RESOURCE_REACH,
+                None => default_is_resource,
+            };
+
+            if (reach_is_resource && crossed_resource) || !for_reaches(attachment, safe) {
+                continue;
+            }
+
+            let example = derive_errors_member(attachment, "example");
+            let code = ErrorCode::new(code.to_owned());
+
+            match attached.get_mut(&code) {
+                None => {
+                    attached.insert(
+                        code.clone(),
+                        DeriveErrorsAttachedCode {
+                            derivation: DeriveErrorsAttachedDerivation::NodeErrors,
+                            code,
+                            from: vec![node.origin.clone()],
+                            origin: Some(node.origin.clone()),
+                            example: example.cloned(),
+                        },
+                    );
+                }
+                Some(nearer) => {
+                    if nearer.example.is_none() {
+                        nearer.example = example.cloned();
+                    }
+                }
+            }
+        }
+
+        // A nested collection or single bounds a `resource` attachment of the nodes above it.
+        if matches!(node.kind, TreeNodeKind::Collection | TreeNodeKind::Single) {
+            crossed_resource = true;
+        }
+    }
+
+    if let Some(ConventionReading {
+        value: JsonValue::Array(every),
+        origin: Some(_),
+    }) = context.conventions.get("errors.every")?
+    {
+        for (index, code) in every.iter().enumerate() {
+            let JsonValue::String(code) = code else {
+                continue;
+            };
+            let code = ErrorCode::new(code.clone());
+
+            if attached.contains_key(&code) {
+                continue;
+            }
+
+            let pointer = pointer_below(EVERY_POINTER, &[&index.to_string()]);
+            let origin = derive_errors_origin_of(context, &pointer)?;
+
+            attached.insert(
+                code.clone(),
+                DeriveErrorsAttachedCode {
+                    derivation: DeriveErrorsAttachedDerivation::ConventionsEvery,
+                    code,
+                    from: vec![origin],
+                    origin: None,
+                    example: None,
+                },
+            );
+        }
+    }
+
+    Ok(attached.into_values().collect())
 }

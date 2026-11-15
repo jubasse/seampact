@@ -6,13 +6,12 @@
 
 use seampact_diagnostics::InternalError;
 use seampact_ir::{
-    ApiKind, ApiRole, DerivationId, ErrorCode, ErrorRole, FieldRight, InputPolicy, KnownAccessRef,
-    KnownIdentityRef, KnownRequirementRef, KnownUnknownQueryRef, OperationId, Origin, PagingRole,
-    Requirement,
+    ApiKind, ApiRole, DerivationId, ErrorCode, ErrorRole, FieldRight, IdempotencyEnforcement,
+    InputPolicy, KnownAccessRef, KnownCsrfRef, KnownIdempotencyRef, KnownIdentityRef,
+    KnownRequirementRef, KnownUnknownQueryRef, OperationId, Origin, OwnerKind, PagingRole,
+    Requirement, ValueSourceIn,
 };
-use seampact_pipeline::{DraftIr, DraftOperation, PassError, TreeNode, TreeNodeId};
-
-use crate::not_ported::not_ported_yet;
+use seampact_pipeline::{DraftIr, DraftOperation, TreeNode, TreeNodeId};
 
 /// An operation of the draft with the tree node tree.nodes wrote it from.
 #[derive(Debug, Clone)]
@@ -149,15 +148,112 @@ fn access_roles(
     Ok(triggers)
 }
 
-fn write_roles(_operation: &DraftOperation) -> Result<Vec<DeriveErrorsRoleTrigger>, PassError> {
-    Err(not_ported_yet("writeRoles"))
+fn write_roles(operation: &DraftOperation) -> Result<Vec<DeriveErrorsRoleTrigger>, InternalError> {
+    let mut triggers = Vec::new();
+
+    if let Some(csrf) = &operation.csrf
+        && let KnownCsrfRef::Derived(derived) = KnownCsrfRef::try_from(csrf)?
+    {
+        triggers.push(role_trigger(
+            "csrf.cookieWrite",
+            ErrorRole::CsrfInvalid,
+            derived.derived_from.from.clone(),
+        ));
+    }
+
+    if let Some(idempotency) = &operation.idempotency
+        && let KnownIdempotencyRef::Derived(derived) = KnownIdempotencyRef::try_from(idempotency)?
+    {
+        let from = &derived.derived_from.from;
+
+        if derived.enforce == IdempotencyEnforcement::Boundary {
+            for role in [
+                ErrorRole::IdempotencyKeyReused,
+                ErrorRole::IdempotencyInProgress,
+            ] {
+                triggers.push(role_trigger("idempotency.write", role, from.clone()));
+            }
+        }
+
+        if derived.required {
+            triggers.push(role_trigger(
+                "idempotency.write",
+                ErrorRole::SchemaInvalid,
+                from.clone(),
+            ));
+        }
+    }
+
+    if let Some(concurrency) = &operation.concurrency
+        && let Some(derived) = &concurrency.derived_from
+    {
+        let roles: &[ErrorRole] = if concurrency.version.r#in == ValueSourceIn::Header {
+            &[
+                ErrorRole::PreconditionFailed,
+                ErrorRole::PreconditionRequired,
+            ]
+        } else {
+            &[ErrorRole::StateConflict]
+        };
+
+        for role in roles {
+            triggers.push(role_trigger(
+                "concurrency.version",
+                role.clone(),
+                derived.from.clone(),
+            ));
+        }
+    }
+
+    Ok(triggers)
 }
 
 fn member_roles(
-    _sources: &DeriveErrorsTriggerSources<'_>,
-    _route: &DeriveErrorsRoute<'_>,
-) -> Result<Vec<DeriveErrorsRoleTrigger>, PassError> {
-    Err(not_ported_yet("memberRoles"))
+    sources: &DeriveErrorsTriggerSources<'_>,
+    route: &DeriveErrorsRoute<'_>,
+) -> Result<Vec<DeriveErrorsRoleTrigger>, InternalError> {
+    let mut triggers = Vec::new();
+    let operation = route.operation;
+
+    if !sources.unread_member_ids.is_empty() {
+        triggers.push(role_trigger(
+            "member.notFound",
+            ErrorRole::NotFound,
+            vec![operation_origin(route)?],
+        ));
+    }
+
+    if let Some(owner) = &operation.owner
+        && owner.kind == OwnerKind::Caller
+    {
+        triggers.push(role_trigger(
+            "owner.caller",
+            ErrorRole::NotFound,
+            vec![owner.origin.clone()],
+        ));
+    }
+
+    let principal = operation.principal_requires.as_deref().unwrap_or_default();
+
+    if !principal.is_empty() {
+        triggers.push(role_trigger(
+            "principal.requires",
+            ErrorRole::Forbidden,
+            principal.iter().map(|entry| entry.origin.clone()).collect(),
+        ));
+    }
+
+    let bindings = operation.bindings.as_deref().unwrap_or_default();
+
+    if !bindings.is_empty() {
+        triggers.push(role_trigger(
+            "binding.mismatch",
+            ErrorRole::Forbidden,
+            bindings.iter().map(|entry| entry.origin.clone()).collect(),
+        ));
+    }
+
+    Ok(triggers)
 }
 
 fn rejected_input_fields(operation: &DraftOperation) -> Vec<&FieldRight> {
@@ -173,10 +269,8 @@ fn rejected_input_fields(operation: &DraftOperation) -> Vec<&FieldRight> {
 }
 
 /// Whether an operation has a restricted input field whose rejection answers `forbidden`.
-pub(crate) fn derive_errors_rejects_input_field(
-    _operation: &DraftOperation,
-) -> Result<bool, PassError> {
-    Err(not_ported_yet("deriveErrorsRejectsInputField"))
+pub(crate) fn derive_errors_rejects_input_field(operation: &DraftOperation) -> bool {
+    !rejected_input_fields(operation).is_empty()
 }
 
 fn right_roles(operation: &DraftOperation) -> Vec<DeriveErrorsRoleTrigger> {
@@ -211,14 +305,24 @@ fn right_roles(operation: &DraftOperation) -> Vec<DeriveErrorsRoleTrigger> {
 
 // The trigger is the `deadline` identity header: the origins derive.wire wrote it from, else the
 // operation's.
-fn deadline_origins(_route: &DeriveErrorsRoute<'_>) -> Result<Vec<Origin>, PassError> {
-    Err(not_ported_yet("deadlineOrigins"))
+fn deadline_origins(route: &DeriveErrorsRoute<'_>) -> Result<Vec<Origin>, InternalError> {
+    let operation = route.operation;
+    let header = operation
+        .params
+        .iter()
+        .flat_map(|params| params.header.iter())
+        .find(|param| operation.deadline_header.as_deref() == Some(param.name.as_str()));
+
+    match header.and_then(|param| param.derived_from.as_ref()) {
+        Some(derived) => Ok(derived.from.clone()),
+        None => Ok(vec![operation_origin(route)?]),
+    }
 }
 
 fn wire_roles(
     sources: &DeriveErrorsTriggerSources<'_>,
     route: &DeriveErrorsRoute<'_>,
-) -> Result<Vec<DeriveErrorsRoleTrigger>, PassError> {
+) -> Result<Vec<DeriveErrorsRoleTrigger>, InternalError> {
     let mut triggers = Vec::new();
     let operation = route.operation;
 
@@ -313,8 +417,22 @@ fn api_roles(
     Ok(triggers)
 }
 
-fn requirement_origins(_requirement: &Requirement) -> Result<Vec<Origin>, PassError> {
-    Err(not_ported_yet("requirementOrigins"))
+fn requirement_origins(requirement: &Requirement) -> Result<Vec<Origin>, InternalError> {
+    let (origin, derived_from) = match KnownRequirementRef::try_from(requirement)? {
+        KnownRequirementRef::Right(right) => (&right.origin, &right.derived_from),
+        KnownRequirementRef::Rule(rule) => (&rule.origin, &rule.derived_from),
+    };
+
+    if let Some(origin) = origin {
+        return Ok(vec![origin.clone()]);
+    }
+
+    match derived_from {
+        Some(derived) => Ok(derived.from.clone()),
+        None => Err(InternalError::new(
+            "access.rights wrote a requirement with neither origin nor derivedFrom",
+        )),
+    }
 }
 
 // A versionToken use's `stale` code, where derive.wire wrote its request header: on the writes of
@@ -378,7 +496,7 @@ fn version_token_codes(
 fn requirement_triggers(
     sources: &DeriveErrorsTriggerSources<'_>,
     operation: &DraftOperation,
-) -> Result<DeriveErrorsTriggers, PassError> {
+) -> Result<DeriveErrorsTriggers, InternalError> {
     let mut triggers = DeriveErrorsTriggers::default();
 
     for requirement in operation.requires.iter().flatten() {
@@ -468,10 +586,44 @@ fn push_declared_codes(
 ///
 /// # Errors
 ///
-/// A [`PassError`] when the operation cannot be read yet.
+/// An [`InternalError`] when an earlier half left a member this reads unwritten.
 pub(crate) fn derive_errors_triggers(
-    _sources: &DeriveErrorsTriggerSources<'_>,
-    _route: &DeriveErrorsRoute<'_>,
-) -> Result<DeriveErrorsTriggers, PassError> {
-    Err(not_ported_yet("deriveErrorsTriggers"))
+    sources: &DeriveErrorsTriggerSources<'_>,
+    route: &DeriveErrorsRoute<'_>,
+) -> Result<DeriveErrorsTriggers, InternalError> {
+    let operation = route.operation;
+    let mut roles = Vec::new();
+
+    if has_input(operation)? {
+        roles.push(role_trigger(
+            "input.invalid",
+            ErrorRole::SchemaInvalid,
+            vec![operation_origin(route)?],
+        ));
+    }
+
+    if let Some(input) = &operation.input {
+        for (derivation, role) in [
+            ("body.limit", ErrorRole::PayloadTooLarge),
+            ("body.media", ErrorRole::UnsupportedMediaType),
+        ] {
+            roles.push(role_trigger(derivation, role, vec![input.origin.clone()]));
+        }
+    }
+
+    let requirements = requirement_triggers(sources, operation)?;
+
+    roles.extend(access_roles(sources, route)?);
+    roles.extend(write_roles(operation)?);
+    roles.extend(member_roles(sources, route)?);
+    roles.extend(right_roles(operation));
+    roles.extend(requirements.roles);
+    roles.extend(wire_roles(sources, route)?);
+    roles.extend(api_roles(sources, route)?);
+
+    let mut codes = requirements.codes;
+
+    codes.extend(version_token_codes(sources, operation)?);
+
+    Ok(DeriveErrorsTriggers { roles, codes })
 }
