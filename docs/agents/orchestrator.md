@@ -23,8 +23,21 @@ Spawn and message agents as the global AGENTS.md "Sub-agents" table says (Herdr 
 ## Rust port
 
 - Grid: Sonnet medium for port lanes, each brief listing the TypeScript test cases and what covers each (see "Port lessons"); Sonnet high for derive and the loader; Opus high for design notes, seams (IR and authoring types, diagnostic type, writer) and freeze reviews. The lead runs Sonnet medium during port waves and Opus at freezes.
-- One agent per 500-1,000 TypeScript lines, from a complete brief (template in the `seampact-rust-port-ts` skill).
-- Lane prompts invoke `seampact-rust`, `seampact-rust-port-ts` and `seampact-rust-practice`; the full `rust-best-practices` and `rust-review` are for design notes and layer reviews only.
+- One agent per 500-1,000 TypeScript lines, from a complete brief filled from this template:
+
+  ```
+  Invoke the skills seampact-rust and seampact-rust-port-ts first.
+  Task: <port of ... to crate ...>; worktree, branch, tip, report path.
+  TS files: <paths>; keep their algorithm and function shape (PORTING.md section 1), each function on a trace.tsv line (skips and merges included). Section 2 rows touched: <rows>; write a Rust test on the edge values of each.
+  Target crate: <name>, design note section <n>, with its designed types (do not redesign them).
+  TS test cases to port, as a list: <behaviour per line>.
+  Fixture subset and oracle command: <fixtures>, <command>.
+  Skip list: <functions or files never ported>.
+  Call cap: <60 | 100 | 140>.
+  Hand-back: tip, gate and oracle result (counts), functions against trace.tsv, loops used, items for the lead.
+  ```
+
+- Lane prompts invoke `seampact-rust` and `seampact-rust-port-ts`; the full `rust-best-practices` and `rust-review` are for design notes and layer reviews only.
 - For lane PRs merged into the port branch `feat/rust-core`: one review per layer, not per PR; every PR to develop keeps its fresh-agent review. The mechanical checks (`clippy::indexing_slicing`, the trace check, cargo deny and machete) carry the rest.
 
 ### Port lessons

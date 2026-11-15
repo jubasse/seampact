@@ -5,45 +5,12 @@ description: The procedure for porting a seampact TypeScript module to Rust for 
 
 # Porting a TypeScript module to Rust
 
-Rules: [PORTING.md](../../../PORTING.md) (cited by section below). Rust style: the `seampact-rust` and `seampact-rust-practice` skills.
+Rules: PORTING.md, cited by section. Rust style: the `seampact-rust` skill.
 
-## Inputs (from the brief)
+1. Read the brief, the design note section it names and its TypeScript files; nothing else unless a step needs it (no other ADR section; a TypeScript test only to list its behaviours). The design note fixes the crate API, core types, ownership and errors: never redesign them. A gap or a contradiction goes under "For the lead", then stop.
+2. For each TypeScript function, note its steps, its diagnostics and the section 2 rows it touches.
+3. Port function by function (section 1). Before porting a helper, `rg` the crates for an existing port and reuse it (trace line `merged: <path>`, `../<crate directory>/src/<file>.rs#<fn>` for another crate). Add each function to `trace.tsv` as you go.
+4. Compile loop (section 7), then tests (section 6), then the oracle loop on the brief's fixture subset (section 4): first mismatch only; 3 loops on the same mismatch: commit what is green, write the mismatch and what you tried in the report, stop and hand back (restart rule).
+5. Gate (section 8) on the branch rebased on `feat/rust-core`. Then check your diff against every rule of `seampact-rust` from "Ownership" down, plus the `map[&key]` and fallback rules of "Lints". A lane never invokes `rust-review`.
 
-The brief gives: the TypeScript files to port, the target crate and its designed types (design note section), the TypeScript test cases to port as a list, the fixture subset, the oracle command, the skip list and the call cap (template below). Read nothing else unless a step needs it: no ADR beyond the named section, no TypeScript test bodies beyond listing their behaviours.
-
-## Steps
-
-1. Read the design note section: the crate API, core types, ownership and errors are given; do not redesign them. A gap or a contradiction goes under "For the lead", then stop.
-2. Read the TypeScript files of the brief. For each function, note its steps, the diagnostics it emits and the traps of PORTING.md section 2 it touches.
-3. Port function by function, keeping the algorithm and function shape (section 1). Add each one to the crate's `trace.tsv` as you go, skips and merges included with their reason (every TypeScript function of the brief's files has a line).
-4. Compile loop: `cargo check -p <crate> --message-format short` until clean, then clippy.
-5. Tests: list the behaviours of the TypeScript tests the brief names, write Rust tests of them (section 6), then edge-value tests for each section 2 row the module touches. Run `cargo nextest run -p <crate>`.
-6. Oracle loop on the fixture subset (section 4): read the first mismatch only, fix, repeat. Three loops on the same mismatch: stop and hand back with the mismatch and what you tried (restart rule).
-7. Commit each green step with named files only (section 7).
-8. Gate on the branch rebased on `feat/rust-core` (section 8), the trace check, then the oracle on every fixture. Run the checklist of `seampact-rust-practice` section 9 on your diff; a lane does not invoke `rust-review` (the layer review covers idiom).
-
-## Port brief
-
-The lead fills this template for each lane: one agent per 500-1,000 TypeScript lines.
-
-```
-Invoke the skills seampact-rust, seampact-rust-port-ts and seampact-rust-practice first.
-Task: <port of ... to crate ...>; worktree, branch, tip, report path.
-TS files: <paths>; keep their algorithm and function shape (PORTING.md section 1), each function on a trace.tsv line (skips and merges included). Section 2 rows touched: <rows>; write a Rust test on the edge values of each.
-Target crate: <name>, design note section <n>, with its designed types (do not redesign them).
-TS test cases to port, as a list: <behaviour per line>.
-Fixture subset and oracle command: <fixtures>, <command>.
-Skip list: <functions or files never ported>.
-Call cap: <60 | 100 | 140>.
-Hand-back: tip, gate and oracle result, functions against trace.tsv, loops used, items for the lead.
-```
-
-## Never
-
-- Edit an expected output, `fixtures/expected/differences.yaml` or a TypeScript source.
-- Special-case a fixture, weaken or delete a test, leave `todo!`, `unimplemented!` or `#[ignore]` (section 5).
-- Port the TypeScript shape where the design note gives another one, or copy a helper that exists.
-
-## Hand-back
-
-The lines the task prompt asks for: tip, gate and oracle result (counts), functions ported against `trace.tsv`, loops used, items for the lead. Details go to the report file.
+Hand-back: the lines the brief asks for; details in the report.
