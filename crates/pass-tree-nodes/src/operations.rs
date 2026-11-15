@@ -430,11 +430,26 @@ fn with_lifecycle(base: DraftOperation, lifecycle: DraftOperation) -> DraftOpera
 }
 
 fn report_no_input(
-    _site: &TreeNodesSite<'_, '_>,
-    _op: &OpShorthand,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    op: &OpShorthand,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("reportNoInput"))
+    let op = op.as_str();
+
+    scope
+        .context
+        .report(tree_nodes_error(TreeNodesDiagnosticOptions {
+            rule: TreeNodesRule::OpInput,
+            origin: tree_nodes_node_origin(&site.node.origin)?,
+            message: format!(
+                "The {op} op {} has no input; the item schema holds fields a client never sends.",
+                site.operation_id
+            ),
+            fix: format!("Declare input on the {op} op."),
+            related: Vec::new(),
+        }));
+
+    Ok(())
 }
 
 fn report_get_input(
