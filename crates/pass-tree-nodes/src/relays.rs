@@ -1,11 +1,14 @@
 //! Relay routes: an operation that copies another api's operation, with the formats and paging styles it needs.
 
+use std::borrow::Borrow;
 use std::collections::HashMap;
+use std::hash::Hash;
 
 use seampact_diagnostics::{DiagnosticOrigin, InternalError};
 use seampact_ir::{
     ContractIr, DerivationId, DerivedFrom, FormatId, HttpMethod, IrMap, Operation, OperationId,
-    OperationRef, Origin, Paging, PagingStyle, Params, Response, ValueSource, WireFormat,
+    OperationRef, Origin, Paging, PagingStyle, Param, Params, Response, ResponseHeader, SurfaceId,
+    ValueSource, WireFormat,
 };
 use seampact_pass_tree_shared::{
     TREE_NODES_OPERATION_KIND, tree_nodes_relay_origin, tree_nodes_text,
@@ -112,6 +115,24 @@ impl RelayedOperation<'_> {
             Self::Draft(operation) => operation.origin.as_ref(),
             Self::Imported(operation) => Some(&operation.origin),
         }
+    }
+
+    /// The operation id as messages name it.
+    fn id_text(&self) -> Result<&str, InternalError> {
+        match self {
+            Self::Draft(operation) => operation.id.as_ref().map(OperationId::as_str),
+            Self::Imported(operation) => Some(operation.id.as_str()),
+        }
+        .ok_or_else(|| InternalError::new("a relayed operation has no id"))
+    }
+
+    /// The surface id as messages name it.
+    fn surface_text(&self) -> Result<&str, InternalError> {
+        match self {
+            Self::Draft(operation) => operation.surface.as_ref().map(SurfaceId::as_str),
+            Self::Imported(operation) => Some(operation.surface.as_str()),
+        }
+        .ok_or_else(|| InternalError::new("a relayed operation has no surface"))
     }
 
     /// The id of the format the operation writes.
@@ -284,13 +305,13 @@ pub(crate) fn tree_nodes_join_relay_declarations(
     for declaration in declarations {
         let key = format!("{}:{}", declaration.value.catalogue(), declaration.id);
 
-        let Some(held) = held_declaration(declaration, scope)? else {
+        let Some(held) = held_declaration(declaration, scope) else {
             add_declaration(declaration, scope)?;
             joined_by.insert(key, declaration);
             continue;
         };
 
-        if same_declaration(held.origin(), &declaration.value)? {
+        if same_declaration(&held, &declaration.value) {
             continue;
         }
 
@@ -302,10 +323,21 @@ pub(crate) fn tree_nodes_join_relay_declarations(
     Ok(())
 }
 fn held_declaration(
-    _declaration: &TreeNodesRelayDeclaration<'_, '_>,
-    _scope: &TreeNodesScope<'_, '_, '_>,
-) -> Result<Option<RelayDeclarationValue>, PassError> {
-    Err(not_ported_yet("heldDeclaration"))
+    declaration: &TreeNodesRelayDeclaration<'_, '_>,
+    scope: &TreeNodesScope<'_, '_, '_>,
+) -> Option<RelayDeclarationValue> {
+    match declaration.value {
+        RelayDeclarationValue::Format(_) => scope
+            .output
+            .formats
+            .get(declaration.id.as_str())
+            .map(|held| RelayDeclarationValue::Format(Box::new(held.clone()))),
+        RelayDeclarationValue::Paging(_) => scope
+            .output
+            .pagings
+            .get(declaration.id.as_str())
+            .map(|held| RelayDeclarationValue::Paging(Box::new(held.clone()))),
+    }
 }
 
 fn add_declaration(
@@ -315,8 +347,24 @@ fn add_declaration(
     Err(not_ported_yet("addDeclaration"))
 }
 
-fn same_declaration(_held: &Origin, _copied: &RelayDeclarationValue) -> Result<bool, PassError> {
-    Err(not_ported_yet("sameDeclaration"))
+// Two declarations are one when they differ by their origin only: a shared file read by both apis.
+fn same_declaration(held: &RelayDeclarationValue, copied: &RelayDeclarationValue) -> bool {
+    match (held, copied) {
+        (RelayDeclarationValue::Format(held), RelayDeclarationValue::Format(copied)) => {
+            WireFormat {
+                origin: copied.origin.clone(),
+                ..(**held).clone()
+            } == **copied
+        }
+        (RelayDeclarationValue::Paging(held), RelayDeclarationValue::Paging(copied)) => {
+            PagingStyle {
+                origin: copied.origin.clone(),
+                ..(**held).clone()
+            } == **copied
+        }
+        (RelayDeclarationValue::Format(_), RelayDeclarationValue::Paging(_))
+        | (RelayDeclarationValue::Paging(_), RelayDeclarationValue::Format(_)) => false,
+    }
 }
 
 fn report_different_declaration(
@@ -337,15 +385,66 @@ fn push_declarations(
     Err(not_ported_yet("pushDeclarations"))
 }
 
-fn stamped<Element: Clone>(_element: &Element, _stamp: &RelayStamp) -> Result<Element, PassError> {
-    Err(not_ported_yet("stamped"))
+/// An element a relay route copies, which carries the origin it is copied from and the derivation that stamps it.
+trait RelayCopied: Clone {
+    fn origin(&self) -> Option<&Origin>;
+
+    fn stamp(&mut self, origin: Option<Origin>, derived_from: DerivedFrom);
 }
 
-fn is_copied(
-    _derived_from: Option<&DerivedFrom>,
-    _derivations: &[&str],
-) -> Result<bool, PassError> {
-    Err(not_ported_yet("isCopied"))
+impl RelayCopied for Param {
+    fn origin(&self) -> Option<&Origin> {
+        self.origin.as_ref()
+    }
+
+    fn stamp(&mut self, origin: Option<Origin>, derived_from: DerivedFrom) {
+        self.origin = origin;
+        self.derived_from = Some(derived_from);
+    }
+}
+
+impl RelayCopied for ResponseHeader {
+    fn origin(&self) -> Option<&Origin> {
+        self.origin.as_ref()
+    }
+
+    fn stamp(&mut self, origin: Option<Origin>, derived_from: DerivedFrom) {
+        self.origin = origin;
+        self.derived_from = Some(derived_from);
+    }
+}
+
+impl RelayCopied for Response {
+    fn origin(&self) -> Option<&Origin> {
+        self.origin.as_ref()
+    }
+
+    fn stamp(&mut self, origin: Option<Origin>, derived_from: DerivedFrom) {
+        self.origin = origin;
+        self.derived_from = Some(derived_from);
+    }
+}
+
+// A copied element: its origin in the other api, and `derivedFrom: relay.route` from the public operation.
+fn stamped<Element: RelayCopied>(element: &Element, stamp: &RelayStamp) -> Element {
+    let mut copied = element.clone();
+    let origin = element
+        .origin()
+        .map(|origin| tree_nodes_relay_origin(origin, &stamp.api));
+
+    copied.stamp(
+        origin,
+        DerivedFrom {
+            derivation: RELAY_DERIVATION,
+            from: vec![stamp.from.clone()],
+        },
+    );
+
+    copied
+}
+
+fn is_copied(derived_from: Option<&DerivedFrom>, derivations: &[DerivationId]) -> bool {
+    derived_from.is_none_or(|derived| derivations.contains(&derived.derivation))
 }
 
 fn copied_params(_params: Option<&Params>, _stamp: &RelayStamp) -> Result<Params, PassError> {
@@ -377,12 +476,34 @@ fn copied_paging(_paging: &Paging, _api: &str) -> Result<Paging, PassError> {
     Err(not_ported_yet("copiedPaging"))
 }
 
-fn path_under_prefix(_path: &str, _prefix: Option<&str>) -> Result<bool, PassError> {
-    Err(not_ported_yet("pathUnderPrefix"))
+// A path is under a prefix at a segment boundary: `/v10/x` is not under `/v1`.
+fn path_under_prefix(path: &str, prefix: Option<&str>) -> bool {
+    prefix.is_some_and(|prefix| {
+        path == prefix
+            || path
+                .strip_prefix(prefix)
+                .is_some_and(|rest| rest.starts_with('/'))
+    })
 }
 
-fn relay_path(_source: &RelaySource<'_>, _own_prefix: &str) -> Result<String, PassError> {
-    Err(not_ported_yet("relayPath"))
+// The public path after its surface's prefix, appended to this surface's prefix.
+fn relay_path(source: &RelaySource<'_>, own_prefix: &str) -> Result<String, PassError> {
+    let path = source.operation.path().unwrap_or_default();
+    let under = source
+        .surface_prefix
+        .as_deref()
+        .filter(|prefix| path_under_prefix(path, Some(prefix)));
+    let Some(rest) = under.and_then(|prefix| path.strip_prefix(prefix)) else {
+        return Err(InternalError::new(format!(
+            "the relayed operation {}.{} has the path {path}, which does not start with the prefix of its surface {}",
+            source.api,
+            source.operation.id_text()?,
+            source.operation.surface_text()?
+        ))
+        .into());
+    };
+
+    Ok(format!("{own_prefix}{rest}"))
 }
 
 // The authoring schema admits `relays` as `<api>.<operationId>` only.
@@ -474,11 +595,11 @@ fn named_unknowns(_unknowns: Option<&[ClosedUnknown]>) -> Result<Vec<String>, Pa
     Err(not_ported_yet("namedUnknowns"))
 }
 
-fn own_entry<'catalogue, Key, Value>(
-    _catalogue: &'catalogue IrMap<Key, Value>,
-    _id: Option<&str>,
-) -> Result<Option<&'catalogue Value>, PassError> {
-    Err(not_ported_yet("ownEntry"))
+fn own_entry<'catalogue, Key: Borrow<str> + AsRef<str> + Hash + Eq, Value>(
+    catalogue: &'catalogue IrMap<Key, Value>,
+    id: Option<&str>,
+) -> Option<&'catalogue Value> {
+    id.and_then(|id| catalogue.get(id))
 }
 
 fn check_route_name(
@@ -529,4 +650,28 @@ fn relays_origin(
         .unwrap_or_else(|| site.node.origin.clone());
 
     tree_nodes_node_origin(&origin)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::path_under_prefix;
+
+    #[test]
+    fn a_path_is_under_a_prefix_at_a_segment_boundary_only() {
+        for (path, prefix, expected) in [
+            ("/v1", Some("/v1"), true),
+            ("/v1/tasks", Some("/v1"), true),
+            ("/v10/tasks", Some("/v1"), false),
+            ("/v1", Some("/v1/"), false),
+            ("/tasks", Some(""), true),
+            ("", Some(""), true),
+            ("/v1", None, false),
+        ] {
+            assert_eq!(
+                path_under_prefix(path, prefix),
+                expected,
+                "path {path:?} prefix {prefix:?}"
+            );
+        }
+    }
 }

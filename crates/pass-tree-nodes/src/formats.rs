@@ -6,21 +6,21 @@ use std::{iter, mem};
 use indexmap::IndexMap;
 use seampact_diagnostics::{InternalError, quote_text};
 use seampact_ir::{
-    Absent, EachTemplate, ErrorShape, FormatId, HeaderTemplate, IrMap, KnownSchemaRef,
-    KnownTemplateRef, Layer, MemberName, MetaFill, MetaMember, ObjectSchema, ObjectTemplate,
-    ObjectTemplateMember, OperationId, Origin, PlainMemberName, ResponseShape, Shape, Slot,
-    SlotTemplate, SuccessShapes, Template, TypeUse, WireFormat,
+    Absent, Direction, EachTemplate, ErrorShape, FormatId, HeaderTemplate, IrMap,
+    KnownMemberNameRef, KnownSchemaRef, KnownTemplateRef, Layer, MemberName, MetaFill, MetaMember,
+    ObjectSchema, ObjectTemplate, ObjectTemplateMember, OperationId, Origin, PlainMemberName,
+    ResponseShape, Shape, Slot, SlotTemplate, SuccessShapes, Template, TypeUse, WireFormat,
 };
 use seampact_js::js_key_order;
 use seampact_json::JsonValue;
-use seampact_pass_tree_shared::{tree_nodes_member, tree_nodes_schema};
+use seampact_pass_tree_shared::{tree_nodes_answered_use, tree_nodes_member, tree_nodes_schema};
 use seampact_pipeline::{DraftOperation, PassError, pointer_below};
-use seampact_templates::template_slots;
+use seampact_templates::{template_slots, template_uses};
 
 use crate::api::text_of;
 use crate::not_ported::not_ported_yet;
 use crate::pass::TreeNodesScope;
-use crate::templates::{TreeNodesTemplatePlace, TreeNodesTemplateSite};
+use crate::templates::{TreeNodesTemplatePlace, TreeNodesTemplateSite, tree_nodes_template};
 
 /// The id of the core `bare` format.
 pub(crate) const TREE_NODES_BARE_FORMAT: &str = "bare";
@@ -77,6 +77,40 @@ enum ShapeName {
     Table,
     List,
     Page,
+}
+
+impl ShapeName {
+    const fn as_str(self) -> &'static str {
+        match self {
+            Self::Item => "item",
+            Self::Table => "table",
+            Self::List => "list",
+            Self::Page => "page",
+        }
+    }
+
+    const fn place(self) -> TreeNodesTemplatePlace {
+        match self {
+            Self::Item => TreeNodesTemplatePlace::Item,
+            Self::Table => TreeNodesTemplatePlace::Table,
+            Self::List => TreeNodesTemplatePlace::List,
+            Self::Page => TreeNodesTemplatePlace::Page,
+        }
+    }
+}
+
+/// The slot a shape's body writes when the format writes none.
+fn default_body_slot(shape: ShapeName) -> Result<&'static str, InternalError> {
+    DEFAULT_BODY_SLOT
+        .iter()
+        .find(|(name, _)| *name == shape)
+        .map(|(_, body_slot)| *body_slot)
+        .ok_or_else(|| {
+            InternalError::new(format!(
+                "no default body slot for the shape {}",
+                shape.as_str()
+            ))
+        })
 }
 
 const SHAPES: &[ShapeName] = &[
@@ -248,7 +282,7 @@ fn format_of(
         return Ok((id == TREE_NODES_BARE_FORMAT).then(core_bare));
     };
 
-    let mut reader = FormatReader::new(scope, id, &pointer)?;
+    let mut reader = FormatReader::new(scope, id, &pointer);
     let media =
         text_of(tree_nodes_member(Some(declared), "media")).unwrap_or(TREE_NODES_DEFAULT_MEDIA);
     let success = reader.success(tree_nodes_member(Some(declared), "success"))?;
@@ -280,14 +314,37 @@ pub(crate) fn tree_nodes_absent(written: Option<&JsonValue>) -> Absent {
         _ => DEFAULT_ABSENT,
     }
 }
+/// The templates of a mapping (`headers`, a style's `meta`), each named as written; `None` when one is refused.
 pub(crate) fn tree_nodes_named_templates(
-    _owner: &str,
-    _place: TreeNodesTemplatePlace,
-    _named_templates: Option<&JsonValue>,
-    _pointer: &str,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    owner: &str,
+    place: TreeNodesTemplatePlace,
+    named_templates: Option<&JsonValue>,
+    pointer: &str,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<Option<Vec<HeaderTemplate>>, PassError> {
-    Err(not_ported_yet("treeNodesNamedTemplates"))
+    let Some(JsonValue::Object(named)) = named_templates else {
+        return Ok(Some(Vec::new()));
+    };
+    let mut templates = Vec::with_capacity(named.len());
+    let mut refused = false;
+
+    for (name, written) in js_key_order(named.iter()) {
+        let site = TreeNodesTemplateSite {
+            place,
+            owner: owner.to_owned(),
+        };
+        let value = tree_nodes_template(&site, written, &pointer_below(pointer, &[name]), scope)?;
+
+        match value {
+            Some(value) => templates.push(HeaderTemplate {
+                name: name.clone(),
+                value,
+            }),
+            None => refused = true,
+        }
+    }
+
+    Ok((!refused).then_some(templates))
 }
 
 #[allow(
@@ -296,33 +353,90 @@ pub(crate) fn tree_nodes_named_templates(
 )]
 impl<'scope, 'draft, 'half, 'run> FormatReader<'scope, 'draft, 'half, 'run> {
     fn new(
-        _scope: &'scope mut TreeNodesScope<'draft, 'half, 'run>,
-        _id: &str,
-        _pointer: &str,
-    ) -> Result<Self, PassError> {
-        Err(not_ported_yet("FormatReader.constructor"))
+        scope: &'scope mut TreeNodesScope<'draft, 'half, 'run>,
+        id: &str,
+        pointer: &str,
+    ) -> Self {
+        Self {
+            scope,
+            id: id.to_owned(),
+            pointer: pointer.to_owned(),
+            owner: format!("the format {id}"),
+        }
     }
 
-    fn success(
-        &mut self,
-        _written: Option<&JsonValue>,
-    ) -> Result<Option<SuccessShapes>, PassError> {
-        Err(not_ported_yet("FormatReader.success"))
+    fn success(&mut self, written: Option<&JsonValue>) -> Result<Option<SuccessShapes>, PassError> {
+        let mut shapes: Vec<Option<Shape>> = Vec::with_capacity(SHAPES.len());
+
+        for name in SHAPES {
+            shapes.push(self.shape(*name, tree_nodes_member(written, name.as_str()))?);
+        }
+
+        let [Some(item), Some(table), Some(list), Some(page)] =
+            <[Option<Shape>; 4]>::try_from(shapes).map_err(|_| {
+                InternalError::new("a format does not read its four success shapes")
+            })?
+        else {
+            return Ok(None);
+        };
+
+        Ok(Some(SuccessShapes {
+            item,
+            table,
+            list,
+            page,
+        }))
     }
 
     fn shape(
         &mut self,
-        _name: ShapeName,
-        _written: Option<&JsonValue>,
+        name: ShapeName,
+        written: Option<&JsonValue>,
     ) -> Result<Option<Shape>, PassError> {
-        Err(not_ported_yet("FormatReader.shape"))
+        let pointer = pointer_below(&self.pointer, &["success", name.as_str()]);
+        let written_body = tree_nodes_member(written, "body");
+        let body = match written_body {
+            None => Some(slot(default_body_slot(name)?)),
+            Some(written_body) => tree_nodes_template(
+                &self.site(name.place()),
+                written_body,
+                &format!("{pointer}/body"),
+                self.scope,
+            )?,
+        };
+        let headers = tree_nodes_named_templates(
+            &self.owner,
+            name.place(),
+            tree_nodes_member(written, "headers"),
+            &format!("{pointer}/headers"),
+            self.scope,
+        )?;
+
+        Ok(body
+            .zip(headers)
+            .map(|(body, headers)| Shape { body, headers }))
     }
 
     fn meta(
         &mut self,
-        _written: Option<&JsonValue>,
+        written: Option<&JsonValue>,
     ) -> Result<Option<IndexMap<String, MetaMember>>, PassError> {
-        Err(not_ported_yet("FormatReader.meta"))
+        let mut members = IndexMap::new();
+        let Some(JsonValue::Object(written)) = written else {
+            return Ok(Some(members));
+        };
+        let mut refused = false;
+
+        for (name, field) in js_key_order(written.iter()) {
+            match self.meta_member(name, field)? {
+                Some(member) => {
+                    members.insert(name.clone(), member);
+                }
+                None => refused = true,
+            }
+        }
+
+        Ok((!refused).then_some(members))
     }
 
     fn meta_member(
@@ -333,8 +447,12 @@ impl<'scope, 'draft, 'half, 'run> FormatReader<'scope, 'draft, 'half, 'run> {
         Err(not_ported_yet("FormatReader.metaMember"))
     }
 
-    fn schema_type(&self, _pointer: &str) -> Result<TypeUse, PassError> {
-        Err(not_ported_yet("FormatReader.schemaType"))
+    fn schema_type(&self, pointer: &str) -> Result<TypeUse, PassError> {
+        tree_nodes_answered_use(
+            self.scope.schemas,
+            &format!("{pointer}/schema"),
+            &Direction::Output,
+        )
     }
 
     fn refuse_untyped_meta(
@@ -346,13 +464,58 @@ impl<'scope, 'draft, 'half, 'run> FormatReader<'scope, 'draft, 'half, 'run> {
         Err(not_ported_yet("FormatReader.refuseUntypedMeta"))
     }
 
+    // A format without `error` takes the bare one; its `media` defaults to the format's, and it must write `$code`.
     fn error(
         &mut self,
-        _written: Option<&JsonValue>,
-        _media: &str,
-        _bare_error: Option<&ErrorShape>,
+        written: Option<&JsonValue>,
+        media: &str,
+        bare_error: Option<&ErrorShape>,
     ) -> Result<Option<ErrorShape>, PassError> {
-        Err(not_ported_yet("FormatReader.error"))
+        let Some(written) = written else {
+            return Ok(bare_error.cloned());
+        };
+        let pointer = pointer_below(&self.pointer, &["error"]);
+        let written_body = tree_nodes_member(Some(written), "body");
+        let body = match written_body {
+            None => None,
+            Some(written_body) => tree_nodes_template(
+                &self.site(TreeNodesTemplatePlace::Error),
+                written_body,
+                &format!("{pointer}/body"),
+                self.scope,
+            )?,
+        };
+        let headers = tree_nodes_named_templates(
+            &self.owner,
+            TreeNodesTemplatePlace::Error,
+            tree_nodes_member(Some(written), "headers"),
+            &format!("{pointer}/headers"),
+            self.scope,
+        )?;
+
+        if written_body.is_some() && body.is_none() {
+            return Ok(None);
+        }
+
+        let Some(body) = body else {
+            self.refuse_codeless(&pointer)?;
+
+            return Ok(None);
+        };
+
+        if !template_uses(&body, "code")? && self.code_required()? {
+            self.refuse_codeless(&pointer)?;
+
+            return Ok(None);
+        }
+
+        let media = text_of(tree_nodes_member(Some(written), "media")).unwrap_or(media);
+
+        Ok(headers.map(|headers| ErrorShape {
+            media: media.to_owned(),
+            body,
+            headers,
+        }))
     }
 
     fn code_required(&self) -> Result<bool, PassError> {
@@ -363,8 +526,11 @@ impl<'scope, 'draft, 'half, 'run> FormatReader<'scope, 'draft, 'half, 'run> {
         Err(not_ported_yet("FormatReader.refuseCodeless"))
     }
 
-    fn site(&self, _place: TreeNodesTemplatePlace) -> Result<TreeNodesTemplateSite, PassError> {
-        Err(not_ported_yet("FormatReader.site"))
+    fn site(&self, place: TreeNodesTemplatePlace) -> TreeNodesTemplateSite {
+        TreeNodesTemplateSite {
+            place,
+            owner: self.owner.clone(),
+        }
     }
 }
 
@@ -549,12 +715,12 @@ fn written_templates(
         .collect()
 }
 
-fn operation_id_of(operation: &DraftOperation) -> Result<&str, InternalError> {
+pub(crate) fn operation_id_of(operation: &DraftOperation) -> Result<&str, InternalError> {
     operation
         .id
         .as_ref()
         .map(OperationId::as_str)
-        .ok_or_else(|| InternalError::new("an operation under payload check has no id"))
+        .ok_or_else(|| InternalError::new("an operation has no id"))
 }
 
 fn check_id_slots(
@@ -578,7 +744,7 @@ fn check_id_slots(
     let item = slot_value_of_use(&check.record, scope)?;
 
     if let (Some(property), SlotValue::Object { schema }) = (property, &item)
-        && has_property(schema, property)?
+        && has_property(schema, property)
     {
         return Ok(());
     }
@@ -721,14 +887,23 @@ fn duplicate_member_name(
 }
 
 fn member_name_text(
-    _name: &MemberName,
-    _resource_type: Option<&str>,
+    name: &MemberName,
+    resource_type: Option<&str>,
 ) -> Result<Option<String>, PassError> {
-    Err(not_ported_yet("memberNameText"))
+    Ok(match KnownMemberNameRef::try_from(name)? {
+        KnownMemberNameRef::Text(text) => Some(text.text.clone()),
+        KnownMemberNameRef::Slot(named) if named.slot.as_str() == COLLECTION_SLOT => {
+            resource_type.map(str::to_owned)
+        }
+        KnownMemberNameRef::Slot(_) => None,
+    })
 }
 
-fn has_property(_schema: &ObjectSchema, _name: &str) -> Result<bool, PassError> {
-    Err(not_ported_yet("hasProperty"))
+fn has_property(schema: &ObjectSchema, name: &str) -> bool {
+    schema
+        .properties
+        .iter()
+        .any(|property| property.name == name)
 }
 
 // Walks a template with the element `$item` holds inside `$as`.
@@ -769,34 +944,150 @@ fn check_slot_values(
     }
 }
 
+// The value a slot holds for this response; `None` for an object slot the payload does not set (`$meta`).
 fn slot_value(
-    _check: &PayloadCheck<'_>,
-    _slot_name: &str,
-    _element: Option<&SlotValue>,
-    _scope: &TreeNodesScope<'_, '_, '_>,
+    check: &PayloadCheck<'_>,
+    slot_name: &str,
+    element: Option<&SlotValue>,
+    scope: &TreeNodesScope<'_, '_, '_>,
 ) -> Result<Option<SlotValue>, PassError> {
-    Err(not_ported_yet("slotValue"))
+    match slot_name {
+        "payload" => Ok(Some(check.payload.clone())),
+        "items" => Ok(Some(SlotValue::Array {
+            items: check.record.clone(),
+        })),
+        "fields" => Ok(Some(slot_value_of_use(&check.record, scope)?)),
+        "item" | "itemFields" => Ok(element.cloned()),
+        _ => Ok(None),
+    }
 }
 
 fn each_element(
-    _check: &PayloadCheck<'_>,
-    _written: &WrittenTemplate,
-    _template: &EachTemplate,
-    _element: Option<&SlotValue>,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    check: &PayloadCheck<'_>,
+    written: &WrittenTemplate,
+    template: &EachTemplate,
+    element: Option<&SlotValue>,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<Option<SlotValue>, PassError> {
-    Err(not_ported_yet("eachElement"))
+    let of = template.of.as_str();
+    let Some(mapped) = slot_value(check, of, element, scope)? else {
+        return Ok(None);
+    };
+
+    if let SlotValue::Array { items } = &mapped {
+        return Ok(Some(slot_value_of_use(items, scope)?));
+    }
+
+    report_payload(
+        check,
+        &written.owner,
+        &PayloadFault {
+            rule: PayloadRule::FormatEach,
+            message: format!(
+                "The template of {} maps ${of} with $each, but it holds no array for {}.",
+                written.owner.name,
+                operation_id_of(check.operation)?
+            ),
+            fix: format!(
+                "Write ${of} as a member, or use a format whose {} shape maps no ${of}.",
+                check.shape.as_str()
+            ),
+        },
+        scope,
+    )?;
+
+    Ok(None)
 }
 
+// A table's id-keyed payload is an object whose members are ids, so no member clash is checked.
 fn check_merge(
-    _check: &PayloadCheck<'_>,
-    _written: &WrittenTemplate,
-    _template: &ObjectTemplate,
-    _merge: &str,
-    _element: Option<&SlotValue>,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    check: &PayloadCheck<'_>,
+    written: &WrittenTemplate,
+    template: &ObjectTemplate,
+    merge: &str,
+    element: Option<&SlotValue>,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("checkMerge"))
+    let operation = check.operation;
+    let owner = &written.owner;
+    let merged = slot_value(check, merge, element, scope)?;
+
+    let schema = match &merged {
+        None | Some(SlotValue::Table) => return Ok(()),
+        Some(SlotValue::Object { schema }) => schema,
+        Some(other) => {
+            let holds = if matches!(other, SlotValue::Array { .. }) {
+                "an array"
+            } else {
+                "no object"
+            };
+            let operation_id = operation_id_of(operation)?;
+
+            return report_payload(
+                check,
+                owner,
+                &PayloadFault {
+                    rule: PayloadRule::FormatMerge,
+                    message: format!(
+                        "The template of {} merges ${merge}, but it holds {holds} for {operation_id}.",
+                        owner.name
+                    ),
+                    fix: format!(
+                        "Answer an object from {operation_id}, map an array with {{ $each: ${merge}, $as: <template> }}, or use a format that wraps the payload."
+                    ),
+                },
+                scope,
+            );
+        }
+    };
+    let id_property = if IDLESS_SLOTS.contains(&merge) {
+        operation.resource.as_ref().and_then(|resource| {
+            resource
+                .id_property
+                .as_deref()
+                .or(resource.id_param.as_deref())
+        })
+    } else {
+        None
+    };
+    let member_names: Vec<&str> = template
+        .members
+        .iter()
+        .map(|member| KnownMemberNameRef::try_from(&member.name))
+        .collect::<Result<Vec<_>, _>>()?
+        .into_iter()
+        .filter_map(|name| match name {
+            KnownMemberNameRef::Text(text) => Some(text.text.as_str()),
+            KnownMemberNameRef::Slot(_) => None,
+        })
+        .collect();
+    let twice = schema.properties.iter().find(|property| {
+        Some(property.name.as_str()) != id_property
+            && member_names.contains(&property.name.as_str())
+    });
+    let Some(twice) = twice else {
+        return Ok(());
+    };
+
+    report_payload(
+        check,
+        owner,
+        &PayloadFault {
+            rule: PayloadRule::FormatMerge,
+            message: format!(
+                "The template of {} writes the member {}, which the merged ${merge} of {} defines too.",
+                owner.name,
+                quote_text(&twice.name),
+                operation_id_of(operation)?
+            ),
+            fix: format!(
+                "Rename the property {} of {}, or the template's member.",
+                quote_text(&twice.name),
+                schema.id.as_str()
+            ),
+        },
+        scope,
+    )
 }
 
 fn report_payload(

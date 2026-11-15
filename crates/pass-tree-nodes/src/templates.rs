@@ -1,11 +1,17 @@
 //! The templates of formats and paging styles: the slots each place allows, read by the shared template reader.
 
+use seampact_diagnostics::InternalError;
 use seampact_ir::Template;
 use seampact_json::JsonValue;
+use seampact_pass_tree_shared::tree_nodes_origin_at;
 use seampact_pipeline::PassError;
-use seampact_templates::{TemplateSlot, TemplateSlotKind};
+use seampact_templates::{
+    TemplateFault, TemplateRule, TemplateSite, TemplateSlot, TemplateSlotKind, template_read,
+};
 
-use crate::not_ported::not_ported_yet;
+use crate::diagnostics::{
+    TreeNodesDiagnosticOptions, TreeNodesRule, tree_nodes_error, tree_nodes_node_origin,
+};
 use crate::pass::TreeNodesScope;
 
 /// Where a template is written, which sets the slots it may use.
@@ -207,11 +213,64 @@ fn slots_of(names: &[&str]) -> Vec<TemplateSlot> {
         .collect()
 }
 
+/// The rule a template fault is reported under.
+const fn template_rule_of(rule: TemplateRule) -> TreeNodesRule {
+    match rule {
+        TemplateRule::Slot => TreeNodesRule::TemplateSlot,
+        TemplateRule::Syntax => TreeNodesRule::TemplateSyntax,
+        TemplateRule::Merge => TreeNodesRule::TemplateMerge,
+        TemplateRule::Each => TreeNodesRule::TemplateEach,
+        TemplateRule::Name => TreeNodesRule::TemplateName,
+    }
+}
+
+fn place_entry<Entry>(
+    table: &[(TreeNodesTemplatePlace, Entry)],
+    place: TreeNodesTemplatePlace,
+) -> Result<&Entry, InternalError> {
+    table
+        .iter()
+        .find(|(candidate, _)| *candidate == place)
+        .map(|(_, entry)| entry)
+        .ok_or_else(|| InternalError::new(format!("no template table entry for {place:?}")))
+}
+
+/// The template written at `pointer`, `None` when it is refused (each fault reported where it is written).
 pub(crate) fn tree_nodes_template(
-    _site: &TreeNodesTemplateSite,
-    _value: &JsonValue,
-    _pointer: &str,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesTemplateSite,
+    value: &JsonValue,
+    pointer: &str,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<Option<Template>, PassError> {
-    Err(not_ported_yet("treeNodesTemplate"))
+    let slots = slots_of(place_entry(SLOTS_BY_PLACE, site.place)?);
+    let each_slots = slots_of(EACH_SLOTS);
+    let mut faults: Vec<TemplateFault> = Vec::new();
+    let mut collect = |fault: TemplateFault| faults.push(fault);
+    let mut reading = TemplateSite {
+        slots: &slots,
+        each_slots: &each_slots,
+        owner: &site.owner,
+        place_name: place_entry(PLACE_NAMES, site.place)?,
+        example_slot: "$payload",
+        adr_sections: "ADR 0002 sections 13 and 14",
+        report: &mut collect,
+    };
+    let template = template_read(&mut reading, value, pointer);
+
+    // The reader reports only while it reads, so reporting afterwards keeps the order.
+    for fault in faults {
+        let origin = tree_nodes_origin_at(scope.context, &fault.pointer)?;
+
+        scope
+            .context
+            .report(tree_nodes_error(TreeNodesDiagnosticOptions {
+                rule: template_rule_of(fault.rule),
+                origin: tree_nodes_node_origin(&origin)?,
+                message: fault.message,
+                fix: fault.fix,
+                related: Vec::new(),
+            }));
+    }
+
+    Ok(template)
 }

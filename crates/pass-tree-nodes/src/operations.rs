@@ -452,11 +452,30 @@ fn report_no_input(
     Ok(())
 }
 
+// A get carries no body: a get is a route without a body.
 fn report_get_input(
-    _site: &TreeNodesSite<'_, '_>,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("reportGetInput"))
+    let origin = scope
+        .context
+        .origin(&format!("{}/input", site.node.pointer))
+        .unwrap_or_else(|| site.node.origin.clone());
+
+    scope
+        .context
+        .report(tree_nodes_error(TreeNodesDiagnosticOptions {
+            rule: TreeNodesRule::GetInput,
+            origin: tree_nodes_node_origin(&origin)?,
+            message: format!(
+                "The get route {} declares an input, but a get request carries no body.",
+                site.operation_id
+            ),
+            fix: "Move the fields into query, or make the route a post.".to_owned(),
+            related: Vec::new(),
+        }));
+
+    Ok(())
 }
 
 fn surface_of(node_id: TreeNodeId, nodes: &TreeNodes<'_>) -> Result<String, InternalError> {

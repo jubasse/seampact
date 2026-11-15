@@ -7,11 +7,14 @@ use seampact_ir::{
 };
 use seampact_js::js_key_order;
 use seampact_json::{JsonValue, MAX_SAFE_INTEGER, MIN_SAFE_INTEGER, js_integer_in_range};
-use seampact_pass_tree_shared::{tree_nodes_member, tree_nodes_object_of};
-use seampact_pipeline::PassError;
+use seampact_pass_tree_shared::{
+    tree_nodes_member, tree_nodes_object_of, tree_nodes_written_convention,
+};
+use seampact_pipeline::{PassError, pointer_below};
 
 use crate::diagnostics::{
     TreeNodesDiagnosticOptions, TreeNodesRule, tree_nodes_error, tree_nodes_node_origin,
+    tree_nodes_report_once,
 };
 use crate::fields::TreeNodesSite;
 use crate::not_ported::not_ported_yet;
@@ -355,8 +358,8 @@ fn sort_keys_of(
     Ok(sort_keys)
 }
 
-fn number_of(value: &JsonValue) -> Result<Option<i64>, PassError> {
-    let JsonValue::Number(number) = value else {
+pub(crate) fn number_of(value: Option<&JsonValue>) -> Result<Option<i64>, PassError> {
+    let Some(JsonValue::Number(number)) = value else {
         return Ok(None);
     };
 
@@ -389,94 +392,325 @@ fn request_roles(style: &JsonValue) -> Vec<String> {
     }
 }
 
-fn written_limits(_settings: Option<&JsonValue>) -> Result<RouteLimits, PassError> {
-    Err(not_ported_yet("writtenLimits"))
+fn written_limits(settings: Option<&JsonValue>) -> Result<RouteLimits, PassError> {
+    let max_limit = number_of(tree_nodes_member(settings, "maxLimit"))?;
+    let default_limit = number_of(tree_nodes_member(settings, "defaultLimit"))?;
+
+    Ok(RouteLimits {
+        max_limit,
+        default_limit,
+    })
 }
 
 fn convention_limit(
-    _value: Option<&JsonValue>,
-    _origin: Option<&Origin>,
+    value: Option<&JsonValue>,
+    origin: Option<&Origin>,
 ) -> Result<Option<ConventionLimit>, PassError> {
-    Err(not_ported_yet("conventionLimit"))
+    let (Some(value), Some(origin)) = (number_of(value)?, origin) else {
+        return Ok(None);
+    };
+
+    Ok(Some(ConventionLimit {
+        value,
+        origin: origin.clone(),
+    }))
 }
 
-fn above_max_limit(
-    _default_limit: Option<i64>,
-    _max_limit: Option<i64>,
-) -> Result<Option<LimitPair>, PassError> {
-    Err(not_ported_yet("aboveMaxLimit"))
+fn above_max_limit(default_limit: Option<i64>, max_limit: Option<i64>) -> Option<LimitPair> {
+    let (Some(default_limit), Some(max_limit)) = (default_limit, max_limit) else {
+        return None;
+    };
+
+    (default_limit > max_limit).then_some(LimitPair {
+        default_limit,
+        max_limit,
+    })
 }
 
-fn convention_limits(
-    _site: &TreeNodesSite<'_, '_>,
-    _scope: &TreeNodesScope<'_, '_, '_>,
-) -> Result<ConventionLimits, PassError> {
-    Err(not_ported_yet("conventionLimits"))
+// `conventions.paging.defaultLimit` reads `maxLimit` when unwritten, so only a written one counts as a default.
+fn convention_limits(scope: &TreeNodesScope<'_, '_, '_>) -> Result<ConventionLimits, PassError> {
+    let conventions = scope.context.conventions;
+    let max_reading = conventions.get("paging.maxLimit")?;
+    let max_limit = convention_limit(
+        max_reading.as_ref().map(|reading| reading.value),
+        max_reading
+            .as_ref()
+            .and_then(|reading| reading.origin.as_ref()),
+    )?;
+    let written_default = tree_nodes_written_convention(*conventions, "paging.defaultLimit")?;
+    let default_limit = convention_limit(
+        written_default.as_ref().map(|written| written.value),
+        written_default.as_ref().map(|written| &written.origin),
+    )?;
+
+    Ok(ConventionLimits {
+        max_limit,
+        default_limit,
+    })
 }
 
 fn declared_style<'run>(
-    _site: &TreeNodesSite<'_, '_>,
-    _id: &str,
-    _origin: &Origin,
-    _scope: &TreeNodesScope<'_, '_, 'run>,
+    site: &TreeNodesSite<'_, '_>,
+    id: &str,
+    origin: &Origin,
+    scope: &mut TreeNodesScope<'_, '_, 'run>,
 ) -> Result<Option<&'run JsonValue>, PassError> {
-    Err(not_ported_yet("declaredStyle"))
+    let raw = scope.context.raw;
+
+    if let Some(style) = tree_nodes_member(raw.merged.get("pagings"), id) {
+        return Ok(Some(style));
+    }
+
+    let diagnostic = tree_nodes_error(TreeNodesDiagnosticOptions {
+        rule: TreeNodesRule::PagingUnknown,
+        origin: tree_nodes_node_origin(origin)?,
+        message: format!(
+            "The paging style {id} of {} is not declared in pagings.",
+            site.operation_id
+        ),
+        fix: format!("Declare {id} in pagings, or name a declared style."),
+        related: Vec::new(),
+    });
+
+    tree_nodes_report_once(
+        &format!("paging-unknown:{}#{}", origin.layer, origin.pointer),
+        diagnostic,
+        scope,
+    );
+
+    Ok(None)
 }
 
+// The id of a named style that sits in a message; only a style with an id reaches the checks that name it.
+fn style_id_of<'named>(named: &'named NamedStyle<'_>) -> Result<&'named str, PassError> {
+    named.id.as_deref().ok_or_else(|| {
+        InternalError::new(format!(
+            "the paging style at {} names no style id",
+            named.origin.pointer
+        ))
+        .into()
+    })
+}
+
+// `token` belongs to a style with a `since` role only.
 fn token_of(
-    _site: &TreeNodesSite<'_, '_>,
-    _named: &NamedStyle<'_>,
-    _roles: &[String],
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    named: &NamedStyle<'_>,
+    roles: &[String],
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<Option<PagingToken>, PassError> {
-    Err(not_ported_yet("tokenOf"))
+    let written = tree_nodes_member(named.settings, "token");
+    let token = TOKENS
+        .iter()
+        .find(|candidate| matches!(written, Some(JsonValue::String(text)) if candidate.as_str() == text))
+        .cloned();
+
+    if roles.iter().any(|role| role == SINCE_ROLE) {
+        return Ok(Some(token.unwrap_or(DEFAULT_TOKEN)));
+    }
+
+    if written.is_none() {
+        return Ok(None);
+    }
+
+    scope
+        .context
+        .report(tree_nodes_error(TreeNodesDiagnosticOptions {
+            rule: TreeNodesRule::PagingToken,
+            origin: tree_nodes_node_origin(&named.origin)?,
+            message: format!(
+                "The list {} sets a token, but its style {} has no since role.",
+                site.operation_id,
+                style_id_of(named)?
+            ),
+            fix: "Remove token, or use a style with a since role.".to_owned(),
+            related: Vec::new(),
+        }));
+
+    Ok(None)
 }
 
+// ADR 0002 section 14: a request name already used by the route's `query` is a compile error naming the style.
 fn refuse_taken_names(
-    _site: &TreeNodesSite<'_, '_>,
-    _id: &str,
-    _style: &JsonValue,
-    _query: &[Param],
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    id: &str,
+    style: &JsonValue,
+    query: &[Param],
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("refuseTakenNames"))
+    let Some(JsonValue::Object(request)) = tree_nodes_member(Some(style), "request") else {
+        return Ok(());
+    };
+
+    for (role, place) in js_key_order(request.iter()) {
+        let Some(JsonValue::String(name)) = tree_nodes_member(Some(place), "query") else {
+            continue;
+        };
+        let Some(taken) = query.iter().find(|param| param.name == *name) else {
+            continue;
+        };
+        let origin = taken.origin.as_ref().unwrap_or(&site.node.origin);
+        let related = request_related(id, role, scope)?;
+
+        scope
+            .context
+            .report(tree_nodes_error(TreeNodesDiagnosticOptions {
+                rule: TreeNodesRule::PagingParam,
+                origin: tree_nodes_node_origin(origin)?,
+                message: format!(
+                    "The query field {} of {} is also the {role} parameter of the paging style {id}.",
+                    taken.name, site.operation_id
+                ),
+                fix: format!(
+                    "Rename the query field {}, or use another paging style.",
+                    taken.name
+                ),
+                related,
+            }));
+    }
+
+    Ok(())
 }
 
+// ADR 0002 sections 13 and 14: `maxLimit` is required for a style with a `limit` role, `defaultLimit` is the
+// limit of a request that sends none (the `maxLimit` by default) and the page size of a style without `limit`.
+// Each limit comes from the route, else `conventions.paging`. A convention default above the route's `maxLimit` is
+// lowered to it; a route default above the effective `maxLimit`, or a convention pair at odds, is refused.
 fn limits_of(
-    _site: &TreeNodesSite<'_, '_>,
-    _named: &NamedStyle<'_>,
-    _roles: &[String],
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    named: &NamedStyle<'_>,
+    roles: &[String],
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<Option<Limits>, PassError> {
-    Err(not_ported_yet("limitsOf"))
+    let route = written_limits(named.settings)?;
+    let conventions = convention_limits(scope)?;
+    let max_limit = route
+        .max_limit
+        .or(conventions.max_limit.as_ref().map(|limit| limit.value));
+    let written_default = route
+        .default_limit
+        .or(conventions.default_limit.as_ref().map(|limit| limit.value));
+    let token = token_of(site, named, roles, scope)?;
+
+    if roles.iter().any(|role| role == LIMIT_ROLE) && max_limit.is_none() {
+        report_missing_limit(
+            site,
+            named,
+            "its limit role needs a maxLimit",
+            "Set maxLimit",
+            scope,
+        )?;
+
+        return Ok(None);
+    }
+
+    let Some(inherited_default) = written_default.or(max_limit) else {
+        report_missing_limit(
+            site,
+            named,
+            "a style without a limit role needs a defaultLimit",
+            "Set defaultLimit",
+            scope,
+        )?;
+
+        return Ok(None);
+    };
+
+    if let Some(contradiction) = above_max_limit(route.default_limit, max_limit) {
+        report_route_contradiction(site, named, &contradiction, scope)?;
+
+        return Ok(None);
+    }
+
+    if let (Some(convention_default), Some(convention_max)) =
+        (&conventions.default_limit, &conventions.max_limit)
+        && above_max_limit(Some(convention_default.value), Some(convention_max.value)).is_some()
+    {
+        report_convention_contradiction(site, convention_default, convention_max, scope)?;
+
+        return Ok(None);
+    }
+
+    let default_limit = max_limit.map_or(inherited_default, |max| inherited_default.min(max));
+
+    Ok(Some(Limits {
+        max_limit,
+        default_limit: Some(default_limit),
+        over_limit: over_limit_of(named, scope)?,
+        token,
+    }))
 }
 
+// A key holding the separator or starting with the descending sign could not be read back from a signed list.
 fn refuse_unsignable_keys(
-    _site: &TreeNodesSite<'_, '_>,
-    _style_id: &str,
-    _sort_keys: &[SortKey],
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    style_id: &str,
+    sort_keys: &[SortKey],
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("refuseUnsignableKeys"))
+    for SortKey { key, origin, .. } in sort_keys {
+        if !key.contains(SIGNED_LIST_SEPARATOR) && !key.starts_with(SIGNED_DESCENDING_PREFIX) {
+            continue;
+        }
+
+        let origin = origin.as_ref().unwrap_or(&site.node.origin);
+
+        scope
+            .context
+            .report(tree_nodes_error(TreeNodesDiagnosticOptions {
+                rule: TreeNodesRule::SortKeySigned,
+                origin: tree_nodes_node_origin(origin)?,
+                message: format!(
+                    "The sort key {key} of {} holds a ',' or starts with '-', which the signed sort style {style_id} cannot send.",
+                    site.operation_id
+                ),
+                fix: format!(
+                    "Rename {key}, or use a paging style whose sort role is pair, keyed or split."
+                ),
+                related: Vec::new(),
+            }));
+    }
+
+    Ok(())
 }
 
 fn report_unknown_key(
-    _site: &TreeNodesSite<'_, '_>,
-    _key: &str,
-    _schema: &str,
-    _origin: &Origin,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    key: &str,
+    schema: &str,
+    origin: &Origin,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("reportUnknownKey"))
+    scope
+        .context
+        .report(tree_nodes_error(TreeNodesDiagnosticOptions {
+            rule: TreeNodesRule::SortKey,
+            origin: tree_nodes_node_origin(origin)?,
+            message: format!(
+                "The sort key {key} of {} is not a property of its item {schema}.",
+                site.operation_id
+            ),
+            fix: format!("Name a property of {schema}, or declare {key} on it."),
+            related: Vec::new(),
+        }));
+
+    Ok(())
 }
 
 fn request_related(
-    _site: &TreeNodesSite<'_, '_>,
-    _id: &str,
-    _role: &str,
-    _scope: &TreeNodesScope<'_, '_, '_>,
+    id: &str,
+    role: &str,
+    scope: &TreeNodesScope<'_, '_, '_>,
 ) -> Result<Vec<RelatedLocation>, PassError> {
-    Err(not_ported_yet("requestRelated"))
+    let pointer = pointer_below("/pagings", &[id, "request", role]);
+    let Some(origin) = scope.context.origin(&pointer) else {
+        return Ok(Vec::new());
+    };
+
+    Ok(vec![RelatedLocation {
+        origin: tree_nodes_node_origin(&origin)?,
+        message: format!("the {role} role of {id}"),
+    }])
 }
 
 fn report_route_contradiction(
