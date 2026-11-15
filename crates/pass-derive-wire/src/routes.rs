@@ -7,11 +7,13 @@ use std::collections::{HashMap, HashSet};
 use indexmap::IndexMap;
 use seampact_diagnostics::InternalError;
 use seampact_ir::{
-    ApiWire, Int64Wire, KnownAccessRef, OperationId, Origin, OutputEnumForm, Response, UrlForm,
+    ApiWire, Int64Wire, KnownAccessRef, OperationId, Origin, OutputEnumForm, Response,
+    ResponseHeader, UrlForm,
 };
 use seampact_pipeline::{
-    DeriveWireOperation, DeriveWireOutput, DraftIr, DraftOperation, HalfContext, OperationIndex,
-    TreeNode, TreeNodeId, TreeSchemaService, place_derived_responses,
+    DeriveWireOperation, DeriveWireOutput, DerivedResponse, DraftIr, DraftOperation, HalfContext,
+    OperationIndex, ResponseHeaderAdditions, ResponsePosition, TreeNode, TreeNodeId,
+    TreeSchemaService, place_derived_responses,
 };
 
 use crate::report::{
@@ -133,6 +135,52 @@ impl<'draft, 'half, 'run> DeriveWireScope<'draft, 'half, 'run> {
         inherited.nodes().get(route.node)
     }
 
+    /// Appends a header to the response at `response` of the operation's merged responses.
+    pub(crate) fn add_response_header(
+        &mut self,
+        operation: OperationIndex,
+        response: usize,
+        header: ResponseHeader,
+    ) -> Result<(), InternalError> {
+        let written = self.output_of(operation)?;
+
+        match written
+            .response_headers
+            .iter_mut()
+            .find(|addition| addition.response == response)
+        {
+            Some(addition) => addition.headers.push(header),
+            None => written.response_headers.push(ResponseHeaderAdditions {
+                response,
+                headers: vec![header],
+            }),
+        }
+
+        Ok(())
+    }
+
+    /// Places a response the half derives. The headers added to the responses it lands before
+    /// follow them, since they are addressed in the final merged order.
+    pub(crate) fn add_derived_response(
+        &mut self,
+        operation: OperationIndex,
+        derived: DerivedResponse,
+    ) -> Result<(), InternalError> {
+        let written = self.output_of(operation)?;
+
+        if let ResponsePosition::At(at) = derived.position {
+            for addition in &mut written.response_headers {
+                if addition.response >= at {
+                    addition.response += 1;
+                }
+            }
+        }
+
+        written.responses.push(derived);
+
+        Ok(())
+    }
+
     /// The responses of the operation as the half has them so far: the draft's, then the ones the
     /// half appended, each with the headers the half added. Built owned, since a response gains
     /// headers from the output.
@@ -248,4 +296,79 @@ pub(crate) fn derive_wire_origin_at(
         .context
         .origin(pointer)
         .ok_or_else(|| InternalError::new(format!("{pointer} has no origin in the side table")))
+}
+
+#[cfg(test)]
+mod tests {
+    use seampact_ir::ResponseShape;
+    use seampact_pipeline::testing::{FakeSchemaService, HalfFixture};
+
+    use super::*;
+
+    fn response(status: i64) -> Response {
+        Response {
+            status,
+            media: None,
+            body: None,
+            shape: ResponseShape::Empty,
+            headers: Vec::new(),
+            origin: None,
+            derived_from: None,
+            docs: None,
+        }
+    }
+
+    fn header(name: &str) -> ResponseHeader {
+        ResponseHeader {
+            name: name.to_owned(),
+            r#type: crate::params::derive_wire_string_use(),
+            required: true,
+            semantic: None,
+            origin: None,
+            derived_from: None,
+        }
+    }
+
+    #[test]
+    fn a_header_follows_its_response_when_a_derived_response_lands_before_it()
+    -> Result<(), InternalError> {
+        let mut draft = DraftIr::new();
+
+        draft.operations.push(DraftOperation {
+            responses: Some(vec![response(200), response(404)]),
+            ..DraftOperation::default()
+        });
+
+        let operation = draft
+            .operation_indices()
+            .next()
+            .ok_or_else(|| InternalError::new("no operation".to_owned()))?;
+        let schemas = FakeSchemaService::new();
+        let mut fixture = HalfFixture::from_json("{}")?;
+
+        fixture.with_context(|context| {
+            let mut scope = DeriveWireScope::new(&draft, context, &schemas);
+
+            scope.add_response_header(operation, 1, header("Retry-After"))?;
+            scope.add_derived_response(
+                operation,
+                DerivedResponse {
+                    position: ResponsePosition::At(1),
+                    response: response(304),
+                },
+            )?;
+
+            let responses = scope.responses_of(operation)?;
+            let statuses: Vec<i64> = responses.iter().map(|item| item.status).collect();
+            let header_counts: Vec<usize> =
+                responses.iter().map(|item| item.headers.len()).collect();
+
+            assert_eq!(statuses, [200, 304, 404]);
+            assert_eq!(header_counts, [0, 0, 1]);
+
+            Ok::<(), InternalError>(())
+        })??;
+
+        Ok(())
+    }
 }

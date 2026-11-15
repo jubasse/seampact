@@ -8,17 +8,20 @@
 
 use seampact_diagnostics::InternalError;
 use seampact_ir::{
-    DecimalLiteral, DerivationId, DerivedFrom, OverLimitPolicy, Paging, PagingParamPlacement,
-    PagingRequestRole, PagingRole, PagingStyle, PagingToken, QueryStyle, QueryWire, QueryWireKind,
-    Refinements, ScalarType, ScalarTypeUse, TypeUse,
+    ArrayTypeUse, DecimalLiteral, DerivationId, DerivedFrom, OverLimitPolicy, Paging,
+    PagingParamPlacement, PagingParamStyle, PagingRequestRole, PagingRole, PagingStyle,
+    PagingToken, Pattern, QueryStyle, QueryWire, QueryWireKind, Refinements, ResponseShape,
+    ScalarType, ScalarTypeUse, TypeUse,
 };
-use seampact_pass_tree_schemas::tree_schemas_escape_pattern_literal;
+use seampact_pass_tree_schemas::{
+    TreeSchemasPatternResult, tree_schemas_escape_pattern_literal, tree_schemas_normalize_pattern,
+};
 use seampact_pipeline::PassError;
 
-use crate::not_ported::not_ported_yet;
 use crate::params::{
-    DeriveWireDerived, DeriveWireParamPlace, derive_wire_add_param, derive_wire_no_refinements,
-    derive_wire_scalar_use, derive_wire_string_use,
+    DERIVE_WIRE_LINK, DeriveWireDerived, DeriveWireParamPlace, derive_wire_add_param,
+    derive_wire_add_response_header, derive_wire_no_refinements, derive_wire_scalar_use,
+    derive_wire_string_use,
 };
 use crate::routes::{DeriveWireRoute, DeriveWireScope};
 
@@ -57,8 +60,8 @@ struct Paged<'draft> {
 ///
 /// # Errors
 ///
-/// An internal error for a style the draft lacks, or [`PassError::NotPortedYet`] until the sort
-/// and page-header writers are ported.
+/// An internal error for a style the draft lacks, or a derived sort pattern the pattern parser
+/// refuses.
 pub(crate) fn derive_wire_paging(
     route: &DeriveWireRoute,
     scope: &mut DeriveWireScope<'_, '_, '_>,
@@ -90,7 +93,9 @@ pub(crate) fn derive_wire_paging(
         write_role(route, role, &paged, scope)?;
     }
 
-    write_page_headers(route, &paged, scope)
+    write_page_headers(route, &paged, scope)?;
+
+    Ok(())
 }
 
 fn write_role(
@@ -120,7 +125,9 @@ fn write_role(
             ..optional(&role.name, r#type, paged)
         },
         scope,
-    )
+    )?;
+
+    Ok(())
 }
 
 // The integer roles with their bounds; `None` for a text role.
@@ -179,52 +186,203 @@ pub(crate) fn integer_use(minimum: i64, maximum: Option<i64>) -> ScalarTypeUse {
 
 // No sort parameter on a list that sorts by nothing.
 fn write_sort(
-    _route: &DeriveWireRoute,
-    _role: &PagingRequestRole,
-    _paged: &Paged<'_>,
-    _scope: &mut DeriveWireScope<'_, '_, '_>,
+    route: &DeriveWireRoute,
+    role: &PagingRequestRole,
+    paged: &Paged<'_>,
+    scope: &mut DeriveWireScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("writeSort"))
+    let keys: Vec<&str> = paged
+        .paging
+        .sort_keys
+        .iter()
+        .map(|sort_key| sort_key.key.as_str())
+        .collect();
+
+    if keys.is_empty() {
+        return Ok(());
+    }
+
+    let place = if role.r#in == PagingParamPlacement::Query {
+        DeriveWireParamPlace::Query
+    } else {
+        DeriveWireParamPlace::Header
+    };
+    let list = |items: ScalarTypeUse, explode: bool| DeriveWireDerived {
+        wire: Some(QueryWire {
+            kind: QueryWireKind::List,
+            style: QueryStyle::Form,
+            explode,
+            brackets: false,
+        }),
+        ..optional(
+            &role.name,
+            TypeUse::Array(ArrayTypeUse {
+                items: Box::new(TypeUse::Scalar(items)),
+                min_items: None,
+                max_items: None,
+                nullable: None,
+                docs: None,
+                examples: None,
+            }),
+            paged,
+        )
+    };
+
+    match role.style.clone().unwrap_or(PagingParamStyle::Signed) {
+        PagingParamStyle::Signed => {
+            let derived = list(signed_sort_use(&keys)?, false);
+
+            derive_wire_add_param(route, place, derived, scope)?;
+        }
+        PagingParamStyle::Pair => {
+            let derived = list(pair_sort_use(&keys)?, true);
+
+            derive_wire_add_param(route, place, derived, scope)?;
+        }
+        PagingParamStyle::Keyed => {
+            for key in keys {
+                let name = keyed_name(&role.name, key);
+                let derived = optional(&name, TypeUse::Scalar(sort_direction_use()?), paged);
+
+                derive_wire_add_param(route, place, derived, scope)?;
+            }
+        }
+        PagingParamStyle::Split => {
+            let Some(direction) = &role.direction else {
+                return Err(InternalError::new(format!(
+                    "tree.nodes wrote a split sort role without its direction on '{}'",
+                    route.id
+                ))
+                .into());
+            };
+            let key_use = TypeUse::Scalar(one_of_use(&keys)?);
+            let direction_use = TypeUse::Scalar(sort_direction_use()?);
+
+            derive_wire_add_param(route, place, optional(&role.name, key_use, paged), scope)?;
+            derive_wire_add_param(
+                route,
+                place,
+                optional(direction, direction_use, paged),
+                scope,
+            )?;
+        }
+        // An open enum no pass must act on: a style this compiler does not know gets no parameter.
+        PagingParamStyle::Unknown(_) => {}
+    }
+
+    Ok(())
+}
+
+// A name template with the key at its first placeholder only, as `String.replace` does.
+fn keyed_name(template: &str, key: &str) -> String {
+    template.replacen(KEY_PLACEHOLDER, key, 1)
 }
 
 // The sort values a style accepts, each a string of exactly the declared keys (ADR 0003 section 9
 // pattern): a signed item is a key or its descending form, a pair item a key and a direction, a
 // split key one key.
-fn signed_sort_use(_keys: &[&str]) -> Result<ScalarTypeUse, PassError> {
-    Err(not_ported_yet("signedSortUse"))
+fn signed_sort_use(keys: &[&str]) -> Result<ScalarTypeUse, PassError> {
+    let values: Vec<String> = keys
+        .iter()
+        .flat_map(|key| [(*key).to_owned(), format!("{DESCENDING_PREFIX}{key}")])
+        .collect();
+
+    one_of_use(&values)
 }
 
-fn pair_sort_use(_keys: &[&str]) -> Result<ScalarTypeUse, PassError> {
-    Err(not_ported_yet("pairSortUse"))
+fn pair_sort_use(keys: &[&str]) -> Result<ScalarTypeUse, PassError> {
+    pattern_use(&format!(
+        "^{}{PAIR_SEPARATOR}{}$",
+        alternation(keys),
+        alternation(&SORT_DIRECTIONS)
+    ))
 }
 
 fn sort_direction_use() -> Result<ScalarTypeUse, PassError> {
     one_of_use(&SORT_DIRECTIONS)
 }
 
-fn one_of_use(values: &[&str]) -> Result<ScalarTypeUse, PassError> {
+fn one_of_use<Value: AsRef<str>>(values: &[Value]) -> Result<ScalarTypeUse, PassError> {
     pattern_use(&format!("^{}$", alternation(values)))
 }
 
-fn alternation(values: &[&str]) -> String {
+fn alternation<Value: AsRef<str>>(values: &[Value]) -> String {
     let escaped: Vec<String> = values
         .iter()
-        .map(|value| tree_schemas_escape_pattern_literal(value))
+        .map(|value| tree_schemas_escape_pattern_literal(value.as_ref()))
         .collect();
 
     format!("(?:{})", escaped.join("|"))
 }
 
-fn pattern_use(_source: &str) -> Result<ScalarTypeUse, PassError> {
-    Err(not_ported_yet("patternUse"))
+fn pattern_use(source: &str) -> Result<ScalarTypeUse, PassError> {
+    let normalized = match tree_schemas_normalize_pattern(source)? {
+        TreeSchemasPatternResult::Normalized { normalized } => normalized,
+        TreeSchemasPatternResult::Refused { message, .. } => {
+            return Err(InternalError::new(format!(
+                "the derived sort pattern '{source}' is refused: {message}"
+            ))
+            .into());
+        }
+    };
+
+    Ok(derive_wire_scalar_use(
+        ScalarType::String,
+        None,
+        Refinements {
+            pattern: Some(Pattern {
+                source: source.to_owned(),
+                normalized,
+            }),
+            ..derive_wire_no_refinements()
+        },
+    ))
 }
 
 fn write_page_headers(
-    _route: &DeriveWireRoute,
-    _paged: &Paged<'_>,
-    _scope: &mut DeriveWireScope<'_, '_, '_>,
-) -> Result<(), PassError> {
-    Err(not_ported_yet("writePageHeaders"))
+    route: &DeriveWireRoute,
+    paged: &Paged<'_>,
+    scope: &mut DeriveWireScope<'_, '_, '_>,
+) -> Result<(), InternalError> {
+    let style_response = &paged.style.response;
+    let mut names: Vec<&str> = style_response
+        .headers
+        .iter()
+        .map(|header| header.name.as_str())
+        .collect();
+
+    if !style_response.links.is_empty() {
+        names.push(DERIVE_WIRE_LINK);
+    }
+
+    if names.is_empty() {
+        return Ok(());
+    }
+
+    let page_positions: Vec<usize> = scope
+        .responses_of(route.operation)?
+        .iter()
+        .enumerate()
+        .filter(|(_, response)| response.shape == ResponseShape::Page)
+        .map(|(position, _)| position)
+        .collect();
+
+    if page_positions.is_empty() {
+        return Err(InternalError::new(format!(
+            "tree.nodes wrote no page response on the paged list '{}'",
+            route.id
+        )));
+    }
+
+    for position in page_positions {
+        for name in &names {
+            let derived = optional(name, derive_wire_string_use(), paged);
+
+            derive_wire_add_response_header(route, position, &derived, None, scope)?;
+        }
+    }
+
+    Ok(())
 }
 
 fn optional(name: &str, r#type: TypeUse, paged: &Paged<'_>) -> DeriveWireDerived {
@@ -234,5 +392,18 @@ fn optional(name: &str, r#type: TypeUse, paged: &Paged<'_>) -> DeriveWireDerived
         required: false,
         derived_from: paged.derived_from.clone(),
         wire: None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_keyed_name_takes_the_key_at_its_first_placeholder_only() {
+        assert_eq!(
+            keyed_name("order[{key}]{key}", "createdAt"),
+            "order[createdAt]{key}"
+        );
     }
 }

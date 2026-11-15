@@ -23,7 +23,8 @@ pub(crate) enum DeriveWireRule {
 }
 
 impl DeriveWireRule {
-    /// Every rule the half reports.
+    /// Every rule the half reports; the registry test compares it with `RULE_IDS`.
+    #[cfg(test)]
     pub(crate) const ALL: &'static [Self] = &[
         Self::IdempotencyConvention,
         Self::IdempotencyExemptUnused,

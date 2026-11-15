@@ -1,11 +1,6 @@
 //! The `derive.wire` half (ADR 0006 section 2), ported from
 //! `packages/core/compiler/src/passes/derive/wire`.
 
-#![allow(
-    dead_code,
-    reason = "functions reached only by stubs until the half's last brief"
-)]
-
 mod api_wire;
 mod bodies;
 mod body_limit;
@@ -17,7 +12,6 @@ mod header_tag;
 mod idempotency;
 mod identity_headers;
 mod lifecycle;
-mod not_ported;
 mod paging;
 mod params;
 mod pass;
@@ -51,8 +45,7 @@ pub const RULE_IDS: &[RuleId] = &[
 ///
 /// # Errors
 ///
-/// [`PassError::NotPortedYet`] when the run reaches a function not ported yet, else
-/// [`PassError::Internal`] for a bug.
+/// [`PassError`] when a schema service call fails, or for a bug.
 pub fn run(
     draft: &DraftIr,
     context: &mut HalfContext<'_>,

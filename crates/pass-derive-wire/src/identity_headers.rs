@@ -10,17 +10,19 @@
 
 use seampact_diagnostics::InternalError;
 use seampact_ir::{
-    HeaderDecl, HeaderSemantic, HeaderUseFor, IdentityHeaderUse, KnownAccessRef, KnownIdentityRef,
+    DerivationId, DerivedFrom, HeaderDecl, HeaderSemantic, HeaderSide, HeaderUseFor,
+    IdentityHeaderUse, KnownAccessRef, KnownIdentityRef, ResponseHeaderSemantic,
 };
-use seampact_pipeline::PassError;
 
-use crate::not_ported::not_ported_yet;
-use crate::params::DeriveWireDerived;
+use crate::params::{
+    DeriveWireDerived, DeriveWireParamPlace, derive_wire_add_param, derive_wire_add_success_header,
+    derive_wire_string_use,
+};
 use crate::routes::{DeriveWireRoute, DeriveWireScope, derive_wire_access_of};
 
-const HEADER: &str = "identity.header";
+const HEADER: DerivationId = DerivationId::from_static("identity.header");
 
-const VERSION_TOKEN: &str = "identity.versionToken";
+const VERSION_TOKEN: DerivationId = DerivationId::from_static("identity.versionToken");
 
 /// A use of a header by an identity, with the declaration it names.
 #[derive(Debug, Clone, Copy)]
@@ -40,12 +42,11 @@ pub(crate) struct DeriveWireVersionTokenFacts {
 ///
 /// # Errors
 ///
-/// An internal error for an identity or header the draft lacks, or [`PassError::NotPortedYet`]
-/// until the header writers are ported.
+/// An internal error for an identity or header the draft lacks, or a header without its name.
 pub(crate) fn derive_wire_identity_headers(
     route: &DeriveWireRoute,
     scope: &mut DeriveWireScope<'_, '_, '_>,
-) -> Result<(), PassError> {
+) -> Result<(), InternalError> {
     let (identity, authenticated) = match derive_wire_access_of(scope, route)? {
         KnownAccessRef::Public(_) => return Ok(()),
         KnownAccessRef::Identity(access) => (&access.identity, true),
@@ -56,8 +57,7 @@ pub(crate) fn derive_wire_identity_headers(
         return Err(InternalError::new(format!(
             "tree.nodes wrote no safe on operation '{}'",
             route.id
-        ))
-        .into());
+        )));
     };
     let uses = uses_of(identity.as_str(), scope)?;
 
@@ -92,30 +92,121 @@ pub(crate) fn applies(use_for: &HeaderUseFor, safe: bool) -> bool {
 
 // `authenticated` is false on optional access, where a request may come without a principal.
 fn write_header(
-    _route: &DeriveWireRoute,
-    _item: &DeriveWireUse<'_>,
-    _authenticated: bool,
-    _scope: &mut DeriveWireScope<'_, '_, '_>,
-) -> Result<(), PassError> {
-    Err(not_ported_yet("writeHeader"))
+    route: &DeriveWireRoute,
+    item: &DeriveWireUse<'_>,
+    authenticated: bool,
+    scope: &mut DeriveWireScope<'_, '_, '_>,
+) -> Result<(), InternalError> {
+    let DeriveWireUse {
+        header_use,
+        declaration,
+    } = item;
+    let (Some(name), Some(side)) = (&declaration.name, &declaration.r#in) else {
+        return Err(InternalError::new(format!(
+            "access.identity wrote header '{}' ({}) without its name or side",
+            declaration.id, declaration.semantic
+        )));
+    };
+    let derived = derived_of(name, item, authenticated && header_use.required, HEADER);
+
+    if *side == HeaderSide::Response {
+        let semantic = response_semantic_of(&declaration.semantic)?;
+
+        return derive_wire_add_success_header(route, &derived, Some(&semantic), scope);
+    }
+
+    derive_wire_add_param(route, DeriveWireParamPlace::Header, derived, scope)?;
+
+    if declaration.semantic == HeaderSemantic::Deadline {
+        scope.output_of(route.operation)?.deadline_header = Some(name.clone());
+    }
+
+    Ok(())
 }
 
 fn write_version_token(
-    _route: &DeriveWireRoute,
-    _item: &DeriveWireUse<'_>,
-    _operation: DeriveWireVersionTokenFacts,
-    _scope: &mut DeriveWireScope<'_, '_, '_>,
-) -> Result<(), PassError> {
-    Err(not_ported_yet("writeVersionToken"))
+    route: &DeriveWireRoute,
+    item: &DeriveWireUse<'_>,
+    operation: DeriveWireVersionTokenFacts,
+    scope: &mut DeriveWireScope<'_, '_, '_>,
+) -> Result<(), InternalError> {
+    let DeriveWireVersionTokenFacts {
+        safe,
+        authenticated,
+    } = operation;
+    let DeriveWireUse {
+        header_use,
+        declaration,
+    } = item;
+    let (Some(response), Some(request)) = (&declaration.response, &declaration.request) else {
+        return Err(InternalError::new(format!(
+            "access.identity wrote versionToken header '{}' without its response or request name",
+            declaration.id
+        )));
+    };
+    let semantic = response_semantic_of(&declaration.semantic)?;
+
+    derive_wire_add_success_header(
+        route,
+        &derived_of(response, item, authenticated, VERSION_TOKEN),
+        Some(&semantic),
+        scope,
+    )?;
+
+    if !safe {
+        derive_wire_add_param(
+            route,
+            DeriveWireParamPlace::Header,
+            derived_of(
+                request,
+                item,
+                authenticated && header_use.required,
+                VERSION_TOKEN,
+            ),
+            scope,
+        )?;
+    }
+
+    Ok(())
+}
+
+// The response header semantics are the header declarations' and more: a declaration's own is one
+// of them.
+fn response_semantic_of(
+    semantic: &HeaderSemantic,
+) -> Result<ResponseHeaderSemantic, InternalError> {
+    ResponseHeaderSemantic::known(semantic.as_str()).ok_or_else(|| {
+        InternalError::new(format!(
+            "access.identity wrote a header semantic '{semantic}', which no response header carries"
+        ))
+    })
 }
 
 fn derived_of(
-    _name: &str,
-    _item: &DeriveWireUse<'_>,
-    _required: bool,
-    _derivation: &str,
-) -> Result<DeriveWireDerived, PassError> {
-    Err(not_ported_yet("derivedOf"))
+    name: &str,
+    item: &DeriveWireUse<'_>,
+    required: bool,
+    derivation: DerivationId,
+) -> DeriveWireDerived {
+    DeriveWireDerived {
+        name: name.to_owned(),
+        r#type: item
+            .header_use
+            .schema
+            .as_ref()
+            .or(item.declaration.schema.as_ref())
+            .cloned()
+            .unwrap_or_else(derive_wire_string_use),
+        required,
+        derived_from: DerivedFrom {
+            derivation,
+            from: vec![
+                item.header_use.origin.clone(),
+                item.declaration.origin.clone(),
+            ],
+        },
+        wire: None,
+    }
 }
 
 fn uses_of<'draft>(
