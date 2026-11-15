@@ -203,16 +203,16 @@ fn sort_direction_use() -> Result<ScalarTypeUse, PassError> {
 }
 
 fn one_of_use(values: &[&str]) -> Result<ScalarTypeUse, PassError> {
-    pattern_use(&format!("^{}$", alternation(values)?))
+    pattern_use(&format!("^{}$", alternation(values)))
 }
 
-fn alternation(values: &[&str]) -> Result<String, PassError> {
-    let escaped = values
+fn alternation(values: &[&str]) -> String {
+    let escaped: Vec<String> = values
         .iter()
         .map(|value| tree_schemas_escape_pattern_literal(value))
-        .collect::<Result<Vec<_>, PassError>>()?;
+        .collect();
 
-    Ok(format!("(?:{})", escaped.join("|")))
+    format!("(?:{})", escaped.join("|"))
 }
 
 fn pattern_use(_source: &str) -> Result<ScalarTypeUse, PassError> {
