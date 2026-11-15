@@ -1,10 +1,11 @@
 //! The params a right or rule use gives, checked against the params schema the target declares.
 
-use seampact_json::JsonValue;
+use seampact_diagnostics::access_rights_quoted;
+use seampact_ir::{KnownTypeUse, RefTypeUse, SchemaId};
+use seampact_json::{JsonObject, JsonValue};
 use seampact_pipeline::{PassError, TreeSchemaExampleIssue};
 
-use crate::not_ported::not_ported_yet;
-use crate::report::{AccessRightsReporter, AccessRightsRule};
+use crate::report::{AccessRightsProblem, AccessRightsReporter, AccessRightsRule};
 use crate::schema_use::AccessRightsContext;
 
 /// What declares the params.
@@ -39,14 +40,95 @@ pub(crate) struct AccessRightsCheckedParams {
 
 const LISTED_ISSUES: usize = 3;
 
+/// The params of a use, when they fit; `None` after an error.
 pub(crate) fn access_rights_check_params(
-    _context: &AccessRightsContext,
-    _reporter: &mut AccessRightsReporter,
-    _use: &AccessRightsParamsUse,
+    context: &AccessRightsContext,
+    reporter: &mut AccessRightsReporter,
+    use_of: &AccessRightsParamsUse,
 ) -> Result<Option<AccessRightsCheckedParams>, PassError> {
-    Err(not_ported_yet("accessRightsCheckParams"))
+    let kind = match use_of.kind {
+        AccessRightsParamsKind::Right => "right",
+        AccessRightsParamsKind::Rule => "rule",
+    };
+    let target = format!("{kind} '{}'", use_of.name);
+    let holder = &use_of.holder;
+
+    let Some(schema) = &use_of.schema else {
+        if use_of.params.is_none() {
+            return Ok(Some(AccessRightsCheckedParams { params: None }));
+        }
+
+        reporter.error(AccessRightsProblem {
+            rule: use_of.rule,
+            message: format!("{target} declares no params, but {holder} gives some"),
+            fix: format!("remove 'params', or declare params on the {kind}"),
+            pointer: use_of.params_pointer.clone(),
+            distinct_by: None,
+            related: Vec::new(),
+        });
+
+        return Ok(None);
+    };
+
+    let written = use_of
+        .params
+        .clone()
+        .unwrap_or_else(|| JsonValue::Object(JsonObject::new()));
+    let params_schema = KnownTypeUse::Ref(RefTypeUse {
+        schema: SchemaId::new(schema.clone()),
+        unknown_keys: None,
+        nullable: None,
+        docs: None,
+        examples: None,
+    })
+    .into();
+    let issues = context.schemas.check_example(&written, &params_schema)?;
+
+    if issues.is_empty() {
+        return Ok(Some(AccessRightsCheckedParams {
+            params: use_of.params.clone(),
+        }));
+    }
+
+    reporter.error(AccessRightsProblem {
+        rule: use_of.rule,
+        message: format!(
+            "the params of {holder} do not fit {schema}, the params of {target}: {}",
+            listed_issues(&issues)
+        ),
+        fix: format!("give params that fit {schema}"),
+        pointer: if use_of.params.is_none() {
+            use_of.use_pointer.clone()
+        } else {
+            use_of.params_pointer.clone()
+        },
+        distinct_by: None,
+        related: Vec::new(),
+    });
+
+    Ok(None)
 }
 
-pub(crate) fn listed_issues(_issues: &[TreeSchemaExampleIssue]) -> Result<String, PassError> {
-    Err(not_ported_yet("listedIssues"))
+/// A message lists the first issues, each quoted, and counts the rest.
+pub(crate) fn listed_issues(issues: &[TreeSchemaExampleIssue]) -> String {
+    let listed: Vec<String> = issues
+        .iter()
+        .take(LISTED_ISSUES)
+        .map(|issue| {
+            let pointer = if issue.pointer.is_empty() {
+                "(params)"
+            } else {
+                &issue.pointer
+            };
+
+            access_rights_quoted(&format!("{pointer}: {}", issue.message))
+        })
+        .collect();
+    let more = issues.len().saturating_sub(listed.len());
+
+    if more > 0 {
+        format!("{}; and {more} more", listed.join("; "))
+    } else {
+        listed.join("; ")
+    }
 }

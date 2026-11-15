@@ -5,6 +5,7 @@ use seampact_diagnostics::InternalError;
 use seampact_ir::IrMap;
 use seampact_ir::{
     InputProof, KnownRequirementRef, Property, Requirement, Schema, SchemaId, ValueSource,
+    ValueSourceIn,
 };
 use seampact_pipeline::{DraftOperationInput, PassError, pointer_below};
 
@@ -13,7 +14,7 @@ use crate::not_ported::not_ported_yet;
 use crate::report::{
     AccessRightsProblem, AccessRightsRelated, AccessRightsReporter, AccessRightsRule,
 };
-use crate::routes::AccessRightsRoute;
+use crate::routes::{AccessRightsAccessKind, AccessRightsRoute};
 use crate::source::access_rights_source_text;
 
 /// What one route's bucket uses need besides the catalogues.
@@ -80,7 +81,7 @@ pub(crate) fn access_rights_check_bucket_keys(
             let Some(problem) = key_problem(input, source)? else {
                 continue;
             };
-            let source_text = access_rights_source_text(source)?;
+            let source_text = access_rights_source_text(source);
 
             reporter.error(AccessRightsProblem {
                 rule: AccessRightsRule::BucketKey,
@@ -106,10 +107,28 @@ pub(crate) fn access_rights_check_bucket_keys(
 }
 
 pub(crate) fn key_problem(
-    _input: &AccessRightsBucketKeysInput<'_>,
-    _source: &ValueSource,
+    input: &AccessRightsBucketKeysInput<'_>,
+    source: &ValueSource,
 ) -> Result<Option<KeyProblem>, PassError> {
-    Err(not_ported_yet("keyProblem"))
+    if source.r#in == ValueSourceIn::Principal && input.route.access != AccessRightsAccessKind::Identity
+    {
+        let route_kind = if input.route.access == AccessRightsAccessKind::Public {
+            "a public"
+        } else {
+            "an optional-auth"
+        };
+
+        return Ok(Some(KeyProblem {
+            why: format!("{route_kind} route, where the principal may be null"),
+            fix: "count the bucket by a source every caller has (address, a body field), or require it on an identified route".to_owned(),
+        }));
+    }
+
+    let (ValueSourceIn::Body, Some(name)) = (&source.r#in, &source.name) else {
+        return Ok(None);
+    };
+
+    body_key_problem(input, name)
 }
 
 pub(crate) fn body_key_problem(

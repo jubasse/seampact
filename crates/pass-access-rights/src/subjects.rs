@@ -1,13 +1,14 @@
 //! The subject of a requirement: the value its right or rule is checked on (ADR 0002 section 9).
 
+use seampact_diagnostics::access_rights_quoted;
 use seampact_ir::{
-    IrMap, OperationScope, Property, RequirementSubject, ResourceSubject, Right, Schema, SchemaId,
+    IrMap, KnownRightSubjectRef, OperationScope, Property, RequirementSubject, ResourceSubject, Right, Schema, SchemaId,
     TypeUse, ValueSource,
 };
 use seampact_pipeline::{PassError, TreeNodeId, TreeNodes};
 
 use crate::not_ported::not_ported_yet;
-use crate::report::AccessRightsReporter;
+use crate::report::{AccessRightsProblem, AccessRightsReporter, AccessRightsRule};
 use crate::routes::AccessRightsRoute;
 use crate::schema_use::AccessRightsContext;
 
@@ -70,11 +71,38 @@ pub(crate) enum AccessRightsFieldsSetting {
 }
 
 pub(crate) fn access_rights_subject(
-    _context: &AccessRightsContext,
-    _reporter: &mut AccessRightsReporter,
-    _input: &AccessRightsSubjectInput<'_>,
+    context: &AccessRightsContext,
+    reporter: &mut AccessRightsReporter,
+    input: &AccessRightsSubjectInput<'_>,
 ) -> Result<AccessRightsSubjectResult<RequirementSubject>, PassError> {
-    Err(not_ported_yet("accessRightsSubject"))
+    match KnownRightSubjectRef::try_from(&input.right.subject)? {
+        KnownRightSubjectRef::NoSubject(_) => {
+            let Some(written) = &input.written else {
+                return Ok(AccessRightsSubjectResult::Resolved { subject: None });
+            };
+
+            reporter.error(AccessRightsProblem {
+                rule: AccessRightsRule::RequirementSubject,
+                message: format!(
+                    "right '{}' has no subject, but this requirement reads one from {}",
+                    input.right.id,
+                    access_rights_quoted(&written.text)
+                ),
+                fix: "remove 'subject', or declare a subject on the right".to_owned(),
+                pointer: written.pointer.clone(),
+                distinct_by: None,
+                related: Vec::new(),
+            });
+
+            Ok(AccessRightsSubjectResult::Refused)
+        }
+        KnownRightSubjectRef::Scope(subject) => {
+            scope_subject(reporter, input, subject.scope.as_str())
+        }
+        KnownRightSubjectRef::Resource(subject) => {
+            resource_subject(context, reporter, input, subject)
+        }
+    }
 }
 
 pub(crate) fn scope_subject(

@@ -1,10 +1,11 @@
 //! Readers of the merged raw tree for the half.
 
-use seampact_ir::{Extensions, Origin};
+use indexmap::IndexMap;
+use seampact_diagnostics::InternalError;
+use seampact_ir::{Docs, ExtensionKey, ExtensionPrefix, Extensions, IrMap, Origin};
+use seampact_js::js_key_order;
 use seampact_json::{JsonObject, JsonValue};
-use seampact_pipeline::PassError;
 
-use crate::not_ported::not_ported_yet;
 use crate::schema_use::AccessRightsContext;
 
 /// The written `summary` and `description` of a declaration.
@@ -12,6 +13,15 @@ use crate::schema_use::AccessRightsContext;
 pub(crate) struct AccessRightsDocs {
     pub(crate) summary: Option<String>,
     pub(crate) description: Option<String>,
+}
+
+impl From<AccessRightsDocs> for Docs {
+    fn from(docs: AccessRightsDocs) -> Self {
+        Self {
+            summary: docs.summary,
+            description: docs.description,
+        }
+    }
 }
 
 /// The value as a mapping; `None` for another type or an absent value.
@@ -42,11 +52,18 @@ pub(crate) fn access_rights_string<'raw>(
 }
 
 /// The strings of a list member, in written order; an empty list when absent.
-pub(crate) fn access_rights_strings(
-    _object: Option<&JsonObject>,
-    _key: &str,
-) -> Result<Vec<String>, PassError> {
-    Err(not_ported_yet("accessRightsStrings"))
+pub(crate) fn access_rights_strings(object: Option<&JsonObject>, key: &str) -> Vec<String> {
+    let Some(JsonValue::Array(items)) = access_rights_member(object, key) else {
+        return Vec::new();
+    };
+
+    items
+        .iter()
+        .filter_map(|item| match item {
+            JsonValue::String(text) => Some(text.clone()),
+            _ => None,
+        })
+        .collect()
 }
 
 /// The entries of a mapping member whose values are mappings, in written order.
@@ -66,30 +83,91 @@ pub(crate) fn access_rights_entries<'raw>(
         .collect()
 }
 
-/// The prefix and key of an `x-<prefix>-<key>` extension member name.
-fn extension_key_parts(_name: &str) -> Result<Option<(&str, &str)>, PassError> {
-    Err(not_ported_yet("EXTENSION_KEY"))
+/// The prefix and key of an `x-<prefix>-<key>` extension member name; the prefix holds no dash,
+/// so the key is everything after it.
+fn extension_key_parts(name: &str) -> Option<(&str, &str)> {
+    let rest = name.strip_prefix("x-")?;
+    let first = rest.chars().next()?;
+
+    if !first.is_ascii_lowercase() {
+        return None;
+    }
+
+    let prefix_length = rest
+        .find(|character: char| !(character.is_ascii_lowercase() || character.is_ascii_digit()))
+        .unwrap_or(rest.len());
+    let (prefix, after_prefix) = rest.split_at_checked(prefix_length)?;
+    let key = after_prefix.strip_prefix('-')?;
+    let has_line_terminator = key.contains(['\n', '\r', '\u{2028}', '\u{2029}']);
+
+    (!key.is_empty() && !has_line_terminator).then_some((prefix, key))
 }
 
-pub(crate) fn access_rights_docs(_declaration: &JsonObject) -> Result<AccessRightsDocs, PassError> {
-    Err(not_ported_yet("accessRightsDocs"))
+/// The written `summary` and `description` of a declaration.
+pub(crate) fn access_rights_docs(declaration: &JsonObject) -> AccessRightsDocs {
+    AccessRightsDocs {
+        summary: access_rights_string(Some(declaration), "summary").map(str::to_owned),
+        description: access_rights_string(Some(declaration), "description").map(str::to_owned),
+    }
 }
 
-pub(crate) fn access_rights_extensions(_declaration: &JsonObject) -> Result<Extensions, PassError> {
-    Err(not_ported_yet("accessRightsExtensions"))
+/// The extension values written on a declaration (`x-<prefix>-<key>`), copied into the IR slot
+/// `{ <prefix>: { <key>: value } }`; the keys of a slot come in JavaScript key order.
+pub(crate) fn access_rights_extensions(declaration: &JsonObject) -> Extensions {
+    let mut slots: IndexMap<&str, Vec<(String, JsonValue)>> = IndexMap::new();
+
+    for (member, value) in declaration {
+        if let Some((prefix, key)) = extension_key_parts(member) {
+            slots
+                .entry(prefix)
+                .or_default()
+                .push((key.to_owned(), value.clone()));
+        }
+    }
+
+    let mut extensions = Extensions::new();
+
+    for (prefix, keys) in slots {
+        let mut slot = IrMap::new();
+
+        for (key, value) in js_key_order(keys) {
+            slot.insert(ExtensionKey::new(key), value);
+        }
+
+        extensions.insert(ExtensionPrefix::new(prefix.to_owned()), slot);
+    }
+
+    extensions
 }
 
+/// The origin of a node of the merged raw tree the half read.
+///
+/// # Errors
+///
+/// An internal error for a pointer with no origin.
 pub(crate) fn access_rights_origin_of(
-    _context: &AccessRightsContext,
-    _pointer: &str,
-) -> Result<Origin, PassError> {
-    Err(not_ported_yet("accessRightsOriginOf"))
+    context: &AccessRightsContext,
+    pointer: &str,
+) -> Result<Origin, InternalError> {
+    context.context.origin(pointer).ok_or_else(|| {
+        InternalError::new(format!(
+            "access.rights read {pointer}, which has no origin in the merged raw tree"
+        ))
+    })
 }
 
-pub(crate) fn access_rights_schema_name(
-    _value: Option<&JsonValue>,
-) -> Result<Option<String>, PassError> {
-    Err(not_ported_yet("accessRightsSchemaName"))
+/// The schema name a written schema position holds (`TaskId`, or `{ $ref: TaskId }`), `None` for
+/// an inline schema. Two id positions naming different schemas are different ids, even when both
+/// compile to one type use.
+pub(crate) fn access_rights_schema_name(value: Option<&JsonValue>) -> Option<String> {
+    if let Some(JsonValue::String(name)) = value {
+        return Some(name.clone());
+    }
+
+    let object = access_rights_object(value)?;
+    let reference = access_rights_string(Some(object), "$ref")?;
+
+    (object.len() == 1).then(|| reference.to_owned())
 }
 
 #[cfg(test)]

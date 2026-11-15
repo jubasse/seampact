@@ -5,7 +5,7 @@ use indexmap::{IndexMap, IndexSet};
 use seampact_diagnostics::InternalError;
 use seampact_ir::{
     DerivationId, DerivedFrom, FieldWire, Identity, IdentityId, InputMediaType, InputProof, IrMap,
-    KnownIdentityRef, KnownRequirementRef, Origin, Param, ProofPlacement, Requirement, RuleProof,
+    KnownIdentityRef, KnownRequirementRef, KnownSchemeRef, Origin, Param, ProofPlacement, Requirement, RuleProof,
     Scheme, SchemeId, SignedIdentity, UnknownKeys,
 };
 use seampact_pipeline::{DraftOperationInput, PassError, pointer_below};
@@ -100,7 +100,7 @@ pub(crate) fn access_rights_proofs(
     }
 
     for header_use in &header_uses {
-        headers.push(header_param_of(header_use)?);
+        headers.push(header_param_of(header_use));
     }
 
     let body_uses = shared_by_name(reporter, &input.route, &uses, &ProofPlacement::Body)?;
@@ -154,7 +154,7 @@ pub(crate) fn access_rights_proofs(
     let mut proofs = Vec::with_capacity(body_uses.len());
 
     for body_use in &body_uses {
-        let mut proof = input_proof_of(body_use)?;
+        let mut proof = input_proof_of(body_use);
 
         if field_media {
             proof.wire = Some(proof_wire(context, body_use)?);
@@ -218,12 +218,34 @@ pub(crate) fn proof_uses(
     Ok(uses)
 }
 
-pub(crate) fn requirement_origins(_requirement: &Requirement) -> Result<Vec<Origin>, PassError> {
-    Err(not_ported_yet("requirementOrigins"))
+/// The origins of a requirement: a written one has its origin, a pack-derived one the origins of
+/// its derivation, the pack entry first.
+///
+/// # Errors
+///
+/// An internal error for a requirement of a kind this revision does not know.
+pub(crate) fn requirement_origins(requirement: &Requirement) -> Result<Vec<Origin>, InternalError> {
+    let (origin, derived_from) = match KnownRequirementRef::try_from(requirement)? {
+        KnownRequirementRef::Right(right) => (&right.origin, &right.derived_from),
+        KnownRequirementRef::Rule(rule) => (&rule.origin, &rule.derived_from),
+    };
+
+    if let Some(origin) = origin {
+        return Ok(vec![origin.clone()]);
+    }
+
+    Ok(derived_from
+        .as_ref()
+        .map(|derived_from| derived_from.from.clone())
+        .unwrap_or_default())
 }
 
-pub(crate) fn name_key(_placement: &ProofPlacement, _name: &str) -> Result<String, PassError> {
-    Err(not_ported_yet("nameKey"))
+/// Header names are case-insensitive (RFC 9110 section 5.1); a body name is a JSON member name.
+pub(crate) fn name_key(placement: &ProofPlacement, name: &str) -> String {
+    match placement {
+        ProofPlacement::Header => name.to_lowercase(),
+        ProofPlacement::Body | ProofPlacement::Unknown(_) => name.to_owned(),
+    }
 }
 
 /// The uses of one placement merged by name, in requirement order: a later use with the first
@@ -246,7 +268,7 @@ pub(crate) fn shared_by_name(
             continue;
         }
 
-        let key = name_key(placement, &use_of.proof.name)?;
+        let key = name_key(placement, &use_of.proof.name);
         let Some(first) = by_name.get_mut(&key) else {
             by_name.insert(key, use_of.clone());
 
@@ -336,18 +358,68 @@ pub(crate) fn identity_scheme_ids(
     })
 }
 
+/// The headers a scheme makes a route read. `access.identity` resolves every scheme an identity
+/// names, so an unknown id is already its error.
+///
+/// # Errors
+///
+/// An internal error for a scheme of a kind this revision does not know.
 pub(crate) fn scheme_headers(
-    _schemes: &IrMap<SchemeId, Scheme>,
-    _id: &str,
-) -> Result<Vec<RouteHeader>, PassError> {
-    Err(not_ported_yet("schemeHeaders"))
+    schemes: &IrMap<SchemeId, Scheme>,
+    id: &str,
+) -> Result<Vec<RouteHeader>, InternalError> {
+    let Some(scheme) = schemes.get(id) else {
+        return Ok(Vec::new());
+    };
+    let credential = |name: &str, origin: &Origin| {
+        vec![RouteHeader {
+            name: name.to_owned(),
+            role: format!("the credential header of scheme '{id}'"),
+            pointer: origin.pointer.clone(),
+        }]
+    };
+
+    Ok(match KnownSchemeRef::try_from(scheme)? {
+        KnownSchemeRef::Bearer(scheme) => credential(AUTHORIZATION_HEADER, &scheme.origin),
+        KnownSchemeRef::Basic(scheme) => credential(AUTHORIZATION_HEADER, &scheme.origin),
+        KnownSchemeRef::Header(scheme) => credential(&scheme.name, &scheme.origin),
+        KnownSchemeRef::Signature(scheme) => scheme
+            .name
+            .as_ref()
+            .map_or_else(Vec::new, |name| credential(name, &scheme.origin)),
+        KnownSchemeRef::Cookie(scheme) => match &scheme.csrf {
+            Some(csrf) => csrf_headers(schemes, csrf.as_str())?,
+            None => Vec::new(),
+        },
+        KnownSchemeRef::Query(_) => Vec::new(),
+    })
 }
 
+/// The CSRF header of a cookie scheme, when its `csrf` names a header scheme.
+///
+/// # Errors
+///
+/// An internal error for a scheme of a kind this revision does not know.
 pub(crate) fn csrf_headers(
-    _schemes: &IrMap<SchemeId, Scheme>,
-    _id: &str,
-) -> Result<Vec<RouteHeader>, PassError> {
-    Err(not_ported_yet("csrfHeaders"))
+    schemes: &IrMap<SchemeId, Scheme>,
+    id: &str,
+) -> Result<Vec<RouteHeader>, InternalError> {
+    let Some(scheme) = schemes.get(id) else {
+        return Ok(Vec::new());
+    };
+
+    Ok(match KnownSchemeRef::try_from(scheme)? {
+        KnownSchemeRef::Header(scheme) => vec![RouteHeader {
+            name: scheme.name.clone(),
+            role: format!("the CSRF header of scheme '{id}'"),
+            pointer: scheme.origin.pointer.clone(),
+        }],
+        KnownSchemeRef::Bearer(_)
+        | KnownSchemeRef::Basic(_)
+        | KnownSchemeRef::Signature(_)
+        | KnownSchemeRef::Cookie(_)
+        | KnownSchemeRef::Query(_) => Vec::new(),
+    })
 }
 
 pub(crate) fn takes_route_header(
@@ -368,16 +440,32 @@ pub(crate) fn report_schema_clash(
     Err(not_ported_yet("reportSchemaClash"))
 }
 
-pub(crate) fn derived_from_of(_use: &ProofUse) -> Result<DerivedFrom, PassError> {
-    Err(not_ported_yet("derivedFromOf"))
+pub(crate) fn derived_from_of(use_of: &ProofUse) -> DerivedFrom {
+    DerivedFrom {
+        derivation: PROOF_DERIVATION,
+        from: use_of.from.clone(),
+    }
 }
 
-pub(crate) fn header_param_of(_use: &ProofUse) -> Result<Param, PassError> {
-    Err(not_ported_yet("headerParamOf"))
+pub(crate) fn header_param_of(use_of: &ProofUse) -> Param {
+    Param {
+        name: use_of.proof.name.clone(),
+        r#type: use_of.proof.schema.clone(),
+        required: true,
+        wire: None,
+        default: None,
+        origin: None,
+        derived_from: Some(derived_from_of(use_of)),
+    }
 }
 
-pub(crate) fn input_proof_of(_use: &ProofUse) -> Result<InputProof, PassError> {
-    Err(not_ported_yet("inputProofOf"))
+pub(crate) fn input_proof_of(use_of: &ProofUse) -> InputProof {
+    InputProof {
+        name: use_of.proof.name.clone(),
+        schema: use_of.proof.schema.clone(),
+        wire: None,
+        derived_from: derived_from_of(use_of),
+    }
 }
 
 pub(crate) fn proof_wire(

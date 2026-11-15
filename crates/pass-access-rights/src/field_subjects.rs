@@ -1,5 +1,6 @@
 //! The subject of a field right: the id of the resource it checks, or its scope.
 
+use seampact_diagnostics::access_rights_quoted;
 use seampact_ir::{FieldRightSubject, OperationScope, ResourceSubject, Right};
 use seampact_pipeline::PassError;
 
@@ -27,10 +28,9 @@ pub(crate) struct FieldScopeUse<'draft, 'route> {
     pub(crate) pointer: String,
 }
 
-pub(crate) fn access_rights_field_text(
-    _field: &AccessRightsRestrictedField<'_>,
-) -> Result<String, PassError> {
-    Err(not_ported_yet("accessRightsFieldText"))
+/// The field as a message names it: the body's schema and the pointer.
+pub(crate) fn access_rights_field_text(field: &AccessRightsRestrictedField<'_>) -> String {
+    access_rights_quoted(&format!("{}{}", field.schema, field.pointer))
 }
 
 pub(crate) fn restricted_here(

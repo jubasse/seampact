@@ -63,10 +63,8 @@ pub(crate) struct AccessRightsRefusedPosition {
     pub(crate) pointer: Option<String>,
 }
 
-pub(crate) fn access_rights_field_walk_exceeded(
-    _walk: &AccessRightsFieldWalk<'_, '_>,
-) -> Result<bool, PassError> {
-    Err(not_ported_yet("accessRightsFieldWalkExceeded"))
+pub(crate) const fn access_rights_field_walk_exceeded(walk: &AccessRightsFieldWalk<'_, '_>) -> bool {
+    walk.reached > FIELD_RIGHTS_PER_OPERATION_LIMIT
 }
 
 /// The schemas from which a restricted field can be reached, through any reference or JSON
@@ -149,20 +147,53 @@ pub(crate) fn use_references(type_use: &TypeUse) -> Result<Vec<String>, Internal
     }
 }
 
+/// The schema of an id; `tree.schemas` wrote every schema a use names.
+///
+/// # Errors
+///
+/// An internal error for an id no schema has.
 pub(crate) fn schema_of<'draft>(
-    _schemas: &'draft AccessRightsDraftSchemas,
-    _id: &str,
-) -> Result<&'draft Schema, PassError> {
-    Err(not_ported_yet("schemaOf"))
+    schemas: &'draft AccessRightsDraftSchemas,
+    id: &str,
+) -> Result<&'draft Schema, InternalError> {
+    schemas.get(id).ok_or_else(|| {
+        InternalError::new(format!(
+            "a type use references schema '{id}', which tree.schemas did not write"
+        ))
+    })
 }
 
-/// Calls `found` for each restricted field the use reaches.
+/// Calls `found` for each restricted field the use reaches. A body that is not a reference (an
+/// array of them) is walked from each schema it reaches, its pointers relative to that schema,
+/// since an entry names a schema.
 pub(crate) fn access_rights_restricted_fields<'draft>(
-    _walk: &mut AccessRightsFieldWalk<'draft, '_>,
-    _use: &TypeUse,
-    _found: &mut dyn FnMut(AccessRightsRestrictedField<'draft>),
+    walk: &mut AccessRightsFieldWalk<'draft, '_>,
+    type_use: &TypeUse,
+    found: &mut dyn FnMut(AccessRightsRestrictedField<'draft>),
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("accessRightsRestrictedFields"))
+    let reference = match KnownTypeUseRef::try_from(type_use)? {
+        KnownTypeUseRef::Array(array) => {
+            return access_rights_restricted_fields(walk, &array.items, found);
+        }
+        KnownTypeUseRef::Ref(reference) => reference,
+        KnownTypeUseRef::Scalar(_)
+        | KnownTypeUseRef::Enum(_)
+        | KnownTypeUseRef::File(_)
+        | KnownTypeUseRef::Opaque(_) => return Ok(()),
+    };
+    let id = reference.schema.as_str();
+
+    if !walk.checks.reaching.contains(id) {
+        return Ok(());
+    }
+
+    let at = WalkAt {
+        root: id.to_owned(),
+        prefix: String::new(),
+        path: vec![id.to_owned()],
+    };
+
+    walk_schema(walk, &at, found, id)
 }
 
 pub(crate) fn walk_schema<'draft>(
@@ -192,12 +223,39 @@ pub(crate) fn walk_reference<'draft>(
     Err(not_ported_yet("walkReference"))
 }
 
+/// Refuses every restricted field the use reaches, each at its written restriction, once per
+/// schema.
 pub(crate) fn access_rights_refuse_restrictions_below(
-    _walk: &mut AccessRightsPositionWalk<'_, '_>,
-    _use: &TypeUse,
-    _position: &AccessRightsRefusedPosition,
+    walk: &mut AccessRightsPositionWalk<'_, '_>,
+    type_use: &TypeUse,
+    position: &AccessRightsRefusedPosition,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("accessRightsRefuseRestrictionsBelow"))
+    let mut seen: HashSet<String> = HashSet::new();
+    let mut pending = use_references(type_use)?;
+
+    while let Some(id) = pending.pop() {
+        if seen.contains(&id) || !walk.checks.reaching.contains(&id) {
+            continue;
+        }
+
+        seen.insert(id.clone());
+
+        let schema = schema_of(walk.schemas, &id)?;
+
+        pending.extend(schema_references(schema)?);
+
+        let KnownSchemaRef::Object(object) = KnownSchemaRef::try_from(schema)? else {
+            continue;
+        };
+
+        for property in &object.properties {
+            if let Some(restriction) = &property.restricted_to {
+                refuse_position(walk.reporter, &id, property, restriction, position)?;
+            }
+        }
+    }
+
+    Ok(())
 }
 
 pub(crate) fn refuse_position(
