@@ -4,11 +4,13 @@
 //! `Content-Disposition`. `redirect.location`: a 301, 302, 303, 307 or 308 answers the required
 //! `Location`, a `uri-reference`.
 
-use seampact_ir::{DerivationId, Origin, Response, ScalarType, TypeUse};
-use seampact_pipeline::PassError;
+use seampact_diagnostics::InternalError;
+use seampact_ir::{DerivationId, DerivedFrom, Origin, Response, ScalarType, TypeUse};
 
-use crate::not_ported::not_ported_yet;
-use crate::params::{derive_wire_no_refinements, derive_wire_scalar_use};
+use crate::params::{
+    DeriveWireDerived, derive_wire_add_response_header, derive_wire_no_refinements,
+    derive_wire_scalar_use, derive_wire_string_use,
+};
 use crate::routes::{DeriveWireRoute, DeriveWireScope};
 
 const DOWNLOAD: DerivationId = DerivationId::from_static("response.download");
@@ -38,11 +40,11 @@ struct BodyHeader {
 ///
 /// # Errors
 ///
-/// [`PassError::NotPortedYet`] until the header writers are ported.
+/// An internal error for an operation without an origin.
 pub(crate) fn derive_wire_body_headers(
     route: &DeriveWireRoute,
     scope: &mut DeriveWireScope<'_, '_, '_>,
-) -> Result<(), PassError> {
+) -> Result<(), InternalError> {
     let responses = scope.responses_of(route.operation)?;
 
     for (position, response) in responses.iter().enumerate() {
@@ -101,19 +103,42 @@ pub(crate) fn derive_wire_body_headers(
 }
 
 fn add(
-    _route: &DeriveWireRoute,
-    _response: usize,
-    _header: &BodyHeader,
-    _scope: &mut DeriveWireScope<'_, '_, '_>,
-) -> Result<(), PassError> {
-    Err(not_ported_yet("add"))
+    route: &DeriveWireRoute,
+    response: usize,
+    header: &BodyHeader,
+    scope: &mut DeriveWireScope<'_, '_, '_>,
+) -> Result<(), InternalError> {
+    let derived = DeriveWireDerived {
+        name: header.name.to_owned(),
+        r#type: header.r#type.clone().unwrap_or_else(derive_wire_string_use),
+        required: header.required,
+        derived_from: DerivedFrom {
+            derivation: header.derivation.clone(),
+            from: vec![header.from.clone()],
+        },
+        wire: None,
+    };
+
+    derive_wire_add_response_header(route, response, &derived, None, scope)
 }
 
 // The response as written, else the route that declares it as its output.
 fn origin_of(
-    _route: &DeriveWireRoute,
-    _response: &Response,
-    _scope: &DeriveWireScope<'_, '_, '_>,
-) -> Result<Origin, PassError> {
-    Err(not_ported_yet("originOf"))
+    route: &DeriveWireRoute,
+    response: &Response,
+    scope: &DeriveWireScope<'_, '_, '_>,
+) -> Result<Origin, InternalError> {
+    let operation = scope.operation_of(route.operation)?;
+
+    response
+        .origin
+        .as_ref()
+        .or(operation.origin.as_ref())
+        .cloned()
+        .ok_or_else(|| {
+            InternalError::new(format!(
+                "tree.nodes wrote no origin on operation '{}'",
+                route.id
+            ))
+        })
 }

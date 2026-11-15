@@ -10,7 +10,6 @@
 
 use seampact_diagnostics::InternalError;
 use seampact_ir::{Csrf, DerivationId, DerivedFrom, KnownAccessRef, KnownSchemeRef, Origin};
-use seampact_pipeline::PassError;
 
 use crate::params::{
     DeriveWireDerived, DeriveWireParamPlace, derive_wire_add_param, derive_wire_string_use,
@@ -39,11 +38,11 @@ pub(crate) struct DeriveWireCredentialPlace {
 ///
 /// # Errors
 ///
-/// An internal error for a scheme the draft lacks, or [`PassError::NotPortedYet`] on a name clash.
+/// An internal error for a scheme the draft lacks.
 pub(crate) fn derive_wire_credentials(
     route: &DeriveWireRoute,
     scope: &mut DeriveWireScope<'_, '_, '_>,
-) -> Result<(), PassError> {
+) -> Result<(), InternalError> {
     let (access_kind, scheme_ids, access_origin) = match derive_wire_access_of(scope, route)? {
         KnownAccessRef::Public(_) => return Ok(()),
         KnownAccessRef::Identity(access) => (
@@ -104,7 +103,7 @@ fn write_csrf_param(
     access_kind: DeriveWireCredentialAccess,
     schemes: &[KnownSchemeRef<'_>],
     scope: &mut DeriveWireScope<'_, '_, '_>,
-) -> Result<(), PassError> {
+) -> Result<(), InternalError> {
     let Some(Csrf::Derived(csrf)) = &scope.operation_of(route.operation)?.csrf else {
         return Ok(());
     };

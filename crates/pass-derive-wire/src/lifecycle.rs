@@ -9,9 +9,9 @@ use seampact_diagnostics::InternalError;
 use seampact_ir::{
     DerivationId, DerivedFrom, MaturitySource, OperationMaturity, ResponseHeaderSemantic,
 };
-use seampact_pipeline::{ConventionReading, PassError};
+use seampact_json::JsonValue;
+use seampact_pipeline::ConventionReading;
 
-use crate::not_ported::not_ported_yet;
 use crate::params::{
     DERIVE_WIRE_LINK, DeriveWireDerived, derive_wire_add_success_header, derive_wire_string_use,
 };
@@ -29,12 +29,11 @@ struct DeprecationHeader<'run> {
 ///
 /// # Errors
 ///
-/// An internal error from a convention reading, or [`PassError::NotPortedYet`] until the header
-/// writers are ported.
+/// An internal error from a convention reading or a header name with no text.
 pub(crate) fn derive_wire_deprecation(
     route: &DeriveWireRoute,
     scope: &mut DeriveWireScope<'_, '_, '_>,
-) -> Result<(), PassError> {
+) -> Result<(), InternalError> {
     let Some(deprecated) = &scope.operation_of(route.operation)?.deprecated else {
         return Ok(());
     };
@@ -149,6 +148,11 @@ pub(crate) fn derive_wire_maturity(
     Ok(())
 }
 
-fn text_of(_reading: Option<&ConventionReading<'_>>) -> Result<String, PassError> {
-    Err(not_ported_yet("textOf"))
+fn text_of(reading: Option<&ConventionReading<'_>>) -> Result<String, InternalError> {
+    match reading.map(|reading| reading.value) {
+        Some(JsonValue::String(text)) => Ok(text.clone()),
+        _ => Err(InternalError::new(
+            "a conventions.deprecation header name has no text, which its default gives".to_owned(),
+        )),
+    }
 }

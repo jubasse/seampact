@@ -10,17 +10,22 @@ use std::collections::HashSet;
 
 use seampact_diagnostics::{InternalError, quote_text};
 use seampact_ir::{
-    ExemptIdempotency, IdempotencyEnforcement, Identity, KnownAccessRef, KnownIdempotency, Origin,
-    Reason,
+    DerivationId, DerivedFrom, DerivedIdempotency, ExemptIdempotency, IdempotencyEnforcement,
+    Identity, KnownAccessRef, KnownIdempotency, Origin, Reason, ScalarType, TypeUse,
 };
 use seampact_json::{JsonValue, stringify_json};
-use seampact_pipeline::{ConventionReading, NearestSetting, PassError, parse_duration};
+use seampact_pipeline::{ConventionReading, NearestSetting, parse_duration};
 
-use crate::not_ported::not_ported_yet;
+use crate::params::{
+    DeriveWireDerived, DeriveWireParamPlace, derive_wire_add_param, derive_wire_add_success_header,
+    derive_wire_no_refinements, derive_wire_scalar_use, derive_wire_string_use,
+};
 use crate::report::{DeriveWireProblem, DeriveWireRule};
 use crate::routes::{
     DeriveWireRoute, DeriveWireScope, derive_wire_access_of, derive_wire_origin_at,
 };
+
+const IDEMPOTENCY: DerivationId = DerivationId::from_static("idempotency.write");
 
 /// The idempotency convention, read once per api.
 #[derive(Debug, Clone, PartialEq)]
@@ -60,11 +65,10 @@ struct WrittenExemption {
 ///
 /// # Errors
 ///
-/// An internal error for a member the authoring schema refuses, or [`PassError::NotPortedYet`]
-/// when the convention is incomplete.
+/// An internal error for a member the authoring schema refuses.
 pub(crate) fn derive_wire_idempotency_convention(
     scope: &mut DeriveWireScope<'_, '_, '_>,
-) -> Result<DeriveWireIdempotencyReading, PassError> {
+) -> Result<DeriveWireIdempotencyReading, InternalError> {
     let conventions = scope.context.conventions;
     // `methods` defaults only within a written `idempotency`, so its reading tells whether the
     // convention is set.
@@ -122,14 +126,13 @@ pub(crate) fn derive_wire_idempotency_convention(
 ///
 /// # Errors
 ///
-/// An internal error for an exemption that is no mapping, or [`PassError::NotPortedYet`] until
-/// the key writer is ported.
+/// An internal error for an exemption that is no mapping.
 pub(crate) fn derive_wire_idempotency(
     route: &DeriveWireRoute,
     reading: &DeriveWireIdempotencyReading,
     exemptions: &mut DeriveWireExemptions,
     scope: &mut DeriveWireScope<'_, '_, '_>,
-) -> Result<(), PassError> {
+) -> Result<(), InternalError> {
     let inherited = scope.context.inherited;
     let exemption = inherited.nearest(route.node, &NearestSetting::Idempotency)?;
     let DeriveWireIdempotencyReading::Set(convention) = reading else {
@@ -152,8 +155,7 @@ pub(crate) fn derive_wire_idempotency(
             return Err(InternalError::new(format!(
                 "the idempotency setting at {} is no exemption",
                 entry.origin.pointer
-            ))
-            .into());
+            )));
         };
 
         exemptions
@@ -174,11 +176,64 @@ pub(crate) fn derive_wire_idempotency(
 }
 
 fn write_key(
-    _route: &DeriveWireRoute,
-    _convention: &DeriveWireIdempotencyConvention,
-    _scope: &mut DeriveWireScope<'_, '_, '_>,
-) -> Result<(), PassError> {
-    Err(not_ported_yet("writeKey"))
+    route: &DeriveWireRoute,
+    convention: &DeriveWireIdempotencyConvention,
+    scope: &mut DeriveWireScope<'_, '_, '_>,
+) -> Result<(), InternalError> {
+    let derived_from = DerivedFrom {
+        derivation: IDEMPOTENCY,
+        from: vec![convention.origin.clone()],
+    };
+
+    scope.output_of(route.operation)?.idempotency = Some(
+        KnownIdempotency::Derived(DerivedIdempotency {
+            header: convention.header.clone(),
+            replay_header: convention.replay_header.clone(),
+            lifetime_ms: convention.lifetime_ms,
+            required: convention.required,
+            enforce: convention.enforce.clone(),
+            derived_from: derived_from.clone(),
+        })
+        .into(),
+    );
+
+    derive_wire_add_param(
+        route,
+        DeriveWireParamPlace::Header,
+        DeriveWireDerived {
+            name: convention.header.clone(),
+            r#type: derive_wire_string_use(),
+            required: convention.required,
+            derived_from: derived_from.clone(),
+            wire: None,
+        },
+        scope,
+    )?;
+
+    if convention.enforce == IdempotencyEnforcement::Boundary {
+        derive_wire_add_success_header(
+            route,
+            &DeriveWireDerived {
+                name: convention.replay_header.clone(),
+                r#type: boolean_use(),
+                required: false,
+                derived_from,
+                wire: None,
+            },
+            None,
+            scope,
+        )?;
+    }
+
+    Ok(())
+}
+
+fn boolean_use() -> TypeUse {
+    TypeUse::Scalar(derive_wire_scalar_use(
+        ScalarType::Boolean,
+        None,
+        derive_wire_no_refinements(),
+    ))
 }
 
 /// Reports each written exemption no operation the key reaches inherits. Under a refused
@@ -340,11 +395,34 @@ fn convention_origin(scope: &DeriveWireScope<'_, '_, '_>) -> Result<Origin, Inte
 }
 
 fn report_incomplete(
-    _header: Option<&str>,
-    _replay_header: Option<&str>,
-    _lifetime: Option<&str>,
-    _origin: &Origin,
-    _scope: &mut DeriveWireScope<'_, '_, '_>,
-) -> Result<(), PassError> {
-    Err(not_ported_yet("reportIncomplete"))
+    header: Option<&str>,
+    replay_header: Option<&str>,
+    lifetime: Option<&str>,
+    origin: &Origin,
+    scope: &mut DeriveWireScope<'_, '_, '_>,
+) -> Result<(), InternalError> {
+    let missing: Vec<&str> = [
+        ("header", header),
+        ("replayHeader", replay_header),
+        ("lifetime", lifetime),
+    ]
+    .into_iter()
+    .filter(|(_, text)| text.is_none())
+    .map(|(key, _)| key)
+    .collect();
+    let what = if missing.is_empty() {
+        "has a lifetime longer than any duration the compiler can hold".to_owned()
+    } else {
+        format!("sets no {}", missing.join(", "))
+    };
+
+    scope.reporter().error(DeriveWireProblem {
+        rule: DeriveWireRule::IdempotencyConvention,
+        message: format!(
+            "conventions.idempotency {what}, so no idempotency key can be derived"
+        ),
+        fix: "Write header, replayHeader and lifetime in conventions.idempotency (Idempotency-Key, Idempotency-Replayed, 24h), or remove it.".to_owned(),
+        pointer: origin.pointer.clone(),
+        related: Vec::new(),
+    })
 }

@@ -7,17 +7,19 @@
 //! operation derived, with that operation's `from`.
 
 use seampact_diagnostics::InternalError;
-use seampact_ir::{DerivationId, DerivedFrom, QueryWire, ResponseShape, TypeUse, ValueSourceIn};
+use seampact_ir::{
+    DerivationId, DerivedFrom, Direction, KnownSchemaRef, QueryWire, ResponseShape, TypeUse,
+    ValueSourceIn,
+};
 use seampact_json::JsonValue;
 use seampact_pass_tree_shared::tree_nodes_op_owner;
 use seampact_pipeline::{PassError, TreeNode, TreeNodeKind};
 
-use crate::not_ported::not_ported_yet;
 use crate::params::{
     DeriveWireDerived, DeriveWireParamPlace, derive_wire_add_param,
     derive_wire_add_response_header, derive_wire_string_use, derive_wire_success_responses,
 };
-use crate::relayed::{DeriveWireRelayed, derive_wire_relayed_of};
+use crate::relayed::{DeriveWireRelayed, derive_wire_relayed_derived_from, derive_wire_relayed_of};
 use crate::routes::{DeriveWireRoute, DeriveWireScope, derive_wire_origin_at};
 
 const CONCURRENCY: DerivationId = DerivationId::from_static("concurrency.version");
@@ -40,13 +42,15 @@ pub(crate) struct DeriveWireVersionParam {
 /// # Errors
 ///
 /// An internal error for a concurrency without a resource or a name, or
-/// [`PassError::NotPortedYet`] until the relayed and version writers are ported.
+/// [`PassError`] from the schema service.
 pub(crate) fn derive_wire_concurrency(
     route: &DeriveWireRoute,
     scope: &mut DeriveWireScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
     if let Some(relayed) = derive_wire_relayed_of(route, scope)? {
-        return derive_relayed_concurrency(route, &relayed, scope);
+        derive_relayed_concurrency(route, &relayed, scope)?;
+
+        return Ok(());
     }
 
     let operation = scope.operation_of(route.operation)?;
@@ -98,7 +102,7 @@ pub(crate) fn derive_wire_concurrency(
     };
 
     if place == DeriveWireParamPlace::Header && name.to_lowercase() == IF_MATCH {
-        return derive_wire_add_param(
+        derive_wire_add_param(
             route,
             place,
             DeriveWireDerived {
@@ -109,7 +113,9 @@ pub(crate) fn derive_wire_concurrency(
                 wire: None,
             },
             scope,
-        );
+        )?;
+
+        return Ok(());
     }
 
     let param = version_param(resource, &concurrency.field, scope)?;
@@ -125,25 +131,111 @@ pub(crate) fn derive_wire_concurrency(
             wire: param.wire,
         },
         scope,
-    )
+    )?;
+
+    Ok(())
 }
 
 fn derive_relayed_concurrency(
-    _route: &DeriveWireRoute,
-    _relayed: &DeriveWireRelayed<'_>,
-    _scope: &mut DeriveWireScope<'_, '_, '_>,
-) -> Result<(), PassError> {
-    Err(not_ported_yet("deriveRelayedConcurrency"))
+    route: &DeriveWireRoute,
+    relayed: &DeriveWireRelayed<'_>,
+    scope: &mut DeriveWireScope<'_, '_, '_>,
+) -> Result<(), InternalError> {
+    write_relayed_entity_tags(route, relayed, scope)?;
+
+    let Some(concurrency) = &scope.operation_of(route.operation)?.concurrency else {
+        return Ok(());
+    };
+    let version = &concurrency.version;
+    let Some(public_derived_from) = relayed.operation.concurrency_derived_from() else {
+        return Err(InternalError::new(format!(
+            "operation '{}' relays an operation of {} whose concurrency has no derivedFrom",
+            route.id, relayed.api
+        )));
+    };
+    let derived_from = derive_wire_relayed_derived_from(public_derived_from, &relayed.api);
+
+    scope.output_of(route.operation)?.concurrency_derived_from = Some(derived_from.clone());
+
+    let place = match version.r#in {
+        ValueSourceIn::Query => DeriveWireParamPlace::Query,
+        ValueSourceIn::Header => DeriveWireParamPlace::Header,
+        _ => return Ok(()),
+    };
+    let param = version.name.as_deref().and_then(|name| {
+        relayed
+            .operation
+            .param_named(place, name)
+            .filter(|candidate| is_version_derivation(candidate.derived_from.as_ref()))
+    });
+    let Some(param) = param else {
+        return Err(InternalError::new(format!(
+            "operation '{}' relays an operation of {} without its {} version parameter",
+            route.id,
+            relayed.api,
+            place.as_str()
+        )));
+    };
+
+    derive_wire_add_param(
+        route,
+        place,
+        DeriveWireDerived {
+            name: param.name.clone(),
+            r#type: param.r#type.clone(),
+            required: true,
+            derived_from,
+            wire: param.wire.clone(),
+        },
+        scope,
+    )
+}
+
+fn is_version_derivation(derived_from: Option<&DerivedFrom>) -> bool {
+    derived_from.is_some_and(|record| record.derivation == CONCURRENCY)
 }
 
 // Each success response of the relay route carries the `ETag` the same response of the public
 // operation carries.
 fn write_relayed_entity_tags(
-    _route: &DeriveWireRoute,
-    _relayed: &DeriveWireRelayed<'_>,
-    _scope: &mut DeriveWireScope<'_, '_, '_>,
-) -> Result<(), PassError> {
-    Err(not_ported_yet("writeRelayedEntityTags"))
+    route: &DeriveWireRoute,
+    relayed: &DeriveWireRelayed<'_>,
+    scope: &mut DeriveWireScope<'_, '_, '_>,
+) -> Result<(), InternalError> {
+    let responses = scope.responses_of(route.operation)?;
+
+    for position in derive_wire_success_responses(route, scope)? {
+        let Some(response) = responses.get(position) else {
+            continue;
+        };
+        let public_header = relayed
+            .operation
+            .responses()
+            .iter()
+            .find(|candidate| candidate.status == response.status)
+            .and_then(|public| {
+                public.headers.iter().find(|header| {
+                    header.name == DERIVE_WIRE_ETAG
+                        && is_version_derivation(header.derived_from.as_ref())
+                })
+            });
+        let Some(public_derived_from) =
+            public_header.and_then(|header| header.derived_from.as_ref())
+        else {
+            continue;
+        };
+        let derived = DeriveWireDerived {
+            name: DERIVE_WIRE_ETAG.to_owned(),
+            r#type: derive_wire_string_use(),
+            required: true,
+            derived_from: derive_wire_relayed_derived_from(public_derived_from, &relayed.api),
+            wire: None,
+        };
+
+        derive_wire_add_response_header(route, position, &derived, None, scope)?;
+    }
+
+    Ok(())
 }
 
 // Under a resource versioned by `If-Match`, every success response carrying its item writes the
@@ -229,18 +321,50 @@ fn resource_of<'run>(
 }
 
 fn item_schema_of(
-    _resource: &TreeNode<'_>,
-    _scope: &DeriveWireScope<'_, '_, '_>,
+    resource: &TreeNode<'_>,
+    scope: &DeriveWireScope<'_, '_, '_>,
 ) -> Result<Option<String>, PassError> {
-    Err(not_ported_yet("itemSchemaOf"))
+    let pointer = format!("{}/item", resource.pointer);
+
+    Ok(match scope.schemas.type_use(&pointer, Direction::Output)? {
+        Some(TypeUse::Ref(item)) => Some(item.schema.as_str().to_owned()),
+        _ => None,
+    })
 }
 
 // The version parameter: typed like `field`, a query one with the wire tree.schemas gives that
 // property.
 fn version_param(
-    _resource: &TreeNode<'_>,
-    _field: &str,
-    _scope: &DeriveWireScope<'_, '_, '_>,
+    resource: &TreeNode<'_>,
+    field: &str,
+    scope: &DeriveWireScope<'_, '_, '_>,
 ) -> Result<DeriveWireVersionParam, PassError> {
-    Err(not_ported_yet("versionParam"))
+    let item = item_schema_of(resource, scope)?;
+    let schema = item.as_deref().and_then(|id| scope.draft.schemas.get(id));
+    let object = match schema.map(KnownSchemaRef::try_from).transpose()? {
+        Some(KnownSchemaRef::Object(object)) => Some(object),
+        Some(KnownSchemaRef::Map(_) | KnownSchemaRef::Union(_)) | None => None,
+    };
+    let property = object.and_then(|object| {
+        object
+            .properties
+            .iter()
+            .find(|candidate| candidate.name == field)
+            .map(|property| (object, property))
+    });
+    let Some((object, property)) = property else {
+        return Err(InternalError::new(format!(
+            "the item of {} has no property '{field}', which tree.schemas checks",
+            resource.pointer
+        ))
+        .into());
+    };
+    let wire = scope
+        .schemas
+        .query_wire(&format!("{}/properties/{field}", object.origin.pointer))?;
+
+    Ok(DeriveWireVersionParam {
+        r#type: property.r#type.clone(),
+        wire,
+    })
 }

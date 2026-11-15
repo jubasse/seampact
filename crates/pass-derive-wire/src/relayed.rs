@@ -5,11 +5,13 @@
 //! version parameter, the `ETag` of a versioned item) is read here.
 
 use seampact_diagnostics::InternalError;
-use seampact_ir::{DerivedFrom, Operation};
-use seampact_pass_tree_shared::TREE_NODES_OPERATION_KIND;
-use seampact_pipeline::{DraftOperation, PassError};
+use seampact_ir::{
+    DerivedFrom, IrClosedCheck, Operation, Param, Response, check_ir_closed_declaration,
+};
+use seampact_pass_tree_shared::{TREE_NODES_OPERATION_KIND, tree_nodes_relay_origin};
+use seampact_pipeline::DraftOperation;
 
-use crate::not_ported::not_ported_yet;
+use crate::params::DeriveWireParamPlace;
 use crate::routes::{DeriveWireRoute, DeriveWireScope};
 
 /// The public operation of a relay route: from a workspace api's draft, or an import's closed IR.
@@ -30,12 +32,11 @@ pub(crate) struct DeriveWireRelayed<'run> {
 ///
 /// # Errors
 ///
-/// An internal error for an operation no workspace api or import holds, and
-/// [`PassError::NotPortedYet`] for an imported one, whose closed check is not ported.
+/// An internal error for an operation no workspace api or import holds closed.
 pub(crate) fn derive_wire_relayed_of<'run>(
     route: &DeriveWireRoute,
     scope: &DeriveWireScope<'_, '_, 'run>,
-) -> Result<Option<DeriveWireRelayed<'run>>, PassError> {
+) -> Result<Option<DeriveWireRelayed<'run>>, InternalError> {
     let Some(relays) = &scope.operation_of(route.operation)?.relays else {
         return Ok(None);
     };
@@ -59,29 +60,84 @@ pub(crate) fn derive_wire_relayed_of<'run>(
         contract
             .operations
             .iter()
-            .find(|candidate| candidate.kind == TREE_NODES_OPERATION_KIND && candidate.id == *id)
+            .enumerate()
+            .find(|(_, candidate)| {
+                candidate.kind == TREE_NODES_OPERATION_KIND && candidate.id == *id
+            })
     });
+    let closed = imported
+        .map(|(index, operation)| {
+            check_ir_closed_declaration(operation, &format!("/operations/{index}"))
+        })
+        .transpose()
+        .map_err(|error| InternalError::new(error.to_string()))?;
 
-    if imported.is_none() {
-        return Err(InternalError::new(format!(
-            "operation '{}' relays {api}.{id}, which tree.nodes found but is no closed operation of {api}",
-            route.id
-        ))
-        .into());
+    if let Some(IrClosedCheck::Closed(operation)) = closed {
+        return Ok(Some(DeriveWireRelayed {
+            api: api.to_owned(),
+            operation: DeriveWireRelayedOperation::Imported(operation),
+        }));
     }
 
-    // The closed check of an imported operation is the foreign `checkIrClosedDeclaration`.
-    Err(not_ported_yet("checkIrClosedDeclaration"))
+    Err(InternalError::new(format!(
+        "operation '{}' relays {api}.{id}, which tree.nodes found but is no closed operation of {api}",
+        route.id
+    )))
 }
 
 /// A copy of a derivation of the public operation, its origins in that api named by `api`.
-///
-/// # Errors
-///
-/// [`PassError::NotPortedYet`] until the function is ported.
 pub(crate) fn derive_wire_relayed_derived_from(
-    _derived_from: &DerivedFrom,
-    _api: &str,
-) -> Result<DerivedFrom, PassError> {
-    Err(not_ported_yet("deriveWireRelayedDerivedFrom"))
+    derived_from: &DerivedFrom,
+    api: &str,
+) -> DerivedFrom {
+    DerivedFrom {
+        derivation: derived_from.derivation.clone(),
+        from: derived_from
+            .from
+            .iter()
+            .map(|origin| tree_nodes_relay_origin(origin, api))
+            .collect(),
+    }
+}
+
+impl<'run> DeriveWireRelayedOperation<'run> {
+    /// The derivation of the operation's `concurrency`, when it has one.
+    pub(crate) fn concurrency_derived_from(self) -> Option<&'run DerivedFrom> {
+        match self {
+            Self::Draft(operation) => operation
+                .concurrency
+                .as_ref()
+                .and_then(|concurrency| concurrency.derived_from.as_ref()),
+            Self::Imported(operation) => operation
+                .concurrency
+                .as_ref()
+                .map(|concurrency| &concurrency.derived_from),
+        }
+    }
+
+    /// The parameter of the `place` list named `name`.
+    pub(crate) fn param_named(
+        self,
+        place: DeriveWireParamPlace,
+        name: &str,
+    ) -> Option<&'run Param> {
+        let params = match self {
+            Self::Draft(operation) => operation.params.as_ref(),
+            Self::Imported(operation) => Some(&operation.params),
+        }?;
+        let list = match place {
+            DeriveWireParamPlace::Query => &params.query,
+            DeriveWireParamPlace::Header => &params.header,
+        };
+
+        list.iter().find(|candidate| candidate.name == name)
+    }
+
+    /// The operation's responses.
+    pub(crate) fn responses(self) -> &'run [Response] {
+        match self {
+            Self::Draft(operation) => operation.responses.as_deref().unwrap_or_default(),
+            Self::Imported(operation) => &operation.responses,
+        }
+    }
 }

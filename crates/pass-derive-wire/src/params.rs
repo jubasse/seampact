@@ -8,13 +8,12 @@
 
 use seampact_diagnostics::InternalError;
 use seampact_ir::{
-    DerivedFrom, Origin, Param, QueryStyle, QueryWire, QueryWireKind, Refinements, Response,
+    DerivedFrom, Layer, Origin, Param, QueryStyle, QueryWire, QueryWireKind, Refinements, Response,
     ResponseHeader, ResponseHeaderSemantic, ScalarType, ScalarTypeUse, TypeUse,
 };
-use seampact_pipeline::{MergedResponse, OperationIndex, PassError, merged_response_order};
+use seampact_pipeline::{MergedResponse, OperationIndex, merged_response_order};
 
-use crate::not_ported::not_ported_yet;
-use crate::report::DeriveWireRelated;
+use crate::report::{DeriveWireProblem, DeriveWireRelated, DeriveWireRule};
 use crate::routes::{DeriveWireRoute, DeriveWireScope};
 
 /// The response header of web links (RFC 8288): the paging links and the deprecation successor
@@ -356,20 +355,18 @@ fn accumulated_derived_from<'scope>(
 ///
 /// # Errors
 ///
-/// An internal error for an operation without params; [`PassError::NotPortedYet`] when the name
-/// is already taken.
+/// An internal error for an operation without params.
 pub(crate) fn derive_wire_add_param(
     route: &DeriveWireRoute,
     place: DeriveWireParamPlace,
     derived: DeriveWireDerived,
     scope: &mut DeriveWireScope<'_, '_, '_>,
-) -> Result<(), PassError> {
+) -> Result<(), InternalError> {
     if scope.operation_of(route.operation)?.params.is_none() {
         return Err(InternalError::new(format!(
             "tree.nodes wrote no params on operation '{}'",
             route.id
-        ))
-        .into());
+        )));
     }
 
     if merged_into(
@@ -411,29 +408,48 @@ pub(crate) fn derive_wire_add_param(
 ///
 /// # Errors
 ///
-/// [`PassError::NotPortedYet`] until the function is ported.
+/// An internal error for an operation without responses.
 pub(crate) fn derive_wire_add_success_header(
-    _route: &DeriveWireRoute,
-    _derived: &DeriveWireDerived,
-    _semantic: Option<&ResponseHeaderSemantic>,
-    _scope: &mut DeriveWireScope<'_, '_, '_>,
-) -> Result<(), PassError> {
-    Err(not_ported_yet("deriveWireAddSuccessHeader"))
+    route: &DeriveWireRoute,
+    derived: &DeriveWireDerived,
+    semantic: Option<&ResponseHeaderSemantic>,
+    scope: &mut DeriveWireScope<'_, '_, '_>,
+) -> Result<(), InternalError> {
+    for response in derive_wire_success_responses(route, scope)? {
+        derive_wire_add_response_header(route, response, derived, semantic, scope)?;
+    }
+
+    Ok(())
 }
 
 /// Appends a derived header to one response of the operation, at its position.
 ///
 /// # Errors
 ///
-/// [`PassError::NotPortedYet`] until the function is ported.
+/// An internal error when the half read an element it did not write.
 pub(crate) fn derive_wire_add_response_header(
-    _route: &DeriveWireRoute,
-    _response: usize,
-    _derived: &DeriveWireDerived,
-    _semantic: Option<&ResponseHeaderSemantic>,
-    _scope: &mut DeriveWireScope<'_, '_, '_>,
-) -> Result<(), PassError> {
-    Err(not_ported_yet("deriveWireAddResponseHeader"))
+    route: &DeriveWireRoute,
+    response: usize,
+    derived: &DeriveWireDerived,
+    semantic: Option<&ResponseHeaderSemantic>,
+    scope: &mut DeriveWireScope<'_, '_, '_>,
+) -> Result<(), InternalError> {
+    let list = DeriveWireElementList::ResponseHeaders { response };
+
+    if merged_into(list, derived, semantic, route, scope)? {
+        return Ok(());
+    }
+
+    let header = ResponseHeader {
+        name: derived.name.clone(),
+        r#type: derived.r#type.clone(),
+        required: derived.required,
+        semantic: semantic.cloned(),
+        origin: None,
+        derived_from: Some(derived.derived_from.clone()),
+    };
+
+    scope.add_response_header(route.operation, response, header)
 }
 
 /// The positions of the success responses of the operation tree.nodes wrote, 2xx only: a redirect
@@ -491,7 +507,7 @@ fn merged_into(
     semantic: Option<&ResponseHeaderSemantic>,
     route: &DeriveWireRoute,
     scope: &mut DeriveWireScope<'_, '_, '_>,
-) -> Result<bool, PassError> {
+) -> Result<bool, InternalError> {
     let place = list.place();
     let (found, draft_count) = find_named(scope, route.operation, list, &derived.name)?;
     let Some((position, existing)) = found else {
@@ -505,7 +521,7 @@ fn merged_into(
             "operation '{}' already has a {place} '{}' {}, so derivation {derivation} cannot add its own",
             route.id,
             existing.name,
-            describe(&existing)?,
+            describe(&existing),
             place = place.as_str(),
         );
 
@@ -553,7 +569,7 @@ fn merged_into(
         return Ok(true);
     }
 
-    if !same_shape(&existing, derived)? {
+    if !same_shape(&existing, derived) {
         let message = format!(
             "derivation {} writes the {place} '{}' of operation '{}' twice, with a different type or requirement",
             record.derivation,
@@ -577,7 +593,7 @@ fn merged_into(
         return Ok(true);
     }
 
-    let new_origins = new_origins_of(&record, derived)?;
+    let new_origins = new_origins_of(&record, derived);
 
     if new_origins.is_empty() {
         return Ok(true);
@@ -589,8 +605,7 @@ fn merged_into(
             existing.name,
             route.id,
             place = place.as_str(),
-        ))
-        .into());
+        )));
     }
 
     accumulated_derived_from(scope, route.operation, list, position, draft_count)?
@@ -600,65 +615,232 @@ fn merged_into(
     Ok(true)
 }
 
-// The origins of the derived element the record does not name yet.
-fn new_origins_of(
-    record: &DerivedFrom,
-    derived: &DeriveWireDerived,
-) -> Result<Vec<Origin>, PassError> {
-    let mut new_origins = Vec::new();
+// The origins of the derived element the record does not name yet, each once.
+fn new_origins_of(record: &DerivedFrom, derived: &DeriveWireDerived) -> Vec<Origin> {
+    let mut new_origins: Vec<Origin> = Vec::new();
 
     for origin in &derived.derived_from.from {
-        let mut known = false;
-
-        for candidate in &record.from {
-            if same_origin(candidate, origin)? {
-                known = true;
-                break;
-            }
-        }
+        let known = record
+            .from
+            .iter()
+            .chain(&new_origins)
+            .any(|candidate| same_origin(candidate, origin));
 
         if !known {
             new_origins.push(origin.clone());
         }
     }
 
-    Ok(new_origins)
+    new_origins
 }
 
-fn describe(_element: &DeriveWireNamed) -> Result<String, PassError> {
-    Err(not_ported_yet("describe"))
+fn describe(element: &DeriveWireNamed) -> String {
+    match &element.derived_from {
+        None => "declared on the route".to_owned(),
+        Some(record) => format!("from derivation {}", record.derivation),
+    }
 }
 
-fn same_origin(_left: &Origin, _right: &Origin) -> Result<bool, PassError> {
-    Err(not_ported_yet("sameOrigin"))
+fn same_origin(left: &Origin, right: &Origin) -> bool {
+    left.layer == right.layer && left.pointer == right.pointer
 }
 
-// Type uses are plain data written by the IR writers, so their JSON text compares them.
-fn same_shape(
-    _existing: &DeriveWireNamed,
-    _derived: &DeriveWireDerived,
-) -> Result<bool, PassError> {
-    Err(not_ported_yet("sameShape"))
+// Type uses are plain data written by the IR writers, so equal values have equal JSON text.
+fn same_shape(existing: &DeriveWireNamed, derived: &DeriveWireDerived) -> bool {
+    existing.required == derived.required && existing.r#type == derived.r#type
 }
 
 // A route that declared the name taken wrote the fault, so it is located there. Otherwise both
 // sides are derived and the fault is reported once, at the derivation's name origin.
 fn report_collision(
-    _collision: &DeriveWireCollision<'_, '_>,
-    _scope: &mut DeriveWireScope<'_, '_, '_>,
-) -> Result<(), PassError> {
-    Err(not_ported_yet("reportCollision"))
+    collision: &DeriveWireCollision<'_, '_>,
+    scope: &mut DeriveWireScope<'_, '_, '_>,
+) -> Result<(), InternalError> {
+    let DeriveWireCollision {
+        place,
+        existing,
+        derived,
+        route,
+        message,
+        fix,
+    } = collision;
+    let route_pointer = &scope.node_of(route)?.pointer;
+    let name_origin = existing
+        .derived_from
+        .as_ref()
+        .and_then(|_| last_authored(derived));
+
+    let Some(name_origin) = name_origin else {
+        let related = related_of(existing, derived, route_pointer);
+
+        return scope.reporter().error(DeriveWireProblem {
+            rule: DeriveWireRule::DerivedNameCollision,
+            message: message.clone(),
+            fix: fix.clone(),
+            pointer: route_pointer.clone(),
+            related,
+        });
+    };
+
+    let key = [
+        derived.derived_from.derivation.as_str(),
+        place.as_str(),
+        derived.name.to_lowercase().as_str(),
+        name_origin.pointer.as_str(),
+    ]
+    .join(" ");
+
+    if !scope.reported_collisions.insert(key) {
+        return Ok(());
+    }
+
+    let mut related = vec![DeriveWireRelated {
+        pointer: route_pointer.clone(),
+        message: "the first route it reaches".to_owned(),
+    }];
+
+    related.extend(related_of(existing, derived, &name_origin.pointer));
+
+    scope.reporter().error(DeriveWireProblem {
+        rule: DeriveWireRule::DerivedNameCollision,
+        message: message.clone(),
+        fix: fix.clone(),
+        pointer: name_origin.pointer.clone(),
+        related,
+    })
 }
 
-fn last_authored(_derived: &DeriveWireDerived) -> Result<Option<Origin>, PassError> {
-    Err(not_ported_yet("lastAuthored"))
+// The name of a derived element comes from its last authored origin, which every route it reaches
+// shares.
+fn last_authored(derived: &DeriveWireDerived) -> Option<&Origin> {
+    derived
+        .derived_from
+        .from
+        .iter()
+        .rfind(|origin| origin.layer != Layer::Core)
 }
 
 // The authored origins of both sides but the location, a core default having none.
 fn related_of(
-    _existing: &DeriveWireNamed,
-    _derived: &DeriveWireDerived,
-    _located: &str,
-) -> Result<Vec<DeriveWireRelated>, PassError> {
-    Err(not_ported_yet("relatedOf"))
+    existing: &DeriveWireNamed,
+    derived: &DeriveWireDerived,
+    located: &str,
+) -> Vec<DeriveWireRelated> {
+    let existing_origins: &[Origin] = match (&existing.origin, &existing.derived_from) {
+        (Some(origin), _) => std::slice::from_ref(origin),
+        (None, Some(record)) => &record.from,
+        (None, None) => &[],
+    };
+    let sides = [
+        (existing_origins, "the name taken"),
+        (&derived.derived_from.from, "the derivation"),
+    ];
+
+    sides
+        .into_iter()
+        .flat_map(|(origins, message)| {
+            origins
+                .iter()
+                .filter(|origin| origin.layer != Layer::Core && origin.pointer != located)
+                .map(move |origin| DeriveWireRelated {
+                    pointer: origin.pointer.clone(),
+                    message: message.to_owned(),
+                })
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use seampact_ir::DerivationId;
+
+    use super::*;
+
+    fn origin(layer: Layer, pointer: &str) -> Origin {
+        Origin {
+            api: None,
+            layer,
+            pointer: pointer.to_owned(),
+        }
+    }
+
+    fn derived_from(from: Vec<Origin>) -> DerivedFrom {
+        DerivedFrom {
+            derivation: DerivationId::from_static("test.derivation"),
+            from,
+        }
+    }
+
+    fn derived(from: Vec<Origin>) -> DeriveWireDerived {
+        DeriveWireDerived {
+            name: "X".to_owned(),
+            r#type: derive_wire_string_use(),
+            required: true,
+            derived_from: derived_from(from),
+            wire: None,
+        }
+    }
+
+    #[test]
+    fn an_origin_repeated_in_the_derived_element_is_added_once() {
+        let known = origin(Layer::Api, "/a");
+        let fresh = origin(Layer::Api, "/b");
+        let record = derived_from(vec![known.clone()]);
+        let element = derived(vec![known, fresh.clone(), fresh.clone()]);
+
+        assert_eq!(new_origins_of(&record, &element), vec![fresh]);
+    }
+
+    #[test]
+    fn the_name_origin_is_the_last_authored_one() {
+        let element = derived(vec![
+            origin(Layer::Api, "/first"),
+            origin(Layer::Api, "/last"),
+            origin(Layer::Core, "/core"),
+        ]);
+
+        assert_eq!(
+            last_authored(&element).map(|found| found.pointer.as_str()),
+            Some("/last")
+        );
+        assert_eq!(
+            last_authored(&derived(vec![origin(Layer::Core, "/core")])),
+            None
+        );
+    }
+
+    #[test]
+    fn related_locations_leave_out_the_core_and_the_located_pointer() {
+        let existing = DeriveWireNamed {
+            name: "X".to_owned(),
+            r#type: derive_wire_string_use(),
+            required: true,
+            origin: None,
+            derived_from: Some(derived_from(vec![
+                origin(Layer::Api, "/taken"),
+                origin(Layer::Core, "/core"),
+                origin(Layer::Api, "/here"),
+            ])),
+            semantic: None,
+        };
+        let element = derived(vec![
+            origin(Layer::Api, "/own"),
+            origin(Layer::Api, "/here"),
+        ]);
+        let related = related_of(&existing, &element, "/here");
+
+        assert_eq!(
+            related,
+            vec![
+                DeriveWireRelated {
+                    pointer: "/taken".to_owned(),
+                    message: "the name taken".to_owned()
+                },
+                DeriveWireRelated {
+                    pointer: "/own".to_owned(),
+                    message: "the derivation".to_owned()
+                },
+            ]
+        );
+    }
 }
