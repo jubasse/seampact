@@ -7,10 +7,12 @@
 use std::collections::HashSet;
 
 use seampact_diagnostics::InternalError;
+use seampact_diagnostics::quote_text;
 use seampact_ir::{
     ArrayTypeUse, EnumTypeUse, IrMap, KnownSchemaRef, KnownTypeUseRef, ObjectSchema, Property,
-    RefTypeUse, Refinements, ScalarTypeUse, Schema, SchemaId,
+    RefTypeUse, Refinements, ScalarType, ScalarTypeUse, Schema, SchemaId, SchemaRef, TypeUse,
 };
+use seampact_json::JsonValue;
 use seampact_pipeline::{PassError, TreeSchemaService};
 
 use crate::not_ported::not_ported_yet;
@@ -134,19 +136,121 @@ fn nested_reason(
     Err(not_ported_yet("nestedReason"))
 }
 
+/// The use that names the schema `id`, as a param's type.
+pub(crate) fn derive_errors_ref_use(id: &SchemaRef) -> TypeUse {
+    TypeUse::Ref(RefTypeUse {
+        schema: id.clone(),
+        unknown_keys: None,
+        nullable: None,
+        docs: None,
+        examples: None,
+    })
+}
+
+/// A scalar use of one type, an optional format and the given refinements, nothing else set.
+pub(crate) fn derive_errors_scalar_use(
+    scalar_type: ScalarType,
+    format: Option<&str>,
+    refinements: Refinements,
+) -> ScalarTypeUse {
+    ScalarTypeUse {
+        r#type: scalar_type,
+        format: format.map(str::to_owned),
+        scalar: None,
+        refinements,
+        content: None,
+        sensitive: None,
+        nullable: None,
+        docs: None,
+        examples: None,
+    }
+}
+
+/// Refinements that bound nothing.
+pub(crate) const fn derive_errors_no_refinements() -> Refinements {
+    Refinements {
+        min_length: None,
+        max_length: None,
+        pattern: None,
+        minimum: None,
+        maximum: None,
+        exclusive_minimum: None,
+        exclusive_maximum: None,
+        multiple_of: None,
+    }
+}
+
 /// The JSON types a typed use takes.
+///
+/// # Errors
+///
+/// An internal error when a scalar use has a type this compiler does not know.
 pub(crate) fn derive_errors_kinds_of(
-    _typed: &DeriveErrorsTyped<'_>,
-) -> Result<DeriveErrorsKinds, PassError> {
-    Err(not_ported_yet("deriveErrorsKindsOf"))
+    typed: &DeriveErrorsTyped<'_>,
+) -> Result<DeriveErrorsKinds, InternalError> {
+    let use_nullable = match &typed.use_ {
+        KnownTypeUseRef::Opaque(_) => return Ok(DeriveErrorsKinds::Any),
+        KnownTypeUseRef::File(file) => file.nullable,
+        KnownTypeUseRef::Enum(enum_use) => enum_use.nullable,
+        KnownTypeUseRef::Array(array) => array.nullable,
+        KnownTypeUseRef::Scalar(scalar) => scalar.nullable,
+        KnownTypeUseRef::Ref(reference) => reference.nullable,
+    };
+    let mut kinds = HashSet::new();
+
+    if typed.nullable || use_nullable == Some(true) {
+        kinds.insert(DeriveErrorsJsonKind::Null);
+    }
+
+    match &typed.use_ {
+        KnownTypeUseRef::Opaque(_) | KnownTypeUseRef::File(_) => {}
+        KnownTypeUseRef::Enum(_) => {
+            kinds.insert(DeriveErrorsJsonKind::String);
+        }
+        KnownTypeUseRef::Array(_) => {
+            kinds.insert(DeriveErrorsJsonKind::Array);
+        }
+        KnownTypeUseRef::Scalar(scalar) => {
+            let kind = match scalar.r#type {
+                ScalarType::String => DeriveErrorsJsonKind::String,
+                ScalarType::Integer => DeriveErrorsJsonKind::Integer,
+                ScalarType::Number => {
+                    kinds.insert(DeriveErrorsJsonKind::Integer);
+
+                    DeriveErrorsJsonKind::Number
+                }
+                ScalarType::Boolean => DeriveErrorsJsonKind::Boolean,
+                ScalarType::Unknown(ref unknown) => {
+                    return Err(InternalError::new(format!(
+                        "a scalar use has the type {unknown}, which this compiler does not know"
+                    )));
+                }
+            };
+
+            kinds.insert(kind);
+        }
+        // A union's variants are object schemas, so a union use takes an object, never an array
+        // or a scalar.
+        KnownTypeUseRef::Ref(_) => {
+            kinds.insert(DeriveErrorsJsonKind::Object);
+        }
+    }
+
+    Ok(DeriveErrorsKinds::Only(kinds))
 }
 
 /// Whether every rendered JSON type is accepted.
 pub(crate) fn derive_errors_kinds_fit(
-    _rendered: &DeriveErrorsKinds,
-    _accepted: &DeriveErrorsKinds,
-) -> Result<bool, PassError> {
-    Err(not_ported_yet("deriveErrorsKindsFit"))
+    rendered: &DeriveErrorsKinds,
+    accepted: &DeriveErrorsKinds,
+) -> bool {
+    match (rendered, accepted) {
+        (_, DeriveErrorsKinds::Any) => true,
+        (DeriveErrorsKinds::Any, DeriveErrorsKinds::Only(_)) => false,
+        (DeriveErrorsKinds::Only(rendered), DeriveErrorsKinds::Only(accepted)) => {
+            rendered.iter().all(|kind| accepted.contains(kind))
+        }
+    }
 }
 
 /// The JSON types as a message lists them.
@@ -168,22 +272,51 @@ pub(crate) fn derive_errors_misfit(
 
 // `seen` holds the pairs of object schemas under comparison, so a recursive schema ends.
 fn typed_misfit(
-    _fit: &DeriveErrorsFit<'_>,
-    _rendered: &DeriveErrorsTyped<'_>,
-    _accepted: &DeriveErrorsTyped<'_>,
-    _seen: &mut HashSet<String>,
+    fit: &DeriveErrorsFit<'_>,
+    rendered: &DeriveErrorsTyped<'_>,
+    accepted: &DeriveErrorsTyped<'_>,
+    seen: &mut HashSet<String>,
 ) -> Result<Option<DeriveErrorsMisfitReason>, PassError> {
-    Err(not_ported_yet("typedMisfit"))
+    let rendered_kinds = derive_errors_kinds_of(rendered)?;
+    let accepted_kinds = derive_errors_kinds_of(accepted)?;
+
+    if !derive_errors_kinds_fit(&rendered_kinds, &accepted_kinds) {
+        let reason = derive_errors_misfit_reason(format!(
+            "the param's type ({}) does not take {}",
+            derive_errors_describe_kinds(&accepted_kinds)?,
+            derive_errors_describe_kinds(&rendered_kinds)?
+        ))?;
+
+        return Ok(Some(reason));
+    }
+
+    constraint_misfit(fit, &rendered.use_, &accepted.use_, seen)
 }
 
 // The kinds fit; what the accepted use narrows beyond them.
 fn constraint_misfit(
-    _fit: &DeriveErrorsFit<'_>,
-    _rendered: &KnownTypeUseRef<'_>,
-    _accepted: &KnownTypeUseRef<'_>,
-    _seen: &mut HashSet<String>,
+    fit: &DeriveErrorsFit<'_>,
+    rendered: &KnownTypeUseRef<'_>,
+    accepted: &KnownTypeUseRef<'_>,
+    seen: &mut HashSet<String>,
 ) -> Result<Option<DeriveErrorsMisfitReason>, PassError> {
-    Err(not_ported_yet("constraintMisfit"))
+    match (accepted, rendered) {
+        (KnownTypeUseRef::Array(accepted), KnownTypeUseRef::Array(rendered)) => {
+            array_misfit(fit, rendered, accepted, seen)
+        }
+        (KnownTypeUseRef::Opaque(_) | KnownTypeUseRef::File(_) | KnownTypeUseRef::Array(_), _) => {
+            Ok(None)
+        }
+        (KnownTypeUseRef::Enum(accepted), _) => misfit_or_none(enum_misfit(rendered, accepted)?),
+        (KnownTypeUseRef::Scalar(accepted), KnownTypeUseRef::Scalar(rendered)) => {
+            misfit_or_none(scalar_misfit(fit, rendered, accepted)?)
+        }
+        (KnownTypeUseRef::Scalar(accepted), _) => misfit_or_none(Some(format!(
+            "its values are not provably within the param's {}",
+            describe_scalar(accepted)?
+        ))),
+        (KnownTypeUseRef::Ref(accepted), _) => ref_misfit(fit, rendered, accepted, seen),
+    }
 }
 
 fn enum_misfit(
@@ -198,19 +331,43 @@ fn describe_scalar(_use: &ScalarTypeUse) -> Result<String, PassError> {
 }
 
 fn scalar_misfit(
-    _fit: &DeriveErrorsFit<'_>,
-    _rendered: &ScalarTypeUse,
-    _accepted: &ScalarTypeUse,
+    fit: &DeriveErrorsFit<'_>,
+    rendered: &ScalarTypeUse,
+    accepted: &ScalarTypeUse,
 ) -> Result<Option<String>, PassError> {
-    Err(not_ported_yet("scalarMisfit"))
+    if let Some(format) = &accepted.format
+        && rendered.format.as_ref() != Some(format)
+    {
+        return Ok(Some(format!(
+            "its format is not the param's format {}",
+            quote_text(format)
+        )));
+    }
+
+    if accepted.content.is_some() && rendered.content != accepted.content {
+        return Ok(Some("its JSON content is not the param's".to_owned()));
+    }
+
+    refinements_misfit(fit, &rendered.refinements, &accepted.refinements)
 }
 
+// A decimal text checked by the example validator against one refinement: exact, whatever the
+// bound's size.
 fn decimal_keeps(
-    _fit: &DeriveErrorsFit<'_>,
-    _value: &str,
-    _refinements: &Refinements,
+    fit: &DeriveErrorsFit<'_>,
+    value: &str,
+    refinements: &Refinements,
 ) -> Result<bool, PassError> {
-    Err(not_ported_yet("decimalKeeps"))
+    let decimal_use = TypeUse::Scalar(derive_errors_scalar_use(
+        ScalarType::String,
+        Some("decimal"),
+        refinements.clone(),
+    ));
+    let issues = fit
+        .examples
+        .check_example(&JsonValue::String(value.to_owned()), &decimal_use)?;
+
+    Ok(issues.is_empty())
 }
 
 fn refinements_misfit(
@@ -258,4 +415,58 @@ fn member_misfit(
     _seen: &mut HashSet<String>,
 ) -> Result<Option<DeriveErrorsMisfitReason>, PassError> {
     Err(not_ported_yet("memberMisfit"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn kinds_of_scalar(scalar_type: ScalarType, nullable: bool) -> DeriveErrorsKinds {
+        let scalar = TypeUse::Scalar(derive_errors_scalar_use(
+            scalar_type,
+            None,
+            derive_errors_no_refinements(),
+        ));
+        let typed = DeriveErrorsTyped {
+            use_: KnownTypeUseRef::try_from(&scalar).unwrap(),
+            nullable,
+        };
+
+        derive_errors_kinds_of(&typed).unwrap()
+    }
+
+    fn only(kinds: &[DeriveErrorsJsonKind]) -> DeriveErrorsKinds {
+        DeriveErrorsKinds::Only(kinds.iter().copied().collect())
+    }
+
+    #[test]
+    fn a_number_takes_integers_and_a_nullable_use_takes_null() {
+        assert_eq!(
+            kinds_of_scalar(ScalarType::Number, true),
+            only(&[
+                DeriveErrorsJsonKind::Null,
+                DeriveErrorsJsonKind::Integer,
+                DeriveErrorsJsonKind::Number,
+            ])
+        );
+        assert_eq!(
+            kinds_of_scalar(ScalarType::Integer, false),
+            only(&[DeriveErrorsJsonKind::Integer])
+        );
+    }
+
+    #[test]
+    fn kinds_fit_only_when_every_rendered_kind_is_accepted() {
+        let integer = only(&[DeriveErrorsJsonKind::Integer]);
+        let number = kinds_of_scalar(ScalarType::Number, false);
+
+        assert!(derive_errors_kinds_fit(&integer, &number));
+        assert!(!derive_errors_kinds_fit(&number, &integer));
+        assert!(derive_errors_kinds_fit(&integer, &DeriveErrorsKinds::Any));
+        assert!(!derive_errors_kinds_fit(&DeriveErrorsKinds::Any, &integer));
+        assert!(derive_errors_kinds_fit(
+            &DeriveErrorsKinds::Any,
+            &DeriveErrorsKinds::Any
+        ));
+    }
 }

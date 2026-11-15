@@ -2,16 +2,21 @@
 //! type use takes, whatever the role's data hold, and a required param gets one whenever the
 //! binding answers.
 
+use seampact_diagnostics::InternalError;
 use seampact_ir::{
-    ArrayTemplate, EachTemplate, KnownTemplateRef, KnownTypeUseRef, ObjectSchema, ObjectTemplate,
-    Refinements, ScalarType, ScalarTypeUse, SlotTemplate, Template, TextTemplate,
+    ArrayTemplate, EachTemplate, KnownTemplateRef, KnownTextPartRef, KnownTypeUseRef, ObjectSchema,
+    ObjectTemplate, ScalarType, ScalarTypeUse, SlotTemplate, Template, TextTemplate,
 };
 use seampact_json::JsonValue;
-use seampact_pipeline::PassError;
+use seampact_pipeline::{PassError, pointer_below};
 
 use crate::not_ported::not_ported_yet;
 use crate::report::DeriveErrorsReporter;
-use crate::role_param_fit::{DeriveErrorsFit, DeriveErrorsMisfitReason, DeriveErrorsTyped};
+use crate::role_param_fit::{
+    DeriveErrorsFit, DeriveErrorsMisfitReason, DeriveErrorsTyped, derive_errors_misfit,
+    derive_errors_no_refinements, derive_errors_object_of_use, derive_errors_ref_use,
+    derive_errors_scalar_use,
+};
 use crate::role_params::DeriveErrorsRoleParamsSite;
 
 /// The checks of one binding: its site, the fit and the number of faults found so far.
@@ -58,32 +63,13 @@ pub(crate) enum ListTemplate<'template> {
 /// The number of items a list template writes: the bounds it provably stays within.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct ItemCounts {
-    pub(crate) min: Option<usize>,
-    pub(crate) max: Option<usize>,
+    pub(crate) min: Option<i64>,
+    pub(crate) max: Option<i64>,
 }
 
 /// The use a text template renders.
 fn string_use() -> ScalarTypeUse {
-    ScalarTypeUse {
-        r#type: ScalarType::String,
-        format: None,
-        scalar: None,
-        refinements: Refinements {
-            min_length: None,
-            max_length: None,
-            pattern: None,
-            minimum: None,
-            maximum: None,
-            exclusive_minimum: None,
-            exclusive_maximum: None,
-            multiple_of: None,
-        },
-        content: None,
-        sensitive: None,
-        nullable: None,
-        docs: None,
-        examples: None,
-    }
+    derive_errors_scalar_use(ScalarType::String, None, derive_errors_no_refinements())
 }
 
 /// Checks that the params a template renders validate against the code's params schema; `false`
@@ -93,11 +79,52 @@ fn string_use() -> ScalarTypeUse {
 ///
 /// A [`PassError`] when the template cannot be checked yet.
 pub(crate) fn derive_errors_check_role_param_types(
-    _site: &DeriveErrorsRoleParamsSite<'_>,
-    _template: &Template,
-    _reporter: &mut DeriveErrorsReporter<'_, '_>,
+    site: &DeriveErrorsRoleParamsSite<'_>,
+    template: &Template,
+    reporter: &mut DeriveErrorsReporter<'_, '_>,
 ) -> Result<bool, PassError> {
-    Err(not_ported_yet("deriveErrorsCheckRoleParamTypes"))
+    let Some(params_schema) = site.params_schema else {
+        return Ok(true);
+    };
+    let params_use = derive_errors_ref_use(params_schema);
+    let Some(schema) =
+        derive_errors_object_of_use(site.schemas, &KnownTypeUseRef::try_from(&params_use)?)?
+    else {
+        return Err(InternalError::new(format!(
+            "the params schema {} of '{}' is no object schema",
+            params_schema, site.code
+        ))
+        .into());
+    };
+    let mut check = TypedCheck {
+        site,
+        fit: DeriveErrorsFit {
+            schemas: site.schemas,
+            examples: site.examples,
+        },
+        faults: 0,
+    };
+    // A by-name template is not written, so its problems are located at the binding.
+    let pointer = if site.template.is_none() {
+        site.pointer.clone()
+    } else {
+        pointer_below(&site.pointer, &["params"])
+    };
+    let position = Position {
+        param: String::new(),
+        pointer,
+        item: None,
+    };
+
+    check_object(
+        &mut check,
+        &KnownTemplateRef::try_from(template)?,
+        schema,
+        &position,
+        reporter,
+    )?;
+
+    Ok(check.faults == 0)
 }
 
 fn slot_value<'check>(
@@ -159,21 +186,87 @@ fn refuse_missing(
 /// Whether a template always renders a value (docs/ir/07: a slot without a value has none, and so
 /// on up).
 fn always_valued(
-    _check: &TypedCheck<'_>,
-    _position: &Position<'_>,
-    _template: &KnownTemplateRef<'_>,
+    check: &TypedCheck<'_>,
+    position: &Position<'_>,
+    template: &KnownTemplateRef<'_>,
 ) -> Result<bool, PassError> {
-    Err(not_ported_yet("alwaysValued"))
+    match template {
+        KnownTemplateRef::Literal(_) | KnownTemplateRef::Array(_) => Ok(true),
+        KnownTemplateRef::Slot(slot) => {
+            slot_always(check, position, slot.slot.as_str(), &slot.path)
+        }
+        KnownTemplateRef::Text(text) => {
+            for part in &text.parts {
+                let always = match KnownTextPartRef::try_from(part)? {
+                    KnownTextPartRef::Text(_) => true,
+                    KnownTextPartRef::Slot(slot) => {
+                        slot_always(check, position, slot.slot.as_str(), &slot.path)?
+                    }
+                };
+
+                if !always {
+                    return Ok(false);
+                }
+            }
+
+            Ok(true)
+        }
+        KnownTemplateRef::Each(each) => slot_always(check, position, each.of.as_str(), &[]),
+        KnownTemplateRef::Object(object) => {
+            for member in &object.members {
+                if always_valued(check, position, &KnownTemplateRef::try_from(&member.value)?)? {
+                    return Ok(true);
+                }
+            }
+
+            Ok(false)
+        }
+    }
+}
+
+fn slot_always(
+    check: &TypedCheck<'_>,
+    position: &Position<'_>,
+    slot: &str,
+    path: &[String],
+) -> Result<bool, PassError> {
+    Ok(match slot_value(check, position, slot, path)? {
+        SlotValue::Found { always, .. } => always,
+        SlotValue::Missing(_) => false,
+    })
 }
 
 fn check_value(
-    _check: &mut TypedCheck<'_>,
-    _template: &KnownTemplateRef<'_>,
-    _accepted: &DeriveErrorsTyped<'_>,
-    _position: &Position<'_>,
-    _reporter: &mut DeriveErrorsReporter<'_, '_>,
+    check: &mut TypedCheck<'_>,
+    template: &KnownTemplateRef<'_>,
+    accepted: &DeriveErrorsTyped<'_>,
+    position: &Position<'_>,
+    reporter: &mut DeriveErrorsReporter<'_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("checkValue"))
+    match template {
+        KnownTemplateRef::Literal(literal) => {
+            check_literal(check, &literal.value, accepted, position, reporter)
+        }
+        KnownTemplateRef::Slot(slot) => check_slot(check, slot, accepted, position, reporter),
+        KnownTemplateRef::Text(text) => check_text(check, text, accepted, position, reporter),
+        KnownTemplateRef::Object(object) => {
+            check_object_value(check, object, accepted, position, reporter)
+        }
+        KnownTemplateRef::Array(array) => check_array_value(
+            check,
+            ListTemplate::Array(array),
+            accepted,
+            position,
+            reporter,
+        ),
+        KnownTemplateRef::Each(each) => check_array_value(
+            check,
+            ListTemplate::Each(each),
+            accepted,
+            position,
+            reporter,
+        ),
+    }
 }
 
 fn check_literal(
@@ -187,13 +280,32 @@ fn check_literal(
 }
 
 fn check_slot(
-    _check: &mut TypedCheck<'_>,
-    _template: &SlotTemplate,
-    _accepted: &DeriveErrorsTyped<'_>,
-    _position: &Position<'_>,
-    _reporter: &mut DeriveErrorsReporter<'_, '_>,
+    check: &mut TypedCheck<'_>,
+    template: &SlotTemplate,
+    accepted: &DeriveErrorsTyped<'_>,
+    position: &Position<'_>,
+    reporter: &mut DeriveErrorsReporter<'_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("checkSlot"))
+    let typed = match slot_value(check, position, template.slot.as_str(), &template.path)? {
+        SlotValue::Missing(missing) => {
+            return refuse_unknown_path(check, position, &missing, reporter);
+        }
+        SlotValue::Found { typed, .. } => typed,
+    };
+    let Some(reason) = derive_errors_misfit(&check.fit, &typed, accepted)? else {
+        return Ok(());
+    };
+    let mut written = vec![template.slot.as_str()];
+
+    written.extend(template.path.iter().map(String::as_str));
+
+    refuse_type(
+        check,
+        position,
+        &format!("${}", written.join(".")),
+        &reason,
+        reporter,
+    )
 }
 
 fn check_text(
@@ -218,11 +330,42 @@ fn check_object_value(
 
 // The number of items an array template writes, or an `each` maps from its array datum.
 fn item_counts(
-    _check: &TypedCheck<'_>,
-    _template: ListTemplate<'_>,
-    _position: &Position<'_>,
+    check: &TypedCheck<'_>,
+    template: ListTemplate<'_>,
+    position: &Position<'_>,
 ) -> Result<ItemCounts, PassError> {
-    Err(not_ported_yet("itemCounts"))
+    let each = match template {
+        ListTemplate::Array(array) => {
+            let written = i64::try_from(array.items.len()).map_err(|_| {
+                InternalError::new("an array template writes more items than an integer counts")
+            })?;
+
+            return Ok(ItemCounts {
+                min: Some(written),
+                max: Some(written),
+            });
+        }
+        ListTemplate::Each(each) => each,
+    };
+    let mapped = slot_value(check, position, each.of.as_str(), &[])?;
+
+    Ok(match mapped {
+        SlotValue::Found {
+            typed:
+                DeriveErrorsTyped {
+                    use_: KnownTypeUseRef::Array(array),
+                    ..
+                },
+            ..
+        } => ItemCounts {
+            min: array.min_items,
+            max: array.max_items,
+        },
+        SlotValue::Found { .. } | SlotValue::Missing(_) => ItemCounts {
+            min: None,
+            max: None,
+        },
+    })
 }
 
 fn check_array_value(

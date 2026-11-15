@@ -7,25 +7,33 @@
 //! `conventions.errors.pattern`.
 
 use std::collections::HashMap;
+use std::ops::RangeInclusive;
 
 use indexmap::IndexMap;
 use regress::Regex;
 use seampact_diagnostics::{InternalError, quote_text};
 use seampact_ir::{
-    Docs, ErrorCode, ErrorDecl, ErrorHttp, IrMap, Layer, NatureBase, NatureDecl, NatureId, Origin,
-    Schema, SchemaId, SchemaRef,
+    Direction, Docs, ErrorCode, ErrorDecl, ErrorHttp, IrMap, KnownTypeUseRef, Layer, NatureBase,
+    NatureDecl, NatureId, Origin, Schema, SchemaId, SchemaRef,
 };
-use seampact_json::{JsonObject, JsonValue};
+use seampact_json::{JsonObject, JsonValue, canonical_json, js_integer_in_range};
 use seampact_pipeline::{
     ConventionReading, DerivationRole, PassError, TreeSchemaService, derivation_params_schema_id,
     derivation_roles, pipeline_tree_nodes, pointer_below,
 };
 
-use crate::not_ported::not_ported_yet;
-use crate::read::{derive_errors_entries, derive_errors_member, derive_errors_string};
+use crate::natures::derive_errors_is_base_nature;
+use crate::read::{
+    derive_errors_docs, derive_errors_entries, derive_errors_member, derive_errors_origin_of,
+    derive_errors_string,
+};
 use crate::report::{
     DeriveErrorsContext, DeriveErrorsProblem, DeriveErrorsRelated, DeriveErrorsReporter,
     DeriveErrorsRule,
+};
+use crate::role_param_fit::derive_errors_ref_use;
+use crate::sensitive_params::{
+    DeriveErrorsSensitiveSite, DeriveErrorsSensitiveSources, derive_errors_params_no_store,
 };
 
 /// A code of the registry with the merged raw tree pointer of its declaration (absent for a core
@@ -90,6 +98,12 @@ const ERROR_EVERY_POINTER: &str = "/conventions/errors/every";
 const UNAVAILABLE_STATUSES: &[i64] = &[408, 425, 429, 502, 503, 504];
 
 const FIRST_SERVER_STATUS: i64 = 500;
+
+/// The statuses the IR admits on an error (`ErrorHttp.status`).
+const HTTP_STATUS_RANGE: RangeInclusive<i64> = 100..=599;
+
+/// The members of an attachment that are no part of a declaration's definition.
+const ATTACHMENT_ONLY_MEMBERS: [&str; 2] = ["reach", "for"];
 
 /// The catalogues whose entries list the codes they answer (ADR 0002 section 9).
 const LISTING_CATALOGUES: [&str; 4] = ["identities", "rights", "rules", "scopes"];
@@ -161,8 +175,16 @@ fn error_sites<'raw>(
 
 // What a declaration defines: every member but the attachment's `reach` and `for`, key order
 // aside.
-fn definition_of(_site: &ErrorSite<'_>) -> Result<String, PassError> {
-    Err(not_ported_yet("definitionOf"))
+fn definition_of(site: &ErrorSite<'_>) -> String {
+    let mut definition = JsonObject::new();
+
+    for (key, value) in site.value {
+        if !ATTACHMENT_ONLY_MEMBERS.contains(&key.as_str()) {
+            definition.insert(key.clone(), value.clone());
+        }
+    }
+
+    canonical_json(&JsonValue::Object(definition))
 }
 
 fn error_pattern(
@@ -287,50 +309,261 @@ const fn line_terminator_escape(character: char) -> Option<&'static str> {
 }
 
 fn nature_of(
-    _site: &ErrorSite<'_>,
-    _status: i64,
-    _natures: &IndexMap<NatureId, NatureDecl>,
-    _reporter: &mut DeriveErrorsReporter<'_, '_>,
-) -> Result<Nature, PassError> {
-    Err(not_ported_yet("natureOf"))
+    site: &ErrorSite<'_>,
+    status: i64,
+    natures: &IndexMap<NatureId, NatureDecl>,
+    reporter: &mut DeriveErrorsReporter<'_, '_>,
+) -> Result<Nature, InternalError> {
+    let Some(written) = derive_errors_string(site.value, "nature") else {
+        return Ok(Nature {
+            nature: derive_errors_default_nature(status),
+            nature_name: None,
+        });
+    };
+
+    if let Some(base) = derive_errors_is_base_nature(written) {
+        return Ok(Nature {
+            nature: base,
+            nature_name: None,
+        });
+    }
+
+    if let Some(declared) = natures.get(written) {
+        return Ok(Nature {
+            nature: declared.base.clone(),
+            nature_name: Some(NatureId::new(written.to_owned())),
+        });
+    }
+
+    let mut allowed = vec!["refused", "unavailable", "failed"];
+
+    allowed.extend(natures.keys().map(NatureId::as_str));
+
+    reporter.error(DeriveErrorsProblem {
+        rule: DeriveErrorsRule::ErrorNature,
+        message: format!(
+            "error {} has nature {}, which is neither a base nature nor a declared nature; the allowed values are {}",
+            quote_text(site.code),
+            quote_text(written),
+            allowed.join(", ")
+        ),
+        fix: "use a base nature or declare the nature in 'natures'".to_owned(),
+        pointer: pointer_below(&site.pointer, &["nature"]),
+        related: Vec::new(),
+    })?;
+
+    Ok(Nature {
+        nature: derive_errors_default_nature(status),
+        nature_name: None,
+    })
 }
 
 // The params schema of a declaration: the schema its written params compile to, or the core params
 // schema of a default code that writes none.
 fn params_of(
-    _site: &ErrorSite<'_>,
-    _service: &dyn TreeSchemaService,
+    site: &ErrorSite<'_>,
+    service: &dyn TreeSchemaService,
 ) -> Result<Option<SchemaRef>, PassError> {
-    Err(not_ported_yet("paramsOf"))
+    let pointer = pointer_below(&site.pointer, &["params"]);
+
+    if derive_errors_member(site.value, "params").is_none() {
+        return match role_of_default_code(site.code) {
+            Some(role) if !role.data.is_empty() => {
+                Ok(Some(derivation_params_schema_id(site.code)?))
+            }
+            _ => Ok(None),
+        };
+    }
+
+    let Some(params_use) = service.type_use(&pointer, Direction::Output)? else {
+        return Err(InternalError::new(format!(
+            "tree.schemas answers no type use at {pointer}, the params of '{}'",
+            site.code
+        ))
+        .into());
+    };
+
+    // tree.schemas refuses params that are no object schema (`fields-schema`), and no later half
+    // runs then.
+    match KnownTypeUseRef::try_from(&params_use)? {
+        KnownTypeUseRef::Ref(reference) => Ok(Some(reference.schema.clone())),
+        _ => Err(InternalError::new(format!(
+            "the params at {pointer} compile to a {}, not an object schema",
+            params_use.tag()
+        ))
+        .into()),
+    }
 }
 
 fn check_example(
-    _site: &ErrorSite<'_>,
-    _params: Option<&SchemaRef>,
-    _service: &dyn TreeSchemaService,
-    _reporter: &mut DeriveErrorsReporter<'_, '_>,
+    site: &ErrorSite<'_>,
+    params: Option<&SchemaRef>,
+    service: &dyn TreeSchemaService,
+    reporter: &mut DeriveErrorsReporter<'_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("checkExample"))
+    let Some(example) = derive_errors_member(site.value, "example") else {
+        return Ok(());
+    };
+    let pointer = pointer_below(&site.pointer, &["example"]);
+    let code = quote_text(site.code);
+
+    let Some(params) = params else {
+        reporter.error(DeriveErrorsProblem {
+            rule: DeriveErrorsRule::ErrorExample,
+            message: format!("error {code} has an example but no params for it to show"),
+            fix: "declare the params, or remove the example".to_owned(),
+            pointer,
+            related: Vec::new(),
+        })?;
+
+        return Ok(());
+    };
+
+    // tree.schemas locates each issue at a value the example holds (a missing member at its
+    // object).
+    for issue in service.check_example(example, &derive_errors_ref_use(params))? {
+        reporter.error(DeriveErrorsProblem {
+            rule: DeriveErrorsRule::ErrorExample,
+            message: format!(
+                "the example of error {code} does not fit its params: {}",
+                issue.message
+            ),
+            fix: "correct the example to fit the params".to_owned(),
+            pointer: format!("{pointer}{}", issue.pointer),
+            related: Vec::new(),
+        })?;
+    }
+
+    Ok(())
 }
 
 // ADR 0006 section 6: a layer that redeclares a default code may add or change its params and
 // docs, never its status or nature; without `nature` it keeps the core one.
 fn default_code_nature(
-    _site: &ErrorSite<'_>,
-    _status: i64,
-    _role: &DerivationRole,
-    _sources: &DeriveErrorsRegistrySources<'_, '_>,
-    _reporter: &mut DeriveErrorsReporter<'_, '_>,
-) -> Result<Nature, PassError> {
-    Err(not_ported_yet("defaultCodeNature"))
+    site: &ErrorSite<'_>,
+    status: i64,
+    role: &DerivationRole,
+    sources: &DeriveErrorsRegistrySources<'_, '_>,
+    reporter: &mut DeriveErrorsReporter<'_, '_>,
+) -> Result<Nature, InternalError> {
+    let code = quote_text(site.code);
+    let role_name = &role.role;
+
+    if status != i64::from(role.status) {
+        reporter.error(DeriveErrorsProblem {
+            rule: DeriveErrorsRule::ErrorDefault,
+            message: format!(
+                "default code {code} of role '{role_name}' is redeclared with status {status}, but its status is {}",
+                role.status
+            ),
+            fix: format!(
+                "keep status {}, or declare another code and bind role '{role_name}' to it",
+                role.status
+            ),
+            pointer: pointer_below(&site.pointer, &["status"]),
+            related: Vec::new(),
+        })?;
+    }
+
+    if derive_errors_string(site.value, "nature").is_none() {
+        return Ok(Nature {
+            nature: role.nature.clone(),
+            nature_name: None,
+        });
+    }
+
+    let written = nature_of(site, status, sources.natures, reporter)?;
+
+    if written.nature != role.nature {
+        let written_name = written
+            .nature_name
+            .as_ref()
+            .map_or_else(|| written.nature.as_str(), NatureId::as_str);
+
+        reporter.error(DeriveErrorsProblem {
+            rule: DeriveErrorsRule::ErrorDefault,
+            message: format!(
+                "default code {code} of role '{role_name}' is redeclared with nature {}, whose base is not its nature {}",
+                quote_text(written_name),
+                quote_text(role.nature.as_str())
+            ),
+            fix: format!(
+                "leave nature out, or name a nature on the base {}",
+                quote_text(role.nature.as_str())
+            ),
+            pointer: pointer_below(&site.pointer, &["nature"]),
+            related: Vec::new(),
+        })?;
+    }
+
+    Ok(written)
 }
 
 fn declaration_of(
-    _site: &ErrorSite<'_>,
-    _sources: &DeriveErrorsRegistrySources<'_, '_>,
-    _reporter: &mut DeriveErrorsReporter<'_, '_>,
+    site: &ErrorSite<'_>,
+    sources: &DeriveErrorsRegistrySources<'_, '_>,
+    reporter: &mut DeriveErrorsReporter<'_, '_>,
 ) -> Result<ErrorDecl, PassError> {
-    Err(not_ported_yet("declarationOf"))
+    let context = sources.context;
+    let status = declared_status(site)?;
+    let family = derive_errors_string(site.value, "family")
+        .or_else(|| derive_errors_default_family(site.code));
+    let title = derive_errors_string(site.value, "title");
+    let example = derive_errors_member(site.value, "example");
+    let params = params_of(site, sources.service)?;
+    let role = role_of_default_code(site.code);
+
+    check_example(site, params.as_ref(), sources.service, reporter)?;
+
+    let code = ErrorCode::new(site.code.to_owned());
+    let no_store = match &params {
+        None => false,
+        Some(params) => derive_errors_params_no_store(
+            &DeriveErrorsSensitiveSite {
+                code: &code,
+                params,
+                pointer: &pointer_below(&site.pointer, &["params"]),
+            },
+            &DeriveErrorsSensitiveSources {
+                context,
+                schemas: sources.schemas,
+            },
+            reporter,
+        )?,
+    };
+    let nature = match role {
+        None => nature_of(site, status, sources.natures, reporter)?,
+        Some(role) => default_code_nature(site, status, role, sources, reporter)?,
+    };
+
+    Ok(ErrorDecl {
+        code,
+        family: family.map(str::to_owned),
+        nature: nature.nature,
+        nature_name: nature.nature_name,
+        http: ErrorHttp { status },
+        params,
+        example: example.cloned(),
+        title: title.map(str::to_owned),
+        docs: derive_errors_docs(site.value),
+        origin: derive_errors_origin_of(context, &site.pointer)?,
+        default: role.map(|role| role.role.clone()),
+        no_store: no_store.then_some(true),
+    })
+}
+
+fn declared_status(site: &ErrorSite<'_>) -> Result<i64, InternalError> {
+    let no_status = || {
+        InternalError::new(format!(
+            "the declaration at {} has no numeric status",
+            site.pointer
+        ))
+    };
+    let Some(JsonValue::Number(status)) = derive_errors_member(site.value, "status") else {
+        return Err(no_status());
+    };
+
+    js_integer_in_range(status, HTTP_STATUS_RANGE).map_err(|_| no_status())
 }
 
 fn core_declaration_of(role: &DerivationRole) -> Result<ErrorDecl, InternalError> {
@@ -519,7 +752,7 @@ pub(crate) fn derive_errors_registry(
             continue;
         };
 
-        if definition_of(first)? == definition_of(site)? {
+        if definition_of(first) == definition_of(site) {
             continue;
         }
 
@@ -554,4 +787,39 @@ pub(crate) fn derive_errors_registry(
     check_attachments(&attachments, &registry, sources, reporter)?;
 
     Ok(registry)
+}
+
+#[cfg(test)]
+mod tests {
+    use seampact_json::JsonNumber;
+
+    use super::*;
+
+    fn status_of(text: &str) -> Result<i64, InternalError> {
+        let number = JsonNumber::from_json_text(text).unwrap();
+        let mut declaration = JsonObject::new();
+
+        declaration.insert("status".to_owned(), JsonValue::Number(number));
+
+        declared_status(&ErrorSite {
+            code: "x.y",
+            pointer: "/errors/x.y".to_owned(),
+            value: &declaration,
+        })
+    }
+
+    #[test]
+    fn a_status_is_a_javascript_integer_within_the_http_range() {
+        for (text, expected) in [
+            ("404", Some(404)),
+            ("404.0", Some(404)),
+            ("4.04e2", Some(404)),
+        ] {
+            assert_eq!(status_of(text).ok(), expected, "status {text}");
+        }
+
+        for text in ["1e-17", "404.5", "99", "600", "-0", "9007199254740993"] {
+            assert!(status_of(text).is_err(), "status {text}");
+        }
+    }
 }

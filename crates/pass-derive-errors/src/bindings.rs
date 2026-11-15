@@ -7,19 +7,28 @@
 
 use std::collections::{HashMap, HashSet};
 
-use seampact_diagnostics::InternalError;
-use seampact_ir::{ErrorCode, ErrorRole, IrMap, Schema, SchemaId, Template};
+use seampact_diagnostics::{InternalError, quote_text};
+use seampact_ir::{
+    ErrorCode, ErrorRole, IrMap, KnownMemberNameRef, KnownTemplateRef, Schema, SchemaId, Template,
+};
 use seampact_json::JsonValue;
 use seampact_pipeline::{
     DerivationRole, PassError, PerKeySetting, RoleDatum, TreeNodeId, TreeNodes, TreeSchemaService,
     derivation_roles, pipeline_rate_limit_param, pipeline_tree_nodes, pointer_below,
 };
+use seampact_templates::template_uses;
 
 use crate::not_ported::not_ported_yet;
-use crate::read::derive_errors_member;
+use crate::read::{derive_errors_member, derive_errors_string};
 use crate::registry::DeriveErrorsRegistry;
-use crate::report::{DeriveErrorsContext, DeriveErrorsReporter};
-use crate::role_params::{DeriveErrorsRoleParams, DeriveErrorsRoleParamsSite};
+use crate::report::{
+    DeriveErrorsContext, DeriveErrorsProblem, DeriveErrorsReporter, DeriveErrorsRule,
+};
+use crate::role_param_types::derive_errors_check_role_param_types;
+use crate::role_params::{
+    DeriveErrorsRoleParams, DeriveErrorsRoleParamsSite, derive_errors_datum_always,
+    derive_errors_param_of_datum, derive_errors_read_role_params,
+};
 
 /// The code a role answers with where a binding applies.
 #[derive(Debug, Clone, PartialEq)]
@@ -57,22 +66,47 @@ fn role_of(name: &str) -> Result<&'static DerivationRole, InternalError> {
 }
 
 fn written_binding<'run>(
-    _role: &ErrorRole,
-    _value: &'run JsonValue,
-    _pointer: String,
-) -> Result<DeriveErrorsBinding<'run>, PassError> {
-    Err(not_ported_yet("writtenBinding"))
+    role: &ErrorRole,
+    value: &'run JsonValue,
+    pointer: String,
+) -> Result<DeriveErrorsBinding<'run>, InternalError> {
+    if let JsonValue::String(code) = value {
+        return Ok(DeriveErrorsBinding {
+            role: role.clone(),
+            code: ErrorCode::new(code.clone()),
+            params: None,
+            pointer: Some(pointer),
+        });
+    }
+
+    let written = match value {
+        JsonValue::Object(object) => derive_errors_string(object, "code")
+            .map(|code| (code, derive_errors_member(object, "params"))),
+        _ => None,
+    };
+    let Some((code, params)) = written else {
+        return Err(InternalError::new(format!(
+            "the role binding at {pointer} names no code"
+        )));
+    };
+
+    Ok(DeriveErrorsBinding {
+        role: role.clone(),
+        code: ErrorCode::new(code.to_owned()),
+        params,
+        pointer: Some(pointer),
+    })
 }
 
 /// The api-wide binding of a role: `conventions.errors.derived`, else the role's default code.
 ///
 /// # Errors
 ///
-/// A [`PassError`] when the conventions or the written binding cannot be read.
+/// An internal error when the conventions or the written binding cannot be read.
 pub(crate) fn derive_errors_api_binding<'run>(
     context: DeriveErrorsContext<'run>,
     role: &ErrorRole,
-) -> Result<DeriveErrorsBinding<'run>, PassError> {
+) -> Result<DeriveErrorsBinding<'run>, InternalError> {
     let reading = context.conventions.get(&format!("errors.derived.{role}"))?;
 
     match reading {
@@ -94,13 +128,13 @@ pub(crate) fn derive_errors_api_binding<'run>(
 ///
 /// # Errors
 ///
-/// A [`PassError`] when the inherited entry or the written binding cannot be read.
+/// An internal error when the inherited entry or the written binding cannot be read.
 pub(crate) fn derive_errors_binding_at<'run>(
     context: DeriveErrorsContext<'run>,
     nodes: &TreeNodes<'_>,
     node: TreeNodeId,
     role: &ErrorRole,
-) -> Result<DeriveErrorsBinding<'run>, PassError> {
+) -> Result<DeriveErrorsBinding<'run>, InternalError> {
     let entries = context.inherited.per_key(node, PerKeySetting::ErrorRoles)?;
     let Some(entry) = entries
         .as_ref()
@@ -147,11 +181,30 @@ pub(crate) fn derive_errors_params_site<'check>(
 // A required datum reaches the param it fills when a member of the params template reads it: the
 // member of its param, or, for a datum filling the param of its own name, any member.
 fn datum_reached(
-    _site: &DeriveErrorsRoleParamsSite<'_>,
-    _params: Option<&Template>,
-    _datum: &RoleDatum,
-) -> Result<bool, PassError> {
-    Err(not_ported_yet("datumReached"))
+    site: &DeriveErrorsRoleParamsSite<'_>,
+    params: Option<&Template>,
+    datum: &RoleDatum,
+) -> Result<bool, InternalError> {
+    let Some(params) = params else {
+        return Ok(false);
+    };
+    let KnownTemplateRef::Object(object) = KnownTemplateRef::try_from(params)? else {
+        return Ok(false);
+    };
+    let param = derive_errors_param_of_datum(site, datum);
+
+    for member in &object.members {
+        let KnownMemberNameRef::Text(name) = KnownMemberNameRef::try_from(&member.name)? else {
+            continue;
+        };
+
+        if template_uses(&member.value, datum.name)? && (datum.name == param || name.text == param)
+        {
+            return Ok(true);
+        }
+    }
+
+    Ok(false)
 }
 
 /// Whether a datum the role supplies only on some operations reaches a param of the bound code
@@ -180,22 +233,82 @@ pub(crate) struct DeriveErrorsOperationSite<'site> {
 
 /// Whether every datum a binding must carry reaches a param; each missing datum reported.
 fn check_required_data(
-    _site: &DeriveErrorsRoleParamsSite<'_>,
-    _params: Option<&Template>,
-    _reporter: &mut DeriveErrorsReporter<'_, '_>,
-) -> Result<bool, PassError> {
-    Err(not_ported_yet("checkRequiredData"))
+    site: &DeriveErrorsRoleParamsSite<'_>,
+    params: Option<&Template>,
+    reporter: &mut DeriveErrorsReporter<'_, '_>,
+) -> Result<bool, InternalError> {
+    let mut carried = true;
+
+    for datum in &site.role.data {
+        if !derive_errors_datum_always(site, datum) || datum_reached(site, params, datum)? {
+            continue;
+        }
+
+        let param = derive_errors_param_of_datum(site, datum);
+        let code = quote_text(site.code.as_str());
+
+        carried = false;
+        reporter.error(DeriveErrorsProblem {
+            rule: DeriveErrorsRule::RoleDatum,
+            message: format!(
+                "role '{}' requires the datum '{}', which no param of {code} receives",
+                site.role.role, datum.name
+            ),
+            fix: format!(
+                "add a param '{param}' to {code}, or bind it with params: {{ {param}: ${} }}",
+                datum.name
+            ),
+            pointer: site.pointer.clone(),
+            related: Vec::new(),
+        })?;
+    }
+
+    Ok(carried)
 }
 
 // A checked binding's params: the template the operations write, or refused (each fault
 // reported); `None` when the bound code is unregistered (`role-code` reported).
-fn check_binding(
-    _check: &DeriveErrorsBindingCheck<'_>,
-    _binding: &DeriveErrorsBinding<'_>,
-    _pointer: &str,
-    _reporter: &mut DeriveErrorsReporter<'_, '_>,
+fn check_binding<'check>(
+    check: &DeriveErrorsBindingCheck<'check>,
+    binding: &'check DeriveErrorsBinding<'check>,
+    pointer: &str,
+    reporter: &mut DeriveErrorsReporter<'_, '_>,
 ) -> Result<Option<DeriveErrorsRoleParams>, PassError> {
-    Err(not_ported_yet("checkBinding"))
+    let Some(site) = derive_errors_params_site(check, binding, pointer)? else {
+        let code = quote_text(binding.code.as_str());
+
+        reporter.error(DeriveErrorsProblem {
+            rule: DeriveErrorsRule::RoleCode,
+            message: format!(
+                "role '{}' is bound to {code}, which no layer or node declares and which is no default code",
+                binding.role
+            ),
+            fix: format!("declare {code} in 'errors', or bind the role to a registered code"),
+            pointer: pointer.to_owned(),
+            related: Vec::new(),
+        })?;
+
+        return Ok(None);
+    };
+    let DeriveErrorsRoleParams::Written { params } =
+        derive_errors_read_role_params(&site, reporter)?
+    else {
+        return Ok(Some(DeriveErrorsRoleParams::Refused));
+    };
+
+    if !check_required_data(&site, params.as_ref(), reporter)? {
+        return Ok(Some(DeriveErrorsRoleParams::Refused));
+    }
+
+    let Some(template) = &params else {
+        return Ok(Some(DeriveErrorsRoleParams::Written { params }));
+    };
+
+    if derive_errors_check_role_param_types(&site, template, reporter)? {
+        return Ok(Some(DeriveErrorsRoleParams::Written { params }));
+    }
+
+    Ok(Some(DeriveErrorsRoleParams::Refused))
 }
 
 /// The key of a binding in `DeriveErrorsBoundParams`: its pointer, or its role for a default
@@ -280,7 +393,7 @@ pub(crate) fn derive_errors_check_bindings(
 
 fn node_bindings(
     context: DeriveErrorsContext<'_>,
-) -> Result<Vec<DeriveErrorsBinding<'_>>, PassError> {
+) -> Result<Vec<DeriveErrorsBinding<'_>>, InternalError> {
     let mut bindings = Vec::new();
     let nodes = pipeline_tree_nodes(context.raw)?;
 
