@@ -14,32 +14,56 @@ pub(crate) struct AccessRightsDocs {
     pub(crate) description: Option<String>,
 }
 
+/// The value as a mapping; `None` for another type or an absent value.
+pub(crate) fn access_rights_object(value: Option<&JsonValue>) -> Option<&JsonObject> {
+    match value {
+        Some(JsonValue::Object(object)) => Some(object),
+        _ => None,
+    }
+}
+
+/// An own member of a raw mapping; `None` when absent or when `object` is no mapping.
 pub(crate) fn access_rights_member<'raw>(
-    _object: Option<&'raw JsonValue>,
-    _key: &str,
-) -> Result<Option<&'raw JsonValue>, PassError> {
-    Err(not_ported_yet("accessRightsMember"))
+    object: Option<&'raw JsonObject>,
+    key: &str,
+) -> Option<&'raw JsonValue> {
+    object?.get(key)
 }
 
-pub(crate) fn access_rights_string(
-    _object: Option<&JsonValue>,
-    _key: &str,
-) -> Result<Option<String>, PassError> {
-    Err(not_ported_yet("accessRightsString"))
+/// A string member; `None` when absent or of another type.
+pub(crate) fn access_rights_string<'raw>(
+    object: Option<&'raw JsonObject>,
+    key: &str,
+) -> Option<&'raw str> {
+    match access_rights_member(object, key) {
+        Some(JsonValue::String(text)) => Some(text.as_str()),
+        _ => None,
+    }
 }
 
+/// The strings of a list member, in written order; an empty list when absent.
 pub(crate) fn access_rights_strings(
-    _object: Option<&JsonValue>,
+    _object: Option<&JsonObject>,
     _key: &str,
 ) -> Result<Vec<String>, PassError> {
     Err(not_ported_yet("accessRightsStrings"))
 }
 
+/// The entries of a mapping member whose values are mappings, in written order.
 pub(crate) fn access_rights_entries<'raw>(
-    _object: Option<&'raw JsonValue>,
-    _key: &str,
-) -> Result<Vec<(String, &'raw JsonObject)>, PassError> {
-    Err(not_ported_yet("accessRightsEntries"))
+    object: Option<&'raw JsonObject>,
+    key: &str,
+) -> Vec<(&'raw str, &'raw JsonObject)> {
+    let Some(catalogue) = access_rights_object(access_rights_member(object, key)) else {
+        return Vec::new();
+    };
+
+    catalogue
+        .iter()
+        .filter_map(|(name, value)| {
+            access_rights_object(Some(value)).map(|entry| (name.as_str(), entry))
+        })
+        .collect()
 }
 
 pub(crate) fn access_rights_docs(_declaration: &JsonObject) -> Result<AccessRightsDocs, PassError> {

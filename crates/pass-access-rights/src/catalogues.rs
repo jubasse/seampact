@@ -7,11 +7,17 @@ use regress::Regex;
 use seampact_ir::{
     Bucket, BucketId, ProofPlacement, Right, RightId, RightSubject, Rule, RuleId, Scope, ScopeId,
 };
-use seampact_json::{JsonObject, JsonValue};
-use seampact_pipeline::PassError;
+use seampact_diagnostics::InternalError;
+use seampact_ir::IrMap;
+use seampact_json::{JsonObject, JsonValue, stringify_json};
+use seampact_pipeline::{ConventionReading, PassError};
 
 use crate::not_ported::not_ported_yet;
-use crate::report::AccessRightsReporter;
+use crate::read::{
+    access_rights_entries, access_rights_member, access_rights_object, access_rights_schema_name,
+    access_rights_string,
+};
+use crate::report::{AccessRightsProblem, AccessRightsReporter, AccessRightsRule};
 use crate::schema_use::AccessRightsContext;
 
 /// The names declared in each catalogue, refused ones included, so a use of a refused one adds no
@@ -84,26 +90,156 @@ const PROOF_PLACEMENTS: &[&str] = &["header", "body"];
 
 const UNREADABLE_PROOF_KINDS: &[&str] = &["file", "opaque"];
 
+/// Builds the four catalogues, reporting each declaration's errors.
+///
+/// # Errors
+///
+/// An internal error, or a [`PassError::NotPortedYet`] from a declaration builder.
 pub(crate) fn access_rights_catalogues(
-    _context: &AccessRightsContext,
-    _reporter: &mut AccessRightsReporter,
+    context: &AccessRightsContext,
+    reporter: &mut AccessRightsReporter,
 ) -> Result<AccessRightsCatalogues, PassError> {
-    Err(not_ported_yet("accessRightsCatalogues"))
+    let merged = Some(&context.context.raw.merged);
+    let scope_names = names_of(merged, "scopes");
+    let right_pattern = right_pattern_of(context, reporter)?;
+    let forbidden_code = forbidden_code_of(context)?;
+
+    let mut rights = IrMap::new();
+    let mut right_id_names = HashMap::new();
+
+    for (id, declaration) in access_rights_entries(merged, "rights") {
+        let declared = RightDeclaration {
+            id: id.to_owned(),
+            declaration,
+            scope_names: &scope_names,
+            right_pattern: right_pattern.as_ref(),
+            forbidden_code: &forbidden_code,
+        };
+        let Some(right) = right_of(context, reporter, &declared)? else {
+            continue;
+        };
+
+        rights.insert(RightId::new(id.to_owned()), right);
+
+        let subject = access_rights_object(access_rights_member(Some(declaration), "subject"));
+
+        if let Some(id_name) = access_rights_schema_name(access_rights_member(subject, "id"))? {
+            right_id_names.insert(id.to_owned(), id_name);
+        }
+    }
+
+    let mut rules = IrMap::new();
+
+    for (id, declaration) in access_rights_entries(merged, "rules") {
+        if let Some(rule) = rule_of(context, reporter, id, declaration)? {
+            rules.insert(RuleId::new(id.to_owned()), rule);
+        }
+    }
+
+    let mut scopes = IrMap::new();
+
+    for (id, declaration) in access_rights_entries(merged, "scopes") {
+        let declared = DeclarationWithScopes {
+            id: id.to_owned(),
+            declaration,
+            scope_names: &scope_names,
+        };
+
+        if let Some(scope) = scope_of(context, reporter, &declared)? {
+            scopes.insert(ScopeId::new(id.to_owned()), scope);
+        }
+    }
+
+    let mut buckets = IrMap::new();
+
+    for (id, declaration) in access_rights_entries(merged, "buckets") {
+        if let Some(bucket) = bucket_of(context, reporter, id, declaration)? {
+            buckets.insert(BucketId::new(id.to_owned()), bucket);
+        }
+    }
+
+    Ok(AccessRightsCatalogues {
+        rights,
+        rules,
+        scopes,
+        buckets,
+        right_id_names,
+        forbidden_code,
+        declared: AccessRightsDeclared {
+            rights: names_of(merged, "rights"),
+            rules: names_of(merged, "rules"),
+            scopes: scope_names,
+            buckets: names_of(merged, "buckets"),
+        },
+        right_pattern,
+    })
 }
 
-pub(crate) fn forbidden_code_of(_context: &AccessRightsContext) -> Result<String, PassError> {
-    Err(not_ported_yet("forbiddenCodeOf"))
+// The keys of a catalogue member, refused entries included.
+fn names_of(merged: Option<&JsonObject>, catalogue: &str) -> HashSet<String> {
+    access_rights_object(access_rights_member(merged, catalogue))
+        .map(|entries| entries.keys().cloned().collect())
+        .unwrap_or_default()
+}
+
+// The role binding is a code, or `{ code, params }` (ADR 0002 section 11); the core binds every
+// role by default.
+pub(crate) fn forbidden_code_of(context: &AccessRightsContext) -> Result<String, InternalError> {
+    let binding = context
+        .context
+        .conventions
+        .get("errors.derived.forbidden")?
+        .map(|reading| reading.value);
+    let code = match binding {
+        Some(JsonValue::String(code)) => Some(code.as_str()),
+        other => access_rights_string(access_rights_object(other), "code"),
+    };
+
+    code.map(str::to_owned).ok_or_else(|| {
+        let written = binding.map_or_else(|| "undefined".to_owned(), stringify_json);
+
+        InternalError::new(format!(
+            "conventions.errors.derived.forbidden binds no code: {written}"
+        ))
+    })
 }
 
 pub(crate) fn right_pattern_of(
-    _context: &AccessRightsContext,
-    _reporter: &mut AccessRightsReporter,
-) -> Result<Option<AccessRightsRightPattern>, PassError> {
-    Err(not_ported_yet("rightPatternOf"))
+    context: &AccessRightsContext,
+    reporter: &mut AccessRightsReporter,
+) -> Result<Option<AccessRightsRightPattern>, InternalError> {
+    let Some(ConventionReading {
+        value: JsonValue::String(written),
+        ..
+    }) = context.context.conventions.get("rights.pattern")?
+    else {
+        return Ok(None);
+    };
+
+    match Regex::with_flags(written, "u") {
+        Ok(pattern) => Ok(Some(AccessRightsRightPattern {
+            pattern,
+            pointer: RIGHT_PATTERN_POINTER.to_owned(),
+        })),
+        Err(error) => {
+            reporter.error(AccessRightsProblem {
+                rule: AccessRightsRule::RightPattern,
+                message: format!(
+                    "conventions.rights.pattern '{written}' is no regular expression: SyntaxError: Invalid regular expression: /{written}/u: {error}"
+                ),
+                fix: "write a regular expression every right name must match".to_owned(),
+                pointer: RIGHT_PATTERN_POINTER.to_owned(),
+                distinct_by: None,
+                related: Vec::new(),
+            });
+
+            Ok(None)
+        }
+    }
 }
 
 pub(crate) fn access_rights_right_errors(
-    _declaration: Option<&JsonValue>,
+    _declaration: Option<&JsonObject>,
     _forbidden_code: &str,
 ) -> Result<Vec<String>, PassError> {
     Err(not_ported_yet("accessRightsRightErrors"))

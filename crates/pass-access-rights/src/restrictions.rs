@@ -26,10 +26,15 @@ pub(crate) struct AccessRightsRestrictionChecks {
     pub(crate) reaching: HashSet<String>,
 }
 
+/// Fresh checks, given the schemas from which a restricted field can be reached.
 pub(crate) fn access_rights_restriction_checks(
-    _reaching: HashSet<String>,
-) -> Result<AccessRightsRestrictionChecks, PassError> {
-    Err(not_ported_yet("accessRightsRestrictionChecks"))
+    reaching: HashSet<String>,
+) -> AccessRightsRestrictionChecks {
+    AccessRightsRestrictionChecks {
+        checked: HashMap::new(),
+        recursive: HashSet::new(),
+        reaching,
+    }
 }
 
 pub(crate) fn access_rights_restriction_origin(

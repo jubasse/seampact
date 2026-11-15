@@ -3,10 +3,10 @@
 
 use std::collections::HashSet;
 
-use seampact_diagnostics::RuleId;
-use seampact_pipeline::PassError;
+use seampact_diagnostics::{
+    Diagnostic, DiagnosticOrigin, InternalError, RelatedLocation, RuleId, Severity,
+};
 
-use crate::not_ported::not_ported_yet;
 use crate::schema_use::AccessRightsContext;
 
 /// The rules the half reports, each `seampact/access/<rule>`.
@@ -47,6 +47,42 @@ pub(crate) enum AccessRightsRule {
 }
 
 impl AccessRightsRule {
+    /// Every rule, in the order of `RULE_IDS`.
+    pub(crate) const ALL: &'static [Self] = &[
+        Self::RightName,
+        Self::RightPattern,
+        Self::RightSubject,
+        Self::ProofSchema,
+        Self::ProofName,
+        Self::ProofInput,
+        Self::SignedInput,
+        Self::ScopeWithin,
+        Self::BucketKey,
+        Self::BucketWindow,
+        Self::ScopeUnknown,
+        Self::ScopeTwice,
+        Self::ScopeNesting,
+        Self::RequirementEntry,
+        Self::RequirementTarget,
+        Self::RequirementParams,
+        Self::RequirementBucket,
+        Self::RequirementSubject,
+        Self::RequirementTwice,
+        Self::GuestRight,
+        Self::CallerRight,
+        Self::PackTemplate,
+        Self::PackRight,
+        Self::FieldRightTarget,
+        Self::FieldRightParams,
+        Self::FieldRightSubject,
+        Self::FieldRightRecursive,
+        Self::FieldRightConflict,
+        Self::FieldRightPosition,
+        Self::FieldRightLimit,
+        Self::SortKeyRight,
+        Self::FilteredBy,
+    ];
+
     /// The rule id as `diagnostics.json` writes it.
     pub(crate) const fn rule_id(self) -> RuleId {
         RuleId::from_static(match self {
@@ -137,11 +173,52 @@ impl AccessRightsReporter {
 }
 
 /// Locates each queued problem at its pointer through the context and reports it.
+///
+/// # Errors
+///
+/// An [`InternalError`] for a pointer with no authored origin.
 pub(crate) fn report_queued(
-    _reporter: AccessRightsReporter,
-    _context: &mut AccessRightsContext,
-) -> Result<(), PassError> {
-    Err(not_ported_yet("accessRightsReporter"))
+    reporter: AccessRightsReporter,
+    context: &mut AccessRightsContext,
+) -> Result<(), InternalError> {
+    for problem in reporter.queued {
+        let mut related = Vec::with_capacity(problem.related.len());
+
+        for item in problem.related {
+            related.push(RelatedLocation {
+                origin: locate(context, &item.pointer)?,
+                message: item.message,
+            });
+        }
+
+        let origin = locate(context, &problem.pointer)?;
+
+        context.context.report(Diagnostic {
+            severity: Severity::Error,
+            rule: problem.rule.rule_id(),
+            message: problem.message,
+            fix: problem.fix,
+            origin,
+            related,
+        });
+    }
+
+    Ok(())
+}
+
+// Every pointer reported is one the half read from an authored layer, so it has an authored origin.
+fn locate(context: &AccessRightsContext, pointer: &str) -> Result<DiagnosticOrigin, InternalError> {
+    let Some(origin) = context.context.origin(pointer) else {
+        return Err(InternalError::new(format!(
+            "access.rights located a diagnostic at {pointer}, which has no origin"
+        )));
+    };
+
+    DiagnosticOrigin::of(&origin).ok_or_else(|| {
+        InternalError::new(format!(
+            "access.rights located a diagnostic at {pointer}, whose origin is the core, not an authored layer"
+        ))
+    })
 }
 
 pub(crate) fn access_rights_reporter() -> AccessRightsReporter {
@@ -149,5 +226,21 @@ pub(crate) fn access_rights_reporter() -> AccessRightsReporter {
         errors: 0,
         reported: HashSet::new(),
         queued: Vec::new(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::RULE_IDS;
+
+    #[test]
+    fn rule_ids_list_every_rule_in_order() {
+        let from_rules: Vec<RuleId> = AccessRightsRule::ALL
+            .iter()
+            .map(|rule| rule.rule_id())
+            .collect();
+
+        assert_eq!(from_rules, RULE_IDS);
     }
 }

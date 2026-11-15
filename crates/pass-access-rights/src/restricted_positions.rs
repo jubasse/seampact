@@ -1,10 +1,15 @@
 //! The positions a field restriction is refused at: route params, headers and error params.
 
 use seampact_ir::{Origin, TypeUse};
-use seampact_pipeline::PassError;
+use seampact_diagnostics::access_rights_quoted;
+use seampact_pipeline::{PassError, pointer_below};
 
 use crate::not_ported::not_ported_yet;
-use crate::restricted_fields::{AccessRightsDraftSchemas, AccessRightsPositionWalk};
+use crate::read::{access_rights_entries, access_rights_member};
+use crate::restricted_fields::{
+    AccessRightsDraftSchemas, AccessRightsPositionWalk, AccessRightsRefusedPosition,
+    access_rights_refuse_restrictions_below,
+};
 use crate::routes::AccessRightsRoute;
 use crate::schema_use::AccessRightsContext;
 
@@ -31,11 +36,30 @@ pub(crate) fn access_rights_refuse_route_positions(
     Err(not_ported_yet("accessRightsRefuseRoutePositions"))
 }
 
+/// Refuses a restricted field reached from the params of an error the contract declares, whatever
+/// route answers it.
 pub(crate) fn access_rights_refuse_error_params(
-    _context: &AccessRightsContext,
-    _walk: &mut AccessRightsPositionWalk<'_, '_>,
+    context: &AccessRightsContext,
+    walk: &mut AccessRightsPositionWalk<'_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("accessRightsRefuseErrorParams"))
+    let merged = Some(&context.context.raw.merged);
+
+    for (code, error) in access_rights_entries(merged, "errors") {
+        if access_rights_member(Some(error), "params").is_none() {
+            continue;
+        }
+
+        let pointer = pointer_below("/errors", &[code, "params"]);
+        let position = AccessRightsRefusedPosition {
+            text: format!("the params of error '{}'", access_rights_quoted(code)),
+            pointer: Some(pointer.clone()),
+        };
+        let params_use = error_params_use(context, walk.schemas, &pointer)?;
+
+        access_rights_refuse_restrictions_below(walk, &params_use, &position)?;
+    }
+
+    Ok(())
 }
 
 pub(crate) fn error_params_use(
