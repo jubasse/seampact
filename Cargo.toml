@@ -64,6 +64,11 @@ libfuzzer-sys = "0.4.13"
 # The CLI binary and xtask only.
 anyhow = "1.0.104"
 
+# Tests and the oracle run 4-5 times faster at opt-level 1 (the gate: 320 s to 70 s after a one-crate
+# change); debug assertions and overflow checks stay on, so behaviour is unchanged.
+[profile.dev]
+opt-level = 1
+
 [workspace.lints.rust]
 unsafe_code = "forbid"
 missing_docs = "warn"

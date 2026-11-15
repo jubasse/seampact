@@ -10,7 +10,7 @@ use seampact_oracle::{
     RuleIdRegistry, Selection, SubjectAnswer, Verdict, run_oracle,
 };
 
-use crate::outcome::StepOutcome;
+use crate::outcome::{StepOutcome, StepReport};
 use crate::prerequisite::missing_node_modules_problem;
 
 const ORACLE_STEP: &str = "oracle";
@@ -119,37 +119,33 @@ pub fn run_oracle_task(
     }
 }
 
-/// The oracle step of the gate: every fixture, the verdict printed, then the step's outcome.
-pub fn oracle_gate_step(workspace_root: &Utf8Path) -> StepOutcome {
+/// The oracle step of the gate: every fixture, the verdict kept in the report, then the outcome.
+pub fn oracle_gate_step(workspace_root: &Utf8Path) -> StepReport {
     let subject = compiler_subject();
 
     if let Some(problem) = missing_node_modules_problem(workspace_root) {
-        eprintln!("{ORACLE_STEP}: {problem}");
-
-        return StepOutcome::Failed { step: ORACLE_STEP };
+        return StepReport::failed_with(ORACLE_STEP, &format!("{ORACLE_STEP}: {problem}"));
     }
 
     if let Some(problem) = unplugged_compiler_problem(workspace_root, subject.as_deref()) {
-        eprintln!("{ORACLE_STEP}: {problem}");
-
-        return StepOutcome::Failed { step: ORACLE_STEP };
+        return StepReport::failed_with(ORACLE_STEP, &format!("{ORACLE_STEP}: {problem}"));
     }
 
     match run_oracle_task(workspace_root, &default_selection()) {
         Ok(verdict) => {
-            println!("{verdict}");
-
-            if verdict.passed() {
+            let outcome = if verdict.passed() {
                 StepOutcome::Passed { step: ORACLE_STEP }
             } else {
                 StepOutcome::Failed { step: ORACLE_STEP }
+            };
+
+            StepReport {
+                outcome,
+                stdout: format!("{verdict}\n"),
+                stderr: String::new(),
             }
         }
-        Err(error) => {
-            eprintln!("{ORACLE_STEP}: {error}");
-
-            StepOutcome::Failed { step: ORACLE_STEP }
-        }
+        Err(error) => StepReport::failed_with(ORACLE_STEP, &format!("{ORACLE_STEP}: {error}")),
     }
 }
 

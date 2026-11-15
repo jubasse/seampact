@@ -1,6 +1,8 @@
 //! The lane's oracle subset: every expected half delta of every fixture replays onto the typed draft.
 
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::thread;
 
 use crate::support::{files_under, read_json, repository_root};
 use seampact_json::JsonValue;
@@ -53,7 +55,7 @@ fn half_files_by_api(root: &Path) -> Result<Vec<ApiHalves>, String> {
 }
 
 /// Replays one api; the first step that differs is named.
-fn replay(api: &ApiHalves) -> (usize, Option<String>) {
+fn replay(api: &ApiHalves) -> ReplayResult {
     let mut identical = 0;
     let Ok(mut state) = DraftIr::new().to_json_value() else {
         return (identical, Some("a new draft does not encode".to_owned()));
@@ -72,6 +74,53 @@ fn replay(api: &ApiHalves) -> (usize, Option<String>) {
     }
 
     (identical, None)
+}
+
+/// What replaying one api found: the steps that matched and the first difference.
+type ReplayResult = (usize, Option<String>);
+
+/// Replays every api on all cores; the results come back in api order, so the first difference
+/// named does not depend on thread timing.
+fn replay_every_api(apis: &[ApiHalves]) -> Result<Vec<ReplayResult>, String> {
+    let next_api = AtomicUsize::new(0);
+    let worker_count = thread::available_parallelism().map_or(1, usize::from);
+
+    let finished_by_worker: Vec<Vec<(usize, ReplayResult)>> = thread::scope(|scope| {
+        let workers: Vec<_> = (0..worker_count)
+            .map(|_| {
+                scope.spawn(|| {
+                    let mut finished = Vec::new();
+
+                    loop {
+                        let index = next_api.fetch_add(1, Ordering::Relaxed);
+                        let Some(api) = apis.get(index) else {
+                            break;
+                        };
+
+                        finished.push((index, replay(api)));
+                    }
+
+                    finished
+                })
+            })
+            .collect();
+
+        workers
+            .into_iter()
+            .map(|worker| {
+                worker
+                    .join()
+                    .map_err(|_| "a replay worker panicked".to_owned())
+            })
+            .collect::<Result<Vec<_>, String>>()
+    })?;
+
+    let mut finished: Vec<(usize, ReplayResult)> =
+        finished_by_worker.into_iter().flatten().collect();
+
+    finished.sort_by_key(|(index, _)| *index);
+
+    Ok(finished.into_iter().map(|(_, result)| result).collect())
 }
 
 fn replay_step(state: &JsonValue, file: &Path) -> Result<JsonValue, String> {
@@ -107,9 +156,7 @@ fn every_expected_half_delta_replays_onto_the_typed_draft() -> Result<(), String
     let mut identical = 0;
     let mut differences: Vec<String> = Vec::new();
 
-    for api in &apis {
-        let (matched, difference) = replay(api);
-
+    for (matched, difference) in replay_every_api(&apis)? {
         identical += matched;
         differences.extend(difference);
     }
