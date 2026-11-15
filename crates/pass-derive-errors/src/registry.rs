@@ -788,3 +788,38 @@ pub(crate) fn derive_errors_registry(
 
     Ok(registry)
 }
+
+#[cfg(test)]
+mod tests {
+    use seampact_json::JsonNumber;
+
+    use super::*;
+
+    fn status_of(text: &str) -> Result<i64, InternalError> {
+        let number = JsonNumber::from_json_text(text).unwrap();
+        let mut declaration = JsonObject::new();
+
+        declaration.insert("status".to_owned(), JsonValue::Number(number));
+
+        declared_status(&ErrorSite {
+            code: "x.y",
+            pointer: "/errors/x.y".to_owned(),
+            value: &declaration,
+        })
+    }
+
+    #[test]
+    fn a_status_is_a_javascript_integer_within_the_http_range() {
+        for (text, expected) in [
+            ("404", Some(404)),
+            ("404.0", Some(404)),
+            ("4.04e2", Some(404)),
+        ] {
+            assert_eq!(status_of(text).ok(), expected, "status {text}");
+        }
+
+        for text in ["1e-17", "404.5", "99", "600", "-0", "9007199254740993"] {
+            assert!(status_of(text).is_err(), "status {text}");
+        }
+    }
+}

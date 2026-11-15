@@ -388,3 +388,94 @@ fn read_written(
 
     Ok(None)
 }
+
+#[cfg(test)]
+mod tests {
+    use seampact_json::JsonObject;
+    use seampact_pipeline::derivation_roles;
+    use seampact_pipeline::testing::FakeSchemaService;
+
+    use super::*;
+    use crate::tests::with_reporter;
+
+    const BINDING_POINTER: &str = "/conventions/errors/derived/unauthenticated";
+
+    const RAW_WITH_TEMPLATE: &str = r#"{"conventions":{"errors":{"derived":{"unauthenticated":
+        {"code":"auth.required","params":{"b":1,"10":2,"9":3,"𐐀":4}}}}}}"#;
+
+    #[test]
+    fn the_keys_of_a_written_template_are_reported_in_javascript_key_order() {
+        let mut object = JsonObject::new();
+
+        for key in ["b", "10", "9", "\u{10400}"] {
+            object.insert(key.to_owned(), JsonValue::String("$code".to_owned()));
+        }
+
+        let template = JsonValue::Object(object);
+        let service = FakeSchemaService::new();
+        let schemas = IrMap::new();
+        let code = ErrorCode::new("auth.required".to_owned());
+        let role = derivation_roles()
+            .iter()
+            .find(|candidate| candidate.role.as_str() == "unauthenticated")
+            .unwrap();
+        let site = DeriveErrorsRoleParamsSite {
+            schemas: &schemas,
+            examples: &service,
+            role,
+            code: &code,
+            params_schema: None,
+            template: Some(&template),
+            rate_limit_param: None,
+            pointer: BINDING_POINTER.to_owned(),
+        };
+
+        let (accepted, reported) = with_reporter(RAW_WITH_TEMPLATE, |reporter| {
+            check_top_level_keys(&site, &HashSet::new(), reporter)
+        })
+        .unwrap();
+        let pointers: Vec<&str> = reported
+            .iter()
+            .map(|diagnostic| diagnostic.origin.pointer.as_str())
+            .collect();
+
+        assert_eq!(accepted, Ok(false));
+        // Array-index keys first and ascending, then the others in written order.
+        assert_eq!(
+            pointers,
+            [
+                "/conventions/errors/derived/unauthenticated/params/9",
+                "/conventions/errors/derived/unauthenticated/params/10",
+                "/conventions/errors/derived/unauthenticated/params/b",
+                "/conventions/errors/derived/unauthenticated/params/\u{10400}",
+            ]
+        );
+    }
+
+    #[test]
+    fn a_template_that_is_no_object_fills_no_param() {
+        let template = JsonValue::String("$code".to_owned());
+        let service = FakeSchemaService::new();
+        let schemas = IrMap::new();
+        let code = ErrorCode::new("auth.required".to_owned());
+        let role = derivation_roles().first().unwrap();
+        let site = DeriveErrorsRoleParamsSite {
+            schemas: &schemas,
+            examples: &service,
+            role,
+            code: &code,
+            params_schema: None,
+            template: Some(&template),
+            rate_limit_param: None,
+            pointer: BINDING_POINTER.to_owned(),
+        };
+
+        let (accepted, reported) = with_reporter(RAW_WITH_TEMPLATE, |reporter| {
+            check_top_level_keys(&site, &HashSet::new(), reporter)
+        })
+        .unwrap();
+
+        assert_eq!(accepted, Ok(false));
+        assert_eq!(reported.len(), 1);
+    }
+}

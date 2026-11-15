@@ -62,19 +62,14 @@ fn retry_param_problem(
         _ => return Ok(Some("an integer".to_owned())),
     };
 
-    // A decimal literal that does not parse reads as NaN, which no comparison holds.
-    let within = |bound: Option<&str>, holds: fn(f64) -> bool| {
-        bound.is_some_and(|text| text.parse::<f64>().is_ok_and(holds))
-    };
-
-    if !within(
+    if !bound_holds(
         integer.refinements.minimum.as_ref().map(AsRef::as_ref),
         |minimum| minimum >= 0.0,
     ) {
         return Ok(Some("an integer with a minimum of at least 0".to_owned()));
     }
 
-    if !within(
+    if !bound_holds(
         integer.refinements.maximum.as_ref().map(AsRef::as_ref),
         |maximum| maximum <= SAFE_MAXIMUM_NUMBER,
     ) {
@@ -84,6 +79,29 @@ fn retry_param_problem(
     }
 
     Ok(None)
+}
+
+// A bound is the JavaScript `Number` of its decimal literal, NaN when it does not read as one,
+// which no comparison holds.
+fn bound_holds(bound: Option<&str>, holds: fn(f64) -> bool) -> bool {
+    bound.is_some_and(|text| holds(number_of_decimal_text(text)))
+}
+
+// `Number(text)` for the text of a decimal literal: `Number("")` is 0, and Rust's parser would
+// also read `inf` and `nan`, which JavaScript does not.
+fn number_of_decimal_text(text: &str) -> f64 {
+    if text.is_empty() {
+        return 0.0;
+    }
+
+    let is_decimal_character =
+        |character: char| character.is_ascii_digit() || "+-.eE".contains(character);
+
+    if !text.chars().all(is_decimal_character) {
+        return f64::NAN;
+    }
+
+    text.parse::<f64>().unwrap_or(f64::NAN)
 }
 
 // The param's own pointer when the declaration writes its params inline, else the declaration,
@@ -161,4 +179,50 @@ pub(crate) fn derive_errors_check_retry_param(
     })?;
 
     Ok(false)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn minimum_holds(text: Option<&str>) -> bool {
+        bound_holds(text, |minimum| minimum >= 0.0)
+    }
+
+    fn maximum_holds(text: Option<&str>) -> bool {
+        bound_holds(text, |maximum| maximum <= SAFE_MAXIMUM_NUMBER)
+    }
+
+    #[test]
+    fn a_minimum_is_read_as_a_javascript_number() {
+        // `Number("-0") >= 0` and `Number("") >= 0` hold; an absent or unreadable bound holds nothing.
+        for (text, expected) in [
+            (Some("0"), true),
+            (Some("-0"), true),
+            (Some("0.5"), true),
+            (Some("-1"), false),
+            (Some("-0.000000000000000001"), false),
+            (Some(""), true),
+            (Some("inf"), false),
+            (Some("NaN"), false),
+            (None, false),
+        ] {
+            assert_eq!(minimum_holds(text), expected, "minimum {text:?}");
+        }
+    }
+
+    #[test]
+    fn a_maximum_is_compared_as_a_double() {
+        // 2^53 + 1 reads as 2^53, past the largest safe integer, as it does in JavaScript.
+        for (text, expected) in [
+            (Some("9007199254740991"), true),
+            (Some("9007199254740992"), false),
+            (Some("9007199254740993"), false),
+            (Some("1e999"), false),
+            (Some("-1"), true),
+            (None, false),
+        ] {
+            assert_eq!(maximum_holds(text), expected, "maximum {text:?}");
+        }
+    }
 }

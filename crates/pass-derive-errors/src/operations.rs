@@ -396,6 +396,11 @@ fn compare_origins(
         .iter()
         .map(|entry| Layer::from(entry.layer.clone()))
         .collect();
+
+    origin_order(layers)
+}
+
+fn origin_order(layers: Vec<Layer>) -> impl Fn(&Origin, &Origin) -> Ordering {
     let layer_index = move |origin: &Origin| {
         layers
             .iter()
@@ -593,4 +598,33 @@ pub(crate) fn derive_errors_operations(
     }
 
     Ok(operation_errors)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn origin(api: Option<&str>, layer: Layer, pointer: &str) -> Origin {
+        Origin {
+            api: api.map(str::to_owned),
+            layer,
+            pointer: pointer.to_owned(),
+        }
+    }
+
+    #[test]
+    fn origins_sort_by_api_then_workspace_layer_then_utf16_pointer() {
+        let order = origin_order(vec![Layer::Shared, Layer::Api]);
+        let astral = origin(None, Layer::Api, "/\u{10000}");
+        let private_use = origin(None, Layer::Api, "/\u{E000}");
+        let shared = origin(None, Layer::Shared, "/z");
+        let named_api = origin(Some("a"), Layer::Shared, "/a");
+
+        // U+10000 is the surrogate pair D800 DC00 in JavaScript, which sorts before U+E000.
+        assert_eq!(order(&astral, &private_use), Ordering::Less);
+        // The shared layer is listed first, then the api's.
+        assert_eq!(order(&shared, &astral), Ordering::Less);
+        // An origin without an api sorts before any named api.
+        assert_eq!(order(&named_api, &shared), Ordering::Greater);
+    }
 }

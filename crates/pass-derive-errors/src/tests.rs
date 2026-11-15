@@ -20,7 +20,7 @@ const NATURES: &str = r#"{
   }
 }"#;
 
-fn with_reporter<R>(
+pub(crate) fn with_reporter<R>(
     text: &str,
     body: impl FnOnce(&mut DeriveErrorsReporter<'_, '_>) -> R,
 ) -> Result<(R, Vec<Diagnostic>), InternalError> {

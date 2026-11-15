@@ -416,3 +416,57 @@ fn member_misfit(
 ) -> Result<Option<DeriveErrorsMisfitReason>, PassError> {
     Err(not_ported_yet("memberMisfit"))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn kinds_of_scalar(scalar_type: ScalarType, nullable: bool) -> DeriveErrorsKinds {
+        let scalar = TypeUse::Scalar(derive_errors_scalar_use(
+            scalar_type,
+            None,
+            derive_errors_no_refinements(),
+        ));
+        let typed = DeriveErrorsTyped {
+            use_: KnownTypeUseRef::try_from(&scalar).unwrap(),
+            nullable,
+        };
+
+        derive_errors_kinds_of(&typed).unwrap()
+    }
+
+    fn only(kinds: &[DeriveErrorsJsonKind]) -> DeriveErrorsKinds {
+        DeriveErrorsKinds::Only(kinds.iter().copied().collect())
+    }
+
+    #[test]
+    fn a_number_takes_integers_and_a_nullable_use_takes_null() {
+        assert_eq!(
+            kinds_of_scalar(ScalarType::Number, true),
+            only(&[
+                DeriveErrorsJsonKind::Null,
+                DeriveErrorsJsonKind::Integer,
+                DeriveErrorsJsonKind::Number,
+            ])
+        );
+        assert_eq!(
+            kinds_of_scalar(ScalarType::Integer, false),
+            only(&[DeriveErrorsJsonKind::Integer])
+        );
+    }
+
+    #[test]
+    fn kinds_fit_only_when_every_rendered_kind_is_accepted() {
+        let integer = only(&[DeriveErrorsJsonKind::Integer]);
+        let number = kinds_of_scalar(ScalarType::Number, false);
+
+        assert!(derive_errors_kinds_fit(&integer, &number));
+        assert!(!derive_errors_kinds_fit(&number, &integer));
+        assert!(derive_errors_kinds_fit(&integer, &DeriveErrorsKinds::Any));
+        assert!(!derive_errors_kinds_fit(&DeriveErrorsKinds::Any, &integer));
+        assert!(derive_errors_kinds_fit(
+            &DeriveErrorsKinds::Any,
+            &DeriveErrorsKinds::Any
+        ));
+    }
+}
