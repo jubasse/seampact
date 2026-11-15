@@ -29,6 +29,7 @@ pub use derivations::{
 };
 pub use draft::{
     ApiDeclaration, DraftApi, DraftConcurrency, DraftIr, DraftOperation, DraftOperationInput,
+    DraftOperationInputRef,
 };
 pub use error::PassError;
 pub use halves::{Half, LaterHalf, PassName};

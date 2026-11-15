@@ -11,7 +11,8 @@ use seampact_pass_tree_shared::{
     TREE_NODES_OPERATION_KIND, tree_nodes_relay_origin, tree_nodes_text,
 };
 use seampact_pipeline::{
-    DraftConcurrency, DraftIr, DraftOperation, DraftOperationInput, PassError,
+    DraftConcurrency, DraftIr, DraftOperation, DraftOperationInput, DraftOperationInputRef,
+    PassError,
 };
 
 use crate::diagnostics::{
@@ -70,12 +71,11 @@ impl RelayedOperation<'_> {
         }
     }
 
-    /// The request body, which only a draft operation holds in the shape a relay copies.
-    fn input(&self) -> Result<Option<&DraftOperationInput>, PassError> {
+    /// The request body, in the draft shape.
+    fn input(&self) -> Option<DraftOperationInputRef<'_>> {
         match self {
-            Self::Draft(operation) => Ok(operation.input.as_ref()),
-            Self::Imported(operation) if operation.input.is_none() => Ok(None),
-            Self::Imported(_) => Err(not_ported_yet("copiedInput")),
+            Self::Draft(operation) => operation.input.as_ref().map(DraftOperationInputRef::from),
+            Self::Imported(operation) => operation.input.as_ref().map(DraftOperationInputRef::from),
         }
     }
 
@@ -240,9 +240,8 @@ pub(crate) fn tree_nodes_relay_shape(
     };
     let params = copied_params(operation.params(), &stamp)?;
     let input = operation
-        .input()?
-        .map(|input| copied_input(input, &source.api))
-        .transpose()?;
+        .input()
+        .map(|input| copied_input(input, &source.api));
     let responses = copied_responses(operation.responses().unwrap_or_default(), &stamp)?;
     let paging = operation
         .paging()
@@ -353,11 +352,18 @@ fn copied_params(_params: Option<&Params>, _stamp: &RelayStamp) -> Result<Params
     Err(not_ported_yet("copiedParams"))
 }
 
-fn copied_input(
-    _input: &DraftOperationInput,
-    _api: &str,
-) -> Result<DraftOperationInput, PassError> {
-    Err(not_ported_yet("copiedInput"))
+// The body input with its media, schema and fields; never `proofs`, `rawBody` or `bodyLimitBytes`,
+// which the relay route derives under its own settings.
+fn copied_input(input: DraftOperationInputRef<'_>, api: &str) -> DraftOperationInput {
+    DraftOperationInput {
+        media: input.media.clone(),
+        schema: input.schema.clone(),
+        body_limit_bytes: None,
+        raw_body: None,
+        fields: input.fields.map(<[_]>::to_vec),
+        proofs: None,
+        origin: tree_nodes_relay_origin(input.origin, api),
+    }
 }
 
 fn copied_responses(
