@@ -66,6 +66,11 @@ pub(crate) fn access_rights_entries<'raw>(
         .collect()
 }
 
+/// The prefix and key of an `x-<prefix>-<key>` extension member name.
+fn extension_key_parts(_name: &str) -> Result<Option<(&str, &str)>, PassError> {
+    Err(not_ported_yet("EXTENSION_KEY"))
+}
+
 pub(crate) fn access_rights_docs(_declaration: &JsonObject) -> Result<AccessRightsDocs, PassError> {
     Err(not_ported_yet("accessRightsDocs"))
 }

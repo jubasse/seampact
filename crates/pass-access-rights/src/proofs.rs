@@ -4,7 +4,7 @@
 use indexmap::{IndexMap, IndexSet};
 use seampact_diagnostics::InternalError;
 use seampact_ir::{
-    DerivedFrom, FieldWire, Identity, IdentityId, InputMediaType, InputProof, IrMap,
+    DerivationId, DerivedFrom, FieldWire, Identity, IdentityId, InputMediaType, InputProof, IrMap,
     KnownIdentityRef, KnownRequirementRef, Origin, Param, ProofPlacement, Requirement, RuleProof,
     Scheme, SchemeId, SignedIdentity, UnknownKeys,
 };
@@ -56,9 +56,9 @@ pub(crate) struct ProofUse {
     pub(crate) from: Vec<Origin>,
 }
 
-const PROOF_DERIVATION: &str = "rule.proof";
+const PROOF_DERIVATION: DerivationId = DerivationId::from_static("rule.proof");
 
-const UNKNOWN_KEYS_DERIVATION: &str = "identity.unknownKeys";
+const UNKNOWN_KEYS_DERIVATION: DerivationId = DerivationId::from_static("identity.unknownKeys");
 
 const PROOF_ONLY_MEDIA: &str = "application/json";
 

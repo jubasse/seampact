@@ -3,7 +3,9 @@
 use std::cmp::Ordering;
 
 use indexmap::IndexMap;
-use seampact_ir::{Direction, FieldRestriction, FieldRight, FieldRightSubject, InputPolicy};
+use seampact_ir::{
+    DerivationId, Direction, FieldRestriction, FieldRight, FieldRightSubject, InputPolicy,
+};
 use seampact_js::cmp_utf16;
 use seampact_pipeline::{PassError, TreeNodeKind};
 
@@ -34,6 +36,8 @@ pub(crate) struct Reached<'draft> {
     pub(crate) field: AccessRightsRestrictedField<'draft>,
     pub(crate) direction: Direction,
 }
+
+const FIELD_RIGHT_DERIVATION: DerivationId = DerivationId::from_static("fieldRight.restricted");
 
 /// The `fieldRights` of a route: one entry per restricted field its input and responses reach.
 ///

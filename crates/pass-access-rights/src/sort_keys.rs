@@ -3,7 +3,8 @@
 use indexmap::IndexMap;
 use seampact_diagnostics::access_rights_quoted;
 use seampact_ir::{
-    DerivedFrom, FieldRestriction, FieldRightSubject, ObjectSchema, OperationScope, SortKey,
+    DerivationId, DerivedFrom, FieldRestriction, FieldRightSubject, ObjectSchema, OperationScope,
+    SortKey,
 };
 use seampact_pipeline::{PassError, TreeNodeKind};
 
@@ -75,6 +76,8 @@ pub(crate) enum WrittenRight {
 }
 
 const LIST_SHAPES: &[&str] = &["page", "list"];
+
+const SORT_KEY_DERIVATION: DerivationId = DerivationId::from_static("sortKey.restricted");
 
 /// The right and subject of each sort key that names a restricted field, by the key's position.
 ///
