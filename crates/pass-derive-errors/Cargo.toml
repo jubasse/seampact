@@ -15,7 +15,6 @@ seampact-diagnostics.workspace = true
 seampact-ir.workspace = true
 seampact-js.workspace = true
 seampact-json.workspace = true
-seampact-pass-tree-nodes.workspace = true
 seampact-pass-tree-shared.workspace = true
 seampact-pipeline.workspace = true
 seampact-templates.workspace = true

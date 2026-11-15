@@ -981,7 +981,6 @@ dependencies = [
  "seampact-ir",
  "seampact-js",
  "seampact-json",
- "seampact-pass-tree-nodes",
  "seampact-pass-tree-shared",
  "seampact-pipeline",
  "seampact-templates",
