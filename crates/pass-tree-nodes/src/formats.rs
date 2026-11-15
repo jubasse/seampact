@@ -1,17 +1,21 @@
 //! The `formats` catalogue: every declared wire format and the core `bare`, and the check of each payload against its templates.
 
-use std::mem;
+use std::collections::HashSet;
+use std::{iter, mem};
 
 use indexmap::IndexMap;
+use seampact_diagnostics::{InternalError, quote_text};
 use seampact_ir::{
-    Absent, EachTemplate, ErrorShape, FormatId, HeaderTemplate, IrMap, Layer, MemberName, MetaFill,
-    MetaMember, ObjectSchema, ObjectTemplate, ObjectTemplateMember, Origin, PlainMemberName,
-    ResponseShape, Shape, Slot, SlotTemplate, SuccessShapes, Template, TypeUse, WireFormat,
+    Absent, EachTemplate, ErrorShape, FormatId, HeaderTemplate, IrMap, KnownSchemaRef,
+    KnownTemplateRef, Layer, MemberName, MetaFill, MetaMember, ObjectSchema, ObjectTemplate,
+    ObjectTemplateMember, OperationId, Origin, PlainMemberName, ResponseShape, Shape, Slot,
+    SlotTemplate, SuccessShapes, Template, TypeUse, WireFormat,
 };
 use seampact_js::js_key_order;
 use seampact_json::JsonValue;
-use seampact_pass_tree_shared::tree_nodes_member;
+use seampact_pass_tree_shared::{tree_nodes_member, tree_nodes_schema};
 use seampact_pipeline::{DraftOperation, PassError, pointer_below};
+use seampact_templates::template_slots;
 
 use crate::api::text_of;
 use crate::not_ported::not_ported_yet;
@@ -399,7 +403,7 @@ pub(crate) fn tree_nodes_check_payloads(
                 record: record_of(shape, body),
             };
 
-            for written in written_templates(operation, format, shape, scope)? {
+            for written in written_templates(operation, format, shape, scope) {
                 check_id_slots(&check, &written, scope)?;
                 check_item_collection_slot(&check, &written, scope)?;
                 check_member_names(&check, &written, scope)?;
@@ -429,10 +433,30 @@ fn success_shape_of(shape: &ResponseShape) -> Option<ShapeName> {
     }
 }
 fn slot_value_of_use(
-    _type_use: &TypeUse,
-    _scope: &TreeNodesScope<'_, '_, '_>,
+    type_use: &TypeUse,
+    scope: &TreeNodesScope<'_, '_, '_>,
 ) -> Result<SlotValue, PassError> {
-    Err(not_ported_yet("slotValueOfUse"))
+    if let TypeUse::Array(array) = type_use {
+        return Ok(SlotValue::Array {
+            items: (*array.items).clone(),
+        });
+    }
+
+    let schema = match type_use {
+        TypeUse::Ref(reference) => tree_nodes_schema(scope.draft, reference.schema.as_str()),
+        _ => None,
+    };
+    let Some(schema) = schema else {
+        return Ok(SlotValue::Other);
+    };
+
+    Ok(match KnownSchemaRef::try_from(schema)? {
+        KnownSchemaRef::Object(object) => SlotValue::Object {
+            schema: object.clone(),
+        },
+        KnownSchemaRef::Map(_) => SlotValue::Table,
+        KnownSchemaRef::Union(_) => SlotValue::Other,
+    })
 }
 
 // `$payload` is the item, the id-keyed table, or the records of a list or page.
@@ -458,44 +482,242 @@ fn record_of(shape: ShapeName, body: &TypeUse) -> TypeUse {
         _ => body.clone(),
     }
 }
+fn shape_in(success: &SuccessShapes, shape: ShapeName) -> &Shape {
+    match shape {
+        ShapeName::Item => &success.item,
+        ShapeName::Table => &success.table,
+        ShapeName::List => &success.list,
+        ShapeName::Page => &success.page,
+    }
+}
+
 fn written_templates(
-    _operation: &DraftOperation,
-    _format: &WireFormat,
-    _shape: ShapeName,
-    _scope: &TreeNodesScope<'_, '_, '_>,
-) -> Result<Vec<WrittenTemplate>, PassError> {
-    Err(not_ported_yet("writtenTemplates"))
+    operation: &DraftOperation,
+    format: &WireFormat,
+    shape: ShapeName,
+    scope: &TreeNodesScope<'_, '_, '_>,
+) -> Vec<WrittenTemplate> {
+    let format_owner = TemplateOwner {
+        name: format!("the format {}", format.id.as_str()),
+        origin: format.origin.clone(),
+    };
+    let success = shape_in(&format.success, shape);
+    let format_headers = success.headers.iter().map(|header| WrittenTemplate {
+        template: header.value.clone(),
+        owner: format_owner.clone(),
+    });
+    let style_id = operation
+        .paging
+        .as_ref()
+        .and_then(|paging| paging.style.as_ref());
+    let style = match style_id {
+        Some(id) if shape == ShapeName::Page => scope.output.pagings.get(id),
+        _ => None,
+    };
+    let body = WrittenTemplate {
+        template: success.body.clone(),
+        owner: format_owner.clone(),
+    };
+    let Some(style) = style else {
+        return iter::once(body).chain(format_headers).collect();
+    };
+    let style_owner = TemplateOwner {
+        name: format!("the paging style {}", style.id.as_str()),
+        origin: style.origin.clone(),
+    };
+    let response = &style.response;
+    let first = match &response.body {
+        Some(template) => WrittenTemplate {
+            template: template.clone(),
+            owner: style_owner.clone(),
+        },
+        None => body,
+    };
+    let style_templates = response
+        .meta
+        .iter()
+        .map(|member| &member.value)
+        .chain(response.headers.iter().map(|header| &header.value))
+        .map(|template| WrittenTemplate {
+            template: template.clone(),
+            owner: style_owner.clone(),
+        });
+
+    iter::once(first)
+        .chain(format_headers)
+        .chain(style_templates)
+        .collect()
+}
+
+fn operation_id_of(operation: &DraftOperation) -> Result<&str, InternalError> {
+    operation
+        .id
+        .as_ref()
+        .map(OperationId::as_str)
+        .ok_or_else(|| InternalError::new("an operation under payload check has no id"))
 }
 
 fn check_id_slots(
-    _check: &PayloadCheck<'_>,
-    _written: &WrittenTemplate,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    check: &PayloadCheck<'_>,
+    written: &WrittenTemplate,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("checkIdSlots"))
+    let operation = check.operation;
+    let used = template_slots(&written.template)?
+        .into_iter()
+        .find(|used| ID_SLOTS.contains(&used.slot.as_str()));
+    let Some(used) = used else {
+        return Ok(());
+    };
+    let property = operation.resource.as_ref().and_then(|resource| {
+        resource
+            .id_property
+            .as_deref()
+            .or(resource.id_param.as_deref())
+    });
+    let item = slot_value_of_use(&check.record, scope)?;
+
+    if let (Some(property), SlotValue::Object { schema }) = (property, &item)
+        && has_property(schema, property)?
+    {
+        return Ok(());
+    }
+
+    let named = property.map_or_else(String::new, |property| format!(" {}", quote_text(property)));
+    let to_declare = property.map_or_else(|| "the id property".to_owned(), quote_text);
+
+    report_payload(
+        check,
+        &written.owner,
+        &PayloadFault {
+            rule: PayloadRule::FormatId,
+            message: format!(
+                "The template of {} writes ${}, but the item of {} has no id property{named}.",
+                written.owner.name,
+                used.slot,
+                operation_id_of(operation)?
+            ),
+            fix: format!(
+                "Declare {to_declare} on the item (or set idProperty), or use a format that reads no id."
+            ),
+        },
+        scope,
+    )
 }
 
+// `$collection` in an item names the collection or single the operation belongs to; outside one it has no value.
 fn check_item_collection_slot(
-    _check: &PayloadCheck<'_>,
-    _written: &WrittenTemplate,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    check: &PayloadCheck<'_>,
+    written: &WrittenTemplate,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("checkItemCollectionSlot"))
+    let operation = check.operation;
+
+    if check.shape != ShapeName::Item || operation.resource.is_some() {
+        return Ok(());
+    }
+
+    let uses_collection = template_slots(&written.template)?
+        .iter()
+        .any(|used| used.slot == COLLECTION_SLOT);
+
+    if !uses_collection {
+        return Ok(());
+    }
+
+    report_payload(
+        check,
+        &written.owner,
+        &PayloadFault {
+            rule: PayloadRule::TemplateSlot,
+            message: format!(
+                "The template of {} writes ${COLLECTION_SLOT} in an item, but {} belongs to no collection or single.",
+                written.owner.name,
+                operation_id_of(operation)?
+            ),
+            fix: "Set format: bare (or another format) on the route, or move it under a collection or single."
+                .to_owned(),
+        },
+        scope,
+    )
 }
 
+// A member name written twice in one object would be one member in the document: `$collection` names a member by
+// the resource type the operation fixes, so a literal member of that name collides with it.
 fn check_member_names(
-    _check: &PayloadCheck<'_>,
-    _written: &WrittenTemplate,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    check: &PayloadCheck<'_>,
+    written: &WrittenTemplate,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("checkMemberNames"))
+    let resource_type = check
+        .operation
+        .resource
+        .as_ref()
+        .map(|resource| resource.r#type.as_str());
+    let Some(duplicate) = duplicate_member_name(&written.template, resource_type)? else {
+        return Ok(());
+    };
+
+    report_payload(
+        check,
+        &written.owner,
+        &PayloadFault {
+            rule: PayloadRule::FormatMember,
+            message: format!(
+                "The template of {} writes the member {} twice in {}.",
+                written.owner.name,
+                quote_text(&duplicate),
+                operation_id_of(check.operation)?
+            ),
+            fix: "Rename one of the members, or stop naming a member with $collection where a literal member has the resource's name."
+                .to_owned(),
+        },
+        scope,
+    )
 }
 
 fn duplicate_member_name(
-    _template: &Template,
-    _resource_type: Option<&str>,
+    template: &Template,
+    resource_type: Option<&str>,
 ) -> Result<Option<String>, PassError> {
-    Err(not_ported_yet("duplicateMemberName"))
+    match KnownTemplateRef::try_from(template)? {
+        KnownTemplateRef::Object(object) => {
+            let mut seen = HashSet::new();
+
+            for member in &object.members {
+                let Some(name) = member_name_text(&member.name, resource_type)? else {
+                    continue;
+                };
+
+                if seen.contains(&name) {
+                    return Ok(Some(name));
+                }
+
+                seen.insert(name);
+            }
+
+            for member in &object.members {
+                if let Some(nested) = duplicate_member_name(&member.value, resource_type)? {
+                    return Ok(Some(nested));
+                }
+            }
+
+            Ok(None)
+        }
+        KnownTemplateRef::Array(array) => {
+            for item in &array.items {
+                if let Some(name) = duplicate_member_name(item, resource_type)? {
+                    return Ok(Some(name));
+                }
+            }
+
+            Ok(None)
+        }
+        KnownTemplateRef::Each(each) => duplicate_member_name(&each.r#as, resource_type),
+        KnownTemplateRef::Slot(_) | KnownTemplateRef::Text(_) | KnownTemplateRef::Literal(_) => {
+            Ok(None)
+        }
+    }
 }
 
 fn member_name_text(
@@ -509,14 +731,42 @@ fn has_property(_schema: &ObjectSchema, _name: &str) -> Result<bool, PassError> 
     Err(not_ported_yet("hasProperty"))
 }
 
+// Walks a template with the element `$item` holds inside `$as`.
 fn check_slot_values(
-    _check: &PayloadCheck<'_>,
-    _written: &WrittenTemplate,
-    _template: &Template,
-    _element: Option<&SlotValue>,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    check: &PayloadCheck<'_>,
+    written: &WrittenTemplate,
+    template: &Template,
+    element: Option<&SlotValue>,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("checkSlotValues"))
+    match KnownTemplateRef::try_from(template)? {
+        KnownTemplateRef::Object(object) => {
+            if let Some(merge) = &object.merge {
+                check_merge(check, written, object, merge.as_str(), element, scope)?;
+            }
+
+            for member in &object.members {
+                check_slot_values(check, written, &member.value, element, scope)?;
+            }
+
+            Ok(())
+        }
+        KnownTemplateRef::Array(array) => {
+            for item in &array.items {
+                check_slot_values(check, written, item, element, scope)?;
+            }
+
+            Ok(())
+        }
+        KnownTemplateRef::Each(each) => {
+            let inner = each_element(check, written, each, element, scope)?;
+
+            check_slot_values(check, written, &each.r#as, inner.as_ref(), scope)
+        }
+        KnownTemplateRef::Slot(_) | KnownTemplateRef::Text(_) | KnownTemplateRef::Literal(_) => {
+            Ok(())
+        }
+    }
 }
 
 fn slot_value(

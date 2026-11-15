@@ -1,11 +1,13 @@
 //! The `paging` member of an operation: the style it uses, its limits and token, and the sort keys of its item.
 
-use seampact_diagnostics::RelatedLocation;
+use seampact_diagnostics::{InternalError, RelatedLocation};
 use seampact_ir::{
     Origin, OverLimitPolicy, Paging, PagingId, PagingParamStyle, PagingToken, Param, Response,
     SortKey, TypeUse,
 };
-use seampact_json::JsonValue;
+use seampact_js::js_key_order;
+use seampact_json::{JsonValue, MAX_SAFE_INTEGER, MIN_SAFE_INTEGER, js_integer_in_range};
+use seampact_pass_tree_shared::{tree_nodes_member, tree_nodes_object_of};
 use seampact_pipeline::PassError;
 
 use crate::diagnostics::{
@@ -13,8 +15,9 @@ use crate::diagnostics::{
 };
 use crate::fields::TreeNodesSite;
 use crate::not_ported::not_ported_yet;
+use crate::pagings::TREE_NODES_DEFAULT_SORT_STYLE;
 use crate::pass::TreeNodesScope;
-use crate::responses::tree_nodes_is_list;
+use crate::responses::{TREE_NODES_PAGING_NONE, tree_nodes_is_list};
 
 const DEFAULT_OVER_LIMIT: OverLimitPolicy = OverLimitPolicy::Reject;
 const OVER_LIMITS: &[OverLimitPolicy] = &[OverLimitPolicy::Reject, OverLimitPolicy::Clamp];
@@ -136,7 +139,7 @@ pub(crate) fn tree_nodes_paging(
             style: None,
             max_limit: None,
             default_limit: None,
-            over_limit: over_limit_of(site, &named, scope)?,
+            over_limit: over_limit_of(&named, scope)?,
             token: None,
             sort_keys,
             origin: named.origin.clone(),
@@ -145,11 +148,11 @@ pub(crate) fn tree_nodes_paging(
     let Some(style) = declared_style(site, named_id, &named.origin, scope)? else {
         return Ok(None);
     };
-    let roles = request_roles(style)?;
+    let roles = request_roles(style);
 
     if !roles.iter().any(|role| role == SORT_ROLE) {
         refuse_sort_without_role(site, &sort_keys, &format!("the style {named_id}"), scope)?;
-    } else if sort_style_of(style)? == Some(SIGNED_SORT_STYLE) {
+    } else if sort_style_of(style) == Some(SIGNED_SORT_STYLE) {
         refuse_unsignable_keys(site, named_id, &sort_keys, scope)?;
     }
 
@@ -170,48 +173,220 @@ pub(crate) fn tree_nodes_paging(
     }))
 }
 
-fn named_style<'run>(
-    _site: &TreeNodesSite<'_, '_>,
-    _scope: &mut TreeNodesScope<'_, '_, 'run>,
-) -> Result<Option<NamedStyle<'run>>, PassError> {
-    Err(not_ported_yet("namedStyle"))
+// The style the route names (`cursor`, `{ cursor: { maxLimit } }`, `none`), else the convention's.
+fn named_style<'raw>(
+    site: &TreeNodesSite<'_, 'raw>,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
+) -> Result<Option<NamedStyle<'raw>>, PassError> {
+    let pointer = format!("{}/paging", site.node.pointer);
+
+    if let Some(written) = site.node.settings.get("paging") {
+        let Some(origin) = scope.context.origin(&pointer) else {
+            return Err(
+                InternalError::new(format!("the raw tree has no origin for {pointer}")).into(),
+            );
+        };
+
+        return match written {
+            JsonValue::String(text) if text == TREE_NODES_PAGING_NONE => Ok(Some(NamedStyle {
+                id: None,
+                settings: None,
+                origin,
+                on_route: true,
+            })),
+            JsonValue::String(text) => Ok(Some(NamedStyle {
+                id: Some(text.clone()),
+                settings: None,
+                origin,
+                on_route: true,
+            })),
+            JsonValue::Object(map) => {
+                let Some((id, settings)) = js_key_order(map.iter()).next() else {
+                    return Err(InternalError::new(format!(
+                        "the paging at {pointer} names no style"
+                    ))
+                    .into());
+                };
+
+                Ok(Some(NamedStyle {
+                    id: Some(id.clone()),
+                    settings: Some(settings),
+                    origin,
+                    on_route: true,
+                }))
+            }
+            _ => Err(InternalError::new(format!("the paging at {pointer} names no style")).into()),
+        };
+    }
+
+    if let Some(reading) = scope.context.conventions.get("paging.default")?
+        && let JsonValue::String(id) = reading.value
+        && let Some(origin) = reading.origin
+    {
+        return Ok(Some(NamedStyle {
+            id: Some(id.clone()),
+            settings: None,
+            origin,
+            on_route: false,
+        }));
+    }
+
+    scope
+        .context
+        .report(tree_nodes_error(TreeNodesDiagnosticOptions {
+            rule: TreeNodesRule::PagingStyle,
+            origin: tree_nodes_node_origin(&site.node.origin)?,
+            message: format!(
+                "The list {} names no paging style, and conventions.paging.default sets none.",
+                site.operation_id
+            ),
+            fix: PAGING_STYLE_FIX.to_owned(),
+            related: Vec::new(),
+        }));
+
+    Ok(None)
 }
 
 fn over_limit_of(
-    _site: &TreeNodesSite<'_, '_>,
-    _named: &NamedStyle<'_>,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    named: &NamedStyle<'_>,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<OverLimitPolicy, PassError> {
-    Err(not_ported_yet("overLimitOf"))
+    // `??`: a written null falls through to the convention.
+    let written = tree_nodes_member(named.settings, "overLimit")
+        .filter(|value| !matches!(value, JsonValue::Null));
+    let written = match written {
+        Some(value) => Some(value),
+        None => scope
+            .context
+            .conventions
+            .get("paging.overLimit")?
+            .map(|reading| reading.value),
+    };
+    let Some(JsonValue::String(text)) = written else {
+        return Ok(DEFAULT_OVER_LIMIT);
+    };
+
+    Ok(OVER_LIMITS
+        .iter()
+        .find(|policy| policy.as_str() == text)
+        .cloned()
+        .unwrap_or(DEFAULT_OVER_LIMIT))
 }
 
 fn refuse_sort_without_role(
-    _site: &TreeNodesSite<'_, '_>,
-    _sort_keys: &[SortKey],
-    _what: &str,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    sort_keys: &[SortKey],
+    what: &str,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("refuseSortWithoutRole"))
+    if sort_keys.is_empty() {
+        return Ok(());
+    }
+
+    let origin = scope
+        .context
+        .origin(&format!("{}/sortable", site.node.pointer))
+        .unwrap_or_else(|| site.node.origin.clone());
+
+    scope
+        .context
+        .report(tree_nodes_error(TreeNodesDiagnosticOptions {
+            rule: TreeNodesRule::PagingSort,
+            origin: tree_nodes_node_origin(&origin)?,
+            message: format!(
+                "The list {} declares sort keys, but {what} has no sort role to send them.",
+                site.operation_id
+            ),
+            fix: "Remove sortable, or use a paging style with a sort role.".to_owned(),
+            related: Vec::new(),
+        }));
+
+    Ok(())
 }
 
 fn sort_keys_of(
-    _site: &TreeNodesSite<'_, '_>,
-    _item: Option<&TypeUse>,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    item: Option<&TypeUse>,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<Vec<SortKey>, PassError> {
-    Err(not_ported_yet("sortKeysOf"))
+    let Some(JsonValue::Array(written)) = site.node.settings.get("sortable") else {
+        return Ok(Vec::new());
+    };
+    let draft = scope.draft;
+    let schema = tree_nodes_object_of(draft, item);
+    let mut sort_keys = Vec::with_capacity(written.len());
+
+    for (index, entry) in written.iter().enumerate() {
+        let key = match entry {
+            JsonValue::String(key) => Some(key),
+            other => match tree_nodes_member(Some(other), "key") {
+                Some(JsonValue::String(key)) => Some(key),
+                _ => None,
+            },
+        };
+        let pointer = format!("{}/sortable/{index}", site.node.pointer);
+        let origin = scope.context.origin(&pointer);
+        let (Some(key), Some(origin)) = (key, origin) else {
+            return Err(InternalError::new(format!(
+                "the sort key at {pointer} has no key or origin"
+            ))
+            .into());
+        };
+
+        if let Some(schema) = schema
+            && !schema
+                .properties
+                .iter()
+                .any(|property| property.name == *key)
+        {
+            report_unknown_key(site, key, schema.id.as_str(), &origin, scope)?;
+        }
+
+        sort_keys.push(SortKey {
+            key: key.clone(),
+            origin: Some(origin),
+            right: None,
+            params: None,
+            subject: None,
+            derived_from: None,
+        });
+    }
+
+    Ok(sort_keys)
 }
 
-fn number_of(_value: &JsonValue) -> Result<Option<i64>, PassError> {
-    Err(not_ported_yet("numberOf"))
+fn number_of(value: &JsonValue) -> Result<Option<i64>, PassError> {
+    let JsonValue::Number(number) = value else {
+        return Ok(None);
+    };
+
+    js_integer_in_range(number, MIN_SAFE_INTEGER..=MAX_SAFE_INTEGER)
+        .map(Some)
+        .map_err(|error| {
+            InternalError::new(format!("a paging limit is no integer: {error}")).into()
+        })
 }
 
-fn sort_style_of(_style: &JsonValue) -> Result<Option<PagingParamStyle>, PassError> {
-    Err(not_ported_yet("sortStyleOf"))
+fn sort_style_of(style: &JsonValue) -> Option<PagingParamStyle> {
+    let request = tree_nodes_member(Some(style), "request");
+    let role = tree_nodes_member(request, SORT_ROLE);
+    let written =
+        tree_nodes_member(role, "style").filter(|value| !matches!(value, JsonValue::Null));
+
+    match written {
+        None => Some(TREE_NODES_DEFAULT_SORT_STYLE),
+        Some(JsonValue::String(text)) => PagingParamStyle::known(text),
+        Some(_) => None,
+    }
 }
 
-fn request_roles(_style: &JsonValue) -> Result<Vec<String>, PassError> {
-    Err(not_ported_yet("requestRoles"))
+fn request_roles(style: &JsonValue) -> Vec<String> {
+    match tree_nodes_member(Some(style), "request") {
+        Some(JsonValue::Object(request)) => js_key_order(request.iter())
+            .map(|(role, _)| role.clone())
+            .collect(),
+        _ => Vec::new(),
+    }
 }
 
 fn written_limits(_settings: Option<&JsonValue>) -> Result<RouteLimits, PassError> {
@@ -330,4 +505,38 @@ fn report_convention_contradiction(
     _scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
     Err(not_ported_yet("reportConventionContradiction"))
+}
+
+#[cfg(test)]
+mod tests {
+    use seampact_ir::PagingParamStyle;
+    use seampact_json::JsonValue;
+
+    use super::{request_roles, sort_style_of};
+
+    fn json(text: &str) -> JsonValue {
+        serde_json::from_str(text).expect("test json")
+    }
+
+    #[test]
+    fn request_roles_come_in_javascript_key_order() {
+        let style = json(r#"{"request":{"sort":{},"10":{},"limit":{},"2":{}}}"#);
+
+        assert_eq!(request_roles(&style), ["2", "10", "sort", "limit"]);
+    }
+
+    #[test]
+    fn a_sort_style_falls_back_to_signed_on_absent_or_null() {
+        for text in [r"{}", r#"{"request":{"sort":{"style":null}}}"#] {
+            assert_eq!(
+                sort_style_of(&json(text)),
+                Some(PagingParamStyle::Signed),
+                "style {text}"
+            );
+        }
+
+        let pair = json(r#"{"request":{"sort":{"style":"pair"}}}"#);
+
+        assert_eq!(sort_style_of(&pair), Some(PagingParamStyle::Pair));
+    }
 }

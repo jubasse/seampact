@@ -1,10 +1,9 @@
 //! The `pagings` catalogue: every declared paging style, read and checked against its wire format.
 
 use std::collections::HashSet;
-use std::mem;
+use std::{iter, mem};
 
-use seampact_diagnostics::InternalError;
-use seampact_diagnostics::RelatedLocation;
+use seampact_diagnostics::{InternalError, RelatedLocation, quote_text};
 use seampact_ir::{
     HandlerResultMember, NamedTemplate, Origin, PagingId, PagingLink, PagingParamPlacement,
     PagingParamStyle, PagingPosition, PagingRequestRole, PagingResponse, PagingRole, PagingStyle,
@@ -13,15 +12,17 @@ use seampact_ir::{
 use seampact_js::js_key_order;
 use seampact_json::{JsonValue, stringify_json};
 use seampact_pipeline::{PassError, pointer_below};
+use seampact_templates::template_slots;
 
 use crate::diagnostics::{
     TreeNodesDiagnosticOptions, TreeNodesRule, tree_nodes_error, tree_nodes_node_origin,
 };
 use crate::responses::TREE_NODES_PAGING_NONE;
 
+use crate::formats::tree_nodes_named_templates;
 use crate::not_ported::not_ported_yet;
 use crate::pass::TreeNodesScope;
-use crate::templates::{TreeNodesTemplatePlace, TreeNodesTemplateSite};
+use crate::templates::{TREE_NODES_RESPONSE_ROLES, TreeNodesTemplatePlace, TreeNodesTemplateSite};
 
 const POSITION_ROLES: &[PagingPosition] = &[
     PagingPosition::Cursor,
@@ -56,6 +57,8 @@ const URL_ROLES: &[UrlRole] = &[
     UrlRole::Next,
     UrlRole::Last,
 ];
+/// The slot that holds a page's records.
+const ITEMS_SLOT: &str = "items";
 const HANDLER_RESULT: &[HandlerResultMember] = &[
     HandlerResultMember::NextCursor,
     HandlerResultMember::PreviousCursor,
@@ -190,15 +193,64 @@ fn style_of(
     Err(not_ported_yet("styleOf"))
 }
 
-fn used_roles(_response: &PagingResponse) -> Result<HashSet<String>, PassError> {
-    Err(not_ported_yet("usedRoles"))
+// The response roles a style's templates and links write.
+fn used_roles(response: &PagingResponse) -> Result<HashSet<String>, PassError> {
+    let templates = response
+        .body
+        .iter()
+        .chain(response.meta.iter().map(|member| &member.value))
+        .chain(response.headers.iter().map(|header| &header.value));
+    let mut roles = HashSet::new();
+
+    for template in templates {
+        roles.extend(template_slots(template)?.into_iter().map(|used| used.slot));
+    }
+
+    roles.extend(
+        response
+            .links
+            .iter()
+            .map(|link| link.role.as_str().to_owned()),
+    );
+
+    Ok(roles)
 }
 
+// The members the roles use, `total` for a role computed from it, `more` for a page or offset style that needs no
+// total, and the value a cursor or since kind builds its next and previous URLs from.
 fn handler_result_of(
-    _position: &PagingPosition,
-    _used: &HashSet<String>,
+    position: &PagingPosition,
+    used: &HashSet<String>,
 ) -> Result<Vec<HandlerResultMember>, PassError> {
-    Err(not_ported_yet("handlerResultOf"))
+    let mut members: HashSet<&str> = used.iter().map(String::as_str).collect();
+    let needs_total = TOTAL_ROLES.iter().any(|role| used.contains(*role));
+
+    if needs_total {
+        members.insert(HandlerResultMember::Total.as_str());
+    }
+
+    if !needs_total && matches!(position, PagingPosition::Page | PagingPosition::Offset) {
+        members.insert(HandlerResultMember::More.as_str());
+    }
+
+    let Some((_, url_results)) = URL_ROLE_RESULTS.iter().find(|(kind, _)| kind == position) else {
+        return Err(InternalError::new(format!(
+            "no URL role results for the paging position {position}"
+        ))
+        .into());
+    };
+
+    for (role, member) in *url_results {
+        if used.contains(*role) {
+            members.insert(member.as_str());
+        }
+    }
+
+    Ok(HANDLER_RESULT
+        .iter()
+        .filter(|member| members.contains(member.as_str()))
+        .cloned()
+        .collect())
 }
 
 #[allow(
@@ -207,26 +259,80 @@ fn handler_result_of(
 )]
 impl<'scope, 'draft, 'half, 'run> StyleReader<'scope, 'draft, 'half, 'run> {
     fn new(
-        _scope: &'scope mut TreeNodesScope<'draft, 'half, 'run>,
-        _id: &str,
-        _pointer: &str,
-    ) -> Result<Self, PassError> {
-        Err(not_ported_yet("StyleReader.constructor"))
+        scope: &'scope mut TreeNodesScope<'draft, 'half, 'run>,
+        id: &str,
+        pointer: &str,
+    ) -> Self {
+        Self {
+            scope,
+            id: id.to_owned(),
+            pointer: pointer.to_owned(),
+        }
     }
 
     fn request(
         &mut self,
-        _written: Option<&JsonValue>,
+        written: Option<&JsonValue>,
     ) -> Result<Option<Vec<PagingRequestRole>>, PassError> {
-        Err(not_ported_yet("StyleReader.request"))
+        let Some(JsonValue::Object(written)) = written else {
+            return Ok(Some(Vec::new()));
+        };
+        let mut roles = Vec::new();
+        let mut sent = HashSet::new();
+        let mut refused = false;
+
+        for (name, place) in js_key_order(written.iter()) {
+            let role = self.request_role(name, place)?;
+
+            match role {
+                Some(role) if self.check_sent_once(&role, &mut sent)? => roles.push(role),
+                _ => refused = true,
+            }
+        }
+
+        Ok((!refused).then_some(roles))
     }
 
+    // Two request roles naming one parameter or header could not be told apart.
     fn check_sent_once(
         &mut self,
-        _role: &PagingRequestRole,
-        _sent: &mut HashSet<String>,
+        role: &PagingRequestRole,
+        sent: &mut HashSet<String>,
     ) -> Result<bool, PassError> {
-        Err(not_ported_yet("StyleReader.checkSentOnce"))
+        let names: Vec<&str> = iter::once(role.name.as_str())
+            .chain(role.direction.as_deref())
+            .collect();
+        let twice = names.iter().enumerate().find_map(|(index, name)| {
+            let repeated = sent.contains(&sent_key(&role.r#in, name))
+                || names.iter().position(|other| other == name) < Some(index);
+
+            repeated.then_some(*name)
+        });
+
+        for name in &names {
+            sent.insert(sent_key(&role.r#in, name));
+        }
+
+        let Some(twice) = twice else {
+            return Ok(true);
+        };
+        let placement = if role.r#in == PagingParamPlacement::Header {
+            "header"
+        } else {
+            "query parameter"
+        };
+
+        self.refuse_request(
+            &pointer_below(&self.pointer, &["request", role.role.as_str()]),
+            &format!(
+                "its {} role sends the {placement} {}, which another role sends too",
+                role.role.as_str(),
+                quote_text(twice)
+            ),
+            &format!("Give each request role its own {placement}."),
+        )?;
+
+        Ok(false)
     }
 
     fn request_role(
@@ -237,25 +343,62 @@ impl<'scope, 'draft, 'half, 'run> StyleReader<'scope, 'draft, 'half, 'run> {
         Err(not_ported_yet("StyleReader.requestRole"))
     }
 
+    // `split` names its direction parameter, and only it does; `keyed` holds `{key}` in its name.
     fn check_sort(
         &mut self,
-        _pointer: &str,
-        _parameter: &str,
-        _style: Option<&PagingParamStyle>,
-        _direction: Option<&JsonValue>,
+        pointer: &str,
+        parameter: &str,
+        style: Option<&PagingParamStyle>,
+        direction: Option<&JsonValue>,
     ) -> Result<bool, PassError> {
-        Err(not_ported_yet("StyleReader.checkSort"))
+        let Some(fault) = sort_fault(parameter, style, direction)? else {
+            return Ok(true);
+        };
+
+        self.refuse_request(pointer, &fault.why, &fault.fix)?;
+
+        Ok(false)
     }
 
     fn refuse_request(&mut self, _pointer: &str, _why: &str, _fix: &str) -> Result<(), PassError> {
         Err(not_ported_yet("StyleReader.refuseRequest"))
     }
 
+    // Exactly one position role, or the pair `after` and `before`, which is a cursor kind.
     fn position(
         &mut self,
-        _request: &[PagingRequestRole],
+        request: &[PagingRequestRole],
     ) -> Result<Option<PagingPosition>, PassError> {
-        Err(not_ported_yet("StyleReader.position"))
+        let has = |name: &str| request.iter().any(|entry| entry.role.as_str() == name);
+        let pair = has(PagingRole::After.as_str()) || has(PagingRole::Before.as_str());
+        let positions: Vec<&PagingPosition> = POSITION_ROLES
+            .iter()
+            .filter(|position| has(position.as_str()))
+            .collect();
+
+        if pair
+            && has(PagingRole::After.as_str())
+            && has(PagingRole::Before.as_str())
+            && positions.is_empty()
+        {
+            return Ok(Some(PagingPosition::Cursor));
+        }
+
+        if let (false, [only]) = (pair, positions.as_slice()) {
+            return Ok(Some((*only).clone()));
+        }
+
+        self.report(
+            StyleRule::Position,
+            &pointer_below(&self.pointer, &["request"]),
+            &format!(
+                "The paging style {} writes no single position role.",
+                self.id
+            ),
+            "Write exactly one of cursor, page, offset and since, or the pair after and before.",
+        )?;
+
+        Ok(None)
     }
 
     fn response(
@@ -267,10 +410,27 @@ impl<'scope, 'draft, 'half, 'run> StyleReader<'scope, 'draft, 'half, 'run> {
 
     fn meta(
         &mut self,
-        _written: Option<&JsonValue>,
-        _pointer: &str,
+        written: Option<&JsonValue>,
+        pointer: &str,
     ) -> Result<Option<Vec<NamedTemplate>>, PassError> {
-        Err(not_ported_yet("StyleReader.meta"))
+        let owner = format!("the paging style {}", self.id);
+        let templates = tree_nodes_named_templates(
+            &owner,
+            TreeNodesTemplatePlace::PagingMember,
+            written,
+            pointer,
+            self.scope,
+        )?;
+
+        Ok(templates.map(|templates| {
+            templates
+                .into_iter()
+                .map(|template| NamedTemplate {
+                    name: template.name,
+                    value: template.value,
+                })
+                .collect()
+        }))
     }
 
     fn links(
@@ -281,16 +441,69 @@ impl<'scope, 'draft, 'half, 'run> StyleReader<'scope, 'draft, 'half, 'run> {
         Err(not_ported_yet("StyleReader.links"))
     }
 
-    fn check_items_once(&mut self, _body: &Template, _pointer: &str) -> Result<bool, PassError> {
-        Err(not_ported_yet("StyleReader.checkItemsOnce"))
+    fn check_items_once(&mut self, body: &Template, pointer: &str) -> Result<bool, PassError> {
+        let count = template_slots(body)?
+            .iter()
+            .filter(|used| used.slot == ITEMS_SLOT)
+            .count();
+
+        if count == 1 {
+            return Ok(true);
+        }
+
+        let times = if count == 0 {
+            "nowhere".to_owned()
+        } else {
+            format!("{count} times")
+        };
+
+        self.report(
+            StyleRule::Items,
+            pointer,
+            &format!(
+                "The page body of the paging style {} writes ${ITEMS_SLOT} {times}.",
+                self.id
+            ),
+            "Write $items exactly once in response.body.",
+        )?;
+
+        Ok(false)
     }
 
+    // A role used outside its kinds is a compile error naming the style.
     fn check_kinds(
         &mut self,
-        _position: &PagingPosition,
-        _used: &HashSet<String>,
+        position: &PagingPosition,
+        used: &HashSet<String>,
     ) -> Result<bool, PassError> {
-        Err(not_ported_yet("StyleReader.checkKinds"))
+        let mut outside = 0_usize;
+
+        for role in TREE_NODES_RESPONSE_ROLES {
+            let Some((_, kinds)) = ROLE_KINDS.iter().find(|(name, _)| name == role) else {
+                continue;
+            };
+
+            if !used.contains(*role) || kinds.contains(position) {
+                continue;
+            }
+
+            let names: Vec<&str> = kinds.iter().map(PagingPosition::as_str).collect();
+
+            outside += 1;
+            self.report(
+                StyleRule::Role,
+                &pointer_below(&self.pointer, &["response"]),
+                &format!(
+                    "The paging style {} pages by {}, but writes the role ${role}, which only {} styles fill.",
+                    self.id,
+                    position.as_str(),
+                    names.join(", ")
+                ),
+                &format!("Remove ${role}, or page by {}.", names.join(" or ")),
+            )?;
+        }
+
+        Ok(outside == 0)
     }
 
     fn site(&self, place: TreeNodesTemplatePlace) -> TreeNodesTemplateSite {

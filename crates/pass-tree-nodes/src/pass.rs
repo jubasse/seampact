@@ -8,23 +8,83 @@ use seampact_ir::{
     WireFormat,
 };
 use seampact_pipeline::{
-    ApiDeclaration, DraftIr, DraftOperation, HalfContext, PassError, TreeNodesOperation,
-    TreeNodesOutput, TreeSchemaService, pipeline_tree_nodes,
+    ApiDeclaration, DraftIr, DraftOperation, HalfContext, PassError, TreeNodesConcurrency,
+    TreeNodesInput, TreeNodesOperation, TreeNodesOutput, TreeNodesPaging, TreeNodesSortKey,
+    TreeSchemaService, pipeline_tree_nodes,
 };
 
 use crate::api::tree_nodes_api;
 use crate::collections::tree_nodes_check_id_properties;
 use crate::formats::{tree_nodes_check_payloads, tree_nodes_formats};
 use crate::limits::tree_nodes_check_body_limits;
-use crate::not_ported::not_ported_yet;
 use crate::operations::tree_nodes_operations;
 use crate::pagings::tree_nodes_pagings;
 use crate::relays::tree_nodes_join_relay_declarations;
 use crate::settings::tree_nodes_api_settings;
 
+/// A member every operation the half creates carries, or the internal error naming it.
+fn written<Value>(member: Option<Value>, name: &str) -> Result<Value, InternalError> {
+    member.ok_or_else(|| {
+        InternalError::new(format!("an operation of tree.nodes ends without {name}"))
+    })
+}
+
 /// The operation as the output declares it, from the draft `operationOf` builds.
-fn declared_operation(_draft: DraftOperation) -> Result<TreeNodesOperation, PassError> {
-    Err(not_ported_yet("operationOf"))
+fn declared_operation(draft: DraftOperation) -> Result<TreeNodesOperation, InternalError> {
+    Ok(TreeNodesOperation {
+        kind: written(draft.kind, "kind")?,
+        id: written(draft.id, "id")?,
+        name: written(draft.name, "name")?,
+        surface: written(draft.surface, "surface")?,
+        op: draft.op,
+        resource: draft.resource,
+        method: draft.method,
+        path: draft.path,
+        safe: draft.safe,
+        params: written(draft.params, "params")?,
+        unknown_query: written(draft.unknown_query, "unknownQuery")?,
+        input: draft.input.map(|input| TreeNodesInput {
+            media: input.media,
+            schema: input.schema,
+            fields: input.fields,
+            origin: input.origin,
+        }),
+        responses: written(draft.responses, "responses")?,
+        concurrency: draft.concurrency.map(|concurrency| TreeNodesConcurrency {
+            version: concurrency.version,
+            field: concurrency.field,
+        }),
+        owner: draft.owner,
+        paging: draft.paging.map(|paging| TreeNodesPaging {
+            style: paging.style,
+            max_limit: paging.max_limit,
+            default_limit: paging.default_limit,
+            over_limit: paging.over_limit,
+            token: paging.token,
+            sort_keys: paging
+                .sort_keys
+                .into_iter()
+                .map(|sort_key| TreeNodesSortKey {
+                    key: sort_key.key,
+                    origin: sort_key.origin,
+                })
+                .collect(),
+            origin: paging.origin,
+        }),
+        degradable: draft.degradable,
+        budget_ms: draft.budget_ms,
+        deprecated: draft.deprecated,
+        relays: draft.relays,
+        upstream: written(draft.upstream, "upstream")?,
+        maturity: draft.maturity,
+        internal: written(draft.internal, "internal")?,
+        format: draft.format,
+        tags: written(draft.tags, "tags")?,
+        examples: written(draft.examples, "examples")?,
+        docs: written(draft.docs, "docs")?,
+        extensions: written(draft.extensions, "extensions")?,
+        origin: written(draft.origin, "origin")?,
+    })
 }
 
 /// What the half writes, built up member by member: `api` is written first, so the output only

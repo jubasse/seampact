@@ -80,12 +80,12 @@ pub struct TreeNodesOperation {
     pub op: Option<OpShorthand>,
     /// The `resource` member.
     pub resource: Option<OperationResource>,
-    /// The `method` member.
-    pub method: HttpMethod,
-    /// The `path` member.
-    pub path: String,
-    /// The `safe` member.
-    pub safe: bool,
+    /// The `method` member; absent on a relay route whose target was refused.
+    pub method: Option<HttpMethod>,
+    /// The `path` member; absent on a relay route whose target was refused.
+    pub path: Option<String>,
+    /// The `safe` member; absent on a relay route whose target was refused.
+    pub safe: Option<bool>,
     /// The declared parameters, with the three lists always present.
     pub params: Params,
     /// The `unknownQuery` member.
@@ -114,8 +114,8 @@ pub struct TreeNodesOperation {
     pub maturity: Option<OperationMaturity>,
     /// The `internal` member.
     pub internal: bool,
-    /// The `format` member.
-    pub format: FormatId,
+    /// The `format` member; absent on a relay route whose target was refused.
+    pub format: Option<FormatId>,
     /// The `tags` member.
     pub tags: Vec<String>,
     /// The `examples` member.
@@ -218,9 +218,9 @@ impl From<TreeNodesOperation> for DraftOperation {
             surface: Some(operation.surface),
             op: operation.op,
             resource: operation.resource,
-            method: Some(operation.method),
-            path: Some(operation.path),
-            safe: Some(operation.safe),
+            method: operation.method,
+            path: operation.path,
+            safe: operation.safe,
             params: Some(operation.params),
             unknown_query: Some(operation.unknown_query),
             input: operation.input.map(Into::into),
@@ -235,7 +235,7 @@ impl From<TreeNodesOperation> for DraftOperation {
             upstream: Some(operation.upstream),
             maturity: operation.maturity,
             internal: Some(operation.internal),
-            format: Some(operation.format),
+            format: operation.format,
             tags: Some(operation.tags),
             examples: Some(operation.examples),
             docs: Some(operation.docs),
@@ -321,5 +321,71 @@ impl TreeNodesOutput {
             .collect();
 
         write_list(&mut draft.operations, operations, "operations", &site)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use seampact_ir::{
+        DeclarationKind, Docs, IrMap, Layer, Name, NameRole, Origin, Params, SurfaceId,
+        UnknownQuery,
+    };
+
+    use super::*;
+
+    fn refused_relay_operation() -> TreeNodesOperation {
+        TreeNodesOperation {
+            kind: DeclarationKind::HttpOperation,
+            id: OperationId::new("getTask".to_owned()),
+            name: Name {
+                segments: vec!["get".to_owned(), "task".to_owned()],
+                role: NameRole::Schema,
+                status: None,
+            },
+            surface: SurfaceId::new("internal".to_owned()),
+            op: None,
+            resource: None,
+            method: None,
+            path: None,
+            safe: None,
+            params: Params {
+                path: Vec::new(),
+                query: Vec::new(),
+                header: Vec::new(),
+            },
+            unknown_query: UnknownQuery::Refuse(seampact_ir::RefuseUnknownQuery {}),
+            input: None,
+            responses: Vec::new(),
+            concurrency: None,
+            owner: None,
+            paging: None,
+            degradable: None,
+            budget_ms: None,
+            deprecated: None,
+            relays: None,
+            upstream: Vec::new(),
+            maturity: None,
+            internal: false,
+            format: None,
+            tags: Vec::new(),
+            examples: IrMap::new(),
+            docs: Docs::default(),
+            extensions: IrMap::new(),
+            origin: Origin {
+                api: None,
+                layer: Layer::Api,
+                pointer: "/surfaces/internal/routes/getTask".to_owned(),
+            },
+        }
+    }
+
+    #[test]
+    fn a_refused_relay_route_writes_no_method_path_or_safe() {
+        let draft = DraftOperation::from(refused_relay_operation());
+
+        assert_eq!(draft.method, None);
+        assert_eq!(draft.path, None);
+        assert_eq!(draft.safe, None);
+        assert_eq!(draft.id, Some(OperationId::new("getTask".to_owned())));
     }
 }

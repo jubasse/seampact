@@ -1,9 +1,14 @@
 //! Who owns an operation and the concurrency token it carries, inherited from its resource.
 
 use seampact_diagnostics::InternalError;
-use seampact_ir::{OpShorthand, Origin, Owner, OwnerKind, Param, Params, TypeUse};
+use seampact_ir::{
+    OpShorthand, Origin, Owner, OwnerKind, Param, Params, TypeUse, ValueSource, ValueSourceIn,
+};
 use seampact_json::JsonValue;
-use seampact_pass_tree_shared::{tree_nodes_op_owner, tree_nodes_text};
+use seampact_pass_tree_shared::{
+    TREE_NODES_DELETE_OP, tree_nodes_member, tree_nodes_op_owner, tree_nodes_op_shorthand,
+    tree_nodes_setting, tree_nodes_text,
+};
 use seampact_pipeline::{DraftConcurrency, PassError, TreeNode, TreeNodeKind, TreeNodes};
 
 use crate::fields::TreeNodesSite;
@@ -22,6 +27,16 @@ enum VersionPlace {
     Body,
     Query,
     Header,
+}
+
+impl VersionPlace {
+    const fn value_source_in(self) -> ValueSourceIn {
+        match self {
+            Self::Body => ValueSourceIn::Body,
+            Self::Query => ValueSourceIn::Query,
+            Self::Header => ValueSourceIn::Header,
+        }
+    }
 }
 
 /// The place and name a concurrency version is read from.
@@ -98,21 +113,83 @@ pub(crate) fn tree_nodes_owner(
     }))
 }
 
+/// The version an operation compares: its resource's `concurrency`, for an `update` or `delete` op, and for
+/// a member route with `concurrency: inherit`. A delete without input reads a body source from the query.
 pub(crate) fn tree_nodes_concurrency(
-    _site: &TreeNodesSite<'_, '_>,
-    _input: Option<&TypeUse>,
-    _params: &Params,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    input: Option<&TypeUse>,
+    params: &Params,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<Option<DraftConcurrency>, PassError> {
-    Err(not_ported_yet("treeNodesConcurrency"))
+    let node = site.node;
+    let op = tree_nodes_op_shorthand(node);
+    let opts_in = tree_nodes_text(node, "concurrency") == Some(INHERIT);
+    let resource = resource_node_of(node, site.nodes)?;
+
+    check_declaration(site, resource, scope)?;
+
+    if op.as_ref().is_some_and(|op| !VERSIONED_OPS.contains(op)) {
+        return Ok(None);
+    }
+
+    if op.is_none() && !opts_in {
+        return Ok(None);
+    }
+
+    let declared = resource.and_then(|resource| tree_nodes_setting(resource, "concurrency"));
+    let (Some(resource), Some(declared)) = (resource, declared) else {
+        if opts_in {
+            report_nothing_to_inherit(site, "declares no concurrency", scope)?;
+        }
+
+        return Ok(None);
+    };
+
+    if opts_in && !on_member_scope(node, resource)? {
+        report_nothing_to_inherit(site, "is not a member route of a collection", scope)?;
+
+        return Ok(None);
+    }
+
+    let source = parse_source(tree_nodes_member(Some(declared), "version"))?;
+    let field = tree_nodes_member(Some(declared), "field");
+    let (Some(source), Some(JsonValue::String(field))) = (source, field) else {
+        return Err(InternalError::new(format!(
+            "the concurrency of {} has no version and field the grammar admits",
+            resource.pointer
+        ))
+        .into());
+    };
+
+    check_not_restated(site, &source, input, params, scope)?;
+
+    let reads_body_without_one = source.place == VersionPlace::Body
+        && op.as_ref() == Some(&TREE_NODES_DELETE_OP)
+        && input.is_none();
+    let place = if reads_body_without_one {
+        VersionPlace::Query
+    } else {
+        source.place
+    };
+
+    Ok(Some(DraftConcurrency {
+        version: ValueSource {
+            r#in: place.value_source_in(),
+            name: Some(source.name),
+            prefix_bits: None,
+        },
+        field: field.clone(),
+        derived_from: None,
+    }))
 }
 
-fn origin_of(
-    _site: &TreeNodesSite<'_, '_>,
-    _param: Option<&Param>,
-    _scope: &TreeNodesScope<'_, '_, '_>,
-) -> Result<Option<Origin>, PassError> {
-    Err(not_ported_yet("originOf"))
+fn origin_of(site: &TreeNodesSite<'_, '_>, param: Option<&Param>) -> Option<Origin> {
+    param.map(|param| {
+        param
+            .origin
+            .clone()
+            .unwrap_or_else(|| site.node.origin.clone())
+    })
 }
 
 fn check_owner_alone(
@@ -124,7 +201,7 @@ fn check_owner_alone(
 }
 
 // A concurrency source is `body.<name>`, `query.<name>` or `header.<name>`.
-fn parse_source(_written: &JsonValue) -> Result<Option<VersionSource>, PassError> {
+fn parse_source(_written: Option<&JsonValue>) -> Result<Option<VersionSource>, PassError> {
     Err(not_ported_yet("parseSource"))
 }
 

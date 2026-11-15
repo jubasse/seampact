@@ -111,8 +111,11 @@ fn check_path(
 }
 
 // A degraded header name may not hold a character outside printable ASCII, a comma, or a space at either end.
-fn name_unfit_for_header(_name: &str) -> Result<bool, PassError> {
-    Err(not_ported_yet("nameUnfitForHeader"))
+fn name_unfit_for_header(name: &str) -> bool {
+    name.chars()
+        .any(|character| !(' '..='~').contains(&character) || character == ',')
+        || name.starts_with(' ')
+        || name.ends_with(' ')
 }
 
 fn path_fault(
@@ -141,4 +144,23 @@ fn report_path(
     _scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
     Err(not_ported_yet("reportPath"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::name_unfit_for_header;
+
+    #[test]
+    fn a_header_name_holds_printable_ascii_without_comma_or_edge_space() {
+        let fit = ["x-request-id", "a b", "~", "!"];
+        let unfit = ["a,b", " a", "a ", "é", "a\tb", "\u{7f}", "a\u{1F600}"];
+
+        for name in fit {
+            assert!(!name_unfit_for_header(name), "name {name:?}");
+        }
+
+        for name in unfit {
+            assert!(name_unfit_for_header(name), "name {name:?}");
+        }
+    }
 }

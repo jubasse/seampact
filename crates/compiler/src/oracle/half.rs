@@ -395,7 +395,6 @@ mod tests {
     #[test]
     fn a_half_that_is_not_ported_answers_not_ported() {
         assert_eq!(run("tree.schemas", &[]), Ok(SubjectAnswer::NotPorted));
-        assert_eq!(run("tree.nodes", &[]), Ok(SubjectAnswer::NotPorted));
     }
 
     #[test]

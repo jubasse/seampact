@@ -448,14 +448,65 @@ fn check_placeholders(
     Ok(())
 }
 
+// A query field carries its query wire and its default; one the service answers no wire for has no query
+// encoding.
 fn param_of(
-    _site: &TreeNodesSite<'_, '_>,
-    _field: &TreeNodesField,
-    _param_type: &TypeUse,
-    _list: ParamList,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    field: &TreeNodesField,
+    param_type: &TypeUse,
+    list: ParamList,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<Option<Param>, PassError> {
-    Err(not_ported_yet("paramOf"))
+    let param = Param {
+        name: field.name.clone(),
+        r#type: param_type.clone(),
+        required: field.required,
+        wire: None,
+        default: None,
+        origin: Some(field.origin.clone()),
+        derived_from: None,
+    };
+
+    if list != ParamList::Query {
+        return Ok(Some(param));
+    }
+
+    if let Some(wire) = scope.schemas.query_wire(&field.wire_pointer)? {
+        // A default sits on an optional query field only; tree.schemas checks its value.
+        let default = if field.required {
+            None
+        } else {
+            field.default.clone()
+        };
+
+        return Ok(Some(Param {
+            wire: Some(wire),
+            default,
+            ..param
+        }));
+    }
+
+    let node_origin = tree_nodes_node_origin(&site.node.origin)?;
+    let origin = tree_nodes_locate(&field.origin, &node_origin);
+    let key = format!(
+        "query-field:{}#{}:{}",
+        origin.layer, origin.pointer, field.name
+    );
+    let diagnostic = tree_nodes_error(TreeNodesDiagnosticOptions {
+        rule: TreeNodesRule::QueryField,
+        origin,
+        message: format!(
+            "The query field {} of {} has no query encoding.",
+            field.name, site.operation_id
+        ),
+        fix: "Give the field a number, boolean, text, enum or list of them, or an object of them."
+            .to_owned(),
+        related: Vec::new(),
+    });
+
+    tree_nodes_report_once(&key, diagnostic, scope);
+
+    Ok(None)
 }
 
 fn report_undeclared_placeholder(
