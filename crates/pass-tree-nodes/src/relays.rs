@@ -4,12 +4,19 @@ use std::collections::HashMap;
 
 use seampact_diagnostics::{DiagnosticOrigin, InternalError};
 use seampact_ir::{
-    ContractIr, DerivationId, DerivedFrom, FormatId, HttpMethod, IrMap, Operation, Origin, Paging,
-    PagingStyle, Params, Response, WireFormat,
+    ContractIr, DerivationId, DerivedFrom, FormatId, HttpMethod, IrMap, Operation, OperationId,
+    OperationRef, Origin, Paging, PagingStyle, Params, Response, ValueSource, WireFormat,
 };
-use seampact_pipeline::{DraftIr, DraftOperation, DraftOperationInput, PassError};
+use seampact_pass_tree_shared::{
+    TREE_NODES_OPERATION_KIND, tree_nodes_relay_origin, tree_nodes_text,
+};
+use seampact_pipeline::{
+    DraftConcurrency, DraftIr, DraftOperation, DraftOperationInput, PassError,
+};
 
-use crate::diagnostics::{TreeNodesRule, tree_nodes_node_origin};
+use crate::diagnostics::{
+    TreeNodesDiagnosticOptions, TreeNodesRule, tree_nodes_error, tree_nodes_node_origin,
+};
 use crate::fields::TreeNodesSite;
 use crate::not_ported::not_ported_yet;
 use crate::pass::TreeNodesScope;
@@ -46,6 +53,64 @@ impl RelayedOperation<'_> {
         match self {
             Self::Draft(operation) => operation.path.as_deref(),
             Self::Imported(operation) => Some(&operation.path),
+        }
+    }
+
+    fn safe(&self) -> Option<bool> {
+        match self {
+            Self::Draft(operation) => operation.safe,
+            Self::Imported(operation) => Some(operation.safe),
+        }
+    }
+
+    fn params(&self) -> Option<&Params> {
+        match self {
+            Self::Draft(operation) => operation.params.as_ref(),
+            Self::Imported(operation) => Some(&operation.params),
+        }
+    }
+
+    /// The request body, which only a draft operation holds in the shape a relay copies.
+    fn input(&self) -> Result<Option<&DraftOperationInput>, PassError> {
+        match self {
+            Self::Draft(operation) => Ok(operation.input.as_ref()),
+            Self::Imported(operation) if operation.input.is_none() => Ok(None),
+            Self::Imported(_) => Err(not_ported_yet("copiedInput")),
+        }
+    }
+
+    fn responses(&self) -> Option<&[Response]> {
+        match self {
+            Self::Draft(operation) => operation.responses.as_deref(),
+            Self::Imported(operation) => Some(&operation.responses),
+        }
+    }
+
+    fn paging(&self) -> Option<&Paging> {
+        match self {
+            Self::Draft(operation) => operation.paging.as_ref(),
+            Self::Imported(operation) => operation.paging.as_ref(),
+        }
+    }
+
+    /// The version source and field of the operation's concurrency.
+    fn concurrency(&self) -> Option<(&ValueSource, &str)> {
+        match self {
+            Self::Draft(operation) => operation
+                .concurrency
+                .as_ref()
+                .map(|concurrency| (&concurrency.version, concurrency.field.as_str())),
+            Self::Imported(operation) => operation
+                .concurrency
+                .as_ref()
+                .map(|concurrency| (&concurrency.version, concurrency.field.as_str())),
+        }
+    }
+
+    fn origin(&self) -> Option<&Origin> {
+        match self {
+            Self::Draft(operation) => operation.origin.as_ref(),
+            Self::Imported(operation) => Some(&operation.origin),
         }
     }
 
@@ -137,13 +202,77 @@ struct ImportedMissing {
     style_missing: bool,
 }
 
+/// The members of a relay route copied from the public operation: method, safety, path, params, input, success
+/// responses, paging, concurrency, format and `relays`.
+///
+/// `None` when the target is refused (reported); the copied format and paging style are pushed to `declarations`.
 pub(crate) fn tree_nodes_relay_shape(
-    _site: &TreeNodesSite<'_, '_>,
-    _own_prefix: &str,
-    _declarations: &mut Vec<TreeNodesRelayDeclaration<'_, '_>>,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    own_prefix: &str,
+    declarations: &mut Vec<TreeNodesRelayDeclaration<'_, '_>>,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<Option<DraftOperation>, PassError> {
-    Err(not_ported_yet("treeNodesRelayShape"))
+    let target = relay_target(site)?;
+    let Some(source) = relay_source(site, &target, scope)? else {
+        return Ok(None);
+    };
+
+    check_route_name(site, &target, scope)?;
+
+    let operation = source.operation;
+    let Some(operation_origin) = operation.origin() else {
+        return Err(InternalError::new(format!(
+            "the relayed operation {} has no origin",
+            target.text
+        ))
+        .into());
+    };
+    let stamp = RelayStamp {
+        api: source.api.clone(),
+        from: tree_nodes_relay_origin(operation_origin, &source.api),
+    };
+
+    push_declarations(&source, site, &target, declarations)?;
+
+    let path = match operation.path() {
+        Some(_) => Some(relay_path(&source, own_prefix)?),
+        None => None,
+    };
+    let params = copied_params(operation.params(), &stamp)?;
+    let input = operation
+        .input()?
+        .map(|input| copied_input(input, &source.api))
+        .transpose()?;
+    let responses = copied_responses(operation.responses().unwrap_or_default(), &stamp)?;
+    let paging = operation
+        .paging()
+        .map(|paging| copied_paging(paging, &source.api))
+        .transpose()?;
+    let concurrency = operation
+        .concurrency()
+        .map(|(version, field)| DraftConcurrency {
+            version: version.clone(),
+            field: field.to_owned(),
+            derived_from: None,
+        });
+
+    Ok(Some(DraftOperation {
+        method: operation.method().cloned(),
+        safe: operation.safe(),
+        path,
+        params: Some(params),
+        input,
+        responses: Some(responses),
+        paging,
+        concurrency,
+        format: operation.format().cloned(),
+        relays: Some(OperationRef {
+            kind: TREE_NODES_OPERATION_KIND,
+            api: source.api.clone(),
+            id: OperationId::new(target.id.clone()),
+        }),
+        ..DraftOperation::default()
+    }))
 }
 
 /// Joins each copied format and paging style to this api's catalogue: absent, it is added; present, it is the same.
@@ -250,16 +379,51 @@ fn relay_path(_source: &RelaySource<'_>, _own_prefix: &str) -> Result<String, Pa
     Err(not_ported_yet("relayPath"))
 }
 
-fn relay_target(_site: &TreeNodesSite<'_, '_>) -> Result<RelayTarget, PassError> {
-    Err(not_ported_yet("relayTarget"))
+// The authoring schema admits `relays` as `<api>.<operationId>` only.
+fn relay_target(site: &TreeNodesSite<'_, '_>) -> Result<RelayTarget, PassError> {
+    let target = tree_nodes_text(site.node, "relays")
+        .and_then(|text| Some((text, text.split_once('.')?)))
+        .filter(|(_, (api, _))| !api.is_empty());
+    let Some((text, (api, id))) = target else {
+        return Err(InternalError::new(format!(
+            "the relay route at {} has no relays <api>.<operationId>",
+            site.node.pointer
+        ))
+        .into());
+    };
+
+    Ok(RelayTarget {
+        api: api.to_owned(),
+        id: id.to_owned(),
+        text: text.to_owned(),
+    })
 }
 
 fn relay_source<'run>(
-    _site: &TreeNodesSite<'_, '_>,
-    _target: &RelayTarget,
-    _scope: &mut TreeNodesScope<'_, '_, 'run>,
+    site: &TreeNodesSite<'_, '_>,
+    target: &RelayTarget,
+    scope: &mut TreeNodesScope<'_, '_, 'run>,
 ) -> Result<Option<RelaySource<'run>>, PassError> {
-    Err(not_ported_yet("relaySource"))
+    if let Some(relayed) = scope.context.relayed(&target.api) {
+        return relayed_source(site, target, relayed, scope);
+    }
+
+    if let Some(imported) = scope.context.imported(&target.api) {
+        return imported_source(site, target, imported, scope);
+    }
+
+    report_target(
+        site,
+        &format!(
+            "relays {}, but {} is neither an api of the workspace nor an import",
+            target.text, target.api
+        ),
+        "Name an api of the workspace, or add it to workspace.imports.",
+        TreeNodesRule::RelayTarget,
+        scope,
+    )?;
+
+    Ok(None)
 }
 
 fn relayed_source<'run>(
@@ -328,13 +492,25 @@ fn report_no_operation(
 }
 
 fn report_target(
-    _site: &TreeNodesSite<'_, '_>,
-    _fault: &str,
-    _fix: &str,
-    _rule: TreeNodesRule,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    fault: &str,
+    fix: &str,
+    rule: TreeNodesRule,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("reportTarget"))
+    let origin = relays_origin(site, scope)?;
+
+    scope
+        .context
+        .report(tree_nodes_error(TreeNodesDiagnosticOptions {
+            rule,
+            origin,
+            message: format!("The relay route {} {fault}.", site.operation_id),
+            fix: fix.to_owned(),
+            related: Vec::new(),
+        }));
+
+    Ok(())
 }
 
 fn relays_origin(

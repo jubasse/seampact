@@ -3,7 +3,7 @@
 use seampact_diagnostics::InternalError;
 use seampact_ir::{OpShorthand, Origin, Owner, OwnerKind, Param, Params, TypeUse};
 use seampact_json::JsonValue;
-use seampact_pass_tree_shared::tree_nodes_op_owner;
+use seampact_pass_tree_shared::{tree_nodes_op_owner, tree_nodes_text};
 use seampact_pipeline::{DraftConcurrency, PassError, TreeNode, TreeNodeKind, TreeNodes};
 
 use crate::fields::TreeNodesSite;
@@ -74,11 +74,28 @@ fn resource_node_of<'nodes, 'raw>(
 
     Ok(None)
 }
+/// `owner: caller`, written on the collection or single the operation belongs to.
 pub(crate) fn tree_nodes_owner(
-    _site: &TreeNodesSite<'_, '_>,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    scope: &TreeNodesScope<'_, '_, '_>,
 ) -> Result<Option<Owner>, PassError> {
-    Err(not_ported_yet("treeNodesOwner"))
+    let Some(resource) = resource_node_of(site.node, site.nodes)? else {
+        return Ok(None);
+    };
+
+    if tree_nodes_text(resource, "owner") != Some(OWNER_CALLER.as_str()) {
+        return Ok(None);
+    }
+
+    let pointer = format!("{}/owner", resource.pointer);
+    let Some(origin) = scope.context.origin(&pointer) else {
+        return Err(InternalError::new(format!("the raw tree has no origin for {pointer}")).into());
+    };
+
+    Ok(Some(Owner {
+        kind: OWNER_CALLER,
+        origin,
+    }))
 }
 
 pub(crate) fn tree_nodes_concurrency(

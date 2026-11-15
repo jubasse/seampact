@@ -8,7 +8,7 @@ use seampact_ir::{
     PathApiVersion, PathVersion, PathVersionMode, RightId, Surface, SurfaceId,
 };
 use seampact_js::{FiniteNumber, js_key_order};
-use seampact_json::{JsonValue, stringify_json};
+use seampact_json::{JsonObject, JsonValue, stringify_json};
 use seampact_naming::split_name;
 use seampact_pass_tree_shared::{TREE_NODES_MATURITIES, tree_nodes_member};
 use seampact_pipeline::{ApiDeclaration, pointer_below};
@@ -221,9 +221,20 @@ fn path_version_of(
 
 /// The `summary` and `description` written on a mapping.
 pub(crate) fn tree_nodes_docs(written: Option<&JsonValue>) -> Docs {
+    match written {
+        Some(JsonValue::Object(object)) => tree_nodes_docs_of_object(object),
+        _ => Docs {
+            summary: None,
+            description: None,
+        },
+    }
+}
+
+/// The `summary` and `description` written on a mapping already read as one.
+pub(crate) fn tree_nodes_docs_of_object(written: &JsonObject) -> Docs {
     Docs {
-        summary: text_of(tree_nodes_member(written, "summary")).map(str::to_owned),
-        description: text_of(tree_nodes_member(written, "description")).map(str::to_owned),
+        summary: text_of(written.get("summary")).map(str::to_owned),
+        description: text_of(written.get("description")).map(str::to_owned),
     }
 }
 

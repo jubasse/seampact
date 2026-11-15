@@ -2,15 +2,19 @@
 
 use seampact_diagnostics::RelatedLocation;
 use seampact_ir::{
-    Origin, OverLimitPolicy, Paging, PagingParamStyle, PagingToken, Param, Response, SortKey,
-    TypeUse,
+    Origin, OverLimitPolicy, Paging, PagingId, PagingParamStyle, PagingToken, Param, Response,
+    SortKey, TypeUse,
 };
 use seampact_json::JsonValue;
 use seampact_pipeline::PassError;
 
+use crate::diagnostics::{
+    TreeNodesDiagnosticOptions, TreeNodesRule, tree_nodes_error, tree_nodes_node_origin,
+};
 use crate::fields::TreeNodesSite;
 use crate::not_ported::not_ported_yet;
 use crate::pass::TreeNodesScope;
+use crate::responses::tree_nodes_is_list;
 
 const DEFAULT_OVER_LIMIT: OverLimitPolicy = OverLimitPolicy::Reject;
 const OVER_LIMITS: &[OverLimitPolicy] = &[OverLimitPolicy::Reject, OverLimitPolicy::Clamp];
@@ -75,19 +79,95 @@ struct LimitPair {
 }
 
 fn refuse_outside_list(
-    _site: &TreeNodesSite<'_, '_>,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("refuseOutsideList"))
+    for member in ["paging", "sortable"] {
+        if !site.node.settings.contains_key(member) {
+            continue;
+        }
+
+        let origin = scope
+            .context
+            .origin(&format!("{}/{member}", site.node.pointer))
+            .unwrap_or_else(|| site.node.origin.clone());
+
+        scope.context.report(tree_nodes_error(TreeNodesDiagnosticOptions {
+            rule: TreeNodesRule::PagingList,
+            origin: tree_nodes_node_origin(&origin)?,
+            message: format!(
+                "The operation {} writes {member}, but it is no list.",
+                site.operation_id
+            ),
+            fix: format!(
+                "Remove {member}, or make the route a list (the list op, or item instead of output)."
+            ),
+            related: Vec::new(),
+        }));
+    }
+
+    Ok(())
 }
 
+/// The paging of a list operation, `None` when the list has no style (reported).
+///
+/// A route that is no list and writes `paging` or `sortable` is refused.
 pub(crate) fn tree_nodes_paging(
-    _site: &TreeNodesSite<'_, '_>,
-    _responses: &[Response],
-    _query: &[Param],
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    responses: &[Response],
+    query: &[Param],
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<Option<Paging>, PassError> {
-    Err(not_ported_yet("treeNodesPaging"))
+    if !tree_nodes_is_list(site.node) {
+        refuse_outside_list(site, scope)?;
+
+        return Ok(None);
+    }
+
+    let Some(named) = named_style(site, scope)? else {
+        return Ok(None);
+    };
+    let item = responses.iter().find_map(|response| response.body.as_ref());
+    let sort_keys = sort_keys_of(site, item, scope)?;
+    let Some(named_id) = named.id.as_deref() else {
+        refuse_sort_without_role(site, &sort_keys, "an unpaged list", scope)?;
+
+        return Ok(Some(Paging {
+            style: None,
+            max_limit: None,
+            default_limit: None,
+            over_limit: over_limit_of(site, &named, scope)?,
+            token: None,
+            sort_keys,
+            origin: named.origin.clone(),
+        }));
+    };
+    let Some(style) = declared_style(site, named_id, &named.origin, scope)? else {
+        return Ok(None);
+    };
+    let roles = request_roles(style)?;
+
+    if !roles.iter().any(|role| role == SORT_ROLE) {
+        refuse_sort_without_role(site, &sort_keys, &format!("the style {named_id}"), scope)?;
+    } else if sort_style_of(style)? == Some(SIGNED_SORT_STYLE) {
+        refuse_unsignable_keys(site, named_id, &sort_keys, scope)?;
+    }
+
+    refuse_taken_names(site, named_id, style, query, scope)?;
+
+    let Some(limits) = limits_of(site, &named, &roles, scope)? else {
+        return Ok(None);
+    };
+
+    Ok(Some(Paging {
+        style: Some(PagingId::new(named_id.to_owned())),
+        max_limit: limits.max_limit,
+        default_limit: limits.default_limit,
+        over_limit: limits.over_limit,
+        token: limits.token,
+        sort_keys,
+        origin: named.origin,
+    }))
 }
 
 fn named_style<'run>(
