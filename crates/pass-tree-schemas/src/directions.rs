@@ -6,7 +6,7 @@
 use std::collections::HashMap;
 
 use indexmap::IndexMap;
-use seampact_ir::{Direction, Enum, KnownSchemaRef, Scalar, Schema, TypeUse};
+use seampact_ir::{Direction, Enum, KnownSchemaRef, KnownTypeUseRef, Scalar, Schema, TypeUse};
 use seampact_pipeline::PassError;
 
 use crate::compile::TreeSchemasCompiler;
@@ -37,8 +37,15 @@ struct DirectionHolder {
 
 /// Adds a direction in the fixed order; `false` when it was already there, which ends the walk of a
 /// cycle.
-fn add_direction(directions: &mut Vec<Direction>, direction: Direction) -> Result<bool, PassError> {
-    Err(not_ported_yet("addDirection"))
+fn add_direction(directions: &mut Vec<Direction>, direction: Direction) -> bool {
+    if directions.contains(&direction) {
+        return false;
+    }
+
+    directions.push(direction);
+    directions.sort_by_key(|each| DIRECTION_ORDER.iter().position(|ordered| ordered == each));
+
+    true
 }
 
 fn reach(
@@ -46,7 +53,39 @@ fn reach(
     direction: &Direction,
     targets: &mut DirectionTargets<'_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("reach"))
+    match KnownTypeUseRef::try_from(use_)? {
+        KnownTypeUseRef::Ref(reference) => reach_schema(reference.schema.as_str(), direction, targets),
+        KnownTypeUseRef::Enum(enum_use) => {
+            let declared = targets
+                .enum_positions
+                .get(enum_use.r#enum.as_str())
+                .and_then(|position| targets.enums.get_mut(*position));
+
+            if let Some(declared) = declared {
+                add_direction(&mut declared.directions, direction.clone());
+            }
+
+            Ok(())
+        }
+        KnownTypeUseRef::Array(array) => reach(&array.items, direction, targets),
+        KnownTypeUseRef::Scalar(scalar) => {
+            let named = scalar
+                .scalar
+                .as_ref()
+                .and_then(|id| targets.scalar_positions.get(id.as_str()))
+                .and_then(|position| targets.scalars.get_mut(*position));
+
+            if let Some(named) = named {
+                add_direction(&mut named.directions, direction.clone());
+            }
+
+            match &scalar.content {
+                Some(content) => reach(&content.schema, direction, targets),
+                None => Ok(()),
+            }
+        }
+        KnownTypeUseRef::File(_) | KnownTypeUseRef::Opaque(_) => Ok(()),
+    }
 }
 
 fn reach_schema(

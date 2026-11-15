@@ -54,6 +54,24 @@ pub(crate) fn tree_schemas_entries(value: Option<&JsonValue>) -> Vec<(&str, &Jso
     }
 }
 
+/// The property of a written source `<prefix><property>`: the text after the prefix when it is not
+/// empty and holds no line terminator, as the TypeScript `^<prefix>(.+)$` reads it.
+pub(crate) fn tree_schemas_source_property<'text>(
+    text: &'text str,
+    prefix: &str,
+) -> Option<&'text str> {
+    let property = text.strip_prefix(prefix)?;
+    let has_line_terminator = property
+        .chars()
+        .any(|character| matches!(character, '\n' | '\r' | '\u{2028}' | '\u{2029}'));
+
+    if property.is_empty() || has_line_terminator {
+        return None;
+    }
+
+    Some(property)
+}
+
 fn escape_segment(segment: &str) -> String {
     format!("/{}", escape_pointer(segment))
 }

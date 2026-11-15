@@ -7,17 +7,21 @@ use seampact_diagnostics::InternalError;
 use seampact_ir::{Direction, KnownTypeUseRef, Property, TypeUse};
 use seampact_json::JsonValue;
 use seampact_naming::{Role, derive_name};
-use seampact_pass_tree_shared::TreeNodesOperationName;
+use seampact_pass_tree_shared::{TreeNodesOperationName, tree_nodes_op_owner};
 use seampact_pipeline::{PassError, ResolvedConventions, TreeNode, TreeNodeKind, TreeNodes};
 
 use crate::compile::TreeSchemasCompiler;
 use crate::not_ported::not_ported_yet;
-use crate::raw::tree_schemas_pointer;
+use crate::raw::{
+    TreeSchemasProblem, tree_schemas_is_object, tree_schemas_member, tree_schemas_pointer,
+    tree_schemas_source_property,
+};
+use crate::rule::TreeSchemasRule;
 
 const BATCH_OP: &str = "batch";
 const VERSIONED_OPS: [&str; 2] = ["update", "delete"];
-/// ECMAScript source of a body version source, `body.<property>`.
-const BODY_SOURCE: &str = r"^body\.(.+)$";
+/// The prefix of a body version source, `body.<property>`.
+const BODY_SOURCE_PREFIX: &str = "body.";
 const INHERIT: &str = "inherit";
 
 /// A versioned write: where its version is read and the item property it is compared with.
@@ -85,11 +89,55 @@ fn id_type_of(
     Err(not_ported_yet("idTypeOf"))
 }
 
+/// `update` and `delete` take their resource's `concurrency`; a member route only with
+/// `concurrency: inherit`.
 fn version_of<'tree, 'raw>(
     nodes: &'tree TreeNodes<'raw>,
     node: &TreeNode<'raw>,
 ) -> Result<Option<Version<'tree, 'raw>>, PassError> {
-    Err(not_ported_yet("versionOf"))
+    let owner = if node.kind == TreeNodeKind::Op {
+        if VERSIONED_OPS.contains(&node.name.as_str()) {
+            tree_nodes_op_owner(nodes, node)?
+        } else {
+            None
+        }
+    } else if matches!(node.settings.get("concurrency"), Some(JsonValue::String(text)) if text == INHERIT)
+    {
+        versioned_ancestor(nodes, node)?
+    } else {
+        None
+    };
+    let Some(owner) = owner else {
+        return Ok(None);
+    };
+    let concurrency = owner.settings.get("concurrency");
+
+    if !tree_schemas_is_object(concurrency) {
+        return Ok(None);
+    }
+
+    let (
+        Some(JsonValue::String(version)),
+        Some(JsonValue::String(field)),
+    ) = (
+        tree_schemas_member(concurrency, "version"),
+        tree_schemas_member(concurrency, "field"),
+    )
+    else {
+        return Ok(None);
+    };
+    let inherited = if node.kind == TreeNodeKind::Op {
+        None
+    } else {
+        Some(tree_schemas_pointer(&node.pointer, &["concurrency"]))
+    };
+
+    Ok(Some(Version {
+        property: tree_schemas_source_property(version, BODY_SOURCE_PREFIX).map(str::to_owned),
+        field: field.clone(),
+        owner,
+        inherited,
+    }))
 }
 
 fn versioned_ancestor<'tree, 'raw>(
@@ -183,11 +231,33 @@ fn refers_to_schema(value: &JsonValue, schema: &str) -> Result<bool, PassError> 
     Err(not_ported_yet("refersToSchema"))
 }
 
+/// The item of a `concurrency` owner has the property `field`, whatever the version source.
 fn check_version_field(
     compiler: &mut TreeSchemasCompiler<'_, '_, '_>,
     owner: &TreeNode<'_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("checkVersionField"))
+    let concurrency = owner.settings.get("concurrency");
+    let Some(JsonValue::String(field)) = tree_schemas_member(concurrency, "field") else {
+        return Ok(());
+    };
+    let item_pointer = tree_schemas_pointer(&owner.pointer, &["item"]);
+
+    // A written item that did not compile is reported where it is written.
+    if owner.settings.contains_key("item") && !compiler.uses.contains_key(&item_pointer) {
+        return Ok(());
+    }
+
+    if item_property(compiler, owner, field)?.is_some() {
+        return Ok(());
+    }
+
+    compiler.reporter.error(TreeSchemasProblem {
+        rule: TreeSchemasRule::ConcurrencyField,
+        pointer: tree_schemas_pointer(&owner.pointer, &["concurrency", "field"]),
+        message: format!("the item has no property '{field}' to compare the version with"),
+        fix: "name a property of the item schema in 'field'".to_owned(),
+        related: None,
+    })
 }
 
 fn item_property(

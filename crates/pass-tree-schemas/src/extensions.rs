@@ -7,6 +7,7 @@ use std::collections::HashMap;
 use seampact_diagnostics::{InternalError, quote_text};
 use seampact_ir::{
     ExtensionKey, ExtensionKeyDecl, ExtensionKeyId, ExtensionPlace, ExtensionPrefix, Extensions,
+    IrMap,
 };
 use seampact_json::{JsonObject, JsonValue};
 use seampact_pipeline::{PassError, TreeNodes};
@@ -73,14 +74,33 @@ fn is_place(value: &str) -> Result<bool, PassError> {
 }
 
 /// Whether a mapping writes any extension key.
-pub(crate) fn tree_schemas_has_extensions(value: &JsonObject) -> Result<bool, PassError> {
-    Err(not_ported_yet("treeSchemasHasExtensions"))
+pub(crate) fn tree_schemas_has_extensions(value: &JsonObject) -> bool {
+    value.keys().any(|key| extension_key_parts(key).is_some())
 }
 
 /// The IR slot `{ <prefix>: { <key>: value } }` of the extension values a mapping writes, each
 /// copied.
-pub(crate) fn tree_schemas_extension_slot(value: &JsonObject) -> Result<Extensions, PassError> {
-    Err(not_ported_yet("treeSchemasExtensionSlot"))
+pub(crate) fn tree_schemas_extension_slot(value: &JsonObject) -> Extensions {
+    let mut slot = Extensions::new();
+
+    for (written, member) in value.iter() {
+        let Some((prefix, key)) = extension_key_parts(written) else {
+            continue;
+        };
+        let prefix = ExtensionPrefix::new(prefix.to_owned());
+        let key = ExtensionKey::new(key.to_owned());
+
+        match slot.get_mut(&prefix) {
+            Some(keys) => {
+                keys.insert(key, member.clone());
+            }
+            None => {
+                slot.insert(prefix, IrMap::from_iter([(key, member.clone())]));
+            }
+        }
+    }
+
+    slot
 }
 
 pub(crate) fn tree_schemas_compile_extension_keys(
