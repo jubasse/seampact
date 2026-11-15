@@ -109,7 +109,7 @@ pub(crate) fn tree_nodes_input(
     if is_json {
         let files = files_below(&schema, None, scope)?;
 
-        report_nested_files(&site, &files, None, scope)?;
+        report_nested_files(&site, &files, None, scope);
 
         return Ok(Some(input));
     }
@@ -146,7 +146,7 @@ fn report_nested_files(
     files: &[NestedFile],
     field: Option<&str>,
     scope: &mut TreeNodesScope<'_, '_, '_>,
-) -> Result<(), PassError> {
+) {
     for file in files {
         let at = if file.path.is_empty() {
             String::new()
@@ -185,8 +185,6 @@ fn report_nested_files(
                 related: Vec::new(),
             }));
     }
-
-    Ok(())
 }
 
 /// The files one walk of `files_below` has found and the schemas it has entered.
@@ -210,7 +208,7 @@ impl<'draft> FileWalk<'draft> {
             }),
             KnownTypeUseRef::Array(array) => self.visit(&array.items, at_path, origin)?,
             KnownTypeUseRef::Ref(reference) => {
-                self.visit_schema(reference.schema.as_str(), at_path)?
+                self.visit_schema(reference.schema.as_str(), at_path)?;
             }
             KnownTypeUseRef::Scalar(scalar) => {
                 if let Some(content) = &scalar.content {
@@ -372,7 +370,7 @@ fn field_wire(
     } else {
         let nested = files_below(&property.r#type, Some(&property.origin), scope)?;
 
-        report_nested_files(site, &nested, Some(&property.name), scope)?;
+        report_nested_files(site, &nested, Some(&property.name), scope);
 
         if !nested.is_empty() {
             return Ok(None);

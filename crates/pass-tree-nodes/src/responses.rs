@@ -418,7 +418,7 @@ fn check_responses_alone(
 ) -> Result<(), PassError> {
     let beside = RESPONSES_INSTEAD_OF
         .iter()
-        .filter(|member| site.node.settings.contains_key(**member));
+        .filter(|member| site.node.settings.contains_key(member));
 
     for member in beside {
         let pointer = pointer_below(&site.node.pointer, &[member]);

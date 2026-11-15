@@ -403,7 +403,7 @@ pub(crate) fn tree_nodes_check_payloads(
                 record: record_of(shape, body),
             };
 
-            for written in written_templates(operation, format, shape, scope)? {
+            for written in written_templates(operation, format, shape, scope) {
                 check_id_slots(&check, &written, scope)?;
                 check_item_collection_slot(&check, &written, scope)?;
                 check_member_names(&check, &written, scope)?;
@@ -496,7 +496,7 @@ fn written_templates(
     format: &WireFormat,
     shape: ShapeName,
     scope: &TreeNodesScope<'_, '_, '_>,
-) -> Result<Vec<WrittenTemplate>, PassError> {
+) -> Vec<WrittenTemplate> {
     let format_owner = TemplateOwner {
         name: format!("the format {}", format.id.as_str()),
         origin: format.origin.clone(),
@@ -519,7 +519,7 @@ fn written_templates(
         owner: format_owner.clone(),
     };
     let Some(style) = style else {
-        return Ok(iter::once(body).chain(format_headers).collect());
+        return iter::once(body).chain(format_headers).collect();
     };
     let style_owner = TemplateOwner {
         name: format!("the paging style {}", style.id.as_str()),
@@ -543,10 +543,10 @@ fn written_templates(
             owner: style_owner.clone(),
         });
 
-    Ok(iter::once(first)
+    iter::once(first)
         .chain(format_headers)
         .chain(style_templates)
-        .collect())
+        .collect()
 }
 
 fn operation_id_of(operation: &DraftOperation) -> Result<&str, InternalError> {
