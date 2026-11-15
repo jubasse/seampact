@@ -111,8 +111,11 @@ fn check_path(
 }
 
 // A degraded header name may not hold a character outside printable ASCII, a comma, or a space at either end.
-fn name_unfit_for_header(_name: &str) -> Result<bool, PassError> {
-    Err(not_ported_yet("nameUnfitForHeader"))
+fn name_unfit_for_header(name: &str) -> bool {
+    name.chars()
+        .any(|character| !(' '..='~').contains(&character) || character == ',')
+        || name.starts_with(' ')
+        || name.ends_with(' ')
 }
 
 fn path_fault(

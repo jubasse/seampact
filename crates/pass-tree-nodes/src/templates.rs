@@ -194,8 +194,17 @@ pub(crate) struct TreeNodesTemplateSite {
     pub(crate) owner: String,
 }
 
-fn slots_of(_names: &[&str]) -> Result<Vec<TemplateSlot>, PassError> {
-    Err(not_ported_yet("slotsOf"))
+fn slots_of(names: &[&str]) -> Vec<TemplateSlot> {
+    names
+        .iter()
+        .map(|name| TemplateSlot {
+            name: (*name).to_owned(),
+            kind: SLOT_KINDS
+                .iter()
+                .find(|(slot, _)| slot == name)
+                .map_or(TemplateSlotKind::Value, |(_, kind)| *kind),
+        })
+        .collect()
 }
 
 pub(crate) fn tree_nodes_template(
