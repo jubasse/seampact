@@ -3,17 +3,20 @@
 use std::collections::HashSet;
 
 use seampact_diagnostics::InternalError;
-use seampact_ir::{Conventions, FormatId, IrMap, Lint, PackRef, PagingId, Service, ServiceId, WireFormat, PagingStyle};
+use seampact_ir::{
+    Conventions, FormatId, IrMap, Lint, PackRef, PagingId, PagingStyle, Service, ServiceId,
+    WireFormat,
+};
 use seampact_pipeline::{
-    ApiDeclaration, DraftIr, DraftOperation, HalfContext, PassError, TreeNodesOperation, TreeNodesOutput,
-    TreeSchemaService, pipeline_tree_nodes,
+    ApiDeclaration, DraftIr, DraftOperation, HalfContext, PassError, TreeNodesOperation,
+    TreeNodesOutput, TreeSchemaService, pipeline_tree_nodes,
 };
 
 use crate::api::tree_nodes_api;
-use crate::not_ported::not_ported_yet;
 use crate::collections::tree_nodes_check_id_properties;
 use crate::formats::{tree_nodes_check_payloads, tree_nodes_formats};
 use crate::limits::tree_nodes_check_body_limits;
+use crate::not_ported::not_ported_yet;
 use crate::operations::tree_nodes_operations;
 use crate::pagings::tree_nodes_pagings;
 use crate::relays::tree_nodes_join_relay_declarations;
@@ -120,5 +123,5 @@ pub fn run(
     tree_nodes_join_relay_declarations(&relay_declarations, &mut scope)?;
     tree_nodes_check_payloads(&mut scope)?;
 
-    Ok(scope.output.into_output()?)
+    scope.output.into_output()
 }

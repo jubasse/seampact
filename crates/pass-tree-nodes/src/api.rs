@@ -3,10 +3,11 @@
 use indexmap::IndexMap;
 use seampact_diagnostics::{DiagnosticOrigin, InternalError};
 use seampact_ir::{
-    ApiCaller, ApiDocument, ApiKind, ApiRole, Compat, CompatPolicy,
-    DocumentId, Docs, IdentityId, InternalPolicy, IrMap, KnownApiVersion, LabelApiVersion, Maturity, Name,
-    NameRole, Origin, PathApiVersion, PathVersion, PathVersionMode, RightId, Surface, SurfaceId,
+    ApiCaller, ApiDocument, ApiKind, ApiRole, Compat, CompatPolicy, Docs, DocumentId, IdentityId,
+    InternalPolicy, IrMap, KnownApiVersion, LabelApiVersion, Maturity, Name, NameRole, Origin,
+    PathApiVersion, PathVersion, PathVersionMode, RightId, Surface, SurfaceId,
 };
+use seampact_js::{FiniteNumber, js_key_order};
 use seampact_json::{JsonValue, stringify_json};
 use seampact_naming::split_name;
 use seampact_pass_tree_shared::{TREE_NODES_MATURITIES, tree_nodes_member};
@@ -68,7 +69,7 @@ fn schema_name(written: &str) -> Name {
 }
 
 /// The first of `allowed` that `value` writes, `None` for anything but one of their texts.
-fn one_of<T: Clone>(
+pub(crate) fn one_of<T: Clone>(
     value: Option<&JsonValue>,
     allowed: &[T],
     text_of_candidate: fn(&T) -> &str,
@@ -102,7 +103,11 @@ pub(crate) fn tree_nodes_api(
     let version = version_of(tree_nodes_member(written, "version"))?;
 
     let surfaces = surfaces_of(&version, &version_origin, scope)?;
-    let role = one_of(tree_nodes_member(written, "role"), API_ROLES, ApiRole::as_str);
+    let role = one_of(
+        tree_nodes_member(written, "role"),
+        API_ROLES,
+        ApiRole::as_str,
+    );
     let caller = caller_of(tree_nodes_member(written, "caller"));
     let id = text_of(tree_nodes_member(written, "name")).unwrap_or(&raw.name);
     let surface_ids: Vec<String> = surfaces.iter().map(|entry| entry.id.clone()).collect();
@@ -115,8 +120,12 @@ pub(crate) fn tree_nodes_api(
         id: id.to_owned(),
         name: schema_name(id),
         version: version.into(),
-        kind: one_of(tree_nodes_member(written, "kind"), API_KINDS, ApiKind::as_str)
-            .unwrap_or(DEFAULT_API_KIND),
+        kind: one_of(
+            tree_nodes_member(written, "kind"),
+            API_KINDS,
+            ApiKind::as_str,
+        )
+        .unwrap_or(DEFAULT_API_KIND),
         path_version: path_version_of(&version_origin, scope)?,
         role,
         maturity: one_of(
@@ -149,17 +158,21 @@ pub(crate) fn tree_nodes_api(
     Ok(prefixes)
 }
 
-fn required_origin(pointer: &str, scope: &TreeNodesScope<'_, '_, '_>) -> Result<Origin, InternalError> {
-    scope.context.origin(pointer).ok_or_else(|| {
-        InternalError::new(format!("the raw tree has no origin for {pointer}"))
-    })
+fn required_origin(
+    pointer: &str,
+    scope: &TreeNodesScope<'_, '_, '_>,
+) -> Result<Origin, InternalError> {
+    scope
+        .context
+        .origin(pointer)
+        .ok_or_else(|| InternalError::new(format!("the raw tree has no origin for {pointer}")))
 }
 
 // An integer version is the path version; a string one a label, allowed only with every surface unversioned.
 fn version_of(written: Option<&JsonValue>) -> Result<KnownApiVersion, InternalError> {
     match written {
         Some(JsonValue::Number(number)) => Ok(KnownApiVersion::Path(PathApiVersion {
-            number: number.to_f64() as i64,
+            number: integer_of(number.to_f64())?,
         })),
         Some(JsonValue::String(label)) => Ok(KnownApiVersion::Label(LabelApiVersion {
             label: label.clone(),
@@ -168,6 +181,15 @@ fn version_of(written: Option<&JsonValue>) -> Result<KnownApiVersion, InternalEr
             "the api file has no version, which the grammar requires",
         )),
     }
+}
+
+// The grammar admits an integer version only.
+fn integer_of(number: f64) -> Result<i64, InternalError> {
+    let text = FiniteNumber::new(number).map(|finite| finite.to_string());
+
+    text.as_deref()
+        .and_then(|text| text.parse::<i64>().ok())
+        .ok_or_else(|| InternalError::new(format!("the api version {number} is no integer")))
 }
 
 fn path_version_of(
@@ -181,9 +203,10 @@ fn path_version_of(
         PathVersionMode::as_str,
     );
     let Some(value) = value else {
-        let resolved = reading
-            .as_ref()
-            .map_or_else(|| "undefined".to_owned(), |reading| stringify_json(reading.value));
+        let resolved = reading.as_ref().map_or_else(
+            || "undefined".to_owned(),
+            |reading| stringify_json(reading.value),
+        );
 
         return Err(InternalError::new(format!(
             "conventions.pathVersion resolves to {resolved}, no mode the grammar admits"
@@ -224,7 +247,7 @@ fn documents_of(
         return documents;
     };
 
-    for (id, document) in declared.iter() {
+    for (id, document) in js_key_order(declared.iter()) {
         let surfaces: Vec<SurfaceId> = match tree_nodes_member(Some(document), "surfaces") {
             Some(JsonValue::Array(listed)) => listed
                 .iter()
@@ -240,7 +263,10 @@ fn documents_of(
         )
         .unwrap_or(DEFAULT_INTERNAL);
 
-        documents.insert(DocumentId::new(id.clone()), ApiDocument { surfaces, internal });
+        documents.insert(
+            DocumentId::new(id.clone()),
+            ApiDocument { surfaces, internal },
+        );
     }
 
     documents
@@ -260,7 +286,7 @@ fn surfaces_of(
     let mut entries = Vec::new();
     let mut versioned_surfaces: Vec<&str> = Vec::new();
 
-    for (id, settings) in written.iter() {
+    for (id, settings) in js_key_order(written.iter()) {
         let pointer = pointer_below("/surfaces", &[id]);
         let origin = required_origin(&pointer, scope)?;
         let mode = one_of(
@@ -275,7 +301,9 @@ fn surfaces_of(
                 PathVersionMode::as_str,
             )
         })
-        .ok_or_else(|| InternalError::new(format!("the surface {id} resolves no path version mode")))?;
+        .ok_or_else(|| {
+            InternalError::new(format!("the surface {id} resolves no path version mode"))
+        })?;
 
         let prefix_text = text_of(tree_nodes_member(Some(settings), "prefix"));
         let written_prefix = prefix_text.unwrap_or("");
@@ -381,7 +409,7 @@ fn check_prefix(
     };
 
     let mismatch = match &site.version {
-        KnownApiVersion::Path(path) if Some(path.number) != literal_number(literal) => {
+        KnownApiVersion::Path(path) if Some(path.number.to_string()) != literal_number(literal) => {
             format!(", which differs from the api version {}", path.number)
         }
         _ => String::new(),
@@ -402,18 +430,18 @@ fn check_prefix(
 }
 
 /// A segment that is `v` and digits: the TypeScript's `/^v[0-9]+$/`.
-fn is_literal_version_segment(segment: &str) -> bool {
+pub(crate) fn is_literal_version_segment(segment: &str) -> bool {
     segment.strip_prefix('v').is_some_and(|digits| {
         !digits.is_empty() && digits.bytes().all(|byte| byte.is_ascii_digit())
     })
 }
 
-// A digit run past the exact integers reads like `Number(...)`, which rounds; a mismatch then holds
-// for any api version a number can write.
-fn literal_number(literal: &str) -> Option<i64> {
+// `Number(literal.slice(1))` as text: leading zeros drop, and a digit run past the exact integers rounds.
+pub(crate) fn literal_number(literal: &str) -> Option<String> {
     let digits = literal.strip_prefix('v')?;
+    let number = digits.parse::<f64>().ok()?;
 
-    digits.parse::<f64>().ok().map(|number| number as i64)
+    FiniteNumber::new(number).map(|finite| finite.to_string())
 }
 
 // A prefix's only placeholder is `{version}`: no parameter fills any other, so it would reach the client as written.
@@ -446,7 +474,11 @@ fn check_prefix_placeholders(
     }
 }
 
-fn resolve_prefix(written_prefix: &str, mode: &PathVersionMode, version: &KnownApiVersion) -> String {
+pub(crate) fn resolve_prefix(
+    written_prefix: &str,
+    mode: &PathVersionMode,
+    version: &KnownApiVersion,
+) -> String {
     if *mode == PathVersionMode::None {
         return leading_slash(trim_trailing_slash(written_prefix));
     }
@@ -454,7 +486,10 @@ fn resolve_prefix(written_prefix: &str, mode: &PathVersionMode, version: &KnownA
     let template = if written_prefix.contains(VERSION_PLACEHOLDER) {
         leading_slash(written_prefix)
     } else {
-        format!("{DEFAULT_VERSIONED_PREFIX}{}", leading_slash(written_prefix))
+        format!(
+            "{DEFAULT_VERSIONED_PREFIX}{}",
+            leading_slash(written_prefix)
+        )
     };
     let version_text = match version {
         KnownApiVersion::Path(path) => path.number.to_string(),
@@ -464,7 +499,7 @@ fn resolve_prefix(written_prefix: &str, mode: &PathVersionMode, version: &KnownA
     trim_trailing_slash(&template.replace(VERSION_PLACEHOLDER, &version_text)).to_owned()
 }
 
-fn leading_slash(path: &str) -> String {
+pub(crate) fn leading_slash(path: &str) -> String {
     if path.is_empty() || path.starts_with('/') {
         return path.to_owned();
     }
@@ -472,6 +507,6 @@ fn leading_slash(path: &str) -> String {
     format!("/{path}")
 }
 
-fn trim_trailing_slash(path: &str) -> &str {
+pub(crate) fn trim_trailing_slash(path: &str) -> &str {
     path.strip_suffix('/').unwrap_or(path)
 }

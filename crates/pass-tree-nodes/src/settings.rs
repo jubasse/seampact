@@ -3,9 +3,10 @@
 use seampact_authoring::ApiLayer;
 use seampact_diagnostics::InternalError;
 use seampact_ir::{
-    ConventionValue, IrMap, Lint, LintAllow, LintRule, LintSeverity, Maturity, PackRef, Reason, Service,
-    ServiceId,
+    ConventionValue, IrMap, Lint, LintAllow, LintRule, LintSeverity, Maturity, PackRef, Reason,
+    Service, ServiceId,
 };
+use seampact_js::js_key_order;
 use seampact_json::{JsonObject, JsonValue};
 use seampact_pass_tree_shared::{
     TREE_NODES_MATURITIES, tree_nodes_member, tree_nodes_written_convention,
@@ -97,14 +98,16 @@ fn write_conventions(scope: &mut TreeNodesScope<'_, '_, '_>) -> Result<(), Inter
     Ok(())
 }
 
-fn lint_rules(scope: &TreeNodesScope<'_, '_, '_>) -> Result<IrMap<String, LintRule>, InternalError> {
+fn lint_rules(
+    scope: &TreeNodesScope<'_, '_, '_>,
+) -> Result<IrMap<String, LintRule>, InternalError> {
     let mut rules = IrMap::new();
     let lint = scope.context.raw.merged.get("lint");
     let Some(written) = object_of(tree_nodes_member(lint, "rules")) else {
         return Ok(rules);
     };
 
-    for (rule, value) in written.iter() {
+    for (rule, value) in js_key_order(written.iter()) {
         let severity = LINT_SEVERITIES
             .iter()
             .find(|candidate| text_of(Some(value)) == Some(candidate.as_str()));
@@ -144,7 +147,7 @@ fn lint_allows(scope: &TreeNodesScope<'_, '_, '_>) -> Result<Vec<LintAllow>, Int
             return;
         };
 
-        for (rule, reason) in written.iter() {
+        for (rule, reason) in js_key_order(written.iter()) {
             let Some(reason) = text_of(Some(reason)) else {
                 continue;
             };
@@ -168,7 +171,7 @@ fn lint_allows(scope: &TreeNodesScope<'_, '_, '_>) -> Result<Vec<LintAllow>, Int
             continue;
         };
 
-        for (id, entry) in entries.iter() {
+        for (id, entry) in js_key_order(entries.iter()) {
             let pointer = pointer_below(&format!("/{catalogue}"), &[id]);
 
             add(object_of(Some(entry)), &pointer, AllowOwner::Entry);
@@ -184,7 +187,11 @@ fn lint_allows(scope: &TreeNodesScope<'_, '_, '_>) -> Result<Vec<LintAllow>, Int
 
 fn add_route_position_allows(settings: &JsonObject, pointer: &str, add: AddAllows<'_>) {
     for position in ROUTE_SCHEMA_POSITIONS {
-        add_inline_schema_allows(settings.get(position), &format!("{pointer}/{position}"), add);
+        add_inline_schema_allows(
+            settings.get(position),
+            &format!("{pointer}/{position}"),
+            add,
+        );
     }
 
     for map in ROUTE_FIELDS_MAPS {
@@ -195,7 +202,7 @@ fn add_route_position_allows(settings: &JsonObject, pointer: &str, add: AddAllow
         return;
     };
 
-    for (status, response) in responses.iter() {
+    for (status, response) in js_key_order(responses.iter()) {
         let at = pointer_below(&format!("{pointer}/responses"), &[status]);
 
         add_inline_schema_allows(
@@ -226,7 +233,7 @@ fn add_fields_map_allows(fields: Option<&JsonValue>, pointer: &str, add: AddAllo
         return;
     };
 
-    for (name, field) in object.iter() {
+    for (name, field) in js_key_order(object.iter()) {
         add_inline_schema_allows(Some(field), &pointer_below(pointer, &[name]), add);
     }
 }
@@ -266,10 +273,12 @@ fn write_services(scope: &mut TreeNodesScope<'_, '_, '_>) -> Result<(), Internal
     // A service that states no maturity is as mature as the api it serves: the grammar states none for it.
     let api_maturity: Option<Maturity> = scope.output.api.as_ref().map(|api| api.maturity.clone());
 
-    for (id, service) in written.iter() {
+    for (id, service) in js_key_order(written.iter()) {
         let stated = TREE_NODES_MATURITIES
             .iter()
-            .find(|level| text_of(tree_nodes_member(Some(service), "maturity")) == Some(level.as_str()))
+            .find(|level| {
+                text_of(tree_nodes_member(Some(service), "maturity")) == Some(level.as_str())
+            })
             .cloned();
         let maturity = stated.or_else(|| api_maturity.clone());
         let origin = scope.context.origin(&pointer_below("/services", &[id]));
@@ -300,7 +309,7 @@ fn add_nested_allows(schema: Option<&JsonValue>, pointer: &str, add: AddAllows<'
             continue;
         };
 
-        for (key, nested) in entries.iter() {
+        for (key, nested) in js_key_order(entries.iter()) {
             add_inline_schema_allows(Some(nested), &pointer_below(pointer, &[member, key]), add);
         }
     }
@@ -313,7 +322,11 @@ fn add_nested_allows(schema: Option<&JsonValue>, pointer: &str, add: AddAllows<'
         for (index, nested) in entries.iter().enumerate() {
             let position = index.to_string();
 
-            add_inline_schema_allows(Some(nested), &pointer_below(pointer, &[member, &position]), add);
+            add_inline_schema_allows(
+                Some(nested),
+                &pointer_below(pointer, &[member, &position]),
+                add,
+            );
         }
     }
 

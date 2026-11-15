@@ -1,8 +1,10 @@
 //! The `responses` of an operation: the format and media it answers in, the declared or derived responses and their headers.
 
-use seampact_ir::{DerivationId, Docs, OpShorthand, Origin, Response, ResponseHeader, ResponseShape};
-use seampact_json::JsonValue;
 use seampact_diagnostics::InternalError;
+use seampact_ir::{
+    DerivationId, Docs, OpShorthand, Origin, Response, ResponseHeader, ResponseShape,
+};
+use seampact_json::JsonValue;
 use seampact_pass_tree_shared::tree_nodes_member;
 use seampact_pipeline::{NearestSetting, PassError, TreeNode};
 

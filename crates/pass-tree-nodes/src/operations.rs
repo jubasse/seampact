@@ -197,24 +197,28 @@ fn report_route_clashes(
             continue;
         };
         let first = by_route.get(route.key.as_str()).copied();
-        let Some((first, first_route)) = first.and_then(|first| Some((first, first.route.as_ref()?))) else {
+        let Some((first, first_route)) =
+            first.and_then(|first| Some((first, first.route.as_ref()?)))
+        else {
             by_route.insert(&route.key, entry);
             continue;
         };
 
-        scope.context.report(tree_nodes_error(TreeNodesDiagnosticOptions {
-            rule: TreeNodesRule::RouteUnique,
-            origin: tree_nodes_node_origin(&entry.node.origin)?,
-            message: format!(
-                "The operation {} answers {}, which a router cannot tell from {} of {}.",
-                entry.name.id, route.text, first_route.text, first.name.id
-            ),
-            fix: "Change the path or the method of one of the two routes.".to_owned(),
-            related: vec![RelatedLocation {
-                origin: tree_nodes_node_origin(&first.node.origin)?,
-                message: format!("the operation {}", first.name.id),
-            }],
-        }));
+        scope
+            .context
+            .report(tree_nodes_error(TreeNodesDiagnosticOptions {
+                rule: TreeNodesRule::RouteUnique,
+                origin: tree_nodes_node_origin(&entry.node.origin)?,
+                message: format!(
+                    "The operation {} answers {}, which a router cannot tell from {} of {}.",
+                    entry.name.id, route.text, first_route.text, first.name.id
+                ),
+                fix: "Change the path or the method of one of the two routes.".to_owned(),
+                related: vec![RelatedLocation {
+                    origin: tree_nodes_node_origin(&first.node.origin)?,
+                    message: format!("the operation {}", first.name.id),
+                }],
+            }));
     }
 
     Ok(())
@@ -270,7 +274,10 @@ fn report_get_input(
 }
 
 fn surface_of(node_id: TreeNodeId, nodes: &TreeNodes<'_>) -> Result<String, InternalError> {
-    let root = nodes.chain(node_id)?.first().map(|(_, root)| root.name.clone());
+    let root = nodes
+        .chain(node_id)?
+        .first()
+        .map(|(_, root)| root.name.clone());
 
     root.ok_or_else(|| InternalError::new("a tree node has no root"))
 }
@@ -353,16 +360,18 @@ fn report_clash(
         ),
     };
 
-    scope.context.report(tree_nodes_error(TreeNodesDiagnosticOptions {
-        rule: rule.rule(),
-        origin: tree_nodes_node_origin(&entry.node.origin)?,
-        message,
-        fix: "Rename one of the routes, or set operationId on one of them.".to_owned(),
-        related: vec![RelatedLocation {
-            origin: tree_nodes_node_origin(&first.node.origin)?,
-            message: format!("the operation {first_id}"),
-        }],
-    }));
+    scope
+        .context
+        .report(tree_nodes_error(TreeNodesDiagnosticOptions {
+            rule: rule.rule(),
+            origin: tree_nodes_node_origin(&entry.node.origin)?,
+            message,
+            fix: "Rename one of the routes, or set operationId on one of them.".to_owned(),
+            related: vec![RelatedLocation {
+                origin: tree_nodes_node_origin(&first.node.origin)?,
+                message: format!("the operation {first_id}"),
+            }],
+        }));
 
     Ok(())
 }

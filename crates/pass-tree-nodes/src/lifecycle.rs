@@ -2,12 +2,13 @@
 
 use indexmap::IndexMap;
 use seampact_diagnostics::DiagnosticOrigin;
+use seampact_diagnostics::InternalError;
 use seampact_ir::{
     ApiKind, Deprecation, ExtensionKey, ExtensionPrefix, Extensions, IrMap, MaturitySource,
     OperationMaturity, Origin,
 };
+use seampact_js::js_key_order;
 use seampact_json::{JsonObject, JsonValue};
-use seampact_diagnostics::InternalError;
 use seampact_pipeline::{
     DraftOperation, InheritedEntry, PassError, TreeNodeId, TreeNodes, UnionSetting,
 };
@@ -79,7 +80,7 @@ fn add_extensions(written: Option<&JsonValue>, values: &mut ExtensionValues) {
 }
 
 fn add_object_extensions(written: &JsonObject, values: &mut ExtensionValues) {
-    for (key, value) in written.iter() {
+    for (key, value) in js_key_order(written.iter()) {
         let Some((prefix, name)) = extension_key_parts(key) else {
             continue;
         };
@@ -93,7 +94,7 @@ fn add_object_extensions(written: &JsonObject, values: &mut ExtensionValues) {
 
 /// The prefix and the name of an extension key, `x-<prefix>-<name>`: the TypeScript's
 /// `/^x-([a-z][a-z0-9]*)-(.+)$/`.
-fn extension_key_parts(key: &str) -> Option<(&str, &str)> {
+pub(crate) fn extension_key_parts(key: &str) -> Option<(&str, &str)> {
     let rest = key.strip_prefix("x-")?;
     let first = rest.chars().next()?;
 

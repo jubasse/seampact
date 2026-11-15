@@ -1,8 +1,8 @@
 //! Who owns an operation and the concurrency token it carries, inherited from its resource.
 
+use seampact_diagnostics::InternalError;
 use seampact_ir::{OpShorthand, Origin, Owner, OwnerKind, Param, Params, TypeUse};
 use seampact_json::JsonValue;
-use seampact_diagnostics::InternalError;
 use seampact_pass_tree_shared::tree_nodes_op_owner;
 use seampact_pipeline::{DraftConcurrency, PassError, TreeNode, TreeNodeKind, TreeNodes};
 
@@ -62,7 +62,10 @@ fn resource_node_of<'nodes, 'raw>(
     while let Some(at_id) = at {
         let current = nodes.get(at_id)?;
 
-        if matches!(current.kind, TreeNodeKind::Collection | TreeNodeKind::Single) {
+        if matches!(
+            current.kind,
+            TreeNodeKind::Collection | TreeNodeKind::Single
+        ) {
             return Ok(Some(current));
         }
 

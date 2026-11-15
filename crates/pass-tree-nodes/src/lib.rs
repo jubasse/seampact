@@ -31,6 +31,9 @@ mod settings;
 mod templates;
 mod writes;
 
+#[cfg(test)]
+mod tests;
+
 pub use diagnostics::RULE_IDS;
 pub use field_wire::tree_nodes_field_wire;
 pub use limits::{TreeNodesBodyLimit, TreeNodesBodyLimitContext, tree_nodes_body_limit};

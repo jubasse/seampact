@@ -51,7 +51,10 @@ pub fn tree_nodes_body_limit(
     node: &TreeNode<'_>,
     context: &TreeNodesBodyLimitContext<'_, '_>,
 ) -> Result<Option<TreeNodesBodyLimit>, InternalError> {
-    if let Some(inherited) = context.inherited.nearest(node_id, &NearestSetting::BodyLimit)? {
+    if let Some(inherited) = context
+        .inherited
+        .nearest(node_id, &NearestSetting::BodyLimit)?
+    {
         return parsed_body_limit(
             inherited.value,
             Some(&inherited.origin),
@@ -60,14 +63,18 @@ pub fn tree_nodes_body_limit(
     }
 
     let is_batch = node.kind == TreeNodeKind::Op && node.name == "batch";
-    let convention = if is_batch { "batch.bodyLimit" } else { "bodyLimit" };
+    let convention = if is_batch {
+        "batch.bodyLimit"
+    } else {
+        "bodyLimit"
+    };
     let Some(reading) = context.conventions.get(convention)? else {
         return Ok(None);
     };
-    let written_at = reading
-        .origin
-        .as_ref()
-        .map_or_else(|| format!("the default conventions.{convention}"), |origin| origin.pointer.clone());
+    let written_at = reading.origin.as_ref().map_or_else(
+        || format!("the default conventions.{convention}"),
+        |origin| origin.pointer.clone(),
+    );
 
     parsed_body_limit(reading.value, reading.origin.as_ref(), &written_at)
 }
@@ -84,7 +91,9 @@ fn parsed_body_limit(
 
     if let Some(bytes) = bytes {
         let bytes = i64::try_from(bytes).map_err(|_| {
-            InternalError::new(format!("the body limit at {written_at} is past i64: {bytes}"))
+            InternalError::new(format!(
+                "the body limit at {written_at} is past i64: {bytes}"
+            ))
         })?;
 
         return Ok(Some(TreeNodesBodyLimit {
@@ -143,16 +152,18 @@ fn check_limit(
         return Ok(());
     }
 
-    scope.context.report(tree_nodes_error(TreeNodesDiagnosticOptions {
-        rule: TreeNodesRule::BodyLimit,
-        origin: tree_nodes_node_origin(origin)?,
-        message: format!(
-            "The body limit {} is larger than any size the compiler can check.",
-            js_text_of(Some(value))
-        ),
-        fix: format!("Write a smaller bodyLimit, at most {LARGEST_CHECKED_MIB}MiB."),
-        related: Vec::new(),
-    }));
+    scope
+        .context
+        .report(tree_nodes_error(TreeNodesDiagnosticOptions {
+            rule: TreeNodesRule::BodyLimit,
+            origin: tree_nodes_node_origin(origin)?,
+            message: format!(
+                "The body limit {} is larger than any size the compiler can check.",
+                js_text_of(Some(value))
+            ),
+            fix: format!("Write a smaller bodyLimit, at most {LARGEST_CHECKED_MIB}MiB."),
+            related: Vec::new(),
+        }));
 
     Ok(())
 }

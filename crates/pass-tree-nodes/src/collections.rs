@@ -55,7 +55,11 @@ pub(crate) fn tree_nodes_check_id_properties(
             continue;
         };
 
-        if item.properties.iter().any(|property| property.name == id_property) {
+        if item
+            .properties
+            .iter()
+            .any(|property| property.name == id_property)
+        {
             continue;
         }
 

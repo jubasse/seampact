@@ -4,10 +4,11 @@ use std::mem;
 
 use indexmap::IndexMap;
 use seampact_ir::{
-    Layer, Absent, EachTemplate, ErrorShape, FormatId, HeaderTemplate, IrMap, MemberName, MetaFill,
+    Absent, EachTemplate, ErrorShape, FormatId, HeaderTemplate, IrMap, Layer, MemberName, MetaFill,
     MetaMember, ObjectSchema, ObjectTemplate, ObjectTemplateMember, Origin, PlainMemberName,
     ResponseShape, Shape, Slot, SlotTemplate, SuccessShapes, Template, TypeUse, WireFormat,
 };
+use seampact_js::js_key_order;
 use seampact_json::JsonValue;
 use seampact_pass_tree_shared::tree_nodes_member;
 use seampact_pipeline::{DraftOperation, PassError, pointer_below};
@@ -178,13 +179,16 @@ pub(crate) fn tree_nodes_formats(scope: &mut TreeNodesScope<'_, '_, '_>) -> Resu
         return Ok(());
     };
 
-    for id in declared.keys() {
+    for (id, _) in js_key_order(declared.iter()) {
         if id == TREE_NODES_BARE_FORMAT {
             continue;
         }
 
         if let Some(format) = format_of(id, bare_error.as_ref(), scope)? {
-            scope.output.formats.insert(FormatId::new(id.clone()), format);
+            scope
+                .output
+                .formats
+                .insert(FormatId::new(id.clone()), format);
         }
     }
 
@@ -236,10 +240,15 @@ fn format_of(
     };
 
     let mut reader = FormatReader::new(scope, id, &pointer)?;
-    let media = text_of(tree_nodes_member(Some(declared), "media")).unwrap_or(TREE_NODES_DEFAULT_MEDIA);
+    let media =
+        text_of(tree_nodes_member(Some(declared), "media")).unwrap_or(TREE_NODES_DEFAULT_MEDIA);
     let success = reader.success(tree_nodes_member(Some(declared), "success"))?;
     let meta = reader.meta(tree_nodes_member(Some(declared), "meta"))?;
-    let error = reader.error(tree_nodes_member(Some(declared), "error"), media, bare_error)?;
+    let error = reader.error(
+        tree_nodes_member(Some(declared), "error"),
+        media,
+        bare_error,
+    )?;
 
     let (Some(success), Some(meta), Some(error)) = (success, meta, error) else {
         return Ok(None);
@@ -362,7 +371,11 @@ pub(crate) fn tree_nodes_check_payloads(
     let formats = mem::take(&mut scope.output.formats);
 
     for operation in &operations {
-        let Some(format) = operation.format.as_ref().and_then(|id| own_of(&formats, id)) else {
+        let Some(format) = operation
+            .format
+            .as_ref()
+            .and_then(|id| own_of(&formats, id))
+        else {
             continue;
         };
 

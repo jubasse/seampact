@@ -394,7 +394,10 @@ mod tests {
 
     #[test]
     fn rule_ids_are_every_rule_mapped_through_rule_id() {
-        let mapped: Vec<RuleId> = TreeNodesRule::ALL.iter().map(|rule| rule.rule_id()).collect();
+        let mapped: Vec<RuleId> = TreeNodesRule::ALL
+            .iter()
+            .map(|rule| rule.rule_id())
+            .collect();
 
         assert_eq!(RULE_IDS, mapped.as_slice());
     }

@@ -82,7 +82,11 @@ fn chain_of<'nodes, 'raw>(
     node_id: TreeNodeId,
     nodes: &'nodes TreeNodes<'raw>,
 ) -> Result<Vec<&'nodes TreeNode<'raw>>, InternalError> {
-    Ok(nodes.chain(node_id)?.into_iter().map(|(_, node)| node).collect())
+    Ok(nodes
+        .chain(node_id)?
+        .into_iter()
+        .map(|(_, node)| node)
+        .collect())
 }
 fn policy_of(
     value: Option<&JsonValue>,
@@ -220,7 +224,9 @@ pub(crate) fn blank_placeholders(text: &str) -> String {
         let close = after_open.find(['{', '}']);
         let name_and_rest = close.map(|close| after_open.split_at(close));
 
-        match name_and_rest.and_then(|(name, from_close)| Some((name, from_close.strip_prefix('}')?))) {
+        match name_and_rest
+            .and_then(|(name, from_close)| Some((name, from_close.strip_prefix('}')?)))
+        {
             Some((name, after_close)) if !name.is_empty() => {
                 blanked.push_str("{}");
                 rest = after_close;

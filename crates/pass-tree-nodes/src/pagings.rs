@@ -3,14 +3,14 @@
 use std::collections::HashSet;
 use std::mem;
 
+use seampact_diagnostics::InternalError;
 use seampact_diagnostics::RelatedLocation;
 use seampact_ir::{
-    PagingId,
-    HandlerResultMember, NamedTemplate, Origin, PagingLink, PagingParamPlacement, PagingParamStyle,
-    PagingPosition, PagingRequestRole, PagingResponse, PagingRole, PagingStyle, Template, UrlRole,
-    WireFormat,
+    HandlerResultMember, NamedTemplate, Origin, PagingId, PagingLink, PagingParamPlacement,
+    PagingParamStyle, PagingPosition, PagingRequestRole, PagingResponse, PagingRole, PagingStyle,
+    Template, UrlRole, WireFormat,
 };
-use seampact_diagnostics::InternalError;
+use seampact_js::js_key_order;
 use seampact_json::{JsonValue, stringify_json};
 use seampact_pipeline::{PassError, pointer_below};
 
@@ -150,9 +150,14 @@ pub(crate) fn tree_nodes_pagings(scope: &mut TreeNodesScope<'_, '_, '_>) -> Resu
     refuse_reserved_style(scope)?;
 
     if let Some(JsonValue::Object(declared)) = scope.context.raw.merged.get("pagings") {
-        for id in declared.keys().filter(|name| *name != TREE_NODES_PAGING_NONE) {
+        for (id, _) in
+            js_key_order(declared.iter()).filter(|(name, _)| *name != TREE_NODES_PAGING_NONE)
+        {
             if let Some(style) = style_of(id, scope)? {
-                scope.output.pagings.insert(PagingId::new(id.clone()), style);
+                scope
+                    .output
+                    .pagings
+                    .insert(PagingId::new(id.clone()), style);
             }
         }
     }
@@ -328,7 +333,7 @@ fn format_related(
 }
 
 // Header names are case-insensitive (RFC 9110 section 5.1); query parameter names are not.
-fn sent_key(placement: &PagingParamPlacement, name: &str) -> String {
+pub(crate) fn sent_key(placement: &PagingParamPlacement, name: &str) -> String {
     let sent_name = if *placement == PagingParamPlacement::Header {
         name.to_lowercase()
     } else {
@@ -349,7 +354,10 @@ fn check_formats(scope: &mut TreeNodesScope<'_, '_, '_>) -> Result<(), PassError
     let mut checked: HashSet<String> = HashSet::new();
 
     for operation in &operations {
-        let style_id = operation.paging.as_ref().and_then(|paging| paging.style.as_ref());
+        let style_id = operation
+            .paging
+            .as_ref()
+            .and_then(|paging| paging.style.as_ref());
         let (Some(style_id), Some(format_id)) = (style_id, operation.format.as_ref()) else {
             continue;
         };
