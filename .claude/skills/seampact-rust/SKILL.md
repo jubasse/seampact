@@ -1,49 +1,69 @@
 ---
 name: seampact-rust
-description: Seampact's overrides of general Rust practice for the 2.0.0 Rust core. Use when writing, reviewing or fixing any Rust code, Cargo.toml or Rust test in the seampact repository; where it disagrees with seampact-rust-practice or rust-best-practices, this skill wins.
+description: How Rust is written in seampact's 2.0.0 Rust core, beyond what PORTING.md and clippy enforce. Use when writing, reviewing or fixing any Rust code, Cargo.toml or Rust test in the seampact repository; where it disagrees with rust-best-practices, this skill wins.
 ---
 
 # Rust in seampact
 
-General idiom comes from `seampact-rust-practice` in port lanes (condensed from `rust-best-practices`), and from `rust-best-practices` and `rust-review` in design notes and layer reviews. This skill lists where seampact differs or is stricter. The porting rules are in [PORTING.md](../../../PORTING.md); a port follows the `seampact-rust-port-ts` skill.
+PORTING.md sections 1-8 (JavaScript traps, errors, oracle, gate) and AGENTS.md "Code style" apply and are not repeated here.
 
-## Stricter than the general guide
+## Lints
 
-- No `unwrap`, `expect`, `panic!`, `unreachable!`, `todo!`, `unimplemented!` or indexing that can panic (`clippy::indexing_slicing`) outside tests, even for invariants: a broken invariant is an `InternalError` returned with `?` up to the driver (exit 3), never a diagnostic in a sink. Lock poisoning and "cannot happen" branches included. No silent fallback or placeholder value the TypeScript does not have (`unwrap_or_default`, `unwrap_or(Ordering::Equal)`); a TypeScript `?? x` ports as `unwrap_or(x)`. `clippy::indexing_slicing` and `clippy::string_slice` are denied, and `map[&key]` is banned by review (use `.get`). A fallible lookup returns `Result`, never a forced total type.
-- `anyhow` only in the CLI binary crate and `xtask`. Libraries: one `thiserror` enum per crate for environment failures; user faults are diagnostics, never errors.
-- `unsafe_code = "forbid"` in every crate; no exception without a user decision.
-- `#[allow]` and `#[expect]` need `reason = "..."`; the workspace allow list is short and lives in the root `Cargo.toml`.
-- `print!`, `println!`, `eprintln!` only in the CLI output module.
+- The workspace lints (root `Cargo.toml`, `clippy.toml`) run clippy `all` and `pedantic` under `-D warnings`, require `missing_docs` and a `reason` on every `allow` or `expect`, forbid `unsafe_code`, and deny `unwrap_used`, `expect_used`, `panic`, `unreachable`, `todo`, `unimplemented`, `dbg_macro`, `exit`, `indexing_slicing`, `string_slice`, `print_stdout` and `print_stderr`; `clippy.toml` lets `#[test]` functions unwrap, expect, panic and index.
+- Fix what a lint reports, never silence it. Only when a lint is wrong for one item: `#[expect(clippy::<name>, reason = "...")]` on that item. Printing is allowed only in the CLI output module.
+- The fix for a denied panic, unwrap or index is PORTING.md section 3 (match the shape, or return the `InternalError`), lock poisoning included; never `.expect()` or a fallback value the TypeScript does not have (a TypeScript `?? x` ports as `unwrap_or(x)`).
 
-## Determinism
+## Ownership
 
-- Output depends only on input: no clock, randomness, environment or thread timing in the compiler or generators.
-- A collection that is iterated into output is `IndexMap` or `IndexSet`, or sorted with the UTF-16 compare helper. `HashMap` only for lookups. `BTreeMap<String, _>` iterates in byte order, which is not the IR's order.
-- Parallel work (`rayon`) only where the output order is fixed afterwards.
-- JSON for the IR and OpenAPI goes through the canonical writer; numbers through the ECMAScript number-text helper.
+- Unique ownership. `Rc`, `Arc`, `RefCell` or `Mutex` only when the design asks for sharing or interior mutability, never to quiet the borrow checker; `Rc`, `Arc`, `Box`, `RefCell` and third-party types stay out of signatures other crates call unless the design note puts them there.
+- Never `.clone()` only to end a borrow. Try in order: a named `let` or a block to shorten the borrow; typed intermediates to find the failing step; `mem::take`, `mem::replace` or `Option::take` to move out of `&mut`; split a struct so disjoint fields borrow apart (tracked inside one function, not across method calls); clone small immutable data on purpose; indices into an owning `Vec` last. No self-referential struct.
+- An accessor reading a `&'run` field returns `&'run T`, not the elided borrow of `&self`, so a caller can keep it while it reports. Where the TypeScript returns part of its argument, return a borrow of it, not an owned copy.
+- Take `T` by value only to store or consume it, never `&T` plus an inner `.clone()`. Return several values as a tuple or struct, not through `&mut` out-parameters.
+- Structs own their data (`String`, `Vec`) unless the design makes a borrow (a view over a draft); a lifetime gets a descriptive name (`'draft`, `'run`, `'src`), never `'a`.
+- Build with `let mut`, then rebind `let value = value;` once later code must not mutate it.
 
-## Text and paths
+## Types
 
-- Count what the TypeScript counts: load limits, positions and columns in UTF-16 units through the text helper, JSON Schema string lengths in code points. Spans store byte offsets.
-- Paths are UTF-8 (`camino`); output paths go through the validated relative-path type, which refuses `..`, absolute paths and names that differ only by case or Unicode normalisation.
-- Line endings: LF in every written file; input accepts CRLF.
+- TypeScript to Rust: a string-literal union is a fieldless enum with its text in one `as_str`; a discriminated union an enum with data; an optional property `Option<T>`; `T | undefined` from a lookup `Option<&T>`; a `flag: boolean` option a two-variant enum (no `bool` parameter in a shared signature: clippy only flags three or more).
+- Invalid states unrepresentable: an enum, not a flag plus fields meaningful "only when"; newtypes for ids and units; a fallible constructor (`try_new`) validates once. `Option` for absence, never a sentinel (`-1`, `""`). Named fields; tuples only for one-field newtypes and very local code.
+- No class hierarchy, `Manager` or `Helper` type, or `Deref` to a "base" struct. Traits only for generic code or `dyn` dispatch the design asks for: concrete type, then generic, then `dyn`. A function with a clear receiver is a method. Closure bounds `FnOnce`, else `FnMut`, else `Fn`; a closure parameter goes last. No macro where a function, generic or trait does.
+- `Debug` on every type; `Clone`, `PartialEq`, `Eq`, `Hash`, `Default` when every field allows and they mean something; `Copy` only for small plain types; `PartialOrd` with `Ord` when a total order exists. A hand-written `Ord` comes with `PartialEq`, `PartialOrd` and `Hash` on the same fields.
+- Match an enum this repository owns (IR unions, closed catalogues) with no `_` arm, so a new variant breaks every match; `_` only for foreign or `#[non_exhaustive]` types.
+- Names: no `get_` prefix; constructors `new`, `try_new`, `from_x` (plus `From` when it is a real conversion); error types verb-object-error (`ParseDurationError`); acronyms as one word (`JsonValue`).
+- Visibility: private, then `pub(crate)`, then `pub`; fields private unless the struct is passive data; each public item reachable at one path, re-exported by name.
+- Parameter order is the same across a crate: call-specific first, shared context (half context, reporter) last.
 
-## Shape
+## Numbers
 
-- Airy code: a blank line between steps, after a group of `let`, before `return`, `if`, `match`, loops and after a block; at most 3-4 levels of nesting (early return, `let ... else`, extract a function).
-- Long precise names (`pending_operation_ids`, not `ids`); a function name that makes a comment unnecessary.
-- Comments only for a non-obvious reason; rustdoc on every public item of a library crate (`missing_docs`), first line a sentence.
-- One concept per module: its types, traits and functions together; one shared helper, never a copy.
-- Named constants, no magic values; no boolean flag parameters (an enum instead).
+- `f64 as i64` (`cast_possible_truncation`) saturates and turns NaN into 0, unlike JS `x | 0`: check `is_finite` and the range first, or use the number helper.
+- `+`, `-`, `*` on input-sized integers panic in debug and wrap in release: `checked_` or `saturating_` as the TypeScript number would behave, `wrapping_` only where it relied on 32 bits.
 
-## Dependencies
+## Errors
 
-- Versions pinned once in `[workspace.dependencies]`; a crate uses `dep.workspace = true`.
-- Each new dependency is named with its reason in the PR body and passes `cargo deny check` (MIT-compatible licences, advisories, known sources; a duplicate version you introduce is named with its reason in the PR body). `cargo machete` finds none unused.
-- Crate docs through context7, at the pinned version.
+- `anyhow` only in the CLI binary and `xtask`. A library has one `thiserror` enum per crate, not a workspace-wide one; `#[from]` so `?` works, `map_err` only for a foreign error or added context; messages lowercase, no trailing period.
+- Fallible sort keys: collect them into `Result<Vec<_>, _>` first, then sort on total keys; never a comparator that stores an error and answers `Ordering::Equal`.
+
+## Idioms
+
+- Iterators for short top-down pipelines; collect fallible steps into `Result<Vec<_>, _>`, then `?`; a `for` loop when the body is long, does several jobs or returns early. Bind a long chain to a typed variable (`let names: Vec<&str> = ...`) rather than a turbofish.
+- `entry` for insert-or-update, `Vec::with_capacity` when the size is known, `extend` over push loops.
+- Imports: one `use` per module path; types and traits unqualified, free functions qualified by their module (`mem::take`, `fs::read`).
+- A value another module or crate already names (a derivation id, a rule id) is imported, never retyped; a new magic value is a `const` whose doc line says where it comes from.
+- Paths are UTF-8 (`camino`); output paths go through the validated relative-path type (refuses `..`, absolute paths, names that differ only by case or Unicode normalisation). Written files use LF; input accepts CRLF.
+- Blank line after a group of `let`, before `return`, `if`, `match` and loops, after a block.
+
+## Modules and docs
+
+- One concept per module, named after its main item; a non-leaf module holds only `mod` lines and re-exports. Group by use case, never by kind (`types.rs`, `errors.rs`, `utils.rs`); no prelude of your own.
+- Rustdoc: first sentence one line of about fifteen words (the listing summary); document what the signature cannot say (preconditions, ownership transfer, a TypeScript quirk kept on purpose), never restate the name; link with `` [`Type`] ``. No design journal or rule table in comments.
+
+## Crates
+
+- A new crate takes `[lints] workspace = true` and `dep.workspace = true`. A dependency you add follows PORTING.md section 7; a duplicate version it brings (cargo deny only warns) is named with its reason in the hand-back; crate docs through context7 at the pinned version.
+- Parallel work (`rayon`) only where the output order is fixed afterwards (indexed `collect`).
 
 ## Tests
 
-- Unit tests in a `tests` module beside the code; integration tests in `tests/`; run with `cargo nextest`.
-- Test behaviour, not implementation; a bug fix starts with a test that fails before it.
-- Fixture-driven tests read `fixtures/` and `fixtures/expected/`, never inline copies of them.
+- Unit tests in `#[cfg(test)] mod tests` beside the code, integration tests in `tests/`; fixture-driven tests read `fixtures/` and `fixtures/expected/`, never inline copies. A harness two crates need (fake context, fake service) is shared, never copied.
+- Test behaviour and properties (round trip, idempotence, order), never restated constants or match arms the oracle covers.
+- Assertions carry context: `assert_eq!(actual, expected, "input {input:?}")`.
