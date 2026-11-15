@@ -1,13 +1,15 @@
 //! The lifecycle members of an operation: budget, deprecation, upstream services, maturity, internal, tags and extensions.
 
+use std::cmp::Ordering;
+
 use indexmap::IndexMap;
-use seampact_diagnostics::DiagnosticOrigin;
-use seampact_diagnostics::InternalError;
+use seampact_diagnostics::{DiagnosticOrigin, InternalError, quote_text};
 use seampact_ir::{
     ApiKind, DeclarationKind, Deprecation, ExtensionKey, ExtensionPrefix, Extensions, IrMap,
     MaturitySource, OperationId, OperationMaturity, OperationRef, Origin, Reason,
+    is_ir_same_type_use,
 };
-use seampact_js::js_key_order;
+use seampact_js::{cmp_utf16, js_key_order};
 use seampact_json::{JsonObject, JsonValue, js_text_of};
 use seampact_pass_tree_shared::{
     TREE_NODES_BATCH_OP, TREE_NODES_MATURITIES, tree_nodes_member, tree_nodes_op_shorthand,
@@ -22,6 +24,7 @@ use crate::diagnostics::{
     tree_nodes_report_once,
 };
 use crate::fields::TreeNodesSite;
+use crate::formats::operation_id_of;
 use crate::not_ported::not_ported_yet;
 use crate::pass::TreeNodesScope;
 
@@ -38,11 +41,36 @@ enum DeprecationMember {
     Sunset,
 }
 
+impl DeprecationMember {
+    const fn as_str(self) -> &'static str {
+        match self {
+            Self::Since => "since",
+            Self::Sunset => "sunset",
+        }
+    }
+}
+
 /// The rule a deprecation refusal reports.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum DeprecationRule {
     DeprecatedSince,
     DeprecatedSunset,
+}
+
+impl DeprecationRule {
+    const fn as_str(self) -> &'static str {
+        match self {
+            Self::DeprecatedSince => "deprecated-since",
+            Self::DeprecatedSunset => "deprecated-sunset",
+        }
+    }
+
+    const fn rule(self) -> TreeNodesRule {
+        match self {
+            Self::DeprecatedSince => TreeNodesRule::DeprecatedSince,
+            Self::DeprecatedSunset => TreeNodesRule::DeprecatedSunset,
+        }
+    }
 }
 
 /// A refused deprecation.
@@ -367,7 +395,7 @@ pub(crate) fn tree_nodes_deprecated(
                 api: api_id,
                 id: OperationId::new(id.clone()),
             }),
-            Some(successor_rel_of(site, scope)?),
+            Some(successor_rel_of(scope)?),
         ),
         _ => (None, None),
     };
@@ -420,21 +448,59 @@ pub(crate) fn tree_nodes_check_successor(
     Ok(())
 }
 
-fn successor_rel_of(
-    _site: &TreeNodesSite<'_, '_>,
-    _scope: &TreeNodesScope<'_, '_, '_>,
-) -> Result<String, PassError> {
-    Err(not_ported_yet("successorRelOf"))
+// The successor `Link` relation, `successor-version` unless `conventions.deprecation.successorRel` renames it.
+fn successor_rel_of(scope: &TreeNodesScope<'_, '_, '_>) -> Result<String, PassError> {
+    let reading = scope.context.conventions.get("deprecation.successorRel")?;
+    let Some(JsonValue::String(rel)) = reading.map(|reading| reading.value) else {
+        return Err(InternalError::new(
+            "conventions.deprecation.successorRel has no text, which its default gives",
+        )
+        .into());
+    };
+
+    Ok(rel.clone())
 }
 
+// Each refusal is reported once per written `deprecated`, however many operations inherit it.
 fn deprecation_dates_hold(
-    _site: &TreeNodesSite<'_, '_>,
-    _origin: &Origin,
-    _since: Option<&JsonValue>,
-    _sunset: Option<&JsonValue>,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    origin: &Origin,
+    since: Option<&JsonValue>,
+    sunset: Option<&JsonValue>,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<bool, PassError> {
-    Err(not_ported_yet("deprecationDatesHold"))
+    let since_holds = since_is_date(site, origin, since, scope)?;
+    let sunset_holds = sunset_is_date(site, origin, sunset, scope)?;
+
+    if !since_holds || !sunset_holds {
+        return Ok(false);
+    }
+
+    let (Some(JsonValue::String(since)), Some(JsonValue::String(sunset))) = (since, sunset) else {
+        return Ok(true);
+    };
+
+    if cmp_utf16(since, sunset) != Ordering::Greater {
+        return Ok(true);
+    }
+
+    report_deprecation(
+        origin,
+        &DeprecationRefusal {
+            rule: DeprecationRule::DeprecatedSince,
+            member: Some(DeprecationMember::Since),
+            message: format!(
+                "The deprecation that reaches {} starts on {}, after its sunset {}.",
+                site.operation_id,
+                quote_text(since),
+                quote_text(sunset)
+            ),
+            fix: "Write a since date on or before the sunset date.".to_owned(),
+        },
+        scope,
+    )?;
+
+    Ok(false)
 }
 
 fn since_is_date(
@@ -456,21 +522,86 @@ fn sunset_is_date(
 }
 
 fn report_successor_params(
-    _origin: &DiagnosticOrigin,
-    _operation: &DraftOperation,
-    _successor: &DraftOperation,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    origin: &DiagnosticOrigin,
+    operation: &DraftOperation,
+    successor: &DraftOperation,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("reportSuccessorParams"))
+    let operation_id = operation_id_of(operation)?;
+    let successor_id = operation_id_of(successor)?;
+    let own_path_params = operation
+        .params
+        .as_ref()
+        .map_or(&[][..], |params| params.path.as_slice());
+    let successor_path_params = successor
+        .params
+        .as_ref()
+        .map_or(&[][..], |params| params.path.as_slice());
+
+    for param in successor_path_params {
+        let own = own_path_params
+            .iter()
+            .find(|candidate| candidate.name == param.name);
+
+        if let Some(own) = own
+            && is_ir_same_type_use(&own.r#type, &param.r#type)?
+        {
+            continue;
+        }
+
+        let why = if own.is_none() {
+            format!("which {operation_id} has not")
+        } else {
+            format!("typed otherwise than on {operation_id}")
+        };
+
+        scope
+            .context
+            .report(tree_nodes_error(TreeNodesDiagnosticOptions {
+                rule: TreeNodesRule::DeprecatedSuccessorParams,
+                origin: origin.clone(),
+                message: format!(
+                    "The successor {successor_id} of {operation_id} has the path param {}, {why}.",
+                    param.name
+                ),
+                fix: format!(
+                    "Name a successor whose path params are path params of {operation_id}, of the same type."
+                ),
+                related: Vec::new(),
+            }));
+    }
+
+    Ok(())
 }
 
 fn report_deprecation(
-    _site: &TreeNodesSite<'_, '_>,
-    _origin: &Origin,
-    _refusal: &DeprecationRefusal,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    origin: &Origin,
+    refusal: &DeprecationRefusal,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("reportDeprecation"))
+    let pointer = match refusal.member {
+        None => origin.pointer.clone(),
+        Some(member) => format!("{}/{}", origin.pointer, member.as_str()),
+    };
+    let located = scope
+        .context
+        .origin(&pointer)
+        .unwrap_or_else(|| origin.clone());
+    let diagnostic = tree_nodes_error(TreeNodesDiagnosticOptions {
+        rule: refusal.rule.rule(),
+        origin: tree_nodes_node_origin(&located)?,
+        message: refusal.message.clone(),
+        fix: refusal.fix.clone(),
+        related: Vec::new(),
+    });
+
+    tree_nodes_report_once(
+        &format!("{}:{}#{pointer}", refusal.rule.as_str(), origin.layer),
+        diagnostic,
+        scope,
+    );
+
+    Ok(())
 }
 
 fn report_unknown_service(

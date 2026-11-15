@@ -11,6 +11,7 @@ use seampact_ir::{
 };
 use seampact_js::js_key_order;
 use seampact_json::{JsonValue, stringify_json};
+use seampact_pass_tree_shared::tree_nodes_member;
 use seampact_pipeline::{PassError, pointer_below};
 use seampact_templates::template_slots;
 
@@ -19,10 +20,13 @@ use crate::diagnostics::{
 };
 use crate::responses::TREE_NODES_PAGING_NONE;
 
-use crate::formats::tree_nodes_named_templates;
+use crate::formats::{tree_nodes_absent, tree_nodes_named_templates};
 use crate::not_ported::not_ported_yet;
+use crate::paging::number_of;
 use crate::pass::TreeNodesScope;
-use crate::templates::{TREE_NODES_RESPONSE_ROLES, TreeNodesTemplatePlace, TreeNodesTemplateSite};
+use crate::templates::{
+    TREE_NODES_RESPONSE_ROLES, TreeNodesTemplatePlace, TreeNodesTemplateSite, tree_nodes_template,
+};
 
 const POSITION_ROLES: &[PagingPosition] = &[
     PagingPosition::Cursor,
@@ -186,11 +190,43 @@ fn refuse_reserved_style(scope: &mut TreeNodesScope<'_, '_, '_>) -> Result<(), I
 
     Ok(())
 }
+/// Reads a declared style; `None` when it is refused (reported) or declared nowhere.
 fn style_of(
-    _id: &str,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    id: &str,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<Option<PagingStyle>, PassError> {
-    Err(not_ported_yet("styleOf"))
+    let pointer = pointer_below("/pagings", &[id]);
+    let raw = scope.context.raw;
+    let declared = tree_nodes_member(raw.merged.get("pagings"), id);
+    let origin = scope.context.origin(&pointer);
+    let (Some(declared), Some(origin)) = (declared, origin) else {
+        return Ok(None);
+    };
+    let mut reader = StyleReader::new(scope, id, &pointer);
+    let request = reader.request(tree_nodes_member(Some(declared), "request"))?;
+    let position = match &request {
+        Some(request) => reader.position(request)?,
+        None => None,
+    };
+    let response = reader.response(tree_nodes_member(Some(declared), "response"))?;
+    let (Some(request), Some(position), Some(response)) = (request, position, response) else {
+        return Ok(None);
+    };
+    let used = used_roles(&response)?;
+
+    if !reader.check_kinds(&position, &used)? {
+        return Ok(None);
+    }
+
+    Ok(Some(PagingStyle {
+        id: PagingId::new(id.to_owned()),
+        origin,
+        handler_result: handler_result_of(&position, &used)?,
+        position,
+        absent: tree_nodes_absent(tree_nodes_member(Some(declared), "absent")),
+        request,
+        response,
+    }))
 }
 
 // The response roles a style's templates and links write.
@@ -337,10 +373,72 @@ impl<'scope, 'draft, 'half, 'run> StyleReader<'scope, 'draft, 'half, 'run> {
 
     fn request_role(
         &mut self,
-        _name: &str,
-        _place: &JsonValue,
+        name: &str,
+        place: &JsonValue,
     ) -> Result<Option<PagingRequestRole>, PassError> {
-        Err(not_ported_yet("StyleReader.requestRole"))
+        let pointer = pointer_below(&self.pointer, &["request", name]);
+        let Some(role) = REQUEST_ROLES
+            .iter()
+            .find(|candidate| candidate.as_str() == name)
+        else {
+            let names: Vec<&str> = REQUEST_ROLES.iter().map(PagingRole::as_str).collect();
+
+            return Err(InternalError::new(format!(
+                "the paging role at {pointer} is none of {}",
+                names.join(", ")
+            ))
+            .into());
+        };
+        let placed = PLACEMENTS.iter().find_map(|candidate| {
+            match tree_nodes_member(Some(place), candidate.as_str()) {
+                Some(JsonValue::String(parameter)) => Some((candidate, parameter)),
+                _ => None,
+            }
+        });
+        let Some((placement, parameter)) = placed else {
+            self.refuse_request(
+                &pointer,
+                &format!(
+                    "its {} role names no query parameter or header",
+                    role.as_str()
+                ),
+                "Write query or header on the role.",
+            )?;
+
+            return Ok(None);
+        };
+        let base = tree_nodes_member(Some(place), "base");
+        let style = match tree_nodes_member(Some(place), "style") {
+            Some(JsonValue::String(text)) => SORT_STYLES
+                .iter()
+                .find(|candidate| candidate.as_str() == text),
+            _ => None,
+        };
+        let direction = tree_nodes_member(Some(place), "direction");
+
+        if *role == PagingRole::Sort && !self.check_sort(&pointer, parameter, style, direction)? {
+            return Ok(None);
+        }
+
+        Ok(Some(PagingRequestRole {
+            role: role.clone(),
+            r#in: placement.clone(),
+            name: parameter.clone(),
+            base: if *role == PagingRole::Page {
+                Some(number_of(base)?.unwrap_or(DEFAULT_PAGE_BASE))
+            } else {
+                None
+            },
+            style: if *role == PagingRole::Sort {
+                Some(style.cloned().unwrap_or(TREE_NODES_DEFAULT_SORT_STYLE))
+            } else {
+                None
+            },
+            direction: match direction {
+                Some(JsonValue::String(text)) => Some(text.clone()),
+                _ => None,
+            },
+        }))
     }
 
     // `split` names its direction parameter, and only it does; `keyed` holds `{key}` in its name.
@@ -351,7 +449,7 @@ impl<'scope, 'draft, 'half, 'run> StyleReader<'scope, 'draft, 'half, 'run> {
         style: Option<&PagingParamStyle>,
         direction: Option<&JsonValue>,
     ) -> Result<bool, PassError> {
-        let Some(fault) = sort_fault(parameter, style, direction)? else {
+        let Some(fault) = sort_fault(parameter, style, direction) else {
             return Ok(true);
         };
 
@@ -403,9 +501,58 @@ impl<'scope, 'draft, 'half, 'run> StyleReader<'scope, 'draft, 'half, 'run> {
 
     fn response(
         &mut self,
-        _written: Option<&JsonValue>,
+        written: Option<&JsonValue>,
     ) -> Result<Option<PagingResponse>, PassError> {
-        Err(not_ported_yet("StyleReader.response"))
+        let pointer = pointer_below(&self.pointer, &["response"]);
+        let written_body = tree_nodes_member(written, "body");
+        let body = match written_body {
+            None => None,
+            Some(written_body) => tree_nodes_template(
+                &self.site(TreeNodesTemplatePlace::PagingBody),
+                written_body,
+                &format!("{pointer}/body"),
+                self.scope,
+            )?,
+        };
+        let meta = self.meta(
+            tree_nodes_member(written, "meta"),
+            &format!("{pointer}/meta"),
+        )?;
+        let headers = tree_nodes_named_templates(
+            &self.site(TreeNodesTemplatePlace::PagingMember).owner,
+            TreeNodesTemplatePlace::PagingMember,
+            tree_nodes_member(written, "headers"),
+            &format!("{pointer}/headers"),
+            self.scope,
+        )?;
+        let links = self.links(
+            tree_nodes_member(written, "links"),
+            &format!("{pointer}/links"),
+        )?;
+        let (Some(meta), Some(headers)) = (meta, headers) else {
+            return Ok(None);
+        };
+
+        if written_body.is_some() && body.is_none() {
+            return Ok(None);
+        }
+
+        let Some(links) = links else {
+            return Ok(None);
+        };
+
+        if let Some(body) = &body
+            && !self.check_items_once(body, &format!("{pointer}/body"))?
+        {
+            return Ok(None);
+        }
+
+        Ok(Some(PagingResponse {
+            body,
+            meta,
+            headers,
+            links,
+        }))
     }
 
     fn meta(
@@ -433,12 +580,52 @@ impl<'scope, 'draft, 'half, 'run> StyleReader<'scope, 'draft, 'half, 'run> {
         }))
     }
 
+    // Each link is one URL role, written as its slot (`next: $next`).
     fn links(
         &mut self,
-        _written: Option<&JsonValue>,
-        _pointer: &str,
+        written: Option<&JsonValue>,
+        pointer: &str,
     ) -> Result<Option<Vec<PagingLink>>, PassError> {
-        Err(not_ported_yet("StyleReader.links"))
+        let Some(JsonValue::Object(written)) = written else {
+            return Ok(Some(Vec::new()));
+        };
+        let mut links = Vec::new();
+        let mut refused = false;
+
+        for (rel, value) in js_key_order(written.iter()) {
+            let role = URL_ROLES.iter().find(|candidate| {
+                matches!(value, JsonValue::String(text) if text.strip_prefix('$') == Some(candidate.as_str()))
+            });
+
+            if let Some(role) = role {
+                links.push(PagingLink {
+                    rel: rel.clone(),
+                    role: role.clone(),
+                });
+
+                continue;
+            }
+
+            refused = true;
+
+            let written_roles: Vec<String> = URL_ROLES
+                .iter()
+                .map(|candidate| format!("${}", candidate.as_str()))
+                .collect();
+
+            self.report(
+                StyleRule::Link,
+                &pointer_below(pointer, &[rel]),
+                &format!(
+                    "The link {} of the paging style {} is no URL role.",
+                    quote_text(rel),
+                    self.id
+                ),
+                &format!("Write one of {}.", written_roles.join(", ")),
+            )?;
+        }
+
+        Ok((!refused).then_some(links))
     }
 
     fn check_items_once(&mut self, body: &Template, pointer: &str) -> Result<bool, PassError> {
@@ -525,11 +712,39 @@ impl<'scope, 'draft, 'half, 'run> StyleReader<'scope, 'draft, 'half, 'run> {
 }
 
 fn sort_fault(
-    _parameter: &str,
-    _style: Option<&PagingParamStyle>,
-    _direction: Option<&JsonValue>,
-) -> Result<Option<SortFault>, PassError> {
-    Err(not_ported_yet("sortFault"))
+    parameter: &str,
+    style: Option<&PagingParamStyle>,
+    direction: Option<&JsonValue>,
+) -> Option<SortFault> {
+    let is_split = style == Some(&SPLIT_STYLE);
+
+    if is_split && !matches!(direction, Some(JsonValue::String(_))) {
+        return Some(SortFault {
+            why: "its split sort names no direction parameter".to_owned(),
+            fix: "Write direction on the sort role.".to_owned(),
+        });
+    }
+
+    if !is_split && direction.is_some() {
+        return Some(SortFault {
+            why: "its sort names a direction parameter, which only style: split reads".to_owned(),
+            fix: "Remove direction, or write style: split.".to_owned(),
+        });
+    }
+
+    if style == Some(&KEYED_STYLE) && !parameter.contains(KEY_PLACEHOLDER) {
+        return Some(SortFault {
+            why: format!(
+                "its keyed sort parameter {} holds no {KEY_PLACEHOLDER}",
+                quote_text(parameter)
+            ),
+            fix: format!(
+                "Write {KEY_PLACEHOLDER} in the parameter name, as order[{KEY_PLACEHOLDER}]."
+            ),
+        });
+    }
+
+    None
 }
 
 fn check_meta(
