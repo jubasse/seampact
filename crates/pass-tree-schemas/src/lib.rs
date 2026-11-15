@@ -36,7 +36,7 @@ mod scalars;
 use seampact_diagnostics::RuleId;
 use seampact_pipeline::{DraftIr, HalfContext, PassError, TreeSchemasOutput};
 
-use crate::not_ported::not_ported_yet;
+use crate::pass::{TreeSchemasRun, tree_schemas_run};
 
 pub use crate::pattern::{
     TreeSchemasPatternResult, tree_schemas_escape_pattern_literal, tree_schemas_normalize_pattern,
@@ -107,7 +107,16 @@ pub const RULE_IDS: &[RuleId] = &[
 /// [`PassError::Internal`] for a bug.
 pub fn run(
     _draft: &DraftIr,
-    _context: &mut HalfContext<'_>,
+    context: &mut HalfContext<'_>,
 ) -> Result<TreeSchemasOutput, PassError> {
-    Err(not_ported_yet("treeSchemasPass.run"))
+    let TreeSchemasRun {
+        output,
+        diagnostics,
+    } = tree_schemas_run(context)?;
+
+    for diagnostic in diagnostics {
+        context.report(diagnostic);
+    }
+
+    Ok(output)
 }

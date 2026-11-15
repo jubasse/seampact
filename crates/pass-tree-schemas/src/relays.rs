@@ -11,10 +11,11 @@ use seampact_ir::{
     ContractIr, Direction, Enum, ExtensionKeyDecl, Operation, Scalar, Schema, TypeUse,
 };
 use seampact_json::JsonValue;
-use seampact_pipeline::{DraftIr, DraftOperation, HalfContext, PassError, TreeNodes};
+use seampact_pipeline::{DraftIr, DraftOperation, HalfContext, PassError, TreeNodeKind, TreeNodes};
 
 use crate::compile::TreeSchemasCompiler;
 use crate::not_ported::not_ported_yet;
+use crate::raw::tree_schemas_pointer;
 
 /// A use of a relay route's copied shape, in the direction its position is read or written.
 #[derive(Debug, Clone, PartialEq)]
@@ -204,12 +205,27 @@ struct RelayCopier<'compiler, 'source, 'site, 'raw, 'half, 'run> {
     extension_keys: IndexMap<String, ExtensionKeyDecl>,
 }
 
-impl RelayCopier<'_, '_, '_, '_, '_, '_> {
+impl<'compiler, 'raw, 'half, 'run> RelayCopier<'compiler, '_, '_, 'raw, 'half, 'run> {
     fn new(
-        compiler: &mut TreeSchemasCompiler<'_, '_, '_>,
+        compiler: &'compiler mut TreeSchemasCompiler<'raw, 'half, 'run>,
         local: TreeSchemasLocalDeclarations<'_>,
-    ) -> Result<Self, PassError> {
-        Err(not_ported_yet("RelayCopier.constructor"))
+    ) -> Self {
+        Self {
+            compiler,
+            copies: TreeSchemasRelayCopies::default(),
+            seen: HashSet::new(),
+            first_copies: IndexMap::new(),
+            enums: local
+                .enums
+                .iter()
+                .map(|declared| (declared.id.as_str().to_owned(), declared.clone()))
+                .collect(),
+            extension_keys: local
+                .extension_keys
+                .iter()
+                .map(|declared| (declared.id.as_str().to_owned(), declared.clone()))
+                .collect(),
+        }
     }
 
     fn copy_route(
@@ -313,5 +329,35 @@ pub(crate) fn tree_schemas_copy_relay_declarations(
     nodes: &TreeNodes<'_>,
     context: &HalfContext<'_>,
 ) -> Result<TreeSchemasRelayCopies, PassError> {
-    Err(not_ported_yet("treeSchemasCopyRelayDeclarations"))
+    let mut copier = RelayCopier::new(compiler, local);
+
+    for (_, node) in nodes.iter() {
+        if node.kind != TreeNodeKind::Relay {
+            continue;
+        }
+
+        let Some(relays) = node.settings.get("relays") else {
+            continue;
+        };
+        let Some(target) = relay_target(relays)? else {
+            continue;
+        };
+        let Some((source, operation)) = public_operation(context, &target)? else {
+            continue;
+        };
+        let pointer = tree_schemas_pointer(&node.pointer, &["relays"]);
+        let relays_text = format!("{}.{}", target.api, target.operation_id);
+
+        copier.copy_route(
+            CopySite {
+                source,
+                api: &target.api,
+                pointer: &pointer,
+                relays: &relays_text,
+            },
+            operation,
+        )?;
+    }
+
+    Ok(copier.copies)
 }

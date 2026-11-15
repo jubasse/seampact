@@ -139,12 +139,19 @@ const SYMBOL_BOUNDS: [SymbolBound; 3] = [
 
 /// Escapes every character ADR 0003 section 9 lets a pattern escape, so `text` matches itself
 /// literally.
-///
-/// # Errors
-///
-/// [`PassError::NotPortedYet`] until the function is ported.
-pub fn tree_schemas_escape_pattern_literal(text: &str) -> Result<String, PassError> {
-    Err(not_ported_yet("treeSchemasEscapePatternLiteral"))
+#[must_use]
+pub fn tree_schemas_escape_pattern_literal(text: &str) -> String {
+    let mut escaped = String::with_capacity(text.len());
+
+    for character in text.chars() {
+        if METACHARACTERS.contains(character) {
+            escaped.push('\\');
+        }
+
+        escaped.push(character);
+    }
+
+    escaped
 }
 
 impl PatternRefusal {
