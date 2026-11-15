@@ -1010,9 +1010,12 @@ name = "seampact-pass-tree-nodes"
 version = "2.0.0"
 dependencies = [
  "indexmap",
+ "seampact-authoring",
  "seampact-diagnostics",
  "seampact-ir",
+ "seampact-js",
  "seampact-json",
+ "seampact-naming",
  "seampact-pass-tree-shared",
  "seampact-pipeline",
  "seampact-templates",
