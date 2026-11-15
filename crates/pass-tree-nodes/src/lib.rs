@@ -15,6 +15,7 @@ mod field_wire;
 mod fields;
 mod formats;
 mod input;
+mod js_text;
 mod lifecycle;
 mod limits;
 mod not_ported;
@@ -29,6 +30,9 @@ mod responses;
 mod settings;
 mod templates;
 mod writes;
+
+#[cfg(test)]
+mod tests;
 
 pub use diagnostics::RULE_IDS;
 pub use field_wire::tree_nodes_field_wire;

@@ -2,7 +2,7 @@
 
 use seampact_ir::{Direction, Origin, TypeUse};
 use seampact_json::JsonValue;
-use seampact_pipeline::{PassError, TreeNode};
+use seampact_pipeline::{PassError, TreeNode, TreeNodeId};
 
 use crate::not_ported::not_ported_yet;
 use crate::pass::TreeNodesScope;
@@ -21,8 +21,9 @@ const TEXTLESS_KINDS: &[(&str, &str)] = &[("opaque", "an opaque value"), ("file"
 /// function takes beside the site.
 #[derive(Debug, Clone)]
 pub(crate) struct TreeNodesSite<'node, 'raw> {
+    pub(crate) node_id: TreeNodeId,
     pub(crate) node: &'node TreeNode<'raw>,
-    pub(crate) operation_id: &'node str,
+    pub(crate) operation_id: String,
 }
 
 /// A field of an input, a path, a query or a headers map.

@@ -7,8 +7,6 @@ use crate::fields::TreeNodesSite;
 use crate::not_ported::not_ported_yet;
 use crate::pass::TreeNodesScope;
 
-/// The name a degraded header may not take: a character outside printable ASCII, a comma, or a space at either end.
-const HEADER_UNSAFE_NAME: &str = r"[^\x20-\x7e]|,|^ | $";
 /// The meta fill that names the degraded paths.
 const DEGRADED_FILL: &str = "degraded";
 const NO_PROPERTY: &str = "names no property of the success data";
@@ -41,6 +39,7 @@ fn check_path(
     Err(not_ported_yet("checkPath"))
 }
 
+// A degraded header name may not hold a character outside printable ASCII, a comma, or a space at either end.
 fn name_unfit_for_header(_name: &str) -> Result<bool, PassError> {
     Err(not_ported_yet("nameUnfitForHeader"))
 }

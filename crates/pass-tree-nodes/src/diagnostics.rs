@@ -1,10 +1,10 @@
 //! The diagnostics of the half: its rules, their ids and the helpers that build and locate them.
 
-use seampact_diagnostics::{Diagnostic, DiagnosticOrigin, RelatedLocation, RuleId};
+use seampact_diagnostics::{
+    Diagnostic, DiagnosticOrigin, InternalError, RelatedLocation, RuleId, Severity,
+};
 use seampact_ir::Origin;
-use seampact_pipeline::PassError;
 
-use crate::not_ported::not_ported_yet;
 use crate::pass::TreeNodesScope;
 
 /// A rule of the half, reported as `seampact/tree/<rule>`.
@@ -86,6 +86,83 @@ pub(crate) enum TreeNodesRule {
 }
 
 impl TreeNodesRule {
+    /// Every rule of the half, in declaration order.
+    pub(crate) const ALL: &[Self] = &[
+        Self::CollectionSingular,
+        Self::CollectionId,
+        Self::OperationIdUnique,
+        Self::OperationNameUnique,
+        Self::RouteUnique,
+        Self::OpInput,
+        Self::GetInput,
+        Self::OpItem,
+        Self::IdProperty,
+        Self::InputFile,
+        Self::InputFileSize,
+        Self::BodyLimit,
+        Self::FormInput,
+        Self::FormField,
+        Self::ApiVersion,
+        Self::PathVersion,
+        Self::PathParam,
+        Self::PathSegment,
+        Self::ParamUnique,
+        Self::QueryField,
+        Self::FieldsSchema,
+        Self::OpaquePosition,
+        Self::UnionHeader,
+        Self::RedirectBody,
+        Self::ResponsesOutput,
+        Self::NoContentBody,
+        Self::OwnerConcurrency,
+        Self::ConcurrencyInherit,
+        Self::ConcurrencyInput,
+        Self::PagingList,
+        Self::PagingStyle,
+        Self::PagingUnknown,
+        Self::PagingParam,
+        Self::PagingSort,
+        Self::PagingLimit,
+        Self::PagingToken,
+        Self::SortKey,
+        Self::SortKeySigned,
+        Self::DegradablePath,
+        Self::DegradableHeader,
+        Self::BudgetDuration,
+        Self::DeprecatedSince,
+        Self::DeprecatedSunset,
+        Self::DeprecatedSuccessor,
+        Self::DeprecatedSuccessorParams,
+        Self::UpstreamService,
+        Self::InternalProduct,
+        Self::FormatUnknown,
+        Self::FormatMeta,
+        Self::FormatErrorCode,
+        Self::FormatId,
+        Self::FormatMerge,
+        Self::FormatEach,
+        Self::FormatMember,
+        Self::TemplateSlot,
+        Self::TemplateSyntax,
+        Self::TemplateMerge,
+        Self::TemplateEach,
+        Self::TemplateName,
+        Self::PagingReserved,
+        Self::PagingPosition,
+        Self::PagingRequest,
+        Self::PagingItems,
+        Self::PagingRole,
+        Self::PagingLink,
+        Self::PagingMeta,
+        Self::PagingMetaClash,
+        Self::ExampleTarget,
+        Self::ExampleValue,
+        Self::RelayTarget,
+        Self::RelayName,
+        Self::RelayUnknown,
+        Self::RelayDeclaration,
+    ];
+
     /// The rule as a diagnostic's rule id.
     #[must_use]
     pub(crate) const fn rule_id(self) -> RuleId {
@@ -260,42 +337,79 @@ pub(crate) struct TreeNodesDiagnosticOptions {
 }
 
 /// The origin a diagnostic is located at: `origin`, or `fallback` for a core declaration.
-pub(crate) fn tree_nodes_locate(
-    _origin: &Origin,
-    _fallback: &DiagnosticOrigin,
-) -> Result<DiagnosticOrigin, PassError> {
-    Err(not_ported_yet("treeNodesLocate"))
+pub(crate) fn tree_nodes_locate(origin: &Origin, fallback: &DiagnosticOrigin) -> DiagnosticOrigin {
+    DiagnosticOrigin::of(origin).unwrap_or_else(|| fallback.clone())
 }
 
 /// An origin of the merged raw tree as a diagnostic origin; a tree node's origin is never core.
-pub(crate) fn tree_nodes_node_origin(_origin: &Origin) -> Result<DiagnosticOrigin, PassError> {
-    Err(not_ported_yet("treeNodesNodeOrigin"))
-}
-
-/// The rule's id as text, `seampact/tree/<rule>`.
-pub(crate) fn tree_nodes_rule_id(_rule: TreeNodesRule) -> Result<String, PassError> {
-    Err(not_ported_yet("treeNodesRuleId"))
+///
+/// # Errors
+///
+/// An [`InternalError`] for a core origin.
+pub(crate) fn tree_nodes_node_origin(origin: &Origin) -> Result<DiagnosticOrigin, InternalError> {
+    DiagnosticOrigin::of(origin).ok_or_else(|| {
+        InternalError::new(format!(
+            "a tree node has a core origin ({}); every node is written in a layer",
+            origin.pointer
+        ))
+    })
 }
 
 /// An error diagnostic of the half.
-pub(crate) fn tree_nodes_error(
-    _options: TreeNodesDiagnosticOptions,
-) -> Result<Diagnostic, PassError> {
-    Err(not_ported_yet("treeNodesError"))
+pub(crate) fn tree_nodes_error(options: TreeNodesDiagnosticOptions) -> Diagnostic {
+    Diagnostic {
+        severity: Severity::Error,
+        rule: options.rule.rule_id(),
+        message: options.message,
+        fix: options.fix,
+        origin: options.origin,
+        related: options.related,
+    }
 }
 
 /// A warning diagnostic of the half.
-pub(crate) fn tree_nodes_warning(
-    _options: TreeNodesDiagnosticOptions,
-) -> Result<Diagnostic, PassError> {
-    Err(not_ported_yet("treeNodesWarning"))
+pub(crate) fn tree_nodes_warning(options: TreeNodesDiagnosticOptions) -> Diagnostic {
+    Diagnostic {
+        severity: Severity::Warning,
+        ..tree_nodes_error(options)
+    }
 }
 
 /// Reports `diagnostic` the first time `key` is seen in a run of the half, and drops it after that.
 pub(crate) fn tree_nodes_report_once(
-    _key: &str,
-    _diagnostic: Diagnostic,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
-) -> Result<(), PassError> {
-    Err(not_ported_yet("treeNodesReportOnce"))
+    key: &str,
+    diagnostic: Diagnostic,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
+) {
+    if !scope.reported_once.insert(key.to_owned()) {
+        return;
+    }
+
+    scope.context.report(diagnostic);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rule_ids_are_every_rule_mapped_through_rule_id() {
+        let mapped: Vec<RuleId> = TreeNodesRule::ALL
+            .iter()
+            .map(|rule| rule.rule_id())
+            .collect();
+
+        assert_eq!(RULE_IDS, mapped.as_slice());
+    }
+
+    #[test]
+    fn a_core_origin_has_no_diagnostic_origin() {
+        let core = Origin {
+            layer: seampact_ir::Layer::Core,
+            pointer: "/x".to_owned(),
+            api: None,
+        };
+
+        assert!(tree_nodes_node_origin(&core).is_err());
+    }
 }

@@ -2,9 +2,16 @@
 
 use indexmap::IndexMap;
 use seampact_diagnostics::DiagnosticOrigin;
-use seampact_ir::{ApiKind, Deprecation, Extensions, MaturitySource, OperationMaturity, Origin};
-use seampact_json::JsonValue;
-use seampact_pipeline::{DraftOperation, InheritedEntry, PassError, TreeNode};
+use seampact_diagnostics::InternalError;
+use seampact_ir::{
+    ApiKind, Deprecation, ExtensionKey, ExtensionPrefix, Extensions, IrMap, MaturitySource,
+    OperationMaturity, Origin,
+};
+use seampact_js::js_key_order;
+use seampact_json::{JsonObject, JsonValue};
+use seampact_pipeline::{
+    DraftOperation, InheritedEntry, PassError, TreeNodeId, TreeNodes, UnionSetting,
+};
 
 use crate::fields::TreeNodesSite;
 use crate::not_ported::not_ported_yet;
@@ -14,8 +21,6 @@ const SERVICE_API: ApiKind = ApiKind::Service;
 const STATED: MaturitySource = MaturitySource::Stated;
 /// The convention a batch's budget falls back to.
 const BATCH_BUDGET: &str = "batch.budget";
-/// The key shape of an extension: `x-<prefix>-<name>`.
-const EXTENSION_KEY: &str = r"^x-([a-z][a-z0-9]*)-(.+)$";
 const DEPRECATION_FIX: &str = "Write deprecated: { since: '<date>', sunset: '<date>' }.";
 
 /// Which member of `deprecated` a refusal points at.
@@ -45,34 +50,108 @@ struct DeprecationRefusal {
 /// The extensions of a node by prefix and then key.
 type ExtensionValues = IndexMap<String, IndexMap<String, JsonValue>>;
 
-pub(crate) fn tree_nodes_own_extensions(
-    _written: Option<&JsonValue>,
-) -> Result<Extensions, PassError> {
-    Err(not_ported_yet("treeNodesOwnExtensions"))
+/// The extension values written on one mapping (the `api` block).
+pub(crate) fn tree_nodes_own_extensions(written: Option<&JsonValue>) -> Extensions {
+    let mut values = ExtensionValues::new();
+
+    add_extensions(written, &mut values);
+
+    extensions_of(&values)
+}
+fn extensions_of(values: &ExtensionValues) -> Extensions {
+    values
+        .iter()
+        .map(|(prefix, keys)| {
+            let slot: IrMap<ExtensionKey, JsonValue> = keys
+                .iter()
+                .map(|(key, value)| (ExtensionKey::new(key.clone()), value.clone()))
+                .collect();
+
+            (ExtensionPrefix::new(prefix.clone()), slot)
+        })
+        .collect()
+}
+// tree.schemas has checked each value against its declaration. The key may be `__proto__`, which an
+// ordered map holds like any other.
+fn add_extensions(written: Option<&JsonValue>, values: &mut ExtensionValues) {
+    if let Some(JsonValue::Object(written)) = written {
+        add_object_extensions(written, values);
+    }
 }
 
-fn extensions_of(_values: &ExtensionValues) -> Result<Extensions, PassError> {
-    Err(not_ported_yet("extensionsOf"))
+fn add_object_extensions(written: &JsonObject, values: &mut ExtensionValues) {
+    for (key, value) in js_key_order(written.iter()) {
+        let Some((prefix, name)) = extension_key_parts(key) else {
+            continue;
+        };
+
+        values
+            .entry(prefix.to_owned())
+            .or_default()
+            .insert(name.to_owned(), value.clone());
+    }
 }
 
-fn add_extensions(
-    _written: Option<&JsonValue>,
-    _values: &mut ExtensionValues,
-) -> Result<(), PassError> {
-    Err(not_ported_yet("addExtensions"))
-}
+/// The prefix and the name of an extension key, `x-<prefix>-<name>`: the TypeScript's
+/// `/^x-([a-z][a-z0-9]*)-(.+)$/`.
+pub(crate) fn extension_key_parts(key: &str) -> Option<(&str, &str)> {
+    let rest = key.strip_prefix("x-")?;
+    let first = rest.chars().next()?;
 
-pub(crate) fn tree_nodes_extensions(_node: &TreeNode<'_>) -> Result<Extensions, PassError> {
-    Err(not_ported_yet("treeNodesExtensions"))
-}
+    if !first.is_ascii_lowercase() {
+        return None;
+    }
 
+    let prefix_end = rest
+        .find(|character: char| !(character.is_ascii_lowercase() || character.is_ascii_digit()))?;
+    let (prefix, from_dash) = rest.split_at(prefix_end);
+    let name = from_dash.strip_prefix('-')?;
+    let has_line_terminator = name.contains(['\n', '\r', '\u{2028}', '\u{2029}']);
+
+    (!name.is_empty() && !has_line_terminator).then_some((prefix, name))
+}
+/// The extension values that reach a tree node, `{ <prefix>: { <key>: value } }`, the nearest of each key.
+pub(crate) fn tree_nodes_extensions(
+    node_id: TreeNodeId,
+    nodes: &TreeNodes<'_>,
+) -> Result<Extensions, InternalError> {
+    let mut values = ExtensionValues::new();
+
+    for (_, at) in nodes.chain(node_id)? {
+        add_object_extensions(at.settings, &mut values);
+    }
+
+    Ok(extensions_of(&values))
+}
+/// The union of the `tags` from the root down, each once.
 pub(crate) fn tree_nodes_tags(
-    _site: &TreeNodesSite<'_, '_>,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
-) -> Result<Vec<String>, PassError> {
-    Err(not_ported_yet("treeNodesTags"))
-}
+    site: &TreeNodesSite<'_, '_>,
+    scope: &TreeNodesScope<'_, '_, '_>,
+) -> Result<Vec<String>, InternalError> {
+    let entries = scope
+        .context
+        .inherited
+        .union(site.node_id, UnionSetting::Tags)?
+        .unwrap_or_default();
+    let mut tags: Vec<String> = Vec::new();
 
+    for entry in entries {
+        let written: &[JsonValue] = match entry.value {
+            JsonValue::Array(items) => items,
+            single => std::slice::from_ref(single),
+        };
+
+        for tag in written {
+            if let JsonValue::String(tag) = tag
+                && !tags.contains(tag)
+            {
+                tags.push(tag.clone());
+            }
+        }
+    }
+
+    Ok(tags)
+}
 pub(crate) fn tree_nodes_upstream(
     _site: &TreeNodesSite<'_, '_>,
     _scope: &mut TreeNodesScope<'_, '_, '_>,
