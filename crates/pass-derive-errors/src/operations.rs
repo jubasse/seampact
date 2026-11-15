@@ -19,8 +19,8 @@ use seampact_js::cmp_utf16;
 use seampact_json::JsonValue;
 use seampact_pass_tree_shared::tree_nodes_id_param;
 use seampact_pipeline::{
-    DERIVATION_TABLE, DraftIr, PACK_DERIVATION_ROW, PassError, TreeNodeKind, TreeNodes,
-    pipeline_rate_limit_param,
+    DERIVATION_TABLE, DatumRequired, DraftIr, PACK_DERIVATION_ROW, PassError, TreeNodeKind,
+    TreeNodes, pipeline_rate_limit_param,
 };
 
 use crate::attached::{
@@ -28,9 +28,9 @@ use crate::attached::{
 };
 use crate::bindings::{
     DeriveErrorsBinding, DeriveErrorsBindingCheck, DeriveErrorsBoundParams,
-    derive_errors_binding_at, derive_errors_binding_key, derive_errors_params_site,
+    DeriveErrorsOperationSite, derive_errors_binding_at, derive_errors_binding_key,
+    derive_errors_check_conditional_datum, derive_errors_params_site,
 };
-use crate::not_ported::not_ported_yet;
 use crate::read::derive_errors_origin_of;
 use crate::relays::{DERIVE_ERRORS_RELAY_DERIVATION, DeriveErrorsRelayCode};
 use crate::report::DeriveErrorsReporter;
@@ -221,13 +221,63 @@ fn binding_params(
 // `forbidden`'s pointer is required where a restricted input field is rejected: checked once per
 // binding.
 fn check_forbidden_pointer(
-    _sources: &DeriveErrorsOperationsSources<'_>,
-    _route: &DeriveErrorsRoute<'_>,
-    _binding: &DeriveErrorsBinding<'_>,
-    _checked: &mut HashSet<String>,
-    _reporter: &mut DeriveErrorsReporter<'_, '_>,
-) -> Result<(), PassError> {
-    Err(not_ported_yet("checkForbiddenPointer"))
+    sources: &DeriveErrorsOperationsSources<'_>,
+    route: &DeriveErrorsRoute<'_>,
+    binding: &DeriveErrorsBinding<'_>,
+    checked: &mut HashSet<String>,
+    reporter: &mut DeriveErrorsReporter<'_, '_>,
+) -> Result<(), InternalError> {
+    let key = derive_errors_binding_key(binding);
+    let pointer = match &binding.pointer {
+        Some(pointer) => Some(pointer.as_str()),
+        None => sources
+            .check
+            .registry
+            .get(binding.code.as_str())
+            .and_then(|registered| registered.pointer.as_deref()),
+    };
+
+    // A default binding to the core code carries the pointer by name; one refused already
+    // reported its fault.
+    let Some(pointer) = pointer else {
+        return Ok(());
+    };
+    let refused = matches!(
+        sources.bound.get(&key),
+        Some(DeriveErrorsRoleParams::Refused)
+    );
+
+    if checked.contains(&key) || refused {
+        return Ok(());
+    }
+
+    checked.insert(key);
+
+    let Some(site) = derive_errors_params_site(&sources.check, binding, pointer)? else {
+        return Ok(());
+    };
+    let Some(datum) = site
+        .role
+        .data
+        .iter()
+        .find(|candidate| candidate.required == DatumRequired::Conditional)
+    else {
+        return Ok(());
+    };
+    let params = binding_params(sources, binding, reporter)?;
+
+    derive_errors_check_conditional_datum(
+        &site,
+        params.as_ref(),
+        datum,
+        &DeriveErrorsOperationSite {
+            id: route.id.as_str(),
+            pointer: &route.node.pointer,
+        },
+        reporter,
+    )?;
+
+    Ok(())
 }
 
 fn binding_origin(

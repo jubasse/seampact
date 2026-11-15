@@ -7,7 +7,7 @@ use seampact_authoring::RawApi;
 use seampact_diagnostics::{
     Diagnostic, DiagnosticOrigin, InternalError, RelatedLocation, RuleId, Severity,
 };
-use seampact_ir::Origin;
+use seampact_ir::{ContractIr, Origin};
 use seampact_pipeline::{DraftIr, HalfContext, Inherited, ResolvedConventions, pipeline_origin};
 
 /// The rules this half reports, each `seampact/derive/<rule>`.
@@ -17,6 +17,13 @@ pub(crate) enum DeriveErrorsRule {
     ErrorUnknown,
     ErrorPattern,
     ErrorNature,
+    #[cfg_attr(
+        not(test),
+        expect(
+            dead_code,
+            reason = "tree.schemas reports this rule; the half keeps the TypeScript union"
+        )
+    )]
     ErrorParams,
     ErrorExample,
     ErrorDefault,
@@ -34,6 +41,7 @@ pub(crate) enum DeriveErrorsRule {
 
 impl DeriveErrorsRule {
     /// Every rule of the half, in the order of the TypeScript union.
+    #[cfg(test)]
     pub(crate) const ALL: &'static [Self] = &[
         Self::ErrorRedefined,
         Self::ErrorUnknown,
@@ -130,6 +138,11 @@ impl<'run> DeriveErrorsReporter<'_, 'run> {
     /// The derived draft of a workspace api that already ran.
     pub(crate) fn relayed(&self, api: &str) -> Option<&'run DraftIr> {
         self.context.relayed(api)
+    }
+
+    /// The IR of an imported api, in the open reader types.
+    pub(crate) fn imported(&self, api: &str) -> Option<&'run ContractIr> {
+        self.context.imported(api)
     }
 
     // Every pointer reported is one the half read from an authored layer, so it has an authored

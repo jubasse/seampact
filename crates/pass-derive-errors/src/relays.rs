@@ -15,16 +15,20 @@ use std::collections::HashMap;
 use std::hash::Hash;
 
 use indexmap::IndexMap;
+use seampact_diagnostics::{InternalError, quote_text};
 use seampact_ir::{
-    DerivationId, ErrorCode, ErrorDecl, ErrorRoleBinding, IrMap, NatureDecl, NatureId, Operation,
-    OperationError, OperationId, OperationRef, Origin, Schema, SchemaId,
+    DerivationId, ErrorCode, ErrorDecl, ErrorRoleBinding, IrClosedCheck, IrMap, NatureDecl,
+    NatureId, Operation, OperationError, OperationId, OperationRef, Origin, Schema, SchemaId,
+    check_ir_closed_declaration,
 };
-use seampact_json::JsonValue;
-use seampact_pipeline::{DraftOperation, PassError};
+use seampact_json::{JsonValue, canonical_json};
+use seampact_pass_tree_shared::{TREE_NODES_OPERATION_KIND, tree_nodes_relay_origin};
+use seampact_pipeline::{DraftOperation, pointer_below};
 
-use crate::not_ported::not_ported_yet;
 use crate::registry::{DeriveErrorsRegistered, DeriveErrorsRegistry};
-use crate::report::{DeriveErrorsContext, DeriveErrorsReporter};
+use crate::report::{
+    DeriveErrorsProblem, DeriveErrorsRelated, DeriveErrorsReporter, DeriveErrorsRule,
+};
 use crate::triggers::DeriveErrorsRoute;
 
 /// The derivation of a code a relay route copies.
@@ -33,12 +37,8 @@ pub(crate) const DERIVE_ERRORS_RELAY_DERIVATION: DerivationId =
 
 const PACK_DERIVATION_PREFIX: &str = "pack.";
 
-const DOMAIN_DERIVATIONS: [&str; 4] = [
-    "member.notFound",
-    "owner.caller",
-    "relay.route",
-    "node.errors",
-];
+/// The derivations of a domain code besides the relay's own.
+const OTHER_DOMAIN_DERIVATIONS: [&str; 3] = ["member.notFound", "owner.caller", "node.errors"];
 
 /// A domain code a relay route copies from the public operation.
 #[derive(Debug, Clone, PartialEq)]
@@ -63,7 +63,6 @@ pub(crate) struct DeriveErrorsRelayCopies {
 /// What the relay copy reads.
 #[derive(Clone, Copy)]
 pub(crate) struct DeriveErrorsRelaySources<'sources> {
-    pub(crate) context: DeriveErrorsContext<'sources>,
     pub(crate) registry: &'sources DeriveErrorsRegistry,
     pub(crate) natures: &'sources IndexMap<NatureId, NatureDecl>,
     pub(crate) schemas: &'sources IrMap<SchemaId, Schema>,
@@ -93,6 +92,34 @@ pub(crate) enum PublicSide<'run> {
     },
 }
 
+impl<'run> PublicSide<'run> {
+    fn api(&self) -> &str {
+        match self {
+            Self::Relayed { api, .. } | Self::Imported { api, .. } => api,
+        }
+    }
+
+    fn errors(&self) -> &'run IrMap<ErrorCode, ErrorDecl> {
+        match self {
+            Self::Relayed { errors, .. } | Self::Imported { errors, .. } => errors,
+        }
+    }
+
+    fn operation_origin(&self) -> Option<&'run Origin> {
+        match self {
+            Self::Relayed { operation, .. } => operation.origin.as_ref(),
+            Self::Imported { operation, .. } => Some(&operation.origin),
+        }
+    }
+
+    fn operation_errors(&self) -> &'run [OperationError] {
+        match self {
+            Self::Relayed { operation, .. } => operation.errors.as_deref().unwrap_or_default(),
+            Self::Imported { operation, .. } => &operation.errors,
+        }
+    }
+}
+
 /// One relay route's copy: where it is reported and what it relays.
 #[derive(Debug, Clone)]
 struct RelaySite {
@@ -106,46 +133,124 @@ struct FirstCopy<'declaration> {
     site: RelaySite,
 }
 
-fn is_domain_code(_error: &OperationError) -> Result<bool, PassError> {
-    Err(not_ported_yet("isDomainCode"))
+fn is_domain_code(error: &OperationError) -> bool {
+    let Some(derived_from) = &error.derived_from else {
+        return false;
+    };
+    let derivation = &derived_from.derivation;
+
+    OTHER_DOMAIN_DERIVATIONS.contains(&derivation.as_str())
+        || *derivation == DERIVE_ERRORS_RELAY_DERIVATION
+        || derivation.as_str().starts_with(PACK_DERIVATION_PREFIX)
 }
 
 // What two declarations of one name must agree on: everything but the origin, which names each
 // api's file.
-fn content_of(_declaration: Declaration<'_>) -> Result<String, PassError> {
-    Err(not_ported_yet("contentOf"))
+fn content_of(declaration: Declaration<'_>) -> Result<String, InternalError> {
+    let encoded = match declaration {
+        Declaration::Error(error) => serde_json::to_value(error),
+        Declaration::Nature(nature) => serde_json::to_value(nature),
+    }
+    .map_err(|failure| {
+        InternalError::new(format!(
+            "derive.errors cannot encode a declaration to compare: {failure}"
+        ))
+    })?;
+    let mut content = JsonValue::try_from(encoded).map_err(|failure| {
+        InternalError::new(format!(
+            "derive.errors holds a declaration that is no JSON value: {failure}"
+        ))
+    })?;
+
+    if let JsonValue::Object(members) = &mut content {
+        members.remove("origin");
+    }
+
+    Ok(canonical_json(&content))
 }
 
 fn entry_of<'catalogue, K, V>(
-    _catalogue: &'catalogue IrMap<K, V>,
-    _id: &str,
-    _what: &str,
-) -> Result<&'catalogue V, PassError>
+    catalogue: &'catalogue IrMap<K, V>,
+    id: &str,
+    what: &str,
+) -> Result<&'catalogue V, InternalError>
 where
-    K: Borrow<str> + Eq + Hash,
+    K: AsRef<str> + Borrow<str> + Eq + Hash,
 {
-    Err(not_ported_yet("entryOf"))
+    catalogue.get(id).ok_or_else(|| {
+        InternalError::new(format!(
+            "{what} {id} is not declared in the api that names it"
+        ))
+    })
 }
 
 fn public_side<'run>(
-    _reporter: &DeriveErrorsReporter<'_, 'run>,
-    _relays: &OperationRef,
-) -> Result<PublicSide<'run>, PassError> {
-    Err(not_ported_yet("publicSide"))
+    reporter: &DeriveErrorsReporter<'_, 'run>,
+    relays: &OperationRef,
+) -> Result<PublicSide<'run>, InternalError> {
+    let api = relays.api.as_str();
+    let id = &relays.id;
+    let relayed = reporter.relayed(api);
+    let from_draft = relayed.and_then(|draft| {
+        draft
+            .operations
+            .iter()
+            .find(|candidate| {
+                candidate.kind.as_ref() == Some(&TREE_NODES_OPERATION_KIND)
+                    && candidate.id.as_ref() == Some(id)
+            })
+            .map(|operation| (draft, operation))
+    });
+
+    if let Some((draft, operation)) = from_draft {
+        return Ok(PublicSide::Relayed {
+            api: api.to_owned(),
+            operation,
+            errors: &draft.errors,
+            natures: &draft.natures,
+        });
+    }
+
+    let imported = reporter.imported(api);
+    let found = imported.and_then(|contract| {
+        contract
+            .operations
+            .iter()
+            .enumerate()
+            .find(|(_, candidate)| {
+                candidate.kind == TREE_NODES_OPERATION_KIND && candidate.id == *id
+            })
+            .map(|(index, operation)| (contract, index, operation))
+    });
+    let closed = found
+        .map(|(contract, index, operation)| {
+            check_ir_closed_declaration(operation, &format!("/operations/{index}"))
+                .map(|check| (contract, check))
+        })
+        .transpose()
+        .map_err(|error| InternalError::new(error.to_string()))?;
+
+    if let Some((contract, IrClosedCheck::Closed(operation))) = closed {
+        return Ok(PublicSide::Imported {
+            api: api.to_owned(),
+            operation,
+            errors: &contract.errors,
+        });
+    }
+
+    Err(InternalError::new(format!(
+        "a relay route relays {api}.{id}, which tree.nodes found but is no closed operation of {api}"
+    )))
 }
 
-struct RelayCopier<'sources> {
+struct RelayCopier<'sources, 'run> {
     sources: DeriveErrorsRelaySources<'sources>,
     copies: DeriveErrorsRelayCopies,
-    first_errors: HashMap<String, FirstCopy<'sources>>,
-    first_natures: HashMap<String, FirstCopy<'sources>>,
+    first_errors: HashMap<String, FirstCopy<'run>>,
+    first_natures: HashMap<String, FirstCopy<'run>>,
 }
 
-#[allow(
-    clippy::unused_self,
-    reason = "methods are stubs until the brief that ports their bodies"
-)]
-impl<'sources> RelayCopier<'sources> {
+impl<'sources, 'run> RelayCopier<'sources, 'run> {
     fn new(sources: DeriveErrorsRelaySources<'sources>) -> Self {
         Self {
             sources,
@@ -157,65 +262,271 @@ impl<'sources> RelayCopier<'sources> {
 
     fn copy_route(
         &mut self,
-        _route: &DeriveErrorsRoute<'_>,
-        _relays: &OperationRef,
-        _reporter: &mut DeriveErrorsReporter<'_, '_>,
-    ) -> Result<(), PassError> {
-        Err(not_ported_yet("RelayCopier.copyRoute"))
+        route: &DeriveErrorsRoute<'_>,
+        relays: &OperationRef,
+        reporter: &mut DeriveErrorsReporter<'_, 'run>,
+    ) -> Result<(), InternalError> {
+        let public = public_side(reporter, relays)?;
+        let site = RelaySite {
+            pointer: pointer_below(&route.node.pointer, &["relays"]),
+            relays: format!("{}.{}", relays.api, relays.id),
+        };
+        let Some(public_origin) = public.operation_origin() else {
+            return Err(InternalError::new(format!(
+                "the relayed operation {} has no origin",
+                site.relays
+            )));
+        };
+        let from = vec![tree_nodes_relay_origin(public_origin, public.api())];
+        let mut codes = Vec::new();
+
+        for error in public.operation_errors() {
+            if !is_domain_code(error)
+                || !self.join_declaration(&public, &site, error.code.as_str(), reporter)?
+            {
+                continue;
+            }
+
+            codes.push(DeriveErrorsRelayCode {
+                code: error.code.clone(),
+                from: from.clone(),
+                example: error.example.clone(),
+                roles: error.roles.clone(),
+                origin: error
+                    .origin
+                    .as_ref()
+                    .map(|origin| tree_nodes_relay_origin(origin, public.api())),
+            });
+        }
+
+        self.copies.codes.insert(route.id.clone(), codes);
+
+        Ok(())
     }
 
     // Whether the code's declaration is this api's, the same as one already copied, or copied now.
     fn join_declaration(
         &mut self,
-        _side: &PublicSide<'_>,
-        _site: &RelaySite,
-        _code: &str,
-        _reporter: &mut DeriveErrorsReporter<'_, '_>,
-    ) -> Result<bool, PassError> {
-        Err(not_ported_yet("RelayCopier.joinDeclaration"))
+        public: &PublicSide<'run>,
+        site: &RelaySite,
+        code: &str,
+        reporter: &mut DeriveErrorsReporter<'_, 'run>,
+    ) -> Result<bool, InternalError> {
+        let relayed = entry_of(
+            public.errors(),
+            code,
+            &format!("the error of {}", site.relays),
+        )?;
+        let what = format!("error {}", quote_text(code));
+
+        if let Some(local) = self.sources.registry.get(code) {
+            return Self::same_as_local(
+                site,
+                &what,
+                Declaration::Error(relayed),
+                Declaration::Error(&local.declaration),
+                local.pointer.as_deref(),
+                reporter,
+            );
+        }
+
+        if let Some(first) = self.first_errors.get(code) {
+            return Self::same_as_first(site, &what, Declaration::Error(relayed), first, reporter);
+        }
+
+        let PublicSide::Relayed { api, natures, .. } = public else {
+            reporter.error(DeriveErrorsProblem {
+                rule: DeriveErrorsRule::RelayDeclaration,
+                message: format!(
+                    "error {}, which {} answers, is declared in the imported api {} only, and this compiler does not copy an imported error declaration",
+                    quote_text(code),
+                    site.relays,
+                    public.api()
+                ),
+                fix: format!(
+                    "declare {} in this api with the same definition as in {}",
+                    quote_text(code),
+                    public.api()
+                ),
+                pointer: site.pointer.clone(),
+                related: Vec::new(),
+            })?;
+
+            return Ok(false);
+        };
+
+        if !self.params_join(site, relayed, reporter)?
+            || !self.nature_joins(api, natures, site, relayed, reporter)?
+        {
+            return Ok(false);
+        }
+
+        self.first_errors.insert(
+            code.to_owned(),
+            FirstCopy {
+                declaration: Declaration::Error(relayed),
+                site: site.clone(),
+            },
+        );
+        self.copies.errors.insert(
+            ErrorCode::new(code.to_owned()),
+            DeriveErrorsRegistered {
+                declaration: ErrorDecl {
+                    origin: tree_nodes_relay_origin(&relayed.origin, api),
+                    ..relayed.clone()
+                },
+                pointer: None,
+            },
+        );
+
+        Ok(true)
     }
 
     fn params_join(
         &self,
-        _site: &RelaySite,
-        _declaration: &ErrorDecl,
-        _reporter: &mut DeriveErrorsReporter<'_, '_>,
-    ) -> Result<bool, PassError> {
-        Err(not_ported_yet("RelayCopier.paramsJoin"))
+        site: &RelaySite,
+        declaration: &ErrorDecl,
+        reporter: &mut DeriveErrorsReporter<'_, '_>,
+    ) -> Result<bool, InternalError> {
+        let Some(params) = &declaration.params else {
+            return Ok(true);
+        };
+
+        if self.sources.schemas.contains_key(params.as_str()) {
+            return Ok(true);
+        }
+
+        reporter.error(DeriveErrorsProblem {
+            rule: DeriveErrorsRule::RelayDeclaration,
+            message: format!(
+                "error {}, which {} answers, has the params schema {}, which this api does not declare",
+                quote_text(declaration.code.as_str()),
+                site.relays,
+                quote_text(params.as_str())
+            ),
+            fix: format!(
+                "declare {} in a shared file both apis load",
+                quote_text(params.as_str())
+            ),
+            pointer: site.pointer.clone(),
+            related: Vec::new(),
+        })?;
+
+        Ok(false)
     }
 
     fn nature_joins(
         &mut self,
-        _side: &PublicSide<'_>,
-        _site: &RelaySite,
-        _declaration: &ErrorDecl,
-        _reporter: &mut DeriveErrorsReporter<'_, '_>,
-    ) -> Result<bool, PassError> {
-        Err(not_ported_yet("RelayCopier.natureJoins"))
+        api: &str,
+        natures: &'run IrMap<NatureId, NatureDecl>,
+        site: &RelaySite,
+        declaration: &ErrorDecl,
+        reporter: &mut DeriveErrorsReporter<'_, 'run>,
+    ) -> Result<bool, InternalError> {
+        let Some(id) = &declaration.nature_name else {
+            return Ok(true);
+        };
+        let nature = entry_of(
+            natures,
+            id.as_str(),
+            &format!("the nature of error {}", declaration.code),
+        )?;
+        let what = format!("nature {}", quote_text(id.as_str()));
+
+        if let Some(local) = self.sources.natures.get(id.as_str()) {
+            return Self::same_as_local(
+                site,
+                &what,
+                Declaration::Nature(nature),
+                Declaration::Nature(local),
+                Some(&local.origin.pointer),
+                reporter,
+            );
+        }
+
+        if let Some(first) = self.first_natures.get(id.as_str()) {
+            return Self::same_as_first(site, &what, Declaration::Nature(nature), first, reporter);
+        }
+
+        self.first_natures.insert(
+            id.as_str().to_owned(),
+            FirstCopy {
+                declaration: Declaration::Nature(nature),
+                site: site.clone(),
+            },
+        );
+        self.copies.natures.insert(
+            id.clone(),
+            NatureDecl {
+                origin: tree_nodes_relay_origin(&nature.origin, api),
+                ..nature.clone()
+            },
+        );
+
+        Ok(true)
     }
 
     // A local declaration without a pointer is a core one, located at the relay route alone.
     fn same_as_local(
-        &self,
-        _site: &RelaySite,
-        _what: &str,
-        _relayed: Declaration<'_>,
-        _local: Declaration<'_>,
-        _local_pointer: Option<&str>,
-        _reporter: &mut DeriveErrorsReporter<'_, '_>,
-    ) -> Result<bool, PassError> {
-        Err(not_ported_yet("RelayCopier.sameAsLocal"))
+        site: &RelaySite,
+        what: &str,
+        relayed: Declaration<'_>,
+        local: Declaration<'_>,
+        local_pointer: Option<&str>,
+        reporter: &mut DeriveErrorsReporter<'_, '_>,
+    ) -> Result<bool, InternalError> {
+        if content_of(relayed)? == content_of(local)? {
+            return Ok(true);
+        }
+
+        reporter.error(DeriveErrorsProblem {
+            rule: DeriveErrorsRule::RelayDeclaration,
+            message: format!(
+                "the {what} that {} answers differs from the one this api declares",
+                site.relays
+            ),
+            fix: "declare it once in a shared file both apis load, or rename one of them"
+                .to_owned(),
+            pointer: site.pointer.clone(),
+            related: local_pointer
+                .map(|pointer| DeriveErrorsRelated {
+                    pointer: pointer.to_owned(),
+                    message: format!("this api's {what}"),
+                })
+                .into_iter()
+                .collect(),
+        })?;
+
+        Ok(false)
     }
 
     fn same_as_first(
-        &self,
-        _site: &RelaySite,
-        _what: &str,
-        _relayed: Declaration<'_>,
-        _first: &FirstCopy<'_>,
-        _reporter: &mut DeriveErrorsReporter<'_, '_>,
-    ) -> Result<bool, PassError> {
-        Err(not_ported_yet("RelayCopier.sameAsFirst"))
+        site: &RelaySite,
+        what: &str,
+        relayed: Declaration<'_>,
+        first: &FirstCopy<'_>,
+        reporter: &mut DeriveErrorsReporter<'_, '_>,
+    ) -> Result<bool, InternalError> {
+        if content_of(relayed)? == content_of(first.declaration)? {
+            return Ok(true);
+        }
+
+        reporter.error(DeriveErrorsProblem {
+            rule: DeriveErrorsRule::RelayDeclaration,
+            message: format!(
+                "the {what} that {} answers differs from the one {} answers",
+                site.relays, first.site.relays
+            ),
+            fix: "declare it once in a shared file both public apis load, or rename one of them"
+                .to_owned(),
+            pointer: site.pointer.clone(),
+            related: vec![DeriveErrorsRelated {
+                pointer: first.site.pointer.clone(),
+                message: format!("the route relaying {}", first.site.relays),
+            }],
+        })?;
+
+        Ok(false)
     }
 }
 
@@ -223,12 +534,12 @@ impl<'sources> RelayCopier<'sources> {
 ///
 /// # Errors
 ///
-/// A [`PassError`] when a route cannot be copied yet.
+/// An internal error when a relayed operation or declaration cannot be read.
 pub(crate) fn derive_errors_relay_copies(
     sources: DeriveErrorsRelaySources<'_>,
     routes: &[DeriveErrorsRoute<'_>],
     reporter: &mut DeriveErrorsReporter<'_, '_>,
-) -> Result<DeriveErrorsRelayCopies, PassError> {
+) -> Result<DeriveErrorsRelayCopies, InternalError> {
     let mut copier = RelayCopier::new(sources);
 
     for route in routes {
@@ -238,4 +549,60 @@ pub(crate) fn derive_errors_relay_copies(
     }
 
     Ok(copier.copies)
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::*;
+
+    fn nature(base: &str, pointer: &str, description: &str) -> NatureDecl {
+        serde_json::from_value(json!({
+            "id": "slow",
+            "base": base,
+            "docs": { "description": description },
+            "origin": { "layer": "api", "pointer": pointer }
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn two_declarations_agree_on_everything_but_the_origin() {
+        let first = nature("unavailable", "/natures/slow", "Takes long");
+        let elsewhere = nature("unavailable", "/shared/natures/slow", "Takes long");
+        let other_base = nature("failed", "/natures/slow", "Takes long");
+        let other_docs = nature("unavailable", "/natures/slow", "Takes longer");
+        let content = |declaration: &NatureDecl| content_of(Declaration::Nature(declaration));
+
+        assert_eq!(content(&first).unwrap(), content(&elsewhere).unwrap());
+        assert_ne!(content(&first).unwrap(), content(&other_base).unwrap());
+        assert_ne!(content(&first).unwrap(), content(&other_docs).unwrap());
+    }
+
+    #[test]
+    fn the_content_of_a_declaration_is_its_canonical_json_without_the_origin() {
+        let declaration = nature("unavailable", "/natures/slow", "Takes long");
+
+        assert_eq!(
+            content_of(Declaration::Nature(&declaration)).unwrap(),
+            r#"{"base":"unavailable","docs":{"description":"Takes long"},"id":"slow"}"#
+        );
+    }
+
+    #[test]
+    fn a_domain_code_is_derived_from_a_domain_row_or_a_pack() {
+        let derived = |derivation: &str| -> OperationError {
+            serde_json::from_value(json!({
+                "code": "shop.code",
+                "derivedFrom": { "derivation": derivation, "from": [] }
+            }))
+            .unwrap()
+        };
+
+        assert!(is_domain_code(&derived("relay.route")));
+        assert!(is_domain_code(&derived("member.notFound")));
+        assert!(is_domain_code(&derived("pack.errors-pack")));
+        assert!(!is_domain_code(&derived("body.limits")));
+    }
 }

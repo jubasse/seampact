@@ -71,7 +71,6 @@ pub(crate) fn derive_errors_pass_run(
     let routes = derive_errors_routes(draft, &nodes)?;
     let relayed = derive_errors_relay_copies(
         DeriveErrorsRelaySources {
-            context: readers,
             registry: &registry,
             natures: &natures,
             schemas: &draft.schemas,
