@@ -427,11 +427,17 @@ pub(crate) fn check_target_and_params(
     let target = use_of.target.as_str();
     let (params_schema, params_kind) = match use_of.kind {
         RequirementKind::Right => (
-            catalogues.rights.get(target).map(|right| right.params.as_ref()),
+            catalogues
+                .rights
+                .get(target)
+                .map(|right| right.params.as_ref()),
             AccessRightsParamsKind::Right,
         ),
         RequirementKind::Rule => (
-            catalogues.rules.get(target).map(|rule| rule.params.as_ref()),
+            catalogues
+                .rules
+                .get(target)
+                .map(|rule| rule.params.as_ref()),
             AccessRightsParamsKind::Rule,
         ),
     };
@@ -472,7 +478,8 @@ pub(crate) fn check_target_and_params(
             name: use_of.target.clone(),
             holder: "the requirement".to_owned(),
             schema: params_schema.map(|schema| schema.as_str().to_owned()),
-            params: access_rights_member(access_rights_object(Some(use_of.item)), "params").cloned(),
+            params: access_rights_member(access_rights_object(Some(use_of.item)), "params")
+                .cloned(),
             params_pointer: pointer_below(&use_of.item_pointer, &["params"]),
             use_pointer: use_of.item_pointer.clone(),
         },
@@ -707,11 +714,9 @@ pub(crate) fn equality_key(requirement: &Requirement) -> Result<String, Internal
             "rule",
             rule.rule.as_str(),
             &rule.params,
-            rule.bucket
-                .as_ref()
-                .map_or(JsonValue::Null, |bucket| {
-                    JsonValue::String(bucket.as_str().to_owned())
-                }),
+            rule.bucket.as_ref().map_or(JsonValue::Null, |bucket| {
+                JsonValue::String(bucket.as_str().to_owned())
+            }),
             JsonValue::Null,
         ),
     };
@@ -848,4 +853,107 @@ pub(crate) fn check_caller_right(
     });
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use seampact_ir::{RequirementSubject, ValueSourceIn};
+
+    use super::*;
+
+    fn rule(params: Option<JsonValue>, bucket: Option<&str>) -> Requirement {
+        KnownRequirement::Rule(RuleRequirement {
+            rule: RuleId::new("quota".to_owned()),
+            params,
+            bucket: bucket.map(|name| BucketId::new(name.to_owned())),
+            entry: None,
+            origin: None,
+            derived_from: None,
+        })
+        .into()
+    }
+
+    fn right(source: ValueSource) -> Requirement {
+        KnownRequirement::Right(RightRequirement {
+            right: seampact_ir::RightId::new("tasks.read".to_owned()),
+            params: None,
+            subject: Some(RequirementSubject {
+                source,
+                defaulted: false,
+            }),
+            entry: None,
+            origin: None,
+            derived_from: None,
+        })
+        .into()
+    }
+
+    #[test]
+    fn absent_params_and_empty_params_are_one_requirement() {
+        let empty = JsonValue::Object(JsonObject::new());
+
+        assert_eq!(
+            equality_key(&rule(None, None)).unwrap(),
+            equality_key(&rule(Some(empty), None)).unwrap()
+        );
+        assert_ne!(
+            equality_key(&rule(None, Some("a"))).unwrap(),
+            equality_key(&rule(None, Some("b"))).unwrap()
+        );
+    }
+
+    #[test]
+    fn params_compare_whatever_their_key_order() {
+        let params = |text: &str| JsonValue::Object(mapping(text));
+
+        assert_eq!(
+            equality_key(&rule(Some(params("a,b")), None)).unwrap(),
+            equality_key(&rule(Some(params("b,a")), None)).unwrap()
+        );
+    }
+
+    fn mapping(keys: &str) -> JsonObject {
+        let mut object = JsonObject::new();
+
+        for key in keys.split(',') {
+            object.insert(key.to_owned(), JsonValue::Bool(true));
+        }
+
+        object
+    }
+
+    #[test]
+    fn a_right_key_reads_its_subject_source() {
+        let source = |name: &str| ValueSource {
+            r#in: ValueSourceIn::Path,
+            name: Some(name.to_owned()),
+            prefix_bits: None,
+        };
+
+        assert_ne!(
+            equality_key(&right(source("id"))).unwrap(),
+            equality_key(&right(source("taskId"))).unwrap()
+        );
+    }
+
+    #[test]
+    fn a_requirement_item_names_a_right_or_a_rule_or_is_an_internal_error() {
+        let named = |key: &str| {
+            let mut item = JsonObject::new();
+
+            item.insert(key.to_owned(), JsonValue::String("x".to_owned()));
+
+            JsonValue::Object(item)
+        };
+
+        assert_eq!(
+            target_of(&named("right"), "/p").unwrap().kind,
+            RequirementKind::Right
+        );
+        assert_eq!(
+            target_of(&named("rule"), "/p").unwrap().kind,
+            RequirementKind::Rule
+        );
+        assert!(target_of(&named("other"), "/p").is_err());
+    }
 }

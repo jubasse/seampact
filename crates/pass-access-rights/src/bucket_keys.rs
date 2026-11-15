@@ -110,7 +110,8 @@ pub(crate) fn key_problem(
     input: &AccessRightsBucketKeysInput<'_>,
     source: &ValueSource,
 ) -> Result<Option<KeyProblem>, PassError> {
-    if source.r#in == ValueSourceIn::Principal && input.route.access != AccessRightsAccessKind::Identity
+    if source.r#in == ValueSourceIn::Principal
+        && input.route.access != AccessRightsAccessKind::Identity
     {
         let route_kind = if input.route.access == AccessRightsAccessKind::Public {
             "a public"

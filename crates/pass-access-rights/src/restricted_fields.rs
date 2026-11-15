@@ -63,7 +63,9 @@ pub(crate) struct AccessRightsRefusedPosition {
     pub(crate) pointer: Option<String>,
 }
 
-pub(crate) const fn access_rights_field_walk_exceeded(walk: &AccessRightsFieldWalk<'_, '_>) -> bool {
+pub(crate) const fn access_rights_field_walk_exceeded(
+    walk: &AccessRightsFieldWalk<'_, '_>,
+) -> bool {
     walk.reached > FIELD_RIGHTS_PER_OPERATION_LIMIT
 }
 

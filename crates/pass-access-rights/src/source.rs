@@ -91,7 +91,9 @@ mod tests {
 
     #[test]
     fn a_source_text_reads_each_form_and_refuses_the_rest() {
-        let named = access_rights_value_source("body.owner.id").unwrap().unwrap();
+        let named = access_rights_value_source("body.owner.id")
+            .unwrap()
+            .unwrap();
 
         assert_eq!(named.r#in, ValueSourceIn::Body);
         assert_eq!(named.name.as_deref(), Some("owner.id"));
@@ -100,7 +102,14 @@ mod tests {
             ValueSourceIn::Host
         );
 
-        for refused in ["", "body", "holderField.x", "address/", "address/6x", "path"] {
+        for refused in [
+            "",
+            "body",
+            "holderField.x",
+            "address/",
+            "address/6x",
+            "path",
+        ] {
             assert_eq!(
                 access_rights_value_source(refused).unwrap(),
                 None,

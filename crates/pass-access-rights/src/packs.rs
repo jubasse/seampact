@@ -186,11 +186,13 @@ pub(crate) fn access_rights_selects(
         }
     };
 
-    Ok(accepts("op", operation.op.as_ref().map(OpShorthand::as_str))
-        && accepts("access", Some(access))
-        && accepts("apiKind", Some(&api.kind))
-        && accepts("identity", identity)
-        && tag_accepted)
+    Ok(
+        accepts("op", operation.op.as_ref().map(OpShorthand::as_str))
+            && accepts("access", Some(access))
+            && accepts("apiKind", Some(&api.kind))
+            && accepts("identity", identity)
+            && tag_accepted,
+    )
 }
 
 pub(crate) fn access_rights_expand(

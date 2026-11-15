@@ -186,7 +186,8 @@ pub(crate) fn key_right(
         }
         (KeyRestriction::Found(restriction), written) => (restriction, written),
     };
-    let Some(inherited) = inherited_right(context, reporter, catalogues, checks, use_of, restriction)?
+    let Some(inherited) =
+        inherited_right(context, reporter, catalogues, checks, use_of, restriction)?
     else {
         return Ok(None);
     };

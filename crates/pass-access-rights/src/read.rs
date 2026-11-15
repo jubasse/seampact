@@ -212,4 +212,75 @@ mod tests {
 
         assert_eq!(names, ["zeta", "alpha"]);
     }
+
+    #[test]
+    fn extension_keys_split_at_the_first_dash_after_the_prefix() {
+        assert_eq!(extension_key_parts("x-acme-flag"), Some(("acme", "flag")));
+        assert_eq!(extension_key_parts("x-a1-b-c"), Some(("a1", "b-c")));
+        assert_eq!(
+            extension_key_parts("x-acme-__proto__"),
+            Some(("acme", "__proto__"))
+        );
+
+        for refused in [
+            "x-acme", "x-acme-", "x-1a-b", "x-Acme-b", "y-acme-b", "x--b", "x-a-b\nc",
+        ] {
+            assert_eq!(extension_key_parts(refused), None, "member {refused:?}");
+        }
+    }
+
+    #[test]
+    fn extension_values_keep_proto_as_an_own_key_and_integer_keys_first() {
+        let declaration = mapping_of(vec![
+            ("summary", text("s")),
+            ("x-acme-zeta", text("z")),
+            ("x-acme-__proto__", text("own")),
+            ("x-acme-10", text("ten")),
+            ("x-acme-2", text("two")),
+            ("x-other-a", text("o")),
+        ]);
+        let JsonValue::Object(declaration) = declaration else {
+            panic!("a mapping expected");
+        };
+        let extensions = access_rights_extensions(&declaration);
+        let prefixes: Vec<&str> = extensions.keys().map(ExtensionPrefix::as_str).collect();
+        let acme = extensions.get("acme").unwrap();
+        let keys: Vec<&str> = acme.keys().map(ExtensionKey::as_str).collect();
+
+        assert_eq!(prefixes, ["acme", "other"]);
+        assert_eq!(keys, ["2", "10", "zeta", "__proto__"]);
+        assert_eq!(acme.get("__proto__"), Some(&text("own")));
+    }
+
+    #[test]
+    fn a_schema_name_is_a_string_or_a_lone_reference() {
+        let lone = mapping_of(vec![("$ref", text("TaskId"))]);
+        let with_more = mapping_of(vec![("$ref", text("TaskId")), ("type", text("string"))]);
+
+        assert_eq!(
+            access_rights_schema_name(Some(&text("TaskId"))),
+            Some("TaskId".to_owned())
+        );
+        assert_eq!(
+            access_rights_schema_name(Some(&lone)),
+            Some("TaskId".to_owned())
+        );
+        assert_eq!(access_rights_schema_name(Some(&with_more)), None);
+        assert_eq!(access_rights_schema_name(None), None);
+    }
+
+    #[test]
+    fn the_strings_of_a_list_skip_other_items_and_an_absent_list_is_empty() {
+        let value = mapping_of(vec![(
+            "errors",
+            JsonValue::Array(vec![text("a"), JsonValue::Null, text("b")]),
+        )]);
+        let object = access_rights_object(Some(&value));
+
+        assert_eq!(access_rights_strings(object, "errors"), ["a", "b"]);
+        assert_eq!(
+            access_rights_strings(object, "missing"),
+            Vec::<String>::new()
+        );
+    }
 }

@@ -5,8 +5,8 @@ use indexmap::{IndexMap, IndexSet};
 use seampact_diagnostics::InternalError;
 use seampact_ir::{
     DerivationId, DerivedFrom, FieldWire, Identity, IdentityId, InputMediaType, InputProof, IrMap,
-    KnownIdentityRef, KnownRequirementRef, KnownSchemeRef, Origin, Param, ProofPlacement, Requirement, RuleProof,
-    Scheme, SchemeId, SignedIdentity, UnknownKeys,
+    KnownIdentityRef, KnownRequirementRef, KnownSchemeRef, Origin, Param, ProofPlacement,
+    Requirement, RuleProof, Scheme, SchemeId, SignedIdentity, UnknownKeys,
 };
 use seampact_pipeline::{DraftOperationInput, PassError, pointer_below};
 
@@ -521,4 +521,19 @@ pub(crate) fn fits_declared_input(
     _uses: &[ProofUse],
 ) -> Result<bool, PassError> {
     Err(not_ported_yet("fitsDeclaredInput"))
+}
+
+#[cfg(test)]
+mod name_tests {
+    use super::*;
+
+    #[test]
+    fn a_header_name_folds_case_and_a_body_name_does_not() {
+        assert_eq!(name_key(&ProofPlacement::Header, "X-Token"), "x-token");
+        assert_eq!(name_key(&ProofPlacement::Body, "X-Token"), "X-Token");
+        // JavaScript's toLowerCase maps U+0130 to "i" and a combining dot, as Rust does.
+        assert_eq!(name_key(&ProofPlacement::Header, "\u{130}"), "i\u{307}");
+        assert_eq!(name_key(&ProofPlacement::Header, "\u{3a3}"), "\u{3c3}");
+        assert_eq!(name_key(&ProofPlacement::Header, "A\u{3a3}"), "a\u{3c2}");
+    }
 }

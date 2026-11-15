@@ -132,3 +132,33 @@ pub(crate) fn listed_issues(issues: &[TreeSchemaExampleIssue]) -> String {
         listed.join("; ")
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn issue(pointer: &str, message: &str) -> TreeSchemaExampleIssue {
+        TreeSchemaExampleIssue {
+            pointer: pointer.to_owned(),
+            message: message.to_owned(),
+        }
+    }
+
+    #[test]
+    fn issues_list_the_first_three_and_count_the_rest() {
+        let issues = [
+            issue("", "is required"),
+            issue("/a", "no"),
+            issue("/b", "no"),
+            issue("/c", "no"),
+            issue("/d", "no"),
+        ];
+
+        assert_eq!(
+            listed_issues(&issues),
+            "(params): is required; /a: no; /b: no; and 2 more"
+        );
+        assert_eq!(listed_issues(&issues[..2]), "(params): is required; /a: no");
+        assert_eq!(listed_issues(&[]), "");
+    }
+}

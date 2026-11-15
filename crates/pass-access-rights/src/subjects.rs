@@ -2,8 +2,8 @@
 
 use seampact_diagnostics::access_rights_quoted;
 use seampact_ir::{
-    IrMap, KnownRightSubjectRef, OperationScope, Property, RequirementSubject, ResourceSubject, Right, Schema, SchemaId,
-    TypeUse, ValueSource,
+    IrMap, KnownRightSubjectRef, OperationScope, Property, RequirementSubject, ResourceSubject,
+    Right, Schema, SchemaId, TypeUse, ValueSource,
 };
 use seampact_pipeline::{PassError, TreeNodeId, TreeNodes};
 

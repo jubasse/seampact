@@ -5,12 +5,12 @@ use std::collections::{HashMap, HashSet};
 
 use regress::Regex;
 use seampact_diagnostics::InternalError;
-use seampact_ir::IrMap;
 use seampact_diagnostics::access_rights_quoted;
+use seampact_ir::IrMap;
 use seampact_ir::{
     Bucket, BucketId, Direction, ErrorCode, KnownRightSubject, KnownTypeUseRef, Name, NameRole,
-    NoSubject, ProofPlacement, Reason, ResourceSubject, Right, RightId, RightSubject, Rule,
-    RuleId, RuleProof, Scope, ScopeId, ScopeSubject, TypeUse,
+    NoSubject, ProofPlacement, Reason, ResourceSubject, Right, RightId, RightSubject, Rule, RuleId,
+    RuleProof, Scope, ScopeId, ScopeSubject, TypeUse,
 };
 use seampact_json::{JsonObject, JsonValue, js_integer_in_range, stringify_json};
 use seampact_naming::{NameSource, SegmentsOptions, SegmentsResult, segments_of, split_name};
@@ -25,9 +25,7 @@ use crate::read::{
 use crate::report::{
     AccessRightsProblem, AccessRightsRelated, AccessRightsReporter, AccessRightsRule,
 };
-use crate::schema_use::{
-    AccessRightsContext, access_rights_params_ref, access_rights_type_use,
-};
+use crate::schema_use::{AccessRightsContext, access_rights_params_ref, access_rights_type_use};
 use crate::source::{access_rights_source_text, access_rights_value_source};
 
 /// The names declared in each catalogue, refused ones included, so a use of a refused one adds no
@@ -530,7 +528,9 @@ pub(crate) fn access_rights_check_name(
             message: match code_name {
                 None => format!("right '{id}' yields no identifier segment for generated code"),
                 Some(code_name) => {
-                    format!("the codeName '{code_name}' of right '{id}' yields no identifier segment")
+                    format!(
+                        "the codeName '{code_name}' of right '{id}' yields no identifier segment"
+                    )
                 }
             },
             fix: "set the right's codeName to a name with letters or digits".to_owned(),
@@ -773,4 +773,81 @@ pub(crate) fn report_within_cycle(
     _cycle: &[String],
 ) -> Result<(), PassError> {
     Err(not_ported_yet("reportWithinCycle"))
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::report::access_rights_reporter;
+
+    use super::*;
+
+    fn pattern_of(written: &str) -> AccessRightsRightPattern {
+        AccessRightsRightPattern {
+            pattern: Regex::with_flags(written, "u").unwrap(),
+            source: regexp_source_of(written),
+            pointer: RIGHT_PATTERN_POINTER.to_owned(),
+        }
+    }
+
+    #[test]
+    fn a_pattern_source_escapes_what_regexp_source_escapes() {
+        for (written, source) in [
+            ("", "(?:)"),
+            ("a/b", "a\\/b"),
+            ("a\\/b", "a\\/b"),
+            ("[/]", "[/]"),
+            ("\\[/", "\\[\\/"),
+            ("a\nb", "a\\nb"),
+        ] {
+            assert_eq!(regexp_source_of(written), source, "pattern {written:?}");
+        }
+    }
+
+    #[test]
+    fn a_name_outside_the_pattern_and_one_without_a_segment_are_each_an_error() {
+        let pattern = pattern_of("^[a-z]+$");
+        let mut reporter = access_rights_reporter();
+        let check = |id: &str, code_name: Option<&str>| AccessRightsNameCheck {
+            id: id.to_owned(),
+            code_name: code_name.map(str::to_owned),
+            pointer: pointer_below("/rights", &[id]),
+            right_pattern: Some(&pattern),
+        };
+
+        assert!(!access_rights_check_name(&mut reporter, &check("tasksRead", None)).unwrap());
+        assert_eq!(reporter.errors(), 1);
+
+        assert!(access_rights_check_name(&mut reporter, &check("read", None)).unwrap());
+        assert_eq!(reporter.errors(), 1);
+
+        assert!(!access_rights_check_name(&mut reporter, &check("read", Some("!!"))).unwrap());
+        assert_eq!(reporter.errors(), 2);
+    }
+
+    #[test]
+    fn a_right_without_errors_answers_the_forbidden_code() {
+        assert_eq!(access_rights_right_errors(None, "forbidden"), ["forbidden"]);
+
+        let mut declaration = JsonObject::new();
+
+        declaration.insert("errors".to_owned(), JsonValue::Array(Vec::new()));
+
+        assert_eq!(
+            access_rights_right_errors(Some(&declaration), "forbidden"),
+            Vec::<String>::new()
+        );
+    }
+
+    #[test]
+    fn a_proof_is_placed_in_a_header_or_the_body_only() {
+        assert_eq!(
+            proof_placement("header", "/rules/r").unwrap(),
+            ProofPlacement::Header
+        );
+        assert_eq!(
+            proof_placement("body", "/rules/r").unwrap(),
+            ProofPlacement::Body
+        );
+        assert!(proof_placement("query", "/rules/r").is_err());
+    }
 }
