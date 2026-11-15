@@ -1034,6 +1034,7 @@ name = "seampact-pass-tree-schemas"
 version = "2.0.0"
 dependencies = [
  "indexmap",
+ "regress",
  "seampact-diagnostics",
  "seampact-ir",
  "seampact-js",
@@ -1041,6 +1042,7 @@ dependencies = [
  "seampact-naming",
  "seampact-pass-tree-shared",
  "seampact-pipeline",
+ "serde_json",
 ]
 
 [[package]]
