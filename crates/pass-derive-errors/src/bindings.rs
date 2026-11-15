@@ -290,7 +290,7 @@ fn node_bindings(
             continue;
         };
 
-        for (name, value) in roles.iter() {
+        for (name, value) in roles {
             bindings.push(written_binding(
                 &role_of(name)?.role,
                 value,

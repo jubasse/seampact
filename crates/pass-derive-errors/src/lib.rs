@@ -12,6 +12,7 @@ mod examples;
 mod natures;
 mod not_ported;
 mod operations;
+mod pass;
 mod read;
 mod registry;
 mod relays;
@@ -26,10 +27,26 @@ mod triggers;
 use seampact_diagnostics::RuleId;
 use seampact_pipeline::{DeriveErrorsOutput, DraftIr, HalfContext, PassError, TreeSchemaService};
 
-use crate::not_ported::not_ported_yet;
-
 /// Every rule id the half reports, read by the oracle's rule id registry.
-pub const RULE_IDS: &[RuleId] = &[];
+pub const RULE_IDS: &[RuleId] = &[
+    RuleId::from_static("seampact/derive/error-redefined"),
+    RuleId::from_static("seampact/derive/error-unknown"),
+    RuleId::from_static("seampact/derive/error-pattern"),
+    RuleId::from_static("seampact/derive/error-nature"),
+    RuleId::from_static("seampact/derive/error-params"),
+    RuleId::from_static("seampact/derive/error-example"),
+    RuleId::from_static("seampact/derive/error-default"),
+    RuleId::from_static("seampact/derive/nature-base"),
+    RuleId::from_static("seampact/derive/role-code"),
+    RuleId::from_static("seampact/derive/role-datum"),
+    RuleId::from_static("seampact/derive/role-param"),
+    RuleId::from_static("seampact/derive/role-param-required"),
+    RuleId::from_static("seampact/derive/role-param-type"),
+    RuleId::from_static("seampact/derive/role-template"),
+    RuleId::from_static("seampact/derive/retry-param"),
+    RuleId::from_static("seampact/derive/relay-declaration"),
+    RuleId::from_static("seampact/derive/cache-sensitive-elsewhere"),
+];
 
 /// Runs `derive.errors` over the draft, reading schemas through the service `tree.schemas` built.
 ///
@@ -38,9 +55,25 @@ pub const RULE_IDS: &[RuleId] = &[];
 /// [`PassError::NotPortedYet`] when the run reaches a function not ported yet, else
 /// [`PassError::Internal`] for a bug.
 pub fn run(
-    _draft: &DraftIr,
-    _context: &mut HalfContext<'_>,
-    _schemas: &dyn TreeSchemaService,
+    draft: &DraftIr,
+    context: &mut HalfContext<'_>,
+    schemas: &dyn TreeSchemaService,
 ) -> Result<DeriveErrorsOutput, PassError> {
-    Err(not_ported_yet("deriveErrorsPass.run"))
+    pass::derive_errors_pass_run(draft, context, schemas)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::report::DeriveErrorsRule;
+
+    #[test]
+    fn rule_ids_are_every_rule_of_the_half() {
+        let from_rules: Vec<RuleId> = DeriveErrorsRule::ALL
+            .iter()
+            .map(|rule| rule.rule_id())
+            .collect();
+
+        assert_eq!(RULE_IDS, from_rules.as_slice());
+    }
 }

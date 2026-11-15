@@ -141,6 +141,10 @@ struct RelayCopier<'sources> {
     first_natures: HashMap<String, FirstCopy<'sources>>,
 }
 
+#[allow(
+    clippy::unused_self,
+    reason = "methods are stubs until the brief that ports their bodies"
+)]
 impl<'sources> RelayCopier<'sources> {
     fn new(sources: DeriveErrorsRelaySources<'sources>) -> Self {
         Self {
