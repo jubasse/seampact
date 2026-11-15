@@ -355,3 +355,29 @@ pub(crate) fn tree_schemas_check_written_examples(
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_decimal_text_is_a_plain_integer_part_and_an_optional_fraction() {
+        let cases = [
+            ("0", true),
+            ("-0.5", true),
+            ("1.50", true),
+            ("10", true),
+            ("01", false),
+            ("1.", false),
+            (".5", false),
+            ("-", false),
+            ("+1", false),
+            ("1e3", false),
+            ("\u{ff11}", false),
+        ];
+
+        for (text, expected) in cases {
+            assert_eq!(format_check_decimal(text), Ok(expected), "text {text:?}");
+        }
+    }
+}

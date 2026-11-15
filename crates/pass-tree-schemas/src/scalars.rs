@@ -742,3 +742,80 @@ pub(crate) fn tree_schemas_mapping_docs(value: &JsonObject) -> Docs {
         description: written_text("description"),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_decimal_literal_is_the_shortest_plain_text_of_the_loaded_number() {
+        let cases = [
+            (0.1, Some("0.1")),
+            (1e-7, Some("0.0000001")),
+            (-1.5e-10, Some("-0.00000000015")),
+            (-0.0, Some("0")),
+            (9_007_199_254_740_991.0, Some("9007199254740991")),
+            (9_007_199_254_740_992.0, None),
+            (1e21, None),
+            (0.1 + 0.2, None),
+        ];
+
+        for (number, expected) in cases {
+            assert_eq!(
+                tree_schemas_decimal_literal(number).as_deref(),
+                expected,
+                "number {number:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_range_is_empty_when_no_value_or_no_integer_fits_it() {
+        let bounded = |minimum: Option<&str>,
+                       maximum: Option<&str>,
+                       exclusive_minimum: Option<&str>,
+                       exclusive_maximum: Option<&str>| Refinements {
+            minimum: minimum.map(|text| DecimalLiteral::new(text.to_owned())),
+            maximum: maximum.map(|text| DecimalLiteral::new(text.to_owned())),
+            exclusive_minimum: exclusive_minimum.map(|text| DecimalLiteral::new(text.to_owned())),
+            exclusive_maximum: exclusive_maximum.map(|text| DecimalLiteral::new(text.to_owned())),
+            ..empty_refinements()
+        };
+
+        assert_eq!(
+            empty_ranges(
+                &bounded(Some("2"), Some("1"), None, None),
+                &ScalarType::Number
+            ),
+            ["'minimum' 2 is above 'maximum' 1"]
+        );
+        assert_eq!(
+            empty_ranges(
+                &bounded(Some("1"), None, None, Some("1")),
+                &ScalarType::Number
+            ),
+            ["'minimum' 1 equals 'exclusiveMaximum' 1, one of them exclusive"]
+        );
+        assert_eq!(
+            empty_ranges(
+                &bounded(Some("0.5"), Some("0.9"), None, None),
+                &ScalarType::Integer
+            ),
+            ["no integer lies between 'minimum' 0.5 and 'maximum' 0.9"]
+        );
+        assert_eq!(
+            empty_ranges(
+                &bounded(None, None, Some("1"), Some("2")),
+                &ScalarType::Integer
+            ),
+            ["no integer lies between 'exclusiveMinimum' 1 and 'exclusiveMaximum' 2"]
+        );
+        assert_eq!(
+            empty_ranges(
+                &bounded(Some("0.5"), Some("0.9"), None, None),
+                &ScalarType::Number
+            ),
+            Vec::<String>::new()
+        );
+    }
+}

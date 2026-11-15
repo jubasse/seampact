@@ -401,3 +401,32 @@ pub(crate) fn tree_schemas_copy_relay_declarations(
 
     Ok(copier.copies)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn target(text: &str) -> Option<(String, String)> {
+        relay_target(&JsonValue::String(text.to_owned()))
+            .map(|found| (found.api, found.operation_id))
+    }
+
+    #[test]
+    fn a_relay_target_splits_at_the_first_dot_and_needs_an_api() {
+        assert_eq!(
+            target("public.listUsers"),
+            Some(("public".to_owned(), "listUsers".to_owned()))
+        );
+        assert_eq!(
+            target("public.a.b"),
+            Some(("public".to_owned(), "a.b".to_owned()))
+        );
+        assert_eq!(
+            target("public."),
+            Some(("public".to_owned(), String::new()))
+        );
+        assert_eq!(target(".listUsers"), None);
+        assert_eq!(target("nodot"), None);
+        assert_eq!(relay_target(&JsonValue::Null), None);
+    }
+}

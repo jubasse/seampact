@@ -160,3 +160,24 @@ impl<'half, 'run> TreeSchemasReporter<'half, 'run> {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_source_property_is_the_one_line_text_after_the_prefix() {
+        assert_eq!(tree_schemas_source_property("body.id", "body."), Some("id"));
+        assert_eq!(
+            tree_schemas_source_property("body.\u{1F600}", "body."),
+            Some("\u{1F600}")
+        );
+        assert_eq!(tree_schemas_source_property("body.", "body."), None);
+        assert_eq!(tree_schemas_source_property("body.a\nb", "body."), None);
+        assert_eq!(
+            tree_schemas_source_property("body.a\u{2029}", "body."),
+            None
+        );
+        assert_eq!(tree_schemas_source_property("header.id", "body."), None);
+    }
+}
