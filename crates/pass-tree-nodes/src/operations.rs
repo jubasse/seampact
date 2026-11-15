@@ -256,7 +256,7 @@ fn operation_of(
     let input = if op == Some(TREE_NODES_BATCH_OP) && !writes_input {
         tree_nodes_batch_input(node, scope)?
     } else {
-        tree_nodes_input(node, &name.id, scope)?
+        tree_nodes_input(site.node_id, node, &name.id, scope)?
     };
 
     if let Some(op) = &op
