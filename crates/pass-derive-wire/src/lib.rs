@@ -6,15 +6,46 @@
     reason = "functions reached only by stubs until the half's last brief"
 )]
 
+mod api_wire;
+mod bodies;
+mod body_limit;
+mod buckets;
+mod cache;
+mod concurrency;
+mod credentials;
+mod header_tag;
+mod idempotency;
+mod identity_headers;
+mod lifecycle;
 mod not_ported;
+mod paging;
+mod params;
+mod pass;
+mod relayed;
+mod report;
+mod routes;
+mod sensitive;
+#[cfg(test)]
+mod tests;
+mod unknown_keys;
 
 use seampact_diagnostics::RuleId;
 use seampact_pipeline::{DeriveWireOutput, DraftIr, HalfContext, PassError, TreeSchemaService};
 
-use crate::not_ported::not_ported_yet;
+use crate::report::DeriveWireRule;
 
 /// Every rule id the half reports, read by the oracle's rule id registry.
-pub const RULE_IDS: &[RuleId] = &[];
+pub const RULE_IDS: &[RuleId] = &[
+    DeriveWireRule::IdempotencyConvention.rule_id(),
+    DeriveWireRule::IdempotencyExemptUnused.rule_id(),
+    DeriveWireRule::DerivedNameCollision.rule_id(),
+    DeriveWireRule::CacheMethod.rule_id(),
+    DeriveWireRule::CacheFamily.rule_id(),
+    DeriveWireRule::CacheFreshness.rule_id(),
+    DeriveWireRule::CacheSensitive.rule_id(),
+    DeriveWireRule::CacheSensitiveElsewhere.rule_id(),
+    DeriveWireRule::BucketLimits.rule_id(),
+];
 
 /// Runs `derive.wire` over the draft, reading schemas through the service `tree.schemas` built.
 ///
@@ -23,9 +54,9 @@ pub const RULE_IDS: &[RuleId] = &[];
 /// [`PassError::NotPortedYet`] when the run reaches a function not ported yet, else
 /// [`PassError::Internal`] for a bug.
 pub fn run(
-    _draft: &DraftIr,
-    _context: &mut HalfContext<'_>,
-    _schemas: &dyn TreeSchemaService,
+    draft: &DraftIr,
+    context: &mut HalfContext<'_>,
+    schemas: &dyn TreeSchemaService,
 ) -> Result<DeriveWireOutput, PassError> {
-    Err(not_ported_yet("deriveWirePass.run"))
+    pass::derive_wire_pass_run(draft, context, schemas)
 }
