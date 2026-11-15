@@ -408,12 +408,12 @@ pub struct SignedIdentity {
     /// The `signed` member.
     pub signed: SchemeId,
 
-    /// The `principal` member.
-    pub principal: Principal,
-
-    /// The `unknownKeys` member.
+    /// The `unknownKeys` member, written before `principal` as the TypeScript writer does.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub unknown_keys: Option<KeysPolicy>,
+
+    /// The `principal` member.
+    pub principal: Principal,
 
     /// The `errors` member.
     pub errors: Vec<ErrorCode>,
