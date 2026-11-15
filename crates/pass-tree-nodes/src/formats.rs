@@ -435,12 +435,19 @@ fn slot_value_of_use(
     Err(not_ported_yet("slotValueOfUse"))
 }
 
+// `$payload` is the item, the id-keyed table, or the records of a list or page.
 fn payload_of(
-    _shape: ShapeName,
-    _body: &TypeUse,
-    _scope: &TreeNodesScope<'_, '_, '_>,
+    shape: ShapeName,
+    body: &TypeUse,
+    scope: &TreeNodesScope<'_, '_, '_>,
 ) -> Result<SlotValue, PassError> {
-    Err(not_ported_yet("payloadOf"))
+    match shape {
+        ShapeName::Item => slot_value_of_use(body, scope),
+        ShapeName::Table => Ok(SlotValue::Table),
+        ShapeName::List | ShapeName::Page => Ok(SlotValue::Array {
+            items: record_of(shape, body),
+        }),
+    }
 }
 
 fn record_of(shape: ShapeName, body: &TypeUse) -> TypeUse {

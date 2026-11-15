@@ -293,8 +293,11 @@ impl<'scope, 'draft, 'half, 'run> StyleReader<'scope, 'draft, 'half, 'run> {
         Err(not_ported_yet("StyleReader.checkKinds"))
     }
 
-    fn site(&self, _place: TreeNodesTemplatePlace) -> Result<TreeNodesTemplateSite, PassError> {
-        Err(not_ported_yet("StyleReader.site"))
+    fn site(&self, place: TreeNodesTemplatePlace) -> TreeNodesTemplateSite {
+        TreeNodesTemplateSite {
+            place,
+            owner: format!("the paging style {}", self.id),
+        }
     }
 
     fn report(
