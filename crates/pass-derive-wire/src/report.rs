@@ -108,7 +108,11 @@ impl DeriveWireReporter<'_, '_> {
         })
     }
 
-    fn report(&mut self, severity: Severity, problem: DeriveWireProblem) -> Result<(), InternalError> {
+    fn report(
+        &mut self,
+        severity: Severity,
+        problem: DeriveWireProblem,
+    ) -> Result<(), InternalError> {
         let related = problem
             .related
             .iter()

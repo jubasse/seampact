@@ -7,15 +7,16 @@ use std::collections::{HashMap, HashSet};
 use indexmap::IndexMap;
 use seampact_diagnostics::InternalError;
 use seampact_ir::{
-    ApiWire, DerivedFrom, Int64Wire, KnownAccessRef, Origin, OperationId, OutputEnumForm, Response,
-    UrlForm,
+    ApiWire, Int64Wire, KnownAccessRef, OperationId, Origin, OutputEnumForm, Response, UrlForm,
 };
 use seampact_pipeline::{
     DeriveWireOperation, DeriveWireOutput, DraftIr, DraftOperation, HalfContext, OperationIndex,
     TreeNode, TreeNodeId, TreeSchemaService,
 };
 
-use crate::report::{DeriveWireProblem, DeriveWireRelated, DeriveWireReporter, derive_wire_reporter};
+use crate::report::{
+    DeriveWireProblem, DeriveWireRelated, DeriveWireReporter, derive_wire_reporter,
+};
 
 /// An operation with its node and what every writer of the half reads.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -187,7 +188,10 @@ pub(crate) fn derive_wire_routes(
     let mut routes = Vec::new();
 
     for (position, operation) in draft.operation_indices().zip(&draft.operations) {
-        let pointer = operation.origin.as_ref().map(|origin| origin.pointer.as_str());
+        let pointer = operation
+            .origin
+            .as_ref()
+            .map(|origin| origin.pointer.as_str());
         let node = pointer.and_then(|pointer| node_by_pointer.get(pointer).copied());
 
         let (Some(id), Some(node)) = (operation.id.clone(), node) else {
@@ -244,9 +248,4 @@ pub(crate) fn derive_wire_origin_at(
         .context
         .origin(pointer)
         .ok_or_else(|| InternalError::new(format!("{pointer} has no origin in the side table")))
-}
-
-/// A copy of the derivation record, for the elements that carry it.
-pub(crate) fn derived_from_copy(derived_from: &DerivedFrom) -> DerivedFrom {
-    derived_from.clone()
 }
