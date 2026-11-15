@@ -30,6 +30,7 @@ A condensed subset of `rust-best-practices`, kept to what a port lane meets. Sea
 - A TypeScript union of string literals is a fieldless enum with its text in one `as_str`; a discriminated union is an enum with data; an optional property is `Option<T>`; `T | undefined` returned from a lookup is `Option<&T>`.
 - Derive what every field supports: `Debug` on every type, `Clone`, `PartialEq`/`Eq`, `Hash`, `Default` when meaningful; `Copy` only for small plain types; `PartialOrd` with `Ord` when a total order exists. A hand-written `Ord` comes with `PartialEq`, `PartialOrd` and `Hash` that compare the same fields.
 - Implement `From`/`TryFrom` (never `Into`), `Display` for errors and string-like types, `FromStr` instead of an ad hoc `from_str`. Prefer `from`/`into`/`try_from` to `as`, which truncates silently.
+- `f64 as i64` saturates and turns NaN into 0, unlike the modulo wrap of JS `x | 0`: check `is_finite` and the range first, or use the number helper. Plain `+`, `-`, `*` on input-sized integers wrap in release: `checked_` or `saturating_` as the TypeScript number would behave, `wrapping_` only where it relied on 32 bits.
 - `#[must_use]` on pure functions whose result is the point and on types whose discard is a bug.
 - Visibility: private by default, then `pub(crate)`, then `pub`. Fields private unless the struct is passive data. Each public item reachable at one path; re-export individually, never with a glob.
 - Traits only for generic code or `dyn` dispatch the design asks for (a service, a half), not to organise code. Prefer concrete types, then generics, then `dyn Trait`. A function with a clear receiver is a method; one without is a free function. Closure bounds: `FnOnce`, else `FnMut`, else `Fn`; a closure parameter goes last.
@@ -39,6 +40,7 @@ A condensed subset of `rust-best-practices`, kept to what a port lane meets. Sea
 ## 4. Errors
 
 - `Option` when absence is normal, `Result` when the caller must know what failed. A violated invariant is an `InternalError` returned with `?` (seampact-rust), never a panic.
+- Match an enum this repository owns (IR unions, closed catalogues) without a `_` arm, so a new variant breaks the build in every match; a `_` arm only for foreign or `#[non_exhaustive]` types.
 - Pattern-match instead of check-then-unwrap: `let Some(value) = option else { return ... };`, `if let`, `match`. Never `is_some()` followed by an unwrap.
 - Library error types implement `std::error::Error` with `Display` (lowercase, no trailing period) and `source()` for a wrapped cause, are `Send + Sync + 'static`, and convert with `From` so `?` works; `map_err` only for foreign errors or added context. One `thiserror` enum per crate (seampact-rust), not a workspace-wide one.
 - Document failures: `# Errors` on every public function returning `Result`.
