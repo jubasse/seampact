@@ -69,8 +69,8 @@ const PLACES: [ExtensionPlace; 7] = [
     ExtensionPlace::Scope,
 ];
 
-fn is_place(value: &str) -> Result<bool, PassError> {
-    Err(not_ported_yet("isPlace"))
+fn is_place(value: &str) -> bool {
+    ExtensionPlace::known(value).is_some_and(|place| PLACES.contains(&place))
 }
 
 /// Whether a mapping writes any extension key.
@@ -161,7 +161,7 @@ fn written_places(at: Option<&JsonValue>) -> Result<Vec<ExtensionPlace>, PassErr
             continue;
         };
 
-        if !is_place(text)? {
+        if !is_place(text) {
             continue;
         }
 

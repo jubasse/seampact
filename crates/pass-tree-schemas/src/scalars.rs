@@ -68,7 +68,7 @@ fn portable_type_of(format: &str) -> Option<ScalarType> {
 }
 
 /// The largest magnitude `Number.isSafeInteger` accepts, 2^53 - 1.
-const MAX_SAFE_INTEGER: f64 = 9_007_199_254_740_991.0;
+pub(crate) const MAX_SAFE_INTEGER: f64 = 9_007_199_254_740_991.0;
 
 /// A number as the decimal literal string of its loaded value: `None` for an integer beyond the
 /// safe range or a fraction whose shortest form takes more than 16 significant digits. Only the
@@ -307,7 +307,11 @@ fn refuse_misplaced(
 }
 
 /// A written length: validate guarantees a non-negative integer.
-fn written_count(written: &JsonNumber, key: &str, pointer: &str) -> Result<i64, PassError> {
+pub(crate) fn written_count(
+    written: &JsonNumber,
+    key: &str,
+    pointer: &str,
+) -> Result<i64, PassError> {
     let value = written.to_f64();
     let within = written.is_integer() && value.abs() <= MAX_SAFE_INTEGER;
 

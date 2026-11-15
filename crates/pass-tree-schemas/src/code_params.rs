@@ -64,9 +64,9 @@ pub(crate) fn tree_schemas_code_params_declarations<'raw>(
 
 /// Hoists each code's params once and gives every declaration with equal params the same use; error
 /// params are output.
-pub(crate) fn tree_schemas_compile_code_params(
-    compiler: &mut TreeSchemasCompiler<'_, '_, '_>,
-    declarations: &TreeSchemasCodeParamsDeclarations<'_>,
+pub(crate) fn tree_schemas_compile_code_params<'raw>(
+    compiler: &mut TreeSchemasCompiler<'raw, '_, '_>,
+    declarations: &TreeSchemasCodeParamsDeclarations<'raw>,
 ) -> Result<(), PassError> {
     for (code, declared) in declarations {
         let Some((first, others)) = declared.split_first() else {
@@ -89,7 +89,7 @@ pub(crate) fn tree_schemas_compile_code_params(
 
         for other in others {
             if canonical_json(other.params) == written {
-                compiler.share_use(&first.pointer, &other.pointer, &[Direction::Output])?;
+                compiler.share_use(&first.pointer, &other.pointer, &[Direction::Output]);
             }
         }
     }

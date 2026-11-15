@@ -14,7 +14,8 @@ use seampact_pipeline::{
 
 use crate::compile::TreeSchemasCompiler;
 use crate::not_ported::not_ported_yet;
-use crate::raw::{tree_schemas_member, tree_schemas_pointer};
+use crate::raw::{TreeSchemasProblem, tree_schemas_member, tree_schemas_pointer};
+use crate::rule::TreeSchemasRule;
 
 /// How a query field is written on the wire, besides its kind.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -344,7 +345,15 @@ fn refuse_map_field(
     compiler: &mut TreeSchemasCompiler<'_, '_, '_>,
     pointer: &str,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("refuseMapField"))
+    compiler.reporter.error(TreeSchemasProblem {
+        rule: TreeSchemasRule::QueryMap,
+        pointer: pointer.to_owned(),
+        message: "a query field or header proof holds no map: no query wire encodes its keys"
+            .to_owned(),
+        fix: "declare the keys as the fields of an object, or send the value in a JSON body"
+            .to_owned(),
+        related: None,
+    })
 }
 
 fn refuse_map_form_proof(

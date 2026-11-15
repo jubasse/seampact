@@ -6,11 +6,11 @@
 use std::collections::HashMap;
 
 use indexmap::IndexMap;
+use seampact_diagnostics::InternalError;
 use seampact_ir::{Direction, Enum, KnownSchemaRef, KnownTypeUseRef, Scalar, Schema, TypeUse};
 use seampact_pipeline::PassError;
 
 use crate::compile::TreeSchemasCompiler;
-use crate::not_ported::not_ported_yet;
 use crate::raw::TreeSchemasProblem;
 use crate::relays::TreeSchemasRelayUse;
 use crate::rule::TreeSchemasRule;
@@ -95,7 +95,47 @@ fn reach_schema(
     direction: &Direction,
     targets: &mut DirectionTargets<'_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("reachSchema"))
+    let Some(schema) = targets.schemas.get_mut(id) else {
+        return Ok(());
+    };
+
+    if !add_direction(schema_directions_mut(schema)?, direction.clone()) {
+        return Ok(());
+    }
+
+    for reached in reached_by(schema)? {
+        match reached {
+            Reached::Use(schema_use) => reach(&schema_use, direction, targets)?,
+            Reached::Schema(variant) => reach_schema(&variant, direction, targets)?,
+        }
+    }
+
+    Ok(())
+}
+
+/// What a named schema reaches, in the order the walk follows: property types, the keys then the
+/// values of a map, the variants of a union.
+fn reached_by(schema: &Schema) -> Result<Vec<Reached>, PassError> {
+    let reached = match KnownSchemaRef::try_from(schema)? {
+        KnownSchemaRef::Object(object) => object
+            .properties
+            .iter()
+            .map(|property| Reached::Use(Box::new(property.r#type.clone())))
+            .collect(),
+        KnownSchemaRef::Map(map) => map
+            .keys
+            .iter()
+            .chain([&map.values])
+            .map(|schema_use| Reached::Use(Box::new(schema_use.clone())))
+            .collect(),
+        KnownSchemaRef::Union(union) => union
+            .variants
+            .iter()
+            .map(|variant| Reached::Schema(variant.schema.as_str().to_owned()))
+            .collect(),
+    };
+
+    Ok(reached)
 }
 
 pub(crate) fn tree_schemas_write_directions(
@@ -137,14 +177,35 @@ fn positions_by_id<'id>(ids: impl Iterator<Item = &'id str>) -> HashMap<String, 
         .collect()
 }
 
-fn within(pointer: &str, holder: &str) -> Result<bool, PassError> {
-    Err(not_ported_yet("within"))
+fn within(pointer: &str, holder: &str) -> bool {
+    pointer == holder
+        || pointer
+            .strip_prefix(holder)
+            .is_some_and(|rest| rest.starts_with('/'))
 }
 
 /// The directions of the nearest position or written schema holding `pointer`; none when no use
 /// reaches it yet.
-fn directions_at(holders: &[DirectionHolder], pointer: &str) -> Result<Vec<Direction>, PassError> {
-    Err(not_ported_yet("directionsAt"))
+fn directions_at<'holders>(
+    holders: &'holders [DirectionHolder],
+    pointer: &str,
+) -> &'holders [Direction] {
+    let mut nearest: Option<&DirectionHolder> = None;
+
+    for holder in holders
+        .iter()
+        .filter(|holder| within(pointer, &holder.pointer))
+    {
+        let longer = nearest.is_none_or(|current| {
+            holder.pointer.encode_utf16().count() > current.pointer.encode_utf16().count()
+        });
+
+        if longer {
+            nearest = Some(holder);
+        }
+    }
+
+    nearest.map_or(&[], |holder| holder.directions.as_slice())
 }
 
 pub(crate) fn tree_schemas_refuse_output_unknown_keys(
@@ -172,8 +233,8 @@ pub(crate) fn tree_schemas_refuse_output_unknown_keys(
     }
 
     for written in &compiler.written_unknown_keys {
-        let own = directions_at(&holders, written)?;
-        let directions = if own.is_empty() {
+        let own = directions_at(&holders, written);
+        let directions: Vec<Direction> = if own.is_empty() {
             let mut carried = Vec::new();
 
             for schema_use in compiler
@@ -182,12 +243,12 @@ pub(crate) fn tree_schemas_refuse_output_unknown_keys(
                 .into_iter()
                 .flatten()
             {
-                carried.extend(directions_at(&holders, schema_use)?);
+                carried.extend(directions_at(&holders, schema_use).iter().cloned());
             }
 
             carried
         } else {
-            own
+            own.to_vec()
         };
 
         if directions.is_empty() || directions.contains(&Direction::Input) {
@@ -205,6 +266,24 @@ pub(crate) fn tree_schemas_refuse_output_unknown_keys(
     }
 
     Ok(())
+}
+
+/// A schema the walk reaches: a named schema's own children, owned so the walk can write.
+enum Reached {
+    Use(Box<TypeUse>),
+    Schema(String),
+}
+
+fn schema_directions_mut(schema: &mut Schema) -> Result<&mut Vec<Direction>, PassError> {
+    match schema {
+        Schema::Object(object) => Ok(&mut object.directions),
+        Schema::Map(map) => Ok(&mut map.directions),
+        Schema::Union(union) => Ok(&mut union.directions),
+        Schema::Unknown(_) => Err(InternalError::new(
+            "tree.schemas reached a schema of a kind this IR revision does not know".to_owned(),
+        )
+        .into()),
+    }
 }
 
 fn schema_directions(schema: &Schema) -> Result<&[Direction], PassError> {

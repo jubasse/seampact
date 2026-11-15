@@ -9,6 +9,7 @@ publish.workspace = true
 
 [dependencies]
 indexmap.workspace = true
+regress.workspace = true
 seampact-diagnostics.workspace = true
 seampact-ir.workspace = true
 seampact-js.workspace = true
@@ -16,6 +17,7 @@ seampact-json.workspace = true
 seampact-naming.workspace = true
 seampact-pass-tree-shared.workspace = true
 seampact-pipeline.workspace = true
+serde_json.workspace = true
 
 [dev-dependencies]
 seampact-pipeline = { workspace = true, features = ["test-support"] }
