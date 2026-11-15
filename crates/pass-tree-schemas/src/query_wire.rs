@@ -3,7 +3,10 @@
 
 use indexmap::IndexMap;
 use seampact_diagnostics::InternalError;
-use seampact_ir::{QueryStyle, QueryWire, QueryWireKind, RefTypeUse, SchemaId, TypeUse};
+use seampact_ir::{
+    KnownSchemaRef, KnownTypeUseRef, QueryStyle, QueryWire, QueryWireKind, RefTypeUse, ScalarType,
+    SchemaId, TypeUse,
+};
 use seampact_json::{JsonValue, stringify_json};
 use seampact_pipeline::{
     Inherited, OrderedSetting, PassError, ResolvedConventions, TreeNodeKind, TreeNodes,
@@ -134,11 +137,29 @@ fn shown_convention_value(value: &JsonValue) -> String {
 }
 
 fn single_kind(schema_use: &TypeUse) -> Result<Option<SingleKind>, PassError> {
-    Err(not_ported_yet("singleKind"))
+    let kind = match KnownTypeUseRef::try_from(schema_use)? {
+        KnownTypeUseRef::Enum(_) => Some(SingleKind::Text),
+        KnownTypeUseRef::Scalar(scalar) => match scalar.r#type {
+            ScalarType::String => Some(SingleKind::Text),
+            ScalarType::Boolean => Some(SingleKind::Boolean),
+            ScalarType::Integer | ScalarType::Number => Some(SingleKind::Number),
+            ScalarType::Unknown(_) => None,
+        },
+        KnownTypeUseRef::Ref(_)
+        | KnownTypeUseRef::Opaque(_)
+        | KnownTypeUseRef::File(_)
+        | KnownTypeUseRef::Array(_) => None,
+    };
+
+    Ok(kind)
 }
 
 fn is_list_of_singles(schema_use: &TypeUse) -> Result<bool, PassError> {
-    Err(not_ported_yet("isListOfSingles"))
+    let KnownTypeUseRef::Array(array) = KnownTypeUseRef::try_from(schema_use)? else {
+        return Ok(false);
+    };
+
+    Ok(single_kind(&array.items)?.is_some())
 }
 
 /// The route each form proof schema belongs to, written at the use or through a `requirements`
@@ -210,7 +231,7 @@ pub(crate) fn tree_schemas_query_wires(
             })))?
             .unwrap_or_default();
 
-        for property in &properties {
+        for property in properties {
             record_wire(
                 compiler,
                 &mut wires,
@@ -281,7 +302,7 @@ fn wire_of(
         return Ok(None);
     };
 
-    for property in &properties {
+    for property in properties {
         if single_kind(&property.r#type)?.is_none() && !is_list_of_singles(&property.r#type)? {
             return Ok(None);
         }
@@ -303,7 +324,20 @@ fn is_map(
     compiler: &TreeSchemasCompiler<'_, '_, '_>,
     schema_use: Option<&TypeUse>,
 ) -> Result<bool, PassError> {
-    Err(not_ported_yet("isMap"))
+    let Some(schema_use) = schema_use else {
+        return Ok(false);
+    };
+    let KnownTypeUseRef::Ref(reference) = KnownTypeUseRef::try_from(schema_use)? else {
+        return Ok(false);
+    };
+    let Some(schema) = compiler.schemas.get(reference.schema.as_str()) else {
+        return Ok(false);
+    };
+
+    Ok(matches!(
+        KnownSchemaRef::try_from(schema)?,
+        KnownSchemaRef::Map(_)
+    ))
 }
 
 fn refuse_map_field(

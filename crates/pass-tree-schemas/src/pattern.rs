@@ -306,7 +306,11 @@ impl PatternParser {
 ///
 /// # Errors
 ///
-/// [`PassError::NotPortedYet`] until the function is ported.
+/// [`PassError::NotPortedYet`] until the parser is ported; the brief that ports it decides how a
+/// refusal reaches [`TreeSchemasPatternResult::Refused`].
 pub fn tree_schemas_normalize_pattern(source: &str) -> Result<TreeSchemasPatternResult, PassError> {
-    Err(not_ported_yet("treeSchemasNormalizePattern"))
+    let mut parser = PatternParser::new(source.chars().collect())?;
+    let normalized = parser.parse()?;
+
+    Ok(TreeSchemasPatternResult::Normalized { normalized })
 }

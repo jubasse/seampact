@@ -155,8 +155,21 @@ struct RelayTarget {
     operation_id: String,
 }
 
-fn relay_target(relays: &JsonValue) -> Result<Option<RelayTarget>, PassError> {
-    Err(not_ported_yet("relayTarget"))
+/// `relays: <api>.<operationId>`: the api is the text before the first dot.
+fn relay_target(relays: &JsonValue) -> Option<RelayTarget> {
+    let JsonValue::String(text) = relays else {
+        return None;
+    };
+    let (api, operation_id) = text.split_once('.')?;
+
+    if api.is_empty() {
+        return None;
+    }
+
+    Some(RelayTarget {
+        api: api.to_owned(),
+        operation_id: operation_id.to_owned(),
+    })
 }
 
 fn operation_uses(operation: RelayedOperation<'_>) -> Result<Vec<TreeSchemasRelayUse>, PassError> {
@@ -318,7 +331,34 @@ fn public_operation<'context>(
     context: &'context HalfContext<'_>,
     target: &RelayTarget,
 ) -> Result<Option<(CopySource<'context>, RelayedOperation<'context>)>, PassError> {
-    Err(not_ported_yet("publicOperation"))
+    if let Some(relayed) = context.relayed(&target.api) {
+        let operation = relayed.operations.iter().find(|each| {
+            each.id
+                .as_ref()
+                .is_some_and(|id| id.as_str() == target.operation_id)
+        });
+
+        return Ok(operation.map(|operation| {
+            (
+                CopySource::Draft(relayed),
+                RelayedOperation::Draft(operation),
+            )
+        }));
+    }
+
+    let imported_operation = context.imported(&target.api).is_some_and(|imported| {
+        imported
+            .operations
+            .iter()
+            .any(|each| each.id.as_str() == target.operation_id)
+    });
+
+    if imported_operation {
+        // The closed check of an imported operation is the foreign `checkIrClosedDeclaration`.
+        return Err(not_ported_yet("checkIrClosedDeclaration"));
+    }
+
+    Ok(None)
 }
 
 /// Copies the declarations every relay route of the tree uses and answers them with the copied
@@ -339,7 +379,7 @@ pub(crate) fn tree_schemas_copy_relay_declarations(
         let Some(relays) = node.settings.get("relays") else {
             continue;
         };
-        let Some(target) = relay_target(relays)? else {
+        let Some(target) = relay_target(relays) else {
             continue;
         };
         let Some((source, operation)) = public_operation(context, &target)? else {
@@ -360,4 +400,33 @@ pub(crate) fn tree_schemas_copy_relay_declarations(
     }
 
     Ok(copier.copies)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn target(text: &str) -> Option<(String, String)> {
+        relay_target(&JsonValue::String(text.to_owned()))
+            .map(|found| (found.api, found.operation_id))
+    }
+
+    #[test]
+    fn a_relay_target_splits_at_the_first_dot_and_needs_an_api() {
+        assert_eq!(
+            target("public.listUsers"),
+            Some(("public".to_owned(), "listUsers".to_owned()))
+        );
+        assert_eq!(
+            target("public.a.b"),
+            Some(("public".to_owned(), "a.b".to_owned()))
+        );
+        assert_eq!(
+            target("public."),
+            Some(("public".to_owned(), String::new()))
+        );
+        assert_eq!(target(".listUsers"), None);
+        assert_eq!(target("nodot"), None);
+        assert_eq!(relay_target(&JsonValue::Null), None);
+    }
 }

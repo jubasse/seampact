@@ -1036,6 +1036,7 @@ dependencies = [
  "indexmap",
  "seampact-diagnostics",
  "seampact-ir",
+ "seampact-js",
  "seampact-json",
  "seampact-naming",
  "seampact-pass-tree-shared",

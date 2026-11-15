@@ -31,8 +31,18 @@ struct CodeNamesSite<'raw, 'site> {
     pointer: &'site str,
 }
 
-fn strings(value: Option<&JsonValue>) -> Result<Vec<String>, PassError> {
-    Err(not_ported_yet("strings"))
+fn strings(value: Option<&JsonValue>) -> Vec<String> {
+    let Some(JsonValue::Array(items)) = value else {
+        return Vec::new();
+    };
+
+    items
+        .iter()
+        .filter_map(|item| match item {
+            JsonValue::String(text) => Some(text.clone()),
+            _ => None,
+        })
+        .collect()
 }
 
 /// The values of the enum `name`, following `source.enum` through `path`; `None` when it has none.
