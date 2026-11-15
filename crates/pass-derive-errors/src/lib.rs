@@ -1,16 +1,10 @@
 //! The `derive.errors` half (ADR 0006 section 2), ported from
 //! `packages/core/compiler/src/passes/derive/errors`.
 
-#![allow(
-    dead_code,
-    reason = "functions reached only by stubs until the half's last brief"
-)]
-
 mod attached;
 mod bindings;
 mod examples;
 mod natures;
-mod not_ported;
 mod operations;
 mod pass;
 mod read;
@@ -54,8 +48,7 @@ pub const RULE_IDS: &[RuleId] = &[
 ///
 /// # Errors
 ///
-/// [`PassError::NotPortedYet`] when the run reaches a function not ported yet, else
-/// [`PassError::Internal`] for a bug.
+/// [`PassError::Internal`] for a bug, or the error of a schema service call.
 pub fn run(
     draft: &DraftIr,
     context: &mut HalfContext<'_>,

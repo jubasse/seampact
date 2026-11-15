@@ -3,13 +3,16 @@
 //! and the value must fit its params, each issue located inside the value. A code without params
 //! takes no example, as for a declaration's example.
 
+use seampact_diagnostics::quote_text;
 use seampact_json::JsonObject;
 use seampact_pipeline::{PassError, TreeSchemaService, pipeline_tree_nodes, pointer_below};
 
-use crate::not_ported::not_ported_yet;
-use crate::read::{derive_errors_entries, derive_errors_member};
+use crate::read::{derive_errors_entries, derive_errors_member, derive_errors_string};
 use crate::registry::DeriveErrorsRegistry;
-use crate::report::{DeriveErrorsContext, DeriveErrorsReporter};
+use crate::report::{
+    DeriveErrorsContext, DeriveErrorsProblem, DeriveErrorsReporter, DeriveErrorsRule,
+};
+use crate::role_param_fit::derive_errors_ref_use;
 
 /// What the example check reads.
 #[derive(Clone, Copy)]
@@ -47,10 +50,61 @@ pub(crate) fn derive_errors_check_route_examples(
 }
 
 fn check_example(
-    _check: &DeriveErrorsExampleCheck<'_>,
-    _example: &JsonObject,
-    _pointer: &str,
-    _reporter: &mut DeriveErrorsReporter<'_, '_>,
+    check: &DeriveErrorsExampleCheck<'_>,
+    example: &JsonObject,
+    pointer: &str,
+    reporter: &mut DeriveErrorsReporter<'_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("checkExample"))
+    let Some(code) = derive_errors_string(example, "error") else {
+        return Ok(());
+    };
+    let quoted = quote_text(code);
+    let Some(registered) = check.registry.get(code) else {
+        reporter.error(DeriveErrorsProblem {
+            rule: DeriveErrorsRule::ErrorUnknown,
+            message: format!(
+                "the example names error code {quoted}, which no layer or node declares and which is no default code"
+            ),
+            fix: format!("declare {quoted} with a status in 'errors', or name a declared code"),
+            pointer: pointer_below(pointer, &["error"]),
+            related: Vec::new(),
+        })?;
+
+        return Ok(());
+    };
+    let value_pointer = pointer_below(pointer, &["value"]);
+    let Some(value) = derive_errors_member(example, "value") else {
+        return Ok(());
+    };
+    let Some(params) = &registered.declaration.params else {
+        reporter.error(DeriveErrorsProblem {
+            rule: DeriveErrorsRule::ErrorExample,
+            message: format!(
+                "the example of error {quoted} holds a value, but the code has no params for it to show"
+            ),
+            fix: format!("declare params on {quoted}, or remove the example"),
+            pointer: value_pointer,
+            related: Vec::new(),
+        })?;
+
+        return Ok(());
+    };
+
+    for issue in check
+        .service
+        .check_example(value, &derive_errors_ref_use(params))?
+    {
+        reporter.error(DeriveErrorsProblem {
+            rule: DeriveErrorsRule::ErrorExample,
+            message: format!(
+                "the example of error {quoted} does not fit its params: {}",
+                issue.message
+            ),
+            fix: "correct the example to fit the params".to_owned(),
+            pointer: format!("{value_pointer}{}", issue.pointer),
+            related: Vec::new(),
+        })?;
+    }
+
+    Ok(())
 }

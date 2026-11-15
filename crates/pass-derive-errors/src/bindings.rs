@@ -18,11 +18,11 @@ use seampact_pipeline::{
 };
 use seampact_templates::template_uses;
 
-use crate::not_ported::not_ported_yet;
 use crate::read::{derive_errors_member, derive_errors_string};
 use crate::registry::DeriveErrorsRegistry;
 use crate::report::{
-    DeriveErrorsContext, DeriveErrorsProblem, DeriveErrorsReporter, DeriveErrorsRule,
+    DeriveErrorsContext, DeriveErrorsProblem, DeriveErrorsRelated, DeriveErrorsReporter,
+    DeriveErrorsRule,
 };
 use crate::role_param_types::derive_errors_check_role_param_types;
 use crate::role_params::{
@@ -213,15 +213,39 @@ fn datum_reached(
 ///
 /// # Errors
 ///
-/// A [`PassError`] when the check cannot run yet.
+/// An internal error when the params template or the diagnostic's pointer cannot be read.
 pub(crate) fn derive_errors_check_conditional_datum(
-    _site: &DeriveErrorsRoleParamsSite<'_>,
-    _params: Option<&Template>,
-    _datum: &RoleDatum,
-    _operation: &DeriveErrorsOperationSite<'_>,
-    _reporter: &mut DeriveErrorsReporter<'_, '_>,
-) -> Result<bool, PassError> {
-    Err(not_ported_yet("deriveErrorsCheckConditionalDatum"))
+    site: &DeriveErrorsRoleParamsSite<'_>,
+    params: Option<&Template>,
+    datum: &RoleDatum,
+    operation: &DeriveErrorsOperationSite<'_>,
+    reporter: &mut DeriveErrorsReporter<'_, '_>,
+) -> Result<bool, InternalError> {
+    if datum_reached(site, params, datum)? {
+        return Ok(true);
+    }
+
+    let param = derive_errors_param_of_datum(site, datum);
+    let code = quote_text(site.code.as_str());
+
+    reporter.error(DeriveErrorsProblem {
+        rule: DeriveErrorsRule::RoleDatum,
+        message: format!(
+            "role '{}' requires the datum '{}' on operation '{}', which has a rejected restricted input field, but no param of {code} receives it",
+            site.role.role, datum.name, operation.id
+        ),
+        fix: format!(
+            "add a param '{param}' to {code}, or bind it with params: {{ {param}: ${} }}",
+            datum.name
+        ),
+        pointer: site.pointer.clone(),
+        related: vec![DeriveErrorsRelated {
+            pointer: operation.pointer.to_owned(),
+            message: format!("operation '{}' is declared here", operation.id),
+        }],
+    })?;
+
+    Ok(false)
 }
 
 /// The operation a conditional datum is reported against: its id and its tree node's pointer.
