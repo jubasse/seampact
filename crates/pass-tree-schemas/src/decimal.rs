@@ -3,6 +3,7 @@
 
 use std::cmp::Ordering;
 
+use seampact_diagnostics::InternalError;
 use seampact_pipeline::PassError;
 
 use crate::not_ported::not_ported_yet;
@@ -39,7 +40,26 @@ pub(crate) fn tree_schemas_decimal_of(
 }
 
 fn aligned(a: &TreeSchemasDecimal, b: &TreeSchemasDecimal) -> Result<(i128, i128), PassError> {
-    Err(not_ported_yet("aligned"))
+    let scale = a.scale.max(b.scale);
+
+    Ok((units_at(a, scale)?, units_at(b, scale)?))
+}
+
+/// The units of `decimal` once written at `scale`, which is not below its own.
+fn units_at(decimal: &TreeSchemasDecimal, scale: i64) -> Result<i128, PassError> {
+    let steps = scale
+        .checked_sub(decimal.scale)
+        .and_then(|difference| u32::try_from(difference).ok())
+        .and_then(|difference| TEN.checked_pow(difference));
+    let units = steps.and_then(|factor| decimal.units.checked_mul(factor));
+
+    units.ok_or_else(|| {
+        InternalError::new(format!(
+            "tree.schemas compares the decimal {} x 10^-{} past 128 bits, which no example reaches",
+            decimal.units, decimal.scale
+        ))
+        .into()
+    })
 }
 
 /// `Less` when `a` is below `b`, `Equal` when equal, `Greater` when above.
@@ -47,7 +67,9 @@ pub(crate) fn tree_schemas_compare_decimals(
     a: &TreeSchemasDecimal,
     b: &TreeSchemasDecimal,
 ) -> Result<Ordering, PassError> {
-    Err(not_ported_yet("treeSchemasCompareDecimals"))
+    let (left, right) = aligned(a, b)?;
+
+    Ok(left.cmp(&right))
 }
 
 /// Whether `value` is a whole multiple of a non-zero `step`.

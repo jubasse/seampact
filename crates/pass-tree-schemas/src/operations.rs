@@ -2,9 +2,13 @@
 //! and the version property a body version source adds to a versioned write's input schema
 //! (derivation `concurrency.version`). Both run once every route position is compiled.
 
+use std::collections::HashSet;
+
 use indexmap::IndexMap;
 use seampact_diagnostics::InternalError;
-use seampact_ir::{Direction, KnownTypeUseRef, Property, TypeUse};
+use seampact_ir::{
+    DerivationId, DerivedFrom, Direction, KnownTypeUseRef, ObjectSchema, Property, Schema, TypeUse,
+};
 use seampact_json::JsonValue;
 use seampact_naming::{Role, derive_name};
 use seampact_pass_tree_shared::{TreeNodesOperationName, tree_nodes_op_owner};
@@ -12,9 +16,10 @@ use seampact_pipeline::{PassError, ResolvedConventions, TreeNode, TreeNodeKind, 
 
 use crate::compile::TreeSchemasCompiler;
 use crate::not_ported::not_ported_yet;
+use crate::property::{TreeSchemasWrittenProperty, tree_schemas_derived_property};
 use crate::raw::{
-    TreeSchemasProblem, tree_schemas_is_object, tree_schemas_member, tree_schemas_pointer,
-    tree_schemas_source_property,
+    TreeSchemasProblem, TreeSchemasRelated, tree_schemas_is_object, tree_schemas_member,
+    tree_schemas_pointer, tree_schemas_source_property,
 };
 use crate::rule::TreeSchemasRule;
 
@@ -22,6 +27,9 @@ const BATCH_OP: &str = "batch";
 const VERSIONED_OPS: [&str; 2] = ["update", "delete"];
 /// The prefix of a body version source, `body.<property>`.
 const BODY_SOURCE_PREFIX: &str = "body.";
+/// The derivation of the version property a body version source adds.
+const CONCURRENCY_VERSION_DERIVATION: DerivationId =
+    DerivationId::from_static("concurrency.version");
 const INHERIT: &str = "inherit";
 
 /// A versioned write: where its version is read and the item property it is compared with.
@@ -140,7 +148,19 @@ fn versioned_ancestor<'tree, 'raw>(
     nodes: &'tree TreeNodes<'raw>,
     node: &TreeNode<'raw>,
 ) -> Result<Option<&'tree TreeNode<'raw>>, PassError> {
-    Err(not_ported_yet("versionedAncestor"))
+    let mut at = node.parent;
+
+    while let Some(at_id) = at {
+        let current = nodes.get(at_id)?;
+
+        if tree_schemas_is_object(current.settings.get("concurrency")) {
+            return Ok(Some(current));
+        }
+
+        at = current.parent;
+    }
+
+    Ok(None)
 }
 
 /// Adds the version property of a body version source to the input schema of each versioned write,
@@ -204,7 +224,16 @@ fn refuse_non_object_input(
     compiler: &mut TreeSchemasCompiler<'_, '_, '_>,
     pointer: &str,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("refuseNonObjectInput"))
+    compiler.reporter.error(TreeSchemasProblem {
+        rule: TreeSchemasRule::ConcurrencyVersion,
+        pointer: pointer.to_owned(),
+        message:
+            "a body version source adds its property to the input, which is not an object schema"
+                .to_owned(),
+        fix: "make the input an object schema, or read the version from the query or a header"
+            .to_owned(),
+        related: None,
+    })
 }
 
 fn add_version_property(
@@ -212,7 +241,121 @@ fn add_version_property(
     schema: &str,
     routes: &[BodyRoute<'_, '_>],
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("addVersionProperty"))
+    let versioned = routes.iter().find(|route| {
+        route
+            .version
+            .as_ref()
+            .is_some_and(|version| version.property.is_some())
+    });
+    let Some((versioned, version)) =
+        versioned.and_then(|route| Some((route, route.version.as_ref()?)))
+    else {
+        return Ok(());
+    };
+    let Some(property) = &version.property else {
+        return Ok(());
+    };
+    let other = routes.iter().find(|route| {
+        route
+            .version
+            .as_ref()
+            .map(|each| (&each.property, &each.field))
+            != Some((&version.property, &version.field))
+    });
+
+    if let Some(other) = other {
+        return compiler.reporter.error(TreeSchemasProblem {
+            rule: TreeSchemasRule::ConcurrencyVersion,
+            pointer: versioned.pointer.clone(),
+            message: format!(
+                "the input schema '{schema}' is used by a route that adds '{property}' to it and by one that does not add the same"
+            ),
+            fix: "declare two schemas, one for each route".to_owned(),
+            related: Some(vec![TreeSchemasRelated {
+                pointer: other.pointer.clone(),
+                message: format!("this route uses '{schema}' too"),
+            }]),
+        });
+    }
+
+    if let Some(shared_at) = use_outside_inputs(compiler, schema, routes)? {
+        return compiler.reporter.error(TreeSchemasProblem {
+            rule: TreeSchemasRule::ConcurrencyVersion,
+            pointer: versioned.pointer.clone(),
+            message: format!(
+                "the input schema '{schema}' is used outside the inputs of its versioned routes, which would all take '{property}'"
+            ),
+            fix: "declare a schema for the input of the versioned routes alone".to_owned(),
+            related: Some(vec![TreeSchemasRelated {
+                pointer: shared_at,
+                message: format!("'{schema}' is used here too"),
+            }]),
+        });
+    }
+
+    let declared = collected_object_mut(compiler, schema)?
+        .properties
+        .iter()
+        .any(|candidate| candidate.name == *property);
+
+    if declared {
+        return compiler.reporter.error(TreeSchemasProblem {
+            rule: TreeSchemasRule::ConcurrencyVersion,
+            pointer: versioned.pointer.clone(),
+            message: format!(
+                "the input schema '{schema}' declares '{property}', which 'concurrency' adds"
+            ),
+            fix: "remove it; 'concurrency' adds it".to_owned(),
+            related: None,
+        });
+    }
+
+    let Some(version_type) = field_type(compiler, version)? else {
+        return Ok(());
+    };
+    let origin = compiler.reporter.origin(&tree_schemas_pointer(
+        &version.owner.pointer,
+        &["concurrency", "version"],
+    ))?;
+    let mut from = vec![origin.clone()];
+
+    for inherited in routes
+        .iter()
+        .filter_map(|route| route.version.as_ref()?.inherited.as_deref())
+    {
+        from.push(compiler.reporter.origin(inherited)?);
+    }
+
+    let added = tree_schemas_derived_property(TreeSchemasWrittenProperty {
+        name: property.clone(),
+        type_use: version_type,
+        optional: false,
+        origin,
+        derived_from: Some(DerivedFrom {
+            derivation: CONCURRENCY_VERSION_DERIVATION,
+            from,
+        }),
+    });
+
+    collected_object_mut(compiler, schema)?
+        .properties
+        .push(added);
+
+    Ok(())
+}
+
+/// The object schema a versioned input was collected under: any other kind is a bug.
+fn collected_object_mut<'compiler>(
+    compiler: &'compiler mut TreeSchemasCompiler<'_, '_, '_>,
+    schema: &str,
+) -> Result<&'compiler mut ObjectSchema, PassError> {
+    match compiler.schemas.get_mut(schema) {
+        Some(Schema::Object(object)) => Ok(object),
+        _ => Err(InternalError::new(format!(
+            "tree.schemas collected '{schema}' as no object input"
+        ))
+        .into()),
+    }
 }
 
 fn use_outside_inputs(
@@ -220,11 +363,59 @@ fn use_outside_inputs(
     schema: &str,
     routes: &[BodyRoute<'_, '_>],
 ) -> Result<Option<String>, PassError> {
-    Err(not_ported_yet("useOutsideInputs"))
+    let mut own: HashSet<String> = routes.iter().map(|route| route.pointer.clone()).collect();
+
+    own.insert(tree_schemas_pointer("/schemas", &[schema]));
+
+    for (pointer, schema_use) in &compiler.uses {
+        if !own.contains(pointer)
+            && refers_to_schema(&encoded(serde_json::to_value(schema_use))?, schema)
+        {
+            return Ok(Some(pointer.clone()));
+        }
+    }
+
+    for (id, written) in &compiler.schemas {
+        if refers_to_schema(&encoded(serde_json::to_value(written))?, schema) {
+            return Ok(Some(
+                compiler
+                    .written_at
+                    .get(id)
+                    .cloned()
+                    .unwrap_or_else(|| tree_schemas_pointer("/schemas", &[id])),
+            ));
+        }
+    }
+
+    Ok(None)
 }
 
-fn refers_to_schema(value: &JsonValue, schema: &str) -> Result<bool, PassError> {
-    Err(not_ported_yet("refersToSchema"))
+/// An IR value as the JSON the walk of `refers_to_schema` reads.
+fn encoded(value: serde_json::Result<serde_json::Value>) -> Result<JsonValue, PassError> {
+    let value = value.map_err(|failure| {
+        PassError::from(InternalError::new(format!(
+            "tree.schemas cannot encode an IR value: {failure}"
+        )))
+    })?;
+
+    JsonValue::try_from(value).map_err(|failure| {
+        PassError::from(InternalError::new(format!(
+            "tree.schemas holds an IR value that is no JSON value: {failure}"
+        )))
+    })
+}
+
+fn refers_to_schema(value: &JsonValue, schema: &str) -> bool {
+    match value {
+        JsonValue::Array(entries) => entries.iter().any(|entry| refers_to_schema(entry, schema)),
+        JsonValue::Object(members) => {
+            matches!(members.get("schema"), Some(JsonValue::String(named)) if named == schema)
+                || members
+                    .values()
+                    .any(|entry| refers_to_schema(entry, schema))
+        }
+        JsonValue::Null | JsonValue::Bool(_) | JsonValue::Number(_) | JsonValue::String(_) => false,
+    }
 }
 
 /// The item of a `concurrency` owner has the property `field`, whatever the version source.
@@ -256,17 +447,25 @@ fn check_version_field(
     })
 }
 
-fn item_property(
-    compiler: &TreeSchemasCompiler<'_, '_, '_>,
+fn item_property<'compiler>(
+    compiler: &'compiler TreeSchemasCompiler<'_, '_, '_>,
     owner: &TreeNode<'_>,
     field: &str,
-) -> Result<Option<Property>, PassError> {
-    Err(not_ported_yet("itemProperty"))
+) -> Result<Option<&'compiler Property>, PassError> {
+    let item = compiler
+        .uses
+        .get(&tree_schemas_pointer(&owner.pointer, &["item"]));
+    let properties = compiler.object_properties(item)?;
+
+    Ok(properties
+        .and_then(|candidates| candidates.iter().find(|candidate| candidate.name == field)))
 }
 
 fn field_type(
     compiler: &TreeSchemasCompiler<'_, '_, '_>,
     version: &Version<'_, '_>,
 ) -> Result<Option<TypeUse>, PassError> {
-    Err(not_ported_yet("fieldType"))
+    let field = item_property(compiler, version.owner, &version.field)?;
+
+    Ok(field.map(|property| property.r#type.clone()))
 }

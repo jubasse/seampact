@@ -233,8 +233,12 @@ struct PatternParser {
 }
 
 impl PatternParser {
-    fn new(chars: Vec<char>) -> Result<Self, PassError> {
-        Err(not_ported_yet("PatternParser.constructor"))
+    const fn new(chars: Vec<char>) -> Self {
+        Self {
+            chars,
+            at: 0,
+            group_depth: 0,
+        }
     }
 
     fn parse(&mut self) -> Result<String, PassError> {
@@ -309,7 +313,7 @@ impl PatternParser {
 /// [`PassError::NotPortedYet`] until the parser is ported; the brief that ports it decides how a
 /// refusal reaches [`TreeSchemasPatternResult::Refused`].
 pub fn tree_schemas_normalize_pattern(source: &str) -> Result<TreeSchemasPatternResult, PassError> {
-    let mut parser = PatternParser::new(source.chars().collect())?;
+    let mut parser = PatternParser::new(source.chars().collect());
     let normalized = parser.parse()?;
 
     Ok(TreeSchemasPatternResult::Normalized { normalized })

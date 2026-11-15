@@ -9,27 +9,35 @@ use std::collections::{HashMap, HashSet};
 use seampact_diagnostics::InternalError;
 use seampact_ir::Name as IrName;
 use seampact_ir::{
-    Direction, Docs, ExtensionPlace, FieldRestriction, JsonContent, JsonMediaType, NameRole,
-    OpaqueTypeUse, Property, Reason, ScalarType, Schema, TypeUse, UnionTag, UnionVariant,
-    UnknownKeys, UnknownKeysPolicy,
+    ArrayTypeUse, BodyUnionTag, Direction, Docs, ExtensionPlace, Extensions, FieldRestriction,
+    FileTypeUse, HeaderUnionTag, InputPolicy, JsonContent, JsonMediaType, Layer, MapSchema,
+    NameRole, ObjectSchema, OpaqueTypeUse, Origin, Property, Reason, RefTypeUse, RightId,
+    ScalarType, Schema, SchemaId, TypeUse, UnionSchema, UnionTag, UnionVariant, UnknownKeys,
+    UnknownKeysPolicy,
 };
-use seampact_ir::{KnownSchemaRef, KnownTypeUseRef};
-use seampact_json::{JsonObject, JsonValue};
+use seampact_ir::{KnownSchemaRef, KnownTypeUseRef, KnownUnionTagRef};
+use seampact_js::{FiniteNumber, cmp_utf16};
+use seampact_json::{JsonNumber, JsonObject, JsonValue, js_text_of};
 use seampact_naming::{
     CanonicalIdOptions, Name, Role, canonical_id, derive_name, split_name, suffix_words,
 };
-use seampact_pipeline::PassError;
+use seampact_pipeline::{PassError, parse_size};
 
 use crate::core::TreeSchemasReservation;
 use crate::derived::TreeSchemasDerivedHost;
-use crate::extensions::{TreeSchemasExtensionHolder, tree_schemas_has_extensions};
+use crate::extensions::{
+    TreeSchemasExtensionHolder, tree_schemas_extension_slot, tree_schemas_has_extensions,
+};
 use crate::not_ported::not_ported_yet;
 use crate::raw::{
     TreeSchemasProblem, TreeSchemasRelated, TreeSchemasReporter, tree_schemas_entries,
-    tree_schemas_member, tree_schemas_pointer,
+    tree_schemas_is_object, tree_schemas_member, tree_schemas_pointer,
+    tree_schemas_source_property,
 };
 use crate::rule::TreeSchemasRule;
-use crate::scalars::{TreeSchemasScalars, tree_schemas_mapping_docs};
+use crate::scalars::{
+    TreeSchemasScalars, tree_schemas_docs, tree_schemas_mapping_docs, written_count,
+};
 use crate::use_members::use_members;
 
 /// Where a schema sits, which decides the marks it may carry and the unions it may be.
@@ -149,6 +157,16 @@ enum NamedKind {
     Union,
 }
 
+impl NamedKind {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Object => "object",
+            Self::Map => "map",
+            Self::Union => "union",
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 struct DeclaredTarget<'raw> {
     id: String,
@@ -230,8 +248,10 @@ const ANNOTATION_FIX: [(&str, &str); 4] = [
 ];
 
 const SCALAR_TYPES: [&str; 4] = ["string", "integer", "number", "boolean"];
-/// ECMAScript source of a header source, `header.<name>`.
-const HEADER_SOURCE: &str = r"^header\.(.+)$";
+/// The prefix of a header source, `header.<name>`.
+const HEADER_SOURCE_PREFIX: &str = "header.";
+/// A written `null`, what a map without `additionalProperties` compiles.
+static WRITTEN_NULL: JsonValue = JsonValue::Null;
 const JSON_MEDIA: &str = "application/json";
 
 #[derive(Debug, Clone, PartialEq)]
@@ -513,8 +533,12 @@ fn without_nullable(schema_use: &TypeUse) -> Result<NullableSplit, PassError> {
 
 /// A declared scalar marked sensitive: every use of it carries the mark, so a body, an item, a map
 /// key or a header holding it stays sensitive; a property holds the mark itself.
-fn mark_sensitive(compiled: &mut TreeSchemasCompiled) -> Result<(), PassError> {
-    Err(not_ported_yet("markSensitive"))
+fn mark_sensitive(compiled: &mut TreeSchemasCompiled) {
+    compiled.sensitive = true;
+
+    if let TypeUse::Scalar(scalar) = &mut compiled.schema_use {
+        scalar.sensitive = Some(true);
+    }
 }
 
 /// A property's own type use: `nullable` and `sensitive` move to the property.
@@ -630,14 +654,38 @@ fn required_object_targets(
     Ok(targets)
 }
 
-fn schema_origin_pointer(schema: &Schema) -> Result<String, PassError> {
-    let pointer = match KnownSchemaRef::try_from(schema)? {
-        KnownSchemaRef::Object(object) => &object.origin.pointer,
-        KnownSchemaRef::Map(map) => &map.origin.pointer,
-        KnownSchemaRef::Union(union) => &union.origin.pointer,
+fn schema_origin(schema: &Schema) -> Result<&Origin, PassError> {
+    let origin = match KnownSchemaRef::try_from(schema)? {
+        KnownSchemaRef::Object(object) => &object.origin,
+        KnownSchemaRef::Map(map) => &map.origin,
+        KnownSchemaRef::Union(union) => &union.origin,
     };
 
-    Ok(pointer.clone())
+    Ok(origin)
+}
+
+fn schema_origin_pointer(schema: &Schema) -> Result<String, PassError> {
+    Ok(schema_origin(schema)?.pointer.clone())
+}
+
+/// A map key must be a string or an enum.
+fn is_string_key(key_use: &TypeUse) -> Result<bool, PassError> {
+    Ok(match KnownTypeUseRef::try_from(key_use)? {
+        KnownTypeUseRef::Enum(_) => true,
+        KnownTypeUseRef::Scalar(scalar) => scalar.r#type == ScalarType::String,
+        KnownTypeUseRef::Ref(_)
+        | KnownTypeUseRef::Opaque(_)
+        | KnownTypeUseRef::File(_)
+        | KnownTypeUseRef::Array(_) => false,
+    })
+}
+
+/// A written number as JavaScript prints it in a message.
+fn js_number_text(number: &JsonNumber) -> String {
+    match FiniteNumber::new(number.to_f64()) {
+        Some(finite) => finite.to_string(),
+        None => number.to_string(),
+    }
 }
 
 /// The schemas of one api, compiled once each, and the type use at each schema position compiled.
@@ -845,18 +893,18 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
         }
 
         self.record_use(&position.pointer, compiled.schema_use.clone(), directions);
-        self.written_default(Some(value), &position.pointer, &compiled.schema_use)?;
+        self.written_default(Some(value), &position.pointer, &compiled.schema_use);
 
         Ok(())
     }
 
-    pub(crate) fn share_use(
-        &mut self,
-        from: &str,
-        pointer: &str,
-        directions: &[Direction],
-    ) -> Result<(), PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.shareUse"))
+    pub(crate) fn share_use(&mut self, from: &str, pointer: &str, directions: &[Direction]) {
+        let Some(schema_use) = self.uses.get(from) else {
+            return;
+        };
+        let copy = schema_use.clone();
+
+        self.record_use(pointer, copy, directions);
     }
 
     fn record_use(&mut self, pointer: &str, schema_use: TypeUse, directions: &[Direction]) {
@@ -867,12 +915,79 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
 
     pub(crate) fn fields(
         &mut self,
-        value: &JsonValue,
+        value: &'raw JsonValue,
         pointer: &str,
         name: &Name,
         directions: &[Direction],
     ) -> Result<(), PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.fields"))
+        let position = TreeSchemasPosition {
+            pointer: pointer.to_owned(),
+            name: Some(name.clone()),
+            place: TreeSchemasPlace::Position,
+            id: None,
+        };
+
+        if let JsonValue::String(written) = value {
+            return self.fields_reference(written, &position, directions);
+        }
+
+        let entries: Vec<PropertyEntry<'raw>> = tree_schemas_entries(Some(value))
+            .into_iter()
+            .map(|(key, field)| {
+                let wire = key.strip_suffix('?');
+
+                PropertyEntry {
+                    wire: wire.unwrap_or(key).to_owned(),
+                    key: key.to_owned(),
+                    field,
+                    required: wire.is_none(),
+                }
+            })
+            .collect();
+        let words = words_of(Some(name))?;
+        let Some(properties) = self.property_list(&entries, pointer, words.as_deref())? else {
+            return Ok(());
+        };
+
+        if let Some(compiled) = self.object_schema(properties, None, &position)? {
+            self.record_use(pointer, compiled.schema_use, directions);
+        }
+
+        Ok(())
+    }
+
+    // A fields position written as an object schema name: its properties are the fields.
+    fn fields_reference(
+        &mut self,
+        written: &str,
+        position: &TreeSchemasPosition,
+        directions: &[Direction],
+    ) -> Result<(), PassError> {
+        let Some(compiled) = self.reference(written, position)? else {
+            return Ok(());
+        };
+        let names_object = match &compiled.schema_use {
+            TypeUse::Ref(reference) => {
+                self.kind_of(reference.schema.as_str())? == Some(NamedKind::Object)
+            }
+            _ => false,
+        };
+
+        if !names_object {
+            return self.reporter.error(TreeSchemasProblem {
+                rule: TreeSchemasRule::FieldsSchema,
+                pointer: position.pointer.clone(),
+                message: format!(
+                    "'{written}' is not an object schema, whose properties would be the fields"
+                ),
+                fix: "name an object schema, or write a fields map".to_owned(),
+                related: None,
+            });
+        }
+
+        self.record_use(&position.pointer, compiled.schema_use, directions);
+
+        Ok(())
     }
 
     pub(crate) fn derived_object(
@@ -981,7 +1096,7 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
         if matches!(object.get("sensitive"), Some(JsonValue::Bool(true)))
             && position.place == TreeSchemasPlace::Declared
         {
-            mark_sensitive(&mut compiled)?;
+            mark_sensitive(&mut compiled);
         }
 
         if !self.apply_unknown_keys(value, &mut compiled.schema_use, &position.pointer)? {
@@ -1029,7 +1144,7 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
     }
 
     fn unknown_keys(
-        &mut self,
+        &self,
         value: Option<&JsonValue>,
         pointer: &str,
     ) -> Result<Option<UnknownKeys>, PassError> {
@@ -1115,8 +1230,17 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
         value: Option<&JsonValue>,
         pointer: &str,
         schema_use: &TypeUse,
-    ) -> Result<Option<JsonValue>, PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.writtenDefault"))
+    ) -> Option<JsonValue> {
+        let written = tree_schemas_member(value, "default")?;
+
+        self.example_checks.push(TreeSchemasExampleCheck {
+            pointer: tree_schemas_pointer(pointer, &["default"]),
+            value: written.clone(),
+            schema_use: schema_use.clone(),
+            written: TreeSchemasWrittenValue::Default,
+        });
+
+        Some(written.clone())
     }
 
     fn compile_shape(
@@ -1353,27 +1477,147 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
         name: &str,
         position: &TreeSchemasPosition,
     ) -> Result<Option<TreeSchemasCompiled>, PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.reference"))
+        let Some(target) = self.declared_target(name, &mut HashSet::new())? else {
+            self.reporter.error(TreeSchemasProblem {
+                rule: TreeSchemasRule::SchemaUnknown,
+                pointer: position.pointer.clone(),
+                message: format!("no schema '{name}' is declared"),
+                fix: "declare it under 'schemas', or fix the name".to_owned(),
+                related: None,
+            })?;
+
+            return Ok(None);
+        };
+
+        // The refusal is already reported; a use would resolve to the core schema, not the author's.
+        if self.refused_reserved.contains(&target.id) {
+            return Ok(None);
+        }
+
+        let compiled = match target.kind {
+            None => self.compile_declared(&target.id)?,
+            Some(kind) => Some(TreeSchemasCompiled {
+                schema_use: self.reference_use(&target.id, target.keys_from.as_deref())?,
+                sensitive: false,
+                header_union: kind == NamedKind::Union && Self::is_header_tagged(target.value),
+            }),
+        };
+        let Some(mut compiled) = compiled else {
+            return Ok(None);
+        };
+
+        if !self.check_header_union(compiled.header_union, position)? {
+            return Ok(None);
+        }
+
+        if let Some(keys_from) = &target.keys_from {
+            self.record_unknown_keys_use(keys_from, &position.pointer);
+        }
+
+        if target.nullable {
+            *use_members(&mut compiled.schema_use)?.nullable = Some(true);
+        }
+
+        Ok(Some(compiled))
     }
 
-    fn record_unknown_keys_use(
-        &mut self,
-        declaration: &str,
-        pointer: &str,
-    ) -> Result<(), PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.recordUnknownKeysUse"))
+    fn record_unknown_keys_use(&mut self, declaration: &str, pointer: &str) {
+        let written = tree_schemas_pointer("/schemas", &[declaration, "unknownKeys"]);
+
+        self.unknown_keys_uses
+            .entry(written)
+            .or_default()
+            .push(pointer.to_owned());
     }
 
     fn declared_target(
-        &mut self,
+        &self,
         name: &str,
         seen: &mut HashSet<String>,
     ) -> Result<Option<DeclaredTarget<'raw>>, PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.declaredTarget"))
+        let Some(value) = tree_schemas_member(self.catalogue, name) else {
+            return self.seeded_core_target(name);
+        };
+        let alias = match value {
+            JsonValue::String(text) => Some(text.as_str()),
+            _ => match tree_schemas_member(Some(value), "$ref") {
+                Some(JsonValue::String(text)) => Some(text.as_str()),
+                _ => None,
+            },
+        };
+        let writes_unknown_keys = match value {
+            JsonValue::Object(object) => has(object, "unknownKeys"),
+            _ => false,
+        };
+
+        if let Some(alias) = alias
+            && !seen.contains(name)
+        {
+            seen.insert(name.to_owned());
+
+            let Some(target) = self.declared_target(alias, seen)? else {
+                return Ok(Some(DeclaredTarget {
+                    id: name.to_owned(),
+                    kind: None,
+                    value: Some(value),
+                    nullable: false,
+                    keys_from: None,
+                }));
+            };
+            let nullable = target.nullable
+                || matches!(
+                    tree_schemas_member(Some(value), "nullable"),
+                    Some(JsonValue::Bool(true))
+                );
+            let keys_from = if writes_unknown_keys {
+                Some(name.to_owned())
+            } else {
+                target.keys_from
+            };
+
+            return Ok(Some(DeclaredTarget {
+                nullable,
+                keys_from,
+                ..target
+            }));
+        }
+
+        let shape = match value {
+            JsonValue::Object(object) => tree_schemas_shape_of(object),
+            _ => None,
+        };
+        let kind = match shape {
+            Some(Shape::Object | Shape::AllOf | Shape::Derived) => Some(NamedKind::Object),
+            Some(Shape::Map) => Some(NamedKind::Map),
+            Some(Shape::Union) => Some(NamedKind::Union),
+            _ => None,
+        };
+
+        Ok(Some(DeclaredTarget {
+            id: name.to_owned(),
+            kind,
+            value: Some(value),
+            nullable: false,
+            keys_from: writes_unknown_keys.then(|| name.to_owned()),
+        }))
     }
 
     fn seeded_core_target(&self, name: &str) -> Result<Option<DeclaredTarget<'raw>>, PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.seededCoreTarget"))
+        let Some(schema) = self.schemas.get(name) else {
+            return Ok(None);
+        };
+
+        if !matches!(schema_origin(schema)?.layer, Layer::Core) {
+            return Ok(None);
+        }
+
+        Ok(Some(DeclaredTarget {
+            id: name.to_owned(),
+            kind: Some(NamedKind::Object),
+            value: None,
+            nullable: false,
+            keys_from: None,
+        }))
     }
 
     fn compile_declared(&mut self, id: &str) -> Result<Option<TreeSchemasCompiled>, PassError> {
@@ -1422,15 +1666,61 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
     }
 
     fn report_cycle(&mut self, id: &str, pointer: &str) -> Result<(), PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.reportCycle"))
+        let derived = matches!(
+            tree_schemas_member(self.catalogue, id),
+            Some(JsonValue::Object(object)) if tree_schemas_shape_of(object) == Some(Shape::Derived)
+        );
+
+        let (message, fix) = if derived {
+            (
+                format!(
+                    "the derived object '{id}' reaches itself through the sources of its 'pick' or 'omit' chain"
+                ),
+                "derive the chain from a schema that is not derived from it",
+            )
+        } else {
+            (
+                format!(
+                    "the schema '{id}' reaches itself through schemas that are not objects, maps or unions"
+                ),
+                "break the cycle with a named object, or remove the self-reference",
+            )
+        };
+
+        self.reporter.error(TreeSchemasProblem {
+            rule: TreeSchemasRule::SchemaCycle,
+            pointer: pointer.to_owned(),
+            message,
+            fix: fix.to_owned(),
+            related: None,
+        })
     }
 
     fn reference_use(&self, id: &str, keys_from: Option<&str>) -> Result<TypeUse, PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.referenceUse"))
+        let value = tree_schemas_member(self.catalogue, id);
+        let nullable = matches!(
+            tree_schemas_member(value, "nullable"),
+            Some(JsonValue::Bool(true))
+        );
+        let unknown_keys = match keys_from {
+            None => None,
+            Some(declaration) => self.unknown_keys(
+                tree_schemas_member(self.catalogue, declaration),
+                &tree_schemas_pointer("/schemas", &[declaration]),
+            )?,
+        };
+
+        Ok(TypeUse::Ref(RefTypeUse {
+            schema: SchemaId::new(id.to_owned()),
+            unknown_keys,
+            nullable: nullable.then_some(true),
+            docs: None,
+            examples: None,
+        }))
     }
 
-    fn is_header_tagged(&self, value: Option<&JsonValue>) -> Result<bool, PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.isHeaderTagged"))
+    fn is_header_tagged(value: Option<&JsonValue>) -> bool {
+        tree_schemas_is_object(tree_schemas_member(value, "discriminator"))
     }
 
     fn check_header_union(
@@ -1460,7 +1750,19 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
     }
 
     fn kind_of(&self, id: &str) -> Result<Option<NamedKind>, PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.kindOf"))
+        if let Some(schema) = self.schemas.get(id) {
+            let kind = match KnownSchemaRef::try_from(schema)? {
+                KnownSchemaRef::Object(_) => NamedKind::Object,
+                KnownSchemaRef::Map(_) => NamedKind::Map,
+                KnownSchemaRef::Union(_) => NamedKind::Union,
+            };
+
+            return Ok(Some(kind));
+        }
+
+        Ok(self
+            .declared_target(id, &mut HashSet::new())?
+            .and_then(|target| target.kind))
     }
 
     fn id_of(&self, position: &TreeSchemasPosition) -> Result<String, PassError> {
@@ -1487,11 +1789,95 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
         position: &TreeSchemasPosition,
         kind: NamedKind,
     ) -> Result<bool, PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.claimed"))
+        let Some(name) = &position.name else {
+            self.reporter.error(TreeSchemasProblem {
+                rule: TreeSchemasRule::SchemaInline,
+                pointer: position.pointer.clone(),
+                message: format!("an inline {} has no derived name here", kind.as_str()),
+                fix: "declare it under 'schemas' and write its name here".to_owned(),
+                related: None,
+            })?;
+
+            return Ok(false);
+        };
+        let id = self.id_of(position)?;
+
+        if position.id.is_some() {
+            return Ok(true);
+        }
+
+        self.claim_hoisted(&id, name, &position.pointer)
     }
 
     fn claim_hoisted(&mut self, id: &str, name: &Name, pointer: &str) -> Result<bool, PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.claimHoisted"))
+        let keys = claim_keys(id, name)?;
+        let other = keys
+            .iter()
+            .filter_map(|key| self.claims.get(key))
+            .find(|claim| claim.pointer != pointer)
+            .cloned();
+        let fix = collision_fix(&name.role).unwrap_or(OPERATION_COLLISION_FIX);
+
+        let Some(other) = other else {
+            for key in keys {
+                self.claims.insert(
+                    key,
+                    Claim {
+                        id: id.to_owned(),
+                        pointer: pointer.to_owned(),
+                        reservation: None,
+                    },
+                );
+            }
+
+            return Ok(true);
+        };
+
+        if let Some(reservation) = &other.reservation {
+            let related = if reservation.seed.is_none() {
+                vec![TreeSchemasRelated {
+                    pointer: reservation.pointer.clone(),
+                    message: format!(
+                        "the params of '{}' take the id here",
+                        reservation.id.as_str()
+                    ),
+                }]
+            } else {
+                Vec::new()
+            };
+
+            self.reporter.error(TreeSchemasProblem {
+                rule: TreeSchemasRule::SchemaReserved,
+                pointer: pointer.to_owned(),
+                message: reserved_message("the name", id, reservation),
+                fix: fix.to_owned(),
+                related: Some(related),
+            })?;
+
+            return Ok(false);
+        }
+
+        let message = if other.id == id {
+            format!("the name '{id}' this schema derives is already the name of another schema")
+        } else {
+            format!(
+                "the name '{id}' this schema derives gives the same identifier as the schema '{}'",
+                other.id
+            )
+        };
+
+        self.reporter.error(TreeSchemasProblem {
+            rule: TreeSchemasRule::NameCollision,
+            pointer: pointer.to_owned(),
+            message,
+            fix: fix.to_owned(),
+            related: Some(vec![TreeSchemasRelated {
+                pointer: other.pointer.clone(),
+                message: format!("'{}' is named here", other.id),
+            }]),
+        })?;
+
+        Ok(false)
     }
 
     fn hoist(
@@ -1500,7 +1886,109 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
         value: Option<&JsonObject>,
         position: &TreeSchemasPosition,
     ) -> Result<Option<TreeSchemasCompiled>, PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.hoist"))
+        let kind = match &body {
+            HoistedBody::Object { .. } => NamedKind::Object,
+            HoistedBody::Map { .. } => NamedKind::Map,
+            HoistedBody::Union { .. } => NamedKind::Union,
+        };
+
+        if !self.claimed(position, kind)? {
+            return Ok(None);
+        }
+
+        let id = self.id_of(position)?;
+        let Some(name) = &position.name else {
+            return Err(InternalError::new(format!(
+                "tree.schemas hoists the schema at {} without a derived name",
+                position.pointer
+            ))
+            .into());
+        };
+        let schema_name = ir_name(name)?;
+        let written = |key: &str| value.and_then(|object| object.get(key));
+        let type_name = match written("typeName") {
+            Some(JsonValue::String(text)) => Some(text.clone()),
+            _ => None,
+        };
+        let is_written_true = |key: &str| matches!(written(key), Some(JsonValue::Bool(true)));
+        // A schema written `nullable` takes a null example (ADR 0003 section 1).
+        let example_use = TypeUse::Ref(RefTypeUse {
+            schema: SchemaId::new(id.clone()),
+            unknown_keys: None,
+            nullable: is_written_true("nullable").then_some(true),
+            docs: None,
+            examples: None,
+        });
+        let examples = self
+            .written_examples(written("examples"), &position.pointer, &example_use)
+            .unwrap_or_default();
+        // A property's own `deprecated` marks the property (ADR 0003 section 1).
+        let deprecated = (position.place != TreeSchemasPlace::Property
+            && is_written_true("deprecated"))
+        .then_some(true);
+        let docs = value.map(tree_schemas_mapping_docs).unwrap_or_default();
+        let extensions = match value {
+            Some(object) if position.place != TreeSchemasPlace::Property => {
+                tree_schemas_extension_slot(object)
+            }
+            _ => Extensions::new(),
+        };
+        let origin = self.reporter.origin(&position.pointer)?;
+        let schema_id = SchemaId::new(id.clone());
+        let header_union = matches!(
+            &body,
+            HoistedBody::Union { tag, .. }
+                if matches!(KnownUnionTagRef::try_from(tag)?, KnownUnionTagRef::Header(_))
+        );
+        let schema = match body {
+            HoistedBody::Object { properties } => Schema::Object(ObjectSchema {
+                properties,
+                id: schema_id,
+                name: schema_name,
+                type_name,
+                directions: Vec::new(),
+                examples,
+                docs,
+                extensions,
+                origin,
+                deprecated,
+            }),
+            HoistedBody::Map { keys, values } => Schema::Map(MapSchema {
+                keys: keys.map(|keys| *keys),
+                values: *values,
+                id: schema_id,
+                name: schema_name,
+                type_name,
+                directions: Vec::new(),
+                examples,
+                docs,
+                extensions,
+                origin,
+                deprecated,
+            }),
+            HoistedBody::Union { tag, variants } => Schema::Union(UnionSchema {
+                tag,
+                variants,
+                id: schema_id,
+                name: schema_name,
+                type_name,
+                directions: Vec::new(),
+                examples,
+                docs,
+                extensions,
+                origin,
+                deprecated,
+            }),
+        };
+
+        self.written_at.insert(id.clone(), position.pointer.clone());
+        self.schemas.insert(id.clone(), schema);
+
+        Ok(Some(TreeSchemasCompiled {
+            schema_use: self.reference_use(&id, None)?,
+            sensitive: false,
+            header_union,
+        }))
     }
 
     fn object_schema(
@@ -1509,7 +1997,19 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
         value: Option<&JsonObject>,
         position: &TreeSchemasPosition,
     ) -> Result<Option<TreeSchemasCompiled>, PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.objectSchema"))
+        if properties.is_empty() && position.place != TreeSchemasPlace::Variant {
+            self.reporter.error(TreeSchemasProblem {
+                rule: TreeSchemasRule::ObjectEmpty,
+                pointer: position.pointer.clone(),
+                message: "an object needs at least one property (only a union variant may hold its tag alone)".to_owned(),
+                fix: "add a property, or write '{ opaque: <reason> }' for a free-form value".to_owned(),
+                related: None,
+            })?;
+
+            return Ok(None);
+        }
+
+        self.hoist(HoistedBody::Object { properties }, value, position)
     }
 
     /// The host the derived-object merge reads through: the compiler itself.
@@ -1527,7 +2027,7 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
 
     fn object(
         &mut self,
-        value: &JsonObject,
+        value: &'raw JsonObject,
         position: &TreeSchemasPosition,
     ) -> Result<Option<TreeSchemasCompiled>, PassError> {
         let words = words_of(position.name.as_ref())?;
@@ -1540,33 +2040,214 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
 
     fn properties(
         &mut self,
-        value: &JsonObject,
+        value: &'raw JsonObject,
         pointer: &str,
         words: Option<&[String]>,
     ) -> Result<Option<Vec<Property>>, PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.properties"))
+        let written: &[JsonValue] = match value.get("required") {
+            Some(JsonValue::Array(names)) => names,
+            _ => &[],
+        };
+        let required: IndexSet<&str> = written
+            .iter()
+            .filter_map(|name| match name {
+                JsonValue::String(text) => Some(text.as_str()),
+                _ => None,
+            })
+            .collect();
+        let declared = tree_schemas_entries(value.get("properties"));
+        let unknown: Vec<&str> = required
+            .iter()
+            .copied()
+            .filter(|name| !declared.iter().any(|(key, _)| key == name))
+            .collect();
+
+        for name in &unknown {
+            self.reporter.error(TreeSchemasProblem {
+                rule: TreeSchemasRule::RequiredUnknown,
+                pointer: tree_schemas_pointer(pointer, &["required"]),
+                message: format!("'{name}' is required but is no property of the object"),
+                fix: "declare the property, or remove it from 'required'".to_owned(),
+                related: None,
+            })?;
+        }
+
+        let entries: Vec<PropertyEntry<'raw>> = declared
+            .into_iter()
+            .map(|(key, field)| PropertyEntry {
+                wire: key.to_owned(),
+                key: key.to_owned(),
+                field,
+                required: required.contains(key),
+            })
+            .collect();
+        let properties = self.property_list(
+            &entries,
+            &tree_schemas_pointer(pointer, &["properties"]),
+            words,
+        )?;
+
+        if unknown.is_empty() {
+            return Ok(properties);
+        }
+
+        Ok(None)
     }
 
     fn property_list(
         &mut self,
-        entries: &[PropertyEntry<'_>],
+        entries: &[PropertyEntry<'raw>],
         pointer: &str,
         words: Option<&[String]>,
     ) -> Result<Option<Vec<Property>>, PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.propertyList"))
+        let mut properties = Vec::new();
+        let mut identifiers: HashMap<String, String> = HashMap::new();
+        let mut failed = false;
+
+        for entry in entries {
+            let at = tree_schemas_pointer(pointer, &[&entry.key]);
+            let Some(property) =
+                self.property(&entry.wire, entry.field, &at, words, entry.required)?
+            else {
+                failed = true;
+
+                continue;
+            };
+            let segments = match &property.code_name {
+                Some(code_name) => code_name.segments.clone(),
+                None => split_name(&entry.wire),
+            }
+            .join(" ");
+
+            if let Some(other) = identifiers.get(&segments) {
+                failed = true;
+                self.reporter.error(TreeSchemasProblem {
+                    rule: TreeSchemasRule::NameCollision,
+                    pointer: at,
+                    message: format!(
+                        "the properties '{}' and '{other}' give the same identifier",
+                        entry.wire
+                    ),
+                    fix: "rename one, or set a 'codeName'".to_owned(),
+                    related: Some(vec![TreeSchemasRelated {
+                        pointer: tree_schemas_pointer(pointer, &[other]),
+                        message: format!("'{other}' is here"),
+                    }]),
+                })?;
+            }
+
+            identifiers.insert(segments, entry.key.clone());
+            properties.push(property);
+        }
+
+        if failed {
+            return Ok(None);
+        }
+
+        Ok(Some(properties))
     }
 
     fn property(
         &mut self,
         wire: &str,
-        field: &JsonValue,
+        field: &'raw JsonValue,
         pointer: &str,
         words: Option<&[String]>,
         required: bool,
     ) -> Result<Option<Property>, PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.property"))
+        let own = split_name(wire);
+        let compiled = self.compile_at(
+            field,
+            &TreeSchemasPosition {
+                pointer: pointer.to_owned(),
+                name: child_name(words, &own, ChildRole::Property)?,
+                place: TreeSchemasPlace::Property,
+                id: None,
+            },
+        )?;
+        let code_name = self.code_name(field, &own, wire, pointer)?;
+        let restricted_to =
+            self.restriction(tree_schemas_member(Some(field), "restrictedTo"), pointer)?;
+        let default_value = tree_schemas_member(Some(field), "default");
+        let mut refused_required = Vec::new();
+
+        if required {
+            if restricted_to.is_some() {
+                refused_required.push("a restricted property is optional by nature");
+            }
+
+            if default_value.is_some() {
+                refused_required.push("a default fills an absent property");
+            }
+        }
+
+        for reason in &refused_required {
+            self.reporter.error(TreeSchemasProblem {
+                rule: TreeSchemasRule::RequiredProperty,
+                pointer: pointer.to_owned(),
+                message: format!("'{wire}' is listed in 'required', but {reason}"),
+                fix: "remove it from 'required'".to_owned(),
+                related: None,
+            })?;
+        }
+
+        let (Some(compiled), false) = (
+            compiled,
+            code_name == CodeNameOutcome::Refused || !refused_required.is_empty(),
+        ) else {
+            return Ok(None);
+        };
+
+        let own_use = own_type_use(&compiled.schema_use)?;
+        let field_shape = match field {
+            JsonValue::Object(object) => tree_schemas_shape_of(object),
+            _ => None,
+        };
+        let writes_schema = field_shape.is_some_and(|shape| SCHEMA_WRITING_SHAPES.contains(&shape));
+        // An inline object, map or union keeps its examples on its hoisted schema.
+        let examples = if writes_schema {
+            None
+        } else {
+            self.written_examples(
+                tree_schemas_member(Some(field), "examples"),
+                pointer,
+                &compiled.schema_use,
+            )
+        };
+        let defaulted = self.written_default(Some(field), pointer, &compiled.schema_use);
+        let marked = |key: &str| {
+            matches!(
+                tree_schemas_member(Some(field), key),
+                Some(JsonValue::Bool(true))
+            )
+        };
+        let extensions = match field {
+            JsonValue::Object(object) => tree_schemas_extension_slot(object),
+            _ => Extensions::new(),
+        };
+
+        Ok(Some(Property {
+            name: wire.to_owned(),
+            r#type: own_use.schema_use,
+            optional: !required,
+            nullable: own_use.nullable,
+            sensitive: marked("sensitive") || compiled.sensitive,
+            restricted_to,
+            default: defaulted,
+            deprecated: marked("deprecated"),
+            code_name: match code_name {
+                CodeNameOutcome::Written(written) => Some(written),
+                CodeNameOutcome::Absent | CodeNameOutcome::Refused => None,
+            },
+            docs: tree_schemas_docs(Some(field)),
+            extensions,
+            origin: self.reporter.origin(pointer)?,
+            derived_from: None,
+            examples,
+        }))
     }
 
+    // ADR 0007 sections 1 and 2: a codeName replaces the segments of the wire name; a name with none needs one.
     fn code_name(
         &mut self,
         field: &JsonValue,
@@ -1574,7 +2255,46 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
         wire: &str,
         pointer: &str,
     ) -> Result<CodeNameOutcome, PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.codeName"))
+        let written = match tree_schemas_member(Some(field), "codeName") {
+            Some(JsonValue::String(text)) => Some(text.as_str()),
+            _ => None,
+        };
+        let segments = match written {
+            Some(text) => split_name(text),
+            None => own.to_vec(),
+        };
+
+        if !segments.is_empty() {
+            return Ok(match written {
+                Some(_) => CodeNameOutcome::Written(IrName {
+                    segments,
+                    role: NameRole::Member,
+                    status: None,
+                }),
+                None => CodeNameOutcome::Absent,
+            });
+        }
+
+        let problem = match written {
+            Some(text) => TreeSchemasProblem {
+                rule: TreeSchemasRule::NameSegments,
+                pointer: tree_schemas_pointer(pointer, &["codeName"]),
+                message: format!("the codeName '{text}' yields no identifier segment"),
+                fix: "write a codeName with letters or digits".to_owned(),
+                related: None,
+            },
+            None => TreeSchemasProblem {
+                rule: TreeSchemasRule::NameSegments,
+                pointer: pointer.to_owned(),
+                message: format!("the property '{wire}' yields no identifier segment"),
+                fix: "set its 'codeName'".to_owned(),
+                related: None,
+            },
+        };
+
+        self.reporter.error(problem)?;
+
+        Ok(CodeNameOutcome::Refused)
     }
 
     fn restriction(
@@ -1582,24 +2302,175 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
         written: Option<&JsonValue>,
         pointer: &str,
     ) -> Result<Option<FieldRestriction>, PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.restriction"))
+        let Some(written) = written else {
+            return Ok(None);
+        };
+        let origin = Some(
+            self.reporter
+                .origin(&tree_schemas_pointer(pointer, &["restrictedTo"]))?,
+        );
+
+        if let JsonValue::String(right) = written {
+            return Ok(Some(FieldRestriction {
+                right: RightId::new(right.clone()),
+                params: None,
+                input_policy: None,
+                origin,
+            }));
+        }
+
+        let right = guaranteed_string(
+            tree_schemas_member(Some(written), "right"),
+            "right",
+            pointer,
+        )?;
+        let input_policy = match tree_schemas_member(Some(written), "input") {
+            Some(JsonValue::String(text)) if text == "reject" => Some(InputPolicy::Reject),
+            Some(JsonValue::String(text)) if text == "strip" => Some(InputPolicy::Strip),
+            _ => None,
+        };
+
+        Ok(Some(FieldRestriction {
+            right: RightId::new(right.to_owned()),
+            params: tree_schemas_member(Some(written), "params").cloned(),
+            input_policy,
+            origin,
+        }))
     }
 
     fn map(
         &mut self,
-        value: &JsonObject,
+        value: &'raw JsonObject,
         position: &TreeSchemasPosition,
     ) -> Result<Option<TreeSchemasCompiled>, PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.map"))
+        let pointer = position.pointer.as_str();
+        let words = words_of(position.name.as_ref())?;
+        let values = self.compile_at(
+            value.get("additionalProperties").unwrap_or(&WRITTEN_NULL),
+            &TreeSchemasPosition {
+                pointer: tree_schemas_pointer(pointer, &["additionalProperties"]),
+                name: child_name(words.as_deref(), &[], ChildRole::Value)?,
+                place: TreeSchemasPlace::Nested,
+                id: None,
+            },
+        )?;
+        let key_pointer = tree_schemas_pointer(pointer, &["propertyNames"]);
+        let written_keys = value.get("propertyNames");
+        let keys = match written_keys {
+            None => None,
+            Some(names) => self.compile_at(
+                names,
+                &TreeSchemasPosition {
+                    pointer: key_pointer.clone(),
+                    name: None,
+                    place: TreeSchemasPlace::Nested,
+                    id: None,
+                },
+            )?,
+        };
+        let key_use = keys.map(|compiled| compiled.schema_use);
+
+        if let Some(key_use) = &key_use
+            && !is_string_key(key_use)?
+        {
+            self.reporter.error(TreeSchemasProblem {
+                rule: TreeSchemasRule::MapKeys,
+                pointer: key_pointer,
+                message: "the keys of a map are strings".to_owned(),
+                fix: "write a string schema (with a format, a pattern or a length) or an enum"
+                    .to_owned(),
+                related: None,
+            })?;
+
+            return Ok(None);
+        }
+
+        let Some(values) = values else {
+            return Ok(None);
+        };
+
+        if written_keys.is_some() && key_use.is_none() {
+            return Ok(None);
+        }
+
+        self.hoist(
+            HoistedBody::Map {
+                keys: key_use.map(Box::new),
+                values: Box::new(values.schema_use),
+            },
+            Some(value),
+            position,
+        )
     }
 
     fn array(
         &mut self,
-        value: &JsonObject,
+        value: &'raw JsonObject,
         position: &TreeSchemasPosition,
         plain: &dyn Fn(TypeUse) -> TreeSchemasCompiled,
     ) -> Result<Option<TreeSchemasCompiled>, PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.array"))
+        let Some(written_items) = value.get("items") else {
+            self.reporter.error(TreeSchemasProblem {
+                rule: TreeSchemasRule::SchemaShape,
+                pointer: position.pointer.clone(),
+                message: "an array needs its item schema".to_owned(),
+                fix: "add 'items'".to_owned(),
+                related: None,
+            })?;
+
+            return Ok(None);
+        };
+        let words = words_of(position.name.as_ref())?;
+        let items = self.compile_at(
+            written_items,
+            &TreeSchemasPosition {
+                pointer: tree_schemas_pointer(&position.pointer, &["items"]),
+                name: child_name(words.as_deref(), &[], ChildRole::Item)?,
+                place: TreeSchemasPlace::Nested,
+                id: None,
+            },
+        )?;
+        let Some(items) = items else {
+            return Ok(None);
+        };
+        let written_number = |key: &str| match value.get(key) {
+            Some(JsonValue::Number(number)) => Some(number),
+            _ => None,
+        };
+        let min_items = written_number("minItems");
+        let max_items = written_number("maxItems");
+
+        if let (Some(min), Some(max)) = (min_items, max_items)
+            && min.to_f64() > max.to_f64()
+        {
+            self.reporter.error(TreeSchemasProblem {
+                rule: TreeSchemasRule::RefinementRange,
+                pointer: position.pointer.clone(),
+                message: format!(
+                    "no value fits the schema: 'minItems' {} is above 'maxItems' {}",
+                    js_number_text(min),
+                    js_number_text(max)
+                ),
+                fix: "lower the minimum or raise the maximum".to_owned(),
+                related: None,
+            })?;
+
+            return Ok(None);
+        }
+
+        let count = |number: Option<&JsonNumber>, key: &str| match number {
+            Some(written) => written_count(written, key, &position.pointer).map(Some),
+            None => Ok(None),
+        };
+
+        Ok(Some(plain(TypeUse::Array(ArrayTypeUse {
+            items: Box::new(items.schema_use),
+            min_items: count(min_items, "minItems")?,
+            max_items: count(max_items, "maxItems")?,
+            nullable: None,
+            docs: None,
+            examples: None,
+        }))))
     }
 
     fn scalar(
@@ -1666,7 +2537,55 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
         pointer: &str,
         plain: &dyn Fn(TypeUse) -> TreeSchemasCompiled,
     ) -> Result<Option<TreeSchemasCompiled>, PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.file"))
+        let media = tree_schemas_member(written, "media");
+        let max_size = tree_schemas_member(written, "maxSize");
+        let max_size_bytes = match max_size {
+            Some(JsonValue::String(text)) => parse_size(text)?,
+            _ => None,
+        };
+
+        if max_size.is_some() && max_size_bytes.is_none() {
+            self.reporter.error(TreeSchemasProblem {
+                rule: TreeSchemasRule::SchemaShape,
+                pointer: tree_schemas_pointer(pointer, &["file", "maxSize"]),
+                message: format!(
+                    "'{}' is no size this compiler can hold",
+                    js_text_of(max_size)
+                ),
+                fix: "write a size such as 20MiB".to_owned(),
+                related: None,
+            })?;
+
+            return Ok(None);
+        }
+
+        let max_size_bytes = max_size_bytes
+            .map(|bytes| {
+                i64::try_from(bytes).map_err(|_| {
+                    PassError::from(InternalError::new(format!(
+                        "tree.schemas found the size {bytes} at {pointer}, beyond a size the IR holds"
+                    )))
+                })
+            })
+            .transpose()?;
+        let media_types = match media {
+            Some(JsonValue::Array(types)) => types
+                .iter()
+                .filter_map(|media_type| match media_type {
+                    JsonValue::String(text) => Some(text.clone()),
+                    _ => None,
+                })
+                .collect(),
+            _ => Vec::new(),
+        };
+
+        Ok(Some(plain(TypeUse::File(FileTypeUse {
+            media: media_types,
+            max_size_bytes,
+            nullable: None,
+            docs: None,
+            examples: None,
+        }))))
     }
 
     fn enum_use(
@@ -1680,14 +2599,129 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
 
     fn union(
         &mut self,
-        value: &JsonObject,
+        value: &'raw JsonObject,
         position: &TreeSchemasPosition,
     ) -> Result<Option<TreeSchemasCompiled>, PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.union"))
+        let pointer = position.pointer.as_str();
+        let Some(tag) = self.union_tag(value.get("discriminator"), pointer)? else {
+            return Ok(None);
+        };
+        let tag_in_header = matches!(
+            KnownUnionTagRef::try_from(&tag)?,
+            KnownUnionTagRef::Header(_)
+        );
+
+        if !self.check_header_union(tag_in_header, position)? {
+            return Ok(None);
+        }
+
+        let words = words_of(position.name.as_ref())?;
+        let mut variants: Vec<UnionVariant> = Vec::new();
+        let mut failed = false;
+
+        for (written, variant) in tree_schemas_entries(value.get("oneOf")) {
+            let at = tree_schemas_pointer(pointer, &["oneOf", written]);
+            let compiled = self.compile_at(
+                variant,
+                &TreeSchemasPosition {
+                    pointer: at.clone(),
+                    name: child_name(words.as_deref(), &split_name(written), ChildRole::Variant)?,
+                    place: TreeSchemasPlace::Variant,
+                    id: None,
+                },
+            )?;
+
+            if let Some(compiled) = &compiled
+                && let TypeUse::Ref(reference) = &compiled.schema_use
+                && reference.nullable != Some(true)
+                && self.kind_of(reference.schema.as_str())? == Some(NamedKind::Object)
+            {
+                variants.push(UnionVariant {
+                    tag: written.to_owned(),
+                    schema: reference.schema.clone(),
+                    docs: Self::variant_docs(variant),
+                });
+
+                continue;
+            }
+
+            failed = true;
+
+            let Some(compiled) = compiled else {
+                continue;
+            };
+            let nullable = matches!(
+                &compiled.schema_use,
+                TypeUse::Ref(reference) if reference.nullable == Some(true)
+            );
+            let (message, fix) = if nullable {
+                (
+                    format!(
+                        "the variant '{written}' is nullable, and a variant is an object that is never null"
+                    ),
+                    "name the object schema itself, without 'nullable'",
+                )
+            } else {
+                (
+                    format!("the variant '{written}' is not an object schema"),
+                    "make the variant an object, or name an object schema",
+                )
+            };
+
+            self.reporter.error(TreeSchemasProblem {
+                rule: TreeSchemasRule::UnionVariant,
+                pointer: at,
+                message,
+                fix: fix.to_owned(),
+                related: None,
+            })?;
+        }
+
+        if variants.is_empty() && !failed {
+            self.reporter.error(TreeSchemasProblem {
+                rule: TreeSchemasRule::UnionVariant,
+                pointer: tree_schemas_pointer(pointer, &["oneOf"]),
+                message: "a union needs at least one variant".to_owned(),
+                fix: "map each tag value to its variant schema".to_owned(),
+                related: None,
+            })?;
+        }
+
+        if failed || variants.is_empty() {
+            return Ok(None);
+        }
+
+        variants.sort_by(|a, b| cmp_utf16(&a.tag, &b.tag));
+
+        if let KnownUnionTagRef::Body(body) = KnownUnionTagRef::try_from(&tag)? {
+            self.body_tags.push(BodyTag {
+                pointer: pointer.to_owned(),
+                property: body.property.clone(),
+                variants: variants.clone(),
+            });
+        }
+
+        self.hoist(HoistedBody::Union { tag, variants }, Some(value), position)
     }
 
-    fn variant_docs(&self, variant: &JsonValue) -> Result<Option<Docs>, PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.variantDocs"))
+    // A variant naming a schema holds its own docs; an inline variant keeps them on its hoisted schema.
+    fn variant_docs(variant: &JsonValue) -> Option<Docs> {
+        let shape = match variant {
+            JsonValue::Object(object) => tree_schemas_shape_of(object),
+            _ => None,
+        };
+
+        if shape != Some(Shape::Reference) {
+            return None;
+        }
+
+        let docs = tree_schemas_docs(Some(variant));
+
+        if docs.summary.is_none() && docs.description.is_none() {
+            return None;
+        }
+
+        Some(docs)
     }
 
     fn union_tag(
@@ -1695,7 +2729,34 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
         written: Option<&JsonValue>,
         pointer: &str,
     ) -> Result<Option<UnionTag>, PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.unionTag"))
+        if let Some(JsonValue::String(property)) = written {
+            return Ok(Some(UnionTag::Body(BodyUnionTag {
+                property: property.clone(),
+            })));
+        }
+
+        let from = match tree_schemas_member(written, "from") {
+            None | Some(JsonValue::Null) => String::new(),
+            other => js_text_of(other),
+        };
+
+        if let Some(name) = tree_schemas_source_property(&from, HEADER_SOURCE_PREFIX) {
+            return Ok(Some(UnionTag::Header(HeaderUnionTag {
+                name: name.to_owned(),
+            })));
+        }
+
+        self.reporter.error(TreeSchemasProblem {
+            rule: TreeSchemasRule::UnionDiscriminator,
+            pointer: pointer.to_owned(),
+            message:
+                "a union needs a discriminator: its tag property, or '{ from: header.<Name> }'"
+                    .to_owned(),
+            fix: "add 'discriminator: <tag property>'".to_owned(),
+            related: None,
+        })?;
+
+        Ok(None)
     }
 
     fn all_of(
@@ -1853,6 +2914,6 @@ impl TreeSchemasDerivedHost for TreeSchemasCompiler<'_, '_, '_> {
         pointer: &str,
         schema_use: &TypeUse,
     ) -> Result<Option<JsonValue>, PassError> {
-        self.written_default(Some(value), pointer, schema_use)
+        Ok(self.written_default(Some(value), pointer, schema_use))
     }
 }
