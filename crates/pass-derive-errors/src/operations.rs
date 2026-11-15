@@ -12,26 +12,34 @@ use std::collections::{HashMap, HashSet};
 use indexmap::IndexMap;
 use seampact_diagnostics::InternalError;
 use seampact_ir::{
-    DerivationId, ErrorCode, ErrorRole, Layer, OperationError, Origin, RetryHeader, Template,
-    ValueSourceIn,
+    DerivationId, DerivedFrom, ErrorCode, ErrorRole, ErrorRoleBinding, Layer, OperationError,
+    Origin, RetryHeader, RetryUnit, Template, ValueSourceIn,
 };
 use seampact_js::cmp_utf16;
+use seampact_json::JsonValue;
 use seampact_pass_tree_shared::tree_nodes_id_param;
 use seampact_pipeline::{
     DERIVATION_TABLE, DraftIr, PACK_DERIVATION_ROW, PassError, TreeNodeKind, TreeNodes,
+    pipeline_rate_limit_param,
 };
 
-use crate::attached::DeriveErrorsAttachedCode;
+use crate::attached::{
+    DeriveErrorsAttachedCode, derive_errors_attached, derive_errors_identity_attached,
+};
 use crate::bindings::{
     DeriveErrorsBinding, DeriveErrorsBindingCheck, DeriveErrorsBoundParams,
-    derive_errors_binding_key, derive_errors_params_site,
+    derive_errors_binding_at, derive_errors_binding_key, derive_errors_params_site,
 };
 use crate::not_ported::not_ported_yet;
 use crate::read::derive_errors_origin_of;
-use crate::relays::DeriveErrorsRelayCode;
+use crate::relays::{DERIVE_ERRORS_RELAY_DERIVATION, DeriveErrorsRelayCode};
 use crate::report::DeriveErrorsReporter;
+use crate::retry_param::derive_errors_check_retry_param;
 use crate::role_params::{DeriveErrorsRoleParams, derive_errors_read_role_params};
-use crate::triggers::DeriveErrorsRoute;
+use crate::triggers::{
+    DeriveErrorsRoute, DeriveErrorsTriggerSources, derive_errors_rejects_input_field,
+    derive_errors_triggers,
+};
 
 /// What the per-operation writer reads.
 #[derive(Clone, Copy)]
@@ -191,7 +199,7 @@ fn binding_params(
     sources: &DeriveErrorsOperationsSources<'_>,
     binding: &DeriveErrorsBinding<'_>,
     reporter: &mut DeriveErrorsReporter<'_, '_>,
-) -> Result<Option<Template>, PassError> {
+) -> Result<Option<Template>, InternalError> {
     if let Some(checked) = sources.bound.get(&derive_errors_binding_key(binding)) {
         return Ok(match checked {
             DeriveErrorsRoleParams::Refused => None,
@@ -234,22 +242,123 @@ fn binding_origin(
 }
 
 fn retry_header_of(
-    _sources: &DeriveErrorsOperationsSources<'_>,
-    _code: &ErrorCode,
-    _refused_params: &mut HashMap<String, bool>,
-    _from: &[Origin],
-    _reporter: &mut DeriveErrorsReporter<'_, '_>,
-) -> Result<Option<RetryHeader>, PassError> {
-    Err(not_ported_yet("retryHeaderOf"))
+    sources: &DeriveErrorsOperationsSources<'_>,
+    code: &ErrorCode,
+    refused_params: &mut HashMap<String, bool>,
+    from: &[Origin],
+    reporter: &mut DeriveErrorsReporter<'_, '_>,
+) -> Result<Option<RetryHeader>, InternalError> {
+    let conventions = sources.check.context.conventions;
+    let name = conventions.get("rateLimit.header")?;
+    let written = conventions.get("rateLimit.unit")?;
+    let unit = match written.map(|reading| reading.value) {
+        Some(JsonValue::String(text)) => RetryUnit::known(text),
+        _ => None,
+    };
+    let param = pipeline_rate_limit_param(*conventions)?;
+
+    let (Some(JsonValue::String(name)), Some(unit), Some(param)) =
+        (name.map(|reading| reading.value), unit, param)
+    else {
+        return Ok(None);
+    };
+
+    // A param that cannot render as a safe integer is refused (once per code) and the code carries
+    // no header.
+    if !derive_errors_check_retry_param(
+        &sources.check,
+        refused_params,
+        code.as_str(),
+        param,
+        reporter,
+    )? {
+        return Ok(None);
+    }
+
+    Ok(Some(RetryHeader {
+        name: name.clone(),
+        param: param.to_owned(),
+        unit,
+        derived_from: DerivedFrom {
+            derivation: BUCKET_DERIVATION,
+            from: from.to_vec(),
+        },
+    }))
 }
 
 fn element_of(
-    _sources: &DeriveErrorsOperationsSources<'_>,
-    _error: &PendingError,
-    _refused_retry_params: &mut HashMap<String, bool>,
-    _reporter: &mut DeriveErrorsReporter<'_, '_>,
-) -> Result<OperationError, PassError> {
-    Err(not_ported_yet("elementOf"))
+    sources: &DeriveErrorsOperationsSources<'_>,
+    error: &PendingError,
+    refused_retry_params: &mut HashMap<String, bool>,
+    reporter: &mut DeriveErrorsReporter<'_, '_>,
+) -> Result<OperationError, InternalError> {
+    let mut derivations: Vec<(&DerivationId, &Vec<Origin>)> = error.derivations.iter().collect();
+
+    derivations.sort_by_key(|(derivation, _)| table_index_of(derivation.as_str()));
+
+    let Some((first, _)) = derivations.first() else {
+        return Err(InternalError::new(format!(
+            "error {} was collected with no derivation",
+            error.code
+        )));
+    };
+    let collected: Vec<Origin> = derivations
+        .iter()
+        .flat_map(|(_, origins)| origins.iter().cloned())
+        .collect();
+    let mut trigger_origins = dedupe(&collected);
+
+    trigger_origins.sort_by(compare_origins(sources));
+
+    let mut role_params: Vec<(&ErrorRole, &Option<Template>)> = error.roles.iter().collect();
+
+    role_params.sort_by(|(left, _), (right, _)| cmp_utf16(left.as_str(), right.as_str()));
+
+    let roles: Vec<ErrorRoleBinding> = role_params
+        .into_iter()
+        .map(|(role, params)| ErrorRoleBinding {
+            role: role.clone(),
+            params: params.clone(),
+        })
+        .collect();
+    let status = sources
+        .check
+        .registry
+        .get(error.code.as_str())
+        .map(|registered| registered.declaration.http.status);
+    let retry_header = match &error.bucket_from {
+        Some(bucket_from) if status == Some(RATE_LIMITED_STATUS) => retry_header_of(
+            sources,
+            &error.code,
+            refused_retry_params,
+            &dedupe(bucket_from),
+            reporter,
+        )?,
+        _ => None,
+    };
+    let attached = error.attached.as_ref();
+    let relayed = error.relayed.as_ref();
+    let example = attached
+        .and_then(|attached| attached.example.as_ref())
+        .or_else(|| relayed.and_then(|relayed| relayed.example.as_ref()));
+    let origin = attached
+        .and_then(|attached| attached.origin.as_ref())
+        .or_else(|| relayed.and_then(|relayed| relayed.origin.as_ref()));
+    let mut from = trigger_origins;
+
+    from.extend(dedupe(&error.binding_origins));
+
+    Ok(OperationError {
+        code: error.code.clone(),
+        example: example.cloned(),
+        roles: if roles.is_empty() { None } else { Some(roles) },
+        retry_header,
+        derived_from: Some(DerivedFrom {
+            derivation: (*first).clone(),
+            from,
+        }),
+        origin: origin.cloned(),
+    })
 }
 
 fn origin_key(origin: &Origin) -> String {
@@ -314,12 +423,122 @@ fn compare_origins(
 }
 
 fn collect(
-    _sources: &DeriveErrorsOperationsSources<'_>,
-    _route: &DeriveErrorsRoute<'_>,
-    _forbidden_checked: &mut HashSet<String>,
-    _reporter: &mut DeriveErrorsReporter<'_, '_>,
+    sources: &DeriveErrorsOperationsSources<'_>,
+    route: &DeriveErrorsRoute<'_>,
+    forbidden_checked: &mut HashSet<String>,
+    reporter: &mut DeriveErrorsReporter<'_, '_>,
 ) -> Result<IndexMap<ErrorCode, PendingError>, PassError> {
-    Err(not_ported_yet("collect"))
+    let context = sources.check.context;
+    let mut pending = IndexMap::new();
+    let unread = unread_member_ids(route, sources.nodes, context.raw.merged.get("schemas"))?;
+    let triggers = derive_errors_triggers(
+        &DeriveErrorsTriggerSources {
+            draft: sources.draft,
+            unread_member_ids: &unread,
+        },
+        route,
+    )?;
+
+    for trigger in &triggers.roles {
+        let binding =
+            derive_errors_binding_at(context, sources.nodes, route.node_id, &trigger.role)?;
+
+        // An unregistered bound code is reported at its binding (`role-code`); no element names
+        // it.
+        if !sources.check.registry.contains_key(binding.code.as_str()) {
+            continue;
+        }
+
+        let origin = binding_origin(sources, &binding)?;
+        let error = pending_of(&mut pending, &binding.code);
+
+        add_from(error, &trigger.derivation, &trigger.from);
+
+        if let Some(origin) = origin {
+            error.binding_origins.push(origin);
+        }
+
+        if trigger.derivation == BUCKET_DERIVATION {
+            error
+                .bucket_from
+                .get_or_insert_with(Vec::new)
+                .extend(trigger.from.iter().cloned());
+        }
+
+        if !error.roles.contains_key(&trigger.role) {
+            let params = binding_params(sources, &binding, reporter)?;
+
+            error.roles.insert(trigger.role.clone(), params);
+        }
+
+        if trigger.role == ErrorRole::Forbidden
+            && derive_errors_rejects_input_field(route.operation)
+        {
+            check_forbidden_pointer(sources, route, &binding, forbidden_checked, reporter)?;
+        }
+    }
+
+    for trigger in &triggers.codes {
+        let error = pending_of(&mut pending, &trigger.code);
+
+        add_from(error, &trigger.derivation, &trigger.from);
+
+        if trigger.derivation == BUCKET_DERIVATION {
+            error
+                .bucket_from
+                .get_or_insert_with(Vec::new)
+                .extend(trigger.from.iter().cloned());
+        }
+    }
+
+    // A copied domain code keeps the roles the public operation bound it to (the declarations are
+    // the same).
+    for relayed in sources.relay_codes.get(route.id).into_iter().flatten() {
+        let error = pending_of(&mut pending, &relayed.code);
+
+        add_from(error, &DERIVE_ERRORS_RELAY_DERIVATION, &relayed.from);
+        error.relayed = Some(relayed.clone());
+
+        for binding in relayed.roles.iter().flatten() {
+            if !error.roles.contains_key(&binding.role) {
+                error
+                    .roles
+                    .insert(binding.role.clone(), binding.params.clone());
+            }
+        }
+    }
+
+    for attached in derive_errors_attached(context, sources.nodes, route)? {
+        let error = pending_of(&mut pending, &attached.code);
+
+        add_from(error, &attached.derivation.id(), &attached.from);
+        error.attached = Some(attached);
+    }
+
+    // An identity's listed code keeps its list entry as origin unless a node attached it too (the
+    // node's origin wins).
+    for listed in derive_errors_identity_attached(context, route)? {
+        let error = pending_of(&mut pending, &listed.code);
+        let node_attachment = error
+            .attached
+            .as_ref()
+            .filter(|attached| attached.origin.is_some())
+            .map(|attached| attached.derivation);
+
+        // A node attachment is the more specific: it keeps `derivedFrom`, so a relay route copies
+        // the code as a domain code.
+        add_from(
+            error,
+            &node_attachment.unwrap_or(listed.derivation).id(),
+            &listed.from,
+        );
+
+        if node_attachment.is_none() {
+            error.attached = Some(listed);
+        }
+    }
+
+    Ok(pending)
 }
 
 fn registered_status(

@@ -301,7 +301,12 @@ fn constraint_misfit(
     seen: &mut HashSet<String>,
 ) -> Result<Option<DeriveErrorsMisfitReason>, PassError> {
     match (accepted, rendered) {
-        (KnownTypeUseRef::Opaque(_) | KnownTypeUseRef::File(_), _) => Ok(None),
+        (KnownTypeUseRef::Array(accepted), KnownTypeUseRef::Array(rendered)) => {
+            array_misfit(fit, rendered, accepted, seen)
+        }
+        (KnownTypeUseRef::Opaque(_) | KnownTypeUseRef::File(_) | KnownTypeUseRef::Array(_), _) => {
+            Ok(None)
+        }
         (KnownTypeUseRef::Enum(accepted), _) => misfit_or_none(enum_misfit(rendered, accepted)?),
         (KnownTypeUseRef::Scalar(accepted), KnownTypeUseRef::Scalar(rendered)) => {
             misfit_or_none(scalar_misfit(fit, rendered, accepted)?)
@@ -310,10 +315,6 @@ fn constraint_misfit(
             "its values are not provably within the param's {}",
             describe_scalar(accepted)?
         ))),
-        (KnownTypeUseRef::Array(accepted), KnownTypeUseRef::Array(rendered)) => {
-            array_misfit(fit, rendered, accepted, seen)
-        }
-        (KnownTypeUseRef::Array(_), _) => Ok(None),
         (KnownTypeUseRef::Ref(accepted), _) => ref_misfit(fit, rendered, accepted, seen),
     }
 }
