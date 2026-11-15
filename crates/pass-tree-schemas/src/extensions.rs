@@ -83,7 +83,7 @@ pub(crate) fn tree_schemas_has_extensions(value: &JsonObject) -> bool {
 pub(crate) fn tree_schemas_extension_slot(value: &JsonObject) -> Extensions {
     let mut slot = Extensions::new();
 
-    for (written, member) in value.iter() {
+    for (written, member) in value {
         let Some((prefix, key)) = extension_key_parts(written) else {
             continue;
         };

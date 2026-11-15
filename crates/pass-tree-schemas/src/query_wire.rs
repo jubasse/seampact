@@ -143,7 +143,7 @@ fn single_kind(schema_use: &TypeUse) -> Result<Option<SingleKind>, PassError> {
             ScalarType::String => Some(SingleKind::Text),
             ScalarType::Boolean => Some(SingleKind::Boolean),
             ScalarType::Integer | ScalarType::Number => Some(SingleKind::Number),
-            _ => None,
+            ScalarType::Unknown(_) => None,
         },
         KnownTypeUseRef::Ref(_)
         | KnownTypeUseRef::Opaque(_)

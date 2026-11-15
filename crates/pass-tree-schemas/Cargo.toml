@@ -11,6 +11,7 @@ publish.workspace = true
 indexmap.workspace = true
 seampact-diagnostics.workspace = true
 seampact-ir.workspace = true
+seampact-js.workspace = true
 seampact-json.workspace = true
 seampact-naming.workspace = true
 seampact-pass-tree-shared.workspace = true
