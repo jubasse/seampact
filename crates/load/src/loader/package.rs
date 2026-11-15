@@ -8,7 +8,6 @@
 //! directory, and `*` a wildcard for any tool that globs the path.
 
 use seampact_diagnostics::{InternalError, diagnostic_inert};
-use seampact_js::FiniteNumber;
 use seampact_json::JsonValue;
 use seampact_span::Span;
 
@@ -69,30 +68,6 @@ fn is_name_segment(segment: &str) -> bool {
 
 fn is_package_start(character: char) -> bool {
     character.is_ascii_lowercase() || character.is_ascii_digit() || character == '-'
-}
-
-/// `String(value)` of a value read from JSON, or of an absent one.
-pub(super) fn js_text_of(value: Option<&JsonValue>) -> String {
-    match value {
-        None => "undefined".to_owned(),
-        Some(JsonValue::Null) => "null".to_owned(),
-        Some(JsonValue::Bool(flag)) => flag.to_string(),
-        Some(JsonValue::Number(number)) => match FiniteNumber::new(number.to_f64()) {
-            Some(finite) => finite.to_string(),
-            None if number.to_f64() < 0.0 => "-Infinity".to_owned(),
-            None => "Infinity".to_owned(),
-        },
-        Some(JsonValue::String(text)) => text.clone(),
-        Some(JsonValue::Array(items)) => items
-            .iter()
-            .map(|item| match item {
-                JsonValue::Null => String::new(),
-                other => js_text_of(Some(other)),
-            })
-            .collect::<Vec<_>>()
-            .join(","),
-        Some(JsonValue::Object(_)) => "[object Object]".to_owned(),
-    }
 }
 
 impl Loader<'_, '_> {

@@ -2,7 +2,7 @@
 
 use seampact_diagnostics::InternalError;
 use seampact_ir::Origin;
-use seampact_json::JsonValue;
+use seampact_json::{JsonValue, js_text_of};
 use seampact_pass_tree_shared::tree_nodes_written_convention;
 use seampact_pipeline::{
     Inherited, NearestSetting, ResolvedConventions, TreeNode, TreeNodeId, TreeNodeKind, parse_size,
@@ -12,7 +12,6 @@ use seampact_pipeline::{
 use crate::diagnostics::{
     TreeNodesDiagnosticOptions, TreeNodesRule, tree_nodes_error, tree_nodes_node_origin,
 };
-use crate::js_text::js_text_of;
 use crate::pass::TreeNodesScope;
 
 /// The conventions that hold a body limit.
