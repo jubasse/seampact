@@ -102,14 +102,9 @@ pub(crate) struct AccessIdentityRefusal {
 
 /// Reports the half's errors through its context, each located at its pointer, and carries the
 /// context's readers: the half reads nothing else of it.
-///
-/// In the once mode a problem reaches the sink once: a setting written on a node reaches every
-/// route below it, so a problem that does not name the route would repeat. `errors` counts every
-/// problem, repeated or not, so a builder still knows its element had one.
 pub(crate) struct AccessIdentityReporter<'half, 'run> {
     context: &'half mut HalfContext<'run>,
     errors: usize,
-    reported: Option<HashSet<String>>,
 }
 
 impl<'run> AccessIdentityReporter<'_, 'run> {
@@ -156,18 +151,6 @@ impl<'run> AccessIdentityReporter<'_, 'run> {
     pub(crate) fn error(&mut self, problem: AccessIdentityProblem) -> Result<(), InternalError> {
         self.errors += 1;
 
-        if let Some(reported) = &mut self.reported {
-            let key = stringify_json(&JsonValue::Array(vec![
-                JsonValue::String(problem.rule.as_str().to_owned()),
-                JsonValue::String(problem.pointer.clone()),
-                JsonValue::String(problem.message.clone()),
-            ]));
-
-            if !reported.insert(key) {
-                return Ok(());
-            }
-        }
-
         let related = problem
             .related
             .iter()
@@ -197,20 +180,60 @@ impl<'run> AccessIdentityReporter<'_, 'run> {
 pub(crate) const fn access_identity_reporter<'half, 'run>(
     context: &'half mut HalfContext<'run>,
 ) -> AccessIdentityReporter<'half, 'run> {
-    AccessIdentityReporter {
-        context,
-        errors: 0,
-        reported: None,
+    AccessIdentityReporter { context, errors: 0 }
+}
+
+/// A reporter that reports a problem once: a setting written on a node reaches every route below
+/// it, so a problem that does not name the route would repeat. The wrapped reporter counts what
+/// reaches it.
+pub(crate) struct AccessIdentityOnceReporter<'once, 'half, 'run> {
+    outer: &'once mut AccessIdentityReporter<'half, 'run>,
+    reported: HashSet<String>,
+}
+
+impl<'run> AccessIdentityOnceReporter<'_, '_, 'run> {
+    pub(crate) fn raw(&self) -> &'run RawApi {
+        self.outer.raw()
+    }
+
+    pub(crate) fn inherited(&self) -> &'run Inherited<'run> {
+        self.outer.inherited()
+    }
+
+    pub(crate) fn conventions(&self) -> &'run ResolvedConventions<'run> {
+        self.outer.conventions()
+    }
+
+    pub(crate) fn origin(&self, pointer: &str) -> Option<Origin> {
+        self.outer.origin(pointer)
+    }
+
+    /// Reports one error unless the same problem was reported before.
+    ///
+    /// # Errors
+    ///
+    /// An internal error when a pointer of the problem has no origin.
+    pub(crate) fn error(&mut self, problem: AccessIdentityProblem) -> Result<(), InternalError> {
+        let key = stringify_json(&JsonValue::Array(vec![
+            JsonValue::String(problem.rule.as_str().to_owned()),
+            JsonValue::String(problem.pointer.clone()),
+            JsonValue::String(problem.message.clone()),
+        ]));
+
+        if !self.reported.insert(key) {
+            return Ok(());
+        }
+
+        self.outer.error(problem)
     }
 }
 
-/// The same reporter in the once mode, counting from zero.
-pub(crate) fn access_identity_once_reporter<'once, 'run>(
-    reporter: &'once mut AccessIdentityReporter<'_, 'run>,
-) -> AccessIdentityReporter<'once, 'run> {
-    AccessIdentityReporter {
-        context: &mut *reporter.context,
-        errors: 0,
-        reported: Some(HashSet::new()),
+/// The once reporter over a reporter, counting from zero.
+pub(crate) fn access_identity_once_reporter<'once, 'half, 'run>(
+    reporter: &'once mut AccessIdentityReporter<'half, 'run>,
+) -> AccessIdentityOnceReporter<'once, 'half, 'run> {
+    AccessIdentityOnceReporter {
+        outer: reporter,
+        reported: HashSet::new(),
     }
 }

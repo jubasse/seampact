@@ -8,9 +8,9 @@
 use indexmap::IndexSet;
 use seampact_diagnostics::InternalError;
 use seampact_ir::{
-    Access, CallerKind, CredentialIdentity, Identity, IdentityAccess, IdentityId, IrMap,
-    OptionalAccess, Origin, PublicAccess, Reason, RefusedCredential, Schema, SchemaId, Scheme,
-    SchemeId,
+    CallerKind, CredentialIdentity, IdentityAccess, IdentityId, IrMap, KnownAccess, KnownIdentity,
+    KnownIdentityRef, KnownScheme, OptionalAccess, Origin, Principal, PublicAccess, Reason,
+    RefusedCredential, Schema, SchemaId, SchemeId,
 };
 use seampact_js::cmp_utf16;
 use seampact_json::{JsonValue, stringify_json};
@@ -19,22 +19,21 @@ use seampact_pipeline::{
     pointer_below,
 };
 
-use crate::known::KnownIdentity;
-use crate::not_ported::not_ported_yet;
 use crate::read::{access_identity_is_object, access_identity_object, access_identity_string};
-use crate::report::AccessIdentityReporter;
-use crate::report::{AccessIdentityProblem, AccessIdentityRelated, AccessIdentityRule};
+use crate::report::{
+    AccessIdentityOnceReporter, AccessIdentityProblem, AccessIdentityRelated, AccessIdentityRule,
+};
 use crate::service::ACCESS_IDENTITY_SERVICE_CALLER_POINTER;
 
 /// The catalogues this half built, for the per-operation members.
 pub(crate) struct AccessIdentityBuilt {
-    pub(crate) schemes: IrMap<SchemeId, Scheme>,
-    pub(crate) identities: IrMap<IdentityId, Identity>,
+    pub(crate) schemes: IrMap<SchemeId, KnownScheme>,
+    pub(crate) identities: IrMap<IdentityId, KnownIdentity>,
 }
 
 /// What the per-operation members read besides the operation.
-pub(crate) struct AccessIdentityScope<'scope, 'half, 'run> {
-    pub(crate) reporter: &'scope mut AccessIdentityReporter<'half, 'run>,
+pub(crate) struct AccessIdentityScope<'scope, 'once, 'half, 'run> {
+    pub(crate) reporter: AccessIdentityOnceReporter<'once, 'half, 'run>,
     pub(crate) built: &'scope AccessIdentityBuilt,
     pub(crate) schemas: &'scope IrMap<SchemaId, Schema>,
     /// The caller identity of a service api, which every route of it runs under.
@@ -52,8 +51,32 @@ pub(crate) struct AccessIdentityRoute<'draft, 'run> {
 
 /// An operation's access, with the identity it runs under (none on a public route).
 pub(crate) struct AccessIdentityResolved<'built> {
-    pub(crate) access: Access,
-    pub(crate) identity: Option<KnownIdentity<'built>>,
+    pub(crate) access: KnownAccess,
+    pub(crate) identity: Option<KnownIdentityRef<'built>>,
+}
+
+/// The id of an identity of the catalogue.
+pub(crate) const fn access_identity_id(identity: KnownIdentityRef<'_>) -> &IdentityId {
+    match identity {
+        KnownIdentityRef::Credential(credential) => &credential.id,
+        KnownIdentityRef::Signed(signed) => &signed.id,
+    }
+}
+
+/// The principal of an identity of the catalogue.
+pub(crate) const fn access_identity_principal_of(identity: KnownIdentityRef<'_>) -> &Principal {
+    match identity {
+        KnownIdentityRef::Credential(credential) => &credential.principal,
+        KnownIdentityRef::Signed(signed) => &signed.principal,
+    }
+}
+
+/// Where an identity of the catalogue is declared.
+pub(crate) const fn access_identity_origin_of(identity: KnownIdentityRef<'_>) -> &Origin {
+    match identity {
+        KnownIdentityRef::Credential(credential) => &credential.origin,
+        KnownIdentityRef::Signed(signed) => &signed.origin,
+    }
 }
 
 struct IdentitySource {
@@ -86,7 +109,7 @@ struct OptionalWritten {
 /// The access of a route; `None` when refused, with the error reported.
 pub(crate) fn access_identity_access<'built>(
     route: &AccessIdentityRoute<'_, '_>,
-    scope: &mut AccessIdentityScope<'built, '_, '_>,
+    scope: &mut AccessIdentityScope<'built, '_, '_, '_>,
 ) -> Result<Option<AccessIdentityResolved<'built>>, PassError> {
     let inherited = scope.reporter.inherited();
     let identity_entry = inherited.nearest(route.node_id, &NearestSetting::Identity)?;
@@ -117,40 +140,20 @@ pub(crate) fn access_identity_access<'built>(
 }
 
 /// The access an access reads schemes from; `None` on a public access.
-///
-/// # Errors
-///
-/// An internal error for an access of a kind this compiler does not know.
-pub(crate) fn access_identity_access_schemes(
-    access: &Access,
-) -> Result<Option<&[SchemeId]>, InternalError> {
+pub(crate) fn access_identity_access_schemes(access: &KnownAccess) -> Option<&[SchemeId]> {
     match access {
-        Access::Identity(identity) => Ok(Some(&identity.schemes)),
-        Access::Optional(optional) => Ok(Some(&optional.schemes)),
-        Access::Public(_) => Ok(None),
-        Access::Unknown(unknown) => Err(InternalError::new(format!(
-            "access.identity read an access of unknown kind '{}'",
-            unknown.tag()
-        ))),
+        KnownAccess::Identity(identity) => Some(&identity.schemes),
+        KnownAccess::Optional(optional) => Some(&optional.schemes),
+        KnownAccess::Public(_) => None,
     }
 }
 
 /// The caller kinds an access admits (ADR 0004 section 7), sorted.
-///
-/// # Errors
-///
-/// An internal error for an access of a kind this compiler does not know.
-pub(crate) fn access_identity_caller_kinds(
-    access: &Access,
-) -> Result<Vec<CallerKind>, InternalError> {
+pub(crate) fn access_identity_caller_kinds(access: &KnownAccess) -> Vec<CallerKind> {
     match access {
-        Access::Identity(_) => Ok(vec![CallerKind::Identified]),
-        Access::Optional(_) => Ok(vec![CallerKind::Anonymous, CallerKind::Identified]),
-        Access::Public(_) => Ok(vec![CallerKind::Anonymous]),
-        Access::Unknown(unknown) => Err(InternalError::new(format!(
-            "access.identity read an access of unknown kind '{}'",
-            unknown.tag()
-        ))),
+        KnownAccess::Identity(_) => vec![CallerKind::Identified],
+        KnownAccess::Optional(_) => vec![CallerKind::Anonymous, CallerKind::Identified],
+        KnownAccess::Public(_) => vec![CallerKind::Anonymous],
     }
 }
 
@@ -184,7 +187,7 @@ fn is_below(
 
 fn identity_source(
     entry: Option<&InheritedEntry<'_>>,
-    scope: &AccessIdentityScope<'_, '_, '_>,
+    scope: &AccessIdentityScope<'_, '_, '_, '_>,
 ) -> Result<Option<IdentitySource>, InternalError> {
     if let Some(entry) = entry {
         let node = scope.reporter.inherited().nodes().get(entry.node)?;
@@ -225,17 +228,19 @@ fn identity_source(
 
 // `conventions.service.allowPublic`: a service api that lets a route be public or optional-auth.
 fn service_public_routes_allowed(
-    _scope: &AccessIdentityScope<'_, '_, '_>,
-) -> Result<bool, PassError> {
-    Err(not_ported_yet("servicePublicRoutesAllowed"))
+    scope: &AccessIdentityScope<'_, '_, '_, '_>,
+) -> Result<bool, InternalError> {
+    let allowed = scope.reporter.conventions().get("service.allowPublic")?;
+
+    Ok(allowed.is_some_and(|reading| matches!(reading.value, JsonValue::Bool(true))))
 }
 
 // The identity a source names; `None` when it is refused (reported here, or with the identity
 // itself).
 fn identity_of<'built>(
     source: &IdentitySource,
-    scope: &mut AccessIdentityScope<'built, '_, '_>,
-) -> Result<Option<KnownIdentity<'built>>, PassError> {
+    scope: &mut AccessIdentityScope<'built, '_, '_, '_>,
+) -> Result<Option<KnownIdentityRef<'built>>, PassError> {
     // A service api's node naming another identity is reported once, by
     // `accessIdentityServiceNodes`.
     if let Some(caller) = &scope.caller
@@ -247,7 +252,7 @@ fn identity_of<'built>(
     let built = scope.built;
 
     if let Some(identity) = built.identities.get(source.name.as_str()) {
-        return Ok(Some(KnownIdentity::of(identity)?));
+        return Ok(Some(KnownIdentityRef::from(identity)));
     }
 
     // An identity left out of the catalogue for an error of its own is already reported.
@@ -272,7 +277,7 @@ fn written_access<'built>(
     route: &AccessIdentityRoute<'_, '_>,
     entry: &InheritedEntry<'_>,
     source: Option<&IdentitySource>,
-    scope: &mut AccessIdentityScope<'built, '_, '_>,
+    scope: &mut AccessIdentityScope<'built, '_, '_, '_>,
 ) -> Result<Option<AccessIdentityResolved<'built>>, PassError> {
     let entry_node = scope.reporter.inherited().nodes().get(entry.node)?;
     let pointer = pointer_below(&entry_node.pointer, &["access"]);
@@ -352,7 +357,7 @@ fn public_access<'built>(
     route: &AccessIdentityRoute<'_, '_>,
     entry: &InheritedEntry<'_>,
     written: PublicWritten,
-    scope: &mut AccessIdentityScope<'built, '_, '_>,
+    scope: &mut AccessIdentityScope<'built, '_, '_, '_>,
 ) -> Result<Option<AccessIdentityResolved<'built>>, PassError> {
     if entry.node == route.node_id && route.node.settings.contains_key("identity") {
         scope.reporter.error(AccessIdentityProblem {
@@ -374,7 +379,7 @@ fn public_access<'built>(
     }
 
     Ok(Some(AccessIdentityResolved {
-        access: Access::Public(PublicAccess {
+        access: KnownAccess::Public(PublicAccess {
             reason: Reason::new(written.reason),
             origin: written.origin,
         }),
@@ -386,7 +391,7 @@ fn optional_access<'built>(
     route: &AccessIdentityRoute<'_, '_>,
     written: OptionalWritten,
     source: Option<&IdentitySource>,
-    scope: &mut AccessIdentityScope<'built, '_, '_>,
+    scope: &mut AccessIdentityScope<'built, '_, '_, '_>,
 ) -> Result<Option<AccessIdentityResolved<'built>>, PassError> {
     let Some(source) = source else {
         scope.reporter.error(AccessIdentityProblem {
@@ -410,7 +415,7 @@ fn optional_access<'built>(
     // ADR 0013: a signed route always carries the signature, so an anonymous caller never reaches
     // it.
     let credential = match identity {
-        KnownIdentity::Signed(signed) => {
+        KnownIdentityRef::Signed(signed) => {
             scope.reporter.error(AccessIdentityProblem {
                 rule: AccessIdentityRule::SignedAccess,
                 message: format!(
@@ -427,7 +432,7 @@ fn optional_access<'built>(
 
             return Ok(None);
         }
-        KnownIdentity::Credential(credential) => credential,
+        KnownIdentityRef::Credential(credential) => credential,
     };
 
     let Some(schemes) = credential_schemes(
@@ -442,7 +447,7 @@ fn optional_access<'built>(
     };
 
     Ok(Some(AccessIdentityResolved {
-        access: Access::Optional(OptionalAccess {
+        access: KnownAccess::Optional(OptionalAccess {
             identity: credential.id.clone(),
             schemes,
             reason: Reason::new(written.reason),
@@ -456,16 +461,16 @@ fn optional_access<'built>(
 fn required_access<'built>(
     route: &AccessIdentityRoute<'_, '_>,
     source: &IdentitySource,
-    scope: &mut AccessIdentityScope<'built, '_, '_>,
+    scope: &mut AccessIdentityScope<'built, '_, '_, '_>,
 ) -> Result<Option<AccessIdentityResolved<'built>>, PassError> {
     let Some(identity) = identity_of(source, scope)? else {
         return Ok(None);
     };
 
     let credential = match identity {
-        KnownIdentity::Signed(signed) => {
+        KnownIdentityRef::Signed(signed) => {
             return Ok(Some(AccessIdentityResolved {
-                access: Access::Identity(IdentityAccess {
+                access: KnownAccess::Identity(IdentityAccess {
                     identity: signed.id.clone(),
                     schemes: vec![signed.signed.clone()],
                     origin: source.origin.clone(),
@@ -473,7 +478,7 @@ fn required_access<'built>(
                 identity: Some(identity),
             }));
         }
-        KnownIdentity::Credential(credential) => credential,
+        KnownIdentityRef::Credential(credential) => credential,
     };
 
     let Some(schemes) = credential_schemes(
@@ -488,7 +493,7 @@ fn required_access<'built>(
     };
 
     Ok(Some(AccessIdentityResolved {
-        access: Access::Identity(IdentityAccess {
+        access: KnownAccess::Identity(IdentityAccess {
             identity: credential.id.clone(),
             schemes,
             origin: source.origin.clone(),
@@ -504,7 +509,7 @@ fn credential_schemes(
     safe: bool,
     identity: &CredentialIdentity,
     access: CredentialAccess,
-    scope: &mut AccessIdentityScope<'_, '_, '_>,
+    scope: &mut AccessIdentityScope<'_, '_, '_, '_>,
 ) -> Result<Option<Vec<SchemeId>>, InternalError> {
     let list = if safe { "read" } else { "write" };
     let listed = if safe {

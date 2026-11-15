@@ -7,7 +7,7 @@
 use std::collections::HashMap;
 
 use seampact_diagnostics::InternalError;
-use seampact_ir::{IrMap, Origin, Schema, SchemaId};
+use seampact_ir::{Access, IrMap, KnownIdentityRef, Origin, Schema, SchemaId};
 use seampact_pipeline::{
     AccessIdentityOperation, DraftIr, DraftOperation, PassError, TreeNode, TreeNodeId,
     TreeNodeKind, TreeNodes,
@@ -19,7 +19,6 @@ use crate::access::{
 };
 use crate::bindings::{access_identity_bindings, access_identity_principal_requires};
 use crate::csrf::access_identity_csrf;
-use crate::known::KnownIdentity;
 use crate::params::access_identity_check_query_schemes;
 use crate::report::{AccessIdentityReporter, access_identity_once_reporter};
 use crate::service::{access_identity_service_caller, access_identity_service_nodes};
@@ -55,7 +54,7 @@ pub(crate) fn access_identity_operations(
 
     let schemas: &IrMap<SchemaId, Schema> = &draft.schemas;
     let mut scope = AccessIdentityScope {
-        reporter: &mut reporter,
+        reporter,
         built,
         schemas,
         caller,
@@ -74,13 +73,13 @@ pub(crate) fn access_identity_operations(
 
 fn write_operation(
     route: &AccessIdentityRoute<'_, '_>,
-    scope: &mut AccessIdentityScope<'_, '_, '_>,
+    scope: &mut AccessIdentityScope<'_, '_, '_, '_>,
 ) -> Result<Option<AccessIdentityOperation>, PassError> {
     let Some(resolved) = access_identity_access(route, scope)? else {
         return Ok(None);
     };
 
-    let caller_kinds = access_identity_caller_kinds(&resolved.access)?;
+    let caller_kinds = access_identity_caller_kinds(&resolved.access);
     let csrf = access_identity_csrf(route, &resolved, scope)?;
     let principal_requires = access_identity_principal_requires(route, &resolved, scope)?;
     let bindings = access_identity_bindings(route, &resolved, scope)?;
@@ -91,7 +90,7 @@ fn write_operation(
     let facts = write_input_facts(route.operation, resolved.identity)?;
 
     Ok(Some(AccessIdentityOperation {
-        access: resolved.access,
+        access: Access::from(resolved.access),
         caller_kinds,
         principal_requires,
         bindings,
@@ -104,7 +103,7 @@ fn write_operation(
 // The facts the input receives: `unknownKeys` only on a `ref` input, the one use carrying it.
 fn write_input_facts(
     operation: &DraftOperation,
-    identity: Option<KnownIdentity<'_>>,
+    identity: Option<KnownIdentityRef<'_>>,
 ) -> Result<Option<AccessIdentityInputFacts>, InternalError> {
     let facts = access_identity_input_facts(operation, identity)?;
     let (Some(facts), Some(input)) = (facts, &operation.input) else {
