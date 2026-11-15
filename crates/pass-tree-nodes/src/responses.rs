@@ -1,6 +1,6 @@
 //! The `responses` of an operation: the format and media it answers in, the declared or derived responses and their headers.
 
-use seampact_ir::{Docs, OpShorthand, Origin, Response, ResponseHeader, ResponseShape};
+use seampact_ir::{DerivationId, Docs, OpShorthand, Origin, Response, ResponseHeader, ResponseShape};
 use seampact_json::JsonValue;
 use seampact_diagnostics::InternalError;
 use seampact_pass_tree_shared::tree_nodes_member;
@@ -22,9 +22,9 @@ pub(crate) const TREE_NODES_PAGING_NONE: &str = "none";
 /// The ops whose response is one item.
 const ITEM_OPS: &[OpShorthand] = &[OpShorthand::Get, OpShorthand::Create, OpShorthand::Update];
 /// The derivation of a response read from the format.
-const FORMAT_DERIVATION: &str = "response.format";
+const FORMAT_DERIVATION: DerivationId = DerivationId::from_static("response.format");
 /// The derivation of a batch read.
-const BATCH_DERIVATION: &str = "batch.read";
+const BATCH_DERIVATION: DerivationId = DerivationId::from_static("batch.read");
 /// The shapes that bypass the format: a download and a redirect.
 const BYPASSING_SHAPES: &[ResponseShape] = &[ResponseShape::Binary, ResponseShape::Redirect];
 /// The members a route writes `responses` instead of.

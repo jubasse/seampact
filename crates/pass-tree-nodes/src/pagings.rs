@@ -1,15 +1,23 @@
 //! The `pagings` catalogue: every declared paging style, read and checked against its wire format.
 
 use std::collections::HashSet;
+use std::mem;
 
 use seampact_diagnostics::RelatedLocation;
 use seampact_ir::{
+    PagingId,
     HandlerResultMember, NamedTemplate, Origin, PagingLink, PagingParamPlacement, PagingParamStyle,
     PagingPosition, PagingRequestRole, PagingResponse, PagingRole, PagingStyle, Template, UrlRole,
     WireFormat,
 };
-use seampact_json::JsonValue;
-use seampact_pipeline::PassError;
+use seampact_diagnostics::InternalError;
+use seampact_json::{JsonValue, stringify_json};
+use seampact_pipeline::{PassError, pointer_below};
+
+use crate::diagnostics::{
+    TreeNodesDiagnosticOptions, TreeNodesRule, tree_nodes_error, tree_nodes_node_origin,
+};
+use crate::responses::TREE_NODES_PAGING_NONE;
 
 use crate::not_ported::not_ported_yet;
 use crate::pass::TreeNodesScope;
@@ -137,14 +145,39 @@ enum StyleRule {
     Link,
 }
 
-pub(crate) fn tree_nodes_pagings(_scope: &mut TreeNodesScope<'_, '_, '_>) -> Result<(), PassError> {
-    Err(not_ported_yet("treeNodesPagings"))
-}
+/// Writes `pagings`: every declared style, used or not, but the reserved `none`.
+pub(crate) fn tree_nodes_pagings(scope: &mut TreeNodesScope<'_, '_, '_>) -> Result<(), PassError> {
+    refuse_reserved_style(scope)?;
 
-fn refuse_reserved_style(_scope: &mut TreeNodesScope<'_, '_, '_>) -> Result<(), PassError> {
-    Err(not_ported_yet("refuseReservedStyle"))
-}
+    if let Some(JsonValue::Object(declared)) = scope.context.raw.merged.get("pagings") {
+        for id in declared.keys().filter(|name| *name != TREE_NODES_PAGING_NONE) {
+            if let Some(style) = style_of(id, scope)? {
+                scope.output.pagings.insert(PagingId::new(id.clone()), style);
+            }
+        }
+    }
 
+    check_formats(scope)
+}
+// `none` names an unpaged list, never a style.
+fn refuse_reserved_style(scope: &mut TreeNodesScope<'_, '_, '_>) -> Result<(), InternalError> {
+    let pointer = pointer_below("/pagings", &[TREE_NODES_PAGING_NONE]);
+    let Some(origin) = scope.context.origin(&pointer) else {
+        return Ok(());
+    };
+
+    scope.context.report(tree_nodes_error(TreeNodesDiagnosticOptions {
+        rule: TreeNodesRule::PagingReserved,
+        origin: tree_nodes_node_origin(&origin)?,
+        message: format!(
+            "The paging style name {TREE_NODES_PAGING_NONE} is reserved for a list served whole."
+        ),
+        fix: format!("Rename the style {TREE_NODES_PAGING_NONE}."),
+        related: Vec::new(),
+    }));
+
+    Ok(())
+}
 fn style_of(
     _id: &str,
     _scope: &mut TreeNodesScope<'_, '_, '_>,
@@ -278,10 +311,6 @@ fn sort_fault(
     Err(not_ported_yet("sortFault"))
 }
 
-fn check_formats(_scope: &mut TreeNodesScope<'_, '_, '_>) -> Result<(), PassError> {
-    Err(not_ported_yet("checkFormats"))
-}
-
 fn check_meta(
     _style: &PagingStyle,
     _format: &WireFormat,
@@ -298,6 +327,53 @@ fn format_related(
     Err(not_ported_yet("formatRelated"))
 }
 
-fn sent_key(_placement: &PagingParamPlacement, _name: &str) -> Result<String, PassError> {
-    Err(not_ported_yet("sentKey"))
+// Header names are case-insensitive (RFC 9110 section 5.1); query parameter names are not.
+fn sent_key(placement: &PagingParamPlacement, name: &str) -> String {
+    let sent_name = if *placement == PagingParamPlacement::Header {
+        name.to_lowercase()
+    } else {
+        name.to_owned()
+    };
+
+    stringify_json(&JsonValue::Array(vec![
+        JsonValue::String(placement.as_str().to_owned()),
+        JsonValue::String(sent_name),
+    ]))
+}
+// A style adding `meta` needs a format page that writes `$meta`, and the style and the format name no meta
+// member twice. Each pair of a style and a format is checked once.
+fn check_formats(scope: &mut TreeNodesScope<'_, '_, '_>) -> Result<(), PassError> {
+    let operations = mem::take(&mut scope.output.operations);
+    let pagings = mem::take(&mut scope.output.pagings);
+    let formats = mem::take(&mut scope.output.formats);
+    let mut checked: HashSet<String> = HashSet::new();
+
+    for operation in &operations {
+        let style_id = operation.paging.as_ref().and_then(|paging| paging.style.as_ref());
+        let (Some(style_id), Some(format_id)) = (style_id, operation.format.as_ref()) else {
+            continue;
+        };
+
+        let (Some(style), Some(format)) = (pagings.get(style_id), formats.get(format_id)) else {
+            continue;
+        };
+        let pair = stringify_json(&JsonValue::Array(vec![
+            JsonValue::String(style_id.as_ref().to_owned()),
+            JsonValue::String(format_id.as_ref().to_owned()),
+        ]));
+
+        if !checked.insert(pair) {
+            continue;
+        }
+
+        if style.response.body.is_none() && !style.response.meta.is_empty() {
+            check_meta(style, format, scope)?;
+        }
+    }
+
+    scope.output.operations = operations;
+    scope.output.pagings = pagings;
+    scope.output.formats = formats;
+
+    Ok(())
 }

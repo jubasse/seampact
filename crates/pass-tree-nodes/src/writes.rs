@@ -15,8 +15,6 @@ const OWNER_CALLER: OwnerKind = OwnerKind::Caller;
 const INHERIT: &str = "inherit";
 /// The ops that inherit the resource's concurrency.
 const VERSIONED_OPS: &[OpShorthand] = &[OpShorthand::Update, OpShorthand::Delete];
-/// A concurrency source: `body.<name>`, `query.<name>` or `header.<name>`.
-const VERSION_SOURCE: &str = r"^(body|query|header)\.(.+)$";
 
 /// Where the concurrency version is carried.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -105,6 +103,7 @@ fn check_owner_alone(
     Err(not_ported_yet("checkOwnerAlone"))
 }
 
+// A concurrency source is `body.<name>`, `query.<name>` or `header.<name>`.
 fn parse_source(_written: &JsonValue) -> Result<Option<VersionSource>, PassError> {
     Err(not_ported_yet("parseSource"))
 }

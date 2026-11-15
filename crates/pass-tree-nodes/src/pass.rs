@@ -19,10 +19,8 @@ use crate::pagings::tree_nodes_pagings;
 use crate::relays::tree_nodes_join_relay_declarations;
 use crate::settings::tree_nodes_api_settings;
 
-/// The operations as the output declares them, from the drafts `operationOf` builds.
-fn declared_operations(
-    _drafts: Vec<DraftOperation>,
-) -> Result<Vec<TreeNodesOperation>, PassError> {
+/// The operation as the output declares it, from the draft `operationOf` builds.
+fn declared_operation(_draft: DraftOperation) -> Result<TreeNodesOperation, PassError> {
     Err(not_ported_yet("operationOf"))
 }
 
@@ -50,7 +48,11 @@ impl TreeNodesAccumulator {
             .into());
         };
 
-        let operations = declared_operations(self.operations)?;
+        let operations = self
+            .operations
+            .into_iter()
+            .map(declared_operation)
+            .collect::<Result<Vec<_>, _>>()?;
 
         Ok(TreeNodesOutput {
             conventions: self.conventions,

@@ -75,7 +75,7 @@ src/formats.rs#declared_format	packages/core/compiler/src/passes/tree/nodes/form
 src/formats.rs#core_bare	packages/core/compiler/src/passes/tree/nodes/formats.ts#coreBare
 src/formats.rs#format_of	packages/core/compiler/src/passes/tree/nodes/formats.ts#formatOf
 src/formats.rs#tree_nodes_absent	packages/core/compiler/src/passes/tree/nodes/formats.ts#treeNodesAbsent
-src/formats.rs#text_of	packages/core/compiler/src/passes/tree/nodes/formats.ts#textOf
+-	packages/core/compiler/src/passes/tree/nodes/formats.ts#textOf	merged: src/api.rs#text_of
 src/formats.rs#tree_nodes_named_templates	packages/core/compiler/src/passes/tree/nodes/formats.ts#treeNodesNamedTemplates
 src/formats.rs#new	packages/core/compiler/src/passes/tree/nodes/formats.ts#FormatReader.constructor
 src/formats.rs#success	packages/core/compiler/src/passes/tree/nodes/formats.ts#FormatReader.success
@@ -91,7 +91,7 @@ src/formats.rs#site	packages/core/compiler/src/passes/tree/nodes/formats.ts#Form
 src/formats.rs#meta_fill	packages/core/compiler/src/passes/tree/nodes/formats.ts#metaFill
 src/formats.rs#tree_nodes_check_payloads	packages/core/compiler/src/passes/tree/nodes/formats.ts#treeNodesCheckPayloads
 src/formats.rs#own_of	packages/core/compiler/src/passes/tree/nodes/formats.ts#ownOf
-src/formats.rs#is_success_shape	packages/core/compiler/src/passes/tree/nodes/formats.ts#isSuccessShape
+src/formats.rs#success_shape_of	packages/core/compiler/src/passes/tree/nodes/formats.ts#isSuccessShape
 src/formats.rs#slot_value_of_use	packages/core/compiler/src/passes/tree/nodes/formats.ts#slotValueOfUse
 src/formats.rs#payload_of	packages/core/compiler/src/passes/tree/nodes/formats.ts#payloadOf
 src/formats.rs#record_of	packages/core/compiler/src/passes/tree/nodes/formats.ts#recordOf
@@ -304,7 +304,7 @@ src/writes.rs#report_nothing_to_inherit	packages/core/compiler/src/passes/tree/n
 -	packages/core/compiler/src/passes/tree/nodes/diagnostics.ts#isDiagnosticOrigin	merged: ../diagnostics/src/diagnostic.rs#of
 src/diagnostics.rs#tree_nodes_node_origin	packages/core/compiler/src/passes/tree/nodes/diagnostics.ts#treeNodesNodeOrigin
 src/diagnostics.rs#tree_nodes_report_once	packages/core/compiler/src/passes/tree/nodes/diagnostics.ts#treeNodesReportOnce
-src/diagnostics.rs#tree_nodes_rule_id	packages/core/compiler/src/passes/tree/nodes/diagnostics.ts#treeNodesRuleId
+src/diagnostics.rs#rule_id	packages/core/compiler/src/passes/tree/nodes/diagnostics.ts#treeNodesRuleId
 src/diagnostics.rs#tree_nodes_error	packages/core/compiler/src/passes/tree/nodes/diagnostics.ts#treeNodesError
 src/diagnostics.rs#tree_nodes_locate	packages/core/compiler/src/passes/tree/nodes/diagnostics.ts#treeNodesLocate
 src/diagnostics.rs#tree_nodes_warning	packages/core/compiler/src/passes/tree/nodes/diagnostics.ts#treeNodesWarning
