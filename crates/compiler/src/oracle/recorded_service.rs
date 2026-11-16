@@ -11,13 +11,13 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 
 /// The TypeScript name of [`TreeSchemaService::type_use`].
-const TYPE_USE: &str = "typeUse";
+pub(super) const TYPE_USE: &str = "typeUse";
 /// The TypeScript name of [`TreeSchemaService::query_wire`].
-const QUERY_WIRE: &str = "queryWire";
+pub(super) const QUERY_WIRE: &str = "queryWire";
 /// The TypeScript name of [`TreeSchemaService::check_example`].
-const CHECK_EXAMPLE: &str = "checkExample";
+pub(super) const CHECK_EXAMPLE: &str = "checkExample";
 /// The TypeScript name of [`TreeSchemaService::check_text_example`].
-const CHECK_TEXT_EXAMPLE: &str = "checkTextExample";
+pub(super) const CHECK_TEXT_EXAMPLE: &str = "checkTextExample";
 
 /// A schema service that answers each call as the TypeScript service answered it.
 ///
@@ -130,7 +130,7 @@ fn call_key(method: &str, args: Vec<JsonValue>) -> String {
 }
 
 /// An argument in its IR serde form.
-fn json_of(argument: &impl Serialize) -> Result<JsonValue, InternalError> {
+pub(super) fn json_of(argument: &impl Serialize) -> Result<JsonValue, InternalError> {
     let value = serde_json::to_value(argument).map_err(|failure| {
         InternalError::new(format!("a schema call argument does not encode: {failure}"))
     })?;
@@ -150,14 +150,20 @@ fn decoded<Answer: DeserializeOwned>(
         return Ok(None);
     };
 
-    let value = serde_json::to_value(answer).map_err(|failure| {
-        InternalError::new(format!("a recorded answer does not encode: {failure}"))
-    })?;
-    let decoded_answer = serde_json::from_value(value).map_err(|failure| {
-        InternalError::new(format!("a recorded answer does not decode: {failure}"))
+    Ok(Some(decode_json(answer)?))
+}
+
+/// A recorded argument or answer read through its serde form.
+pub(super) fn decode_json<Value: DeserializeOwned>(
+    recorded: &JsonValue,
+) -> Result<Value, InternalError> {
+    let value = serde_json::to_value(recorded).map_err(|failure| {
+        InternalError::new(format!("a recorded value does not encode: {failure}"))
     })?;
 
-    Ok(Some(decoded_answer))
+    serde_json::from_value(value).map_err(|failure| {
+        InternalError::new(format!("a recorded value does not decode: {failure}"))
+    })
 }
 
 /// The issues of a recorded check answer: `[{ "pointer", "message" }]`.
