@@ -12,7 +12,7 @@ use seampact_ir::{
     NoSubject, ProofPlacement, Reason, ResourceSubject, Right, RightId, RightSubject, Rule, RuleId,
     RuleProof, Scope, ScopeId, ScopeSubject, TypeUse,
 };
-use seampact_js::cmp_utf16;
+use seampact_js::{cmp_utf16, regexp_source};
 use seampact_json::{JsonObject, JsonValue, js_integer_in_range, stringify_json};
 use seampact_naming::{NameSource, SegmentsOptions, SegmentsResult, segments_of, split_name};
 use seampact_pipeline::{ConventionReading, PassError, parse_duration, pointer_below};
@@ -212,41 +212,6 @@ pub(crate) fn forbidden_code_of(context: &AccessRightsContext) -> Result<String,
     })
 }
 
-/// `RegExp.prototype.source` of a pattern: an empty one reads `(?:)`, a `/` outside a class and
-/// the line terminators are escaped.
-fn regexp_source_of(written: &str) -> String {
-    if written.is_empty() {
-        return "(?:)".to_owned();
-    }
-
-    let mut source = String::with_capacity(written.len());
-    let mut in_class = false;
-    let mut escaped = false;
-
-    for character in written.chars() {
-        match character {
-            '\n' => source.push_str("\\n"),
-            '\r' => source.push_str("\\r"),
-            '\u{2028}' => source.push_str("\\u2028"),
-            '\u{2029}' => source.push_str("\\u2029"),
-            '/' if !in_class && !escaped => source.push_str("\\/"),
-            other => source.push(other),
-        }
-
-        if escaped {
-            escaped = false;
-        } else if character == '\\' {
-            escaped = true;
-        } else if in_class {
-            in_class = character != ']';
-        } else {
-            in_class = character == '[';
-        }
-    }
-
-    source
-}
-
 pub(crate) fn right_pattern_of(
     context: &AccessRightsContext,
     reporter: &mut AccessRightsReporter,
@@ -262,7 +227,7 @@ pub(crate) fn right_pattern_of(
     match Regex::with_flags(written, "u") {
         Ok(pattern) => Ok(Some(AccessRightsRightPattern {
             pattern,
-            source: regexp_source_of(written),
+            source: regexp_source(written),
             pointer: RIGHT_PATTERN_POINTER.to_owned(),
         })),
         Err(error) => {
@@ -848,22 +813,8 @@ mod tests {
     fn pattern_of(written: &str) -> AccessRightsRightPattern {
         AccessRightsRightPattern {
             pattern: Regex::with_flags(written, "u").unwrap(),
-            source: regexp_source_of(written),
+            source: regexp_source(written),
             pointer: RIGHT_PATTERN_POINTER.to_owned(),
-        }
-    }
-
-    #[test]
-    fn a_pattern_source_escapes_what_regexp_source_escapes() {
-        for (written, source) in [
-            ("", "(?:)"),
-            ("a/b", "a\\/b"),
-            ("a\\/b", "a\\/b"),
-            ("[/]", "[/]"),
-            ("\\[/", "\\[\\/"),
-            ("a\nb", "a\\nb"),
-        ] {
-            assert_eq!(regexp_source_of(written), source, "pattern {written:?}");
         }
     }
 
