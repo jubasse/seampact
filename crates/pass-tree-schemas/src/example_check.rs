@@ -10,35 +10,34 @@ use regress::Regex;
 use seampact_diagnostics::{InternalError, quote, quote_text};
 use seampact_ir::{
     ArrayTypeUse, DecimalLiteral, Enum, EnumTypeUse, JsonContent, KnownSchemaRef, KnownTypeUseRef,
-    MapSchema, ObjectSchema, Refinements, ScalarType, ScalarTypeUse, Schema, TypeUse, UnionSchema,
+    KnownUnionTagRef, MapSchema, ObjectSchema, RefTypeUse, Refinements, ScalarType, ScalarTypeUse,
+    Schema, TypeUse, UnionSchema, is_ir_calendar_date,
 };
 use seampact_json::{JsonNumber, JsonValue};
 use seampact_pipeline::{PassError, TreeSchemaExampleIssue};
+use serde_json::error::Category;
 
 use crate::compile::{TreeSchemasExampleCheck, TreeSchemasWrittenValue};
 use crate::decimal::{
     TreeSchemasDecimal, TreeSchemasDecimalSource, tree_schemas_compare_decimals,
     tree_schemas_decimal_of, tree_schemas_is_multiple_of,
 };
-use crate::not_ported::not_ported_yet;
 use crate::raw::{TreeSchemasProblem, TreeSchemasReporter, tree_schemas_pointer};
 use crate::rule::TreeSchemasRule;
 use crate::scalars::MAX_SAFE_INTEGER;
 
-/// ECMAScript source of a `YYYY-MM-DD` text.
-const DATE: &str = r"^([0-9]{4})-([0-9]{2})-([0-9]{2})$";
-/// ECMAScript source of an RFC 3339 date-time text.
-const DATE_TIME: &str = r"^([0-9]{4}-[0-9]{2}-[0-9]{2})[Tt]([0-9]{2}):([0-9]{2}):([0-9]{2})(?:\.[0-9]{1,9})?(?:[Zz]|[+-]([0-9]{2}):([0-9]{2}))$";
-/// ECMAScript source of an int64 text.
-const INT64: &str = r"^-?(0|[1-9][0-9]*)$";
-/// ECMAScript source of a JSON number text.
-const NUMBER_TEXT: &str = r"^-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?$";
-const INT64_MIN: i64 = i64::MIN;
-const INT64_MAX: i64 = i64::MAX;
 /// The hex digits of each hyphen-separated group of a uuid.
 const UUID_GROUP_LENGTHS: [usize; 5] = [8, 4, 4, 4, 12];
 const HOURS: u32 = 24;
 const MINUTES: u32 = 60;
+/// What V8 says of a JSON text that ends early.
+const UNEXPECTED_END: &str = "Unexpected end of JSON input";
+/// The length of `YYYY-MM-DD`.
+const DATE_LENGTH: usize = 10;
+/// The length of `HH:MM:SS`.
+const CLOCK_LENGTH: usize = 8;
+const TWO_DIGITS_LENGTH: usize = 2;
+const MAX_FRACTION_DIGITS: usize = 9;
 
 /// One bound of a refinement: the check its comparison must pass, and how a message names it.
 #[derive(Debug, Clone, Copy)]
@@ -79,7 +78,7 @@ enum TextReading {
 }
 
 /// A format check over a text.
-type FormatCheck = fn(&str) -> Result<bool, PassError>;
+type FormatCheck = fn(&str) -> bool;
 
 /// The checks of the formats the checker reads by text, keyed by format name.
 const FORMAT_CHECKS: [(&str, FormatCheck); 5] = [
@@ -155,6 +154,20 @@ fn pattern_matches(source: &str, text: &str) -> Result<bool, PassError> {
     Ok(expression.find(text).is_some())
 }
 
+/// `JSON.parse`: the value, or the reason it refuses. An early end reads as V8 words it; any other
+/// refusal carries the parser's own text.
+fn parse_json_text(text: &str) -> Result<JsonValue, String> {
+    let parsed: serde_json::Value = serde_json::from_str(text).map_err(|error| {
+        if error.classify() == Category::Eof {
+            UNEXPECTED_END.to_owned()
+        } else {
+            error.to_string()
+        }
+    })?;
+
+    JsonValue::try_from(parsed).map_err(|error| error.to_string())
+}
+
 fn string_reading(text: &str) -> TextReading {
     TextReading::Value(JsonValue::String(text.to_owned()))
 }
@@ -200,34 +213,95 @@ fn strip_digits(text: &str) -> Option<&str> {
     (rest.len() < text.len()).then_some(rest)
 }
 
-fn is_record(value: &JsonValue) -> bool {
-    matches!(value, JsonValue::Object(_))
+/// `YYYY-MM-DD` naming a day that exists. Year 0000 is a day here, as `Date.setUTCFullYear` reads
+/// it, where the IR check starts at year 1; it is a leap year, like 2000.
+fn is_calendar_date(text: &str) -> bool {
+    match text.strip_prefix("0000-") {
+        Some(rest) => is_ir_calendar_date(&format!("2000-{rest}")),
+        None => is_ir_calendar_date(text),
+    }
 }
 
-fn is_calendar_date(text: &str) -> Result<bool, PassError> {
-    Err(not_ported_yet("isCalendarDate"))
+/// The value of a text of exactly two ASCII digits.
+fn two_digits(text: &str) -> Option<u32> {
+    if text.len() != TWO_DIGITS_LENGTH {
+        return None;
+    }
+
+    text.chars()
+        .try_fold(0_u32, |value, digit| Some(value * 10 + digit.to_digit(10)?))
 }
 
-fn is_date_time(text: &str) -> Result<bool, PassError> {
-    Err(not_ported_yet("isDateTime"))
+/// The text after an optional fraction `.d{1,9}`, or `None` when a fraction is malformed.
+fn after_fraction(text: &str) -> Option<&str> {
+    let Some(digits_and_rest) = text.strip_prefix('.') else {
+        return Some(text);
+    };
+    let digits = digits_and_rest
+        .find(|digit: char| !digit.is_ascii_digit())
+        .unwrap_or(digits_and_rest.len());
+
+    if !(1..=MAX_FRACTION_DIGITS).contains(&digits) {
+        return None;
+    }
+
+    digits_and_rest.get(digits..)
+}
+
+/// RFC 3339 `date-time` as ADR 0003 section 8 reads it: an offset is required, a leap second
+/// refused.
+fn is_date_time(text: &str) -> bool {
+    if !text.is_ascii() {
+        return false;
+    }
+
+    let Some((date, after_date)) = text.split_at_checked(DATE_LENGTH) else {
+        return false;
+    };
+    let Some(clock_and_rest) = after_date.strip_prefix(['T', 't']) else {
+        return false;
+    };
+    let Some((clock, after_clock)) = clock_and_rest.split_at_checked(CLOCK_LENGTH) else {
+        return false;
+    };
+    let fields: Vec<Option<u32>> = clock.split(':').map(two_digits).collect();
+    let [Some(hour), Some(minute), Some(second)] = fields[..] else {
+        return false;
+    };
+    let Some(zone) = after_fraction(after_clock) else {
+        return false;
+    };
+    let offset_in_range = match zone {
+        "Z" | "z" => true,
+        _ => zone
+            .strip_prefix(['+', '-'])
+            .and_then(|offset| offset.split_once(':'))
+            .and_then(|(offset_hour, offset_minute)| {
+                Some((two_digits(offset_hour)?, two_digits(offset_minute)?))
+            })
+            .is_some_and(|(offset_hour, offset_minute)| {
+                offset_hour < HOURS && offset_minute < MINUTES
+            }),
+    };
+
+    is_calendar_date(date)
+        && hour < HOURS
+        && minute < MINUTES
+        && second < MINUTES
+        && offset_in_range
 }
 
 /// `^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`.
-#[expect(
-    clippy::unnecessary_wraps,
-    reason = "an entry of FORMAT_CHECKS, whose other entries are stubs until their brief"
-)]
-fn format_check_uuid(text: &str) -> Result<bool, PassError> {
+fn format_check_uuid(text: &str) -> bool {
     let groups: Vec<&str> = text.split('-').collect();
-    let has_uuid_shape = groups.len() == UUID_GROUP_LENGTHS.len()
+
+    groups.len() == UUID_GROUP_LENGTHS.len()
         && groups
             .iter()
             .zip(UUID_GROUP_LENGTHS)
             .all(|(group, length)| {
                 group.len() == length && group.chars().all(|digit| digit.is_ascii_hexdigit())
-            });
-
-    Ok(has_uuid_shape)
+            })
 }
 
 /// A written integer without a leading zero: `0|[1-9][0-9]*`.
@@ -239,11 +313,7 @@ fn is_canonical_integer(text: &str) -> bool {
 }
 
 /// `^-?(0|[1-9][0-9]*)(\.[0-9]+)?$`.
-#[expect(
-    clippy::unnecessary_wraps,
-    reason = "an entry of FORMAT_CHECKS, whose other entries are stubs until their brief"
-)]
-fn format_check_decimal(text: &str) -> Result<bool, PassError> {
+fn format_check_decimal(text: &str) -> bool {
     let unsigned = text.strip_prefix('-').unwrap_or(text);
     let (whole, fraction) = match unsigned.split_once('.') {
         Some((whole, fraction)) => (whole, Some(fraction)),
@@ -253,11 +323,14 @@ fn format_check_decimal(text: &str) -> Result<bool, PassError> {
         !digits.is_empty() && digits.chars().all(|digit| digit.is_ascii_digit())
     });
 
-    Ok(is_canonical_integer(whole) && fraction_is_digits)
+    is_canonical_integer(whole) && fraction_is_digits
 }
 
-fn format_check_int64(text: &str) -> Result<bool, PassError> {
-    Err(not_ported_yet("FORMAT_CHECKS.int64"))
+/// `^-?(0|[1-9][0-9]*)$` within the range of a signed 64-bit integer.
+fn format_check_int64(text: &str) -> bool {
+    let unsigned = text.strip_prefix('-').unwrap_or(text);
+
+    is_canonical_integer(unsigned) && text.parse::<i64>().is_ok()
 }
 
 /// Checks values against type uses over the compiled schemas and enums, which it never changes.
@@ -295,13 +368,13 @@ impl TreeSchemasExampleChecker {
         text: &str,
         schema_use: &TypeUse,
     ) -> Result<Vec<TreeSchemaExampleIssue>, PassError> {
-        match self.text_value(text, schema_use)? {
+        match Self::text_value(text, schema_use)? {
             TextReading::Problem(message) => Ok(vec![issue_at("", message)]),
             TextReading::Value(value) => self.check(&value, schema_use),
         }
     }
 
-    fn text_value(&self, text: &str, schema_use: &TypeUse) -> Result<TextReading, PassError> {
+    fn text_value(text: &str, schema_use: &TypeUse) -> Result<TextReading, PassError> {
         let scalar = match KnownTypeUseRef::try_from(schema_use)? {
             KnownTypeUseRef::Enum(_) => return Ok(string_reading(text)),
             KnownTypeUseRef::Scalar(scalar) => scalar,
@@ -466,7 +539,37 @@ impl TreeSchemasExampleChecker {
         pointer: &str,
         issues: &mut Vec<TreeSchemaExampleIssue>,
     ) -> Result<(), PassError> {
-        Err(not_ported_yet("TreeSchemasExampleChecker.map"))
+        let JsonValue::Object(object) = value else {
+            issues.push(issue_at(
+                pointer,
+                format!("the value is not an object ({})", schema.id),
+            ));
+
+            return Ok(());
+        };
+
+        for (key, entry) in object {
+            let at = tree_schemas_pointer(pointer, &[key]);
+
+            if let Some(keys) = &schema.keys {
+                let key_value = JsonValue::String(key.clone());
+
+                for issue in self.check(&key_value, keys)? {
+                    issues.push(issue_at(
+                        &at,
+                        format!(
+                            "the key {} does not fit: {}",
+                            quote_text(key),
+                            issue.message
+                        ),
+                    ));
+                }
+            }
+
+            self.check_use(entry, &schema.values, &at, issues)?;
+        }
+
+        Ok(())
     }
 
     fn union(
@@ -476,7 +579,86 @@ impl TreeSchemasExampleChecker {
         pointer: &str,
         issues: &mut Vec<TreeSchemaExampleIssue>,
     ) -> Result<(), PassError> {
-        Err(not_ported_yet("TreeSchemasExampleChecker.union"))
+        let property = match KnownUnionTagRef::try_from(&schema.tag)? {
+            KnownUnionTagRef::Header(_) => {
+                return self.header_union(value, schema, pointer, issues);
+            }
+            KnownUnionTagRef::Body(body) => &body.property,
+        };
+        let tag = match value {
+            JsonValue::Object(object) => match object.get(property) {
+                Some(JsonValue::String(tag)) => Some(tag),
+                _ => None,
+            },
+            _ => None,
+        };
+        let Some(tag) = tag else {
+            issues.push(issue_at(
+                pointer,
+                format!(
+                    "the value holds no tag {} of {}",
+                    quote_text(property),
+                    schema.id
+                ),
+            ));
+
+            return Ok(());
+        };
+        let variant_schema = schema
+            .variants
+            .iter()
+            .find(|candidate| candidate.tag == *tag)
+            .and_then(|variant| self.schemas.get(variant.schema.as_str()));
+        let object_schema = match variant_schema.map(KnownSchemaRef::try_from).transpose()? {
+            Some(KnownSchemaRef::Object(object_schema)) => object_schema,
+            Some(KnownSchemaRef::Map(_) | KnownSchemaRef::Union(_)) | None => {
+                issues.push(issue_at(
+                    &tree_schemas_pointer(pointer, &[property]),
+                    format!("{} is no tag of {}", quote_text(tag), schema.id),
+                ));
+
+                return Ok(());
+            }
+        };
+
+        self.object(value, object_schema, pointer, issues, Some(property))
+    }
+
+    /// A header-tagged union reads its tag outside the value, so the value fits when it fits one
+    /// variant.
+    fn header_union(
+        &self,
+        value: &JsonValue,
+        schema: &UnionSchema,
+        pointer: &str,
+        issues: &mut Vec<TreeSchemaExampleIssue>,
+    ) -> Result<(), PassError> {
+        let mut fits = false;
+
+        for variant in &schema.variants {
+            let variant_use = TypeUse::Ref(RefTypeUse {
+                schema: variant.schema.clone(),
+                unknown_keys: None,
+                nullable: None,
+                docs: None,
+                examples: None,
+            });
+
+            if self.check(value, &variant_use)?.is_empty() {
+                fits = true;
+
+                break;
+            }
+        }
+
+        if !fits {
+            issues.push(issue_at(
+                pointer,
+                format!("the value fits no variant of {}", schema.id),
+            ));
+        }
+
+        Ok(())
     }
 
     fn enum_value(
@@ -563,7 +745,7 @@ impl TreeSchemasExampleChecker {
         pointer: &str,
         issues: &mut Vec<TreeSchemaExampleIssue>,
     ) -> Result<(), PassError> {
-        if let Some(problem) = self.scalar_problem(value, scalar_use)? {
+        if let Some(problem) = Self::scalar_problem(value, scalar_use)? {
             issues.push(issue_at(pointer, problem));
 
             return Ok(());
@@ -577,7 +759,6 @@ impl TreeSchemasExampleChecker {
     }
 
     fn scalar_problem(
-        &self,
         value: &JsonValue,
         scalar_use: &ScalarTypeUse,
     ) -> Result<Option<String>, PassError> {
@@ -594,7 +775,7 @@ impl TreeSchemasExampleChecker {
                 return Ok(Some(format!("{} is not a string{note}", quote(value))));
             };
 
-            return self.string_problem(text, scalar_use);
+            return Self::string_problem(text, scalar_use);
         }
 
         if scalar_use.r#type == ScalarType::Boolean {
@@ -617,14 +798,13 @@ impl TreeSchemasExampleChecker {
             )));
         }
 
-        self.bounds_problem(
+        Self::bounds_problem(
             TreeSchemasDecimalSource::Number(written),
             &scalar_use.refinements,
         )
     }
 
     fn string_problem(
-        &self,
         value: &str,
         scalar_use: &ScalarTypeUse,
     ) -> Result<Option<String>, PassError> {
@@ -637,7 +817,7 @@ impl TreeSchemasExampleChecker {
         });
 
         if let (Some(written), Some(check)) = (format, format_check)
-            && !check(value)?
+            && !check(value)
         {
             return Ok(Some(format!(
                 "{} is not a valid {written}",
@@ -681,7 +861,7 @@ impl TreeSchemasExampleChecker {
         }
 
         if matches!(format, Some("int64" | "decimal")) {
-            return self.bounds_problem(TreeSchemasDecimalSource::Text(value), refinements);
+            return Self::bounds_problem(TreeSchemasDecimalSource::Text(value), refinements);
         }
 
         Ok(None)
@@ -694,15 +874,37 @@ impl TreeSchemasExampleChecker {
         pointer: &str,
         issues: &mut Vec<TreeSchemaExampleIssue>,
     ) -> Result<(), PassError> {
-        Err(not_ported_yet("TreeSchemasExampleChecker.content"))
+        let parsed = match parse_json_text(value) {
+            Ok(parsed) => parsed,
+            Err(reason) => {
+                issues.push(issue_at(
+                    pointer,
+                    format!("the value is not JSON text: {reason}"),
+                ));
+
+                return Ok(());
+            }
+        };
+
+        for issue in self.check(&parsed, &content.schema)? {
+            issues.push(issue_at(
+                pointer,
+                format!(
+                    "the JSON text does not fit at {}: {}",
+                    quote_text(&issue.pointer),
+                    issue.message
+                ),
+            ));
+        }
+
+        Ok(())
     }
 
     fn bounds_problem(
-        &self,
         value: TreeSchemasDecimalSource<'_>,
         refinements: &Refinements,
     ) -> Result<Option<String>, PassError> {
-        let Some(decimal) = tree_schemas_decimal_of(value.clone())? else {
+        let Some(decimal) = tree_schemas_decimal_of(value)? else {
             return Ok(Some(format!(
                 "{} is not a decimal number",
                 quoted_source(&value)
@@ -809,6 +1011,72 @@ mod tests {
     }
 
     #[test]
+    fn a_calendar_date_names_a_day_that_exists_and_year_zero_is_a_leap_year() {
+        let cases = [
+            ("0000-02-29", true),
+            ("2024-02-29", true),
+            ("2000-02-29", true),
+            ("1900-02-29", false),
+            ("2026-02-29", false),
+            ("2026-13-01", false),
+            ("2026-1-01", false),
+            ("\u{ff12}026-01-01", false),
+        ];
+
+        for (text, expected) in cases {
+            assert_eq!(is_calendar_date(text), expected, "text {text:?}");
+        }
+    }
+
+    #[test]
+    fn a_date_time_needs_an_offset_and_refuses_a_leap_second() {
+        let cases = [
+            ("2026-01-01T00:00:00Z", true),
+            ("2026-01-01t23:59:59.123456789+23:59", true),
+            ("2026-01-01T00:00:60Z", false),
+            ("2026-01-01T24:00:00Z", false),
+            ("2026-01-01T00:00:00", false),
+            ("2026-01-01T00:00:00.Z", false),
+            ("2026-01-01T00:00:00.1234567890Z", false),
+            ("2026-01-01T00:00:00+24:00", false),
+            ("2026-01-01T00:00:00+00:60", false),
+            ("2026-01-01T00:00:00+0000", false),
+            ("2026-02-30T00:00:00Z", false),
+            ("2026-01-01T00:00:00Z ", false),
+        ];
+
+        for (text, expected) in cases {
+            assert_eq!(is_date_time(text), expected, "text {text:?}");
+        }
+    }
+
+    #[test]
+    fn an_int64_text_stays_within_the_signed_64_bit_range() {
+        let cases = [
+            ("9223372036854775807", true),
+            ("9223372036854775808", false),
+            ("-9223372036854775808", true),
+            ("-9223372036854775809", false),
+            ("-0", true),
+            ("00", false),
+            ("-", false),
+            ("", false),
+        ];
+
+        for (text, expected) in cases {
+            assert_eq!(format_check_int64(text), expected, "text {text:?}");
+        }
+    }
+
+    #[test]
+    fn a_json_text_that_ends_early_reads_as_v8_words_it() {
+        assert_eq!(parse_json_text("[1,2"), Err(UNEXPECTED_END.to_owned()));
+        assert_eq!(parse_json_text(""), Err(UNEXPECTED_END.to_owned()));
+        assert!(parse_json_text("nope").is_err());
+        assert!(parse_json_text(r#"{"a":1}"#).is_ok());
+    }
+
+    #[test]
     fn a_decimal_text_is_a_plain_integer_part_and_an_optional_fraction() {
         let cases = [
             ("0", true),
@@ -825,7 +1093,7 @@ mod tests {
         ];
 
         for (text, expected) in cases {
-            assert_eq!(format_check_decimal(text), Ok(expected), "text {text:?}");
+            assert_eq!(format_check_decimal(text), expected, "text {text:?}");
         }
     }
 }

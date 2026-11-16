@@ -393,11 +393,6 @@ mod tests {
     }
 
     #[test]
-    fn a_half_that_is_not_ported_answers_not_ported() {
-        assert_eq!(run("tree.schemas", &[]), Ok(SubjectAnswer::NotPorted));
-    }
-
-    #[test]
     fn a_later_half_reads_the_recorded_service_and_answers_its_diagnostics() {
         let answer = run_fake(asking_dispatch, &recorded_calls()).unwrap();
         let SubjectAnswer::Ported(output) = answer else {

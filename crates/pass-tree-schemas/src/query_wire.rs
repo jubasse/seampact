@@ -106,7 +106,7 @@ impl EncodingConvention {
 }
 
 fn encoding_of(
-    conventions: &ResolvedConventions<'_>,
+    conventions: ResolvedConventions<'_>,
     convention: EncodingConvention,
     table: &[(&str, Encoding)],
 ) -> Result<Encoding, PassError> {
@@ -215,7 +215,7 @@ pub(crate) fn tree_schemas_form_proof_routes(
 
 pub(crate) fn tree_schemas_query_wires(
     compiler: &mut TreeSchemasCompiler<'_, '_, '_>,
-    conventions: &ResolvedConventions<'_>,
+    conventions: ResolvedConventions<'_>,
     form_proofs: &IndexMap<String, String>,
 ) -> Result<IndexMap<String, QueryWire>, PassError> {
     let lists = encoding_of(conventions, EncodingConvention::Lists, &LISTS)?;

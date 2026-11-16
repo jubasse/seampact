@@ -4,19 +4,29 @@
 //! their directions: a parameter or the body input is read, a success response written. Nothing about
 //! access is copied, so a rule's proof schema is not.
 
-use indexmap::IndexMap;
 use std::collections::HashSet;
 
+use indexmap::IndexMap;
+use seampact_diagnostics::{InternalError, quote_text};
 use seampact_ir::{
-    ContractIr, Direction, Enum, ExtensionKeyDecl, Operation, Scalar, Schema, TypeUse,
+    Direction, Enum, EnumId, ExtensionKeyDecl, ExtensionKeyId, ImportedIr, IrClosedCheck,
+    IrClosedDeclaration, IrClosedUnknown, IrMap, KnownEnumSourceRef, KnownSchemaRef,
+    KnownTypeUseRef, Operation, Origin, Params, Response, Scalar, ScalarId, Schema, SchemaId,
+    TypeUse, check_ir_closed_declaration,
 };
-use seampact_json::{JsonValue, canonical_json};
-use seampact_pipeline::{DraftIr, DraftOperation, HalfContext, PassError, TreeNodeKind, TreeNodes};
+use seampact_json::{JsonObject, JsonValue, canonical_json};
+use seampact_pass_tree_shared::tree_nodes_relay_origin;
+use seampact_pipeline::{
+    DraftIr, DraftOperation, DraftOperationInputRef, HalfContext, PassError, TreeNodeKind,
+    TreeNodes,
+};
 
 use crate::compile::TreeSchemasCompiler;
-use crate::not_ported::not_ported_yet;
 use crate::operations::encoded;
-use crate::raw::tree_schemas_pointer;
+use crate::raw::{
+    TreeSchemasProblem, TreeSchemasRelated, TreeSchemasReporter, tree_schemas_pointer,
+};
+use crate::rule::TreeSchemasRule;
 
 /// A use of a relay route's copied shape, in the direction its position is read or written.
 #[derive(Debug, Clone, PartialEq)]
@@ -64,6 +74,70 @@ enum Declaration {
     ExtensionKey(ExtensionKeyDecl),
 }
 
+impl Declaration {
+    fn id(&self) -> Result<&str, PassError> {
+        Ok(match self {
+            Self::Schema(schema) => match KnownSchemaRef::try_from(schema.as_ref())? {
+                KnownSchemaRef::Object(object) => object.id.as_str(),
+                KnownSchemaRef::Map(map) => map.id.as_str(),
+                KnownSchemaRef::Union(union) => union.id.as_str(),
+            },
+            Self::Enum(declared) => declared.id.as_str(),
+            Self::Scalar(declared) => declared.id.as_str(),
+            Self::ExtensionKey(declared) => declared.id.as_str(),
+        })
+    }
+
+    fn origin_pointer(&self) -> Result<&str, PassError> {
+        Ok(match self {
+            Self::Schema(schema) => match KnownSchemaRef::try_from(schema.as_ref())? {
+                KnownSchemaRef::Object(object) => object.origin.pointer.as_str(),
+                KnownSchemaRef::Map(map) => map.origin.pointer.as_str(),
+                KnownSchemaRef::Union(union) => union.origin.pointer.as_str(),
+            },
+            Self::Enum(declared) => declared.origin.pointer.as_str(),
+            Self::Scalar(declared) => declared.origin.pointer.as_str(),
+            Self::ExtensionKey(declared) => declared.origin.pointer.as_str(),
+        })
+    }
+
+    /// The declaration as the JSON the comparison and the origin stamping read.
+    fn encoded(&self) -> Result<JsonValue, PassError> {
+        match self {
+            Self::Schema(schema) => encoded(serde_json::to_value(schema.as_ref())),
+            Self::Enum(declared) => encoded(serde_json::to_value(declared)),
+            Self::Scalar(declared) => encoded(serde_json::to_value(declared)),
+            Self::ExtensionKey(declared) => encoded(serde_json::to_value(declared)),
+        }
+    }
+
+    /// The declaration of the same kind that `value` encodes.
+    fn decoded_like(&self, value: &JsonValue) -> Result<Self, PassError> {
+        let json = serde_json::to_value(value).map_err(decode_failure)?;
+
+        Ok(match self {
+            Self::Schema(_) => Self::Schema(Box::new(
+                serde_json::from_value(json).map_err(decode_failure)?,
+            )),
+            Self::Enum(_) => Self::Enum(serde_json::from_value(json).map_err(decode_failure)?),
+            Self::Scalar(_) => Self::Scalar(serde_json::from_value(json).map_err(decode_failure)?),
+            Self::ExtensionKey(_) => {
+                Self::ExtensionKey(serde_json::from_value(json).map_err(decode_failure)?)
+            }
+        })
+    }
+}
+
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "the callback of every map_err that reads a copy"
+)]
+fn decode_failure(failure: serde_json::Error) -> PassError {
+    PassError::from(InternalError::new(format!(
+        "tree.schemas cannot read a copied declaration back: {failure}"
+    )))
+}
+
 /// Each catalogue a copy is read from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum CatalogueName {
@@ -74,13 +148,13 @@ enum CatalogueName {
 }
 
 impl CatalogueName {
-    /// The IR definition a copy is checked against.
-    fn definition(self) -> &'static str {
+    /// The member of the IR holding the catalogue.
+    const fn member(self) -> &'static str {
         match self {
-            Self::Schemas => "Schema",
-            Self::Enums => "Enum",
-            Self::Scalars => "Scalar",
-            Self::ExtensionKeys => "ExtensionKeyDecl",
+            Self::Schemas => "schemas",
+            Self::Enums => "enums",
+            Self::Scalars => "scalars",
+            Self::ExtensionKeys => "extensionKeys",
         }
     }
 
@@ -112,7 +186,37 @@ pub(crate) struct TreeSchemasLocalDeclarations<'local> {
 #[derive(Debug, Clone, Copy)]
 enum CopySource<'source> {
     Draft(&'source DraftIr),
-    Contract(&'source ContractIr),
+    Contract(&'source ImportedIr),
+}
+
+impl<'source> CopySource<'source> {
+    const fn schemas(self) -> &'source IrMap<SchemaId, Schema> {
+        match self {
+            Self::Draft(draft) => &draft.schemas,
+            Self::Contract(imported) => &imported.contract().schemas,
+        }
+    }
+
+    const fn enums(self) -> &'source IrMap<EnumId, Enum> {
+        match self {
+            Self::Draft(draft) => &draft.enums,
+            Self::Contract(imported) => &imported.contract().enums,
+        }
+    }
+
+    const fn scalars(self) -> &'source IrMap<ScalarId, Scalar> {
+        match self {
+            Self::Draft(draft) => &draft.scalars,
+            Self::Contract(imported) => &imported.contract().scalars,
+        }
+    }
+
+    const fn extension_keys(self) -> &'source IrMap<ExtensionKeyId, ExtensionKeyDecl> {
+        match self {
+            Self::Draft(draft) => &draft.extension_keys,
+            Self::Contract(imported) => &imported.contract().extension_keys,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -134,19 +238,13 @@ const WRITTEN_VALUE_MEMBERS: [&str; 4] = ["default", "examples", "extensions", "
 /// The members a comparison of two copies of one declaration leaves out.
 const IGNORED_MEMBERS: [&str; 2] = ["directions", "origin"];
 
-/// A member a closed declaration holds that the IR does not define.
-///
-/// A plain copy of the IR's closed-declaration result, until `seampact-ir` has that module.
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct TreeSchemasClosedUnknown {
-    pointer: String,
-    value: String,
-}
-
+/// The first copy of a declaration, with the route that made it.
 #[derive(Debug, Clone)]
-struct FirstCopy<'source, 'site> {
+struct FirstCopy {
     declaration: Declaration,
-    site: CopySite<'source, 'site>,
+    /// The pointer of the route's `relays` member.
+    pointer: String,
+    relays: String,
 }
 
 /// A relay target: the api and operation id `relays: <api>.<operationId>` names.
@@ -173,60 +271,291 @@ fn relay_target(relays: &JsonValue) -> Option<RelayTarget> {
     })
 }
 
-fn operation_uses(operation: RelayedOperation<'_>) -> Result<Vec<TreeSchemasRelayUse>, PassError> {
-    Err(not_ported_yet("operationUses"))
+/// The members of a relayed operation a copied shape is read from.
+struct OperationMembers<'operation> {
+    params: Option<&'operation Params>,
+    input_schema: Option<&'operation TypeUse>,
+    responses: &'operation [Response],
 }
 
-fn is_copied_origin(value: &JsonValue) -> Result<bool, PassError> {
-    Err(not_ported_yet("isCopiedOrigin"))
+impl<'operation> From<RelayedOperation<'operation>> for OperationMembers<'operation> {
+    fn from(operation: RelayedOperation<'operation>) -> Self {
+        match operation {
+            RelayedOperation::Draft(draft) => Self {
+                params: draft.params.as_ref(),
+                input_schema: draft
+                    .input
+                    .as_ref()
+                    .map(|input| DraftOperationInputRef::from(input).schema),
+                responses: draft.responses.as_deref().unwrap_or(&[]),
+            },
+            RelayedOperation::Contract(contract) => Self {
+                params: Some(&contract.params),
+                input_schema: contract
+                    .input
+                    .as_ref()
+                    .map(|input| DraftOperationInputRef::from(input).schema),
+                responses: &contract.responses,
+            },
+        }
+    }
+}
+
+/// A member the public api's tree.nodes has not written holds no use to copy.
+fn operation_uses(operation: RelayedOperation<'_>) -> Vec<TreeSchemasRelayUse> {
+    let members = OperationMembers::from(operation);
+    let read = |schema_use: &TypeUse| TreeSchemasRelayUse {
+        schema_use: schema_use.clone(),
+        direction: Direction::Input,
+    };
+    let written = |schema_use: &TypeUse| TreeSchemasRelayUse {
+        schema_use: schema_use.clone(),
+        direction: Direction::Output,
+    };
+    let mut uses: Vec<TreeSchemasRelayUse> = Vec::new();
+
+    if let Some(params) = members.params {
+        let listed = params
+            .path
+            .iter()
+            .chain(&params.query)
+            .chain(&params.header);
+
+        uses.extend(listed.map(|param| read(&param.r#type)));
+    }
+
+    uses.extend(members.input_schema.map(read));
+
+    for response in members
+        .responses
+        .iter()
+        .filter(|response| response.status < i64::from(ERROR_STATUS))
+    {
+        uses.extend(response.body.as_ref().map(written));
+        uses.extend(
+            response
+                .headers
+                .iter()
+                .map(|header| written(&header.r#type)),
+        );
+    }
+
+    uses
+}
+
+/// A copied declaration passed the IR's closed check, so an `origin` or `derivedFrom.from` member
+/// there is an origin.
+fn is_copied_origin(value: &JsonValue) -> bool {
+    let JsonValue::Object(object) = value else {
+        return false;
+    };
+
+    matches!(object.get("layer"), Some(JsonValue::String(_)))
+        && matches!(object.get("pointer"), Some(JsonValue::String(_)))
 }
 
 fn with_api_origin(origin: &mut JsonValue, api: &str) -> Result<(), PassError> {
-    Err(not_ported_yet("withApiOrigin"))
+    if !is_copied_origin(origin) {
+        return Ok(());
+    }
+
+    let json = serde_json::to_value(&*origin).map_err(decode_failure)?;
+    let read: Origin = serde_json::from_value(json).map_err(decode_failure)?;
+    let stamped = tree_nodes_relay_origin(&read, api);
+
+    if let (JsonValue::Object(object), Some(stamped_api)) = (origin, stamped.api) {
+        object.insert("api".to_owned(), JsonValue::String(stamped_api));
+    }
+
+    Ok(())
 }
 
+/// Every origin of a copied declaration keeps its pointer and layer and names the public api: each
+/// `origin` and each origin of a `derivedFrom.from`. A value the contract wrote is never entered:
+/// an `origin` there is data.
 fn with_api_origins(value: &mut JsonValue, api: &str) -> Result<(), PassError> {
-    Err(not_ported_yet("withApiOrigins"))
+    match value {
+        JsonValue::Array(items) => {
+            for item in items {
+                with_api_origins(item, api)?;
+            }
+        }
+        JsonValue::Object(object) => with_api_origins_of_members(object, api)?,
+        JsonValue::Null | JsonValue::Bool(_) | JsonValue::Number(_) | JsonValue::String(_) => {}
+    }
+
+    Ok(())
 }
 
-fn without_ignored(value: &JsonValue) -> Result<JsonValue, PassError> {
-    Err(not_ported_yet("withoutIgnored"))
+fn with_api_origins_of_members(object: &mut JsonObject, api: &str) -> Result<(), PassError> {
+    let keys: Vec<String> = object.keys().cloned().collect();
+
+    for key in keys {
+        let Some(member) = object.get_mut(&key) else {
+            continue;
+        };
+
+        if key == "origin" {
+            with_api_origin(member, api)?;
+        }
+
+        if key == "derivedFrom"
+            && let JsonValue::Object(derived) = member
+            && let Some(JsonValue::Array(origins)) = derived.get_mut("from")
+        {
+            for origin in origins {
+                with_api_origin(origin, api)?;
+            }
+        }
+
+        if !WRITTEN_VALUE_MEMBERS.contains(&key.as_str()) {
+            with_api_origins(member, api)?;
+        }
+    }
+
+    Ok(())
 }
 
-fn compared_member(key: &str, member: &JsonValue) -> Result<JsonValue, PassError> {
-    Err(not_ported_yet("comparedMember"))
+fn without_ignored(value: &JsonValue) -> JsonValue {
+    match value {
+        JsonValue::Array(items) => JsonValue::Array(items.iter().map(without_ignored).collect()),
+        JsonValue::Object(object) => {
+            let mut kept = JsonObject::new();
+
+            for (key, member) in object
+                .iter()
+                .filter(|(key, _)| !IGNORED_MEMBERS.contains(&key.as_str()))
+            {
+                kept.insert(key.clone(), compared_member(key, member));
+            }
+
+            JsonValue::Object(kept)
+        }
+        JsonValue::Null | JsonValue::Bool(_) | JsonValue::Number(_) | JsonValue::String(_) => {
+            value.clone()
+        }
+    }
 }
 
-fn without_origin_api(origin: &JsonValue) -> Result<JsonValue, PassError> {
-    Err(not_ported_yet("withoutOriginApi"))
+/// A `derivedFrom.from` origin is compared without the api a copy marked on it, as an `origin` is
+/// not compared.
+fn compared_member(key: &str, member: &JsonValue) -> JsonValue {
+    if WRITTEN_VALUE_MEMBERS.contains(&key) {
+        return member.clone();
+    }
+
+    let JsonValue::Object(derived) = member else {
+        return without_ignored(member);
+    };
+
+    if key != "derivedFrom" || !derived.contains_key("from") {
+        return without_ignored(member);
+    }
+
+    let from: Vec<JsonValue> = match derived.get("from") {
+        Some(JsonValue::Array(origins)) => origins.iter().map(without_origin_api).collect(),
+        _ => Vec::new(),
+    };
+    let mut replaced = derived.clone();
+
+    replaced.insert("from".to_owned(), JsonValue::Array(from));
+
+    without_ignored(&JsonValue::Object(replaced))
 }
 
+fn without_origin_api(origin: &JsonValue) -> JsonValue {
+    let JsonValue::Object(object) = origin else {
+        return origin.clone();
+    };
+
+    if !is_copied_origin(origin) {
+        return origin.clone();
+    }
+
+    let mut located = object.clone();
+
+    located.remove("api");
+
+    JsonValue::Object(located)
+}
+
+/// What two declarations of one name must agree on: everything but the directions, which each api
+/// takes from its own uses, and the origins, which name the file and the api each copy was read
+/// from.
 fn content_of(declaration: &Declaration) -> Result<String, PassError> {
-    let encoded_declaration = match declaration {
-        Declaration::Schema(schema) => encoded(serde_json::to_value(schema.as_ref())),
-        Declaration::Enum(declared) => encoded(serde_json::to_value(declared)),
-        Declaration::Scalar(declared) => encoded(serde_json::to_value(declared)),
-        Declaration::ExtensionKey(declared) => encoded(serde_json::to_value(declared)),
-    }?;
-
-    Ok(canonical_json(&without_ignored(&encoded_declaration)?))
+    Ok(canonical_json(&without_ignored(&declaration.encoded()?)))
 }
 
+/// The extension key ids a copied schema's values use: its own and its properties'.
 fn extension_key_ids(schema: &Schema) -> Result<Vec<String>, PassError> {
-    Err(not_ported_yet("extensionKeyIds"))
+    let mut slots = Vec::new();
+
+    match KnownSchemaRef::try_from(schema)? {
+        KnownSchemaRef::Object(object) => {
+            slots.push(&object.extensions);
+            slots.extend(
+                object
+                    .properties
+                    .iter()
+                    .map(|property| &property.extensions),
+            );
+        }
+        KnownSchemaRef::Map(map) => slots.push(&map.extensions),
+        KnownSchemaRef::Union(union) => slots.push(&union.extensions),
+    }
+
+    Ok(slots
+        .into_iter()
+        .flat_map(|slot| slot.iter())
+        .flat_map(|(prefix, keys)| {
+            keys.keys()
+                .map(move |key| format!("{}-{}", prefix.as_str(), key.as_str()))
+        })
+        .collect())
+}
+
+/// A declaration read from a catalogue: it is closed, or the unknowns it holds.
+type ReadDeclaration = Result<Declaration, Vec<IrClosedUnknown>>;
+
+/// `declared` as a copy: an imported one passes the IR's closed check at its place in the document,
+/// a workspace api's own draft holds only what this compiler writes.
+fn read_declaration<T: IrClosedDeclaration + Clone>(
+    declared: &T,
+    source: CopySource<'_>,
+    pointer: &str,
+    wrap: fn(T) -> Declaration,
+) -> Result<ReadDeclaration, PassError> {
+    let CopySource::Contract(imported) = source else {
+        return Ok(Ok(wrap(declared.clone())));
+    };
+    let check = check_ir_closed_declaration(declared, imported.document(), pointer)
+        .map_err(|error| InternalError::new(error.to_string()))?;
+
+    Ok(match check {
+        IrClosedCheck::Closed(closed) => Ok(wrap(closed.clone())),
+        IrClosedCheck::Unknowns(unknowns) => Err(unknowns),
+    })
+}
+
+/// The declaration of a catalogue that a copy was asked for, which is of another kind: a bug.
+fn mismatched(catalogue: CatalogueName) -> PassError {
+    PassError::from(InternalError::new(format!(
+        "tree.schemas read a declaration of another kind from the {}",
+        catalogue.member()
+    )))
 }
 
 /// Copies the declarations the relay routes of one api use.
-struct RelayCopier<'compiler, 'source, 'site, 'raw, 'half, 'run> {
+struct RelayCopier<'compiler, 'raw, 'half, 'run> {
     compiler: &'compiler mut TreeSchemasCompiler<'raw, 'half, 'run>,
     copies: TreeSchemasRelayCopies,
     seen: HashSet<String>,
-    first_copies: IndexMap<String, FirstCopy<'source, 'site>>,
+    first_copies: IndexMap<String, FirstCopy>,
     enums: IndexMap<String, Enum>,
     extension_keys: IndexMap<String, ExtensionKeyDecl>,
 }
 
-impl<'compiler, 'raw, 'half, 'run> RelayCopier<'compiler, '_, '_, 'raw, 'half, 'run> {
+impl<'compiler, 'raw, 'half, 'run> RelayCopier<'compiler, 'raw, 'half, 'run> {
     fn new(
         compiler: &'compiler mut TreeSchemasCompiler<'raw, 'half, 'run>,
         local: TreeSchemasLocalDeclarations<'_>,
@@ -254,83 +583,321 @@ impl<'compiler, 'raw, 'half, 'run> RelayCopier<'compiler, '_, '_, 'raw, 'half, '
         site: CopySite<'_, '_>,
         operation: RelayedOperation<'_>,
     ) -> Result<(), PassError> {
-        Err(not_ported_yet("RelayCopier.copyRoute"))
+        for relay_use in operation_uses(operation) {
+            self.reach(site, &relay_use.schema_use)?;
+            self.copies.uses.push(relay_use);
+        }
+
+        Ok(())
     }
 
     fn reach(&mut self, site: CopySite<'_, '_>, schema_use: &TypeUse) -> Result<(), PassError> {
-        Err(not_ported_yet("RelayCopier.reach"))
+        match KnownTypeUseRef::try_from(schema_use)? {
+            KnownTypeUseRef::Ref(reference) => self.schema(site, reference.schema.as_str()),
+            KnownTypeUseRef::Enum(enum_use) => self.enum_of(site, enum_use.r#enum.as_str()),
+            KnownTypeUseRef::Array(array_use) => self.reach(site, &array_use.items),
+            KnownTypeUseRef::Scalar(scalar_use) => {
+                if let Some(scalar) = &scalar_use.scalar {
+                    self.scalar(site, scalar.as_str())?;
+                }
+
+                match &scalar_use.content {
+                    Some(content) => self.reach(site, &content.schema),
+                    None => Ok(()),
+                }
+            }
+            KnownTypeUseRef::File(_) | KnownTypeUseRef::Opaque(_) => Ok(()),
+        }
     }
 
     fn schema(&mut self, site: CopySite<'_, '_>, id: &str) -> Result<(), PassError> {
-        Err(not_ported_yet("RelayCopier.schema"))
+        let Some(relayed) = self.copy_of(site, CatalogueName::Schemas, id)? else {
+            return Ok(());
+        };
+        let Declaration::Schema(schema) = &relayed else {
+            return Err(mismatched(CatalogueName::Schemas));
+        };
+        let local = self
+            .compiler
+            .schemas
+            .get(id)
+            .map(|declared| Declaration::Schema(Box::new(declared.clone())));
+
+        self.join(site, DeclarationKind::Schema, &relayed, local.as_ref())?;
+
+        for key_id in extension_key_ids(schema)? {
+            self.extension_key(site, &key_id)?;
+        }
+
+        match KnownSchemaRef::try_from(schema.as_ref())? {
+            KnownSchemaRef::Object(object) => {
+                for property in &object.properties {
+                    self.reach(site, &property.r#type)?;
+                }
+            }
+            KnownSchemaRef::Map(map) => {
+                if let Some(keys) = &map.keys {
+                    self.reach(site, keys)?;
+                }
+
+                self.reach(site, &map.values)?;
+            }
+            KnownSchemaRef::Union(union) => {
+                for variant in &union.variants {
+                    self.schema(site, variant.schema.as_str())?;
+                }
+            }
+        }
+
+        Ok(())
     }
 
     fn enum_of(&mut self, site: CopySite<'_, '_>, id: &str) -> Result<(), PassError> {
-        Err(not_ported_yet("RelayCopier.enumOf"))
+        let Some(relayed) = self.copy_of(site, CatalogueName::Enums, id)? else {
+            return Ok(());
+        };
+        let Declaration::Enum(declared) = &relayed else {
+            return Err(mismatched(CatalogueName::Enums));
+        };
+        let local = self.enums.get(id).cloned().map(Declaration::Enum);
+
+        self.join(site, DeclarationKind::Enum, &relayed, local.as_ref())?;
+
+        if let Some(source) = &declared.source
+            && let KnownEnumSourceRef::Enum(from) = KnownEnumSourceRef::try_from(source)?
+        {
+            return self.enum_of(site, from.r#enum.as_str());
+        }
+
+        Ok(())
     }
 
     fn extension_key(&mut self, site: CopySite<'_, '_>, id: &str) -> Result<(), PassError> {
-        Err(not_ported_yet("RelayCopier.extensionKey"))
+        let Some(relayed) = self.copy_of(site, CatalogueName::ExtensionKeys, id)? else {
+            return Ok(());
+        };
+        let Declaration::ExtensionKey(declared) = &relayed else {
+            return Err(mismatched(CatalogueName::ExtensionKeys));
+        };
+        let local = self
+            .extension_keys
+            .get(id)
+            .cloned()
+            .map(Declaration::ExtensionKey);
+
+        self.join(
+            site,
+            DeclarationKind::ExtensionKey,
+            &relayed,
+            local.as_ref(),
+        )?;
+
+        self.reach(site, &declared.schema)
     }
 
     fn scalar(&mut self, site: CopySite<'_, '_>, id: &str) -> Result<(), PassError> {
-        Err(not_ported_yet("RelayCopier.scalar"))
+        let Some(relayed) = self.copy_of(site, CatalogueName::Scalars, id)? else {
+            return Ok(());
+        };
+        let local = self
+            .compiler
+            .scalars
+            .all(&mut self.compiler.reporter)?
+            .into_iter()
+            .find(|declared| declared.id.as_str() == id)
+            .map(Declaration::Scalar);
+
+        self.join(site, DeclarationKind::NamedFormat, &relayed, local.as_ref())
     }
 
+    /// A declaration this api lacks is copied once; a later copy of that id from another api is
+    /// compared with it.
     fn join(
         &mut self,
         site: CopySite<'_, '_>,
         kind: DeclarationKind,
-        relayed: Declaration,
+        relayed: &Declaration,
         local: Option<&Declaration>,
     ) -> Result<(), PassError> {
-        Err(not_ported_yet("RelayCopier.join"))
+        if let Some(local) = local {
+            return Self::compare_local(&mut self.compiler.reporter, site, kind, relayed, local);
+        }
+
+        let first_key = format!("{}#{}", kind.text(), relayed.id()?);
+
+        if let Some(first) = self.first_copies.get(&first_key) {
+            return Self::compare_first(&mut self.compiler.reporter, site, kind, relayed, first);
+        }
+
+        let copied = Self::copied(relayed, site)?;
+
+        match &copied {
+            Declaration::Schema(schema) => self.copies.schemas.push(schema.as_ref().clone()),
+            Declaration::Enum(declared) => self.copies.enums.push(declared.clone()),
+            Declaration::Scalar(declared) => self.copies.scalars.push(declared.clone()),
+            Declaration::ExtensionKey(declared) => {
+                self.copies.extension_keys.push(declared.clone());
+            }
+        }
+
+        self.first_copies.insert(
+            first_key,
+            FirstCopy {
+                declaration: copied,
+                pointer: site.pointer.to_owned(),
+                relays: site.relays.to_owned(),
+            },
+        );
+
+        Ok(())
     }
 
+    /// A copy of a declaration of the public api, once per name and api; `None` once seen, or when
+    /// it holds what this IR revision does not know (refused).
     fn copy_of(
         &mut self,
         site: CopySite<'_, '_>,
         catalogue: CatalogueName,
         id: &str,
     ) -> Result<Option<Declaration>, PassError> {
-        Err(not_ported_yet("RelayCopier.copyOf"))
+        let seen_key = format!("{}#{}:{id}", site.api, catalogue.member());
+        let pointer = tree_schemas_pointer("", &[catalogue.member(), id]);
+        let read = match catalogue {
+            CatalogueName::Schemas => site.source.schemas().get(id).map(|declared| {
+                read_declaration(declared, site.source, &pointer, |schema| {
+                    Declaration::Schema(Box::new(schema))
+                })
+            }),
+            CatalogueName::Enums => site.source.enums().get(id).map(|declared| {
+                read_declaration(declared, site.source, &pointer, Declaration::Enum)
+            }),
+            CatalogueName::Scalars => site.source.scalars().get(id).map(|declared| {
+                read_declaration(declared, site.source, &pointer, Declaration::Scalar)
+            }),
+            CatalogueName::ExtensionKeys => site.source.extension_keys().get(id).map(|declared| {
+                read_declaration(declared, site.source, &pointer, Declaration::ExtensionKey)
+            }),
+        };
+
+        let Some(read) = read else {
+            return Ok(None);
+        };
+
+        if !self.seen.insert(seen_key) {
+            return Ok(None);
+        }
+
+        match read? {
+            Ok(declaration) => Ok(Some(declaration)),
+            Err(unknowns) => {
+                let copied = format!("the {} '{id}'", catalogue.kind().text());
+
+                self.report_unknowns(site, &copied, &unknowns)?;
+
+                Ok(None)
+            }
+        }
     }
 
     fn report_unknowns(
         &mut self,
         site: CopySite<'_, '_>,
         copied: &str,
-        unknowns: &[TreeSchemasClosedUnknown],
+        unknowns: &[IrClosedUnknown],
     ) -> Result<(), PassError> {
-        Err(not_ported_yet("RelayCopier.reportUnknowns"))
+        let named: Vec<String> = unknowns
+            .iter()
+            .map(|unknown| format!("{} at {}", quote_text(&unknown.value), unknown.pointer))
+            .collect();
+
+        self.compiler.reporter.error(TreeSchemasProblem {
+            rule: TreeSchemasRule::RelayUnknown,
+            pointer: site.pointer.to_owned(),
+            message: format!(
+                "{copied} that {} uses holds what this compiler does not know ({}), so it is not copied",
+                site.relays,
+                named.join(", ")
+            ),
+            fix: format!(
+                "compile with a seampact version that reads the IR of {}, or relay another operation",
+                site.api
+            ),
+            related: None,
+        })
     }
 
-    fn copied(
-        &self,
-        relayed: &Declaration,
-        site: CopySite<'_, '_>,
-    ) -> Result<Declaration, PassError> {
-        Err(not_ported_yet("RelayCopier.copied"))
+    fn copied(relayed: &Declaration, site: CopySite<'_, '_>) -> Result<Declaration, PassError> {
+        let mut encoded_copy = relayed.encoded()?;
+
+        with_api_origins(&mut encoded_copy, site.api)?;
+
+        // This api writes the directions from its own uses; an extension key has none.
+        if let JsonValue::Object(object) = &mut encoded_copy
+            && object.contains_key("directions")
+        {
+            object.insert("directions".to_owned(), JsonValue::Array(Vec::new()));
+        }
+
+        relayed.decoded_like(&encoded_copy)
     }
 
     fn compare_local(
-        &mut self,
+        reporter: &mut TreeSchemasReporter<'_, '_>,
         site: CopySite<'_, '_>,
         kind: DeclarationKind,
         relayed: &Declaration,
         local: &Declaration,
     ) -> Result<(), PassError> {
-        Err(not_ported_yet("RelayCopier.compareLocal"))
+        if content_of(relayed)? == content_of(local)? {
+            return Ok(());
+        }
+
+        reporter.error(TreeSchemasProblem {
+            rule: TreeSchemasRule::RelayDeclaration,
+            pointer: site.pointer.to_owned(),
+            message: format!(
+                "the {} '{}' that {} uses differs from the one this api declares",
+                kind.text(),
+                relayed.id()?,
+                site.relays
+            ),
+            fix: "declare it once in a shared file both apis load, or rename one of them"
+                .to_owned(),
+            related: Some(vec![TreeSchemasRelated {
+                pointer: local.origin_pointer()?.to_owned(),
+                message: format!("this api's {} '{}'", kind.text(), local.id()?),
+            }]),
+        })
     }
 
     fn compare_first(
-        &mut self,
+        reporter: &mut TreeSchemasReporter<'_, '_>,
         site: CopySite<'_, '_>,
         kind: DeclarationKind,
         relayed: &Declaration,
-        first: &FirstCopy<'_, '_>,
+        first: &FirstCopy,
     ) -> Result<(), PassError> {
-        Err(not_ported_yet("RelayCopier.compareFirst"))
+        if content_of(relayed)? == content_of(&first.declaration)? {
+            return Ok(());
+        }
+
+        reporter.error(TreeSchemasProblem {
+            rule: TreeSchemasRule::RelayDeclaration,
+            pointer: site.pointer.to_owned(),
+            message: format!(
+                "the {} '{}' that {} uses differs from the one {} uses",
+                kind.text(),
+                relayed.id()?,
+                site.relays,
+                first.relays
+            ),
+            fix: "declare it once in a shared file both public apis load, or rename one of them"
+                .to_owned(),
+            related: Some(vec![TreeSchemasRelated {
+                pointer: first.pointer.clone(),
+                message: format!("the route relaying {}", first.relays),
+            }]),
+        })
     }
 }
 
@@ -354,19 +921,29 @@ fn public_operation<'context>(
         }));
     }
 
-    let imported_operation = context.imported(&target.api).is_some_and(|imported| {
-        imported
-            .operations
-            .iter()
-            .any(|each| each.id.as_str() == target.operation_id)
-    });
+    let Some(imported) = context.imported_ir(&target.api) else {
+        return Ok(None);
+    };
+    let found = imported
+        .contract()
+        .operations
+        .iter()
+        .enumerate()
+        .find(|(_, each)| each.id.as_str() == target.operation_id);
+    let Some((index, operation)) = found else {
+        return Ok(None);
+    };
+    let pointer = tree_schemas_pointer("", &["operations", &index.to_string()]);
+    let check = check_ir_closed_declaration(operation, imported.document(), &pointer)
+        .map_err(|error| InternalError::new(error.to_string()))?;
 
-    if imported_operation {
-        // The closed check of an imported operation is the foreign `checkIrClosedDeclaration`.
-        return Err(not_ported_yet("checkIrClosedDeclaration"));
-    }
-
-    Ok(None)
+    Ok(match check {
+        IrClosedCheck::Closed(closed) => Some((
+            CopySource::Contract(imported),
+            RelayedOperation::Contract(closed),
+        )),
+        IrClosedCheck::Unknowns(_) => None,
+    })
 }
 
 /// Copies the declarations every relay route of the tree uses and answers them with the copied
@@ -417,6 +994,61 @@ mod tests {
     fn target(text: &str) -> Option<(String, String)> {
         relay_target(&JsonValue::String(text.to_owned()))
             .map(|found| (found.api, found.operation_id))
+    }
+
+    fn json(text: &str) -> JsonValue {
+        let parsed: serde_json::Value = serde_json::from_str(text).expect("test JSON");
+
+        JsonValue::try_from(parsed).expect("test JSON value")
+    }
+
+    #[test]
+    fn a_copied_origin_names_the_api_but_a_written_value_is_never_entered() {
+        let mut copied = json(
+            r#"{"origin":{"layer":"api","pointer":"/a"},
+                "core":{"origin":{"layer":"core","pointer":"/c"}},
+                "derivedFrom":{"from":[{"layer":"base","pointer":"/b"}]},
+                "examples":[{"origin":{"layer":"api","pointer":"/data"}}],
+                "own":{"origin":{"api":"other","layer":"api","pointer":"/o"}}}"#,
+        );
+
+        with_api_origins(&mut copied, "public").expect("stamped");
+
+        let expected = json(
+            r#"{"origin":{"api":"public","layer":"api","pointer":"/a"},
+                "core":{"origin":{"layer":"core","pointer":"/c"}},
+                "derivedFrom":{"from":[{"api":"public","layer":"base","pointer":"/b"}]},
+                "examples":[{"origin":{"layer":"api","pointer":"/data"}}],
+                "own":{"origin":{"api":"other","layer":"api","pointer":"/o"}}}"#,
+        );
+
+        assert_eq!(copied, expected);
+    }
+
+    #[test]
+    fn two_copies_compare_equal_without_directions_origins_and_the_copy_api() {
+        let first = json(
+            r#"{"id":"A","directions":["input"],"origin":{"layer":"api","pointer":"/a"},
+                "derivedFrom":{"from":[{"api":"x","layer":"api","pointer":"/p"}]},
+                "examples":[{"origin":1}]}"#,
+        );
+        let second = json(
+            r#"{"id":"A","directions":[],"origin":{"layer":"base","pointer":"/z"},
+                "derivedFrom":{"from":[{"layer":"api","pointer":"/p"}]},
+                "examples":[{"origin":1}]}"#,
+        );
+        let different = json(
+            r#"{"id":"A","directions":[],"derivedFrom":{"from":[]},"examples":[{"origin":2}]}"#,
+        );
+
+        assert_eq!(
+            canonical_json(&without_ignored(&first)),
+            canonical_json(&without_ignored(&second))
+        );
+        assert_ne!(
+            canonical_json(&without_ignored(&first)),
+            canonical_json(&without_ignored(&different))
+        );
     }
 
     #[test]

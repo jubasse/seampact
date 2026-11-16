@@ -3,27 +3,27 @@
 
 use std::cmp::Ordering;
 
+use num_bigint::{BigInt, Sign};
 use seampact_diagnostics::InternalError;
 use seampact_js::FiniteNumber;
 use seampact_pipeline::PassError;
 
-use crate::not_ported::not_ported_yet;
-
 /// The ten the units are scaled by.
-const TEN: i128 = 10;
+const TEN: u8 = 10;
+
+/// The most decimal digits a power of ten may have: V8 throws a `RangeError` for a `bigint` past
+/// 2^30 bits, which the TypeScript never catches.
+const MAX_POWER_OF_TEN: u32 = 323_228_496;
 
 /// The value `units / 10^scale`.
-///
-/// `units` is an `i128` for now: the TypeScript holds a `bigint`, and the workspace has no big
-/// integer crate yet.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct TreeSchemasDecimal {
-    pub(crate) units: i128,
+    pub(crate) units: BigInt,
     pub(crate) scale: i64,
 }
 
 /// A decimal text or a number, a number read through its shortest form.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) enum TreeSchemasDecimalSource<'text> {
     Number(f64),
     Text(&'text str),
@@ -45,35 +45,43 @@ pub(crate) fn tree_schemas_decimal_of(
         return Ok(None);
     };
     let digits = format!("{}{}{}", parts.sign, parts.whole, parts.fraction);
-    let units: i128 = digits.parse().map_err(|_| beyond_128_bits(&text))?;
-    let exponent: i64 = parts.exponent.parse().map_err(|_| beyond_128_bits(&text))?;
-    let fraction_length =
-        i64::try_from(parts.fraction.len()).map_err(|_| beyond_128_bits(&text))?;
+    let units: BigInt = digits.parse().map_err(|_| beyond_bigint(&text))?;
+    let exponent: i64 = parts.exponent.parse().map_err(|_| beyond_bigint(&text))?;
+    let fraction_length = i64::try_from(parts.fraction.len()).map_err(|_| beyond_bigint(&text))?;
     let scale = fraction_length
         .checked_sub(exponent)
-        .ok_or_else(|| beyond_128_bits(&text))?;
+        .ok_or_else(|| beyond_bigint(&text))?;
 
     if scale >= 0 {
         return Ok(Some(TreeSchemasDecimal { units, scale }));
     }
 
-    let scaled_units = scale
-        .checked_neg()
-        .and_then(|steps| u32::try_from(steps).ok())
-        .and_then(|steps| TEN.checked_pow(steps))
-        .and_then(|factor| units.checked_mul(factor))
-        .ok_or_else(|| beyond_128_bits(&text))?;
+    let factor = power_of_ten(scale.checked_neg().ok_or_else(|| beyond_bigint(&text))?)?;
 
     Ok(Some(TreeSchemasDecimal {
-        units: scaled_units,
+        units: units * factor,
         scale: 0,
     }))
 }
 
-fn beyond_128_bits(text: &str) -> PassError {
+fn beyond_bigint(text: &str) -> PassError {
     PassError::from(InternalError::new(format!(
-        "tree.schemas reads the decimal {text:?} past 128 bits, which no example reaches"
+        "tree.schemas reads the decimal {text:?} past what a bigint holds, which no example reaches"
     )))
+}
+
+/// `10n ** BigInt(steps)`, refused where V8 throws.
+fn power_of_ten(steps: i64) -> Result<BigInt, PassError> {
+    let exponent = u32::try_from(steps)
+        .ok()
+        .filter(|exponent| *exponent <= MAX_POWER_OF_TEN)
+        .ok_or_else(|| {
+            PassError::from(InternalError::new(format!(
+                "tree.schemas scales a decimal by 10^{steps}, past what a bigint holds, which no example reaches"
+            )))
+        })?;
+
+    Ok(BigInt::from(TEN).pow(exponent))
 }
 
 /// The groups of the decimal text: sign, whole digits, fraction digits and exponent, as written.
@@ -131,27 +139,22 @@ fn split_digits(text: &str) -> Option<(&str, &str)> {
     text.split_at_checked(length)
 }
 
-fn aligned(a: &TreeSchemasDecimal, b: &TreeSchemasDecimal) -> Result<(i128, i128), PassError> {
+fn aligned(a: &TreeSchemasDecimal, b: &TreeSchemasDecimal) -> Result<(BigInt, BigInt), PassError> {
     let scale = a.scale.max(b.scale);
 
     Ok((units_at(a, scale)?, units_at(b, scale)?))
 }
 
 /// The units of `decimal` once written at `scale`, which is not below its own.
-fn units_at(decimal: &TreeSchemasDecimal, scale: i64) -> Result<i128, PassError> {
-    let steps = scale
-        .checked_sub(decimal.scale)
-        .and_then(|difference| u32::try_from(difference).ok())
-        .and_then(|difference| TEN.checked_pow(difference));
-    let units = steps.and_then(|factor| decimal.units.checked_mul(factor));
+fn units_at(decimal: &TreeSchemasDecimal, scale: i64) -> Result<BigInt, PassError> {
+    let steps = scale.checked_sub(decimal.scale).ok_or_else(|| {
+        PassError::from(InternalError::new(format!(
+            "tree.schemas aligns a decimal of scale {} past what a number holds",
+            decimal.scale
+        )))
+    })?;
 
-    units.ok_or_else(|| {
-        InternalError::new(format!(
-            "tree.schemas compares the decimal {} x 10^-{} past 128 bits, which no example reaches",
-            decimal.units, decimal.scale
-        ))
-        .into()
-    })
+    Ok(&decimal.units * power_of_ten(steps)?)
 }
 
 /// `Less` when `a` is below `b`, `Equal` when equal, `Greater` when above.
@@ -169,5 +172,64 @@ pub(crate) fn tree_schemas_is_multiple_of(
     value: &TreeSchemasDecimal,
     step: &TreeSchemasDecimal,
 ) -> Result<bool, PassError> {
-    Err(not_ported_yet("treeSchemasIsMultipleOf"))
+    let (units, step_units) = aligned(value, step)?;
+
+    Ok(step_units.sign() != Sign::NoSign && (units % step_units).sign() == Sign::NoSign)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn decimal(text: &str) -> TreeSchemasDecimal {
+        match tree_schemas_decimal_of(TreeSchemasDecimalSource::Text(text)) {
+            Ok(Some(read)) => read,
+            other => panic!("text {text:?} gave {other:?}"),
+        }
+    }
+
+    #[test]
+    fn multiples_are_exact_past_128_bits_and_a_zero_step_has_none() {
+        let huge = "100000000000000000000000000000000000000000000000000";
+        let cases = [
+            (huge, "0.5", true),
+            (huge, "3", false),
+            ("1", "0.3", false),
+            ("0.9", "0.3", true),
+            ("5", "0", false),
+        ];
+
+        for (value, step, expected) in cases {
+            assert_eq!(
+                tree_schemas_is_multiple_of(&decimal(value), &decimal(step)),
+                Ok(expected),
+                "{value} by {step}"
+            );
+        }
+    }
+
+    #[test]
+    fn decimals_compare_across_scales_without_rounding() {
+        let cases = [
+            ("1.10", "1.1", Ordering::Equal),
+            (
+                "0.1",
+                "0.10000000000000000000000000000000000000000001",
+                Ordering::Less,
+            ),
+            (
+                "-1",
+                "-1.0000000000000000000000000000000000000000001",
+                Ordering::Greater,
+            ),
+        ];
+
+        for (left, right, expected) in cases {
+            assert_eq!(
+                tree_schemas_compare_decimals(&decimal(left), &decimal(right)),
+                Ok(expected),
+                "{left} against {right}"
+            );
+        }
+    }
 }

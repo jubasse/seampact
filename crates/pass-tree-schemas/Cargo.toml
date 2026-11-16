@@ -9,6 +9,7 @@ publish.workspace = true
 
 [dependencies]
 indexmap.workspace = true
+num-bigint.workspace = true
 regress.workspace = true
 seampact-diagnostics.workspace = true
 seampact-ir.workspace = true

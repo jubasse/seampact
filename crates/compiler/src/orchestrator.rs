@@ -558,21 +558,6 @@ mod tests {
     }
 
     #[test]
-    fn the_first_api_that_runs_a_half_ends_the_run_at_the_first_half() {
-        let mut run = loaded_reference();
-        let relay = relay_in_workspace_order(&run);
-
-        let progress = run
-            .run_apis(&relay, &IndexMap::new())
-            .expect("no internal error");
-
-        assert_eq!(
-            progress,
-            Progress::NotPorted(Stage::Half(Half::TreeSchemas))
-        );
-    }
-
-    #[test]
     fn an_api_with_an_error_is_skipped_and_independent_apis_continue() {
         let mut run = loaded_reference();
         let relay = relay_in_workspace_order(&run);
