@@ -4,21 +4,27 @@ use std::collections::HashSet;
 use std::{iter, mem};
 
 use indexmap::IndexMap;
-use seampact_diagnostics::{InternalError, quote_text};
+use seampact_diagnostics::{InternalError, RelatedLocation, quote_text};
 use seampact_ir::{
     Absent, Direction, EachTemplate, ErrorShape, FormatId, HeaderTemplate, IrMap,
     KnownMemberNameRef, KnownSchemaRef, KnownTemplateRef, Layer, MemberName, MetaFill, MetaMember,
     ObjectSchema, ObjectTemplate, ObjectTemplateMember, OperationId, Origin, PlainMemberName,
-    ResponseShape, Shape, Slot, SlotTemplate, SuccessShapes, Template, TypeUse, WireFormat,
+    Refinements, ResponseShape, ScalarType, ScalarTypeUse, Shape, Slot, SlotTemplate,
+    SuccessShapes, Template, TypeUse, ValueSource, ValueSourceIn, WireFormat,
 };
 use seampact_js::js_key_order;
-use seampact_json::JsonValue;
-use seampact_pass_tree_shared::{tree_nodes_answered_use, tree_nodes_member, tree_nodes_schema};
+use seampact_json::{JsonValue, stringify_json};
+use seampact_pass_tree_shared::{
+    tree_nodes_answered_use, tree_nodes_member, tree_nodes_origin_at, tree_nodes_schema,
+};
 use seampact_pipeline::{DraftOperation, PassError, pointer_below};
 use seampact_templates::{template_slots, template_uses};
 
 use crate::api::text_of;
-use crate::not_ported::not_ported_yet;
+use crate::diagnostics::{
+    TreeNodesDiagnosticOptions, TreeNodesRule, tree_nodes_error, tree_nodes_node_origin,
+    tree_nodes_report_once,
+};
 use crate::pass::TreeNodesScope;
 use crate::templates::{TreeNodesTemplatePlace, TreeNodesTemplateSite, tree_nodes_template};
 
@@ -161,6 +167,28 @@ enum PayloadRule {
     FormatEach,
     FormatMember,
     TemplateSlot,
+}
+
+impl PayloadRule {
+    const fn as_str(self) -> &'static str {
+        match self {
+            Self::FormatId => "format-id",
+            Self::FormatMerge => "format-merge",
+            Self::FormatEach => "format-each",
+            Self::FormatMember => "format-member",
+            Self::TemplateSlot => "template-slot",
+        }
+    }
+
+    const fn rule(self) -> TreeNodesRule {
+        match self {
+            Self::FormatId => TreeNodesRule::FormatId,
+            Self::FormatMerge => TreeNodesRule::FormatMerge,
+            Self::FormatEach => TreeNodesRule::FormatEach,
+            Self::FormatMember => TreeNodesRule::FormatMember,
+            Self::TemplateSlot => TreeNodesRule::TemplateSlot,
+        }
+    }
 }
 
 /// A payload fault with how to fix it.
@@ -439,12 +467,52 @@ impl<'scope, 'draft, 'half, 'run> FormatReader<'scope, 'draft, 'half, 'run> {
         Ok((!refused).then_some(members))
     }
 
+    // `now`, `traceId` and `degraded` have a core type; `handler` and a principal field take the written `schema`.
     fn meta_member(
         &mut self,
-        _name: &str,
-        _field: &JsonValue,
+        name: &str,
+        field: &JsonValue,
     ) -> Result<Option<MetaMember>, PassError> {
-        Err(not_ported_yet("FormatReader.metaMember"))
+        let pointer = pointer_below(&self.pointer, &["meta", name]);
+        let Some(fill) = text_of(tree_nodes_member(Some(field), "fill")) else {
+            return Err(
+                InternalError::new(format!("the meta field at {pointer} has no fill")).into(),
+            );
+        };
+        let r#type = if tree_nodes_member(Some(field), "schema").is_none() {
+            core_meta_type(fill)
+        } else {
+            Some(self.schema_type(&pointer)?)
+        };
+        let Some(r#type) = r#type else {
+            self.refuse_untyped_meta(name, fill, &pointer)?;
+
+            return Ok(None);
+        };
+
+        let Some(principal_name) = fill.strip_prefix(PRINCIPAL_PREFIX) else {
+            let fill = if fill == HANDLER_FILL {
+                MetaFill::Handler
+            } else {
+                meta_fill(fill)?
+            };
+
+            return Ok(Some(MetaMember {
+                r#type,
+                fill,
+                source: None,
+            }));
+        };
+
+        Ok(Some(MetaMember {
+            r#type,
+            fill: MetaFill::Source,
+            source: Some(ValueSource {
+                r#in: ValueSourceIn::Principal,
+                name: Some(principal_name.to_owned()),
+                prefix_bits: None,
+            }),
+        }))
     }
 
     fn schema_type(&self, pointer: &str) -> Result<TypeUse, PassError> {
@@ -457,11 +525,28 @@ impl<'scope, 'draft, 'half, 'run> FormatReader<'scope, 'draft, 'half, 'run> {
 
     fn refuse_untyped_meta(
         &mut self,
-        _name: &str,
-        _fill: &str,
-        _pointer: &str,
+        name: &str,
+        fill: &str,
+        pointer: &str,
     ) -> Result<(), PassError> {
-        Err(not_ported_yet("FormatReader.refuseUntypedMeta"))
+        let origin = tree_nodes_origin_at(self.scope.context, pointer)?;
+
+        self.scope
+            .context
+            .report(tree_nodes_error(TreeNodesDiagnosticOptions {
+                rule: TreeNodesRule::FormatMeta,
+                origin: tree_nodes_node_origin(&origin)?,
+                message: format!(
+                    "The meta field {} of {} is filled by {}, which gives it no type.",
+                    quote_text(name),
+                    self.owner,
+                    quote_text(fill)
+                ),
+                fix: format!("Write the schema of {} beside its fill.", quote_text(name)),
+                related: Vec::new(),
+            }));
+
+        Ok(())
     }
 
     // A format without `error` takes the bare one; its `media` defaults to the format's, and it must write `$code`.
@@ -518,12 +603,30 @@ impl<'scope, 'draft, 'half, 'run> FormatReader<'scope, 'draft, 'half, 'run> {
         }))
     }
 
+    // `conventions.errors.requireCode: false` lifts the refusal of an error body that writes no `$code`.
     fn code_required(&self) -> Result<bool, PassError> {
-        Err(not_ported_yet("FormatReader.codeRequired"))
+        let reading = self.scope.context.conventions.get("errors.requireCode")?;
+
+        Ok(reading.map(|reading| reading.value) != Some(&JsonValue::Bool(false)))
     }
 
-    fn refuse_codeless(&mut self, _pointer: &str) -> Result<(), PassError> {
-        Err(not_ported_yet("FormatReader.refuseCodeless"))
+    fn refuse_codeless(&mut self, pointer: &str) -> Result<(), PassError> {
+        let origin = tree_nodes_origin_at(self.scope.context, pointer)?;
+
+        self.scope
+            .context
+            .report(tree_nodes_error(TreeNodesDiagnosticOptions {
+                rule: TreeNodesRule::FormatErrorCode,
+                origin: tree_nodes_node_origin(&origin)?,
+                message: format!(
+                    "The error body of {} writes no $code, so a client cannot tell the error.",
+                    self.owner
+                ),
+                fix: "Write $code in the error body, as a member or inside a text ('https://errors.example.com/${code}'), or set 'conventions.errors.requireCode: false'.".to_owned(),
+                related: Vec::new(),
+            }));
+
+        Ok(())
     }
 
     fn site(&self, place: TreeNodesTemplatePlace) -> TreeNodesTemplateSite {
@@ -534,8 +637,42 @@ impl<'scope, 'draft, 'half, 'run> FormatReader<'scope, 'draft, 'half, 'run> {
     }
 }
 
-fn meta_fill(_fill: &str) -> Result<MetaFill, PassError> {
-    Err(not_ported_yet("metaFill"))
+/// The type a core meta fill gives its field.
+fn core_meta_type(fill: &str) -> Option<TypeUse> {
+    let (scalar_type, format) = match fill {
+        "now" => (ScalarType::String, Some("date-time")),
+        "traceId" => (ScalarType::String, None),
+        "degraded" => (ScalarType::Boolean, None),
+        _ => return None,
+    };
+
+    Some(TypeUse::Scalar(ScalarTypeUse {
+        r#type: scalar_type,
+        format: format.map(str::to_owned),
+        scalar: None,
+        refinements: Refinements::default(),
+        content: None,
+        sensitive: None,
+        nullable: None,
+        docs: None,
+        examples: None,
+    }))
+}
+
+fn meta_fill(fill: &str) -> Result<MetaFill, PassError> {
+    METAFILLS
+        .iter()
+        .find(|candidate| candidate.as_str() == fill)
+        .cloned()
+        .ok_or_else(|| {
+            let known: Vec<&str> = METAFILLS.iter().map(MetaFill::as_str).collect();
+
+            InternalError::new(format!(
+                "the meta fill {fill} is none of {}",
+                known.join(", ")
+            ))
+            .into()
+        })
 }
 
 /// Checks each success response of each operation against the templates its format and paging style write.
@@ -1090,15 +1227,46 @@ fn check_merge(
     )
 }
 
+// Two success responses of one operation may share a fault: it is reported once.
 fn report_payload(
-    _check: &PayloadCheck<'_>,
-    _owner: &TemplateOwner,
-    _fault: &PayloadFault,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    check: &PayloadCheck<'_>,
+    owner: &TemplateOwner,
+    fault: &PayloadFault,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("reportPayload"))
+    let operation = check.operation;
+    let key = stringify_json(&JsonValue::Array(vec![
+        JsonValue::String(fault.rule.as_str().to_owned()),
+        JsonValue::String(operation_id_of(operation)?.to_owned()),
+        JsonValue::String(fault.message.clone()),
+    ]));
+    let related = if owner.origin.layer == Layer::Core {
+        Vec::new()
+    } else {
+        vec![RelatedLocation {
+            origin: tree_nodes_node_origin(&owner.origin)?,
+            message: owner.name.clone(),
+        }]
+    };
+    let diagnostic = tree_nodes_error(TreeNodesDiagnosticOptions {
+        rule: fault.rule.rule(),
+        origin: tree_nodes_node_origin(&origin_of_operation(operation)?)?,
+        message: fault.message.clone(),
+        fix: fault.fix.clone(),
+        related,
+    });
+
+    tree_nodes_report_once(&key, diagnostic, scope);
+
+    Ok(())
 }
 
-fn origin_of_operation(_operation: &DraftOperation) -> Result<Origin, PassError> {
-    Err(not_ported_yet("originOfOperation"))
+fn origin_of_operation(operation: &DraftOperation) -> Result<Origin, PassError> {
+    operation.origin.clone().ok_or_else(|| {
+        InternalError::new(format!(
+            "the operation {} has no origin",
+            operation.id.as_ref().map_or("undefined", OperationId::as_str)
+        ))
+        .into()
+    })
 }
