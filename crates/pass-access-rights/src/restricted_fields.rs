@@ -2,16 +2,17 @@
 
 use std::collections::{HashMap, HashSet};
 
-use seampact_diagnostics::InternalError;
+use seampact_diagnostics::{InternalError, access_rights_quoted};
 use seampact_ir::{
     FieldRestriction, IrMap, KnownSchemaRef, KnownTypeUseRef, ObjectSchema, Property, Schema,
     SchemaId, TypeUse,
 };
-use seampact_pipeline::PassError;
+use seampact_pipeline::{PassError, pointer_below};
 
-use crate::not_ported::not_ported_yet;
-use crate::report::AccessRightsReporter;
-use crate::restrictions::AccessRightsRestrictionChecks;
+use crate::report::{
+    AccessRightsProblem, AccessRightsRelated, AccessRightsReporter, AccessRightsRule,
+};
+use crate::restrictions::{AccessRightsRestrictionChecks, access_rights_restriction_origin};
 use crate::routes::AccessRightsRoute;
 
 pub(crate) type AccessRightsDraftSchemas = IrMap<SchemaId, Schema>;
@@ -199,30 +200,154 @@ pub(crate) fn access_rights_restricted_fields<'draft>(
 }
 
 pub(crate) fn walk_schema<'draft>(
-    _walk: &mut AccessRightsFieldWalk<'draft, '_>,
-    _at: &WalkAt,
-    _found: &mut dyn FnMut(AccessRightsRestrictedField<'draft>),
-    _id: &str,
+    walk: &mut AccessRightsFieldWalk<'draft, '_>,
+    at: &WalkAt,
+    found: &mut dyn FnMut(AccessRightsRestrictedField<'draft>),
+    id: &str,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("walkSchema"))
+    let schemas: &'draft AccessRightsDraftSchemas = walk.schemas;
+
+    match KnownSchemaRef::try_from(schema_of(schemas, id)?)? {
+        KnownSchemaRef::Object(object) => {
+            for property in &object.properties {
+                if access_rights_field_walk_exceeded(walk) {
+                    return Ok(());
+                }
+
+                let pointer = pointer_below(&at.prefix, &[&property.name]);
+
+                if let Some(restriction) = &property.restricted_to {
+                    walk.reached += 1;
+                    found(AccessRightsRestrictedField {
+                        schema: at.root.clone(),
+                        pointer: pointer.clone(),
+                        holder: object,
+                        property,
+                        restriction,
+                    });
+                }
+
+                let below = WalkAt {
+                    prefix: pointer,
+                    ..at.clone()
+                };
+
+                walk_use(walk, &below, found, &property.r#type)?;
+            }
+
+            Ok(())
+        }
+        KnownSchemaRef::Map(map) => {
+            let below = WalkAt {
+                prefix: pointer_below(&at.prefix, &["*"]),
+                ..at.clone()
+            };
+
+            walk_use(walk, &below, found, &map.values)
+        }
+        KnownSchemaRef::Union(union) => {
+            for variant in &union.variants {
+                walk_reference(walk, at, found, variant.schema.as_str())?;
+            }
+
+            Ok(())
+        }
+    }
 }
 
 pub(crate) fn walk_use<'draft>(
-    _walk: &mut AccessRightsFieldWalk<'draft, '_>,
-    _at: &WalkAt,
-    _found: &mut dyn FnMut(AccessRightsRestrictedField<'draft>),
-    _use: &TypeUse,
+    walk: &mut AccessRightsFieldWalk<'draft, '_>,
+    at: &WalkAt,
+    found: &mut dyn FnMut(AccessRightsRestrictedField<'draft>),
+    type_use: &TypeUse,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("walkUse"))
+    match KnownTypeUseRef::try_from(type_use)? {
+        KnownTypeUseRef::Array(array) => {
+            let below = WalkAt {
+                prefix: pointer_below(&at.prefix, &["*"]),
+                ..at.clone()
+            };
+
+            walk_use(walk, &below, found, &array.items)
+        }
+        KnownTypeUseRef::Ref(reference) => {
+            walk_reference(walk, at, found, reference.schema.as_str())
+        }
+        KnownTypeUseRef::Scalar(scalar) => {
+            let Some(content) = &scalar.content else {
+                return Ok(());
+            };
+
+            walk.reached += 1;
+
+            let mut position_walk = AccessRightsPositionWalk {
+                reporter: &mut *walk.reporter,
+                schemas: walk.schemas,
+                checks: &mut *walk.checks,
+            };
+            let position = AccessRightsRefusedPosition {
+                text: format!(
+                    "the JSON content of field '{}'",
+                    access_rights_quoted(&format!("{}{}", at.root, at.prefix))
+                ),
+                pointer: None,
+            };
+
+            access_rights_refuse_restrictions_below(&mut position_walk, &content.schema, &position)
+        }
+        KnownTypeUseRef::Enum(_) | KnownTypeUseRef::File(_) | KnownTypeUseRef::Opaque(_) => Ok(()),
+    }
 }
 
 pub(crate) fn walk_reference<'draft>(
-    _walk: &mut AccessRightsFieldWalk<'draft, '_>,
-    _at: &WalkAt,
-    _found: &mut dyn FnMut(AccessRightsRestrictedField<'draft>),
-    _id: &str,
+    walk: &mut AccessRightsFieldWalk<'draft, '_>,
+    at: &WalkAt,
+    found: &mut dyn FnMut(AccessRightsRestrictedField<'draft>),
+    id: &str,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("walkReference"))
+    if !walk.checks.reaching.contains(id) {
+        return Ok(());
+    }
+
+    if !at.path.iter().any(|schema| schema == id) {
+        let mut path = at.path.clone();
+
+        path.push(id.to_owned());
+
+        let below = WalkAt { path, ..at.clone() };
+
+        return walk_schema(walk, &below, found, id);
+    }
+
+    walk.reached += 1;
+
+    if walk.checks.recursive.contains(id) {
+        return Ok(());
+    }
+
+    walk.checks.recursive.insert(id.to_owned());
+
+    let origin = match KnownSchemaRef::try_from(schema_of(walk.schemas, id)?)? {
+        KnownSchemaRef::Object(object) => &object.origin,
+        KnownSchemaRef::Map(map) => &map.origin,
+        KnownSchemaRef::Union(union) => &union.origin,
+    };
+
+    walk.reporter.error(AccessRightsProblem {
+        rule: AccessRightsRule::FieldRightRecursive,
+        message: format!(
+            "schema '{id}' holds a restricted field and references itself below '{}', so route '{}' would have field rights at pointers without end",
+            access_rights_quoted(&format!("{}{}", at.root, at.prefix)),
+            walk.route.id
+        ),
+        fix: "restrict the field in a schema that is not recursive, or end the recursion before it"
+            .to_owned(),
+        pointer: origin.pointer.clone(),
+        distinct_by: None,
+        related: Vec::new(),
+    });
+
+    Ok(())
 }
 
 /// Refuses every restricted field the use reaches, each at its written restriction, once per
@@ -261,11 +386,34 @@ pub(crate) fn access_rights_refuse_restrictions_below(
 }
 
 pub(crate) fn refuse_position(
-    _reporter: &mut AccessRightsReporter,
-    _holder: &str,
-    _property: &Property,
-    _restriction: &FieldRestriction,
-    _position: &AccessRightsRefusedPosition,
-) -> Result<(), PassError> {
-    Err(not_ported_yet("refusePosition"))
+    reporter: &mut AccessRightsReporter,
+    holder: &str,
+    property: &Property,
+    restriction: &FieldRestriction,
+    position: &AccessRightsRefusedPosition,
+) -> Result<(), InternalError> {
+    let related = position
+        .pointer
+        .iter()
+        .map(|pointer| AccessRightsRelated {
+            pointer: pointer.clone(),
+            message: "the position is written here".to_owned(),
+        })
+        .collect();
+
+    reporter.error(AccessRightsProblem {
+        rule: AccessRightsRule::FieldRightPosition,
+        message: format!(
+            "field '{}' is restricted to right '{}' and is reached from {}, where the IR lists no field right",
+            access_rights_quoted(&format!("{holder}{}", pointer_below("", &[&property.name]))),
+            access_rights_quoted(restriction.right.as_str()),
+            position.text
+        ),
+        fix: "move the restricted field out of the schemas this position reaches, or remove its restrictedTo".to_owned(),
+        pointer: access_rights_restriction_origin(restriction)?.pointer.clone(),
+        distinct_by: None,
+        related,
+    });
+
+    Ok(())
 }

@@ -105,3 +105,6 @@ pub fn run(
 
     Ok(scope.output)
 }
+
+#[cfg(test)]
+mod tests;

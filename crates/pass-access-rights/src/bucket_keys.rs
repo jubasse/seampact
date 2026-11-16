@@ -4,13 +4,12 @@
 use seampact_diagnostics::InternalError;
 use seampact_ir::IrMap;
 use seampact_ir::{
-    InputProof, KnownRequirementRef, Property, Requirement, Schema, SchemaId, ValueSource,
-    ValueSourceIn,
+    InputProof, KnownRequirementRef, KnownSchemaRef, KnownTypeUseRef, Property, Requirement,
+    Schema, SchemaId, ValueSource, ValueSourceIn,
 };
-use seampact_pipeline::{DraftOperationInput, PassError, pointer_below};
+use seampact_pipeline::{DraftOperationInput, pointer_below};
 
 use crate::catalogues::AccessRightsCatalogues;
-use crate::not_ported::not_ported_yet;
 use crate::report::{
     AccessRightsProblem, AccessRightsRelated, AccessRightsReporter, AccessRightsRule,
 };
@@ -48,7 +47,7 @@ pub(crate) fn access_rights_check_bucket_keys(
     reporter: &mut AccessRightsReporter,
     catalogues: &AccessRightsCatalogues,
     input: &AccessRightsBucketKeysInput<'_>,
-) -> Result<(), PassError> {
+) -> Result<(), InternalError> {
     for requirement in &input.requires {
         let KnownRequirementRef::Rule(rule) = KnownRequirementRef::try_from(requirement)? else {
             continue;
@@ -73,8 +72,7 @@ pub(crate) fn access_rights_check_bucket_keys(
         let (Some(bucket), Some(use_pointer)) = (bucket, use_pointer) else {
             return Err(InternalError::new(format!(
                 "access.rights built a requirement counting in bucket '{bucket_id}' it cannot place"
-            ))
-            .into());
+            )));
         };
 
         for (index, source) in bucket.key.iter().enumerate() {
@@ -109,7 +107,7 @@ pub(crate) fn access_rights_check_bucket_keys(
 pub(crate) fn key_problem(
     input: &AccessRightsBucketKeysInput<'_>,
     source: &ValueSource,
-) -> Result<Option<KeyProblem>, PassError> {
+) -> Result<Option<KeyProblem>, InternalError> {
     if source.r#in == ValueSourceIn::Principal
         && input.route.access != AccessRightsAccessKind::Identity
     {
@@ -133,22 +131,85 @@ pub(crate) fn key_problem(
 }
 
 pub(crate) fn body_key_problem(
-    _input: &AccessRightsBucketKeysInput<'_>,
-    _name: &str,
-) -> Result<Option<KeyProblem>, PassError> {
-    Err(not_ported_yet("bodyKeyProblem"))
+    input: &AccessRightsBucketKeysInput<'_>,
+    name: &str,
+) -> Result<Option<KeyProblem>, InternalError> {
+    let Some(property) = input_property(input, name)? else {
+        return Ok(proof_key_problem(input, name));
+    };
+
+    if property.sensitive {
+        return Ok(Some(KeyProblem {
+            why: format!("whose input field '{name}' is sensitive"),
+            fix: "count a field that is not sensitive, or another source".to_owned(),
+        }));
+    }
+
+    if property.optional || property.nullable {
+        return Ok(Some(KeyProblem {
+            why: format!("whose input field '{name}' may be absent or null"),
+            fix: "make the field required and non-null, or count another source".to_owned(),
+        }));
+    }
+
+    if let KnownTypeUseRef::Scalar(scalar) = KnownTypeUseRef::try_from(&property.r#type)?
+        && COUNTABLE_TYPES.contains(&scalar.r#type.as_str())
+    {
+        return Ok(None);
+    }
+
+    Ok(Some(KeyProblem {
+        why: format!("whose input field '{name}' is no string or integer"),
+        fix: "count a string or integer field of the input".to_owned(),
+    }))
 }
 
+// A body key that is no input field: a body proof, sensitive by definition, or nothing the body
+// carries.
 pub(crate) fn proof_key_problem(
-    _input: &AccessRightsBucketKeysInput<'_>,
-    _name: &str,
-) -> Result<Option<KeyProblem>, PassError> {
-    Err(not_ported_yet("proofKeyProblem"))
+    input: &AccessRightsBucketKeysInput<'_>,
+    name: &str,
+) -> Option<KeyProblem> {
+    if input.refused_proofs.iter().any(|refused| refused == name) {
+        return None;
+    }
+
+    if input.proofs.iter().any(|proof| proof.name == name) {
+        return Some(KeyProblem {
+            why: format!("whose body field '{name}' is a rule proof, which is sensitive"),
+            fix: "count an input field that is not sensitive, or another source".to_owned(),
+        });
+    }
+
+    Some(KeyProblem {
+        why: format!("whose input has no field '{name}'"),
+        fix:
+            "count a field the input declares, or require the bucket on a route whose input has it"
+                .to_owned(),
+    })
 }
 
+// A property of the route's object input schema.
 pub(crate) fn input_property<'draft>(
-    _input: &AccessRightsBucketKeysInput<'draft>,
-    _name: &str,
-) -> Result<Option<&'draft Property>, PassError> {
-    Err(not_ported_yet("inputProperty"))
+    input: &AccessRightsBucketKeysInput<'draft>,
+    name: &str,
+) -> Result<Option<&'draft Property>, InternalError> {
+    let Some(declared) = input.input else {
+        return Ok(None);
+    };
+    let KnownTypeUseRef::Ref(reference) = KnownTypeUseRef::try_from(&declared.schema)? else {
+        return Ok(None);
+    };
+    let schemas: &'draft IrMap<SchemaId, Schema> = input.schemas;
+    let Some(schema) = schemas.get(reference.schema.as_str()) else {
+        return Ok(None);
+    };
+
+    Ok(match KnownSchemaRef::try_from(schema)? {
+        KnownSchemaRef::Object(object) => object
+            .properties
+            .iter()
+            .find(|candidate| candidate.name == name),
+        KnownSchemaRef::Map(_) | KnownSchemaRef::Union(_) => None,
+    })
 }

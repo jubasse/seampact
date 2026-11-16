@@ -5,6 +5,7 @@ use seampact_diagnostics::InternalError;
 use seampact_ir::{Docs, ExtensionKey, ExtensionPrefix, Extensions, IrMap, Origin};
 use seampact_js::js_key_order;
 use seampact_json::{JsonObject, JsonValue};
+use seampact_pipeline::json_at_pointer;
 
 use crate::schema_use::AccessRightsContext;
 
@@ -38,6 +39,13 @@ pub(crate) fn access_rights_member<'raw>(
     key: &str,
 ) -> Option<&'raw JsonValue> {
     object?.get(key)
+}
+
+/// The value the merged raw tree holds at `pointer`, copied; `None` when it names nothing.
+pub(crate) fn access_rights_merged_at(merged: &JsonObject, pointer: &str) -> Option<JsonValue> {
+    let root = JsonValue::Object(merged.clone());
+
+    json_at_pointer(&root, pointer).cloned()
 }
 
 /// A string member; `None` when absent or of another type.

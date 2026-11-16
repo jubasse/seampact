@@ -3,14 +3,19 @@
 use std::cmp::Ordering;
 
 use indexmap::IndexMap;
+use seampact_diagnostics::InternalError;
 use seampact_ir::{
-    DerivationId, Direction, FieldRestriction, FieldRight, FieldRightSubject, InputPolicy,
+    DerivationId, DerivedFrom, Direction, FieldRestriction, FieldRight, FieldRightSubject,
+    InputPolicy, SchemaId,
 };
 use seampact_js::cmp_utf16;
+use seampact_json::{JsonValue, stringify_json};
 use seampact_pipeline::{PassError, TreeNodeKind};
 
 use crate::catalogues::AccessRightsCatalogues;
-use crate::field_subjects::AccessRightsFieldRoute;
+use crate::field_subjects::{
+    AccessRightsFieldRoute, access_rights_input_subject, access_rights_output_subject,
+};
 use crate::not_ported::not_ported_yet;
 use crate::report::{AccessRightsProblem, AccessRightsReporter, AccessRightsRule};
 use crate::restricted_fields::{
@@ -19,9 +24,13 @@ use crate::restricted_fields::{
     access_rights_field_walk_exceeded, access_rights_restricted_fields,
 };
 use crate::restricted_positions::access_rights_refuse_route_positions;
-use crate::restrictions::{AccessRightsCheckedRestriction, AccessRightsRestrictionChecks};
+use crate::restrictions::{
+    AccessRightsCheckedRestriction, AccessRightsRestrictionChecks, access_rights_check_restriction,
+    access_rights_restriction_origin,
+};
 use crate::routes::access_rights_operation_of;
 use crate::schema_use::AccessRightsContext;
+use crate::subjects::AccessRightsSubjectResult;
 
 /// A route with the scopes it enters and the schemas its fields are read from.
 #[derive(Debug, Clone)]
@@ -174,14 +183,54 @@ fn adding_to<'reached, 'draft>(
 }
 
 pub(crate) fn entry_of(
-    _context: &AccessRightsContext,
-    _reporter: &mut AccessRightsReporter,
-    _catalogues: &AccessRightsCatalogues,
-    _checks: &mut AccessRightsRestrictionChecks,
-    _input: &AccessRightsFieldRightsInput<'_>,
-    _reached: &Reached<'_>,
+    context: &AccessRightsContext,
+    reporter: &mut AccessRightsReporter,
+    catalogues: &AccessRightsCatalogues,
+    checks: &mut AccessRightsRestrictionChecks,
+    input: &AccessRightsFieldRightsInput<'_>,
+    reached: &Reached<'_>,
 ) -> Result<Option<FieldRight>, PassError> {
-    Err(not_ported_yet("entryOf"))
+    let Reached { field, direction } = reached;
+    let Some(checked) =
+        access_rights_check_restriction(context, reporter, catalogues, checks, field.restriction)?
+    else {
+        return Ok(None);
+    };
+    let subject = match direction {
+        Direction::Input => access_rights_input_subject(
+            context,
+            reporter,
+            catalogues,
+            &input.field_route,
+            field,
+            &checked.right,
+        )?,
+        Direction::Output => access_rights_output_subject(
+            context,
+            reporter,
+            catalogues,
+            &input.field_route,
+            field,
+            &checked.right,
+        )?,
+        Direction::Unknown(_) => {
+            return Err(InternalError::new(format!(
+                "a restricted field was reached in direction '{direction}', which is neither input nor output"
+            ))
+            .into());
+        }
+    };
+    let AccessRightsSubjectResult::Resolved { subject } = subject else {
+        return Ok(None);
+    };
+
+    Ok(Some(field_right_of(
+        context,
+        field,
+        direction,
+        &checked,
+        subject.as_ref(),
+    )?))
 }
 
 pub(crate) fn same_entry(
@@ -201,13 +250,31 @@ pub(crate) fn report_conflict(
 }
 
 pub(crate) fn field_right_of(
-    _context: &AccessRightsContext,
-    _field: &AccessRightsRestrictedField<'_>,
-    _direction: &Direction,
-    _checked: &AccessRightsCheckedRestriction,
-    _subject: Option<&FieldRightSubject>,
-) -> Result<FieldRight, PassError> {
-    Err(not_ported_yet("fieldRightOf"))
+    context: &AccessRightsContext,
+    field: &AccessRightsRestrictedField<'_>,
+    direction: &Direction,
+    checked: &AccessRightsCheckedRestriction,
+    subject: Option<&FieldRightSubject>,
+) -> Result<FieldRight, InternalError> {
+    let input_policy = match direction {
+        Direction::Input => Some(input_policy_of(context, field.restriction)?),
+        Direction::Output | Direction::Unknown(_) => None,
+    };
+
+    Ok(FieldRight {
+        schema: SchemaId::new(field.schema.clone()),
+        pointer: field.pointer.clone(),
+        right: checked.right.id.clone(),
+        params: checked.params.clone(),
+        subject: subject.cloned(),
+        direction: direction.clone(),
+        input_policy,
+        always: None,
+        derived_from: DerivedFrom {
+            derivation: FIELD_RIGHT_DERIVATION,
+            from: vec![access_rights_restriction_origin(field.restriction)?.clone()],
+        },
+    })
 }
 
 /// UTF-16 code unit order, as the TypeScript's `<` on strings.
@@ -231,11 +298,25 @@ pub(crate) fn by_location(left: &[Reached<'_>], right: &[Reached<'_>]) -> Orderi
         })
 }
 
+// The field's own `input`, else `conventions.restrictedInput` (reject by default, A21).
 pub(crate) fn input_policy_of(
-    _context: &AccessRightsContext,
-    _restriction: &FieldRestriction,
-) -> Result<InputPolicy, PassError> {
-    Err(not_ported_yet("inputPolicyOf"))
+    context: &AccessRightsContext,
+    restriction: &FieldRestriction,
+) -> Result<InputPolicy, InternalError> {
+    if let Some(policy) = &restriction.input_policy {
+        return Ok(policy.clone());
+    }
+
+    let convention = context.context.conventions.get("restrictedInput")?;
+
+    match convention.as_ref().map(|reading| reading.value) {
+        Some(JsonValue::String(text)) if text == "reject" => Ok(InputPolicy::Reject),
+        Some(JsonValue::String(text)) if text == "strip" => Ok(InputPolicy::Strip),
+        other => Err(InternalError::new(format!(
+            "conventions.restrictedInput resolves to no policy: {}",
+            other.map_or_else(|| "undefined".to_owned(), stringify_json)
+        ))),
+    }
 }
 
 #[cfg(test)]

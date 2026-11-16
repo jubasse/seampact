@@ -969,6 +969,7 @@ dependencies = [
  "seampact-js",
  "seampact-json",
  "seampact-naming",
+ "seampact-pass-tree-nodes",
  "seampact-pipeline",
 ]
 
