@@ -162,7 +162,6 @@ impl<'draft, 'half, 'run> TreeNodesScope<'draft, 'half, 'run> {
 ///
 /// # Errors
 ///
-/// [`PassError::NotPortedYet`] when the run reaches a function not ported yet, else
 /// [`PassError::Internal`] for a bug.
 pub fn run(
     draft: &DraftIr,

@@ -353,7 +353,8 @@ fn report_key_issue(
                 site.operation_id,
                 quote_text(&table_key.key)
             ),
-            fix: "Key each entry of the table by an id the collection's id schema reads.".to_owned(),
+            fix: "Key each entry of the table by an id the collection's id schema reads."
+                .to_owned(),
             related: Vec::new(),
         }));
 
@@ -392,10 +393,12 @@ fn table_id_use(
 
     let named = tree_nodes_answered_use(scope.schemas, &id_pointer, &Direction::Input)?;
     let properties = match &named {
-        TypeUse::Ref(reference) => match tree_nodes_draft_schema(scope.draft, reference.schema.as_str())? {
-            Schema::Object(object) => object.properties.as_slice(),
-            _ => &[],
-        },
+        TypeUse::Ref(reference) => {
+            match tree_nodes_draft_schema(scope.draft, reference.schema.as_str())? {
+                Schema::Object(object) => object.properties.as_slice(),
+                _ => &[],
+            }
+        }
         _ => &[],
     };
 

@@ -87,6 +87,7 @@ pub(crate) enum TreeNodesRule {
 
 impl TreeNodesRule {
     /// Every rule of the half, in declaration order.
+    #[cfg(test)]
     pub(crate) const ALL: &[Self] = &[
         Self::CollectionSingular,
         Self::CollectionId,

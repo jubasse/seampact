@@ -202,7 +202,6 @@ struct PayloadFault {
 /// Reads one wire format from the merged raw tree and reports what it refuses.
 pub(crate) struct FormatReader<'scope, 'draft, 'half, 'run> {
     pub(crate) scope: &'scope mut TreeNodesScope<'draft, 'half, 'run>,
-    pub(crate) id: String,
     pub(crate) pointer: String,
     pub(crate) owner: String,
 }
@@ -387,7 +386,6 @@ impl<'scope, 'draft, 'half, 'run> FormatReader<'scope, 'draft, 'half, 'run> {
     ) -> Self {
         Self {
             scope,
-            id: id.to_owned(),
             pointer: pointer.to_owned(),
             owner: format!("the format {id}"),
         }
@@ -1265,7 +1263,10 @@ fn origin_of_operation(operation: &DraftOperation) -> Result<Origin, PassError> 
     operation.origin.clone().ok_or_else(|| {
         InternalError::new(format!(
             "the operation {} has no origin",
-            operation.id.as_ref().map_or("undefined", OperationId::as_str)
+            operation
+                .id
+                .as_ref()
+                .map_or("undefined", OperationId::as_str)
         ))
         .into()
     })

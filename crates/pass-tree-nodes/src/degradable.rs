@@ -91,10 +91,7 @@ pub(crate) fn tree_nodes_degradable(
     }))
 }
 
-fn format_fills_degraded(
-    format: &str,
-    scope: &TreeNodesScope<'_, '_, '_>,
-) -> bool {
+fn format_fills_degraded(format: &str, scope: &TreeNodesScope<'_, '_, '_>) -> bool {
     let formats = scope.context.raw.merged.get("formats");
     let meta = tree_nodes_member(tree_nodes_member(formats, format), "meta");
 
@@ -103,8 +100,7 @@ fn format_fills_degraded(
     };
 
     meta.values().any(|field| {
-        tree_nodes_member(Some(field), "fill")
-            == Some(&JsonValue::String(DEGRADED_FILL.to_owned()))
+        tree_nodes_member(Some(field), "fill") == Some(&JsonValue::String(DEGRADED_FILL.to_owned()))
     })
 }
 
@@ -137,7 +133,11 @@ fn check_path(
         );
     }
 
-    if header_written && segments.iter().any(|segment| name_unfit_for_header(segment)) {
+    if header_written
+        && segments
+            .iter()
+            .any(|segment| name_unfit_for_header(segment))
+    {
         return report_path(
             site,
             pointer,

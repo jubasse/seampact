@@ -84,13 +84,6 @@ impl ClashRule {
     }
 }
 
-fn is_http_method(value: &JsonValue) -> bool {
-    let JsonValue::String(text) = value else {
-        return false;
-    };
-
-    HTTP_METHODS.iter().any(|method| method.as_str() == text)
-}
 /// Writes every operation of the api to the output, in tree order, and reports the id and name clashes. Returns the
 /// wire formats and paging styles the relay routes copy, which join `formats` and `pagings` once those are written.
 pub(crate) fn tree_nodes_operations<'node, 'raw>(

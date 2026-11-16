@@ -5,15 +5,15 @@ use std::{iter, mem};
 
 use seampact_diagnostics::{InternalError, RelatedLocation, quote_text};
 use seampact_ir::{
-    HandlerResultMember, NamedTemplate, Origin, PagingId, PagingLink, PagingParamPlacement,
+    HandlerResultMember, Layer, NamedTemplate, Origin, PagingId, PagingLink, PagingParamPlacement,
     PagingParamStyle, PagingPosition, PagingRequestRole, PagingResponse, PagingRole, PagingStyle,
     Template, UrlRole, WireFormat,
 };
 use seampact_js::js_key_order;
 use seampact_json::{JsonValue, stringify_json};
-use seampact_pass_tree_shared::tree_nodes_member;
+use seampact_pass_tree_shared::{tree_nodes_member, tree_nodes_origin_at};
 use seampact_pipeline::{PassError, pointer_below};
-use seampact_templates::template_slots;
+use seampact_templates::{template_slots, template_uses};
 
 use crate::diagnostics::{
     TreeNodesDiagnosticOptions, TreeNodesRule, tree_nodes_error, tree_nodes_node_origin,
@@ -21,7 +21,6 @@ use crate::diagnostics::{
 use crate::responses::TREE_NODES_PAGING_NONE;
 
 use crate::formats::{tree_nodes_absent, tree_nodes_named_templates};
-use crate::not_ported::not_ported_yet;
 use crate::paging::number_of;
 use crate::pass::TreeNodesScope;
 use crate::templates::{
@@ -150,6 +149,18 @@ enum StyleRule {
     Items,
     Role,
     Link,
+}
+
+impl StyleRule {
+    const fn rule(self) -> TreeNodesRule {
+        match self {
+            Self::Request => TreeNodesRule::PagingRequest,
+            Self::Position => TreeNodesRule::PagingPosition,
+            Self::Items => TreeNodesRule::PagingItems,
+            Self::Role => TreeNodesRule::PagingRole,
+            Self::Link => TreeNodesRule::PagingLink,
+        }
+    }
 }
 
 /// Writes `pagings`: every declared style, used or not, but the reserved `none`.
@@ -458,8 +469,10 @@ impl<'scope, 'draft, 'half, 'run> StyleReader<'scope, 'draft, 'half, 'run> {
         Ok(false)
     }
 
-    fn refuse_request(&mut self, _pointer: &str, _why: &str, _fix: &str) -> Result<(), PassError> {
-        Err(not_ported_yet("StyleReader.refuseRequest"))
+    fn refuse_request(&mut self, pointer: &str, why: &str, fix: &str) -> Result<(), PassError> {
+        let message = format!("The paging style {} is not valid: {why}.", self.id);
+
+        self.report(StyleRule::Request, pointer, &message, fix)
     }
 
     // Exactly one position role, or the pair `after` and `before`, which is a cursor kind.
@@ -702,12 +715,24 @@ impl<'scope, 'draft, 'half, 'run> StyleReader<'scope, 'draft, 'half, 'run> {
 
     fn report(
         &mut self,
-        _rule: StyleRule,
-        _pointer: &str,
-        _message: &str,
-        _fix: &str,
+        rule: StyleRule,
+        pointer: &str,
+        message: &str,
+        fix: &str,
     ) -> Result<(), PassError> {
-        Err(not_ported_yet("StyleReader.report"))
+        let origin = tree_nodes_origin_at(self.scope.context, pointer)?;
+
+        self.scope
+            .context
+            .report(tree_nodes_error(TreeNodesDiagnosticOptions {
+                rule: rule.rule(),
+                origin: tree_nodes_node_origin(&origin)?,
+                message: message.to_owned(),
+                fix: fix.to_owned(),
+                related: Vec::new(),
+            }));
+
+        Ok(())
     }
 }
 
@@ -748,19 +773,91 @@ fn sort_fault(
 }
 
 fn check_meta(
-    _style: &PagingStyle,
-    _format: &WireFormat,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    style: &PagingStyle,
+    format: &WireFormat,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("checkMeta"))
+    let style_id = style.id.as_str();
+    let format_id = format.id.as_str();
+    let meta_pointer = pointer_below("/pagings", &[style_id, "response", "meta"]);
+    let related = format_related(
+        format,
+        Some(&format.origin),
+        &format!("the format {format_id}"),
+    )?;
+
+    if !template_uses(&format.success.page.body, "meta")? {
+        let origin = tree_nodes_origin_at(scope.context, &meta_pointer)?;
+
+        scope
+            .context
+            .report(tree_nodes_error(TreeNodesDiagnosticOptions {
+                rule: TreeNodesRule::PagingMeta,
+                origin: tree_nodes_node_origin(&origin)?,
+                message: format!(
+                    "The paging style {style_id} adds meta members, but the page of the format {format_id} writes no $meta."
+                ),
+                fix: format!(
+                    "Write response.body on {style_id}, or use a format whose page writes $meta."
+                ),
+                related,
+            }));
+
+        return Ok(());
+    }
+
+    for member in &style.response.meta {
+        if !format.meta.contains_key(member.name.as_str()) {
+            continue;
+        }
+
+        let format_member = scope.context.origin(&pointer_below(
+            "/formats",
+            &[format_id, "meta", &member.name],
+        ));
+        let origin = tree_nodes_origin_at(
+            scope.context,
+            &pointer_below(&meta_pointer, &[&member.name]),
+        )?;
+        let related = format_related(
+            format,
+            format_member.as_ref(),
+            &format!("the meta field {} of {format_id}", quote_text(&member.name)),
+        )?;
+
+        scope
+            .context
+            .report(tree_nodes_error(TreeNodesDiagnosticOptions {
+                rule: TreeNodesRule::PagingMetaClash,
+                origin: tree_nodes_node_origin(&origin)?,
+                message: format!(
+                    "The meta member {} is named by both the paging style {style_id} and the format {format_id}.",
+                    quote_text(&member.name)
+                ),
+                fix: format!(
+                    "Rename {} in the style's meta or in the format's meta.",
+                    quote_text(&member.name)
+                ),
+                related,
+            }));
+    }
+
+    Ok(())
 }
 
 fn format_related(
-    _format: &WireFormat,
-    _origin: Option<&Origin>,
-    _message: &str,
+    format: &WireFormat,
+    origin: Option<&Origin>,
+    message: &str,
 ) -> Result<Vec<RelatedLocation>, PassError> {
-    Err(not_ported_yet("formatRelated"))
+    let Some(origin) = origin.filter(|_| format.origin.layer != Layer::Core) else {
+        return Ok(Vec::new());
+    };
+
+    Ok(vec![RelatedLocation {
+        origin: tree_nodes_node_origin(origin)?,
+        message: message.to_owned(),
+    }])
 }
 
 // Header names are case-insensitive (RFC 9110 section 5.1); query parameter names are not.

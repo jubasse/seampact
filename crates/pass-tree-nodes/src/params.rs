@@ -9,9 +9,7 @@ use seampact_ir::{
 };
 use seampact_json::{JsonValue, stringify_json};
 use seampact_pass_tree_shared::{tree_nodes_member, tree_nodes_tag_header};
-use seampact_pipeline::{
-    NearestSetting, OrderedSetting, PassError, TreeNode, TreeNodeId, TreeNodeKind, TreeNodes,
-};
+use seampact_pipeline::{NearestSetting, OrderedSetting, PassError, TreeNodeId, TreeNodeKind};
 
 use crate::api::text_of;
 use crate::diagnostics::{
@@ -103,16 +101,6 @@ pub(crate) fn tree_nodes_unknown_query(
         reading.as_ref().map(|reading| reading.value),
         reading.as_ref().and_then(|reading| reading.origin.as_ref()),
     )
-}
-fn chain_of<'nodes, 'raw>(
-    node_id: TreeNodeId,
-    nodes: &'nodes TreeNodes<'raw>,
-) -> Result<Vec<&'nodes TreeNode<'raw>>, InternalError> {
-    Ok(nodes
-        .chain(node_id)?
-        .into_iter()
-        .map(|(_, node)| node)
-        .collect())
 }
 fn policy_of(
     value: Option<&JsonValue>,

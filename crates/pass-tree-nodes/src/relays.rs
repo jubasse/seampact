@@ -7,13 +7,13 @@ use std::hash::Hash;
 use seampact_diagnostics::{
     DiagnosticOrigin, InternalError, RelatedLocation, access_rights_quoted,
 };
-use seampact_json::JsonValue;
 use seampact_ir::{
     ContractIr, DerivationId, DerivedFrom, FormatId, HttpMethod, ImportedIr, IrClosedCheck,
     IrClosedDeclaration, IrMap, Operation, OperationId, OperationRef, Origin, Paging, PagingId,
     PagingStyle, Param, Params, Response, ResponseHeader, SortKey, SurfaceId, ValueSource,
     WireFormat, check_ir_closed_declaration,
 };
+use seampact_json::JsonValue;
 use seampact_pass_tree_shared::{
     TREE_NODES_OPERATION_KIND, tree_nodes_relay_origin, tree_nodes_text,
 };
@@ -566,7 +566,9 @@ fn copied_responses(responses: &[Response], stamp: &RelayStamp) -> Vec<Response>
             headers: response
                 .headers
                 .iter()
-                .filter(|header| is_copied(header.derived_from.as_ref(), COPIED_ELEMENT_DERIVATIONS))
+                .filter(|header| {
+                    is_copied(header.derived_from.as_ref(), COPIED_ELEMENT_DERIVATIONS)
+                })
                 .map(|header| stamped(header, stamp))
                 .collect(),
             ..stamped(response, stamp)
@@ -753,7 +755,11 @@ fn imported_source<'run>(
         &contract.pagings,
         document,
         "/pagings",
-        found.paging.as_ref().and_then(|paging| paging.style.as_ref()).map(PagingId::as_str),
+        found
+            .paging
+            .as_ref()
+            .and_then(|paging| paging.style.as_ref())
+            .map(PagingId::as_str),
     )?;
     let unknowns: Vec<String> = [
         named_unknowns(Some(&operation)),
@@ -774,7 +780,10 @@ fn imported_source<'run>(
         .surfaces
         .get(closed.surface.as_str())
         .map(|surface| surface.prefix.as_str());
-    let style_named = found.paging.as_ref().is_some_and(|paging| paging.style.is_some());
+    let style_named = found
+        .paging
+        .as_ref()
+        .is_some_and(|paging| paging.style.is_some());
     let inconsistency = import_inconsistency(
         closed,
         surface_prefix,
@@ -806,8 +815,8 @@ fn imported_source<'run>(
         api: target.api.clone(),
         operation: RelayedOperation::Imported(closed),
         surface_prefix: surface_prefix.map(str::to_owned),
-        format: format.and_then(closed_declaration),
-        paging_style: style.and_then(closed_declaration),
+        format: format.as_ref().and_then(closed_declaration),
+        paging_style: style.as_ref().and_then(closed_declaration),
     }))
 }
 
@@ -842,9 +851,9 @@ fn check_closed<'declaration, Declaration: IrClosedDeclaration>(
         .map_err(|error| InternalError::new(error.to_string()))
 }
 
-fn closed_declaration<Declaration>(
-    check: IrClosedCheck<'_, Declaration>,
-) -> Option<&Declaration> {
+fn closed_declaration<'run, Declaration>(
+    check: &IrClosedCheck<'run, Declaration>,
+) -> Option<&'run Declaration> {
     match check {
         IrClosedCheck::Closed(declaration) => Some(declaration),
         IrClosedCheck::Unknowns(_) => None,
@@ -966,10 +975,7 @@ fn check_route_name(
                 "The relay route {} relays {}, so its name must be the public operation id {}.",
                 node.name, target.text, target.id
             ),
-            fix: format!(
-                "Rename the route {}, or set operationId on it.",
-                target.id
-            ),
+            fix: format!("Rename the route {}, or set operationId on it.", target.id),
             related: Vec::new(),
         }));
 
