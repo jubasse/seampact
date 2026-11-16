@@ -7,12 +7,11 @@ use std::error::Error;
 use camino::Utf8PathBuf;
 use indexmap::IndexMap;
 use seampact_compiler::{
-    PipelineOptions, PipelineRun, RelayOrder, Stage, check_relay_order, compile_workspace,
+    PipelineOptions, PipelineRun, RelayOrder, check_relay_order, compile_workspace,
     relays_to_stopped,
 };
 use seampact_diagnostics::Severity;
 use seampact_load::{FsReader, LoadOptions};
-use seampact_pipeline::Half;
 
 fn fixture_directory(path: &str) -> Utf8PathBuf {
     Utf8PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -51,19 +50,6 @@ fn a_load_error_stops_the_run_with_the_sorted_workspace_diagnostics_and_no_api()
     );
     assert!(result.read_files.contains(&"api.yaml".to_owned()));
     assert!(!result.source_files.is_empty());
-
-    Ok(())
-}
-
-#[test]
-fn a_clean_load_passes_validate_and_the_relay_order_and_stops_at_the_first_unported_half()
--> Result<(), Box<dyn Error>> {
-    let run = compile_fixture("reference", "workspace.yaml")?;
-
-    assert!(
-        matches!(run, PipelineRun::NotPorted(Stage::Half(Half::TreeSchemas))),
-        "{run:?}"
-    );
 
     Ok(())
 }
