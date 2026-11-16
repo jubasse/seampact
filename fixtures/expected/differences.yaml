@@ -88,3 +88,11 @@ differences:
     change: message
     from: "conventions.rights.pattern '(' is no regular expression: SyntaxError: Invalid regular expression: /(/u: Unterminated group"
     to: "conventions.rights.pattern '(' is no regular expression: SyntaxError: Invalid regular expression: /(/u: Unbalanced parenthesis"
+  - id: diagnostic-origin-member-order
+    reason: The Rust core writes every diagnostic origin with its members in one order, api, layer, pointer, where the TS oracle appended the api last for an origin copied from another api.
+    decision: docs/adr/0031-rust-core.md#bytes-that-change-once
+    applies:
+      fixtures: ["rules/workspace-relay-cycle"]
+      output: diagnostics
+      pointer: /apis/0/diagnostics/0/related/0/origin
+    change: member-order

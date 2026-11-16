@@ -60,6 +60,23 @@ fn exact_big_integers(_name: &str, text: &str) -> String {
         .replace("9007199254740992", "9007199254740993")
 }
 
+/// The api of an origin copied from another api written first, as the Rust port writes it where
+/// the TS oracle appended it last.
+fn origin_api_first(_name: &str, text: &str) -> String {
+    text.replace(
+        concat!(
+            "\"layer\": \"api\",\n",
+            "                \"pointer\": \"/surfaces/internal/routes/getTask/relays\",\n",
+            "                \"api\": \"svc\"\n"
+        ),
+        concat!(
+            "\"api\": \"svc\",\n",
+            "                \"layer\": \"api\",\n",
+            "                \"pointer\": \"/surfaces/internal/routes/getTask/relays\"\n"
+        ),
+    )
+}
+
 /// The wording of regress for the syntax errors V8 words as an unterminated character class or
 /// group.
 fn regress_pattern_message(_name: &str, text: &str) -> String {
@@ -144,6 +161,24 @@ fn the_exact_integers_of_the_rust_port_are_accepted_by_the_committed_differences
     };
     let selection = Selection {
         fixture_glob: Some(FixtureGlob::new("big-integers/**")),
+        half: None,
+        ..Selection::default()
+    };
+
+    let verdict = run_oracle(&repository_root(), &selection, &subject).unwrap();
+
+    assert!(verdict.passed(), "{verdict}");
+    assert_eq!(verdict.matching, verdict.fixtures);
+}
+
+#[test]
+fn an_origin_with_its_api_first_is_accepted_by_the_committed_differences() {
+    let subject = ExpectedFilesSubject {
+        repository_root: repository_root(),
+        rewrite: origin_api_first,
+    };
+    let selection = Selection {
+        fixture_glob: Some(FixtureGlob::new("rules/workspace-relay-cycle")),
         half: None,
         ..Selection::default()
     };
