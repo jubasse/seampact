@@ -171,15 +171,17 @@ fn write_version_token(
 }
 
 // The response header semantics are the header declarations' and more: a declaration's own is one
-// of them.
+// of them, and access.identity writes only known ones.
 fn response_semantic_of(
     semantic: &HeaderSemantic,
 ) -> Result<ResponseHeaderSemantic, InternalError> {
-    ResponseHeaderSemantic::known(semantic.as_str()).ok_or_else(|| {
-        InternalError::new(format!(
-            "access.identity wrote a header semantic '{semantic}', which no response header carries"
-        ))
-    })
+    if let HeaderSemantic::Unknown(unknown) = semantic {
+        return Err(InternalError::new(format!(
+            "access.identity wrote a header semantic '{unknown}' this compiler does not know"
+        )));
+    }
+
+    Ok(ResponseHeaderSemantic::from(semantic.clone()))
 }
 
 fn derived_of(
