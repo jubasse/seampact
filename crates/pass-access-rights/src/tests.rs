@@ -3,20 +3,24 @@
 
 use std::collections::HashMap;
 
+use seampact_authoring::ApiLayer;
 use seampact_diagnostics::InternalError;
 use seampact_ir::{
-    Docs, Extensions, FieldRestriction, InputPolicy, IrMap, Layer, Origin, RefTypeUse, SchemaId,
-    Scope, ScopeId, TypeUse,
+    DerivationId, DerivedFrom, Direction, Docs, Extensions, FieldRestriction, FieldRight,
+    InputPolicy, IrMap, Layer, Origin, PackName, RefTypeUse, RightId, SchemaId, Scope, ScopeId,
+    TypeUse,
 };
-use seampact_json::JsonValue;
+use seampact_json::{JsonObject, JsonValue};
 use seampact_pipeline::testing::{FakeSchemaService, HalfFixture};
 use seampact_pipeline::{
     AccessRightsOutput, DraftIr, InheritedEntry, TreeNodeId, TreeNodeKind, pipeline_tree_nodes,
 };
 
 use crate::catalogues::{AccessRightsCatalogues, AccessRightsDeclared, report_within_cycle};
-use crate::field_rights::input_policy_of;
+use crate::field_rights::{input_policy_of, same_entry};
+use crate::packs::access_rights_derive_entries;
 use crate::report::access_rights_reporter;
+use crate::routes::{AccessRightsScopeNodes, access_rights_resource_of, access_rights_scope_of};
 use crate::schema_use::AccessRightsContext;
 use crate::scopes::{ScopeUse, resolution_order};
 use crate::subjects::member_ids;
@@ -231,4 +235,102 @@ fn a_convention_that_names_no_policy_is_an_internal_error() {
                 .contains("conventions.restrictedInput resolves to no policy: \"allow\"")),
         "got {message:?}"
     );
+}
+
+fn field_right(params: &[(&str, &str)], derivation: &str) -> FieldRight {
+    let mut written = JsonObject::new();
+
+    for (key, value) in params {
+        written.insert((*key).to_owned(), JsonValue::String((*value).to_owned()));
+    }
+
+    FieldRight {
+        schema: SchemaId::new("Task".to_owned()),
+        pointer: "/title".to_owned(),
+        right: RightId::new("tasks.read".to_owned()),
+        params: Some(JsonValue::Object(written)),
+        subject: None,
+        direction: Direction::Output,
+        input_policy: None,
+        always: None,
+        derived_from: DerivedFrom {
+            derivation: DerivationId::new(derivation.to_owned()),
+            from: Vec::new(),
+        },
+    }
+}
+
+#[test]
+fn two_field_rights_agree_when_they_differ_by_derivation_or_param_key_order() {
+    let left = field_right(&[("a", "1"), ("b", "2")], "fieldRight.restricted");
+    let reordered = field_right(&[("b", "2"), ("a", "1")], "other.derivation");
+    let other_params = field_right(&[("a", "1"), ("b", "3")], "fieldRight.restricted");
+
+    assert!(same_entry(Some(&left), Some(&reordered)));
+    assert!(!same_entry(Some(&left), Some(&other_params)));
+    assert!(!same_entry(Some(&left), None));
+    assert!(!same_entry(None, Some(&left)));
+}
+
+#[test]
+fn the_resource_and_scope_of_a_node_are_its_nearest_ancestors() -> Result<(), InternalError> {
+    with_context(TASKS, |context| {
+        let collection = first_node_of(context, TreeNodeKind::Collection)?;
+        let scope = first_node_of(context, TreeNodeKind::Scope)?;
+        let surface = first_node_of(context, TreeNodeKind::Surface)?;
+
+        assert_eq!(
+            access_rights_resource_of(&context.nodes, scope)?,
+            Some(collection)
+        );
+        assert_eq!(
+            access_rights_scope_of(&context.nodes, scope)?,
+            Some(AccessRightsScopeNodes { scope, collection })
+        );
+        assert_eq!(access_rights_resource_of(&context.nodes, collection)?, None);
+        assert_eq!(access_rights_scope_of(&context.nodes, surface)?, None);
+
+        Ok(())
+    })
+}
+
+#[test]
+fn a_derive_entry_of_a_pack_tree_nodes_did_not_record_is_an_internal_error()
+-> Result<(), InternalError> {
+    let mut fixture = HalfFixture::from_layers(&[(
+        ApiLayer::Pack(PackName::new("odd".to_owned())),
+        r#"{"derive":[{"entry":"crud"}]}"#,
+    )])?;
+    let draft = DraftIr::new();
+    let schemas = FakeSchemaService::new();
+
+    let refused = fixture.with_context(|half| {
+        let nodes = pipeline_tree_nodes(half.raw)?;
+        let context = AccessRightsContext {
+            draft: &draft,
+            context: half,
+            schemas: &schemas,
+            nodes,
+            output: AccessRightsOutput {
+                rights: IrMap::new(),
+                rules: IrMap::new(),
+                scopes: IrMap::new(),
+                buckets: IrMap::new(),
+                operations: Vec::new(),
+            },
+        };
+
+        access_rights_derive_entries(&context, &[]).map(|entries| entries.len())
+    })?;
+
+    let message = refused.map_err(|error| error.to_string());
+
+    assert!(
+        message.as_ref().is_err_and(|text| text.contains(
+            "the derive entry at /derive/0 comes from pack 'odd', which tree.nodes did not record in packs"
+        )),
+        "got {message:?}"
+    );
+
+    Ok(())
 }
