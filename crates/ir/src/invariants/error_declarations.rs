@@ -230,33 +230,29 @@ pub(super) fn check_retry_header(
 
 /// An error code whose params carry a sensitive value is never stored: its declaration sets
 /// `noStore`.
-///
-/// # Errors
-///
-/// [`IrError::Decode`] when the params id or the schemas do not decode.
 pub(super) fn check_error_sensitive_no_store(
     declaration: &JsonObject,
     pointer: &str,
     schemas: &IrMap<SchemaId, Schema>,
     out: &mut Violations,
-) -> Result<(), IrError> {
+) {
     let no_store = matches!(declaration.get("noStore"), Some(JsonValue::Bool(true)));
     let Some(params) = string(declaration.get("params")) else {
-        return Ok(());
+        return;
     };
 
     if no_store {
-        return Ok(());
+        return;
     }
 
     let params = SchemaId::new(params.to_owned());
 
     // A params schema the document lacks is `ir.ref.resolves`' to name, not a reach.
     let Ok(reaches) = find_ir_sensitive_param_reaches(&params, schemas) else {
-        return Ok(());
+        return;
     };
     let Some(found) = reaches.first() else {
-        return Ok(());
+        return;
     };
 
     out.fail(
@@ -267,6 +263,4 @@ pub(super) fn check_error_sensitive_no_store(
             sensitive_reach_text(found)
         ),
     );
-
-    Ok(())
 }

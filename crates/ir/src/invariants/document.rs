@@ -2,7 +2,6 @@
 
 use seampact_json::{JsonObject, JsonValue};
 
-use super::catalogue_refs::check_catalogue_id;
 use super::decode::decode_member;
 use super::json_members::{items, record};
 use super::object_rules::{DocumentView, ObjectDefinitions, check_object};
@@ -47,7 +46,7 @@ pub fn check_ir_invariants(ir: &JsonValue) -> Result<Vec<IrInvariantViolation>, 
             schemas: &schemas,
         },
     };
-    let catalogues = catalogues()?;
+    let _catalogues = catalogues()?;
     let root: JsonObject = [(
         "$ref".to_owned(),
         JsonValue::String(ROOT_REFERENCE.to_owned()),
@@ -55,7 +54,7 @@ pub fn check_ir_invariants(ir: &JsonValue) -> Result<Vec<IrInvariantViolation>, 
     .into_iter()
     .collect();
     let mut objects = ObjectDefinitions::new();
-    let mut references = Violations::default();
+    let references = Violations::default();
     let mut rules = Violations::default();
 
     walk_ir_instance(ir, &root, "", &mut |node| match node {

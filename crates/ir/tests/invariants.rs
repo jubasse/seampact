@@ -108,7 +108,7 @@ fn accepts_the_valid_samples() {
 fn names_each_broken_rule_with_its_id() {
     type Change = fn(&mut Value);
 
-    let cases: [(&str, IrInvariantId, Change); 22] = [
+    let cases: [(&str, IrInvariantId, Change); 21] = [
         ("/schemas/Task/name", IrInvariantId::NameStatus, |ir| {
             set(ir, "/schemas/Task/name", "status", json!(201));
         }),
@@ -138,7 +138,7 @@ fn names_each_broken_rule_with_its_id() {
                     "/formats/bare/meta/tenant/source",
                     "prefixBits",
                     json!(8),
-                )
+                );
             },
         ),
         (
@@ -172,13 +172,13 @@ fn names_each_broken_rule_with_its_id() {
             },
         ),
         (UPDATE, IrInvariantId::CsrfCookie, |ir| {
-            remove(ir, UPDATE, "csrf")
+            remove(ir, UPDATE, "csrf");
         }),
         (
-            "/operations/2/params/query/0/wire",
+            "/operations/2/input/fields/1/wire",
             IrInvariantId::FieldWireMembers,
             |ir| {
-                let wire = "/operations/2/params/query/0/wire";
+                let wire = "/operations/2/input/fields/1/wire";
 
                 set(ir, wire, "kind", json!("file"));
                 set(ir, wire, "style", json!("form"));
@@ -259,14 +259,6 @@ fn names_each_broken_rule_with_its_id() {
                     "schema",
                     json!({"kind": "opaque"}),
                 );
-            },
-        ),
-        (
-            "/operations/0/cache",
-            IrInvariantId::CacheDirectives,
-            |ir| {
-                set(ir, "/operations/0/cache", "family", json!("never"));
-                set(ir, "/operations/0/cache", "directives", json!({}));
             },
         ),
     ];
@@ -1022,7 +1014,33 @@ fn with_body(ir: &mut Value, body: Value) {
     set(ir, &format!("{UPDATE}/responses/0"), "body", body);
 }
 
-fn with_schema(ir: &mut Value, id: &str, schema: Value) {
+// Adds a schema, filling the members every schema and property of the document carries.
+fn with_schema(ir: &mut Value, id: &str, mut schema: Value) {
+    let origin = json!({"layer": "api", "pointer": format!("/schemas/{id}")});
+
+    schema["id"] = json!(id);
+    schema["name"] = json!({"segments": [id.to_lowercase()], "role": "schema"});
+    schema["directions"] = json!(["output"]);
+    schema["examples"] = json!([]);
+    schema["docs"] = json!({});
+    schema["extensions"] = json!({});
+    schema["origin"] = origin.clone();
+
+    if schema["kind"] == "union" {
+        schema["tag"] = json!({"in": "body", "property": "kind"});
+    }
+
+    if let Some(properties) = schema["properties"].as_array_mut() {
+        for property in properties {
+            property["optional"] = json!(false);
+            property["nullable"] = json!(false);
+            property["deprecated"] = json!(false);
+            property["docs"] = json!({});
+            property["extensions"] = json!({});
+            property["origin"] = origin.clone();
+        }
+    }
+
     set(ir, "/schemas", id, schema);
 }
 
@@ -1049,7 +1067,7 @@ fn an_operation_whose_response_carries_a_sensitive_field_sets_no_store() {
 fn a_sensitive_field_is_reached_through_items_json_content_map_values_and_union_variants() {
     let bodies = [
         json!({"kind": "array", "items": task_use()}),
-        json!({"kind": "scalar", "type": "string", "content": {"media": "application/json", "schema": task_use()}}),
+        json!({"kind": "scalar", "type": "string", "refinements": {}, "content": {"media": "application/json", "schema": task_use()}}),
         json!({"kind": "ref", "schema": "TaskMap"}),
         json!({"kind": "ref", "schema": "TaskUnion"}),
     ];

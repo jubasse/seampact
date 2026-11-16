@@ -68,7 +68,7 @@ pub(super) fn check_object(
         Some("SortKey") => check_sort_key(value, pointer, view.rights, out)?,
         Some("Deprecation") => check_deprecation_dates(value, pointer, out),
         Some("ErrorDecl") => {
-            check_error_sensitive_no_store(value, pointer, view.operation.schemas, out)?;
+            check_error_sensitive_no_store(value, pointer, view.operation.schemas, out);
         }
         Some("OperationError") => {
             check_role_params(value, pointer, view.errors, out)?;
