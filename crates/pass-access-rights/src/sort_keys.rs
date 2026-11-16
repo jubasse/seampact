@@ -209,7 +209,7 @@ pub(crate) fn key_right(
             pointer,
             distinct_by: None,
             related: vec![AccessRightsRelated {
-                pointer: access_rights_restriction_origin(restriction)?.pointer,
+                pointer: access_rights_restriction_origin(restriction)?.pointer.clone(),
                 message: format!("the field is restricted to '{quoted}' here"),
             }],
         });
@@ -307,7 +307,7 @@ pub(crate) fn key_restriction<'draft>(
 
     for restriction in &restrictions {
         related.push(AccessRightsRelated {
-            pointer: access_rights_restriction_origin(restriction)?.pointer,
+            pointer: access_rights_restriction_origin(restriction)?.pointer.clone(),
             message: format!(
                 "the field is restricted to '{}' here",
                 access_rights_quoted(restriction.right.as_str())

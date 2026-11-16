@@ -15,6 +15,7 @@ seampact-ir.workspace = true
 seampact-js.workspace = true
 seampact-json.workspace = true
 seampact-naming.workspace = true
+seampact-pass-tree-nodes.workspace = true
 seampact-pipeline.workspace = true
 
 [lints]

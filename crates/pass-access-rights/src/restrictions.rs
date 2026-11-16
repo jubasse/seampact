@@ -2,13 +2,16 @@
 
 use std::collections::{HashMap, HashSet};
 
+use seampact_diagnostics::{InternalError, access_rights_quoted};
 use seampact_ir::{FieldRestriction, Origin, Right};
 use seampact_json::JsonValue;
-use seampact_pipeline::PassError;
+use seampact_pipeline::{PassError, pointer_below};
 
 use crate::catalogues::AccessRightsCatalogues;
-use crate::not_ported::not_ported_yet;
-use crate::report::AccessRightsReporter;
+use crate::params::{
+    AccessRightsParamsKind, AccessRightsParamsUse, access_rights_check_params,
+};
+use crate::report::{AccessRightsProblem, AccessRightsReporter, AccessRightsRule};
 use crate::schema_use::AccessRightsContext;
 
 /// A restriction whose right exists and whose params fit.
@@ -37,28 +40,94 @@ pub(crate) fn access_rights_restriction_checks(
     }
 }
 
+/// The origin `tree.schemas` gave a `restrictedTo`, where its errors are located.
+///
+/// # Errors
+///
+/// An internal error for a restriction without origin.
 pub(crate) fn access_rights_restriction_origin(
-    _restriction: &FieldRestriction,
-) -> Result<Origin, PassError> {
-    Err(not_ported_yet("accessRightsRestrictionOrigin"))
+    restriction: &FieldRestriction,
+) -> Result<&Origin, InternalError> {
+    restriction.origin.as_ref().ok_or_else(|| {
+        InternalError::new(format!(
+            "tree.schemas wrote a restrictedTo of right '{}' without origin",
+            restriction.right
+        ))
+    })
 }
 
+/// A restriction's right is declared and its params fit, checked once per restriction.
 pub(crate) fn access_rights_check_restriction(
-    _context: &AccessRightsContext,
-    _reporter: &mut AccessRightsReporter,
-    _catalogues: &AccessRightsCatalogues,
-    _checks: &mut AccessRightsRestrictionChecks,
-    _restriction: &FieldRestriction,
+    context: &AccessRightsContext,
+    reporter: &mut AccessRightsReporter,
+    catalogues: &AccessRightsCatalogues,
+    checks: &mut AccessRightsRestrictionChecks,
+    restriction: &FieldRestriction,
 ) -> Result<Option<AccessRightsCheckedRestriction>, PassError> {
-    Err(not_ported_yet("accessRightsCheckRestriction"))
+    let pointer = access_rights_restriction_origin(restriction)?
+        .pointer
+        .clone();
+
+    if let Some(checked) = checks.checked.get(&pointer) {
+        return Ok(checked.clone());
+    }
+
+    let result = checked_restriction(context, reporter, catalogues, restriction, &pointer)?;
+
+    checks.checked.insert(pointer, result.clone());
+
+    Ok(result)
 }
 
 pub(crate) fn checked_restriction(
-    _context: &AccessRightsContext,
-    _reporter: &mut AccessRightsReporter,
-    _catalogues: &AccessRightsCatalogues,
-    _restriction: &FieldRestriction,
-    _pointer: &str,
+    context: &AccessRightsContext,
+    reporter: &mut AccessRightsReporter,
+    catalogues: &AccessRightsCatalogues,
+    restriction: &FieldRestriction,
+    pointer: &str,
 ) -> Result<Option<AccessRightsCheckedRestriction>, PassError> {
-    Err(not_ported_yet("checkedRestriction"))
+    let Some(right) = catalogues.rights.get(restriction.right.as_str()) else {
+        if !catalogues
+            .declared
+            .rights
+            .contains(restriction.right.as_str())
+        {
+            reporter.error(AccessRightsProblem {
+                rule: AccessRightsRule::FieldRightTarget,
+                message: format!(
+                    "the field is restricted to right '{}', which the rights catalogue does not declare",
+                    access_rights_quoted(restriction.right.as_str())
+                ),
+                fix: "declare the right in 'rights', or name a declared one".to_owned(),
+                pointer: pointer.to_owned(),
+                distinct_by: None,
+                related: Vec::new(),
+            });
+        }
+
+        return Ok(None);
+    };
+
+    let checked = access_rights_check_params(
+        context,
+        reporter,
+        &AccessRightsParamsUse {
+            rule: AccessRightsRule::FieldRightParams,
+            kind: AccessRightsParamsKind::Right,
+            name: right.id.as_str().to_owned(),
+            holder: "the field's restrictedTo".to_owned(),
+            schema: right
+                .params
+                .as_ref()
+                .map(|schema| schema.as_str().to_owned()),
+            params: restriction.params.clone(),
+            params_pointer: pointer_below(pointer, &["params"]),
+            use_pointer: pointer.to_owned(),
+        },
+    )?;
+
+    Ok(checked.map(|checked| AccessRightsCheckedRestriction {
+        right: right.clone(),
+        params: checked.params,
+    }))
 }

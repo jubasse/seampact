@@ -7,6 +7,7 @@ use regress::Regex;
 use seampact_diagnostics::InternalError;
 use seampact_diagnostics::access_rights_quoted;
 use seampact_ir::IrMap;
+use seampact_js::cmp_utf16;
 use seampact_ir::{
     Bucket, BucketId, Direction, ErrorCode, KnownRightSubject, KnownTypeUseRef, Name, NameRole,
     NoSubject, ProofPlacement, Reason, ResourceSubject, Right, RightId, RightSubject, Rule, RuleId,
@@ -16,7 +17,6 @@ use seampact_json::{JsonObject, JsonValue, js_integer_in_range, stringify_json};
 use seampact_naming::{NameSource, SegmentsOptions, SegmentsResult, segments_of, split_name};
 use seampact_pipeline::{ConventionReading, PassError, parse_duration, pointer_below};
 
-use crate::not_ported::not_ported_yet;
 use crate::read::{
     access_rights_docs, access_rights_entries, access_rights_extensions, access_rights_member,
     access_rights_object, access_rights_origin_of, access_rights_schema_name, access_rights_string,
@@ -758,21 +758,85 @@ pub(crate) fn within_of<'run>(
     )
 }
 
+/// Follows `within` from a scope up to a root scope: each parent must be declared, and the chain
+/// never cycles.
 pub(crate) fn within_chain_terminates(
-    _context: &AccessRightsContext,
-    _reporter: &mut AccessRightsReporter,
-    _id: &str,
-    _scope_names: &HashSet<String>,
-) -> Result<bool, PassError> {
-    Err(not_ported_yet("withinChainTerminates"))
+    context: &AccessRightsContext,
+    reporter: &mut AccessRightsReporter,
+    id: &str,
+    scope_names: &HashSet<String>,
+) -> Result<bool, InternalError> {
+    let mut chain = vec![id.to_owned()];
+    let mut parent = within_of(context, id);
+
+    while let Some(name) = parent {
+        if !scope_names.contains(name) {
+            let last = chain.last().map_or(id, String::as_str);
+
+            reporter.error(AccessRightsProblem {
+                rule: AccessRightsRule::ScopeWithin,
+                message: format!(
+                    "scope '{last}' is within '{name}', which the scopes catalogue does not declare"
+                ),
+                fix: "declare the parent scope, or name a declared one in 'within'".to_owned(),
+                pointer: pointer_below("/scopes", &[last, "within"]),
+                distinct_by: None,
+                related: Vec::new(),
+            });
+
+            return Ok(false);
+        }
+
+        if let Some(start) = chain.iter().position(|seen| seen == name) {
+            report_within_cycle(reporter, chain.get(start..).unwrap_or_default())?;
+
+            return Ok(false);
+        }
+
+        chain.push(name.to_owned());
+        parent = within_of(context, name);
+    }
+
+    Ok(true)
 }
 
+// A cycle is reported once, at its first scope by name, whatever scope's chain reached it.
 pub(crate) fn report_within_cycle(
-    _context: &AccessRightsContext,
-    _reporter: &mut AccessRightsReporter,
-    _cycle: &[String],
-) -> Result<(), PassError> {
-    Err(not_ported_yet("reportWithinCycle"))
+    reporter: &mut AccessRightsReporter,
+    cycle: &[String],
+) -> Result<(), InternalError> {
+    let mut sorted: Vec<&String> = cycle.iter().collect();
+
+    sorted.sort_by(|left, right| cmp_utf16(left, right));
+
+    let Some(first) = sorted.first() else {
+        return Err(InternalError::new(
+            "access.rights found an empty 'within' cycle".to_owned(),
+        ));
+    };
+    let start = cycle.iter().position(|name| name == *first).unwrap_or(0);
+    let mut path: Vec<&str> = cycle
+        .iter()
+        .skip(start)
+        .chain(cycle.iter().take(start))
+        .map(String::as_str)
+        .collect();
+
+    path.push(first);
+
+    reporter.error(AccessRightsProblem {
+        rule: AccessRightsRule::ScopeWithin,
+        message: format!(
+            "scope '{first}' is within itself through {}",
+            path.join(" -> ")
+        ),
+        fix: "remove the cycle from the scopes' 'within' chain".to_owned(),
+        pointer: pointer_below("/scopes", &[first, "within"]),
+        distinct_by: None,
+        related: Vec::new(),
+    });
+
+    Ok(())
 }
 
 #[cfg(test)]
