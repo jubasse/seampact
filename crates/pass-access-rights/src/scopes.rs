@@ -199,7 +199,10 @@ pub(crate) fn check_entered_once(
     entered_names: &HashSet<String>,
     use_of: &ScopeUse<'_>,
 ) -> bool {
-    if let Some(twice) = resolved.iter().find(|earlier| earlier.scope == use_of.scope) {
+    if let Some(twice) = resolved
+        .iter()
+        .find(|earlier| earlier.scope == use_of.scope)
+    {
         reporter.error(AccessRightsProblem {
             rule: AccessRightsRule::ScopeTwice,
             message: format!(

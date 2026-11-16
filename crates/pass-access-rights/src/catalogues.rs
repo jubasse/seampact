@@ -7,12 +7,12 @@ use regress::Regex;
 use seampact_diagnostics::InternalError;
 use seampact_diagnostics::access_rights_quoted;
 use seampact_ir::IrMap;
-use seampact_js::cmp_utf16;
 use seampact_ir::{
     Bucket, BucketId, Direction, ErrorCode, KnownRightSubject, KnownTypeUseRef, Name, NameRole,
     NoSubject, ProofPlacement, Reason, ResourceSubject, Right, RightId, RightSubject, Rule, RuleId,
     RuleProof, Scope, ScopeId, ScopeSubject, TypeUse,
 };
+use seampact_js::cmp_utf16;
 use seampact_json::{JsonObject, JsonValue, js_integer_in_range, stringify_json};
 use seampact_naming::{NameSource, SegmentsOptions, SegmentsResult, segments_of, split_name};
 use seampact_pipeline::{ConventionReading, PassError, parse_duration, pointer_below};

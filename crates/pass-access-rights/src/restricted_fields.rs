@@ -314,10 +314,7 @@ pub(crate) fn walk_reference<'draft>(
 
         path.push(id.to_owned());
 
-        let below = WalkAt {
-            path,
-            ..at.clone()
-        };
+        let below = WalkAt { path, ..at.clone() };
 
         return walk_schema(walk, &below, found, id);
     }

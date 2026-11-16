@@ -8,9 +8,7 @@ use seampact_json::JsonValue;
 use seampact_pipeline::{PassError, pointer_below};
 
 use crate::catalogues::AccessRightsCatalogues;
-use crate::params::{
-    AccessRightsParamsKind, AccessRightsParamsUse, access_rights_check_params,
-};
+use crate::params::{AccessRightsParamsKind, AccessRightsParamsUse, access_rights_check_params};
 use crate::report::{AccessRightsProblem, AccessRightsReporter, AccessRightsRule};
 use crate::schema_use::AccessRightsContext;
 

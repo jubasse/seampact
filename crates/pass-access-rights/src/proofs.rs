@@ -7,14 +7,16 @@ use seampact_ir::{
     DerivationId, DerivedFrom, FieldWire, HttpMethod, Identity, IdentityId, InputMediaType,
     InputProof, IrMap, KnownIdentityRef, KnownKeysPolicyRef, KnownRequirementRef, KnownSchemaRef,
     KnownSchemeRef, KnownTypeUseRef, Origin, Param, ProofPlacement, RefTypeUse, Requirement,
-    RuleProof, Scheme, SchemeId, SchemaId, SignedIdentity, TypeUse, UnknownKeys, UnknownKeysPolicy,
+    RuleProof, SchemaId, Scheme, SchemeId, SignedIdentity, TypeUse, UnknownKeys, UnknownKeysPolicy,
 };
 use seampact_pass_tree_nodes::tree_nodes_field_wire;
 use seampact_pipeline::{DraftOperationInput, PassError, pointer_below};
 
 use crate::catalogues::AccessRightsCatalogues;
 use crate::read::access_rights_origin_of;
-use crate::report::{AccessRightsProblem, AccessRightsRelated, AccessRightsReporter, AccessRightsRule};
+use crate::report::{
+    AccessRightsProblem, AccessRightsRelated, AccessRightsReporter, AccessRightsRule,
+};
 use crate::restricted_fields::AccessRightsDraftSchemas;
 use crate::routes::{AccessRightsRoute, access_rights_operation_of};
 use crate::schema_use::AccessRightsContext;
@@ -94,7 +96,7 @@ pub(crate) fn access_rights_proofs(
     let mut headers = Vec::new();
     let mut header_uses = Vec::new();
 
-    for header_use in shared_by_name(reporter, &input.route, &uses, &ProofPlacement::Header)? {
+    for header_use in shared_by_name(reporter, &input.route, &uses, &ProofPlacement::Header) {
         if !takes_route_header(reporter, &input.route, &taken_headers, &header_use) {
             header_uses.push(header_use);
         }
@@ -104,7 +106,7 @@ pub(crate) fn access_rights_proofs(
         headers.push(header_param_of(header_use));
     }
 
-    let body_uses = shared_by_name(reporter, &input.route, &uses, &ProofPlacement::Body)?;
+    let body_uses = shared_by_name(reporter, &input.route, &uses, &ProofPlacement::Body);
     let declared = access_rights_operation_of(context, &input.route)?
         .input
         .as_ref();
@@ -252,16 +254,12 @@ pub(crate) fn name_key(placement: &ProofPlacement, name: &str) -> String {
 /// The uses of one placement merged by name, in requirement order: a later use with the first
 /// one's schema adds its origins to it; one with another schema is an error naming both, and adds
 /// nothing.
-///
-/// # Errors
-///
-/// What the name key and the clash report fail with.
 pub(crate) fn shared_by_name(
     reporter: &mut AccessRightsReporter,
     route: &AccessRightsRoute,
     uses: &[ProofUse],
     placement: &ProofPlacement,
-) -> Result<Vec<ProofUse>, PassError> {
+) -> Vec<ProofUse> {
     let mut by_name: IndexMap<String, ProofUse> = IndexMap::new();
 
     for use_of in uses {
@@ -290,7 +288,7 @@ pub(crate) fn shared_by_name(
         }
     }
 
-    Ok(by_name.into_values().collect())
+    by_name.into_values().collect()
 }
 
 // The declared request headers, then the credential and CSRF headers of the route identity's
@@ -473,11 +471,7 @@ pub(crate) fn report_schema_clash(
         rule: AccessRightsRule::ProofName,
         message: format!(
             "rules '{}' and '{}' read the {} proof '{}' on route '{}' with different schemas",
-            first.rule,
-            later.rule,
-            later.proof.r#in,
-            later.proof.name,
-            route.id
+            first.rule, later.rule, later.proof.r#in, later.proof.name, route.id
         ),
         fix: "give one of the proofs another name, or the same schema".to_owned(),
         pointer: later.use_pointer.clone(),
@@ -596,9 +590,10 @@ pub(crate) fn created_input(
     let route = &input.route;
     let method = access_rights_operation_of(context, route)?.method.as_ref();
     let Some(first) = uses.first() else {
-        return Err(
-            InternalError::new("a proof-only input is created for a body proof".to_owned()).into(),
-        );
+        return Err(InternalError::new(
+            "a proof-only input is created for a body proof".to_owned(),
+        )
+        .into());
     };
 
     if let Some(method @ (HttpMethod::Get | HttpMethod::Delete)) = method {
@@ -679,6 +674,45 @@ pub(crate) fn identity_unknown_keys(
     }))
 }
 
+// A declared input that is no named object schema: `unbuilt` is the reference whose schema is
+// not among the compiled ones.
+fn report_unfit_input(
+    reporter: &mut AccessRightsReporter,
+    route: &AccessRightsRoute,
+    declared: &DraftOperationInput,
+    first: &ProofUse,
+    unbuilt: Option<&RefTypeUse>,
+) {
+    let (message, fix) = match unbuilt {
+        Some(reference) => (
+            format!(
+                "rule '{}' reads its proof '{}' from the body of route '{}', whose input schema '{}' is not among the compiled schemas",
+                first.rule, first.proof.name, route.id, reference.schema
+            ),
+            "declare the input schema under `schemas`, or read the proof in a header",
+        ),
+        None => (
+            format!(
+                "rule '{}' reads its proof '{}' from the body of route '{}', whose input is no named object schema",
+                first.rule, first.proof.name, route.id
+            ),
+            "make the route's input an object schema, or read the proof in a header",
+        ),
+    };
+
+    reporter.error(AccessRightsProblem {
+        rule: AccessRightsRule::ProofInput,
+        message,
+        fix: fix.to_owned(),
+        pointer: first.use_pointer.clone(),
+        distinct_by: None,
+        related: vec![AccessRightsRelated {
+            pointer: declared.origin.pointer.clone(),
+            message: "the route's input is declared here".to_owned(),
+        }],
+    });
+}
+
 /// Whether body proofs fit a declared input: a `ref` use of an object schema whose properties and
 /// form fields bear none of the proofs' names. Each misfit is reported.
 pub(crate) fn fits_declared_input(
@@ -719,34 +753,8 @@ pub(crate) fn fits_declared_input(
             (Some(reference), None) => Some(reference),
             _ => None,
         };
-        let (message, fix) = match unbuilt {
-            Some(reference) => (
-                format!(
-                    "rule '{}' reads its proof '{}' from the body of route '{}', whose input schema '{}' is not among the compiled schemas",
-                    first.rule, first.proof.name, route.id, reference.schema
-                ),
-                "declare the input schema under `schemas`, or read the proof in a header",
-            ),
-            None => (
-                format!(
-                    "rule '{}' reads its proof '{}' from the body of route '{}', whose input is no named object schema",
-                    first.rule, first.proof.name, route.id
-                ),
-                "make the route's input an object schema, or read the proof in a header",
-            ),
-        };
 
-        reporter.error(AccessRightsProblem {
-            rule: AccessRightsRule::ProofInput,
-            message,
-            fix: fix.to_owned(),
-            pointer: first.use_pointer.clone(),
-            distinct_by: None,
-            related: vec![AccessRightsRelated {
-                pointer: declared.origin.pointer.clone(),
-                message: "the route's input is declared here".to_owned(),
-            }],
-        });
+        report_unfit_input(reporter, route, declared, first, unbuilt);
 
         return Ok(false);
     };
@@ -755,7 +763,10 @@ pub(crate) fn fits_declared_input(
 
     for use_of in uses {
         let name = &use_of.proof.name;
-        let property = object.properties.iter().find(|candidate| candidate.name == *name);
+        let property = object
+            .properties
+            .iter()
+            .find(|candidate| candidate.name == *name);
         let field = declared
             .fields
             .iter()
