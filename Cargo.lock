@@ -964,6 +964,7 @@ version = "2.0.0"
 dependencies = [
  "indexmap",
  "regress",
+ "seampact-authoring",
  "seampact-diagnostics",
  "seampact-ir",
  "seampact-js",
