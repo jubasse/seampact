@@ -19,6 +19,7 @@ seampact-pass-tree-nodes.workspace = true
 seampact-pipeline.workspace = true
 
 [dev-dependencies]
+seampact-authoring.workspace = true
 seampact-pipeline = { workspace = true, features = ["test-support"] }
 
 [lints]

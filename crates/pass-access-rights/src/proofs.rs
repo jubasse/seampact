@@ -84,7 +84,7 @@ const FIELD_MEDIA: &[InputMediaType] = &[
 ///
 /// # Errors
 ///
-/// An internal error, or a [`PassError::NotPortedYet`] from a builder.
+/// An internal error.
 pub(crate) fn access_rights_proofs(
     context: &AccessRightsContext,
     reporter: &mut AccessRightsReporter,

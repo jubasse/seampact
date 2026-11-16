@@ -1,17 +1,11 @@
 //! The `access.rights` half (ADR 0006 section 2), ported from
 //! `packages/core/compiler/src/passes/access/rights`.
 
-#![allow(
-    dead_code,
-    reason = "functions reached only by stubs until the half's last brief"
-)]
-
 mod bucket_keys;
 mod catalogues;
 mod field_rights;
 mod field_subjects;
 mod filtered_by;
-mod not_ported;
 mod packs;
 mod params;
 mod pass;
@@ -79,7 +73,6 @@ pub const RULE_IDS: &[RuleId] = &[
 ///
 /// # Errors
 ///
-/// [`PassError::NotPortedYet`] when the run reaches a function not ported yet, else
 /// [`PassError::Internal`] for a bug.
 pub fn run(
     draft: &DraftIr,

@@ -3,15 +3,18 @@
 use indexmap::IndexSet;
 use seampact_diagnostics::{InternalError, access_rights_quoted};
 use seampact_ir::{
-    Direction, IrMap, KnownRightSubjectRef, KnownTypeUseRef, Layer, OperationScope, Property,
-    RequirementSubject, ResourceSubject, Right, Schema, SchemaId, TypeUse, ValueSource,
+    Direction, IrMap, KnownRightSubjectRef, KnownSchemaRef, KnownTypeUseRef, Layer, OperationScope,
+    Property, RequirementSubject, ResourceSubject, Right, Schema, SchemaId, TypeUse, ValueSource,
     ValueSourceIn,
 };
 use seampact_json::JsonValue;
-use seampact_pipeline::{PassError, TreeNodeId, TreeNodeKind, TreeNodes, pointer_below};
+use seampact_pipeline::{
+    OrderedSetting, PassError, TreeNodeId, TreeNodeKind, TreeNodes, pointer_below,
+};
 
-use crate::not_ported::not_ported_yet;
-use crate::read::{access_rights_member, access_rights_merged_at, access_rights_schema_name};
+use crate::read::{
+    access_rights_member, access_rights_merged_at, access_rights_object, access_rights_schema_name,
+};
 use crate::report::{
     AccessRightsProblem, AccessRightsRelated, AccessRightsReporter, AccessRightsRule,
 };
@@ -493,36 +496,174 @@ pub(crate) fn position_schema(
 }
 
 pub(crate) fn source_schema(
-    _context: &AccessRightsContext,
-    _input: &AccessRightsSubjectInput<'_>,
-    _source: &ValueSource,
+    context: &AccessRightsContext,
+    input: &AccessRightsSubjectInput<'_>,
+    source: &ValueSource,
 ) -> Result<Option<AccessRightsSourceSchema>, PassError> {
-    Err(not_ported_yet("sourceSchema"))
+    let name = source.name.as_deref().unwrap_or("");
+
+    match &source.r#in {
+        ValueSourceIn::Path => path_schema(context, input.route.node, name),
+        ValueSourceIn::Query => fields_schema(
+            context,
+            input.route.node,
+            AccessRightsFieldsSetting::Query,
+            &|key| key == name,
+        ),
+        ValueSourceIn::Header => fields_schema(
+            context,
+            input.route.node,
+            AccessRightsFieldsSetting::Headers,
+            &|key| key.to_lowercase() == name.to_lowercase(),
+        ),
+        ValueSourceIn::Scope => {
+            if input
+                .scopes
+                .iter()
+                .any(|scope| scope.scope.as_str() == name)
+            {
+                let pointer = pointer_below("/scopes", &[name, "id"]);
+
+                return Ok(Some(position_schema(context, &pointer)?));
+            }
+
+            Ok(None)
+        }
+        ValueSourceIn::Principal => principal_schema(context, input, name),
+        ValueSourceIn::Body
+        | ValueSourceIn::Host
+        | ValueSourceIn::Subdomain
+        | ValueSourceIn::Address
+        | ValueSourceIn::Resolver
+        | ValueSourceIn::HolderField
+        | ValueSourceIn::Unknown(_) => Ok(None),
+    }
 }
 
+// A path parameter: a member id, or a `pathParams` entry of the route or an ancestor, the nearest
+// first.
 pub(crate) fn path_schema(
-    _context: &AccessRightsContext,
-    _node: TreeNodeId,
-    _name: &str,
+    context: &AccessRightsContext,
+    node: TreeNodeId,
+    name: &str,
 ) -> Result<Option<AccessRightsSourceSchema>, PassError> {
-    Err(not_ported_yet("pathSchema"))
+    let ids = member_ids(&context.nodes, node)?;
+    let member_id = ids.iter().find(|id| id.name == name);
+    let mut at = Some(node);
+
+    while let Some(current) = at {
+        if let Some(member_id) = member_id
+            && current == member_id.collection
+        {
+            return Ok(Some(position_schema(context, &member_id.pointer)?));
+        }
+
+        let at_node = context.nodes.get(current)?;
+        let declared =
+            access_rights_object(access_rights_member(Some(at_node.settings), "pathParams"));
+
+        if access_rights_member(declared, name).is_some() {
+            let pointer = pointer_below(&at_node.pointer, &["pathParams", name]);
+
+            return Ok(Some(position_schema(context, &pointer)?));
+        }
+
+        at = at_node.parent;
+    }
+
+    Ok(None)
 }
 
+const OPTIONAL_FIELD: &str = "?";
+
+// A query field or request header the route declares, in a fields map of the route or an
+// ancestor.
 pub(crate) fn fields_schema(
-    _context: &AccessRightsContext,
-    _node: TreeNodeId,
-    _setting: AccessRightsFieldsSetting,
-    _matches: &dyn Fn(&str) -> bool,
+    context: &AccessRightsContext,
+    node: TreeNodeId,
+    setting: AccessRightsFieldsSetting,
+    matches: &dyn Fn(&str) -> bool,
 ) -> Result<Option<AccessRightsSourceSchema>, PassError> {
-    Err(not_ported_yet("fieldsSchema"))
+    let (ordered, setting_name) = match setting {
+        AccessRightsFieldsSetting::Query => (OrderedSetting::Query, "query"),
+        AccessRightsFieldsSetting::Headers => (OrderedSetting::Headers, "headers"),
+    };
+    let entries = context
+        .context
+        .inherited
+        .ordered(node, ordered)?
+        .unwrap_or_default();
+
+    for entry in entries.iter().rev() {
+        let Some(key) = &entry.key else {
+            continue;
+        };
+        let field = key.strip_suffix(OPTIONAL_FIELD);
+
+        if !matches(field.unwrap_or(key)) {
+            continue;
+        }
+
+        let entry_node = context.nodes.get(entry.node)?;
+        let pointer = pointer_below(&entry_node.pointer, &[setting_name, key]);
+        let mut schema = position_schema(context, &pointer)?;
+
+        schema.optional = field.is_some();
+
+        return Ok(Some(schema));
+    }
+
+    Ok(None)
 }
 
+// A principal field (`principal.userId`, `principal.profile.id`), through the object schemas of
+// the principal.
 pub(crate) fn principal_schema(
-    _context: &AccessRightsContext,
-    _input: &AccessRightsSubjectInput<'_>,
-    _path: &str,
+    context: &AccessRightsContext,
+    input: &AccessRightsSubjectInput<'_>,
+    path: &str,
 ) -> Result<Option<AccessRightsSourceSchema>, PassError> {
-    Err(not_ported_yet("principalSchema"))
+    let Some(route_identity) = &input.route.identity else {
+        return Ok(None);
+    };
+    let merged = Some(&context.context.raw.merged);
+    let identities = access_rights_object(access_rights_member(merged, "identities"));
+    let identity = access_rights_object(access_rights_member(identities, route_identity.as_str()));
+    let mut schema_id = access_rights_schema_name(access_rights_member(identity, "principal"));
+    let mut found: Option<AccessRightsSourceSchema> = None;
+    let mut optional = false;
+
+    for field in path.split('.') {
+        let Some(schema) = schema_id.as_deref().and_then(|id| input.schemas.get(id)) else {
+            return Ok(None);
+        };
+        let KnownSchemaRef::Object(object) = KnownSchemaRef::try_from(schema)? else {
+            return Ok(None);
+        };
+        let Some(property) = object
+            .properties
+            .iter()
+            .find(|candidate| candidate.name == field)
+        else {
+            return Ok(None);
+        };
+
+        optional = optional || property.optional;
+        found = Some(access_rights_property_schema(context, property));
+        schema_id = match KnownTypeUseRef::try_from(&property.r#type)? {
+            KnownTypeUseRef::Ref(reference) => Some(reference.schema.as_str().to_owned()),
+            KnownTypeUseRef::Array(_)
+            | KnownTypeUseRef::Scalar(_)
+            | KnownTypeUseRef::Enum(_)
+            | KnownTypeUseRef::File(_)
+            | KnownTypeUseRef::Opaque(_) => None,
+        };
+    }
+
+    Ok(found.map(|mut schema| {
+        schema.optional = optional;
+        schema
+    }))
 }
 
 /// The schema of an object property: its type use, and the schema its written position names, if

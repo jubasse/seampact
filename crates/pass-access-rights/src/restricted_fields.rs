@@ -26,7 +26,6 @@ pub(crate) struct AccessRightsRestrictedField<'draft> {
     pub(crate) schema: String,
     pub(crate) pointer: String,
     pub(crate) holder: &'draft ObjectSchema,
-    pub(crate) property: &'draft Property,
     pub(crate) restriction: &'draft FieldRestriction,
 }
 
@@ -222,7 +221,6 @@ pub(crate) fn walk_schema<'draft>(
                         schema: at.root.clone(),
                         pointer: pointer.clone(),
                         holder: object,
-                        property,
                         restriction,
                     });
                 }
