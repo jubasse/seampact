@@ -1,11 +1,6 @@
 //! The `tree.nodes` half (ADR 0006 section 2), ported from
 //! `packages/core/compiler/src/passes/tree/nodes`.
 
-#![allow(
-    dead_code,
-    reason = "functions reached only by stubs until the half's last brief"
-)]
-
 mod api;
 mod collections;
 mod degradable;
@@ -17,7 +12,6 @@ mod formats;
 mod input;
 mod lifecycle;
 mod limits;
-mod not_ported;
 mod operations;
 mod paging;
 mod pagings;

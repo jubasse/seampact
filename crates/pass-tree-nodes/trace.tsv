@@ -141,7 +141,7 @@ src/limits.rs#tree_nodes_body_limit	packages/core/compiler/src/passes/tree/nodes
 src/limits.rs#parsed_body_limit	packages/core/compiler/src/passes/tree/nodes/limits.ts#parsedBodyLimit
 src/limits.rs#tree_nodes_check_body_limits	packages/core/compiler/src/passes/tree/nodes/limits.ts#treeNodesCheckBodyLimits
 src/limits.rs#check_limit	packages/core/compiler/src/passes/tree/nodes/limits.ts#checkLimit
-src/operations.rs#is_http_method	packages/core/compiler/src/passes/tree/nodes/operations.ts#isHttpMethod
+-	packages/core/compiler/src/passes/tree/nodes/operations.ts#isHttpMethod	skip: method_of matches the written text against the closed method list directly (src/operations.rs#is_method_text)
 src/operations.rs#tree_nodes_operations	packages/core/compiler/src/passes/tree/nodes/operations.ts#treeNodesOperations
 src/operations.rs#check_successors	packages/core/compiler/src/passes/tree/nodes/operations.ts#checkSuccessors
 src/operations.rs#member_id_failed	packages/core/compiler/src/passes/tree/nodes/operations.ts#memberIdFailed
@@ -209,7 +209,7 @@ src/pagings.rs#format_related	packages/core/compiler/src/passes/tree/nodes/pagin
 src/pagings.rs#sent_key	packages/core/compiler/src/passes/tree/nodes/pagings.ts#sentKey
 src/params.rs#placeholders_of	packages/core/compiler/src/passes/tree/nodes/params.ts#placeholdersOf
 src/params.rs#tree_nodes_unknown_query	packages/core/compiler/src/passes/tree/nodes/params.ts#treeNodesUnknownQuery
-src/params.rs#chain_of	packages/core/compiler/src/passes/tree/nodes/params.ts#chainOf
+-	packages/core/compiler/src/passes/tree/nodes/params.ts#chainOf	skip: the path fields walk the chain of the node tree directly (TreeNodes::chain)
 src/params.rs#policy_of	packages/core/compiler/src/passes/tree/nodes/params.ts#policyOf
 src/params.rs#inherited_fields	packages/core/compiler/src/passes/tree/nodes/params.ts#inheritedFields
 src/params.rs#check_tag_header_not_declared	packages/core/compiler/src/passes/tree/nodes/params.ts#checkTagHeaderNotDeclared

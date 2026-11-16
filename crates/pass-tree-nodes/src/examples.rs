@@ -1,18 +1,22 @@
 //! The `examples` of an operation: each one read, and its value checked against the input or response it targets.
 
 use indexmap::IndexMap;
-use seampact_diagnostics::InternalError;
-use seampact_ir::{ArrayTypeUse, ErrorCode, OperationExample, Response, ResponseShape, TypeUse};
+use seampact_diagnostics::{InternalError, quote_text};
+use seampact_ir::{
+    ArrayTypeUse, Direction, ErrorCode, OperationExample, Response, ResponseShape, Schema, TypeUse,
+};
 use seampact_js::js_key_order;
 use seampact_json::JsonValue;
-use seampact_pass_tree_shared::tree_nodes_member;
+use seampact_pass_tree_shared::{
+    tree_nodes_answered_use, tree_nodes_draft_schema, tree_nodes_id_param, tree_nodes_member,
+    tree_nodes_op_owner, tree_nodes_setting,
+};
 use seampact_pipeline::{PassError, pointer_below};
 
 use crate::diagnostics::{
     TreeNodesDiagnosticOptions, TreeNodesRule, tree_nodes_error, tree_nodes_node_origin,
 };
 use crate::fields::TreeNodesSite;
-use crate::not_ported::not_ported_yet;
 use crate::paging::number_of;
 use crate::pass::TreeNodesScope;
 
@@ -328,27 +332,116 @@ fn report_target(
 }
 
 fn report_key_issue(
-    _site: &TreeNodesSite<'_, '_>,
-    _table_key: &TableKey,
-    _why: &str,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    table_key: &TableKey,
+    why: &str,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("reportKeyIssue"))
+    let origin = scope
+        .context
+        .origin(&table_key.pointer)
+        .unwrap_or_else(|| site.node.origin.clone());
+
+    scope
+        .context
+        .report(tree_nodes_error(TreeNodesDiagnosticOptions {
+            rule: TreeNodesRule::ExampleValue,
+            origin: tree_nodes_node_origin(&origin)?,
+            message: format!(
+                "The example {} of {} has the key {}, which does not read as the id: {why}.",
+                table_key.name,
+                site.operation_id,
+                quote_text(&table_key.key)
+            ),
+            fix: "Key each entry of the table by an id the collection's id schema reads."
+                .to_owned(),
+            related: Vec::new(),
+        }));
+
+    Ok(())
 }
 
+// A table is keyed by the id of the batch op's collection, read in its text form: the entry of an `id` fields map,
+// or the one property of the object schema `id` names (as tree.schemas reads the batch ids).
 fn table_id_use(
-    _site: &TreeNodesSite<'_, '_>,
-    _scope: &TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    scope: &TreeNodesScope<'_, '_, '_>,
 ) -> Result<TypeUse, PassError> {
-    Err(not_ported_yet("tableIdUse"))
+    let collection = tree_nodes_op_owner(site.nodes, site.node)?;
+    let id_param = collection.and_then(|collection| {
+        tree_nodes_id_param(collection, scope.context.raw.merged.get("schemas"))
+    });
+    let (Some(collection), Some(id_param)) = (collection, id_param) else {
+        return Err(InternalError::new(format!(
+            "the table response of {} has no collection id",
+            site.node.pointer
+        ))
+        .into());
+    };
+    let id_pointer = pointer_below(&collection.pointer, &["id"]);
+
+    if !matches!(
+        tree_nodes_setting(collection, "id"),
+        Some(JsonValue::String(_))
+    ) {
+        return tree_nodes_answered_use(
+            scope.schemas,
+            &pointer_below(&id_pointer, &[&id_param]),
+            &Direction::Input,
+        );
+    }
+
+    let named = tree_nodes_answered_use(scope.schemas, &id_pointer, &Direction::Input)?;
+    let properties = match &named {
+        TypeUse::Ref(reference) => {
+            match tree_nodes_draft_schema(scope.draft, reference.schema.as_str())? {
+                Schema::Object(object) => object.properties.as_slice(),
+                _ => &[],
+            }
+        }
+        _ => &[],
+    };
+
+    match properties {
+        [only] => Ok(only.r#type.clone()),
+        _ => Err(InternalError::new(format!(
+            "the id schema of {} is no object of one property",
+            collection.pointer
+        ))
+        .into()),
+    }
 }
 
 fn report_issue(
-    _site: &TreeNodesSite<'_, '_>,
-    _name: &str,
-    _pointer: &str,
-    _issue: &ExampleIssue,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    name: &str,
+    pointer: &str,
+    issue: &ExampleIssue,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("reportIssue"))
+    let origin = scope
+        .context
+        .origin(&format!("{pointer}{}", issue.pointer))
+        .or_else(|| scope.context.origin(pointer))
+        .unwrap_or_else(|| site.node.origin.clone());
+    let at = if issue.pointer.is_empty() {
+        String::new()
+    } else {
+        format!(" at '{}'", issue.pointer)
+    };
+
+    scope
+        .context
+        .report(tree_nodes_error(TreeNodesDiagnosticOptions {
+            rule: TreeNodesRule::ExampleValue,
+            origin: tree_nodes_node_origin(&origin)?,
+            message: format!(
+                "The example {name} of {} does not fit its schema{at}: {}.",
+                site.operation_id, issue.message
+            ),
+            fix: "Correct the example value, or the schema it is parsed against.".to_owned(),
+            related: Vec::new(),
+        }));
+
+    Ok(())
 }

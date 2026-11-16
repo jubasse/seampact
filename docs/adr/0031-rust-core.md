@@ -76,6 +76,7 @@ The server HTTP suite is ported into the binary as `seampact test`, so a JVM, PH
 - Diagnostic message text, now from the binary's own catalogue instead of ajv. Rule ids, pointers, severities and positions stay.
 - Refusal codes: one code per fault on every stack, from one list; the troubleshooting tables are generated from it. A few codes change name.
 - Integers above 2^53, as above.
+- A diagnostic origin writes its members in one order: api, layer, pointer.
 
 ### Formatting
 

@@ -9,9 +9,7 @@ use seampact_ir::{
 };
 use seampact_json::{JsonValue, stringify_json};
 use seampact_pass_tree_shared::{tree_nodes_member, tree_nodes_tag_header};
-use seampact_pipeline::{
-    NearestSetting, OrderedSetting, PassError, TreeNode, TreeNodeId, TreeNodeKind, TreeNodes,
-};
+use seampact_pipeline::{NearestSetting, OrderedSetting, PassError, TreeNodeId, TreeNodeKind};
 
 use crate::api::text_of;
 use crate::diagnostics::{
@@ -21,7 +19,6 @@ use crate::diagnostics::{
 use crate::fields::{
     TreeNodesField, TreeNodesFields, TreeNodesSite, tree_nodes_field_travels, tree_nodes_fields,
 };
-use crate::not_ported::not_ported_yet;
 use crate::pass::TreeNodesScope;
 use crate::paths::TreeNodesPath;
 
@@ -104,16 +101,6 @@ pub(crate) fn tree_nodes_unknown_query(
         reading.as_ref().map(|reading| reading.value),
         reading.as_ref().and_then(|reading| reading.origin.as_ref()),
     )
-}
-fn chain_of<'nodes, 'raw>(
-    node_id: TreeNodeId,
-    nodes: &'nodes TreeNodes<'raw>,
-) -> Result<Vec<&'nodes TreeNode<'raw>>, InternalError> {
-    Ok(nodes
-        .chain(node_id)?
-        .into_iter()
-        .map(|(_, node)| node)
-        .collect())
 }
 fn policy_of(
     value: Option<&JsonValue>,
@@ -406,14 +393,14 @@ fn check_placeholders(
             placeholders.push(placeholder);
 
             if repeated {
-                report_repeated_placeholder(site, &path.full, placeholder, &origin, scope)?;
+                report_repeated_placeholder(site, &path.full, placeholder, &origin, scope);
             } else if path_fields.complete
                 && !path_fields
                     .fields
                     .iter()
                     .any(|field| field.name == placeholder)
             {
-                report_undeclared_placeholder(site, &path.full, placeholder, &origin, scope)?;
+                report_undeclared_placeholder(site, &path.full, placeholder, &origin, scope);
             }
         }
     }
@@ -510,33 +497,96 @@ fn param_of(
 }
 
 fn report_undeclared_placeholder(
-    _site: &TreeNodesSite<'_, '_>,
-    _path: &str,
-    _placeholder: &str,
-    _origin: &DiagnosticOrigin,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
-) -> Result<(), PassError> {
-    Err(not_ported_yet("reportUndeclaredPlaceholder"))
+    site: &TreeNodesSite<'_, '_>,
+    path: &str,
+    placeholder: &str,
+    origin: &DiagnosticOrigin,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
+) {
+    let key = format!(
+        "path-param:{}#{}:{{{placeholder}}}",
+        origin.layer, origin.pointer
+    );
+    let diagnostic = tree_nodes_error(TreeNodesDiagnosticOptions {
+        rule: TreeNodesRule::PathParam,
+        origin: origin.clone(),
+        message: format!(
+            "The path {path} of {} holds {{{placeholder}}}, which no pathParams or id declares.",
+            site.operation_id
+        ),
+        fix: format!("Declare {placeholder} in pathParams."),
+        related: Vec::new(),
+    });
+
+    tree_nodes_report_once(&key, diagnostic, scope);
 }
 
 fn report_twice(
-    _site: &TreeNodesSite<'_, '_>,
-    _field: &TreeNodesField,
-    _first: &TreeNodesField,
-    _list: ParamList,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    field: &TreeNodesField,
+    first: &TreeNodesField,
+    list: ParamList,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("reportTwice"))
+    tree_nodes_report_declared_twice(site, field, first, place_of(list), scope)
+}
+
+/// Reports a field named twice in one list, once per place of the second declaration.
+pub(crate) fn tree_nodes_report_declared_twice(
+    site: &TreeNodesSite<'_, '_>,
+    field: &TreeNodesField,
+    first: &TreeNodesField,
+    place: &str,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
+) -> Result<(), PassError> {
+    let fallback = tree_nodes_node_origin(&site.node.origin)?;
+    let origin = tree_nodes_locate(&field.origin, &fallback);
+    let key = format!(
+        "param-unique:{}#{}:{}",
+        origin.layer, origin.pointer, field.name
+    );
+    let diagnostic = tree_nodes_error(TreeNodesDiagnosticOptions {
+        rule: TreeNodesRule::ParamUnique,
+        origin,
+        message: format!(
+            "The {place} {} of {} is declared twice.",
+            field.name, site.operation_id
+        ),
+        fix: "Remove one of the two declarations.".to_owned(),
+        related: vec![RelatedLocation {
+            origin: tree_nodes_locate(&first.origin, &fallback),
+            message: "the first declaration".to_owned(),
+        }],
+    });
+
+    tree_nodes_report_once(&key, diagnostic, scope);
+
+    Ok(())
 }
 
 fn report_repeated_placeholder(
-    _site: &TreeNodesSite<'_, '_>,
-    _path: &str,
-    _placeholder: &str,
-    _origin: &DiagnosticOrigin,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
-) -> Result<(), PassError> {
-    Err(not_ported_yet("reportRepeatedPlaceholder"))
+    site: &TreeNodesSite<'_, '_>,
+    path: &str,
+    placeholder: &str,
+    origin: &DiagnosticOrigin,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
+) {
+    let key = format!(
+        "path-param:{}#{}:{{{placeholder}}}",
+        origin.layer, origin.pointer
+    );
+    let diagnostic = tree_nodes_error(TreeNodesDiagnosticOptions {
+        rule: TreeNodesRule::PathParam,
+        origin: origin.clone(),
+        message: format!(
+            "The path {path} of {} holds {{{placeholder}}} twice, so one parameter would fill two segments.",
+            site.operation_id
+        ),
+        fix: "Rename one of the two placeholders and declare it.".to_owned(),
+        related: Vec::new(),
+    });
+
+    tree_nodes_report_once(&key, diagnostic, scope);
 }
 
 /// The text with each `{name}` placeholder written `{}`: a path compared by position only.

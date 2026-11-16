@@ -32,7 +32,6 @@ use crate::lifecycle::{
     tree_nodes_budget_ms, tree_nodes_check_successor, tree_nodes_deprecated, tree_nodes_extensions,
     tree_nodes_internal, tree_nodes_stated_maturity, tree_nodes_tags, tree_nodes_upstream,
 };
-use crate::not_ported::not_ported_yet;
 use crate::paging::tree_nodes_paging;
 use crate::params::{blank_placeholders, tree_nodes_params, tree_nodes_unknown_query};
 use crate::pass::TreeNodesScope;
@@ -85,13 +84,6 @@ impl ClashRule {
     }
 }
 
-fn is_http_method(value: &JsonValue) -> bool {
-    let JsonValue::String(text) = value else {
-        return false;
-    };
-
-    HTTP_METHODS.iter().any(|method| method.as_str() == text)
-}
 /// Writes every operation of the api to the output, in tree order, and reports the id and name clashes. Returns the
 /// wire formats and paging styles the relay routes copy, which join `formats` and `pagings` once those are written.
 pub(crate) fn tree_nodes_operations<'node, 'raw>(
@@ -117,7 +109,7 @@ pub(crate) fn tree_nodes_operations<'node, 'raw>(
         let Some(name) =
             tree_nodes_operation_name(nodes, node, conventions, raw.merged.get("schemas"))?
         else {
-            report_no_singular(node, scope)?;
+            report_no_singular(nodes, node, scope)?;
             continue;
         };
 
@@ -606,11 +598,35 @@ fn warn_bare_id_singular(
     Ok(())
 }
 
+// ADR 0002 section 6: the singular comes from `singular` or `id` only. Reported once per collection, at its first
+// operation that needs it.
 fn report_no_singular(
-    _node: &TreeNode<'_>,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    nodes: &TreeNodes<'_>,
+    node: &TreeNode<'_>,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("reportNoSingular"))
+    let Some(collection) = tree_nodes_singular_owner(nodes, node)? else {
+        return Err(InternalError::new(format!(
+            "the operation at {} has no name, yet needs no singular",
+            node.pointer
+        ))
+        .into());
+    };
+    let key = format!("collection-singular:{}", collection.pointer);
+    let diagnostic = tree_nodes_error(TreeNodesDiagnosticOptions {
+        rule: TreeNodesRule::CollectionSingular,
+        origin: tree_nodes_node_origin(&collection.origin)?,
+        message: format!(
+            "The collection {} declares neither singular nor id, so the operation at {} has no singular noun for its name.",
+            collection.name, node.pointer
+        ),
+        fix: "Set singular on the collection (or declare its id).".to_owned(),
+        related: Vec::new(),
+    });
+
+    tree_nodes_report_once(&key, diagnostic, scope);
+
+    Ok(())
 }
 
 // Ids are unique across the api, and two operations whose names give equal segments would collide in every

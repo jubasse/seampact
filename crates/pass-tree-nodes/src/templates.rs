@@ -48,8 +48,6 @@ pub(crate) const TREE_NODES_RESPONSE_ROLES: &[&str] = &[
     "complete",
 ];
 
-const EVERYWHERE: &[&str] = &["status", "self", "path"];
-const SUCCESS: &[&str] = &["status", "self", "path", "payload", "meta", "resource"];
 const PAGING: &[&str] = &[
     "status",
     "self",

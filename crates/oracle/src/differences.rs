@@ -37,6 +37,8 @@ pub enum DifferenceChange {
     Message,
     /// A `rule`, `code` or `id` differs.
     CodeRenamed,
+    /// The members of an object are in another order; the entry names no `from` or `to`.
+    MemberOrder,
     /// A generated file's layout differs.
     Format,
 }

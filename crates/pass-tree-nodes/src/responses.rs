@@ -23,7 +23,7 @@ use crate::diagnostics::{
 use crate::formats::{TREE_NODES_BARE_FORMAT, TREE_NODES_DEFAULT_MEDIA, tree_nodes_bare_origin};
 
 use crate::fields::{TreeNodesField, TreeNodesSite, tree_nodes_field_travels, tree_nodes_fields};
-use crate::not_ported::not_ported_yet;
+use crate::params::tree_nodes_report_declared_twice;
 use crate::pass::TreeNodesScope;
 
 /// The status of a success that writes none.
@@ -649,10 +649,10 @@ fn report_no_item(
 }
 
 fn report_header_twice(
-    _site: &TreeNodesSite<'_, '_>,
-    _field: &TreeNodesField,
-    _first: &TreeNodesField,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    field: &TreeNodesField,
+    first: &TreeNodesField,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("reportHeaderTwice"))
+    tree_nodes_report_declared_twice(site, field, first, "response header", scope)
 }
