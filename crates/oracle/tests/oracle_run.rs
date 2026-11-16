@@ -63,18 +63,18 @@ fn exact_big_integers(_name: &str, text: &str) -> String {
 /// The api of an origin copied from another api written first, as the Rust port writes it where
 /// the TS oracle appended it last.
 fn origin_api_first(_name: &str, text: &str) -> String {
-    text.replace(
-        concat!(
-            "\"layer\": \"api\",\n",
-            "                \"pointer\": \"/surfaces/internal/routes/getTask/relays\",\n",
-            "                \"api\": \"svc\"\n"
-        ),
-        concat!(
-            "\"api\": \"svc\",\n",
-            "                \"layer\": \"api\",\n",
-            "                \"pointer\": \"/surfaces/internal/routes/getTask/relays\"\n"
-        ),
-    )
+    [("internal", "svc"), ("app", "tasks")]
+        .iter()
+        .fold(text.to_owned(), |rewritten, (surface, api)| {
+            rewritten.replace(
+                &format!(
+                    "\"layer\": \"api\",\n                \"pointer\": \"/surfaces/{surface}/routes/getTask/relays\",\n                \"api\": \"{api}\"\n"
+                ),
+                &format!(
+                    "\"api\": \"{api}\",\n                \"layer\": \"api\",\n                \"pointer\": \"/surfaces/{surface}/routes/getTask/relays\"\n"
+                ),
+            )
+        })
 }
 
 /// The wording of regress for the syntax errors V8 words as an unterminated character class or

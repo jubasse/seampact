@@ -94,5 +94,5 @@ differences:
     applies:
       fixtures: ["rules/workspace-relay-cycle"]
       output: diagnostics
-      pointer: /apis/0/diagnostics/0/related/0/origin
+      pointer: /apis/*/diagnostics/0/related/0/origin
     change: member-order
