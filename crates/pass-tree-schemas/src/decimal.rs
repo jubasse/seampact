@@ -3,11 +3,10 @@
 
 use std::cmp::Ordering;
 
-use seampact_diagnostics::InternalError;
 use num_bigint::{BigInt, Sign};
+use seampact_diagnostics::InternalError;
 use seampact_js::FiniteNumber;
 use seampact_pipeline::PassError;
-
 
 /// The ten the units are scaled by.
 const TEN: u8 = 10;
@@ -140,10 +139,7 @@ fn split_digits(text: &str) -> Option<(&str, &str)> {
     text.split_at_checked(length)
 }
 
-fn aligned(
-    a: &TreeSchemasDecimal,
-    b: &TreeSchemasDecimal,
-) -> Result<(BigInt, BigInt), PassError> {
+fn aligned(a: &TreeSchemasDecimal, b: &TreeSchemasDecimal) -> Result<(BigInt, BigInt), PassError> {
     let scale = a.scale.max(b.scale);
 
     Ok((units_at(a, scale)?, units_at(b, scale)?))
@@ -179,4 +175,61 @@ pub(crate) fn tree_schemas_is_multiple_of(
     let (units, step_units) = aligned(value, step)?;
 
     Ok(step_units.sign() != Sign::NoSign && (units % step_units).sign() == Sign::NoSign)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn decimal(text: &str) -> TreeSchemasDecimal {
+        match tree_schemas_decimal_of(TreeSchemasDecimalSource::Text(text)) {
+            Ok(Some(read)) => read,
+            other => panic!("text {text:?} gave {other:?}"),
+        }
+    }
+
+    #[test]
+    fn multiples_are_exact_past_128_bits_and_a_zero_step_has_none() {
+        let huge = "100000000000000000000000000000000000000000000000000";
+        let cases = [
+            (huge, "0.5", true),
+            (huge, "3", false),
+            ("1", "0.3", false),
+            ("0.9", "0.3", true),
+            ("5", "0", false),
+        ];
+
+        for (value, step, expected) in cases {
+            assert_eq!(
+                tree_schemas_is_multiple_of(&decimal(value), &decimal(step)),
+                Ok(expected),
+                "{value} by {step}"
+            );
+        }
+    }
+
+    #[test]
+    fn decimals_compare_across_scales_without_rounding() {
+        let cases = [
+            ("1.10", "1.1", Ordering::Equal),
+            (
+                "0.1",
+                "0.10000000000000000000000000000000000000000001",
+                Ordering::Less,
+            ),
+            (
+                "-1",
+                "-1.0000000000000000000000000000000000000000001",
+                Ordering::Greater,
+            ),
+        ];
+
+        for (left, right, expected) in cases {
+            assert_eq!(
+                tree_schemas_compare_decimals(&decimal(left), &decimal(right)),
+                Ok(expected),
+                "{left} against {right}"
+            );
+        }
+    }
 }

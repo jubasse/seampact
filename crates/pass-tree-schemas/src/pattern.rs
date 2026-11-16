@@ -705,7 +705,9 @@ impl PatternParser {
         if let Some(max) = max
             && max < min
         {
-            return refuse(&format!("the repetition {{{min},{max}}} has its bounds reversed"));
+            return refuse(&format!(
+                "the repetition {{{min},{max}}} has its bounds reversed"
+            ));
         }
 
         let text = match max {
@@ -786,11 +788,7 @@ impl PatternParser {
 
         Ok(Matched {
             text: class_text(&ranges, negated)?,
-            ranges: if negated {
-                complement(&ranges)
-            } else {
-                ranges
-            },
+            ranges: if negated { complement(&ranges) } else { ranges },
         })
     }
 
@@ -856,5 +854,88 @@ pub fn tree_schemas_normalize_pattern(source: &str) -> Result<TreeSchemasPattern
             Ok(TreeSchemasPatternResult::Refused { message, fix })
         }
         Err(PatternFailure::Pass(error)) => Err(error),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn normalized(source: &str) -> String {
+        match tree_schemas_normalize_pattern(source) {
+            Ok(TreeSchemasPatternResult::Normalized { normalized }) => normalized,
+            other => panic!("pattern {source:?} gave {other:?}"),
+        }
+    }
+
+    fn refusal(source: &str) -> String {
+        match tree_schemas_normalize_pattern(source) {
+            Ok(TreeSchemasPatternResult::Refused { message, .. }) => message,
+            other => panic!("pattern {source:?} gave {other:?}"),
+        }
+    }
+
+    #[test]
+    fn shorthands_and_classes_become_sorted_merged_ranges() {
+        let cases = [
+            (r"\d", "[0-9]"),
+            (r"\D", "[^0-9]"),
+            (r"[\wa]", "[0-9A-Z_a-z]"),
+            ("[a-cb-f]", "[a-f]"),
+            ("[a-bc-d]", "[a-d]"),
+            ("[a-]", "[\\-a]"),
+            (".", "[^\\u000A\\u000D\\u0085\\u2028-\\u2029]"),
+        ];
+
+        for (source, expected) in cases {
+            assert_eq!(normalized(source), expected, "pattern {source:?}");
+        }
+    }
+
+    #[test]
+    fn astral_and_invisible_code_points_are_written_as_escapes() {
+        assert_eq!(
+            normalized("[\u{1F600}-\u{1F602}]"),
+            "[\\u{1F600}-\\u{1F602}]"
+        );
+        assert_eq!(normalized("a\u{2028}"), "a\\u2028");
+        assert_eq!(normalized("[\u{85}-\u{a0}]"), "[\\u0085-\\u00A0]");
+    }
+
+    #[test]
+    fn repetition_bounds_are_checked_and_normalised() {
+        assert_eq!(normalized("a{2,2}"), "a{2}");
+        assert_eq!(normalized("a{2,}"), "a{2,}");
+        assert_eq!(normalized("a{0,1000}"), "a{0,1000}");
+        assert_eq!(
+            refusal("a{1001}"),
+            "the pattern is not portable: a repetition count above 1000 is not portable"
+        );
+        assert_eq!(
+            refusal("a{3,2}"),
+            "the pattern is not portable: the repetition {3,2} has its bounds reversed"
+        );
+        assert!(refusal("a{").contains("starts a repetition"));
+        assert!(refusal("a{99999999999999999999999}").contains("above 1000"));
+    }
+
+    #[test]
+    fn a_malformed_class_or_escape_is_refused_by_name() {
+        assert!(refusal("[]").contains("an empty class matches nothing"));
+        assert!(refusal("[z-a]").contains("bounds reversed"));
+        assert!(refusal(r"[\d-z]").contains("a literal '-' inside a class"));
+        assert!(refusal(r"[a-\d]").contains("ends with a shorthand"));
+        assert!(refusal(r"\q").contains("'\\q' is not portable"));
+        assert!(refusal("[a").contains("ends inside a construct"));
+    }
+
+    #[test]
+    fn a_repeated_group_that_can_split_a_text_two_ways_is_refused() {
+        assert_eq!(
+            refusal("(a+)+"),
+            "the pattern can backtrack exponentially: '(a+)+' repeats a group whose trailing repetition can match what the group starts with"
+        );
+        assert!(refusal("(a|ab)*").contains("branches can start with the same character"));
+        assert_eq!(normalized("(a+)?"), "(a+)?");
     }
 }

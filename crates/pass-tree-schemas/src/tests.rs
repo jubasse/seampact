@@ -332,7 +332,10 @@ fn a_decimal_reads_a_number_through_its_shortest_form() {
 
     assert_eq!(
         number(1e-7),
-        Ok(Some(TreeSchemasDecimal { units: BigInt::from(1), scale: 7 }))
+        Ok(Some(TreeSchemasDecimal {
+            units: BigInt::from(1),
+            scale: 7
+        }))
     );
     assert_eq!(
         number(1e21),
@@ -350,7 +353,10 @@ fn a_decimal_reads_a_number_through_its_shortest_form() {
     );
     assert_eq!(
         text("1e-2"),
-        Ok(Some(TreeSchemasDecimal { units: BigInt::from(1), scale: 2 }))
+        Ok(Some(TreeSchemasDecimal {
+            units: BigInt::from(1),
+            scale: 2
+        }))
     );
 
     for refused in ["", "+1", ".5", "1.", "1e", "0x10", "1 ", "\u{ff11}"] {

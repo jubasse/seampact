@@ -294,7 +294,6 @@ fn is_date_time(text: &str) -> bool {
 /// `^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`.
 fn format_check_uuid(text: &str) -> bool {
     let groups: Vec<&str> = text.split('-').collect();
-    
 
     groups.len() == UUID_GROUP_LENGTHS.len()
         && groups
@@ -1009,6 +1008,72 @@ mod tests {
         assert_eq!(pattern_matches("^.$", "\u{1F600}"), Ok(true));
         assert_eq!(pattern_matches("^.$", "ab"), Ok(false));
         assert!(pattern_matches("(", "a").is_err());
+    }
+
+    #[test]
+    fn a_calendar_date_names_a_day_that_exists_and_year_zero_is_a_leap_year() {
+        let cases = [
+            ("0000-02-29", true),
+            ("2024-02-29", true),
+            ("2000-02-29", true),
+            ("1900-02-29", false),
+            ("2026-02-29", false),
+            ("2026-13-01", false),
+            ("2026-1-01", false),
+            ("\u{ff12}026-01-01", false),
+        ];
+
+        for (text, expected) in cases {
+            assert_eq!(is_calendar_date(text), expected, "text {text:?}");
+        }
+    }
+
+    #[test]
+    fn a_date_time_needs_an_offset_and_refuses_a_leap_second() {
+        let cases = [
+            ("2026-01-01T00:00:00Z", true),
+            ("2026-01-01t23:59:59.123456789+23:59", true),
+            ("2026-01-01T00:00:60Z", false),
+            ("2026-01-01T24:00:00Z", false),
+            ("2026-01-01T00:00:00", false),
+            ("2026-01-01T00:00:00.Z", false),
+            ("2026-01-01T00:00:00.1234567890Z", false),
+            ("2026-01-01T00:00:00+24:00", false),
+            ("2026-01-01T00:00:00+00:60", false),
+            ("2026-01-01T00:00:00+0000", false),
+            ("2026-02-30T00:00:00Z", false),
+            ("2026-01-01T00:00:00Z ", false),
+        ];
+
+        for (text, expected) in cases {
+            assert_eq!(is_date_time(text), expected, "text {text:?}");
+        }
+    }
+
+    #[test]
+    fn an_int64_text_stays_within_the_signed_64_bit_range() {
+        let cases = [
+            ("9223372036854775807", true),
+            ("9223372036854775808", false),
+            ("-9223372036854775808", true),
+            ("-9223372036854775809", false),
+            ("-0", true),
+            ("00", false),
+            ("-", false),
+            ("", false),
+        ];
+
+        for (text, expected) in cases {
+            assert_eq!(format_check_int64(text), expected, "text {text:?}");
+        }
+    }
+
+    #[test]
+    fn a_json_text_that_ends_early_reads_as_v8_words_it() {
+        assert_eq!(parse_json_text("[1,2"), Err(UNEXPECTED_END.to_owned()));
+        assert_eq!(parse_json_text(""), Err(UNEXPECTED_END.to_owned()));
+        assert!(parse_json_text("nope").is_err());
+        assert!(parse_json_text(r#"{"a":1}"#).is_ok());
     }
 
     #[test]

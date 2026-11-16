@@ -3208,7 +3208,9 @@ impl TreeSchemasDerivedHost for TreeSchemasCompiler<'_, '_, '_> {
         pointer: &str,
         schema_use: &TypeUse,
     ) -> Result<Option<Vec<JsonValue>>, PassError> {
-        Ok(self.written_examples(Some(value), pointer, schema_use))
+        let written = tree_schemas_member(Some(value), "examples");
+
+        Ok(self.written_examples(written, pointer, schema_use))
     }
 
     fn default_value(

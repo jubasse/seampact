@@ -9,9 +9,10 @@ use std::collections::HashSet;
 use indexmap::IndexMap;
 use seampact_diagnostics::{InternalError, quote_text};
 use seampact_ir::{
-    Direction, Enum, EnumId, ExtensionKeyDecl, ExtensionKeyId, ImportedIr, IrClosedCheck, IrClosedDeclaration,
-    IrClosedUnknown, IrMap, KnownEnumSourceRef, KnownSchemaRef, KnownTypeUseRef, Operation,
-    Origin, Params, Response, Scalar, ScalarId, Schema, SchemaId, TypeUse, check_ir_closed_declaration,
+    Direction, Enum, EnumId, ExtensionKeyDecl, ExtensionKeyId, ImportedIr, IrClosedCheck,
+    IrClosedDeclaration, IrClosedUnknown, IrMap, KnownEnumSourceRef, KnownSchemaRef,
+    KnownTypeUseRef, Operation, Origin, Params, Response, Scalar, ScalarId, Schema, SchemaId,
+    TypeUse, check_ir_closed_declaration,
 };
 use seampact_json::{JsonObject, JsonValue, canonical_json};
 use seampact_pass_tree_shared::tree_nodes_relay_origin;
@@ -314,7 +315,11 @@ fn operation_uses(operation: RelayedOperation<'_>) -> Vec<TreeSchemasRelayUse> {
     let mut uses: Vec<TreeSchemasRelayUse> = Vec::new();
 
     if let Some(params) = members.params {
-        let listed = params.path.iter().chain(&params.query).chain(&params.header);
+        let listed = params
+            .path
+            .iter()
+            .chain(&params.query)
+            .chain(&params.header);
 
         uses.extend(listed.map(|param| read(&param.r#type)));
     }
@@ -327,7 +332,12 @@ fn operation_uses(operation: RelayedOperation<'_>) -> Vec<TreeSchemasRelayUse> {
         .filter(|response| response.status < i64::from(ERROR_STATUS))
     {
         uses.extend(response.body.as_ref().map(written));
-        uses.extend(response.headers.iter().map(|header| written(&header.r#type)));
+        uses.extend(
+            response
+                .headers
+                .iter()
+                .map(|header| written(&header.r#type)),
+        );
     }
 
     uses
@@ -483,7 +493,12 @@ fn extension_key_ids(schema: &Schema) -> Result<Vec<String>, PassError> {
     match KnownSchemaRef::try_from(schema)? {
         KnownSchemaRef::Object(object) => {
             slots.push(&object.extensions);
-            slots.extend(object.properties.iter().map(|property| &property.extensions));
+            slots.extend(
+                object
+                    .properties
+                    .iter()
+                    .map(|property| &property.extensions),
+            );
         }
         KnownSchemaRef::Map(map) => slots.push(&map.extensions),
         KnownSchemaRef::Union(union) => slots.push(&union.extensions),
@@ -670,7 +685,12 @@ impl<'compiler, 'raw, 'half, 'run> RelayCopier<'compiler, 'raw, 'half, 'run> {
             .cloned()
             .map(Declaration::ExtensionKey);
 
-        self.join(site, DeclarationKind::ExtensionKey, &relayed, local.as_ref())?;
+        self.join(
+            site,
+            DeclarationKind::ExtensionKey,
+            &relayed,
+            local.as_ref(),
+        )?;
 
         self.reach(site, &declared.schema)
     }
@@ -748,19 +768,15 @@ impl<'compiler, 'raw, 'half, 'run> RelayCopier<'compiler, 'raw, 'half, 'run> {
                     Declaration::Schema(Box::new(schema))
                 })
             }),
-            CatalogueName::Enums => site
-                .source
-                .enums()
-                .get(id)
-                .map(|declared| read_declaration(declared, site.source, &pointer, Declaration::Enum)),
+            CatalogueName::Enums => site.source.enums().get(id).map(|declared| {
+                read_declaration(declared, site.source, &pointer, Declaration::Enum)
+            }),
             CatalogueName::Scalars => site.source.scalars().get(id).map(|declared| {
                 read_declaration(declared, site.source, &pointer, Declaration::Scalar)
             }),
-            CatalogueName::ExtensionKeys => {
-                site.source.extension_keys().get(id).map(|declared| {
-                    read_declaration(declared, site.source, &pointer, Declaration::ExtensionKey)
-                })
-            }
+            CatalogueName::ExtensionKeys => site.source.extension_keys().get(id).map(|declared| {
+                read_declaration(declared, site.source, &pointer, Declaration::ExtensionKey)
+            }),
         };
 
         let Some(read) = read else {
@@ -810,10 +826,7 @@ impl<'compiler, 'raw, 'half, 'run> RelayCopier<'compiler, 'raw, 'half, 'run> {
         })
     }
 
-    fn copied(
-        relayed: &Declaration,
-        site: CopySite<'_, '_>,
-    ) -> Result<Declaration, PassError> {
+    fn copied(relayed: &Declaration, site: CopySite<'_, '_>) -> Result<Declaration, PassError> {
         let mut encoded_copy = relayed.encoded()?;
 
         with_api_origins(&mut encoded_copy, site.api)?;
@@ -981,6 +994,61 @@ mod tests {
     fn target(text: &str) -> Option<(String, String)> {
         relay_target(&JsonValue::String(text.to_owned()))
             .map(|found| (found.api, found.operation_id))
+    }
+
+    fn json(text: &str) -> JsonValue {
+        let parsed: serde_json::Value = serde_json::from_str(text).expect("test JSON");
+
+        JsonValue::try_from(parsed).expect("test JSON value")
+    }
+
+    #[test]
+    fn a_copied_origin_names_the_api_but_a_written_value_is_never_entered() {
+        let mut copied = json(
+            r#"{"origin":{"layer":"api","pointer":"/a"},
+                "core":{"origin":{"layer":"core","pointer":"/c"}},
+                "derivedFrom":{"from":[{"layer":"base","pointer":"/b"}]},
+                "examples":[{"origin":{"layer":"api","pointer":"/data"}}],
+                "own":{"origin":{"api":"other","layer":"api","pointer":"/o"}}}"#,
+        );
+
+        with_api_origins(&mut copied, "public").expect("stamped");
+
+        let expected = json(
+            r#"{"origin":{"api":"public","layer":"api","pointer":"/a"},
+                "core":{"origin":{"layer":"core","pointer":"/c"}},
+                "derivedFrom":{"from":[{"api":"public","layer":"base","pointer":"/b"}]},
+                "examples":[{"origin":{"layer":"api","pointer":"/data"}}],
+                "own":{"origin":{"api":"other","layer":"api","pointer":"/o"}}}"#,
+        );
+
+        assert_eq!(copied, expected);
+    }
+
+    #[test]
+    fn two_copies_compare_equal_without_directions_origins_and_the_copy_api() {
+        let first = json(
+            r#"{"id":"A","directions":["input"],"origin":{"layer":"api","pointer":"/a"},
+                "derivedFrom":{"from":[{"api":"x","layer":"api","pointer":"/p"}]},
+                "examples":[{"origin":1}]}"#,
+        );
+        let second = json(
+            r#"{"id":"A","directions":[],"origin":{"layer":"base","pointer":"/z"},
+                "derivedFrom":{"from":[{"layer":"api","pointer":"/p"}]},
+                "examples":[{"origin":1}]}"#,
+        );
+        let different = json(
+            r#"{"id":"A","directions":[],"derivedFrom":{"from":[]},"examples":[{"origin":2}]}"#,
+        );
+
+        assert_eq!(
+            canonical_json(&without_ignored(&first)),
+            canonical_json(&without_ignored(&second))
+        );
+        assert_ne!(
+            canonical_json(&without_ignored(&first)),
+            canonical_json(&without_ignored(&different))
+        );
     }
 
     #[test]
