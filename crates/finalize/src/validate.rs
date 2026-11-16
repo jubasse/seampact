@@ -110,6 +110,10 @@ fn invalid(
 
 // The invariants of ADR 0004 section 13 are checked here once `checkIrInvariants` is ported into
 // `seampact-ir`; until then the schema check above is the whole output check.
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "the invariant check that replaces this body can fail"
+)]
 fn assert_ir_invariants(_api: &str, _candidate: &JsonValue) -> Result<(), InternalError> {
     Ok(())
 }

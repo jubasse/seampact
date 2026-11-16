@@ -108,6 +108,8 @@ pub fn finalize(
     let api = context.raw.name.clone();
     let mut ir = draft.to_json_value()?;
 
+    drop(draft);
+
     finalize_prune(&mut ir)?;
 
     let collisions = finalize_id_collisions(&ir)?;

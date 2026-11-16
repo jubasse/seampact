@@ -31,7 +31,7 @@ const CORE_LAYER: &str = "core";
 const ORIGIN_DEFINITION: &str = "Origin";
 const CONTRACT_IR_REFERENCE: &str = "#/$defs/ContractIR";
 
-/// The catalogue members of the ContractIR schema and the id definition each holds.
+/// The catalogue members of the `ContractIR` schema and the id definition each holds.
 struct Catalogues {
     /// The catalogue member of each id definition (`SchemaId` gives `schemas`).
     member_of_definition: HashMap<String, String>,
