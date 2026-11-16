@@ -60,7 +60,7 @@ pub use ids::{
     ScopeId, ServiceId, Slot, SurfaceId, VariantId,
 };
 pub use imported::ImportedIr;
-pub use integers::optional_count;
+pub use integers::{HTTP_STATUS_RANGE, optional_count};
 pub use ir_map::IrMap;
 pub use layer::Layer;
 pub use open_enums::{

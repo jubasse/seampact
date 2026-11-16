@@ -7,14 +7,13 @@
 //! `conventions.errors.pattern`.
 
 use std::collections::HashMap;
-use std::ops::RangeInclusive;
 
 use indexmap::IndexMap;
 use regress::Regex;
 use seampact_diagnostics::{InternalError, quote_text};
 use seampact_ir::{
-    Direction, Docs, ErrorCode, ErrorDecl, ErrorHttp, IrMap, KnownTypeUseRef, Layer, NatureBase,
-    NatureDecl, NatureId, Origin, Schema, SchemaId, SchemaRef,
+    Direction, Docs, ErrorCode, ErrorDecl, ErrorHttp, HTTP_STATUS_RANGE, IrMap, KnownTypeUseRef,
+    Layer, NatureBase, NatureDecl, NatureId, Origin, Schema, SchemaId, SchemaRef,
 };
 use seampact_json::{JsonObject, JsonValue, canonical_json, js_integer_in_range};
 use seampact_pipeline::{
@@ -98,9 +97,6 @@ const ERROR_EVERY_POINTER: &str = "/conventions/errors/every";
 const UNAVAILABLE_STATUSES: &[i64] = &[408, 425, 429, 502, 503, 504];
 
 const FIRST_SERVER_STATUS: i64 = 500;
-
-/// The statuses the IR admits on an error (`ErrorHttp.status`).
-const HTTP_STATUS_RANGE: RangeInclusive<i64> = 100..=599;
 
 /// The members of an attachment that are no part of a declaration's definition.
 const ATTACHMENT_ONLY_MEMBERS: [&str; 2] = ["reach", "for"];
