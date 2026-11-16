@@ -27,33 +27,12 @@ src/same_type_use.rs#canonical_without_annotations	packages/core/spec/src/ir/typ
 src/calendar_date.rs#is_ir_calendar_date	packages/core/spec/src/ir/calendar-date.ts#isIrCalendarDate
 src/calendar_date.rs#days_in_month	packages/core/spec/src/ir/calendar-date.ts#daysInMonth
 src/calendar_date.rs#is_leap_year	packages/core/spec/src/ir/calendar-date.ts#isLeapYear
-src/invariants/violation.rs#IrInvariantId	packages/core/spec/src/ir/invariants.ts#IrInvariantId
-src/invariants/violation.rs#IrInvariantViolation	packages/core/spec/src/ir/invariants.ts#IrInvariantViolation
--	packages/core/spec/src/ir/invariants.ts#Json	skip: the untyped document is a JsonValue
 -	packages/core/spec/src/ir/invariants.ts#has	skip: JsonObject::contains_key
 src/invariants/json_members.rs#record	packages/core/spec/src/ir/invariants.ts#isRecord
 -	packages/core/spec/src/ir/invariants.ts#parentOf	skip: one rsplit_once in object_rules.rs#check_value_source
 src/invariants/catalogue_refs.rs#unescape_segment	packages/core/spec/src/ir/invariants.ts#unescapeSegment
-src/invariants/partitions.rs#NAMED_SOURCES	packages/core/spec/src/ir/invariants.ts#NAMED_SOURCES
-src/invariants/partitions.rs#BARE_SOURCES	packages/core/spec/src/ir/invariants.ts#BARE_SOURCES
-src/invariants/partitions.rs#QUERY_WIRE_KINDS	packages/core/spec/src/ir/invariants.ts#QUERY_WIRE_KINDS
-src/invariants/partitions.rs#PLAIN_WIRE_KINDS	packages/core/spec/src/ir/invariants.ts#PLAIN_WIRE_KINDS
-src/invariants/partitions.rs#QUERY_WIRE_MEMBERS	packages/core/spec/src/ir/invariants.ts#QUERY_WIRE_MEMBERS
-src/invariants/partitions.rs#ID_TYPE_KINDS	packages/core/spec/src/ir/invariants.ts#ID_TYPE_KINDS
-src/invariants/partitions.rs#PROOF_REFUSED_KINDS	packages/core/spec/src/ir/invariants.ts#PROOF_REFUSED_KINDS
-src/invariants/partitions.rs#OTHER_TYPE_KINDS	packages/core/spec/src/ir/invariants.ts#OTHER_TYPE_KINDS
-src/invariants/partitions.rs#KNOWN_TYPE_USE_KINDS	packages/core/spec/src/ir/invariants.ts#KNOWN_TYPE_USE_KINDS
-src/invariants/partitions.rs#OBJECT_SCHEMA_KINDS	packages/core/spec/src/ir/invariants.ts#OBJECT_SCHEMA_KINDS
-src/invariants/partitions.rs#NON_OBJECT_SCHEMA_KINDS	packages/core/spec/src/ir/invariants.ts#NON_OBJECT_SCHEMA_KINDS
-src/invariants/partitions.rs#KNOWN_SCHEMA_KINDS	packages/core/spec/src/ir/invariants.ts#KNOWN_SCHEMA_KINDS
-src/invariants/partitions.rs#FIELD_MEDIA	packages/core/spec/src/ir/invariants.ts#FIELD_MEDIA
-src/invariants/partitions.rs#DOCUMENT_MEDIA	packages/core/spec/src/ir/invariants.ts#DOCUMENT_MEDIA
-src/invariants/partitions.rs#CORE_CATALOGUES	packages/core/spec/src/ir/invariants.ts#CORE_CATALOGUES
-src/invariants/partitions.rs#IR_PARTITIONS	packages/core/spec/src/ir/invariants.ts#IR_PARTITIONS
 src/invariants/open_values.rs#known_values	packages/core/spec/src/ir/invariants.ts#knownValues
 src/invariants/open_values.rs#is_known	packages/core/spec/src/ir/invariants.ts#isKnown
-src/invariants/open_values.rs#catalogues	packages/core/spec/src/ir/invariants.ts#CATALOGUES
-src/invariants/violation.rs#Violations	packages/core/spec/src/ir/invariants.ts#Fail
 src/invariants/input_proofs.rs#proofs_of	packages/core/spec/src/ir/invariants.ts#proofsOf
 src/invariants/input_proofs.rs#ref_target_of	packages/core/spec/src/ir/invariants.ts#refTargetOf
 src/invariants/input_proofs.rs#check_proof_input	packages/core/spec/src/ir/invariants.ts#checkProofInput
@@ -62,19 +41,11 @@ src/invariants/input_proofs.rs#check_proof_names	packages/core/spec/src/ir/invar
 src/invariants/input_proofs.rs#check_proof_wires	packages/core/spec/src/ir/invariants.ts#checkProofWires
 src/invariants/right_subjects.rs#subject_needed	packages/core/spec/src/ir/invariants.ts#subjectNeeded
 src/invariants/right_subjects.rs#check_subject_presence	packages/core/spec/src/ir/invariants.ts#checkSubjectPresence
-src/invariants/right_subjects.rs#ALWAYS_EXCLUDED	packages/core/spec/src/ir/invariants.ts#ALWAYS_EXCLUDED
 src/invariants/right_subjects.rs#check_field_right	packages/core/spec/src/ir/invariants.ts#checkFieldRight
 src/invariants/right_subjects.rs#check_sort_key	packages/core/spec/src/ir/invariants.ts#checkSortKey
-src/invariants/exact_numbers.rs#is_integer_text	packages/core/spec/src/ir/invariants.ts#INT64_TEXT
-src/invariants/exact_numbers.rs#is_decimal_text	packages/core/spec/src/ir/invariants.ts#DECIMAL_TEXT
--	packages/core/spec/src/ir/invariants.ts#INT64_MIN	skip: i64 parse refuses the range
--	packages/core/spec/src/ir/invariants.ts#INT64_MAX	skip: i64 parse refuses the range
 src/invariants/exact_numbers.rs#inexact_number	packages/core/spec/src/ir/invariants.ts#inexactNumber
 src/invariants/exact_numbers.rs#check_exact_numbers	packages/core/spec/src/ir/invariants.ts#checkExactNumbers
 src/invariants/operation.rs#has_degraded_meta	packages/core/spec/src/ir/invariants.ts#hasDegradedMeta
-src/invariants/deprecation.rs#DEPRECATION_SEMANTICS	packages/core/spec/src/ir/invariants.ts#DEPRECATION_SEMANTICS
-src/invariants/deprecation.rs#SUCCESS_STATUSES	packages/core/spec/src/ir/invariants.ts#SUCCESS_FIRST
-src/invariants/deprecation.rs#SUCCESS_STATUSES	packages/core/spec/src/ir/invariants.ts#SUCCESS_LAST
 src/invariants/deprecation.rs#is_success	packages/core/spec/src/ir/invariants.ts#isSuccess
 src/invariants/deprecation.rs#check_deprecation_headers	packages/core/spec/src/ir/invariants.ts#checkDeprecationHeaders
 src/invariants/deprecation.rs#path_params_of	packages/core/spec/src/ir/invariants.ts#pathParamsOf
@@ -82,18 +53,13 @@ src/invariants/deprecation.rs#check_successor_params	packages/core/spec/src/ir/i
 src/invariants/deprecation.rs#check_deprecation_dates	packages/core/spec/src/ir/invariants.ts#checkDeprecationDates
 src/invariants/error_declarations.rs#bindings_in	packages/core/spec/src/ir/invariants.ts#bindingsOf
 src/invariants/operation.rs#check_roles_once	packages/core/spec/src/ir/invariants.ts#checkRolesOnce
-src/invariants/error_declarations.rs#TEMPLATE_REFERENCE	packages/core/spec/src/ir/invariants.ts#TEMPLATE_SCHEMA
 src/invariants/error_declarations.rs#each_pointers	packages/core/spec/src/ir/invariants.ts#eachPointers
 src/invariants/error_declarations.rs#declaration_of	packages/core/spec/src/ir/invariants.ts#errorDeclarationOf
 src/invariants/error_declarations.rs#check_role_params	packages/core/spec/src/ir/invariants.ts#checkRoleParams
-src/invariants/error_declarations.rs#RETRY_STATUS	packages/core/spec/src/ir/invariants.ts#RETRY_STATUS
-src/invariants/error_declarations.rs#RETRY_DERIVATION	packages/core/spec/src/ir/invariants.ts#RETRY_DERIVATION
-src/invariants/error_declarations.rs#SAFE_MAXIMUM	packages/core/spec/src/ir/invariants.ts#SAFE_MAXIMUM
 src/invariants/error_declarations.rs#retry_param_of	packages/core/spec/src/ir/invariants.ts#retryParamOf
 src/invariants/error_declarations.rs#retry_param_problem	packages/core/spec/src/ir/invariants.ts#retryParamProblem
 src/invariants/error_declarations.rs#check_retry_header	packages/core/spec/src/ir/invariants.ts#checkRetryHeader
 src/invariants/operation.rs#check_sensitive_no_store	packages/core/spec/src/ir/invariants.ts#checkSensitiveNoStore
 src/invariants/error_declarations.rs#check_error_sensitive_no_store	packages/core/spec/src/ir/invariants.ts#checkErrorSensitiveNoStore
-src/invariants/operation.rs#OperationScope	packages/core/spec/src/ir/invariants.ts#OperationScope
 src/invariants/operation.rs#check_operation_members	packages/core/spec/src/ir/invariants.ts#checkOperationMembers
 src/invariants/document.rs#check_ir_invariants	packages/core/spec/src/ir/invariants.ts#checkIrInvariants
