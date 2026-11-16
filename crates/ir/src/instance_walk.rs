@@ -10,6 +10,10 @@ use crate::{IR_SCHEMA_FILES, IrError};
 /// The known-values annotation of an open enum (`packages/core/spec/schemas/ir/README.md`).
 const KNOWN_VALUES_KEYWORD: &str = "x-seampact-known";
 
+/// The must-act annotation of a union or an open enum: an unknown value makes the IR invalid for
+/// every reader.
+const MUST_ACT_KEYWORD: &str = "x-seampact-must-act";
+
 /// Every definition of the IR schema files by name (names are unique across the files).
 static DEFINITIONS: LazyLock<Result<HashMap<String, JsonObject>, String>> =
     LazyLock::new(read_definitions);
@@ -42,7 +46,11 @@ fn broken_schemas(what: String) -> IrError {
 }
 
 /// The IR schema definition named `name`, or `None` for a name no schema file defines.
-pub(crate) fn ir_definition(name: &str) -> Result<Option<&'static JsonObject>, IrError> {
+///
+/// # Errors
+///
+/// [`IrError::BrokenSchemas`] when an embedded schema file is no JSON.
+pub fn ir_definition(name: &str) -> Result<Option<&'static JsonObject>, IrError> {
     let definitions = DEFINITIONS
         .as_ref()
         .map_err(|what| broken_schemas(what.clone()))?;
@@ -51,29 +59,58 @@ pub(crate) fn ir_definition(name: &str) -> Result<Option<&'static JsonObject>, I
 }
 
 /// One node of an IR instance, as the schema reads it: an object of a definition, a tagged union
-/// object, the value of an open enum, or a value present where the schema reads an open enum but
-/// not a string.
+/// object, the value of an open enum, a value present where the schema reads an open enum but not
+/// a string, or a string of a named definition (an id, a code, a reason).
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) enum IrInstanceNode<'node> {
+pub enum IrInstanceNode<'node> {
+    /// An object of a definition (`None` for an object the schema reads without a name).
     Object {
+        /// Where the object sits in the instance.
         pointer: &'node str,
+        /// The last definition the schema reference chain named.
         definition: Option<&'node str>,
+        /// The object.
         value: &'node JsonObject,
     },
+    /// An object of a tagged union.
     Union {
+        /// Where the object sits in the instance.
         pointer: &'node str,
+        /// The tag member: `kind`, or `in`, `verify`, `policy`.
         tag: &'node str,
+        /// The tag values of the union's variants, in schema order.
         known: Vec<&'node str>,
+        /// Whether an unknown tag makes the IR invalid for every reader.
+        must_act: bool,
+        /// The object.
         value: &'node JsonObject,
     },
+    /// A string where the schema reads an open enum.
     OpenEnum {
+        /// Where the value sits in the instance.
         pointer: &'node str,
+        /// The known values of the enum.
         known: &'node [JsonValue],
+        /// Whether an unknown value makes the IR invalid for every reader.
+        must_act: bool,
+        /// The value.
         value: &'node str,
     },
+    /// A value that is no string where the schema reads an open enum.
     MalformedOpenEnum {
+        /// Where the value sits in the instance.
         pointer: &'node str,
+        /// The value.
         value: &'node JsonValue,
+    },
+    /// A string of a named definition (an id, a code, a reason).
+    String {
+        /// Where the string sits in the instance.
+        pointer: &'node str,
+        /// The definition the schema reference chain named.
+        definition: &'node str,
+        /// The string.
+        value: &'node str,
     },
 }
 
@@ -147,9 +184,13 @@ fn variant_tags<'schema>(
 ///
 /// Maps and opaque values are data: their entries are walked, never treated as IR objects. A
 /// member the schema does not know, or a union with an unknown tag, is not descended into. Shapes
-/// the schema refuses are skipped (the validator reports them). Named-string nodes are not
-/// visited: no Rust caller reads them.
-pub(crate) fn walk_ir_instance<'node>(
+/// the schema refuses are skipped (the validator reports them).
+///
+/// # Errors
+///
+/// [`IrError::BrokenSchemas`] when a schema reference names no definition, or whatever `visit`
+/// returns.
+pub fn walk_ir_instance<'node>(
     value: &'node JsonValue,
     schema: &'node JsonObject,
     pointer: &str,
@@ -173,6 +214,7 @@ pub(crate) fn walk_ir_instance<'node>(
                 .iter()
                 .map(|variant| variant.tag.as_str())
                 .collect(),
+            must_act: is_must_act(node),
             value: object,
         })?;
 
@@ -238,13 +280,14 @@ pub(crate) fn walk_ir_instance<'node>(
     }
 
     let Some(JsonValue::Array(known)) = node.get(KNOWN_VALUES_KEYWORD) else {
-        return Ok(());
+        return visit_named_string(node, definition, value, pointer, visit);
     };
 
     match value {
         JsonValue::String(text) => visit(&IrInstanceNode::OpenEnum {
             pointer,
             known,
+            must_act: is_must_act(node),
             value: text,
         }),
         other => visit(&IrInstanceNode::MalformedOpenEnum {
@@ -254,32 +297,66 @@ pub(crate) fn walk_ir_instance<'node>(
     }
 }
 
+fn is_must_act(node: &JsonObject) -> bool {
+    matches!(node.get(MUST_ACT_KEYWORD), Some(JsonValue::Bool(true)))
+}
+
+// A string of a definition whose schema is `type: string`: an id, a code, a reason.
+fn visit_named_string(
+    node: &JsonObject,
+    definition: Option<&str>,
+    value: &JsonValue,
+    pointer: &str,
+    visit: &mut impl FnMut(&IrInstanceNode<'_>) -> Result<(), IrError>,
+) -> Result<(), IrError> {
+    let is_string_type =
+        matches!(node.get("type"), Some(JsonValue::String(kind)) if kind == "string");
+
+    match (definition, value) {
+        (Some(definition), JsonValue::String(text)) if is_string_type => {
+            visit(&IrInstanceNode::String {
+                pointer,
+                definition,
+                value: text,
+            })
+        }
+        _ => Ok(()),
+    }
+}
+
 /// A tag outside a union's known variants, or a value outside an open enum's known values (ADR
 /// 0005 section 3).
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) enum IrUnknown<'node> {
+pub enum IrUnknown<'node> {
+    /// A union tag outside the known variants.
     Kind {
         /// The union object.
         pointer: &'node str,
         /// Its tag member: `kind`, or `in`, `verify`, `policy`.
         tag: &'node str,
+        /// The tag value.
         value: &'node str,
     },
+    /// A value outside an open enum's known values.
     Value {
+        /// Where the value sits in the instance.
         pointer: &'node str,
+        /// The value.
         value: &'node str,
     },
 }
 
 /// The node's unknown union tag or unknown open-enum value, if it is one: the one reading of
 /// "unknown" the closed-declaration check shares with the TypeScript `listIrUnknowns`.
-pub(crate) fn visit_ir_unknown<'node>(node: &IrInstanceNode<'node>) -> Option<IrUnknown<'node>> {
+#[must_use]
+pub fn visit_ir_unknown<'node>(node: &IrInstanceNode<'node>) -> Option<IrUnknown<'node>> {
     match node {
         IrInstanceNode::Union {
             pointer,
             tag,
             known,
             value,
+            ..
         } => match value.get(tag) {
             Some(JsonValue::String(text)) if !known.contains(&text.as_str()) => {
                 Some(IrUnknown::Kind {
@@ -294,6 +371,7 @@ pub(crate) fn visit_ir_unknown<'node>(node: &IrInstanceNode<'node>) -> Option<Ir
             pointer,
             known,
             value,
+            ..
         } => {
             let is_known = known
                 .iter()
@@ -301,6 +379,80 @@ pub(crate) fn visit_ir_unknown<'node>(node: &IrInstanceNode<'node>) -> Option<Ir
 
             (!is_known).then_some(IrUnknown::Value { pointer, value })
         }
-        IrInstanceNode::Object { .. } | IrInstanceNode::MalformedOpenEnum { .. } => None,
+        IrInstanceNode::Object { .. }
+        | IrInstanceNode::MalformedOpenEnum { .. }
+        | IrInstanceNode::String { .. } => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn walk_nodes(definition: &str, text: &str) -> Vec<String> {
+        let value: JsonValue = serde_json::from_str(text).expect("test json");
+        let schema: JsonObject = [(
+            "$ref".to_owned(),
+            JsonValue::String(format!("#/$defs/{definition}")),
+        )]
+        .into_iter()
+        .collect();
+        let mut seen = Vec::new();
+
+        walk_ir_instance(&value, &schema, "", &mut |node| {
+            seen.push(match node {
+                IrInstanceNode::String {
+                    pointer,
+                    definition,
+                    value,
+                } => format!("string {definition} {pointer} {value}"),
+                IrInstanceNode::Union {
+                    pointer, must_act, ..
+                } => format!("union {pointer} {must_act}"),
+                IrInstanceNode::OpenEnum {
+                    pointer,
+                    must_act,
+                    value,
+                    ..
+                } => format!("enum {pointer} {must_act} {value}"),
+                IrInstanceNode::Object { pointer, .. } => format!("object {pointer}"),
+                IrInstanceNode::MalformedOpenEnum { pointer, .. } => format!("malformed {pointer}"),
+            });
+
+            Ok(())
+        })
+        .expect("walk");
+
+        seen
+    }
+
+    #[test]
+    fn a_named_string_member_is_visited_with_its_definition() {
+        let seen = walk_nodes(
+            "ErrorDecl",
+            r#"{"origin":{"layer":"core","pointer":"/x"},"params":"api.issue"}"#,
+        );
+
+        assert!(
+            seen.iter().any(|node| node.starts_with("string ")),
+            "visited {seen:?}"
+        );
+    }
+
+    #[test]
+    fn a_must_act_union_and_an_open_enum_carry_their_flag() {
+        let seen = walk_nodes(
+            "Operation",
+            r#"{"access":{"kind":"public"},"method":"GET"}"#,
+        );
+
+        assert!(
+            seen.iter().any(|node| node.starts_with("union /access ")),
+            "visited {seen:?}"
+        );
+        assert!(
+            seen.iter().any(|node| node.starts_with("enum /method ")),
+            "visited {seen:?}"
+        );
     }
 }

@@ -62,6 +62,9 @@ pub use ids::{
     ScopeId, ServiceId, Slot, SurfaceId, VariantId,
 };
 pub use imported::ImportedIr;
+pub use instance_walk::{
+    IrInstanceNode, IrUnknown, ir_definition, visit_ir_unknown, walk_ir_instance,
+};
 pub use integers::{HTTP_STATUS_RANGE, optional_count};
 pub use ir_map::IrMap;
 pub use layer::Layer;

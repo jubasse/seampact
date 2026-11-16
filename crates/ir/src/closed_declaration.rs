@@ -183,7 +183,7 @@ fn push_node_unknowns(
             definition,
             value,
         } => push_unknown_members(*definition, value, pointer, unknowns)?,
-        IrInstanceNode::OpenEnum { .. } => {}
+        IrInstanceNode::OpenEnum { .. } | IrInstanceNode::String { .. } => {}
     }
 
     Ok(())
