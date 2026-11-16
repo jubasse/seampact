@@ -5,6 +5,7 @@
 //! and unions keep an unknown value or variant as read, and their registries ([`OPEN_ENUMS`],
 //! [`UNIONS`]) list every definition. [`IR_SCHEMA_FILES`] embeds the schema files.
 
+mod calendar_date;
 mod closed_declaration;
 mod common;
 mod contract;
@@ -28,6 +29,7 @@ mod source_map;
 mod unions;
 mod version;
 
+pub use calendar_date::is_ir_calendar_date;
 pub use closed_declaration::{
     IrClosedCheck, IrClosedDeclaration, IrClosedUnknown, bounded_unknown_text,
     bounded_unknown_value, check_ir_closed_declaration,

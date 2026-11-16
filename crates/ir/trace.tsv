@@ -24,3 +24,6 @@ src/closed_declaration.rs#closed_unknowns	packages/core/spec/src/ir/closed-decla
 src/closed_declaration.rs#check_ir_closed_declaration	packages/core/spec/src/ir/closed-declaration.ts#checkIrClosedDeclaration
 src/same_type_use.rs#is_ir_same_type_use	packages/core/spec/src/ir/type-use.ts#isIrSameTypeUse
 src/same_type_use.rs#canonical_without_annotations	packages/core/spec/src/ir/type-use.ts#canonicalWithoutAnnotations
+src/calendar_date.rs#is_ir_calendar_date	packages/core/spec/src/ir/calendar-date.ts#isIrCalendarDate
+src/calendar_date.rs#days_in_month	packages/core/spec/src/ir/calendar-date.ts#daysInMonth
+src/calendar_date.rs#is_leap_year	packages/core/spec/src/ir/calendar-date.ts#isLeapYear
