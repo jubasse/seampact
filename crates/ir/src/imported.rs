@@ -28,16 +28,6 @@ impl ImportedIr {
         Ok(Self { contract, document })
     }
 
-    /// The import of an IR this compiler wrote: its canonical text read back, so the document
-    /// holds only what the typed form holds.
-    ///
-    /// # Errors
-    ///
-    /// As [`ContractIr::canonical_text`] and [`ImportedIr::from_json_text`].
-    pub fn from_contract(contract: &ContractIr) -> Result<Self, IrError> {
-        Self::from_json_text(&contract.canonical_text()?)
-    }
-
     /// The typed open form: an IR from another compiler version may hold a variant or a value
     /// this one does not know.
     #[must_use]
