@@ -1,15 +1,15 @@
 //! The `degradable` member: the body paths an operation may leave out, checked against its success data.
 
 use seampact_diagnostics::InternalError;
-use seampact_ir::{Degradable, Response, TypeUse, UnionSchema};
+use seampact_ir::{Degradable, Response, Schema, TypeUse, UnionSchema};
 use seampact_json::JsonValue;
+use seampact_pass_tree_shared::{tree_nodes_draft_schema, tree_nodes_member};
 use seampact_pipeline::{ConventionReading, PassError};
 
 use crate::diagnostics::{
     TreeNodesDiagnosticOptions, TreeNodesRule, tree_nodes_error, tree_nodes_node_origin,
 };
 use crate::fields::TreeNodesSite;
-use crate::not_ported::not_ported_yet;
 use crate::pass::TreeNodesScope;
 
 /// The meta fill that names the degraded paths.
@@ -70,7 +70,7 @@ pub(crate) fn tree_nodes_degradable(
         )?;
     }
 
-    if !format_fills_degraded(site, format, scope)? && header.is_none() {
+    if !format_fills_degraded(format, scope) && header.is_none() {
         scope.context.report(tree_nodes_error(TreeNodesDiagnosticOptions {
             rule: TreeNodesRule::DegradableHeader,
             origin: tree_nodes_node_origin(&origin)?,
@@ -92,22 +92,65 @@ pub(crate) fn tree_nodes_degradable(
 }
 
 fn format_fills_degraded(
-    _site: &TreeNodesSite<'_, '_>,
-    _format: &str,
-    _scope: &TreeNodesScope<'_, '_, '_>,
-) -> Result<bool, PassError> {
-    Err(not_ported_yet("formatFillsDegraded"))
+    format: &str,
+    scope: &TreeNodesScope<'_, '_, '_>,
+) -> bool {
+    let formats = scope.context.raw.merged.get("formats");
+    let meta = tree_nodes_member(tree_nodes_member(formats, format), "meta");
+
+    let Some(JsonValue::Object(meta)) = meta else {
+        return false;
+    };
+
+    meta.values().any(|field| {
+        tree_nodes_member(Some(field), "fill")
+            == Some(&JsonValue::String(DEGRADED_FILL.to_owned()))
+    })
 }
 
+// The success data a path reaches into; a route with no success body has none to leave out. Where the header is
+// written, its value lists the path as written, so a name it cannot carry is refused.
 fn check_path(
-    _site: &TreeNodesSite<'_, '_>,
-    _path: &str,
-    _pointer: &str,
-    _body: Option<&TypeUse>,
-    _header_written: bool,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    path: &str,
+    pointer: &str,
+    body: Option<&TypeUse>,
+    header_written: bool,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("checkPath"))
+    let segments: Vec<String> = path.split('.').map(str::to_owned).collect();
+    let fault = match body {
+        None => Some(NO_PROPERTY.to_owned()),
+        Some(body) => path_fault(&segments, body, scope)?,
+    };
+
+    if let Some(fault) = fault {
+        return report_path(
+            site,
+            pointer,
+            &format!(
+                "The degradable path {path} of {} {fault}; only an optional part can be left out.",
+                site.operation_id
+            ),
+            "Name an optional object property of the success data, or make the property optional.",
+            scope,
+        );
+    }
+
+    if header_written && segments.iter().any(|segment| name_unfit_for_header(segment)) {
+        return report_path(
+            site,
+            pointer,
+            &format!(
+                "The degradable path {path} of {} names a property the degraded header cannot carry: a name may hold no comma, no character outside visible ASCII and space, and no leading or trailing space.",
+                site.operation_id
+            ),
+            "Rename the property, or leave it out of degradable.",
+            scope,
+        );
+    }
+
+    Ok(())
 }
 
 // A degraded header name may not hold a character outside printable ASCII, a comma, or a space at either end.
@@ -118,32 +161,98 @@ fn name_unfit_for_header(name: &str) -> bool {
         || name.ends_with(' ')
 }
 
+// Each segment names a property of the object reached so far, in every variant of a union; the last one must be
+// optional. `None` when the path fits.
 fn path_fault(
-    _site: &TreeNodesSite<'_, '_>,
-    _segments: &[String],
-    _type_use: &TypeUse,
-    _scope: &TreeNodesScope<'_, '_, '_>,
+    segments: &[String],
+    type_use: &TypeUse,
+    scope: &TreeNodesScope<'_, '_, '_>,
 ) -> Result<Option<String>, PassError> {
-    Err(not_ported_yet("pathFault"))
+    let reached = match type_use {
+        TypeUse::Array(array) => &*array.items,
+        other => other,
+    };
+    let TypeUse::Ref(reference) = reached else {
+        return Ok(Some(NO_PROPERTY.to_owned()));
+    };
+
+    schema_fault(segments, reference.schema.as_str(), scope)
+}
+
+fn schema_fault(
+    segments: &[String],
+    schema_id: &str,
+    scope: &TreeNodesScope<'_, '_, '_>,
+) -> Result<Option<String>, PassError> {
+    let schema = tree_nodes_draft_schema(scope.draft, schema_id)?;
+
+    let Schema::Object(object) = schema else {
+        return match schema {
+            Schema::Union(union) => variants_fault(segments, union, scope),
+            _ => Ok(Some(NO_PROPERTY.to_owned())),
+        };
+    };
+    let Some((segment, rest)) = segments.split_first() else {
+        return Ok(Some(NO_PROPERTY.to_owned()));
+    };
+    let Some(property) = object
+        .properties
+        .iter()
+        .find(|candidate| candidate.name == *segment)
+    else {
+        return Ok(Some(NO_PROPERTY.to_owned()));
+    };
+
+    if !rest.is_empty() {
+        return path_fault(rest, &property.r#type, scope);
+    }
+
+    Ok((!property.optional).then(|| "names a required property".to_owned()))
 }
 
 fn variants_fault(
-    _site: &TreeNodesSite<'_, '_>,
-    _segments: &[String],
-    _union: &UnionSchema,
-    _scope: &TreeNodesScope<'_, '_, '_>,
+    segments: &[String],
+    union: &UnionSchema,
+    scope: &TreeNodesScope<'_, '_, '_>,
 ) -> Result<Option<String>, PassError> {
-    Err(not_ported_yet("variantsFault"))
+    for variant in &union.variants {
+        let fault = schema_fault(segments, variant.schema.as_str(), scope)?;
+
+        if let Some(fault) = fault {
+            return Ok(Some(format!(
+                "{fault} in the variant {} of {}",
+                variant.tag,
+                union.id.as_str()
+            )));
+        }
+    }
+
+    Ok(None)
 }
 
 fn report_path(
-    _site: &TreeNodesSite<'_, '_>,
-    _pointer: &str,
-    _message: &str,
-    _fix: &str,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    pointer: &str,
+    message: &str,
+    fix: &str,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("reportPath"))
+    let origin = scope
+        .context
+        .origin(pointer)
+        .unwrap_or_else(|| site.node.origin.clone());
+
+    scope
+        .context
+        .report(tree_nodes_error(TreeNodesDiagnosticOptions {
+            rule: TreeNodesRule::DegradablePath,
+            origin: tree_nodes_node_origin(&origin)?,
+            message: message.to_owned(),
+            fix: fix.to_owned(),
+            related: Vec::new(),
+        }));
+
+    Ok(())
 }
 
 #[cfg(test)]
