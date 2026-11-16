@@ -17,7 +17,6 @@ use crate::diagnostics::{
     tree_nodes_report_once,
 };
 use crate::fields::TreeNodesSite;
-use crate::not_ported::not_ported_yet;
 use crate::pagings::TREE_NODES_DEFAULT_SORT_STYLE;
 use crate::pass::TreeNodesScope;
 use crate::responses::{TREE_NODES_PAGING_NONE, tree_nodes_is_list};
@@ -626,7 +625,7 @@ fn limits_of(
         (&conventions.default_limit, &conventions.max_limit)
         && above_max_limit(Some(convention_default.value), Some(convention_max.value)).is_some()
     {
-        report_convention_contradiction(site, convention_default, convention_max, scope)?;
+        report_convention_contradiction(convention_default, convention_max, scope)?;
 
         return Ok(None);
     }
@@ -714,31 +713,96 @@ fn request_related(
 }
 
 fn report_route_contradiction(
-    _site: &TreeNodesSite<'_, '_>,
-    _named: &NamedStyle<'_>,
-    _pair: &LimitPair,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    named: &NamedStyle<'_>,
+    pair: &LimitPair,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("reportRouteContradiction"))
+    let style_id = style_id_of(named)?;
+
+    scope
+        .context
+        .report(tree_nodes_error(TreeNodesDiagnosticOptions {
+            rule: TreeNodesRule::PagingLimit,
+            origin: tree_nodes_node_origin(&named.origin)?,
+            message: format!(
+                "The list {} pages with {style_id}, but its defaultLimit {} is above its maxLimit {}.",
+                site.operation_id, pair.default_limit, pair.max_limit
+            ),
+            fix: "Lower defaultLimit on the route's paging to its maxLimit or less.".to_owned(),
+            related: Vec::new(),
+        }));
+
+    Ok(())
 }
 
+// A limit missing from a style the conventions name is one fault, reported once at `conventions.paging.default`.
 fn report_missing_limit(
-    _site: &TreeNodesSite<'_, '_>,
-    _named: &NamedStyle<'_>,
-    _why: &str,
-    _fix: &str,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    named: &NamedStyle<'_>,
+    why: &str,
+    fix: &str,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("reportMissingLimit"))
+    let style_id = style_id_of(named)?;
+    let message = if named.on_route {
+        format!(
+            "The list {} pages with {style_id}, but {why}.",
+            site.operation_id
+        )
+    } else {
+        format!(
+            "The paging style {style_id} of conventions.paging.default is used by lists, but {why}."
+        )
+    };
+    let diagnostic = tree_nodes_error(TreeNodesDiagnosticOptions {
+        rule: TreeNodesRule::PagingLimit,
+        origin: tree_nodes_node_origin(&named.origin)?,
+        message,
+        fix: format!("{fix} on the route's paging or in conventions.paging."),
+        related: Vec::new(),
+    });
+
+    if named.on_route {
+        scope.context.report(diagnostic);
+    } else {
+        let key = format!(
+            "paging-limit:{}#{}",
+            named.origin.layer, named.origin.pointer
+        );
+
+        tree_nodes_report_once(&key, diagnostic, scope);
+    }
+
+    Ok(())
 }
 
 fn report_convention_contradiction(
-    _site: &TreeNodesSite<'_, '_>,
-    _default_limit: &ConventionLimit,
-    _max_limit: &ConventionLimit,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    default_limit: &ConventionLimit,
+    max_limit: &ConventionLimit,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("reportConventionContradiction"))
+    let key = format!(
+        "paging-limit:{}#{}",
+        default_limit.origin.layer, default_limit.origin.pointer
+    );
+    let diagnostic = tree_nodes_error(TreeNodesDiagnosticOptions {
+        rule: TreeNodesRule::PagingLimit,
+        origin: tree_nodes_node_origin(&default_limit.origin)?,
+        message: format!(
+            "The conventions.paging defaultLimit {} is above its maxLimit {}.",
+            default_limit.value, max_limit.value
+        ),
+        fix: "Lower conventions.paging.defaultLimit to its maxLimit or less.".to_owned(),
+        related: vec![RelatedLocation {
+            origin: tree_nodes_node_origin(&max_limit.origin)?,
+            message: "conventions.paging.maxLimit".to_owned(),
+        }],
+    });
+
+    tree_nodes_report_once(&key, diagnostic, scope);
+
+    Ok(())
 }
 
 #[cfg(test)]
