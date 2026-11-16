@@ -94,18 +94,6 @@ pub(crate) struct DeriveErrorsMemberMisfit {
 /// The `omittable` reason: the value may be left out, but the param requires it.
 const OMITTABLE_TEXT: &str = "it may be left out, but the param requires it";
 
-/// A copy of the use a closed form borrows, as the open union the example validator reads.
-pub(crate) fn derive_errors_copied_use(use_: &KnownTypeUseRef<'_>) -> TypeUse {
-    match use_ {
-        KnownTypeUseRef::Opaque(opaque) => TypeUse::Opaque((*opaque).clone()),
-        KnownTypeUseRef::File(file) => TypeUse::File((*file).clone()),
-        KnownTypeUseRef::Enum(enum_use) => TypeUse::Enum((*enum_use).clone()),
-        KnownTypeUseRef::Array(array) => TypeUse::Array((*array).clone()),
-        KnownTypeUseRef::Scalar(scalar) => TypeUse::Scalar((*scalar).clone()),
-        KnownTypeUseRef::Ref(reference) => TypeUse::Ref((*reference).clone()),
-    }
-}
-
 /// The schema a ref names; tree.schemas writes every schema a use names, so a missing one is an
 /// internal error.
 ///

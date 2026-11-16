@@ -56,18 +56,22 @@ pub(crate) fn derive_wire_relayed_of<'run>(
         }));
     }
 
-    let imported = scope.context.imported(api).and_then(|contract| {
-        contract
+    let imported = scope.context.imported_ir(api).and_then(|imported| {
+        imported
+            .contract()
             .operations
             .iter()
             .enumerate()
             .find(|(_, candidate)| {
                 candidate.kind == TREE_NODES_OPERATION_KIND && candidate.id == *id
             })
+            .map(|(index, operation)| (imported, index, operation))
     });
     let closed = imported
-        .map(|(index, operation)| {
-            check_ir_closed_declaration(operation, &format!("/operations/{index}"))
+        .map(|(imported, index, operation)| {
+            let pointer = format!("/operations/{index}");
+
+            check_ir_closed_declaration(operation, imported.document(), &pointer)
         })
         .transpose()
         .map_err(|error| InternalError::new(error.to_string()))?;

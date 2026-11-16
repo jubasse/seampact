@@ -472,7 +472,9 @@ pub struct Pattern {
 }
 
 /// The refinements of a scalar (ADR 0003 sections 1 and 8); numeric ones are decimal literal strings, compared numerically.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+///
+/// The default holds no refinement.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Refinements {
     /// The `minLength` member.

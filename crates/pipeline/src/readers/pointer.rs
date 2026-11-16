@@ -2,7 +2,7 @@
 
 use seampact_authoring::RawApi;
 use seampact_ir::Origin;
-use seampact_json::{JsonObject, JsonValue, escape_pointer};
+use seampact_json::{JsonObject, JsonValue, escape_pointer, json_at_object, pointer_segments};
 
 /// Whether `value` is an object (`null` and arrays are not).
 #[must_use]
@@ -29,79 +29,13 @@ pub fn pointer_below(base: &str, segments: &[&str]) -> String {
     pointer
 }
 
-// The segments of a pointer, unescaped; `None` for a pointer that is neither empty nor starts
-// with `/`.
-fn segments_of(pointer: &str) -> Option<Vec<String>> {
-    if pointer.is_empty() {
-        return Some(Vec::new());
-    }
-
-    let rest = pointer.strip_prefix('/')?;
-
-    Some(
-        rest.split('/')
-            .map(|segment| segment.replace("~1", "/").replace("~0", "~"))
-            .collect(),
-    )
-}
-
-// A canonical array index: `0`, or digits with no leading zero.
-fn array_index_of(segment: &str) -> Option<usize> {
-    let canonical = segment == "0"
-        || (segment.starts_with(|first: char| ('1'..='9').contains(&first))
-            && segment.chars().all(|digit| digit.is_ascii_digit()));
-
-    if !canonical {
-        return None;
-    }
-
-    segment.parse().ok()
-}
-
-/// The value at `segments` below `value`, own members only; `None` when absent.
-#[must_use]
-pub fn json_at<'tree, S: AsRef<str>>(
-    value: &'tree JsonValue,
-    segments: &[S],
-) -> Option<&'tree JsonValue> {
-    let mut at = value;
-
-    for segment in segments {
-        at = match at {
-            JsonValue::Array(items) => items.get(array_index_of(segment.as_ref())?)?,
-            JsonValue::Object(object) => object.get(segment.as_ref())?,
-            _ => return None,
-        };
-    }
-
-    Some(at)
-}
-
-/// The value at `segments` below `object`; `None` when absent or when `segments` is empty
-/// (an object is not a [`JsonValue`]).
-#[must_use]
-pub fn json_at_object<'tree, S: AsRef<str>>(
-    object: &'tree JsonObject,
-    segments: &[S],
-) -> Option<&'tree JsonValue> {
-    let (first, rest) = segments.split_first()?;
-
-    json_at(object.get(first.as_ref())?, rest)
-}
-
 // Whether `pointer` names a node of `object`, the root included.
 fn object_names_node(object: &JsonObject, pointer: &str) -> bool {
-    match segments_of(pointer) {
+    match pointer_segments(pointer) {
         None => false,
         Some(segments) if segments.is_empty() => true,
         Some(segments) => json_at_object(object, &segments).is_some(),
     }
-}
-
-/// The value a pointer names in a tree, borrowed; `None` when it names nothing.
-#[must_use]
-pub fn json_at_pointer<'tree>(value: &'tree JsonValue, pointer: &str) -> Option<&'tree JsonValue> {
-    json_at(value, &segments_of(pointer)?)
 }
 
 fn origin_copy(origin: &Origin, pointer: String) -> Origin {

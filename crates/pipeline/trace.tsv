@@ -95,8 +95,8 @@ src/readers/pointer.rs#is_json_object	packages/core/compiler/src/pipeline/pointe
 src/readers/pointer.rs#is_json_list	packages/core/compiler/src/pipeline/pointer.ts#isJsonList
 -	packages/core/compiler/src/pipeline/pointer.ts#escapeSegment	merged: src/readers/pointer.rs#pointer_below
 src/readers/pointer.rs#pointer_below	packages/core/compiler/src/pipeline/pointer.ts#pointerBelow
-src/readers/pointer.rs#segments_of	packages/core/compiler/src/pipeline/pointer.ts#segmentsOf
-src/readers/pointer.rs#json_at	packages/core/compiler/src/pipeline/pointer.ts#jsonAt
-src/readers/pointer.rs#json_at_pointer	packages/core/compiler/src/pipeline/pointer.ts#jsonAtPointer
+-	packages/core/compiler/src/pipeline/pointer.ts#segmentsOf	merged: ../json/src/pointer.rs#pointer_segments
+-	packages/core/compiler/src/pipeline/pointer.ts#jsonAt	merged: ../json/src/pointer.rs#json_at
+-	packages/core/compiler/src/pipeline/pointer.ts#jsonAtPointer	merged: ../json/src/pointer.rs#json_at_pointer
 src/readers/pointer.rs#origin_copy	packages/core/compiler/src/pipeline/pointer.ts#originCopy
 src/readers/pointer.rs#pipeline_origin	packages/core/compiler/src/pipeline/pointer.ts#pipelineOrigin

@@ -212,20 +212,23 @@ fn public_side<'run>(
     }
 
     let imported = reporter.imported(api);
-    let found = imported.and_then(|contract| {
-        contract
+    let found = imported.and_then(|imported| {
+        imported
+            .contract()
             .operations
             .iter()
             .enumerate()
             .find(|(_, candidate)| {
                 candidate.kind == TREE_NODES_OPERATION_KIND && candidate.id == *id
             })
-            .map(|(index, operation)| (contract, index, operation))
+            .map(|(index, operation)| (imported, index, operation))
     });
     let closed = found
-        .map(|(contract, index, operation)| {
-            check_ir_closed_declaration(operation, &format!("/operations/{index}"))
-                .map(|check| (contract, check))
+        .map(|(imported, index, operation)| {
+            let pointer = format!("/operations/{index}");
+
+            check_ir_closed_declaration(operation, imported.document(), &pointer)
+                .map(|check| (imported.contract(), check))
         })
         .transpose()
         .map_err(|error| InternalError::new(error.to_string()))?;

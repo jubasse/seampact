@@ -7,7 +7,7 @@ use seampact_diagnostics::{
     Diagnostic, DiagnosticOrigin, InternalError, RuleId, Severity, quote_text,
 };
 use seampact_ir::{
-    ContractIr, DeclarationKind, IrClosedCheck, OperationError, OperationId, OperationRef,
+    DeclarationKind, ImportedIr, IrClosedCheck, OperationError, OperationId, OperationRef,
     check_ir_closed_declaration,
 };
 use seampact_pipeline::{DraftIr, DraftOperation, PassError, pointer_below};
@@ -55,7 +55,7 @@ fn is_operation(
 // closed import.
 fn public_errors_of<'run>(
     drafts: &'run IndexMap<String, DraftIr>,
-    imports: &'run IndexMap<String, ContractIr>,
+    imports: &'run IndexMap<String, ImportedIr>,
     relays: &OperationRef,
 ) -> Result<&'run [OperationError], PassError> {
     let id = &relays.id;
@@ -70,18 +70,21 @@ fn public_errors_of<'run>(
         return Ok(operation.errors.as_deref().unwrap_or(&[]));
     }
 
-    let imported = imports.get(&relays.api).and_then(|contract| {
-        contract
+    let imported = imports.get(&relays.api).and_then(|imported| {
+        imported
+            .contract()
             .operations
             .iter()
             .enumerate()
             .find(|(_, operation)| is_operation(Some(&operation.kind), Some(&operation.id), id))
+            .map(|(index, operation)| (imported, index, operation))
     });
 
-    if let Some((index, operation)) = imported {
+    if let Some((imported, index, operation)) = imported {
         let pointer = format!("/operations/{index}");
+        let check = check_ir_closed_declaration(operation, imported.document(), &pointer)?;
 
-        if let IrClosedCheck::Closed(closed) = check_ir_closed_declaration(operation, &pointer)? {
+        if let IrClosedCheck::Closed(closed) = check {
             return Ok(&closed.errors);
         }
     }
@@ -157,7 +160,7 @@ fn superset_diagnostic(
 /// An internal error for a relay to no closed operation of a workspace api or an import.
 pub(crate) fn link_relay_superset(
     drafts: &IndexMap<String, DraftIr>,
-    imports: &IndexMap<String, ContractIr>,
+    imports: &IndexMap<String, ImportedIr>,
 ) -> Result<Vec<(String, Diagnostic)>, PassError> {
     let mut reported = Vec::new();
 

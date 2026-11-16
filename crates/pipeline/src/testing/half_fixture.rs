@@ -5,7 +5,7 @@ use camino::Utf8PathBuf;
 use indexmap::IndexMap;
 use seampact_authoring::{ApiLayer, RawApi, RawLayer, RawWorkspace};
 use seampact_diagnostics::{Diagnostic, DiagnosticSink, InternalError};
-use seampact_ir::{ContractIr, Layer, Origin};
+use seampact_ir::{ImportedIr, Layer, Origin};
 use seampact_json::{JsonObject, JsonValue};
 
 use crate::{DraftIr, HalfContext, Inherited, pipeline_conventions, pointer_below};
@@ -26,7 +26,7 @@ pub struct HalfFixture {
     raw: RawApi,
     workspace: RawWorkspace,
     relayed: IndexMap<String, DraftIr>,
-    imports: IndexMap<String, ContractIr>,
+    imports: IndexMap<String, ImportedIr>,
     sink: DiagnosticSink,
 }
 
@@ -73,10 +73,10 @@ impl HalfFixture {
         self
     }
 
-    /// The same fixture where `contract` is the imported IR of `api`.
+    /// The same fixture where `imported` is the imported IR of `api`.
     #[must_use]
-    pub fn with_import(mut self, api: &str, contract: ContractIr) -> Self {
-        self.imports.insert(api.to_owned(), contract);
+    pub fn with_import(mut self, api: &str, imported: ImportedIr) -> Self {
+        self.imports.insert(api.to_owned(), imported);
 
         self
     }

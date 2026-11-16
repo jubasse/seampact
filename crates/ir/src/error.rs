@@ -27,6 +27,14 @@ pub enum IrError {
         found: String,
     },
 
+    /// A declaration checked in the document it was read from is not at the pointer given: a bug
+    /// of the caller, never a fault of the IR read.
+    #[error("no declaration at '{pointer}' in the IR document it was read from")]
+    DeclarationNotInDocument {
+        /// The pointer given.
+        pointer: String,
+    },
+
     /// The embedded IR schema files do not read as the instance walk expects: a bug of the
     /// bundle, never a fault of the IR read.
     #[error("the embedded IR schemas are broken: {what}")]

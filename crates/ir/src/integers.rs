@@ -1,6 +1,8 @@
 //! The integer members of the IR, each read through the shared JS-integer reader with the
 //! bounds its schema gives.
 
+use std::ops::RangeInclusive;
+
 use seampact_json::{MAX_SAFE_INTEGER, js_integer, optional_js_integer};
 use serde::Deserializer;
 
@@ -9,6 +11,9 @@ const HTTP_STATUS_MIN: i64 = 100;
 
 /// The highest HTTP status an error, a response or an example carries.
 const HTTP_STATUS_MAX: i64 = 599;
+
+/// The HTTP statuses an error, a response or an example of the IR carries.
+pub const HTTP_STATUS_RANGE: RangeInclusive<i64> = HTTP_STATUS_MIN..=HTTP_STATUS_MAX;
 
 /// The lowest status a name carries (`Name.status`).
 const NAME_STATUS_MIN: i64 = 200;

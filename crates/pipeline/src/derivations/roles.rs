@@ -121,19 +121,6 @@ pub fn derivation_params_schema_id(code: &str) -> Result<SchemaId, InternalError
 // (ir.error.retry-header).
 const MAX_SAFE_INTEGER: &str = "9007199254740991";
 
-fn empty_refinements() -> Refinements {
-    Refinements {
-        min_length: None,
-        max_length: None,
-        pattern: None,
-        minimum: None,
-        maximum: None,
-        exclusive_minimum: None,
-        exclusive_maximum: None,
-        multiple_of: None,
-    }
-}
-
 fn scalar(r#type: ScalarType, refinements: Refinements) -> ScalarTypeUse {
     ScalarTypeUse {
         r#type,
@@ -149,7 +136,7 @@ fn scalar(r#type: ScalarType, refinements: Refinements) -> ScalarTypeUse {
 }
 
 fn text() -> ScalarTypeUse {
-    scalar(ScalarType::String, empty_refinements())
+    scalar(ScalarType::String, Refinements::default())
 }
 
 fn count() -> ScalarTypeUse {
@@ -157,7 +144,7 @@ fn count() -> ScalarTypeUse {
         ScalarType::Integer,
         Refinements {
             minimum: Some(DecimalLiteral::new("0".to_owned())),
-            ..empty_refinements()
+            ..Refinements::default()
         },
     )
 }
@@ -175,7 +162,7 @@ fn location() -> ScalarTypeUse {
                 normalized: source.clone(),
                 source,
             }),
-            ..empty_refinements()
+            ..Refinements::default()
         },
     )
 }
@@ -186,7 +173,7 @@ fn retry_after_count() -> ScalarTypeUse {
         Refinements {
             minimum: Some(DecimalLiteral::new("0".to_owned())),
             maximum: Some(DecimalLiteral::new(MAX_SAFE_INTEGER.to_owned())),
-            ..empty_refinements()
+            ..Refinements::default()
         },
     )
 }

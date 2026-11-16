@@ -4,8 +4,8 @@
 //! [`JsonNumber`]s, its objects [`JsonObject`]s that keep JavaScript's own-key order.
 //! [`canonical_document`] writes the IR and source-map bytes, [`canonical_json`] the compact key
 //! of a value, [`indented_json`] the `JSON.stringify(value, null, 2)` text. [`js_integer`] reads an IR integer member with JavaScript semantics, [`present`]
-//! an optional opaque member that keeps a present `null`, and [`escape_pointer`] escapes a JSON
-//! Pointer segment. [`js_text_of`] is `String(value)`.
+//! an optional opaque member that keeps a present `null`, [`escape_pointer`] escapes a JSON
+//! Pointer segment and [`json_at_pointer`] reads the value a pointer names. [`js_text_of`] is `String(value)`.
 
 mod canonical;
 mod error;
@@ -26,5 +26,5 @@ pub use js_integer::{
 pub use js_text::js_text_of;
 pub use number::JsonNumber;
 pub use object::JsonObject;
-pub use pointer::escape_pointer;
+pub use pointer::{escape_pointer, json_at, json_at_object, json_at_pointer, pointer_segments};
 pub use value::{JsonValue, present};

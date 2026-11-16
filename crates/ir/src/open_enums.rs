@@ -470,6 +470,22 @@ open_enums! {
     }
 }
 
+/// Every identity header semantic is a response header semantic; an unknown one stays unknown
+/// unless this revision knows its text as a response header semantic.
+impl From<HeaderSemantic> for ResponseHeaderSemantic {
+    fn from(semantic: HeaderSemantic) -> Self {
+        match semantic {
+            HeaderSemantic::Deadline => Self::Deadline,
+            HeaderSemantic::TraceContext => Self::TraceContext,
+            HeaderSemantic::ActorSurface => Self::ActorSurface,
+            HeaderSemantic::VersionToken => Self::VersionToken,
+            HeaderSemantic::Unknown(value) => {
+                Self::known(value.as_str()).unwrap_or(Self::Unknown(value))
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -489,5 +505,33 @@ mod tests {
     fn known_refuses_text_this_revision_does_not_know() {
         assert_eq!(UrlRole::known("self"), Some(UrlRole::SelfLink));
         assert_eq!(UrlRole::known("Self"), None);
+    }
+
+    #[test]
+    fn a_header_semantic_converts_to_the_response_semantic_of_the_same_text() {
+        let known = [
+            HeaderSemantic::Deadline,
+            HeaderSemantic::TraceContext,
+            HeaderSemantic::ActorSurface,
+            HeaderSemantic::VersionToken,
+        ];
+
+        for semantic in known {
+            let text = semantic.as_str().to_owned();
+
+            assert_eq!(ResponseHeaderSemantic::from(semantic).as_str(), text);
+        }
+
+        let response_only: HeaderSemantic = serde_json::from_str("\"sunset\"").unwrap();
+        let unknown: HeaderSemantic = serde_json::from_str("\"later\"").unwrap();
+
+        assert_eq!(
+            ResponseHeaderSemantic::from(response_only),
+            ResponseHeaderSemantic::Sunset
+        );
+        assert!(matches!(
+            ResponseHeaderSemantic::from(unknown),
+            ResponseHeaderSemantic::Unknown(value) if value.as_str() == "later"
+        ));
     }
 }
