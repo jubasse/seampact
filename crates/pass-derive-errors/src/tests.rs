@@ -7,7 +7,7 @@ use seampact_pipeline::testing::HalfFixture;
 
 use crate::natures::derive_errors_natures;
 use crate::operations::dedupe;
-use crate::registry::{derive_errors_default_family, derive_errors_default_nature, regexp_source};
+use crate::registry::{derive_errors_default_family, derive_errors_default_nature};
 use crate::report::{
     DeriveErrorsProblem, DeriveErrorsRelated, DeriveErrorsReporter, DeriveErrorsRule,
     derive_errors_reporter,
@@ -158,16 +158,6 @@ fn the_default_family_is_the_text_before_the_first_dot() {
     assert_eq!(derive_errors_default_family("plain"), None);
     assert_eq!(derive_errors_default_family(".leading"), None);
     assert_eq!(derive_errors_default_family("é.x"), Some("é"));
-}
-
-#[test]
-fn regexp_source_writes_what_javascript_writes() {
-    assert_eq!(regexp_source(""), "(?:)");
-    assert_eq!(regexp_source("^a/b$"), "^a\\/b$");
-    assert_eq!(regexp_source("[/]"), "[/]");
-    assert_eq!(regexp_source("a\\/b"), "a\\/b");
-    assert_eq!(regexp_source("a\nb"), "a\\nb");
-    assert_eq!(regexp_source("a\u{2028}b"), "a\\u2028b");
 }
 
 fn origin(api: Option<&str>, layer: Layer, pointer: &str) -> Origin {

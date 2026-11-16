@@ -300,10 +300,6 @@ fn handler_result_of(
         .collect())
 }
 
-#[allow(
-    clippy::unused_self,
-    reason = "stubs read nothing until the half's last brief"
-)]
 impl<'scope, 'draft, 'half, 'run> StyleReader<'scope, 'draft, 'half, 'run> {
     fn new(
         scope: &'scope mut TreeNodesScope<'draft, 'half, 'run>,

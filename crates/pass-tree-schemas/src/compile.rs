@@ -11,9 +11,9 @@ use seampact_ir::Name as IrName;
 use seampact_ir::{
     ArrayTypeUse, BodyUnionTag, Direction, Docs, EnumId, EnumNarrowing, EnumTypeUse,
     ExtensionPlace, Extensions, FieldRestriction, FileTypeUse, HeaderUnionTag, InputPolicy,
-    JsonContent, JsonMediaType, Layer, MapSchema, NameRole, ObjectSchema, OpaqueTypeUse, Origin,
-    Property, Reason, RefTypeUse, RightId, ScalarType, Schema, SchemaId, TypeUse, UnionSchema,
-    UnionTag, UnionVariant, UnknownKeys, UnknownKeysPolicy,
+    JsonContent, JsonMediaType, Layer, MapSchema, NameRole, ObjectSchema, OpaqueTypeUse, Property,
+    Reason, RefTypeUse, RightId, ScalarType, Schema, SchemaId, TypeUse, UnionSchema, UnionTag,
+    UnionVariant, UnknownKeys, UnknownKeysPolicy,
 };
 use seampact_ir::{KnownSchemaRef, KnownTypeUseRef, KnownUnionTagRef};
 use seampact_js::{FiniteNumber, cmp_utf16};
@@ -687,18 +687,8 @@ fn required_object_targets(
     Ok(targets)
 }
 
-fn schema_origin(schema: &Schema) -> Result<&Origin, PassError> {
-    let origin = match KnownSchemaRef::try_from(schema)? {
-        KnownSchemaRef::Object(object) => &object.origin,
-        KnownSchemaRef::Map(map) => &map.origin,
-        KnownSchemaRef::Union(union) => &union.origin,
-    };
-
-    Ok(origin)
-}
-
 fn schema_origin_pointer(schema: &Schema) -> Result<String, PassError> {
-    Ok(schema_origin(schema)?.pointer.clone())
+    Ok(schema.origin()?.pointer.clone())
 }
 
 /// A map key must be a string or an enum.
@@ -1651,7 +1641,7 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
             return Ok(None);
         };
 
-        if !matches!(schema_origin(schema)?.layer, Layer::Core) {
+        if !matches!(schema.origin()?.layer, Layer::Core) {
             return Ok(None);
         }
 
@@ -3060,7 +3050,7 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
         }
 
         let is_core = match self.schemas.get(&target.id) {
-            Some(schema) => matches!(schema_origin(schema)?.layer, Layer::Core),
+            Some(schema) => matches!(schema.origin()?.layer, Layer::Core),
             None => false,
         };
 

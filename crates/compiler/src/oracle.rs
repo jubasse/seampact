@@ -21,6 +21,7 @@ use crate::{
 
 mod half;
 mod recorded_service;
+mod replay;
 
 pub use recorded_service::RecordedSchemaService;
 
@@ -84,13 +85,19 @@ impl OracleSubject for CompilerSubject {
 
     fn replay_schema_calls(
         &self,
-        _fixture: &Fixture,
-        _api: &str,
-        _input: &HalfInput<'_>,
-        _calls: &[RecordedCall],
+        fixture: &Fixture,
+        api: &str,
+        input: &HalfInput<'_>,
+        calls: &[RecordedCall],
     ) -> SubjectAnswer<Vec<Option<JsonValue>>> {
-        // The replay builds the service with `run_tree_schemas`, which has no port yet.
-        SubjectAnswer::NotPorted
+        let answer = replay::replay_fixture_calls(&self.loaded_fixture, fixture, api, input, calls);
+
+        match answer {
+            Ok(answer) => answer,
+            Err(failure) => SubjectAnswer::InternalError {
+                message: failure.to_string(),
+            },
+        }
     }
 
     fn rule_id_registry(&self) -> RuleIdRegistry {

@@ -3,6 +3,7 @@
 use std::cell::{OnceCell, RefCell};
 
 use indexmap::IndexMap;
+use seampact_authoring::RawApi;
 use seampact_diagnostics::{DiagnosticSink, InternalError, Severity, diagnostic_list_json};
 use seampact_json::JsonValue;
 use seampact_load::{FsReader, LoadOptions, LoadOutput, load_workspace};
@@ -16,7 +17,7 @@ use seampact_pipeline::{
 
 use super::{CompileFailure, RecordedSchemaService};
 use crate::orchestrator::sorted;
-use crate::{HalfReaders, HalfRun, TreeSchemasRun, run_half, run_tree_schemas};
+use crate::{HalfReaders, run_half, run_tree_schemas};
 
 /// The number of halves an api's expected deltas must hold for another api to be relayed from.
 const HALF_COUNT: usize = Half::RUN_ORDER.len();
@@ -27,7 +28,7 @@ type LaterHalfDispatch = fn(
     &mut DraftIr,
     &mut HalfContext<'_>,
     &dyn TreeSchemaService,
-) -> Result<HalfRun, InternalError>;
+) -> Result<(), InternalError>;
 
 /// The loaded workspace of the one fixture whose halves run now.
 ///
@@ -73,8 +74,8 @@ impl LoadedFixtureCache {
 /// Runs `half` of `api` from the expected deltas before it and answers the delta it wrote and
 /// the diagnostics it reported. A half after `tree.schemas` reads schemas from `calls`.
 ///
-/// Every [`InternalError`] answers as a failure; only a half or a stage that is not ported
-/// answers [`SubjectAnswer::NotPorted`], and the diagnostics such a half reported are dropped.
+/// Every [`InternalError`] answers as a failure; only a fixture whose load reported an error
+/// answers [`SubjectAnswer::NotPorted`].
 pub(super) fn run_fixture_half(
     cache: &LoadedFixtureCache,
     fixture: &Fixture,
@@ -96,6 +97,31 @@ pub(super) fn run_fixture_half(
     cache.with_loaded(fixture, |loaded| run.run(loaded))
 }
 
+/// The schema service `tree.schemas` builds for `api` from the expected deltas of its relay
+/// targets, or [`SubjectAnswer::NotPorted`] when the load of the fixture stopped.
+pub(super) fn tree_schemas_service(
+    cache: &LoadedFixtureCache,
+    fixture: &Fixture,
+    api: &str,
+    input: &HalfInput<'_>,
+) -> Result<SubjectAnswer<Box<dyn TreeSchemaService>>, CompileFailure> {
+    let run = HalfToRun {
+        api,
+        half: Half::TreeSchemas,
+        input,
+        calls: &[],
+        dispatch: run_half,
+    };
+
+    cache.with_loaded(fixture, |loaded| {
+        let service = run.run_in_context(loaded, run_tree_schemas)?;
+
+        Ok(service.map_or(SubjectAnswer::NotPorted, |run| {
+            SubjectAnswer::Ported(run.answer)
+        }))
+    })
+}
+
 /// One half of one api, with what it reads.
 struct HalfToRun<'input> {
     api: &'input str,
@@ -105,8 +131,44 @@ struct HalfToRun<'input> {
     dispatch: LaterHalfDispatch,
 }
 
+/// What one run in the context of a half left: the value it answered, the draft it started from
+/// and the one it left, and what it reported.
+struct ContextRun<'loaded, Answer> {
+    answer: Answer,
+    input_json: JsonValue,
+    output_draft: DraftIr,
+    sink: DiagnosticSink,
+    raw: &'loaded RawApi,
+}
+
 impl HalfToRun<'_> {
     fn run(&self, loaded: &LoadOutput) -> Result<SubjectAnswer<HalfOutput>, CompileFailure> {
+        let Some(run) =
+            self.run_in_context(loaded, |draft, context| self.dispatch(draft, context))?
+        else {
+            return Ok(SubjectAnswer::NotPorted);
+        };
+
+        let delta = draft_delta(&run.input_json, &run.output_draft.to_json_value()?)?;
+        let diagnostics = sorted(
+            run.sink.into_diagnostics(),
+            &run.raw.locations,
+            &loaded.files,
+        )?;
+
+        Ok(SubjectAnswer::Ported(HalfOutput {
+            delta: JsonValue::Object(delta),
+            diagnostics: diagnostic_list_json(&diagnostics),
+        }))
+    }
+
+    /// Runs `use_context` over the draft the half starts from, in the context the half reads.
+    /// `None` when the load reported an error, which the compiler stops on before any half.
+    fn run_in_context<'loaded, Answer>(
+        &self,
+        loaded: &'loaded LoadOutput,
+        use_context: impl FnOnce(&mut DraftIr, &mut HalfContext<'_>) -> Result<Answer, InternalError>,
+    ) -> Result<Option<ContextRun<'loaded, Answer>>, CompileFailure> {
         let no_imports = IndexMap::new();
 
         if loaded
@@ -114,7 +176,7 @@ impl HalfToRun<'_> {
             .iter()
             .any(|diagnostic| diagnostic.severity == Severity::Error)
         {
-            return Ok(SubjectAnswer::NotPorted);
+            return Ok(None);
         }
 
         let input_json = draft_json_after(self.input.deltas_before)?;
@@ -133,26 +195,22 @@ impl HalfToRun<'_> {
 
         let mut output_draft = input_draft;
         let mut sink = DiagnosticSink::new();
-        let ran = {
+        let answer = {
             let mut context = readers.context(&loaded.workspace, &relayed, &no_imports, &mut sink);
 
-            self.dispatch(&mut output_draft, &mut context)?
+            use_context(&mut output_draft, &mut context)?
         };
 
         if let Some(failure) = relayed.first_failure() {
             return Err(failure.into());
         }
 
-        if ran == HalfRun::NotPorted {
-            return Ok(SubjectAnswer::NotPorted);
-        }
-
-        let delta = draft_delta(&input_json, &output_draft.to_json_value()?)?;
-        let diagnostics = sorted(sink.into_diagnostics(), &raw.locations, &loaded.files)?;
-
-        Ok(SubjectAnswer::Ported(HalfOutput {
-            delta: JsonValue::Object(delta),
-            diagnostics: diagnostic_list_json(&diagnostics),
+        Ok(Some(ContextRun {
+            answer,
+            input_json,
+            output_draft,
+            sink,
+            raw,
         }))
     }
 
@@ -161,12 +219,11 @@ impl HalfToRun<'_> {
         &self,
         draft: &mut DraftIr,
         context: &mut HalfContext<'_>,
-    ) -> Result<HalfRun, InternalError> {
+    ) -> Result<(), InternalError> {
         let Some(later) = LaterHalf::of(self.half) else {
-            return match run_tree_schemas(draft, context)? {
-                TreeSchemasRun::Merged(_) => Ok(HalfRun::Merged),
-                TreeSchemasRun::NotPorted => Ok(HalfRun::NotPorted),
-            };
+            run_tree_schemas(draft, context)?;
+
+            return Ok(());
         };
 
         let service = RecordedSchemaService::new(self.calls)?;
@@ -338,23 +395,8 @@ mod tests {
         draft: &mut DraftIr,
         context: &mut HalfContext<'_>,
         schemas: &dyn TreeSchemaService,
-    ) -> Result<HalfRun, InternalError> {
+    ) -> Result<(), InternalError> {
         let answer = asking_half(draft, context, schemas);
-
-        merge_answer(answer, draft, DeriveErrorsOutput::merge_into)
-    }
-
-    fn reporting_then_not_ported_dispatch(
-        _half: LaterHalf,
-        draft: &mut DraftIr,
-        context: &mut HalfContext<'_>,
-        _schemas: &dyn TreeSchemaService,
-    ) -> Result<HalfRun, InternalError> {
-        context.report(fake_diagnostic("partial".to_owned()));
-
-        let answer: Result<DeriveErrorsOutput, PassError> = Err(PassError::NotPortedYet {
-            function: "fakeHalf",
-        });
 
         merge_answer(answer, draft, DeriveErrorsOutput::merge_into)
     }
@@ -364,7 +406,7 @@ mod tests {
         draft: &mut DraftIr,
         _context: &mut HalfContext<'_>,
         _schemas: &dyn TreeSchemaService,
-    ) -> Result<HalfRun, InternalError> {
+    ) -> Result<(), InternalError> {
         let answer: Result<DeriveErrorsOutput, PassError> =
             Err(InternalError::new("the fake half broke").into());
 
@@ -413,14 +455,6 @@ mod tests {
         assert!(
             failure.contains(r#"["typeUse",["/schemas/Task","input"]]"#),
             "{failure}"
-        );
-    }
-
-    #[test]
-    fn a_half_not_ported_yet_drops_what_it_reported_before() {
-        assert_eq!(
-            run_fake(reporting_then_not_ported_dispatch, &[]),
-            Ok(SubjectAnswer::NotPorted)
         );
     }
 

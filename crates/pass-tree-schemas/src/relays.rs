@@ -90,11 +90,7 @@ impl Declaration {
 
     fn origin_pointer(&self) -> Result<&str, PassError> {
         Ok(match self {
-            Self::Schema(schema) => match KnownSchemaRef::try_from(schema.as_ref())? {
-                KnownSchemaRef::Object(object) => object.origin.pointer.as_str(),
-                KnownSchemaRef::Map(map) => map.origin.pointer.as_str(),
-                KnownSchemaRef::Union(union) => union.origin.pointer.as_str(),
-            },
+            Self::Schema(schema) => schema.origin()?.pointer.as_str(),
             Self::Enum(declared) => declared.origin.pointer.as_str(),
             Self::Scalar(declared) => declared.origin.pointer.as_str(),
             Self::ExtensionKey(declared) => declared.origin.pointer.as_str(),

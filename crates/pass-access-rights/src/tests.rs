@@ -7,20 +7,26 @@ use seampact_authoring::ApiLayer;
 use seampact_diagnostics::InternalError;
 use seampact_ir::{
     DerivationId, DerivedFrom, Direction, Docs, Extensions, FieldRestriction, FieldRight,
-    InputPolicy, IrMap, Layer, Origin, PackName, RefTypeUse, RightId, SchemaId, Scope, ScopeId,
-    TypeUse,
+    InputMediaType, InputPolicy, IrMap, Layer, OperationId, Origin, PackName, ProofPlacement,
+    RefTypeUse, RightId, RuleProof, SchemaId, Scope, ScopeId, TypeUse,
 };
 use seampact_json::{JsonObject, JsonValue};
-use seampact_pipeline::testing::{FakeSchemaService, HalfFixture};
+use seampact_pipeline::testing::{FakeSchemaService, HalfFixture, draft_operation};
 use seampact_pipeline::{
-    AccessRightsOutput, DraftIr, InheritedEntry, TreeNodeId, TreeNodeKind, pipeline_tree_nodes,
+    AccessRightsOutput, DraftIr, DraftOperationInput, InheritedEntry, PassError, TreeNodeId,
+    TreeNodeKind, pipeline_tree_nodes,
 };
 
 use crate::catalogues::{AccessRightsCatalogues, AccessRightsDeclared, report_within_cycle};
 use crate::field_rights::{input_policy_of, same_entry};
 use crate::packs::access_rights_derive_entries;
+use crate::proofs::{AccessRightsProofsInput, ProofUse, fits_declared_input};
 use crate::report::access_rights_reporter;
-use crate::routes::{AccessRightsScopeNodes, access_rights_resource_of, access_rights_scope_of};
+use crate::restricted_fields::AccessRightsDraftSchemas;
+use crate::routes::{
+    AccessRightsAccessKind, AccessRightsApi, AccessRightsRoute, AccessRightsScopeNodes,
+    access_rights_resource_of, access_rights_routes, access_rights_scope_of,
+};
 use crate::schema_use::AccessRightsContext;
 use crate::scopes::{ScopeUse, resolution_order};
 use crate::subjects::member_ids;
@@ -331,6 +337,137 @@ fn a_derive_entry_of_a_pack_tree_nodes_did_not_record_is_an_internal_error()
         )),
         "got {message:?}"
     );
+
+    Ok(())
+}
+
+#[test]
+fn an_operation_that_is_no_relay_route_and_has_no_access_is_an_internal_error()
+-> Result<(), InternalError> {
+    let mut fixture = HalfFixture::from_json(TASKS)?;
+    let schemas = FakeSchemaService::new();
+
+    let refused = fixture.with_context(|half| {
+        let nodes = pipeline_tree_nodes(half.raw)?;
+        let op = nodes
+            .iter()
+            .find(|(_, node)| node.kind == TreeNodeKind::Op)
+            .map(|(_, node)| node.pointer.clone())
+            .ok_or_else(|| InternalError::new("no op node in the fixture"))?;
+        let mut draft = DraftIr::new();
+
+        draft.operations.push(draft_operation("getTask", &op));
+
+        let context = AccessRightsContext {
+            draft: &draft,
+            context: half,
+            schemas: &schemas,
+            nodes,
+            output: AccessRightsOutput {
+                rights: IrMap::new(),
+                rules: IrMap::new(),
+                scopes: IrMap::new(),
+                buckets: IrMap::new(),
+                operations: Vec::new(),
+            },
+        };
+        let api = AccessRightsApi {
+            kind: "product".to_owned(),
+            caller: None,
+        };
+
+        access_rights_routes(&context, &api).map(|routes| routes.len())
+    })?;
+
+    let message = refused.map_err(|error| error.to_string());
+
+    assert!(
+        message.as_ref().is_err_and(
+            |text| text.contains("access.identity wrote no access on operation getTask")
+        ),
+        "got {message:?}"
+    );
+
+    Ok(())
+}
+
+#[test]
+fn a_body_proof_on_an_input_whose_schema_was_not_compiled_is_refused() -> Result<(), InternalError>
+{
+    let mut fixture = HalfFixture::from_json(TASKS)?;
+
+    let (fits, errors) = fixture.with_context(|half| {
+        let nodes = pipeline_tree_nodes(half.raw)?;
+        let (node, op) = nodes
+            .iter()
+            .find(|(_, node)| node.kind == TreeNodeKind::Op)
+            .map(|(id, node)| (id, node.pointer.clone()))
+            .ok_or_else(|| InternalError::new("no op node in the fixture"))?;
+        let mut draft = DraftIr::new();
+
+        draft.operations.push(draft_operation("getTask", &op));
+
+        let operation = draft
+            .operation_indices()
+            .next()
+            .ok_or_else(|| InternalError::new("the draft has no operation"))?;
+        let schemas = AccessRightsDraftSchemas::new();
+        let identities = IrMap::new();
+        let declared_schemes = IrMap::new();
+        let input = AccessRightsProofsInput {
+            route: AccessRightsRoute {
+                operation,
+                id: OperationId::new("getTask".to_owned()),
+                node,
+                access: AccessRightsAccessKind::Identity,
+                access_pointer: None,
+                identity: None,
+            },
+            requires: Vec::new(),
+            schemas: &schemas,
+            identities: &identities,
+            schemes: &declared_schemes,
+        };
+        let declared = DraftOperationInput {
+            media: InputMediaType::ApplicationJson,
+            schema: TypeUse::Ref(RefTypeUse {
+                schema: SchemaId::new("Note".to_owned()),
+                unknown_keys: None,
+                nullable: None,
+                docs: None,
+                examples: None,
+            }),
+            body_limit_bytes: None,
+            raw_body: None,
+            fields: None,
+            proofs: None,
+            origin: seampact_pipeline::testing::api_layer_origin(&op),
+        };
+        let uses = [ProofUse {
+            rule: "recentAuth".to_owned(),
+            proof: RuleProof {
+                r#in: ProofPlacement::Body,
+                name: "token".to_owned(),
+                schema: TypeUse::Ref(RefTypeUse {
+                    schema: SchemaId::new("Token".to_owned()),
+                    unknown_keys: None,
+                    nullable: None,
+                    docs: None,
+                    examples: None,
+                }),
+            },
+            use_pointer: format!("{op}/requires/0"),
+            proof_pointer: "/rules/recentAuth".to_owned(),
+            from: Vec::new(),
+        }];
+        let mut reporter = access_rights_reporter();
+        let fits = fits_declared_input(&mut reporter, &input, &declared, &uses)?;
+
+        Ok::<_, PassError>((fits, reporter.errors()))
+    })??;
+
+    assert!(!fits);
+    assert_eq!(errors, 1);
 
     Ok(())
 }

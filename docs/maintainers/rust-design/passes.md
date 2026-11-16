@@ -29,6 +29,8 @@ The second port layer of 2.0.0: the six pass halves of [ADR 0006](../../adr/0006
 
 ## 2. NotPortedYet
 
+The machinery of this section, `NotPortedYet`, `HalfRun::NotPorted` and `TreeSchemasRun::NotPorted`, was removed once every half was ported; `PassError` keeps its `Internal` variant and `run_half` answers `Result<(), InternalError>`.
+
 ```rust
 // seampact-pipeline, error.rs
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]

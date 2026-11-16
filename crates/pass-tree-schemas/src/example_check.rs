@@ -11,11 +11,11 @@ use seampact_diagnostics::{InternalError, quote, quote_text};
 use seampact_ir::{
     ArrayTypeUse, DecimalLiteral, Enum, EnumTypeUse, JsonContent, KnownSchemaRef, KnownTypeUseRef,
     KnownUnionTagRef, MapSchema, ObjectSchema, RefTypeUse, Refinements, ScalarType, ScalarTypeUse,
-    Schema, TypeUse, UnionSchema, is_ir_calendar_date,
+    Schema, TypeUse, UnionSchema, is_calendar_date_from_year_zero,
 };
+use seampact_js::json_parse_error_message;
 use seampact_json::{JsonNumber, JsonValue};
 use seampact_pipeline::{PassError, TreeSchemaExampleIssue};
-use serde_json::error::Category;
 
 use crate::compile::{TreeSchemasExampleCheck, TreeSchemasWrittenValue};
 use crate::decimal::{
@@ -30,8 +30,6 @@ use crate::scalars::MAX_SAFE_INTEGER;
 const UUID_GROUP_LENGTHS: [usize; 5] = [8, 4, 4, 4, 12];
 const HOURS: u32 = 24;
 const MINUTES: u32 = 60;
-/// What V8 says of a JSON text that ends early.
-const UNEXPECTED_END: &str = "Unexpected end of JSON input";
 /// The length of `YYYY-MM-DD`.
 const DATE_LENGTH: usize = 10;
 /// The length of `HH:MM:SS`.
@@ -83,7 +81,7 @@ type FormatCheck = fn(&str) -> bool;
 /// The checks of the formats the checker reads by text, keyed by format name.
 const FORMAT_CHECKS: [(&str, FormatCheck); 5] = [
     ("uuid", format_check_uuid),
-    ("date", is_calendar_date),
+    ("date", is_calendar_date_from_year_zero),
     ("date-time", is_date_time),
     ("decimal", format_check_decimal),
     ("int64", format_check_int64),
@@ -154,16 +152,11 @@ fn pattern_matches(source: &str, text: &str) -> Result<bool, PassError> {
     Ok(expression.find(text).is_some())
 }
 
-/// `JSON.parse`: the value, or the reason it refuses. An early end reads as V8 words it; any other
-/// refusal carries the parser's own text.
+/// `JSON.parse`: the value, or the reason it refuses, in V8's words. A text V8 parses and the
+/// parser here refuses (a lone surrogate escape) carries the parser's own text.
 fn parse_json_text(text: &str) -> Result<JsonValue, String> {
-    let parsed: serde_json::Value = serde_json::from_str(text).map_err(|error| {
-        if error.classify() == Category::Eof {
-            UNEXPECTED_END.to_owned()
-        } else {
-            error.to_string()
-        }
-    })?;
+    let parsed: serde_json::Value = serde_json::from_str(text)
+        .map_err(|error| json_parse_error_message(text).unwrap_or_else(|| error.to_string()))?;
 
     JsonValue::try_from(parsed).map_err(|error| error.to_string())
 }
@@ -211,15 +204,6 @@ fn strip_digits(text: &str) -> Option<&str> {
     let rest = text.trim_start_matches(|character: char| character.is_ascii_digit());
 
     (rest.len() < text.len()).then_some(rest)
-}
-
-/// `YYYY-MM-DD` naming a day that exists. Year 0000 is a day here, as `Date.setUTCFullYear` reads
-/// it, where the IR check starts at year 1; it is a leap year, like 2000.
-fn is_calendar_date(text: &str) -> bool {
-    match text.strip_prefix("0000-") {
-        Some(rest) => is_ir_calendar_date(&format!("2000-{rest}")),
-        None => is_ir_calendar_date(text),
-    }
 }
 
 /// The value of a text of exactly two ASCII digits.
@@ -284,7 +268,7 @@ fn is_date_time(text: &str) -> bool {
             }),
     };
 
-    is_calendar_date(date)
+    is_calendar_date_from_year_zero(date)
         && hour < HOURS
         && minute < MINUTES
         && second < MINUTES
@@ -1024,7 +1008,11 @@ mod tests {
         ];
 
         for (text, expected) in cases {
-            assert_eq!(is_calendar_date(text), expected, "text {text:?}");
+            assert_eq!(
+                is_calendar_date_from_year_zero(text),
+                expected,
+                "text {text:?}"
+            );
         }
     }
 
@@ -1069,10 +1057,22 @@ mod tests {
     }
 
     #[test]
-    fn a_json_text_that_ends_early_reads_as_v8_words_it() {
-        assert_eq!(parse_json_text("[1,2"), Err(UNEXPECTED_END.to_owned()));
-        assert_eq!(parse_json_text(""), Err(UNEXPECTED_END.to_owned()));
-        assert!(parse_json_text("nope").is_err());
+    fn a_json_text_that_is_refused_reads_as_v8_words_it() {
+        assert_eq!(
+            parse_json_text("[1,2"),
+            Err(
+                "Expected ',' or ']' after array element in JSON at position 4 (line 1 column 5)"
+                    .to_owned()
+            )
+        );
+        assert_eq!(
+            parse_json_text(""),
+            Err("Unexpected end of JSON input".to_owned())
+        );
+        assert_eq!(
+            parse_json_text("nope"),
+            Err("Unexpected token 'o', \"nope\" is not valid JSON".to_owned())
+        );
         assert!(parse_json_text(r#"{"a":1}"#).is_ok());
     }
 

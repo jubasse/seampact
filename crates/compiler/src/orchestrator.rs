@@ -17,11 +17,11 @@ use seampact_diagnostics::{Diagnostic, DiagnosticSink, InternalError, Severity, 
 use seampact_finalize::Finalized;
 use seampact_ir::ImportedIr;
 use seampact_load::{LoadOptions, LoadOutput, load_workspace};
-use seampact_pipeline::{DraftIr, Half, LaterHalf, pipeline_declared};
+use seampact_pipeline::{DraftIr, LaterHalf, pipeline_declared};
 use seampact_span::SourceFiles;
 
 use crate::context::HalfReaders;
-use crate::half_run::{HalfRun, TreeSchemasRun, run_half, run_tree_schemas};
+use crate::half_run::{run_half, run_tree_schemas};
 use crate::relay::{check_relay_order, relays_to_stopped};
 use crate::result::{PipelineApiResult, PipelineResult};
 use crate::stages::{
@@ -110,8 +110,6 @@ enum HalvesEnd {
     Complete(Box<DraftIr>),
     /// A half reported an error.
     Stopped,
-    /// A half is not ported.
-    NotPorted(Half),
 }
 
 /// The six halves of one api and every diagnostic they reported.
@@ -256,7 +254,6 @@ impl Run {
             self.run_of(api)?.diagnostics.extend(halves.diagnostics);
 
             match halves.end {
-                HalvesEnd::NotPorted(half) => return Ok(Progress::NotPorted(Stage::Half(half))),
                 HalvesEnd::Stopped => {
                     stopped.insert(api.clone());
                 }
@@ -395,17 +392,10 @@ fn run_halves(
     let mut diagnostics: Vec<Diagnostic> = Vec::new();
 
     let mut sink = DiagnosticSink::new();
-    let schemas_run = {
+    let service = {
         let mut context = readers.context(workspace, relayed, imports, &mut sink);
 
         run_tree_schemas(&mut draft, &mut context)?
-    };
-
-    let TreeSchemasRun::Merged(service) = schemas_run else {
-        return Ok(HalvesRun {
-            diagnostics,
-            end: HalvesEnd::NotPorted(Half::TreeSchemas),
-        });
     };
 
     if keep_or_stop(sink, &mut diagnostics) == HalfStep::Stop {
@@ -417,17 +407,10 @@ fn run_halves(
 
     for half in LaterHalf::RUN_ORDER {
         let mut sink = DiagnosticSink::new();
-        let ran = {
+        {
             let mut context = readers.context(workspace, relayed, imports, &mut sink);
 
-            run_half(half, &mut draft, &mut context, &*service)?
-        };
-
-        if ran == HalfRun::NotPorted {
-            return Ok(HalvesRun {
-                diagnostics,
-                end: HalvesEnd::NotPorted(half.into()),
-            });
+            run_half(half, &mut draft, &mut context, &*service)?;
         }
 
         if keep_or_stop(sink, &mut diagnostics) == HalfStep::Stop {

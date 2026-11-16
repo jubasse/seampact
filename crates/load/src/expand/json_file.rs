@@ -3,18 +3,15 @@
 use std::rc::Rc;
 
 use seampact_diagnostics::InternalError;
+use seampact_js::json_parse_error_message;
 use seampact_json::{JsonObject, JsonValue};
 use seampact_span::Span;
-use serde_json::error::Category;
 
 use super::{Expander, JsonFile};
 use crate::budget::utf16_length;
 use crate::json::is_reserved_key;
 use crate::limits::LOAD_MAX_DEPTH;
 use crate::report::LoadRule;
-
-/// What V8 says of a JSON text that ends early (a fixture holds it).
-const UNEXPECTED_END: &str = "Unexpected end of JSON input";
 
 /// The nesting past which no use of a file could pass: the walk counts one level more than the
 /// limit, and a use adds its own depth to it.
@@ -165,25 +162,31 @@ pub(crate) fn parse_json_document(
     let mut values = deserializer.into_iter::<serde_json::Value>();
     let first = match values.next() {
         Some(Ok(value)) => value,
-        Some(Err(error)) => return Err(parser_message(&error)),
-        None => return Err(UNEXPECTED_END.to_owned()),
+        Some(Err(error)) => return Err(parser_message(text, || error.to_string())),
+        None => {
+            return Err(parser_message(text, || {
+                "the text holds no value".to_owned()
+            }));
+        }
     };
 
     match values.next() {
         None => {}
-        Some(Ok(_)) => return Err("Unexpected non-whitespace character after JSON".to_owned()),
-        Some(Err(error)) => return Err(parser_message(&error)),
+        Some(Ok(_)) => {
+            return Err(parser_message(text, || {
+                "a second value follows the text".to_owned()
+            }));
+        }
+        Some(Err(error)) => return Err(parser_message(text, || error.to_string())),
     }
 
     Ok(Some(first))
 }
 
-fn parser_message(error: &serde_json::Error) -> String {
-    if error.classify() == Category::Eof {
-        return UNEXPECTED_END.to_owned();
-    }
-
-    error.to_string()
+/// V8's message for a refused `text`; `own_text` words a text V8 parses and the parser here
+/// refuses (a lone surrogate escape).
+fn parser_message(text: &str, own_text: impl FnOnce() -> String) -> String {
+    json_parse_error_message(text).unwrap_or_else(own_text)
 }
 
 /// The deepest nesting of `[` and `{` outside strings.
@@ -245,11 +248,31 @@ mod tests {
     }
 
     #[test]
-    fn the_parser_messages_are_v8s_where_a_fixture_holds_them() {
-        assert_eq!(parse_json_text(""), Err(UNEXPECTED_END.to_owned()));
-        assert_eq!(parse_json_text("  "), Err(UNEXPECTED_END.to_owned()));
-        assert_eq!(parse_json_text("[1,"), Err(UNEXPECTED_END.to_owned()));
-        assert!(parse_json_text("[1] x").is_err());
+    fn a_refused_text_reads_as_v8_words_it() {
+        for (text, message) in [
+            ("", "Unexpected end of JSON input"),
+            ("  ", "Unexpected end of JSON input"),
+            ("[1,", "Unexpected end of JSON input"),
+            (
+                "[1] x",
+                "Unexpected non-whitespace character after JSON at position 4 (line 1 column 5)",
+            ),
+            (
+                "[1][2]",
+                "Unexpected non-whitespace character after JSON at position 3 (line 1 column 4)",
+            ),
+            (
+                "{\"a\": }",
+                "Unexpected token '}', \"{\"a\": }\" is not valid JSON",
+            ),
+        ] {
+            assert_eq!(
+                parse_json_text(text),
+                Err(message.to_owned()),
+                "text {text:?}"
+            );
+        }
+
         assert!(parse_json_text("1e400").is_err());
     }
 }

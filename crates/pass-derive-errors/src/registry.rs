@@ -15,6 +15,7 @@ use seampact_ir::{
     Direction, Docs, ErrorCode, ErrorDecl, ErrorHttp, HTTP_STATUS_RANGE, IrMap, KnownTypeUseRef,
     Layer, NatureBase, NatureDecl, NatureId, Origin, Schema, SchemaId, SchemaRef,
 };
+use seampact_js::regexp_source;
 use seampact_json::{JsonObject, JsonValue, canonical_json, js_integer_in_range};
 use seampact_pipeline::{
     ConventionReading, DerivationRole, PassError, TreeSchemaService, derivation_params_schema_id,
@@ -247,61 +248,6 @@ fn check_pattern(
             message: "the pattern is set here".to_owned(),
         }],
     })
-}
-
-/// What `RegExp.prototype.source` answers for a pattern written as `written`: `(?:)` for the empty
-/// pattern, a `/` outside a class written `\/`, a line terminator written as its escape.
-pub(crate) fn regexp_source(written: &str) -> String {
-    if written.is_empty() {
-        return "(?:)".to_owned();
-    }
-
-    let mut source = String::with_capacity(written.len());
-    let mut in_class = false;
-    let mut escaped = false;
-
-    for character in written.chars() {
-        if escaped {
-            escaped = false;
-            source.push_str(
-                &line_terminator_escape(character)
-                    .map_or_else(|| format!("\\{character}"), ToOwned::to_owned),
-            );
-
-            continue;
-        }
-
-        match character {
-            '\\' => escaped = true,
-            '[' => {
-                in_class = true;
-                source.push(character);
-            }
-            ']' => {
-                in_class = false;
-                source.push(character);
-            }
-            '/' if !in_class => source.push_str("\\/"),
-            other => source
-                .push_str(line_terminator_escape(other).unwrap_or(other.encode_utf8(&mut [0; 4]))),
-        }
-    }
-
-    if escaped {
-        source.push('\\');
-    }
-
-    source
-}
-
-const fn line_terminator_escape(character: char) -> Option<&'static str> {
-    match character {
-        '\n' => Some("\\n"),
-        '\r' => Some("\\r"),
-        '\u{2028}' => Some("\\u2028"),
-        '\u{2029}' => Some("\\u2029"),
-        _ => None,
-    }
 }
 
 fn nature_of(
