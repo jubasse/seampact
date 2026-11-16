@@ -1,14 +1,16 @@
 //! The stages the orchestrator runs besides the halves, and the answer of one that is not ported.
 //!
-//! Validate, the relay order and link are ported; finalize answers [`StageAnswer::NotPorted`] until
-//! its lane lands, so the run stops there and says where. Link calls its crate, which answers not
+//! Validate, the relay order, link and finalize are ported. Link calls its crate, which answers not
 //! ported yet for a relay to an imported operation.
 
 use indexmap::IndexMap;
 use seampact_authoring::{RawApi, RawWorkspace};
 use seampact_diagnostics::{Diagnostic, InternalError};
-use seampact_ir::{ContractIr, ImportedIr, SourceMap};
+use seampact_finalize::{FinalizeContext, Finalized, PackFileParts, PackFiles, finalize};
+use seampact_ir::ImportedIr;
+use seampact_load::{is_inside, pack_file_parts, pack_vendored_file};
 use seampact_pipeline::{DraftIr, Half, PassError};
+use seampact_span::SourceFiles;
 
 use crate::relay;
 
@@ -23,8 +25,6 @@ pub enum Stage {
     Half(Half),
     /// The link pass over every api's draft.
     Link,
-    /// The finalize of one api's draft.
-    Finalize,
 }
 
 /// What a stage answers: its result, or that it is not ported yet.
@@ -55,15 +55,6 @@ pub struct RelayOrder {
     pub relays_to: IndexMap<String, Vec<String>>,
     /// Errors of the step (a relay cycle names its apis), each listed under an api.
     pub diagnostics: Vec<(String, Vec<Diagnostic>)>,
-}
-
-/// What finalize produces for one api: the canonical IR and its side table.
-#[derive(Debug, Clone, PartialEq)]
-pub struct Finalized {
-    /// The finalized IR.
-    pub ir: ContractIr,
-    /// Where each location of the IR was written.
-    pub source_map: SourceMap,
 }
 
 /// What one api's finalize gave: the diagnostics it reported, and its output when it has one.
@@ -125,7 +116,43 @@ pub fn link_workspace(
 }
 
 /// Finalizes one api's complete draft, which it takes by value: its parts move into the IR.
-#[must_use]
-pub fn finalize_api(_draft: DraftIr, _raw: &RawApi) -> StageAnswer<FinalizeRun> {
-    StageAnswer::NotPorted
+///
+/// `files` locates the api's spans for the source map.
+///
+/// # Errors
+///
+/// An [`InternalError`] when a span is outside its file or the draft builds an invalid IR.
+pub fn finalize_api(
+    draft: DraftIr,
+    raw: &RawApi,
+    files: &SourceFiles,
+) -> Result<FinalizeRun, InternalError> {
+    let locations = files.locations(&raw.locations)?;
+    let mut context = FinalizeContext::new(raw, &locations, &LoadPackFiles);
+    let finalized = finalize(draft, &mut context)?;
+
+    Ok(FinalizeRun {
+        diagnostics: context.into_diagnostics(),
+        finalized,
+    })
+}
+
+/// The pack file paths of the load stage, which finalize does not depend on.
+struct LoadPackFiles;
+
+impl PackFiles for LoadPackFiles {
+    fn parts<'file>(&self, file: &'file str) -> Option<PackFileParts<'file>> {
+        pack_file_parts(file).map(|parts| PackFileParts {
+            name: parts.name,
+            inside: parts.inside,
+        })
+    }
+
+    fn vendored_file(&self, name: &str, version: &str, inside: &str) -> String {
+        pack_vendored_file(name, version, inside)
+    }
+
+    fn is_inside_workspace(&self, file: &str) -> bool {
+        is_inside(".", file)
+    }
 }

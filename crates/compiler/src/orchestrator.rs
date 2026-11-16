@@ -14,6 +14,7 @@ use std::collections::HashSet;
 use indexmap::IndexMap;
 use seampact_authoring::{Locations, RawApi, RawWorkspace};
 use seampact_diagnostics::{Diagnostic, DiagnosticSink, InternalError, Severity, diagnostic_sort};
+use seampact_finalize::Finalized;
 use seampact_ir::ImportedIr;
 use seampact_load::{LoadOptions, LoadOutput, load_workspace};
 use seampact_pipeline::{DraftIr, Half, LaterHalf, pipeline_declared};
@@ -24,8 +25,8 @@ use crate::half_run::{HalfRun, TreeSchemasRun, run_half, run_tree_schemas};
 use crate::relay::{check_relay_order, relays_to_stopped};
 use crate::result::{PipelineApiResult, PipelineResult};
 use crate::stages::{
-    Finalized, RelayOrder, Stage, StageAnswer, Validated, finalize_api, link_workspace,
-    validate_workspace, workspace_relay_order,
+    RelayOrder, Stage, StageAnswer, Validated, finalize_api, link_workspace, validate_workspace,
+    workspace_relay_order,
 };
 
 /// What a run reads and where it starts.
@@ -215,10 +216,8 @@ impl Run {
             return Ok(PipelineRun::NotPorted(stage));
         }
 
-        if self.clean()
-            && let Progress::NotPorted(stage) = self.finalize()?
-        {
-            return Ok(PipelineRun::NotPorted(stage));
+        if self.clean() {
+            self.finalize()?;
         }
 
         self.finish()
@@ -297,7 +296,7 @@ impl Run {
     }
 
     // Finalize of every api, each taking its draft by value.
-    fn finalize(&mut self) -> Result<Progress, InternalError> {
+    fn finalize(&mut self) -> Result<(), InternalError> {
         self.check_every_api_has_a_draft()?;
 
         let apis: Vec<String> = self.runs.keys().cloned().collect();
@@ -308,10 +307,7 @@ impl Run {
                     "api {api} has no derived draft"
                 )));
             };
-            let answer = finalize_api(draft, self.raw_of(&api)?);
-            let StageAnswer::Ported(finalized_run) = answer else {
-                return Ok(Progress::NotPorted(Stage::Finalize));
-            };
+            let finalized_run = finalize_api(draft, self.raw_of(&api)?, &self.source_files)?;
             let reported_error = has_error(&finalized_run.diagnostics);
             let run = self.run_of(&api)?;
 
@@ -322,7 +318,7 @@ impl Run {
             }
         }
 
-        Ok(Progress::Done)
+        Ok(())
     }
 
     fn finish(self) -> Result<PipelineResult, InternalError> {

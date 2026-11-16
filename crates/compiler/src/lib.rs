@@ -22,6 +22,6 @@ pub use orchestrator::{PipelineOptions, PipelineRun, compile_workspace};
 pub use relay::{check_relay_order, relays_to_stopped};
 pub use result::{PipelineApiResult, PipelineResult};
 pub use stages::{
-    FinalizeRun, Finalized, RelayOrder, Stage, StageAnswer, Validated, finalize_api,
-    link_workspace, validate_workspace, workspace_relay_order,
+    FinalizeRun, RelayOrder, Stage, StageAnswer, Validated, finalize_api, link_workspace,
+    validate_workspace, workspace_relay_order,
 };

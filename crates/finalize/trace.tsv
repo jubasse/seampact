@@ -1,0 +1,53 @@
+src/finalize.rs#finalize	packages/core/compiler/src/finalize/finalize.ts#finalizeIr
+src/members.rs#finalize_operation_features	packages/core/compiler/src/finalize/members.ts#finalizeOperationFeatures
+src/members.rs#finalize_members	packages/core/compiler/src/finalize/members.ts#finalizeMembers
+src/record.rs#finalize_is_record	packages/core/compiler/src/finalize/record.ts#finalizeIsRecord
+-	packages/core/compiler/src/finalize/canonical-order.ts#finalizeCompareText	merged: ../js/src/utf16_order.rs#cmp_utf16
+src/canonical_order.rs#compare_number	packages/core/compiler/src/finalize/canonical-order.ts#compareNumber
+src/canonical_order.rs#compare_elements	packages/core/compiler/src/finalize/canonical-order.ts#byKeys
+src/canonical_order.rs#member_at	packages/core/compiler/src/finalize/canonical-order.ts#memberAt
+src/canonical_order.rs#compare_part	packages/core/compiler/src/finalize/canonical-order.ts#byText
+src/canonical_order.rs#compare_part	packages/core/compiler/src/finalize/canonical-order.ts#byNumber
+-	packages/core/compiler/src/finalize/canonical-order.ts#byCanonicalBytes	merged: src/canonical_order.rs#compare_elements
+-	packages/core/compiler/src/finalize/canonical-order.ts#byValueSource	merged: src/canonical_order.rs#compare_part
+src/canonical_order.rs#status_of	packages/core/compiler/src/finalize/canonical-order.ts#byErrorStatus
+-	packages/core/compiler/src/finalize/canonical-order.ts#sortedArrayKeys	merged: src/canonical_order.rs#finalize_sorted_array_rows
+src/canonical_order.rs#finalize_sorted_array_rows	packages/core/compiler/src/finalize/canonical-order.ts#finalizeSortedArrayRows
+src/canonical_order.rs#finalize_canonical_order	packages/core/compiler/src/finalize/canonical-order.ts#finalizeCanonicalOrder
+src/collisions.rs#component_names	packages/core/compiler/src/finalize/collisions.ts#componentNames
+src/collisions.rs#collision_diagnostic	packages/core/compiler/src/finalize/collisions.ts#collisionDiagnostic
+src/collisions.rs#catalogue_collisions	packages/core/compiler/src/finalize/collisions.ts#catalogueCollisions
+src/collisions.rs#capitalized	packages/core/compiler/src/finalize/collisions.ts#capitalized
+src/collisions.rs#code_collisions	packages/core/compiler/src/finalize/collisions.ts#codeCollisions
+src/collisions.rs#proof_input_name	packages/core/compiler/src/finalize/collisions.ts#proofInputName
+src/collisions.rs#proof_input_collisions	packages/core/compiler/src/finalize/collisions.ts#proofInputCollisions
+src/collisions.rs#finalize_id_collisions	packages/core/compiler/src/finalize/collisions.ts#finalizeIdCollisions
+src/prune.rs#read_catalogues	packages/core/compiler/src/finalize/prune.ts#readCatalogueMembers
+src/prune.rs#catalogue_of	packages/core/compiler/src/finalize/prune.ts#catalogueOf
+-	packages/core/compiler/src/finalize/prune.ts#entryKey	merged: src/prune.rs#reachable_entries
+src/prune.rs#owner_of	packages/core/compiler/src/finalize/prune.ts#ownerOf
+src/prune.rs#core_origin_target	packages/core/compiler/src/finalize/prune.ts#coreOriginTarget
+src/prune.rs#extension_key_ids	packages/core/compiler/src/finalize/prune.ts#extensionKeyIds
+src/prune.rs#extension_targets	packages/core/compiler/src/finalize/prune.ts#extensionTargets
+src/prune.rs#references_by_owner	packages/core/compiler/src/finalize/prune.ts#referencesByOwner
+src/prune.rs#reachable_entries	packages/core/compiler/src/finalize/prune.ts#reachableEntries
+src/prune.rs#finalize_prune	packages/core/compiler/src/finalize/prune.ts#finalizePrune
+src/serialize.rs#finalize_serialize_ir	packages/core/compiler/src/finalize/serialize.ts#finalizeSerializeIr
+src/serialize.rs#finalize_canonical_ir	packages/core/compiler/src/finalize/serialize.ts#finalizeCanonicalIr
+-	packages/core/compiler/src/finalize/serialize.ts#finalizeSerializeJson	merged: ../json/src/canonical.rs#canonical_document
+-	packages/core/compiler/src/finalize/serialize.ts#serializedValue	merged: ../json/src/canonical.rs#canonical_document
+-	packages/core/compiler/src/finalize/serialize.ts#serializedNumber	merged: ../json/src/canonical.rs#canonical_document
+-	packages/core/compiler/src/finalize/serialize.ts#serializedString	merged: ../json/src/canonical.rs#canonical_document
+-	packages/core/compiler/src/finalize/serialize.ts#serializedArray	merged: ../json/src/canonical.rs#canonical_document
+-	packages/core/compiler/src/finalize/serialize.ts#serializedObject	merged: ../json/src/canonical.rs#canonical_document
+-	packages/core/compiler/src/finalize/serialize.ts#notSerializable	skip: the Rust writer takes a JsonValue, which holds no lone surrogate, non-finite number or non-plain object
+src/source_map.rs#side_table_file	packages/core/compiler/src/finalize/source-map.ts#sideTableFile
+-	packages/core/compiler/src/finalize/source-map.ts#isApiLayer	merged: src/source_map.rs#api_layer_of
+src/source_map.rs#finalize_source_map	packages/core/compiler/src/finalize/source-map.ts#finalizeSourceMap
+-	packages/core/compiler/src/finalize/validate.ts#validator	merged: ../ir-check/src/strict_validators.rs#shared
+src/validate.rs#parts_of	packages/core/compiler/src/finalize/validate.ts#reportFailures
+src/validate.rs#operation_id_at	packages/core/compiler/src/finalize/validate.ts#operationIdAt
+src/validate.rs#describe_failure	packages/core/compiler/src/finalize/validate.ts#describeFailure
+src/validate.rs#invalid	packages/core/compiler/src/finalize/validate.ts#invalid
+src/validate.rs#finalize_assert_ir	packages/core/compiler/src/finalize/validate.ts#finalizeAssertIr
+src/validate.rs#finalize_assert_source_map	packages/core/compiler/src/finalize/validate.ts#finalizeAssertSourceMap
