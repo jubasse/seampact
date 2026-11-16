@@ -15,14 +15,33 @@ const FEBRUARY: u32 = 2;
 /// The days of each month in a common year, January first.
 const DAYS_IN_MONTH: [u32; 12] = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
-/// Whether `text` is `YYYY-MM-DD` in ASCII digits and names a day that exists.
+/// The first year of an IR calendar date.
+const FIRST_IR_YEAR: u32 = 1;
+
+/// The first year of a date as `Date.setUTCFullYear` reads it: year 0000 is a leap year.
+const FIRST_YEAR_ZERO_YEAR: u32 = 0;
+
+/// Whether `text` is `YYYY-MM-DD` in ASCII digits and names a day that exists, in years 0001 to
+/// 9999: `isIrCalendarDate`.
 #[must_use]
 pub fn is_ir_calendar_date(text: &str) -> bool {
+    names_existing_day(text, FIRST_IR_YEAR)
+}
+
+/// Whether `text` is `YYYY-MM-DD` in ASCII digits and names a day that exists, year 0000
+/// included as a leap year: the `date` format check of an example, which reads the day through
+/// `Date.setUTCFullYear`.
+#[must_use]
+pub fn is_calendar_date_from_year_zero(text: &str) -> bool {
+    names_existing_day(text, FIRST_YEAR_ZERO_YEAR)
+}
+
+fn names_existing_day(text: &str, first_year: u32) -> bool {
     let Some((year, month, day)) = calendar_date_fields(text) else {
         return false;
     };
 
-    if year < 1 || !(1..=MONTHS_IN_YEAR).contains(&month) || day < 1 {
+    if year < first_year || !(1..=MONTHS_IN_YEAR).contains(&month) || day < 1 {
         return false;
     }
 
@@ -150,6 +169,35 @@ mod tests {
             "2026-01-\u{0966}\u{0967}",
         ] {
             assert!(!is_ir_calendar_date(text), "{text:?}");
+        }
+    }
+
+    #[test]
+    fn year_zero_is_a_day_for_the_example_check_and_none_for_the_ir() {
+        for date in ["0000-01-01", "0000-02-29", "0000-12-31"] {
+            assert!(is_calendar_date_from_year_zero(date), "{date}");
+            assert!(!is_ir_calendar_date(date), "{date}");
+        }
+
+        for date in ["0000-02-30", "0000-00-10", "0000-13-01", "0000-04-31"] {
+            assert!(!is_calendar_date_from_year_zero(date), "{date}");
+        }
+    }
+
+    #[test]
+    fn the_other_years_read_alike_in_both_checks() {
+        for date in [
+            "0001-01-01",
+            "2024-02-29",
+            "1900-02-29",
+            "2026-02-30",
+            "9999-12-31",
+        ] {
+            assert_eq!(
+                is_calendar_date_from_year_zero(date),
+                is_ir_calendar_date(date),
+                "{date}"
+            );
         }
     }
 }

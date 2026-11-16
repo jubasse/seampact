@@ -11,7 +11,7 @@ use seampact_diagnostics::{InternalError, quote, quote_text};
 use seampact_ir::{
     ArrayTypeUse, DecimalLiteral, Enum, EnumTypeUse, JsonContent, KnownSchemaRef, KnownTypeUseRef,
     KnownUnionTagRef, MapSchema, ObjectSchema, RefTypeUse, Refinements, ScalarType, ScalarTypeUse,
-    Schema, TypeUse, UnionSchema, is_ir_calendar_date,
+    Schema, TypeUse, UnionSchema, is_calendar_date_from_year_zero,
 };
 use seampact_js::json_parse_error_message;
 use seampact_json::{JsonNumber, JsonValue};
@@ -81,7 +81,7 @@ type FormatCheck = fn(&str) -> bool;
 /// The checks of the formats the checker reads by text, keyed by format name.
 const FORMAT_CHECKS: [(&str, FormatCheck); 5] = [
     ("uuid", format_check_uuid),
-    ("date", is_calendar_date),
+    ("date", is_calendar_date_from_year_zero),
     ("date-time", is_date_time),
     ("decimal", format_check_decimal),
     ("int64", format_check_int64),
@@ -206,15 +206,6 @@ fn strip_digits(text: &str) -> Option<&str> {
     (rest.len() < text.len()).then_some(rest)
 }
 
-/// `YYYY-MM-DD` naming a day that exists. Year 0000 is a day here, as `Date.setUTCFullYear` reads
-/// it, where the IR check starts at year 1; it is a leap year, like 2000.
-fn is_calendar_date(text: &str) -> bool {
-    match text.strip_prefix("0000-") {
-        Some(rest) => is_ir_calendar_date(&format!("2000-{rest}")),
-        None => is_ir_calendar_date(text),
-    }
-}
-
 /// The value of a text of exactly two ASCII digits.
 fn two_digits(text: &str) -> Option<u32> {
     if text.len() != TWO_DIGITS_LENGTH {
@@ -277,7 +268,7 @@ fn is_date_time(text: &str) -> bool {
             }),
     };
 
-    is_calendar_date(date)
+    is_calendar_date_from_year_zero(date)
         && hour < HOURS
         && minute < MINUTES
         && second < MINUTES
@@ -1017,7 +1008,11 @@ mod tests {
         ];
 
         for (text, expected) in cases {
-            assert_eq!(is_calendar_date(text), expected, "text {text:?}");
+            assert_eq!(
+                is_calendar_date_from_year_zero(text),
+                expected,
+                "text {text:?}"
+            );
         }
     }
 

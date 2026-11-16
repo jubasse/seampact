@@ -29,7 +29,7 @@ mod source_map;
 mod unions;
 mod version;
 
-pub use calendar_date::is_ir_calendar_date;
+pub use calendar_date::{is_calendar_date_from_year_zero, is_ir_calendar_date};
 pub use closed_declaration::{
     IrClosedCheck, IrClosedDeclaration, IrClosedUnknown, bounded_unknown_text,
     bounded_unknown_value, check_ir_closed_declaration,
