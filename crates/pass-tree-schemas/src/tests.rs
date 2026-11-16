@@ -8,12 +8,15 @@ use seampact_json::{JsonObject, JsonValue};
 use seampact_pipeline::testing::{HalfFixture, raw_api_from_json};
 
 use crate::compile::TreeSchemasCompiler;
+use crate::decimal::{TreeSchemasDecimal, TreeSchemasDecimalSource, tree_schemas_decimal_of};
 use crate::directions::{DirectionHolder, directions_at, within};
 use crate::example_check::TreeSchemasExampleChecker;
 use crate::extensions::{
     extension_key_parts, tree_schemas_extension_slot, tree_schemas_has_extensions,
 };
-use crate::pattern::tree_schemas_escape_pattern_literal;
+use crate::pattern::{
+    TreeSchemasPatternResult, tree_schemas_escape_pattern_literal, tree_schemas_normalize_pattern,
+};
 use crate::raw::{
     TreeSchemasProblem, TreeSchemasReporter, tree_schemas_entries, tree_schemas_pointer,
 };
@@ -319,4 +322,57 @@ fn the_nearest_direction_holder_is_the_longest_in_utf16_units_and_the_first_on_a
     assert_eq!(directions_at(&holders, "/ab"), []);
     assert!(within("/a", "/a"));
     assert!(!within("/ab", "/a"));
+}
+
+#[test]
+fn a_decimal_reads_a_number_through_its_shortest_form() {
+    let number = |value: f64| tree_schemas_decimal_of(TreeSchemasDecimalSource::Number(value));
+    let text = |value: &str| tree_schemas_decimal_of(TreeSchemasDecimalSource::Text(value));
+
+    assert_eq!(
+        number(1e-7),
+        Ok(Some(TreeSchemasDecimal { units: 1, scale: 7 }))
+    );
+    assert_eq!(
+        number(1e21),
+        Ok(Some(TreeSchemasDecimal {
+            units: 1_000_000_000_000_000_000_000,
+            scale: 0
+        }))
+    );
+    assert_eq!(
+        text("-12.50"),
+        Ok(Some(TreeSchemasDecimal {
+            units: -1250,
+            scale: 2
+        }))
+    );
+    assert_eq!(
+        text("1e-2"),
+        Ok(Some(TreeSchemasDecimal { units: 1, scale: 2 }))
+    );
+
+    for refused in ["", "+1", ".5", "1.", "1e", "0x10", "1 ", "\u{ff11}"] {
+        assert_eq!(text(refused), Ok(None), "text {refused:?}");
+    }
+}
+
+#[test]
+fn a_pattern_is_normalised_by_code_point_and_refused_with_its_fix() {
+    let normalized = |source: &str| tree_schemas_normalize_pattern(source);
+
+    assert_eq!(
+        normalized("a|b"),
+        Ok(TreeSchemasPatternResult::Normalized {
+            normalized: "a|b".to_owned()
+        })
+    );
+    let Ok(TreeSchemasPatternResult::Refused { message, .. }) = normalized("*") else {
+        panic!("a lone star is refused");
+    };
+
+    assert_eq!(
+        message,
+        "the pattern is not portable: '*' has nothing to repeat"
+    );
 }
