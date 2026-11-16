@@ -145,6 +145,17 @@ fn the_change_kind_and_the_last_segment_must_fit() {
     let added_entry = difference("added", "**", "/0", DifferenceChange::Added);
     let message_entry = difference("message", "**", "/message", DifferenceChange::Message);
     let renamed_entry = difference("renamed", "**", "/message", DifferenceChange::CodeRenamed);
+    let order = only_mismatch(r#"{"a": 1, "b": 2}"#, r#"{"b": 2, "a": 1}"#);
+    let order_entry = difference("order", "**", "", DifferenceChange::MemberOrder);
+
+    assert_eq!(
+        outcome(vec![order_entry.clone()], FIXTURE, &order),
+        MatchOutcome::Accepted
+    );
+    assert_eq!(
+        outcome(vec![order_entry], FIXTURE, &added),
+        MatchOutcome::Unmatched
+    );
 
     assert_eq!(
         outcome(vec![removed_entry], FIXTURE, &added),

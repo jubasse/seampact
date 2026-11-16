@@ -17,13 +17,15 @@ pub(crate) struct AcceptedPointers {
     pub(crate) values: HashSet<String>,
     /// Members or items on one side only: dropped with their key and layout.
     pub(crate) members: HashSet<String>,
+    /// Objects whose members are in another order: their members compare by name.
+    pub(crate) reordered: HashSet<String>,
 }
 
 impl AcceptedPointers {
     /// Notes the pointer of a mismatch an entry accepted.
     ///
-    /// Entries accept only `Value`, `Added` and `Removed` mismatches; any other kind marks
-    /// nothing, so its text stays compared byte for byte.
+    /// Entries accept only `Value`, `Added`, `Removed` and `MemberOrder` mismatches; any other
+    /// kind marks nothing, so its text stays compared byte for byte.
     pub(crate) fn note(&mut self, mismatch: &Mismatch) {
         let Some(pointer) = &mismatch.pointer else {
             return;
@@ -32,13 +34,14 @@ impl AcceptedPointers {
         match mismatch.kind {
             MismatchKind::Value => self.values.insert(pointer.clone()),
             MismatchKind::Added | MismatchKind::Removed => self.members.insert(pointer.clone()),
-            MismatchKind::MemberOrder | MismatchKind::Text | MismatchKind::Unparsable => false,
+            MismatchKind::MemberOrder => self.reordered.insert(pointer.clone()),
+            MismatchKind::Text | MismatchKind::Unparsable => false,
         };
     }
 
     /// Whether no mismatch was accepted.
     pub(crate) fn is_empty(&self) -> bool {
-        self.values.is_empty() && self.members.is_empty()
+        self.values.is_empty() && self.members.is_empty() && self.reordered.is_empty()
     }
 }
 
@@ -293,7 +296,9 @@ fn render_container(
     // Each slot keeps its layout; only the member that fills it moves.
     let mut fillers: Vec<&(&RawChild<'_>, String)> = kept.iter().collect();
 
-    if order == MemberOrder::Ignored && container.open == '{' {
+    let by_name = order == MemberOrder::Ignored || accepted.reordered.contains(pointer);
+
+    if by_name && container.open == '{' {
         fillers.sort_by(|left, right| left.0.segment.cmp(&right.0.segment));
     }
 
@@ -341,7 +346,27 @@ mod tests {
                 .iter()
                 .map(|pointer| (*pointer).to_owned())
                 .collect(),
+            reordered: HashSet::new(),
         }
+    }
+
+    #[test]
+    fn only_the_accepted_object_may_hold_its_members_in_another_order() {
+        let reordered = AcceptedPointers {
+            reordered: HashSet::from(["/o".to_owned()]),
+            ..AcceptedPointers::default()
+        };
+
+        assert!(identical_written(
+            "{\"o\": {\"a\": 1, \"b\": 2}, \"p\": {\"a\": 1, \"b\": 2}}",
+            "{\"o\": {\"b\": 2, \"a\": 1}, \"p\": {\"a\": 1, \"b\": 2}}",
+            &reordered
+        ));
+        assert!(!identical_written(
+            "{\"o\": {\"a\": 1}, \"p\": {\"a\": 1, \"b\": 2}}",
+            "{\"o\": {\"a\": 1}, \"p\": {\"b\": 2, \"a\": 1}}",
+            &reordered
+        ));
     }
 
     #[test]

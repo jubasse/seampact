@@ -15,6 +15,7 @@ export type DifferenceChange =
   | "removed"
   | "message"
   | "code-renamed"
+  | "member-order"
   | "format";
 export type DifferenceOutput =
   | "ir"

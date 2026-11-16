@@ -184,6 +184,7 @@ fn change_matches(change: DifferenceChange, mismatch: &Mismatch) -> bool {
         DifferenceChange::CodeRenamed => {
             mismatch.kind == MismatchKind::Value && last_segment_is(&CODE_SEGMENTS)
         }
+        DifferenceChange::MemberOrder => mismatch.kind == MismatchKind::MemberOrder,
         DifferenceChange::Format => false,
     }
 }
