@@ -4,25 +4,29 @@ use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::hash::Hash;
 
-use seampact_diagnostics::{DiagnosticOrigin, InternalError};
+use seampact_diagnostics::{
+    DiagnosticOrigin, InternalError, RelatedLocation, access_rights_quoted,
+};
+use seampact_json::JsonValue;
 use seampact_ir::{
-    ContractIr, DerivationId, DerivedFrom, FormatId, HttpMethod, IrMap, Operation, OperationId,
-    OperationRef, Origin, Paging, PagingStyle, Param, Params, Response, ResponseHeader, SurfaceId,
-    ValueSource, WireFormat,
+    ContractIr, DerivationId, DerivedFrom, FormatId, HttpMethod, ImportedIr, IrClosedCheck,
+    IrClosedDeclaration, IrMap, Operation, OperationId, OperationRef, Origin, Paging, PagingId,
+    PagingStyle, Param, Params, Response, ResponseHeader, SortKey, SurfaceId, ValueSource,
+    WireFormat, check_ir_closed_declaration,
 };
 use seampact_pass_tree_shared::{
     TREE_NODES_OPERATION_KIND, tree_nodes_relay_origin, tree_nodes_text,
 };
 use seampact_pipeline::{
     DraftConcurrency, DraftIr, DraftOperation, DraftOperationInput, DraftOperationInputRef,
-    PassError,
+    PassError, pointer_below,
 };
 
 use crate::diagnostics::{
-    TreeNodesDiagnosticOptions, TreeNodesRule, tree_nodes_error, tree_nodes_node_origin,
+    TreeNodesDiagnosticOptions, TreeNodesRule, tree_nodes_error, tree_nodes_locate,
+    tree_nodes_node_origin,
 };
 use crate::fields::TreeNodesSite;
-use crate::not_ported::not_ported_yet;
 use crate::pass::TreeNodesScope;
 
 /// The derivation that stamps what a relay route copies.
@@ -202,20 +206,6 @@ struct RelayStamp {
     from: Origin,
 }
 
-/// A member of an imported IR this compiler does not know, with where it is.
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct ClosedUnknown {
-    pointer: String,
-    value: String,
-}
-
-/// An imported declaration read as this compiler's own, or the members it does not know.
-#[derive(Debug, Clone, PartialEq)]
-enum ClosedCheck<Declaration> {
-    Closed(Declaration),
-    Unknown(Vec<ClosedUnknown>),
-}
-
 /// What an imported operation lacks in its own catalogues.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct ImportedMissing {
@@ -227,10 +217,10 @@ struct ImportedMissing {
 /// responses, paging, concurrency, format and `relays`.
 ///
 /// `None` when the target is refused (reported); the copied format and paging style are pushed to `declarations`.
-pub(crate) fn tree_nodes_relay_shape(
-    site: &TreeNodesSite<'_, '_>,
+pub(crate) fn tree_nodes_relay_shape<'node, 'raw>(
+    site: &TreeNodesSite<'node, 'raw>,
     own_prefix: &str,
-    declarations: &mut Vec<TreeNodesRelayDeclaration<'_, '_>>,
+    declarations: &mut Vec<TreeNodesRelayDeclaration<'node, 'raw>>,
     scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<Option<DraftOperation>, PassError> {
     let target = relay_target(site)?;
@@ -259,15 +249,14 @@ pub(crate) fn tree_nodes_relay_shape(
         Some(_) => Some(relay_path(&source, own_prefix)?),
         None => None,
     };
-    let params = copied_params(operation.params(), &stamp)?;
+    let params = copied_params(operation.params(), &stamp);
     let input = operation
         .input()
         .map(|input| copied_input(input, &source.api));
-    let responses = copied_responses(operation.responses().unwrap_or_default(), &stamp)?;
+    let responses = copied_responses(operation.responses().unwrap_or_default(), &stamp);
     let paging = operation
         .paging()
-        .map(|paging| copied_paging(paging, &source.api))
-        .transpose()?;
+        .map(|paging| copied_paging(paging, &source.api));
     let concurrency = operation
         .concurrency()
         .map(|(version, field)| DraftConcurrency {
@@ -306,7 +295,7 @@ pub(crate) fn tree_nodes_join_relay_declarations(
         let key = format!("{}:{}", declaration.value.catalogue(), declaration.id);
 
         let Some(held) = held_declaration(declaration, scope) else {
-            add_declaration(declaration, scope)?;
+            add_declaration(declaration, scope);
             joined_by.insert(key, declaration);
             continue;
         };
@@ -341,10 +330,23 @@ fn held_declaration(
 }
 
 fn add_declaration(
-    _declaration: &TreeNodesRelayDeclaration<'_, '_>,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
-) -> Result<(), PassError> {
-    Err(not_ported_yet("addDeclaration"))
+    declaration: &TreeNodesRelayDeclaration<'_, '_>,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
+) {
+    match &declaration.value {
+        RelayDeclarationValue::Format(format) => {
+            scope
+                .output
+                .formats
+                .insert(FormatId::new(declaration.id.clone()), (**format).clone());
+        }
+        RelayDeclarationValue::Paging(style) => {
+            scope
+                .output
+                .pagings
+                .insert(PagingId::new(declaration.id.clone()), (**style).clone());
+        }
+    }
 }
 
 // Two declarations are one when they differ by their origin only: a shared file read by both apis.
@@ -368,21 +370,99 @@ fn same_declaration(held: &RelayDeclarationValue, copied: &RelayDeclarationValue
 }
 
 fn report_different_declaration(
-    _declaration: &TreeNodesRelayDeclaration<'_, '_>,
-    _held_origin: &Origin,
-    _first_copy: Option<&TreeNodesRelayDeclaration<'_, '_>>,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    declaration: &TreeNodesRelayDeclaration<'_, '_>,
+    held_origin: &Origin,
+    first_copy: Option<&TreeNodesRelayDeclaration<'_, '_>>,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("reportDifferentDeclaration"))
+    let site = &declaration.site;
+    let id = &declaration.id;
+    let kind = match declaration.value {
+        RelayDeclarationValue::Format(_) => "wire format",
+        RelayDeclarationValue::Paging(_) => "paging style",
+    };
+    let origin = relays_origin(site, scope)?;
+    let held = match first_copy {
+        None => RelatedLocation {
+            origin: tree_nodes_locate(held_origin, &origin),
+            message: format!("the {kind} {id} of this api"),
+        },
+        Some(first) => RelatedLocation {
+            origin: relays_origin(&first.site, scope)?,
+            message: format!(
+                "the {kind} {id} copied for the relay route {}",
+                first.site.operation_id
+            ),
+        },
+    };
+    let copied = RelatedLocation {
+        origin: tree_nodes_locate(declaration.value.origin(), &origin),
+        message: format!("the {kind} {id} of {}", declaration.relays),
+    };
+
+    scope
+        .context
+        .report(tree_nodes_error(TreeNodesDiagnosticOptions {
+            rule: TreeNodesRule::RelayDeclaration,
+            origin,
+            message: format!(
+                "The relay route {} copies the {kind} {id} of {}, which differs from the {kind} {id} this api already holds.",
+                site.operation_id, declaration.relays
+            ),
+            fix: format!(
+                "Declare {id} once in a shared file both apis read, or rename one of the two."
+            ),
+            related: vec![held, copied],
+        }));
+
+    Ok(())
 }
 
-fn push_declarations(
-    _source: &RelaySource<'_>,
-    _site: &TreeNodesSite<'_, '_>,
-    _target: &RelayTarget,
-    _declarations: &mut Vec<TreeNodesRelayDeclaration<'_, '_>>,
+fn push_declarations<'node, 'raw>(
+    source: &RelaySource<'_>,
+    site: &TreeNodesSite<'node, 'raw>,
+    target: &RelayTarget,
+    declarations: &mut Vec<TreeNodesRelayDeclaration<'node, 'raw>>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("pushDeclarations"))
+    let operation = source.operation;
+    let style = operation.paging().and_then(|paging| paging.style.as_ref());
+
+    // The relayed api writes every format and style its operations name, so a missing one is a broken draft.
+    if (operation.format().is_some() && source.format.is_none())
+        || (style.is_some() && source.paging_style.is_none())
+    {
+        return Err(InternalError::new(format!(
+            "the relayed operation {} names a format or paging style its api does not hold",
+            target.text
+        ))
+        .into());
+    }
+
+    if let (Some(format_id), Some(format)) = (operation.format(), source.format) {
+        declarations.push(TreeNodesRelayDeclaration {
+            id: format_id.as_str().to_owned(),
+            site: site.clone(),
+            relays: target.text.clone(),
+            value: RelayDeclarationValue::Format(Box::new(WireFormat {
+                origin: tree_nodes_relay_origin(&format.origin, &source.api),
+                ..format.clone()
+            })),
+        });
+    }
+
+    if let (Some(style_id), Some(paging_style)) = (style, source.paging_style) {
+        declarations.push(TreeNodesRelayDeclaration {
+            id: style_id.as_str().to_owned(),
+            site: site.clone(),
+            relays: target.text.clone(),
+            value: RelayDeclarationValue::Paging(Box::new(PagingStyle {
+                origin: tree_nodes_relay_origin(&paging_style.origin, &source.api),
+                ..paging_style.clone()
+            })),
+        });
+    }
+
+    Ok(())
 }
 
 /// An element a relay route copies, which carries the origin it is copied from and the derivation that stamps it.
@@ -447,8 +527,21 @@ fn is_copied(derived_from: Option<&DerivedFrom>, derivations: &[DerivationId]) -
     derived_from.is_none_or(|derived| derivations.contains(&derived.derivation))
 }
 
-fn copied_params(_params: Option<&Params>, _stamp: &RelayStamp) -> Result<Params, PassError> {
-    Err(not_ported_yet("copiedParams"))
+fn copied_params(params: Option<&Params>, stamp: &RelayStamp) -> Params {
+    let copied = |list: Option<&Vec<Param>>| -> Vec<Param> {
+        list.map(Vec::as_slice)
+            .unwrap_or_default()
+            .iter()
+            .filter(|param| is_copied(param.derived_from.as_ref(), COPIED_ELEMENT_DERIVATIONS))
+            .map(|param| stamped(param, stamp))
+            .collect()
+    };
+
+    Params {
+        path: copied(params.map(|params| &params.path)),
+        query: copied(params.map(|params| &params.query)),
+        header: copied(params.map(|params| &params.header)),
+    }
 }
 
 // The body input with its media, schema and fields; never `proofs`, `rawBody` or `bodyLimitBytes`,
@@ -465,15 +558,48 @@ fn copied_input(input: DraftOperationInputRef<'_>, api: &str) -> DraftOperationI
     }
 }
 
-fn copied_responses(
-    _responses: &[Response],
-    _stamp: &RelayStamp,
-) -> Result<Vec<Response>, PassError> {
-    Err(not_ported_yet("copiedResponses"))
+fn copied_responses(responses: &[Response], stamp: &RelayStamp) -> Vec<Response> {
+    responses
+        .iter()
+        .filter(|response| is_copied(response.derived_from.as_ref(), COPIED_RESPONSE_DERIVATIONS))
+        .map(|response| Response {
+            headers: response
+                .headers
+                .iter()
+                .filter(|header| is_copied(header.derived_from.as_ref(), COPIED_ELEMENT_DERIVATIONS))
+                .map(|header| stamped(header, stamp))
+                .collect(),
+            ..stamped(response, stamp)
+        })
+        .collect()
 }
 
-fn copied_paging(_paging: &Paging, _api: &str) -> Result<Paging, PassError> {
-    Err(not_ported_yet("copiedPaging"))
+// Sort keys carry their key and origin only: their rights are the gateway's, and the paging's relay provenance
+// is the operation's `relays`.
+fn copied_paging(paging: &Paging, api: &str) -> Paging {
+    Paging {
+        style: paging.style.clone(),
+        max_limit: paging.max_limit,
+        default_limit: paging.default_limit,
+        over_limit: paging.over_limit.clone(),
+        token: paging.token.clone(),
+        sort_keys: paging
+            .sort_keys
+            .iter()
+            .map(|sort_key| SortKey {
+                key: sort_key.key.clone(),
+                right: None,
+                params: None,
+                subject: None,
+                derived_from: None,
+                origin: sort_key
+                    .origin
+                    .as_ref()
+                    .map(|origin| tree_nodes_relay_origin(origin, api)),
+            })
+            .collect(),
+        origin: tree_nodes_relay_origin(&paging.origin, api),
+    }
 }
 
 // A path is under a prefix at a segment boundary: `/v10/x` is not under `/v1`.
@@ -535,7 +661,7 @@ fn relay_source<'run>(
         return relayed_source(site, target, relayed, scope);
     }
 
-    if let Some(imported) = scope.context.imported(&target.api) {
+    if let Some(imported) = scope.context.imported_ir(&target.api) {
         return imported_source(site, target, imported, scope);
     }
 
@@ -554,45 +680,262 @@ fn relay_source<'run>(
 }
 
 fn relayed_source<'run>(
-    _site: &TreeNodesSite<'_, '_>,
-    _target: &RelayTarget,
-    _relayed: &'run DraftIr,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    target: &RelayTarget,
+    relayed: &'run DraftIr,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<Option<RelaySource<'run>>, PassError> {
-    Err(not_ported_yet("relayedSource"))
+    let operation = relayed.operations.iter().find(|candidate| {
+        candidate.kind.as_ref() == Some(&TREE_NODES_OPERATION_KIND)
+            && candidate
+                .id
+                .as_ref()
+                .is_some_and(|id| id.as_str() == target.id)
+    });
+    let Some(operation) = operation else {
+        report_no_operation(site, target, scope)?;
+
+        return Ok(None);
+    };
+    let surface_prefix = relayed
+        .api
+        .as_ref()
+        .zip(operation.surface.as_ref())
+        .and_then(|(api, surface)| api.surfaces.get(surface.as_str()))
+        .map(|surface| surface.prefix.clone());
+
+    Ok(Some(RelaySource {
+        api: target.api.clone(),
+        operation: RelayedOperation::Draft(operation),
+        surface_prefix,
+        format: own_entry(
+            &relayed.formats,
+            operation.format.as_ref().map(FormatId::as_str),
+        ),
+        paging_style: own_entry(
+            &relayed.pagings,
+            operation
+                .paging
+                .as_ref()
+                .and_then(|paging| paging.style.as_ref())
+                .map(PagingId::as_str),
+        ),
+    }))
 }
 
+// An imported IR may hold a union arm, an open-enum value or a member this compiler does not know: the operation
+// is copied only when none sits in it, its format or its paging style; each one found is named. All three are
+// narrowed by the closed-IR guard. An import is external input, so an operation whose path leaves its surface's
+// prefix or that names a format or paging style the import does not hold is refused, located, as well.
 fn imported_source<'run>(
-    _site: &TreeNodesSite<'_, '_>,
-    _target: &RelayTarget,
-    _imported: &'run ContractIr,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    target: &RelayTarget,
+    imported: &'run ImportedIr,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<Option<RelaySource<'run>>, PassError> {
-    Err(not_ported_yet("importedSource"))
+    let contract = imported.contract();
+    let document = imported.document();
+    let found = imported_operation_index(contract, &target.id)
+        .and_then(|index| contract.operations.get(index).map(|found| (index, found)));
+    let Some((index, found)) = found else {
+        report_no_operation(site, target, scope)?;
+
+        return Ok(None);
+    };
+    let operation = check_closed(found, document, &format!("/operations/{index}"))?;
+    let format = imported_declaration(
+        &contract.formats,
+        document,
+        "/formats",
+        Some(found.format.as_str()),
+    )?;
+    let style = imported_declaration(
+        &contract.pagings,
+        document,
+        "/pagings",
+        found.paging.as_ref().and_then(|paging| paging.style.as_ref()).map(PagingId::as_str),
+    )?;
+    let unknowns: Vec<String> = [
+        named_unknowns(Some(&operation)),
+        named_unknowns(format.as_ref()),
+        named_unknowns(style.as_ref()),
+    ]
+    .concat();
+    let IrClosedCheck::Closed(closed) = operation else {
+        return report_unknown(site, target, &unknowns, scope).map(|()| None);
+    };
+
+    if !unknowns.is_empty() {
+        return report_unknown(site, target, &unknowns, scope).map(|()| None);
+    }
+
+    let surface_prefix = contract
+        .api
+        .surfaces
+        .get(closed.surface.as_str())
+        .map(|surface| surface.prefix.as_str());
+    let style_named = found.paging.as_ref().is_some_and(|paging| paging.style.is_some());
+    let inconsistency = import_inconsistency(
+        closed,
+        surface_prefix,
+        ImportedMissing {
+            format_missing: format.is_none(),
+            style_missing: style_named && style.is_none(),
+        },
+    );
+
+    if let Some(inconsistency) = inconsistency {
+        report_target(
+            site,
+            &format!(
+                "relays {}, but the import {} is inconsistent: {inconsistency}",
+                target.text, target.api
+            ),
+            &format!(
+                "Relay an operation of an IR that {} compiled, or fix the import.",
+                target.api
+            ),
+            TreeNodesRule::RelayTarget,
+            scope,
+        )?;
+
+        return Ok(None);
+    }
+
+    Ok(Some(RelaySource {
+        api: target.api.clone(),
+        operation: RelayedOperation::Imported(closed),
+        surface_prefix: surface_prefix.map(str::to_owned),
+        format: format.and_then(closed_declaration),
+        paging_style: style.and_then(closed_declaration),
+    }))
 }
 
+fn report_unknown(
+    site: &TreeNodesSite<'_, '_>,
+    target: &RelayTarget,
+    unknowns: &[String],
+    scope: &mut TreeNodesScope<'_, '_, '_>,
+) -> Result<(), PassError> {
+    report_target(
+        site,
+        &format!(
+            "relays {}, which holds what this compiler does not know ({}), so it cannot be copied",
+            target.text,
+            unknowns.join(", ")
+        ),
+        &format!(
+            "Compile with a seampact version that reads the IR of {}, or relay another operation.",
+            target.api
+        ),
+        TreeNodesRule::RelayUnknown,
+        scope,
+    )
+}
+
+fn check_closed<'declaration, Declaration: IrClosedDeclaration>(
+    declaration: &'declaration Declaration,
+    document: &JsonValue,
+    pointer: &str,
+) -> Result<IrClosedCheck<'declaration, Declaration>, InternalError> {
+    check_ir_closed_declaration(declaration, document, pointer)
+        .map_err(|error| InternalError::new(error.to_string()))
+}
+
+fn closed_declaration<Declaration>(
+    check: IrClosedCheck<'_, Declaration>,
+) -> Option<&Declaration> {
+    match check {
+        IrClosedCheck::Closed(declaration) => Some(declaration),
+        IrClosedCheck::Unknowns(_) => None,
+    }
+}
+
+/// What an imported operation holds that contradicts its own IR, else `None`: a path outside its surface's
+/// prefix, a format or a paging style its catalogue lacks.
 fn import_inconsistency(
-    _operation: &Operation,
-    _surface_prefix: Option<&str>,
-    _missing: ImportedMissing,
-) -> Result<Option<String>, PassError> {
-    Err(not_ported_yet("importInconsistency"))
+    operation: &Operation,
+    surface_prefix: Option<&str>,
+    missing: ImportedMissing,
+) -> Option<String> {
+    let id = operation.id.as_str();
+    let surface = operation.surface.as_str();
+    let path = operation.path.as_str();
+
+    if surface_prefix.is_none() {
+        return Some(format!(
+            "the operation {id} is on the surface {surface}, which the import does not declare"
+        ));
+    }
+
+    if !path_under_prefix(path, surface_prefix) {
+        return Some(format!(
+            "the operation {id} has the path {}, which does not start with the prefix of its surface {surface}",
+            access_rights_quoted(path)
+        ));
+    }
+
+    if missing.format_missing {
+        return Some(format!(
+            "the operation {id} names a wire format the import does not declare"
+        ));
+    }
+
+    if missing.style_missing {
+        return Some(format!(
+            "the operation {id} names a paging style the import does not declare"
+        ));
+    }
+
+    None
 }
 
-fn imported_operation_index(_imported: &ContractIr, _id: &str) -> Result<usize, PassError> {
-    Err(not_ported_yet("importedOperationIndex"))
+// The operation of an id, an `httpOperation` first: one of another kind is refused by the closed-IR guard.
+fn imported_operation_index(imported: &ContractIr, id: &str) -> Option<usize> {
+    imported
+        .operations
+        .iter()
+        .position(|candidate| {
+            candidate.kind == TREE_NODES_OPERATION_KIND && candidate.id.as_str() == id
+        })
+        .or_else(|| {
+            imported
+                .operations
+                .iter()
+                .position(|candidate| candidate.id.as_str() == id)
+        })
 }
 
-fn imported_declaration<Key, Declaration: Clone>(
-    _catalogue: &IrMap<Key, Declaration>,
-    _root: &str,
-    _id: Option<&str>,
-) -> Result<Option<ClosedCheck<Declaration>>, PassError> {
-    Err(not_ported_yet("importedDeclaration"))
+// An imported catalogue entry the operation names, checked by the closed-IR guard; `None` when it names none or
+// the catalogue lacks it.
+fn imported_declaration<'run, Key, Declaration>(
+    catalogue: &'run IrMap<Key, Declaration>,
+    document: &JsonValue,
+    root: &str,
+    id: Option<&str>,
+) -> Result<Option<IrClosedCheck<'run, Declaration>>, InternalError>
+where
+    Key: Borrow<str> + AsRef<str> + Hash + Eq,
+    Declaration: IrClosedDeclaration,
+{
+    let Some(id) = id else {
+        return Ok(None);
+    };
+    let Some(entry) = own_entry(catalogue, Some(id)) else {
+        return Ok(None);
+    };
+
+    check_closed(entry, document, &pointer_below(root, &[id])).map(Some)
 }
 
-fn named_unknowns(_unknowns: Option<&[ClosedUnknown]>) -> Result<Vec<String>, PassError> {
-    Err(not_ported_yet("namedUnknowns"))
+fn named_unknowns<Declaration>(check: Option<&IrClosedCheck<'_, Declaration>>) -> Vec<String> {
+    match check {
+        Some(IrClosedCheck::Unknowns(unknowns)) => unknowns
+            .iter()
+            .map(|unknown| format!("{} at {}", unknown.value, unknown.pointer))
+            .collect(),
+        Some(IrClosedCheck::Closed(_)) | None => Vec::new(),
+    }
 }
 
 fn own_entry<'catalogue, Key: Borrow<str> + AsRef<str> + Hash + Eq, Value>(
@@ -602,20 +945,52 @@ fn own_entry<'catalogue, Key: Borrow<str> + AsRef<str> + Hash + Eq, Value>(
     id.and_then(|id| catalogue.get(id))
 }
 
+// The route name is the public operation id unless the route sets `operationId` (grammar section 7).
 fn check_route_name(
-    _site: &TreeNodesSite<'_, '_>,
-    _target: &RelayTarget,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    target: &RelayTarget,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("checkRouteName"))
+    let node = site.node;
+
+    if tree_nodes_text(node, "operationId").is_some() || node.name == target.id {
+        return Ok(());
+    }
+
+    scope
+        .context
+        .report(tree_nodes_error(TreeNodesDiagnosticOptions {
+            rule: TreeNodesRule::RelayName,
+            origin: tree_nodes_node_origin(&node.origin)?,
+            message: format!(
+                "The relay route {} relays {}, so its name must be the public operation id {}.",
+                node.name, target.text, target.id
+            ),
+            fix: format!(
+                "Rename the route {}, or set operationId on it.",
+                target.id
+            ),
+            related: Vec::new(),
+        }));
+
+    Ok(())
 }
 
 fn report_no_operation(
-    _site: &TreeNodesSite<'_, '_>,
-    _target: &RelayTarget,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    target: &RelayTarget,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("reportNoOperation"))
+    report_target(
+        site,
+        &format!(
+            "relays {}, but the api {} has no operation {}",
+            target.text, target.api, target.id
+        ),
+        &format!("Name an operation id of {}.", target.api),
+        TreeNodesRule::RelayTarget,
+        scope,
+    )
 }
 
 fn report_target(
