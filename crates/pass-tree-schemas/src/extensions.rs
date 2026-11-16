@@ -16,7 +16,6 @@ use crate::compile::{
     TreeSchemasCompiler, TreeSchemasExampleCheck, TreeSchemasPlace, TreeSchemasPosition,
     TreeSchemasWrittenValue,
 };
-use crate::not_ported::not_ported_yet;
 use crate::raw::{
     TreeSchemasProblem, TreeSchemasRelated, tree_schemas_entries, tree_schemas_member,
     tree_schemas_pointer,
@@ -218,8 +217,14 @@ fn catalogue_holders<'raw>(
     holders
 }
 
-fn places_text(places: &[ExtensionPlace]) -> Result<String, PassError> {
-    Err(not_ported_yet("placesText"))
+fn places_text(places: &[ExtensionPlace]) -> String {
+    if places.is_empty() {
+        return "no place".to_owned();
+    }
+
+    let names: Vec<&str> = places.iter().map(ExtensionPlace::as_str).collect();
+
+    names.join(", ")
 }
 
 pub(crate) fn tree_schemas_check_extension_values(
@@ -259,7 +264,7 @@ pub(crate) fn tree_schemas_check_extension_values(
                 .is_some_and(|place| declared.places.contains(place));
 
             if !fits_place {
-                let problem = extension_place_problem(key, at, holder.place.as_ref(), declared)?;
+                let problem = extension_place_problem(key, at, holder.place.as_ref(), declared);
 
                 compiler.reporter.error(problem)?;
 
@@ -283,8 +288,8 @@ fn extension_place_problem(
     pointer: String,
     place: Option<&ExtensionPlace>,
     declared: &ExtensionKeyDecl,
-) -> Result<TreeSchemasProblem, PassError> {
-    let allowed = places_text(&declared.places)?;
+) -> TreeSchemasProblem {
+    let allowed = places_text(&declared.places);
     let quoted = quote_text(key);
     let (message, fix) = match place {
         None => (
@@ -299,7 +304,7 @@ fn extension_place_problem(
         ),
     };
 
-    Ok(TreeSchemasProblem {
+    TreeSchemasProblem {
         rule: TreeSchemasRule::ExtensionPlace,
         pointer,
         message,
@@ -311,5 +316,5 @@ fn extension_place_problem(
             ),
             message: "its declaration".to_owned(),
         }]),
-    })
+    }
 }

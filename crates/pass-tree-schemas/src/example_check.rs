@@ -9,21 +9,22 @@ use indexmap::IndexMap;
 use regress::Regex;
 use seampact_diagnostics::{InternalError, quote, quote_text};
 use seampact_ir::{
-    ArrayTypeUse, Enum, EnumTypeUse, JsonContent, KnownTypeUseRef, MapSchema, ObjectSchema,
-    Refinements, ScalarType, ScalarTypeUse, Schema, TypeUse, UnionSchema,
+    ArrayTypeUse, DecimalLiteral, Enum, EnumTypeUse, JsonContent, KnownSchemaRef, KnownTypeUseRef,
+    MapSchema, ObjectSchema, Refinements, ScalarType, ScalarTypeUse, Schema, TypeUse, UnionSchema,
 };
-use seampact_json::JsonValue;
+use seampact_json::{JsonNumber, JsonValue};
 use seampact_pipeline::{PassError, TreeSchemaExampleIssue};
 
 use crate::compile::{TreeSchemasExampleCheck, TreeSchemasWrittenValue};
-use crate::decimal::{TreeSchemasDecimal, TreeSchemasDecimalSource, tree_schemas_decimal_of};
+use crate::decimal::{
+    TreeSchemasDecimal, TreeSchemasDecimalSource, tree_schemas_compare_decimals,
+    tree_schemas_decimal_of, tree_schemas_is_multiple_of,
+};
 use crate::not_ported::not_ported_yet;
-use crate::raw::{TreeSchemasProblem, TreeSchemasReporter};
+use crate::raw::{TreeSchemasProblem, TreeSchemasReporter, tree_schemas_pointer};
 use crate::rule::TreeSchemasRule;
 use crate::scalars::MAX_SAFE_INTEGER;
 
-/// ECMAScript source of an RFC 4122 shaped uuid text.
-const UUID: &str = r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$";
 /// ECMAScript source of a `YYYY-MM-DD` text.
 const DATE: &str = r"^([0-9]{4})-([0-9]{2})-([0-9]{2})$";
 /// ECMAScript source of an RFC 3339 date-time text.
@@ -34,35 +35,37 @@ const INT64: &str = r"^-?(0|[1-9][0-9]*)$";
 const NUMBER_TEXT: &str = r"^-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?$";
 const INT64_MIN: i64 = i64::MIN;
 const INT64_MAX: i64 = i64::MAX;
+/// The hex digits of each hyphen-separated group of a uuid.
+const UUID_GROUP_LENGTHS: [usize; 5] = [8, 4, 4, 4, 12];
 const HOURS: u32 = 24;
 const MINUTES: u32 = 60;
 
 /// One bound of a refinement: the check its comparison must pass, and how a message names it.
 #[derive(Debug, Clone, Copy)]
 struct BoundCheck {
-    key: &'static str,
+    literal: fn(&Refinements) -> Option<&DecimalLiteral>,
     holds: fn(Ordering) -> bool,
     phrase: &'static str,
 }
 
 const BOUND_CHECKS: [BoundCheck; 4] = [
     BoundCheck {
-        key: "minimum",
+        literal: |refinements| refinements.minimum.as_ref(),
         holds: Ordering::is_ge,
         phrase: "at least",
     },
     BoundCheck {
-        key: "exclusiveMinimum",
+        literal: |refinements| refinements.exclusive_minimum.as_ref(),
         holds: Ordering::is_gt,
         phrase: "above",
     },
     BoundCheck {
-        key: "maximum",
+        literal: |refinements| refinements.maximum.as_ref(),
         holds: Ordering::is_le,
         phrase: "at most",
     },
     BoundCheck {
-        key: "exclusiveMaximum",
+        literal: |refinements| refinements.exclusive_maximum.as_ref(),
         holds: Ordering::is_lt,
         phrase: "below",
     },
@@ -152,6 +155,51 @@ fn pattern_matches(source: &str, text: &str) -> Result<bool, PassError> {
     Ok(expression.find(text).is_some())
 }
 
+fn string_reading(text: &str) -> TextReading {
+    TextReading::Value(JsonValue::String(text.to_owned()))
+}
+
+fn no_text_form(kind: &str) -> TextReading {
+    TextReading::Problem(format!("this {kind} use has no text form"))
+}
+
+/// `^-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?$`.
+fn is_number_text(text: &str) -> bool {
+    let unsigned = text.strip_prefix('-').unwrap_or(text);
+    let whole_length = unsigned
+        .find(|character: char| !character.is_ascii_digit())
+        .unwrap_or(unsigned.len());
+    let (whole, after_whole) = unsigned.split_at(whole_length);
+
+    if !is_canonical_integer(whole) {
+        return false;
+    }
+
+    let after_fraction = match after_whole.strip_prefix('.') {
+        Some(rest) => match strip_digits(rest) {
+            Some(after) => after,
+            None => return false,
+        },
+        None => after_whole,
+    };
+
+    match after_fraction.strip_prefix(['e', 'E']) {
+        Some(rest) => {
+            let unsigned_exponent = rest.strip_prefix(['+', '-']).unwrap_or(rest);
+
+            strip_digits(unsigned_exponent).is_some_and(str::is_empty)
+        }
+        None => after_fraction.is_empty(),
+    }
+}
+
+/// What follows the leading run of ASCII digits, which holds at least one.
+fn strip_digits(text: &str) -> Option<&str> {
+    let rest = text.trim_start_matches(|character: char| character.is_ascii_digit());
+
+    (rest.len() < text.len()).then_some(rest)
+}
+
 fn is_record(value: &JsonValue) -> bool {
     matches!(value, JsonValue::Object(_))
 }
@@ -164,8 +212,22 @@ fn is_date_time(text: &str) -> Result<bool, PassError> {
     Err(not_ported_yet("isDateTime"))
 }
 
+/// `^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`.
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "an entry of FORMAT_CHECKS, whose other entries are stubs until their brief"
+)]
 fn format_check_uuid(text: &str) -> Result<bool, PassError> {
-    Err(not_ported_yet("FORMAT_CHECKS.uuid"))
+    let groups: Vec<&str> = text.split('-').collect();
+    let has_uuid_shape = groups.len() == UUID_GROUP_LENGTHS.len()
+        && groups
+            .iter()
+            .zip(UUID_GROUP_LENGTHS)
+            .all(|(group, length)| {
+                group.len() == length && group.chars().all(|digit| digit.is_ascii_hexdigit())
+            });
+
+    Ok(has_uuid_shape)
 }
 
 /// A written integer without a leading zero: `0|[1-9][0-9]*`.
@@ -233,11 +295,50 @@ impl TreeSchemasExampleChecker {
         text: &str,
         schema_use: &TypeUse,
     ) -> Result<Vec<TreeSchemaExampleIssue>, PassError> {
-        Err(not_ported_yet("TreeSchemasExampleChecker.checkText"))
+        match self.text_value(text, schema_use)? {
+            TextReading::Problem(message) => Ok(vec![issue_at("", message)]),
+            TextReading::Value(value) => self.check(&value, schema_use),
+        }
     }
 
     fn text_value(&self, text: &str, schema_use: &TypeUse) -> Result<TextReading, PassError> {
-        Err(not_ported_yet("TreeSchemasExampleChecker.textValue"))
+        let scalar = match KnownTypeUseRef::try_from(schema_use)? {
+            KnownTypeUseRef::Enum(_) => return Ok(string_reading(text)),
+            KnownTypeUseRef::Scalar(scalar) => scalar,
+            KnownTypeUseRef::Ref(_) => return Ok(no_text_form("ref")),
+            KnownTypeUseRef::Opaque(_) => return Ok(no_text_form("opaque")),
+            KnownTypeUseRef::File(_) => return Ok(no_text_form("file")),
+            KnownTypeUseRef::Array(_) => return Ok(no_text_form("array")),
+        };
+
+        if scalar.r#type == ScalarType::String || scalar.format.as_deref() == Some("int64") {
+            return Ok(string_reading(text));
+        }
+
+        if scalar.r#type == ScalarType::Boolean {
+            return Ok(match text {
+                "true" => TextReading::Value(JsonValue::Bool(true)),
+                "false" => TextReading::Value(JsonValue::Bool(false)),
+                _ => TextReading::Problem(format!("{} is not 'true' or 'false'", quote_text(text))),
+            });
+        }
+
+        if !is_number_text(text) {
+            return Ok(TextReading::Problem(format!(
+                "{} is not a number",
+                quote_text(text)
+            )));
+        }
+
+        let number = text.parse::<f64>().ok().and_then(JsonNumber::from_f64);
+
+        Ok(match number {
+            Some(number) => TextReading::Value(JsonValue::Number(number)),
+            None => TextReading::Problem(format!(
+                "{} is past the range of a JSON number",
+                quote_text(text)
+            )),
+        })
     }
 
     fn check_use(
@@ -287,7 +388,17 @@ impl TreeSchemasExampleChecker {
         pointer: &str,
         issues: &mut Vec<TreeSchemaExampleIssue>,
     ) -> Result<(), PassError> {
-        Err(not_ported_yet("TreeSchemasExampleChecker.schema"))
+        let Some(schema) = self.schemas.get(id) else {
+            return Err(PassError::from(InternalError::new(format!(
+                "tree.schemas checks an example against no schema '{id}'"
+            ))));
+        };
+
+        match KnownSchemaRef::try_from(schema)? {
+            KnownSchemaRef::Object(object) => self.object(value, object, pointer, issues, None),
+            KnownSchemaRef::Map(map) => self.map(value, map, pointer, issues),
+            KnownSchemaRef::Union(union) => self.union(value, union, pointer, issues),
+        }
     }
 
     fn object(
@@ -298,7 +409,54 @@ impl TreeSchemasExampleChecker {
         issues: &mut Vec<TreeSchemaExampleIssue>,
         tag_property: Option<&str>,
     ) -> Result<(), PassError> {
-        Err(not_ported_yet("TreeSchemasExampleChecker.object"))
+        let JsonValue::Object(object) = value else {
+            issues.push(issue_at(
+                pointer,
+                format!("the value is not an object ({})", schema.id),
+            ));
+
+            return Ok(());
+        };
+
+        for key in object.keys() {
+            let is_property = schema
+                .properties
+                .iter()
+                .any(|property| property.name == *key);
+
+            if tag_property != Some(key.as_str()) && !is_property {
+                issues.push(issue_at(
+                    &tree_schemas_pointer(pointer, &[key]),
+                    format!("{} is not a property of {}", quote_text(key), schema.id),
+                ));
+            }
+        }
+
+        for property in &schema.properties {
+            let Some(field) = object.get(&property.name) else {
+                if !property.optional {
+                    issues.push(issue_at(
+                        pointer,
+                        format!(
+                            "the required property {} is missing",
+                            quote_text(&property.name)
+                        ),
+                    ));
+                }
+
+                continue;
+            };
+
+            if matches!(field, JsonValue::Null) && property.nullable {
+                continue;
+            }
+
+            let at = tree_schemas_pointer(pointer, &[&property.name]);
+
+            self.check_use(field, &property.r#type, &at, issues)?;
+        }
+
+        Ok(())
     }
 
     fn map(
@@ -328,7 +486,29 @@ impl TreeSchemasExampleChecker {
         pointer: &str,
         issues: &mut Vec<TreeSchemaExampleIssue>,
     ) -> Result<(), PassError> {
-        Err(not_ported_yet("TreeSchemasExampleChecker.enumValue"))
+        let values = match &enum_use.narrowed_to {
+            Some(narrowing) => Some(&narrowing.values),
+            None => self
+                .enums
+                .get(enum_use.r#enum.as_str())
+                .map(|declared| &declared.values),
+        };
+        let Some(values) = values else {
+            return Err(PassError::from(InternalError::new(format!(
+                "tree.schemas checks an example against no enum '{}'",
+                enum_use.r#enum
+            ))));
+        };
+        let is_value = matches!(value, JsonValue::String(text) if values.contains(text));
+
+        if !is_value {
+            issues.push(issue_at(
+                pointer,
+                format!("{} is not a value of {}", quote(value), enum_use.r#enum),
+            ));
+        }
+
+        Ok(())
     }
 
     fn array(
@@ -338,7 +518,42 @@ impl TreeSchemasExampleChecker {
         pointer: &str,
         issues: &mut Vec<TreeSchemaExampleIssue>,
     ) -> Result<(), PassError> {
-        Err(not_ported_yet("TreeSchemasExampleChecker.array"))
+        let JsonValue::Array(items) = value else {
+            issues.push(issue_at(pointer, "the value is not an array".to_owned()));
+
+            return Ok(());
+        };
+        let length = i64::try_from(items.len()).map_err(|_| {
+            PassError::from(InternalError::new(
+                "tree.schemas holds an example array longer than a count of the IR".to_owned(),
+            ))
+        })?;
+
+        if let Some(min_items) = array_use.min_items
+            && length < min_items
+        {
+            issues.push(issue_at(
+                pointer,
+                format!("the array holds fewer than {min_items} items"),
+            ));
+        }
+
+        if let Some(max_items) = array_use.max_items
+            && length > max_items
+        {
+            issues.push(issue_at(
+                pointer,
+                format!("the array holds more than {max_items} items"),
+            ));
+        }
+
+        for (index, item) in items.iter().enumerate() {
+            let at = tree_schemas_pointer(pointer, &[&index.to_string()]);
+
+            self.check_use(item, &array_use.items, &at, issues)?;
+        }
+
+        Ok(())
     }
 
     fn scalar(
@@ -487,7 +702,55 @@ impl TreeSchemasExampleChecker {
         value: TreeSchemasDecimalSource<'_>,
         refinements: &Refinements,
     ) -> Result<Option<String>, PassError> {
-        Err(not_ported_yet("TreeSchemasExampleChecker.boundsProblem"))
+        let Some(decimal) = tree_schemas_decimal_of(value.clone())? else {
+            return Ok(Some(format!(
+                "{} is not a decimal number",
+                quoted_source(&value)
+            )));
+        };
+
+        for check in BOUND_CHECKS {
+            let Some(literal) = (check.literal)(refinements) else {
+                continue;
+            };
+            let Some(bound) = bound_of(Some(literal.as_str()))? else {
+                continue;
+            };
+
+            if !(check.holds)(tree_schemas_compare_decimals(&decimal, &bound)?) {
+                return Ok(Some(format!(
+                    "{} is not {} {literal}",
+                    quoted_source(&value),
+                    check.phrase
+                )));
+            }
+        }
+
+        let Some(step_literal) = &refinements.multiple_of else {
+            return Ok(None);
+        };
+
+        if let Some(step) = bound_of(Some(step_literal.as_str()))?
+            && !tree_schemas_is_multiple_of(&decimal, &step)?
+        {
+            return Ok(Some(format!(
+                "{} is not a multiple of {step_literal}",
+                quoted_source(&value)
+            )));
+        }
+
+        Ok(None)
+    }
+}
+
+/// `quote` of the number or text a bound is checked on.
+fn quoted_source(value: &TreeSchemasDecimalSource<'_>) -> String {
+    match value {
+        TreeSchemasDecimalSource::Text(text) => quote_text(text),
+        TreeSchemasDecimalSource::Number(number) => match JsonNumber::from_f64(*number) {
+            Some(finite) => quote(&JsonValue::Number(finite)),
+            None => "null".to_owned(),
+        },
     }
 }
 

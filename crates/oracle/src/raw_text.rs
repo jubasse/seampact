@@ -42,6 +42,15 @@ impl AcceptedPointers {
     }
 }
 
+/// Whether the members of an object are held to the order they are written in.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum MemberOrder {
+    /// The order is part of the text.
+    Written,
+    /// Members compare by name; each slot keeps its layout, so spacing is still held.
+    Ignored,
+}
+
 /// A scanned JSON text, scalars as written and every container with its layout.
 enum RawNode<'text> {
     Scalar(&'text str),
@@ -79,12 +88,13 @@ pub(crate) fn identical_outside_accepted(
     expected_text: &str,
     actual_text: &str,
     accepted: &AcceptedPointers,
+    order: MemberOrder,
 ) -> bool {
     let (Some(expected), Some(actual)) = (scan(expected_text), scan(actual_text)) else {
         return false;
     };
 
-    render(&expected, "", accepted) == render(&actual, "", accepted)
+    render(&expected, "", accepted, order) == render(&actual, "", accepted, order)
 }
 
 fn scan(text: &str) -> Option<RawNode<'_>> {
@@ -248,14 +258,19 @@ impl<'text> Scanner<'text> {
     }
 }
 
-fn render(node: &RawNode<'_>, pointer: &str, accepted: &AcceptedPointers) -> String {
+fn render(
+    node: &RawNode<'_>,
+    pointer: &str,
+    accepted: &AcceptedPointers,
+    order: MemberOrder,
+) -> String {
     if accepted.values.contains(pointer) {
         return ACCEPTED_VALUE_MARK.to_owned();
     }
 
     match node {
         RawNode::Scalar(token) => (*token).to_owned(),
-        RawNode::Container(container) => render_container(container, pointer, accepted),
+        RawNode::Container(container) => render_container(container, pointer, accepted, order),
     }
 }
 
@@ -263,25 +278,37 @@ fn render_container(
     container: &RawContainer<'_>,
     pointer: &str,
     accepted: &AcceptedPointers,
+    order: MemberOrder,
 ) -> String {
-    let kept_children: Vec<String> = container
-        .children
+    let mut kept: Vec<(&RawChild<'_>, String)> = Vec::new();
+
+    for child in &container.children {
+        let child_pointer = format!("{pointer}/{}", escape_pointer(&child.segment));
+
+        if !accepted.members.contains(&child_pointer) {
+            kept.push((child, child_pointer));
+        }
+    }
+
+    // Each slot keeps its layout; only the member that fills it moves.
+    let mut fillers: Vec<&(&RawChild<'_>, String)> = kept.iter().collect();
+
+    if order == MemberOrder::Ignored && container.open == '{' {
+        fillers.sort_by(|left, right| left.0.segment.cmp(&right.0.segment));
+    }
+
+    let kept_children: Vec<String> = kept
         .iter()
-        .filter_map(|child| {
-            let child_pointer = format!("{pointer}/{}", escape_pointer(&child.segment));
-
-            if accepted.members.contains(&child_pointer) {
-                return None;
-            }
-
-            Some(format!(
+        .zip(fillers)
+        .map(|((slot, _), (filler, child_pointer))| {
+            format!(
                 "{}{}{}{}{}",
-                child.before,
-                child.key,
-                child.between,
-                render(&child.value, &child_pointer, accepted),
-                child.after
-            ))
+                slot.before,
+                filler.key,
+                slot.between,
+                render(&filler.value, child_pointer, accepted, order),
+                slot.after
+            )
         })
         .collect();
 
@@ -303,6 +330,10 @@ fn render_container(
 mod tests {
     use super::*;
 
+    fn identical_written(expected: &str, actual: &str, accepted: &AcceptedPointers) -> bool {
+        identical_outside_accepted(expected, actual, accepted, MemberOrder::Written)
+    }
+
     fn accepted(values: &[&str], members: &[&str]) -> AcceptedPointers {
         AcceptedPointers {
             values: values.iter().map(|pointer| (*pointer).to_owned()).collect(),
@@ -318,33 +349,29 @@ mod tests {
         let none = AcceptedPointers::default();
         let one_value = accepted(&["/a"], &[]);
 
-        assert!(identical_outside_accepted(
+        assert!(identical_written(
             "{\n  \"a\": 1,\n  \"b\": [2]\n}\n",
             "{\n  \"a\": 9,\n  \"b\": [2]\n}\n",
             &one_value
         ));
-        assert!(!identical_outside_accepted(
+        assert!(!identical_written(
             "{\n  \"a\": 1,\n  \"b\": [2]\n}\n",
             "{\n\t\"a\": 9,\n\t\"b\": [2]\n}\n",
             &one_value
         ));
-        assert!(!identical_outside_accepted(
-            "{\"a\": 1}",
-            "{\"a\": 9}",
-            &none
-        ));
+        assert!(!identical_written("{\"a\": 1}", "{\"a\": 9}", &none));
     }
 
     #[test]
     fn escapes_and_number_notation_outside_the_accepted_value_differ() {
         let one_value = accepted(&["/a"], &[]);
 
-        assert!(!identical_outside_accepted(
+        assert!(!identical_written(
             "{\"a\": 1, \"b\": \"x/y\"}",
             "{\"a\": 2, \"b\": \"x\\/y\"}",
             &one_value
         ));
-        assert!(!identical_outside_accepted(
+        assert!(!identical_written(
             "{\"a\": 1, \"b\": 1e21}",
             "{\"a\": 2, \"b\": 1E21}",
             &one_value
@@ -356,22 +383,22 @@ mod tests {
         let expected = "{\n  \"a\": 1,\n  \"gone\": [\n    2\n  ],\n  \"b\": 3\n}\n";
         let actual = "{\n  \"a\": 1,\n  \"b\": 3\n}\n";
 
-        assert!(identical_outside_accepted(
+        assert!(identical_written(
             expected,
             actual,
             &accepted(&[], &["/gone"])
         ));
-        assert!(!identical_outside_accepted(
+        assert!(!identical_written(
             expected,
             actual,
             &AcceptedPointers::default()
         ));
-        assert!(identical_outside_accepted(
+        assert!(identical_written(
             "[1,\n 2]",
             "[1]",
             &accepted(&[], &["/1"])
         ));
-        assert!(identical_outside_accepted(
+        assert!(identical_written(
             "{\"a\": 1}",
             "{}",
             &accepted(&[], &["/a"])
@@ -380,10 +407,28 @@ mod tests {
 
     #[test]
     fn a_member_name_written_twice_is_not_identical() {
-        assert!(!identical_outside_accepted(
+        assert!(!identical_written(
             "{\"a\": 1, \"a\": 2}",
             "{\"a\": 1, \"a\": 2}",
             &AcceptedPointers::default()
         ));
+    }
+
+    #[test]
+    fn ignored_member_order_holds_names_values_and_layout_beside_an_accepted_value() {
+        let one_value = accepted(&["/a"], &[]);
+        let expected = "{\n  \"kind\": \"x\",\n  \"a\": 1\n}\n";
+        let reordered = "{\n  \"a\": 9,\n  \"kind\": \"x\"\n}\n";
+        let respaced = "{\n\t\"a\": 9,\n\t\"kind\": \"x\"\n}\n";
+        let changed = "{\n  \"a\": 9,\n  \"kind\": \"y\"\n}\n";
+
+        let ignored = |actual: &str| {
+            identical_outside_accepted(expected, actual, &one_value, MemberOrder::Ignored)
+        };
+
+        assert!(ignored(reordered));
+        assert!(!ignored(respaced));
+        assert!(!ignored(changed));
+        assert!(!identical_written(expected, reordered, &one_value));
     }
 }

@@ -7,21 +7,24 @@ use std::collections::HashSet;
 use indexmap::IndexMap;
 use seampact_diagnostics::InternalError;
 use seampact_ir::{
-    DerivationId, DerivedFrom, Direction, KnownTypeUseRef, ObjectSchema, Property, Schema, TypeUse,
+    ArrayTypeUse, DerivationId, DerivedFrom, Direction, KnownTypeUseRef, ObjectSchema, Property,
+    Schema, TypeUse,
 };
 use seampact_json::JsonValue;
 use seampact_naming::{Role, derive_name};
 use seampact_pass_tree_shared::{TreeNodesOperationName, tree_nodes_op_owner};
-use seampact_pipeline::{PassError, ResolvedConventions, TreeNode, TreeNodeKind, TreeNodes};
+use seampact_pipeline::{
+    ConventionReading, PassError, ResolvedConventions, TreeNode, TreeNodeKind, TreeNodes,
+};
 
 use crate::compile::TreeSchemasCompiler;
-use crate::not_ported::not_ported_yet;
 use crate::property::{TreeSchemasWrittenProperty, tree_schemas_derived_property};
 use crate::raw::{
-    TreeSchemasProblem, TreeSchemasRelated, tree_schemas_is_object, tree_schemas_member,
-    tree_schemas_pointer, tree_schemas_source_property,
+    TreeSchemasProblem, TreeSchemasRelated, tree_schemas_entries, tree_schemas_is_object,
+    tree_schemas_member, tree_schemas_pointer, tree_schemas_source_property,
 };
 use crate::rule::TreeSchemasRule;
+use crate::scalars::MAX_SAFE_INTEGER;
 
 const BATCH_OP: &str = "batch";
 const VERSIONED_OPS: [&str; 2] = ["update", "delete"];
@@ -31,6 +34,8 @@ const BODY_SOURCE_PREFIX: &str = "body.";
 const CONCURRENCY_VERSION_DERIVATION: DerivationId =
     DerivationId::from_static("concurrency.version");
 const INHERIT: &str = "inherit";
+/// The derivation of the ids property of a batch input.
+const BATCH_READ_DERIVATION: DerivationId = DerivationId::from_static("batch.read");
 
 /// A versioned write: where its version is read and the item property it is compared with.
 #[derive(Debug, Clone)]
@@ -87,14 +92,126 @@ fn batch_ids(
     node: &TreeNode<'_>,
     conventions: &ResolvedConventions<'_>,
 ) -> Result<Option<Property>, PassError> {
-    Err(not_ported_yet("batchIds"))
+    let collection = tree_nodes_op_owner(nodes, node)?;
+    let id_type = match collection {
+        Some(owner) => id_type_of(compiler, owner)?,
+        None => None,
+    };
+    let written = match node.settings.get("maxIds") {
+        Some(JsonValue::Number(number)) => Some(number.to_f64()),
+        _ => None,
+    };
+    let convention = conventions.get("batch.maxIds")?;
+    let max_ids = written.or_else(|| match &convention {
+        Some(ConventionReading {
+            value: JsonValue::Number(number),
+            ..
+        }) => Some(number.to_f64()),
+        _ => None,
+    });
+
+    let (Some(id_type), Some(max_ids)) = (&id_type, max_ids) else {
+        let (message, fix) = if id_type.is_none() {
+            (
+                "the batch op reads its records by id, and its collection has no single id parameter",
+                "give the collection one id parameter, or declare the op's 'input'",
+            )
+        } else {
+            (
+                "the batch op sets no 'maxIds', and 'conventions.batch.maxIds' is not set",
+                "set 'maxIds' on the op, or 'conventions.batch.maxIds'",
+            )
+        };
+
+        compiler.reporter.error(TreeSchemasProblem {
+            rule: TreeSchemasRule::BatchIds,
+            pointer: node.pointer.clone(),
+            message: message.to_owned(),
+            fix: fix.to_owned(),
+            related: None,
+        })?;
+
+        return Ok(None);
+    };
+    let origin = if written.is_some() {
+        compiler
+            .reporter
+            .origin(&tree_schemas_pointer(&node.pointer, &["maxIds"]))?
+    } else {
+        let Some(origin) = convention.and_then(|reading| reading.origin) else {
+            return Err(PassError::from(InternalError::new(
+                "conventions.batch.maxIds has no core default, so it is written".to_owned(),
+            )));
+        };
+
+        origin
+    };
+    let max_items = integer_count(max_ids)?;
+    let from = compiler.reporter.origin(&node.pointer)?;
+
+    Ok(Some(tree_schemas_derived_property(
+        TreeSchemasWrittenProperty {
+            name: "ids".to_owned(),
+            type_use: TypeUse::Array(ArrayTypeUse {
+                items: Box::new(id_type.clone()),
+                min_items: None,
+                max_items: Some(max_items),
+                nullable: None,
+                docs: None,
+                examples: None,
+            }),
+            optional: false,
+            origin,
+            derived_from: Some(DerivedFrom {
+                derivation: BATCH_READ_DERIVATION,
+                from: vec![from],
+            }),
+        },
+    )))
+}
+
+/// `maxIds` as an IR count: a whole number in the safe range.
+fn integer_count(number: f64) -> Result<i64, PassError> {
+    let is_whole = number.fract() == 0.0 && number.abs() <= MAX_SAFE_INTEGER;
+
+    if !is_whole {
+        return Err(PassError::from(InternalError::new(format!(
+            "tree.schemas reads the batch maxIds {number}, which is no integer of the IR"
+        ))));
+    }
+
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "a whole number within the safe range"
+    )]
+    Ok(number as i64)
 }
 
 fn id_type_of(
     compiler: &mut TreeSchemasCompiler<'_, '_, '_>,
     collection: &TreeNode<'_>,
 ) -> Result<Option<TypeUse>, PassError> {
-    Err(not_ported_yet("idTypeOf"))
+    let id = collection.settings.get("id");
+    let pointer = tree_schemas_pointer(&collection.pointer, &["id"]);
+
+    if tree_schemas_is_object(id) {
+        let entries = tree_schemas_entries(id);
+
+        return Ok(match entries.as_slice() {
+            [(only, _)] => compiler
+                .uses
+                .get(&tree_schemas_pointer(&pointer, &[only]))
+                .cloned(),
+            _ => None,
+        });
+    }
+
+    let properties = compiler.object_properties(compiler.uses.get(&pointer))?;
+
+    Ok(match properties {
+        Some([only]) => Some(only.r#type.clone()),
+        _ => None,
+    })
 }
 
 /// `update` and `delete` take their resource's `concurrency`; a member route only with
@@ -391,7 +508,9 @@ fn use_outside_inputs(
 }
 
 /// An IR value as the JSON the walk of `refers_to_schema` reads.
-fn encoded(value: serde_json::Result<serde_json::Value>) -> Result<JsonValue, PassError> {
+pub(crate) fn encoded(
+    value: serde_json::Result<serde_json::Value>,
+) -> Result<JsonValue, PassError> {
     let value = value.map_err(|failure| {
         PassError::from(InternalError::new(format!(
             "tree.schemas cannot encode an IR value: {failure}"

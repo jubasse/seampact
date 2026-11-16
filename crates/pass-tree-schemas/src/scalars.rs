@@ -6,15 +6,15 @@ use std::cmp::Ordering;
 use indexmap::IndexMap;
 use seampact_diagnostics::InternalError;
 use seampact_ir::{
-    DecimalLiteral, Docs, Name as IrName, NameRole, Refinements, Scalar, ScalarId, ScalarType,
-    ScalarTypeUse,
+    DecimalLiteral, Docs, Name as IrName, NameRole, Pattern, Refinements, Scalar, ScalarId,
+    ScalarType, ScalarTypeUse,
 };
 use seampact_js::FiniteNumber;
 use seampact_json::{JsonNumber, JsonObject, JsonValue};
 use seampact_naming::split_name;
 use seampact_pipeline::PassError;
 
-use crate::not_ported::not_ported_yet;
+use crate::pattern::{TreeSchemasPatternResult, tree_schemas_normalize_pattern};
 use crate::raw::{
     TreeSchemasProblem, TreeSchemasReporter, tree_schemas_entries, tree_schemas_member,
     tree_schemas_pointer,
@@ -160,6 +160,39 @@ fn refinement_bound<'refinements>(
         "exclusiveMaximum" => refinements.exclusive_maximum.as_ref(),
         "multipleOf" => refinements.multiple_of.as_ref(),
         _ => None,
+    }
+}
+
+/// The refinements set, in the order the half writes them.
+fn refinement_keys(refinements: &Refinements) -> Vec<&'static str> {
+    let slots = [
+        ("minLength", refinements.min_length.is_some()),
+        ("maxLength", refinements.max_length.is_some()),
+        ("pattern", refinements.pattern.is_some()),
+        ("minimum", refinements.minimum.is_some()),
+        ("maximum", refinements.maximum.is_some()),
+        ("exclusiveMinimum", refinements.exclusive_minimum.is_some()),
+        ("exclusiveMaximum", refinements.exclusive_maximum.is_some()),
+        ("multipleOf", refinements.multiple_of.is_some()),
+    ];
+
+    slots
+        .into_iter()
+        .filter_map(|(key, is_set)| is_set.then_some(key))
+        .collect()
+}
+
+/// `{ ...declared, ...own }`: a refinement of `own` wins.
+fn merged_refinements(declared: Refinements, own: Refinements) -> Refinements {
+    Refinements {
+        min_length: own.min_length.or(declared.min_length),
+        max_length: own.max_length.or(declared.max_length),
+        pattern: own.pattern.or(declared.pattern),
+        minimum: own.minimum.or(declared.minimum),
+        maximum: own.maximum.or(declared.maximum),
+        exclusive_minimum: own.exclusive_minimum.or(declared.exclusive_minimum),
+        exclusive_maximum: own.exclusive_maximum.or(declared.exclusive_maximum),
+        multiple_of: own.multiple_of.or(declared.multiple_of),
     }
 }
 
@@ -561,7 +594,76 @@ impl<'raw> TreeSchemasScalars<'raw> {
         pointer: &str,
         reporter: &mut TreeSchemasReporter<'_, '_>,
     ) -> Result<Option<ScalarTypeUse>, PassError> {
-        Err(not_ported_yet("TreeSchemasScalars.namedFormatUse"))
+        let at = tree_schemas_pointer(pointer, &["format"]);
+
+        if let Some(portable) = portable_type_of(format) {
+            reporter.error(TreeSchemasProblem {
+                rule: TreeSchemasRule::FormatType,
+                pointer: at,
+                message: format!("the portable format '{format}' is written with its type"),
+                fix: format!("write 'type: {portable}, format: {format}'"),
+                related: None,
+            })?;
+
+            return Ok(None);
+        }
+
+        if format == PASSWORD {
+            self.password_format(&at, reporter)?;
+
+            return Ok(None);
+        }
+
+        let Some(declared) = self.declaration(format, reporter)? else {
+            self.unknown_format(format, &at, reporter)?;
+
+            return Ok(None);
+        };
+        let declared_type = declared.r#type.r#type;
+        let target = RefinementTarget {
+            scalar_type: declared_type.clone(),
+            decimal: false,
+        };
+        let Some(own) = self.refinements(value, pointer, &target, reporter)? else {
+            return Ok(None);
+        };
+        let declared_keys = refinement_keys(&declared.r#type.refinements);
+        let conflicts: Vec<&str> = refinement_keys(&own)
+            .into_iter()
+            .filter(|key| declared_keys.contains(key))
+            .collect();
+
+        for key in &conflicts {
+            reporter.error(TreeSchemasProblem {
+                rule: TreeSchemasRule::FormatRefinement,
+                pointer: tree_schemas_pointer(pointer, &[key]),
+                message: format!("the named format '{format}' already sets '{key}'"),
+                fix: format!("remove '{key}' here, or declare another named format"),
+                related: None,
+            })?;
+        }
+
+        if !conflicts.is_empty() {
+            return Ok(None);
+        }
+
+        let refinements = merged_refinements(declared.r#type.refinements, own);
+
+        if !self.check_ranges(&refinements, &declared_type, pointer, reporter)? {
+            return Ok(None);
+        }
+
+        Ok(Some(ScalarTypeUse {
+            r#type: declared_type,
+            format: None,
+            scalar: Some(ScalarId::new(format.to_owned())),
+            refinements,
+            content: None,
+            sensitive: None,
+            nullable: None,
+            docs: None,
+            examples: None,
+        }))
     }
 
     fn check_ranges(
@@ -591,7 +693,13 @@ impl<'raw> TreeSchemasScalars<'raw> {
         pointer: &str,
         reporter: &mut TreeSchemasReporter<'_, '_>,
     ) -> Result<(), PassError> {
-        Err(not_ported_yet("TreeSchemasScalars.passwordFormat"))
+        reporter.error(TreeSchemasProblem {
+            rule: TreeSchemasRule::FormatType,
+            pointer: pointer.to_owned(),
+            message: "'password' is not authorable: it is what 'sensitive' emits".to_owned(),
+            fix: "write 'type: string' and mark the field 'sensitive: true'".to_owned(),
+            related: None,
+        })
     }
 
     fn unknown_format(
@@ -683,7 +791,27 @@ impl<'raw> TreeSchemasScalars<'raw> {
         out: &mut Refinements,
         reporter: &mut TreeSchemasReporter<'_, '_>,
     ) -> Result<bool, PassError> {
-        Err(not_ported_yet("TreeSchemasScalars.pattern"))
+        match tree_schemas_normalize_pattern(source)? {
+            TreeSchemasPatternResult::Normalized { normalized } => {
+                out.pattern = Some(Pattern {
+                    source: source.to_owned(),
+                    normalized,
+                });
+
+                Ok(true)
+            }
+            TreeSchemasPatternResult::Refused { message, fix } => {
+                reporter.error(TreeSchemasProblem {
+                    rule: TreeSchemasRule::Pattern,
+                    pointer: tree_schemas_pointer(pointer, &["pattern"]),
+                    message,
+                    fix,
+                    related: None,
+                })?;
+
+                Ok(false)
+            }
+        }
     }
 
     fn bound(

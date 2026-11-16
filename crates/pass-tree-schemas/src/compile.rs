@@ -9,11 +9,11 @@ use std::collections::{HashMap, HashSet};
 use seampact_diagnostics::InternalError;
 use seampact_ir::Name as IrName;
 use seampact_ir::{
-    ArrayTypeUse, BodyUnionTag, Direction, Docs, ExtensionPlace, Extensions, FieldRestriction,
-    FileTypeUse, HeaderUnionTag, InputPolicy, JsonContent, JsonMediaType, Layer, MapSchema,
-    NameRole, ObjectSchema, OpaqueTypeUse, Origin, Property, Reason, RefTypeUse, RightId,
-    ScalarType, Schema, SchemaId, TypeUse, UnionSchema, UnionTag, UnionVariant, UnknownKeys,
-    UnknownKeysPolicy,
+    ArrayTypeUse, BodyUnionTag, Direction, Docs, EnumId, EnumNarrowing, EnumTypeUse,
+    ExtensionPlace, Extensions, FieldRestriction, FileTypeUse, HeaderUnionTag, InputPolicy,
+    JsonContent, JsonMediaType, Layer, MapSchema, NameRole, ObjectSchema, OpaqueTypeUse, Origin,
+    Property, Reason, RefTypeUse, RightId, ScalarType, Schema, SchemaId, TypeUse, UnionSchema,
+    UnionTag, UnionVariant, UnknownKeys, UnknownKeysPolicy,
 };
 use seampact_ir::{KnownSchemaRef, KnownTypeUseRef, KnownUnionTagRef};
 use seampact_js::{FiniteNumber, cmp_utf16};
@@ -24,7 +24,8 @@ use seampact_naming::{
 use seampact_pipeline::{PassError, parse_size};
 
 use crate::core::TreeSchemasReservation;
-use crate::derived::TreeSchemasDerivedHost;
+use crate::derived::{TreeSchemasDerivedHost, tree_schemas_derived_properties};
+use crate::enums::{EnumValues, tree_schemas_enum_values, tree_schemas_report_enum_without_values};
 use crate::extensions::{
     TreeSchemasExtensionHolder, tree_schemas_extension_slot, tree_schemas_has_extensions,
 };
@@ -425,6 +426,30 @@ pub(crate) fn tree_schemas_shape_of(value: &JsonObject) -> Option<Shape> {
 
 /// The words a child name starts with: the parent's segments, then its role's default suffix words,
 /// so the child of a derived schema never meets the child of its declared namesake.
+fn enum_type_use(name: &str, narrowed_to: Option<EnumNarrowing>) -> TypeUse {
+    TypeUse::Enum(EnumTypeUse {
+        r#enum: EnumId::new(name.to_owned()),
+        narrowed_to,
+        nullable: None,
+        docs: None,
+        examples: None,
+    })
+}
+
+fn written_string_list(value: Option<&JsonValue>) -> Vec<String> {
+    let Some(JsonValue::Array(items)) = value else {
+        return Vec::new();
+    };
+
+    items
+        .iter()
+        .filter_map(|item| match item {
+            JsonValue::String(text) => Some(text.clone()),
+            _ => None,
+        })
+        .collect()
+}
+
 fn words_of(name: Option<&Name>) -> Result<Option<Vec<String>>, PassError> {
     let Some(name) = name else {
         return Ok(None);
@@ -997,7 +1022,18 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
         name: &Name,
         directions: &[Direction],
     ) -> Result<(), PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.derivedObject"))
+        let position = TreeSchemasPosition {
+            pointer: pointer.to_owned(),
+            name: Some(name.clone()),
+            place: TreeSchemasPlace::Position,
+            id: None,
+        };
+
+        if let Some(compiled) = self.object_schema(properties, None, &position)? {
+            self.record_use(pointer, compiled.schema_use, directions);
+        }
+
+        Ok(())
     }
 
     pub(crate) fn object_properties(
@@ -2013,8 +2049,8 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
     }
 
     /// The host the derived-object merge reads through: the compiler itself.
-    fn derived_host(&mut self) -> Result<&mut dyn TreeSchemasDerivedHost, PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.derivedHost"))
+    fn derived_host(&mut self) -> &mut dyn TreeSchemasDerivedHost {
+        self
     }
 
     fn derived(
@@ -2022,7 +2058,13 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
         value: &JsonObject,
         position: &TreeSchemasPosition,
     ) -> Result<Option<TreeSchemasCompiled>, PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.derived"))
+        let Some(properties) =
+            tree_schemas_derived_properties(value, &position.pointer, self.derived_host())?
+        else {
+            return Ok(None);
+        };
+
+        self.object_schema(properties, Some(value), position)
     }
 
     fn object(
@@ -2594,7 +2636,79 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
         pointer: &str,
         plain: &dyn Fn(TypeUse) -> TreeSchemasCompiled,
     ) -> Result<Option<TreeSchemasCompiled>, PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.enumUse"))
+        let name = match written {
+            Some(JsonValue::String(name)) => name.as_str(),
+            _ => guaranteed_string(tree_schemas_member(written, "narrow"), "narrow", pointer)?,
+        };
+        let found = tree_schemas_enum_values(self.enums, name, &[]);
+        let values = match &found {
+            Some(EnumValues::Values(values)) => values,
+            Some(EnumValues::Cycle(_)) | None => {
+                let at = if matches!(written, Some(JsonValue::String(_))) {
+                    pointer.to_owned()
+                } else {
+                    tree_schemas_pointer(pointer, &["narrow"])
+                };
+
+                tree_schemas_report_enum_without_values(
+                    &mut self.reporter,
+                    name,
+                    found.as_ref(),
+                    &at,
+                )?;
+
+                return Ok(None);
+            }
+        };
+
+        if matches!(written, Some(JsonValue::String(_))) {
+            return Ok(Some(plain(enum_type_use(name, None))));
+        }
+
+        let subset = written_string_list(tree_schemas_member(written, "to"));
+        let mut distinct: Vec<&String> = Vec::new();
+
+        for value in &subset {
+            if !distinct.contains(&value) {
+                distinct.push(value);
+            }
+        }
+
+        let strict = distinct.len() == subset.len()
+            && subset.iter().all(|value| values.contains(value))
+            && subset.len() < values.len();
+
+        if !strict {
+            self.reporter.error(TreeSchemasProblem {
+                rule: TreeSchemasRule::EnumNarrowing,
+                pointer: tree_schemas_pointer(pointer, &["to"]),
+                message: format!(
+                    "a narrowing of '{name}' lists some of its values, each once, and not all of them"
+                ),
+                fix: format!("keep a strict subset of [{}]", values.join(", ")),
+                related: None,
+            })?;
+
+            return Ok(None);
+        }
+
+        let reason = match tree_schemas_member(written, "reason") {
+            Some(JsonValue::String(text)) => Some(Reason::new(text.clone())),
+            _ => None,
+        };
+        let narrowed: Vec<String> = values
+            .iter()
+            .filter(|value| subset.contains(value))
+            .cloned()
+            .collect();
+
+        Ok(Some(plain(enum_type_use(
+            name,
+            Some(EnumNarrowing {
+                values: narrowed,
+                reason,
+            }),
+        ))))
     }
 
     fn union(
@@ -2764,7 +2878,14 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
         value: &JsonObject,
         position: &TreeSchemasPosition,
     ) -> Result<Option<TreeSchemasCompiled>, PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.allOf"))
+        let words = words_of(position.name.as_ref())?;
+
+        let Some(merged) = self.merged_properties(value, &position.pointer, words.as_deref())?
+        else {
+            return Ok(None);
+        };
+
+        self.object_schema(merged, Some(value), position)
     }
 
     fn merged_properties(
@@ -2791,11 +2912,61 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
         pointer: &str,
         holder: PropertyHolder,
     ) -> Result<Option<Vec<Property>>, PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.declaredProperties"))
+        let Some(target) = self.declared_target(name, &mut HashSet::new())? else {
+            self.reporter.error(TreeSchemasProblem {
+                rule: TreeSchemasRule::SchemaUnknown,
+                pointer: pointer.to_owned(),
+                message: format!("no schema '{name}' is declared"),
+                fix: "declare it under 'schemas', or fix the name".to_owned(),
+                related: None,
+            })?;
+
+            return Ok(None);
+        };
+
+        if target.kind != Some(NamedKind::Object) {
+            return match holder {
+                PropertyHolder::AllOf => {
+                    self.not_an_object_member(pointer)?;
+
+                    Ok(None)
+                }
+                PropertyHolder::Derived => {
+                    self.not_a_derived_source(name, pointer)?;
+
+                    Ok(None)
+                }
+            };
+        }
+
+        let is_core = match self.schemas.get(&target.id) {
+            Some(schema) => matches!(schema_origin(schema)?.layer, Layer::Core),
+            None => false,
+        };
+
+        if !is_core && self.compile_declared(&target.id)?.is_none() {
+            return Ok(None);
+        }
+
+        let Some(schema) = self.schemas.get(&target.id) else {
+            return Ok(None);
+        };
+
+        Ok(match KnownSchemaRef::try_from(schema)? {
+            KnownSchemaRef::Object(object) => Some(object.properties.clone()),
+            KnownSchemaRef::Map(_) | KnownSchemaRef::Union(_) => None,
+        })
     }
 
     fn not_a_derived_source(&mut self, name: &str, pointer: &str) -> Result<(), PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.notADerivedSource"))
+        self.reporter.error(TreeSchemasProblem {
+            rule: TreeSchemasRule::DerivedSource,
+            pointer: pointer.to_owned(),
+            message: format!("the source '{name}' of a derived object is not an object schema"),
+            fix: "derive from an object schema: a plain one, an 'allOf' or another derived object"
+                .to_owned(),
+            related: None,
+        })
     }
 
     fn not_an_object_member(&mut self, pointer: &str) -> Result<(), PassError> {
@@ -2896,7 +3067,13 @@ impl TreeSchemasDerivedHost for TreeSchemasCompiler<'_, '_, '_> {
         written: Option<&JsonValue>,
         pointer: &str,
     ) -> Result<FieldRestriction, PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.derivedHost"))
+        let Some(restriction) = self.restriction(written, pointer)? else {
+            return Err(PassError::from(InternalError::new(format!(
+                "tree.schemas found no restrictedTo at {pointer}"
+            ))));
+        };
+
+        Ok(restriction)
     }
 
     fn examples(
