@@ -1035,7 +1035,63 @@ fn relays_origin(
 
 #[cfg(test)]
 mod tests {
-    use super::path_under_prefix;
+    use seampact_ir::{
+        Layer, Origin, OverLimitPolicy, Paging, PagingId, PagingToken, RightId, SortKey,
+    };
+
+    use super::{copied_paging, path_under_prefix};
+
+    fn origin_in(pointer: &str) -> Origin {
+        Origin {
+            api: None,
+            layer: Layer::Api,
+            pointer: pointer.to_owned(),
+        }
+    }
+
+    #[test]
+    fn a_copied_paging_keeps_the_keys_and_origins_of_its_sort_keys_and_drops_their_rights() {
+        let paging = Paging {
+            style: Some(PagingId::new("cursor".to_owned())),
+            max_limit: Some(100),
+            default_limit: None,
+            over_limit: OverLimitPolicy::Clamp,
+            token: Some(PagingToken::Opaque),
+            sort_keys: vec![
+                SortKey {
+                    key: "createdAt".to_owned(),
+                    right: Some(RightId::new("read".to_owned())),
+                    params: None,
+                    subject: None,
+                    derived_from: None,
+                    origin: Some(origin_in("/paging/sort/0")),
+                },
+                SortKey {
+                    key: "id".to_owned(),
+                    right: None,
+                    params: None,
+                    subject: None,
+                    derived_from: None,
+                    origin: None,
+                },
+            ],
+            origin: origin_in("/paging"),
+        };
+        let copied = copied_paging(&paging, "tasks");
+
+        assert_eq!(copied.origin.api.as_deref(), Some("tasks"));
+        assert_eq!(copied.sort_keys.len(), 2);
+        assert_eq!(copied.sort_keys[0].right, None);
+        assert_eq!(
+            copied.sort_keys[0]
+                .origin
+                .as_ref()
+                .and_then(|origin| origin.api.as_deref()),
+            Some("tasks")
+        );
+        assert_eq!(copied.sort_keys[1].origin, None);
+        assert_eq!(copied.max_limit, Some(100));
+    }
 
     #[test]
     fn a_path_is_under_a_prefix_at_a_segment_boundary_only() {

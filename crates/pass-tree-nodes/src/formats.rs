@@ -1271,3 +1271,37 @@ fn origin_of_operation(operation: &DraftOperation) -> Result<Origin, PassError> 
         .into()
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use seampact_ir::{MetaFill, ScalarType, TypeUse};
+
+    use super::{core_meta_type, meta_fill};
+
+    #[test]
+    fn a_core_fill_has_its_type_and_any_other_fill_has_none() {
+        for (fill, format) in [("now", Some("date-time")), ("traceId", None)] {
+            let Some(TypeUse::Scalar(scalar)) = core_meta_type(fill) else {
+                panic!("fill {fill:?} has no scalar type");
+            };
+
+            assert_eq!(scalar.r#type, ScalarType::String, "fill {fill:?}");
+            assert_eq!(scalar.format.as_deref(), format, "fill {fill:?}");
+        }
+
+        assert!(
+            matches!(core_meta_type("degraded"), Some(TypeUse::Scalar(scalar)) if scalar.r#type == ScalarType::Boolean)
+        );
+
+        for fill in ["handler", "principal.sub", "Now", ""] {
+            assert!(core_meta_type(fill).is_none(), "fill {fill:?}");
+        }
+    }
+
+    #[test]
+    fn a_meta_fill_is_one_of_the_three_core_names() {
+        assert_eq!(meta_fill("traceId").ok(), Some(MetaFill::TraceId));
+        assert!(meta_fill("handler").is_err());
+        assert!(meta_fill("").is_err());
+    }
+}
