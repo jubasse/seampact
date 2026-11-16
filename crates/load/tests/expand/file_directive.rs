@@ -106,7 +106,9 @@ fn a_json_file_that_does_not_parse_is_file_invalid() {
     assert!(
         truncated.diagnostics[0]
             .message
-            .ends_with("is not valid JSON: Unexpected end of JSON input"),
+            .ends_with(
+                "is not valid JSON: Expected ',' or ']' after array element in JSON at position 11 (line 1 column 12)"
+            ),
         "{}",
         truncated.diagnostics[0].message
     );

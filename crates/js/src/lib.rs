@@ -6,11 +6,13 @@
 //! order of `Object.keys` and `JSON.stringify`, and [`FiniteNumber`] writes a number as
 //! `String(n)` and `JSON.stringify(n)` do, [`js_number_of_text`] reads a string as `Number(text)`
 //! does, [`is_ecmascript_white_space`] is the `\s` class, [`utf16_prefix`] is
-//! `text.slice(0, units)`, and [`regexp_source`] is `RegExp.prototype.source`.
+//! `text.slice(0, units)`, [`regexp_source`] is `RegExp.prototype.source`, and
+//! [`json_parse_error_message`] is what `JSON.parse` throws for a text it refuses.
 //!
 //! Review rule: map indexing (`map[&key]`) panics on a missing key and has no clippy
 //! lint; use `.get(&key)` and handle the absence.
 
+mod json_parse_message;
 mod key_order;
 mod list_index;
 mod number_text;
@@ -20,6 +22,7 @@ mod utf16_order;
 mod utf16_prefix;
 mod white_space;
 
+pub use json_parse_message::json_parse_error_message;
 pub use key_order::{
     InsertionOrderedMap, MAX_ARRAY_INDEX, array_index_value, js_key_order, reorder_in_js_key_order,
 };

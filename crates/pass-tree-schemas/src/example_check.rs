@@ -13,9 +13,9 @@ use seampact_ir::{
     KnownUnionTagRef, MapSchema, ObjectSchema, RefTypeUse, Refinements, ScalarType, ScalarTypeUse,
     Schema, TypeUse, UnionSchema, is_ir_calendar_date,
 };
+use seampact_js::json_parse_error_message;
 use seampact_json::{JsonNumber, JsonValue};
 use seampact_pipeline::{PassError, TreeSchemaExampleIssue};
-use serde_json::error::Category;
 
 use crate::compile::{TreeSchemasExampleCheck, TreeSchemasWrittenValue};
 use crate::decimal::{
@@ -30,8 +30,6 @@ use crate::scalars::MAX_SAFE_INTEGER;
 const UUID_GROUP_LENGTHS: [usize; 5] = [8, 4, 4, 4, 12];
 const HOURS: u32 = 24;
 const MINUTES: u32 = 60;
-/// What V8 says of a JSON text that ends early.
-const UNEXPECTED_END: &str = "Unexpected end of JSON input";
 /// The length of `YYYY-MM-DD`.
 const DATE_LENGTH: usize = 10;
 /// The length of `HH:MM:SS`.
@@ -154,16 +152,11 @@ fn pattern_matches(source: &str, text: &str) -> Result<bool, PassError> {
     Ok(expression.find(text).is_some())
 }
 
-/// `JSON.parse`: the value, or the reason it refuses. An early end reads as V8 words it; any other
-/// refusal carries the parser's own text.
+/// `JSON.parse`: the value, or the reason it refuses, in V8's words. A text V8 parses and the
+/// parser here refuses (a lone surrogate escape) carries the parser's own text.
 fn parse_json_text(text: &str) -> Result<JsonValue, String> {
-    let parsed: serde_json::Value = serde_json::from_str(text).map_err(|error| {
-        if error.classify() == Category::Eof {
-            UNEXPECTED_END.to_owned()
-        } else {
-            error.to_string()
-        }
-    })?;
+    let parsed: serde_json::Value = serde_json::from_str(text)
+        .map_err(|error| json_parse_error_message(text).unwrap_or_else(|| error.to_string()))?;
 
     JsonValue::try_from(parsed).map_err(|error| error.to_string())
 }
@@ -1069,10 +1062,22 @@ mod tests {
     }
 
     #[test]
-    fn a_json_text_that_ends_early_reads_as_v8_words_it() {
-        assert_eq!(parse_json_text("[1,2"), Err(UNEXPECTED_END.to_owned()));
-        assert_eq!(parse_json_text(""), Err(UNEXPECTED_END.to_owned()));
-        assert!(parse_json_text("nope").is_err());
+    fn a_json_text_that_is_refused_reads_as_v8_words_it() {
+        assert_eq!(
+            parse_json_text("[1,2"),
+            Err(
+                "Expected ',' or ']' after array element in JSON at position 4 (line 1 column 5)"
+                    .to_owned()
+            )
+        );
+        assert_eq!(
+            parse_json_text(""),
+            Err("Unexpected end of JSON input".to_owned())
+        );
+        assert_eq!(
+            parse_json_text("nope"),
+            Err("Unexpected token 'o', \"nope\" is not valid JSON".to_owned())
+        );
         assert!(parse_json_text(r#"{"a":1}"#).is_ok());
     }
 
