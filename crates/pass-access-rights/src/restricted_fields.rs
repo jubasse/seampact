@@ -325,11 +325,7 @@ pub(crate) fn walk_reference<'draft>(
 
     walk.checks.recursive.insert(id.to_owned());
 
-    let origin = match KnownSchemaRef::try_from(schema_of(walk.schemas, id)?)? {
-        KnownSchemaRef::Object(object) => &object.origin,
-        KnownSchemaRef::Map(map) => &map.origin,
-        KnownSchemaRef::Union(union) => &union.origin,
-    };
+    let origin = schema_of(walk.schemas, id)?.origin()?;
 
     walk.reporter.error(AccessRightsProblem {
         rule: AccessRightsRule::FieldRightRecursive,

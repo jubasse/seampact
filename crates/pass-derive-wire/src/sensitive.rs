@@ -151,11 +151,7 @@ fn schema_origin(
         )));
     };
 
-    Ok(match KnownSchemaRef::try_from(schema)? {
-        KnownSchemaRef::Object(object) => object.origin.clone(),
-        KnownSchemaRef::Map(map) => map.origin.clone(),
-        KnownSchemaRef::Union(union) => union.origin.clone(),
-    })
+    Ok(schema.origin()?.clone())
 }
 
 fn property_origin(

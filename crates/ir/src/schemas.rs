@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 use crate::unions::scalar_type_use_member;
 use crate::{
     DecimalLiteral, DerivedFrom, Direction, Docs, EnumId, Extensions, InputPolicy, JsonMediaType,
-    Name, Origin, Reason, RightId, ScalarId, ScalarType, SchemaId, TypeUse, UnionTag,
-    UnknownKeysPolicy, integers,
+    KnownSchemaRef, Name, NarrowUnionError, Origin, Reason, RightId, ScalarId, ScalarType, Schema,
+    SchemaId, TypeUse, UnionTag, UnknownKeysPolicy, integers,
 };
 
 /// The `ObjectSchema` definition.
@@ -540,4 +540,21 @@ pub struct Scalar {
 
     /// The `origin` member.
     pub origin: Origin,
+}
+
+impl Schema {
+    /// Where the schema was declared, whatever its kind.
+    ///
+    /// # Errors
+    ///
+    /// A [`NarrowUnionError`] when the schema is of a kind this compiler does not know.
+    pub fn origin(&self) -> Result<&Origin, NarrowUnionError> {
+        let origin = match KnownSchemaRef::try_from(self)? {
+            KnownSchemaRef::Object(object) => &object.origin,
+            KnownSchemaRef::Map(map) => &map.origin,
+            KnownSchemaRef::Union(union) => &union.origin,
+        };
+
+        Ok(origin)
+    }
 }
