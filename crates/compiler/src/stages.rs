@@ -1,7 +1,6 @@
 //! The stages the orchestrator runs besides the halves, and the answer of one that is not ported.
 //!
-//! Validate, the relay order, link and finalize are ported. Link calls its crate, which answers not
-//! ported yet for a relay to an imported operation.
+//! Validate, the relay order, link and finalize are ported.
 
 use indexmap::IndexMap;
 use seampact_authoring::{RawApi, RawWorkspace};
@@ -9,7 +8,7 @@ use seampact_diagnostics::{Diagnostic, InternalError};
 use seampact_finalize::{FinalizeContext, Finalized, PackFileParts, PackFiles, finalize};
 use seampact_ir::ImportedIr;
 use seampact_load::{is_inside, pack_file_parts, pack_vendored_file};
-use seampact_pipeline::{DraftIr, Half, PassError};
+use seampact_pipeline::{DraftIr, Half};
 use seampact_span::SourceFiles;
 
 use crate::relay;
@@ -108,11 +107,9 @@ pub fn link_workspace(
     workspace: &RawWorkspace,
     imports: &IndexMap<String, ImportedIr>,
 ) -> Result<StageAnswer<Vec<(String, Diagnostic)>>, InternalError> {
-    match seampact_pass_link::run(drafts, workspace, imports) {
-        Ok(reported) => Ok(StageAnswer::Ported(reported)),
-        Err(PassError::NotPortedYet { .. }) => Ok(StageAnswer::NotPorted),
-        Err(PassError::Internal(internal)) => Err(internal),
-    }
+    let reported = seampact_pass_link::run(drafts, workspace, imports)?;
+
+    Ok(StageAnswer::Ported(reported))
 }
 
 /// Finalizes one api's complete draft, which it takes by value: its parts move into the IR.

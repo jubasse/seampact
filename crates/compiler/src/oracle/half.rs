@@ -16,7 +16,7 @@ use seampact_pipeline::{
 
 use super::{CompileFailure, RecordedSchemaService};
 use crate::orchestrator::sorted;
-use crate::{HalfReaders, HalfRun, TreeSchemasRun, run_half, run_tree_schemas};
+use crate::{HalfReaders, run_half, run_tree_schemas};
 
 /// The number of halves an api's expected deltas must hold for another api to be relayed from.
 const HALF_COUNT: usize = Half::RUN_ORDER.len();
@@ -27,7 +27,7 @@ type LaterHalfDispatch = fn(
     &mut DraftIr,
     &mut HalfContext<'_>,
     &dyn TreeSchemaService,
-) -> Result<HalfRun, InternalError>;
+) -> Result<(), InternalError>;
 
 /// The loaded workspace of the one fixture whose halves run now.
 ///
@@ -73,8 +73,8 @@ impl LoadedFixtureCache {
 /// Runs `half` of `api` from the expected deltas before it and answers the delta it wrote and
 /// the diagnostics it reported. A half after `tree.schemas` reads schemas from `calls`.
 ///
-/// Every [`InternalError`] answers as a failure; only a half or a stage that is not ported
-/// answers [`SubjectAnswer::NotPorted`], and the diagnostics such a half reported are dropped.
+/// Every [`InternalError`] answers as a failure; only a fixture whose load reported an error
+/// answers [`SubjectAnswer::NotPorted`].
 pub(super) fn run_fixture_half(
     cache: &LoadedFixtureCache,
     fixture: &Fixture,
@@ -133,18 +133,14 @@ impl HalfToRun<'_> {
 
         let mut output_draft = input_draft;
         let mut sink = DiagnosticSink::new();
-        let ran = {
+        {
             let mut context = readers.context(&loaded.workspace, &relayed, &no_imports, &mut sink);
 
-            self.dispatch(&mut output_draft, &mut context)?
-        };
+            self.dispatch(&mut output_draft, &mut context)?;
+        }
 
         if let Some(failure) = relayed.first_failure() {
             return Err(failure.into());
-        }
-
-        if ran == HalfRun::NotPorted {
-            return Ok(SubjectAnswer::NotPorted);
         }
 
         let delta = draft_delta(&input_json, &output_draft.to_json_value()?)?;
@@ -161,12 +157,11 @@ impl HalfToRun<'_> {
         &self,
         draft: &mut DraftIr,
         context: &mut HalfContext<'_>,
-    ) -> Result<HalfRun, InternalError> {
+    ) -> Result<(), InternalError> {
         let Some(later) = LaterHalf::of(self.half) else {
-            return match run_tree_schemas(draft, context)? {
-                TreeSchemasRun::Merged(_) => Ok(HalfRun::Merged),
-                TreeSchemasRun::NotPorted => Ok(HalfRun::NotPorted),
-            };
+            run_tree_schemas(draft, context)?;
+
+            return Ok(());
         };
 
         let service = RecordedSchemaService::new(self.calls)?;
@@ -338,23 +333,8 @@ mod tests {
         draft: &mut DraftIr,
         context: &mut HalfContext<'_>,
         schemas: &dyn TreeSchemaService,
-    ) -> Result<HalfRun, InternalError> {
+    ) -> Result<(), InternalError> {
         let answer = asking_half(draft, context, schemas);
-
-        merge_answer(answer, draft, DeriveErrorsOutput::merge_into)
-    }
-
-    fn reporting_then_not_ported_dispatch(
-        _half: LaterHalf,
-        draft: &mut DraftIr,
-        context: &mut HalfContext<'_>,
-        _schemas: &dyn TreeSchemaService,
-    ) -> Result<HalfRun, InternalError> {
-        context.report(fake_diagnostic("partial".to_owned()));
-
-        let answer: Result<DeriveErrorsOutput, PassError> = Err(PassError::NotPortedYet {
-            function: "fakeHalf",
-        });
 
         merge_answer(answer, draft, DeriveErrorsOutput::merge_into)
     }
@@ -364,7 +344,7 @@ mod tests {
         draft: &mut DraftIr,
         _context: &mut HalfContext<'_>,
         _schemas: &dyn TreeSchemaService,
-    ) -> Result<HalfRun, InternalError> {
+    ) -> Result<(), InternalError> {
         let answer: Result<DeriveErrorsOutput, PassError> =
             Err(InternalError::new("the fake half broke").into());
 
@@ -413,14 +393,6 @@ mod tests {
         assert!(
             failure.contains(r#"["typeUse",["/schemas/Task","input"]]"#),
             "{failure}"
-        );
-    }
-
-    #[test]
-    fn a_half_not_ported_yet_drops_what_it_reported_before() {
-        assert_eq!(
-            run_fake(reporting_then_not_ported_dispatch, &[]),
-            Ok(SubjectAnswer::NotPorted)
         );
     }
 

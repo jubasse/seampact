@@ -1,23 +1,26 @@
-//! How a half fails: a function not ported yet, or a bug.
+//! How a half fails: a bug of the compiler.
 
 use seampact_diagnostics::InternalError;
 use seampact_ir::{IrError, NarrowUnionError};
 
 /// Why a half or a schema service call gave no answer.
 ///
-/// `NotPortedYet` lives only while the pass halves are ported: the dispatch reads it as a half
-/// not ported, and the oracle counts the pair as skipped, never as a match.
+/// A function not ported yet used to be a second variant while the halves were ported; the
+/// dispatch read it as a half not ported and the oracle counted the pair as skipped.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum PassError {
-    /// The run reached a function whose Rust body is not written yet.
-    #[error("not ported yet: {function}")]
-    NotPortedYet {
-        /// The TypeScript name of the function.
-        function: &'static str,
-    },
     /// A bug, as everywhere else.
     #[error(transparent)]
     Internal(#[from] InternalError),
+}
+
+/// A pass error is a bug of the compiler: the caller keeps the [`InternalError`] it wraps.
+impl From<PassError> for InternalError {
+    fn from(error: PassError) -> Self {
+        match error {
+            PassError::Internal(internal) => internal,
+        }
+    }
 }
 
 /// A failed narrowing is a bug, as [`InternalError`]'s conversion says.
@@ -48,13 +51,7 @@ mod tests {
         let pass_error = PassError::from(internal.clone());
 
         assert_eq!(pass_error.to_string(), internal.to_string());
-        assert_eq!(
-            PassError::NotPortedYet {
-                function: "treeNodesRun"
-            }
-            .to_string(),
-            "not ported yet: treeNodesRun"
-        );
+        assert_eq!(InternalError::from(pass_error), internal);
     }
 
     #[test]

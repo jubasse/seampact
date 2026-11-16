@@ -21,8 +21,7 @@ pub struct TreeSchemaExampleIssue {
 /// no schema is written at the pointer (or the pointer is no schema position). The service holds
 /// no reference to the draft, and every answer is an owned value.
 ///
-/// A call fails with [`PassError::NotPortedYet`] when it reaches a `tree.schemas` function not
-/// ported yet, so a later half stops instead of reading a wrong answer.
+/// A call fails with a [`PassError`] only for a bug of the compiler.
 pub trait TreeSchemaService: Send + Sync {
     /// The type use the schema written at `pointer` compiles to, used in `direction`.
     ///

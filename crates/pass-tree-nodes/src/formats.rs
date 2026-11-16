@@ -374,10 +374,6 @@ pub(crate) fn tree_nodes_named_templates(
     Ok((!refused).then_some(templates))
 }
 
-#[allow(
-    clippy::unused_self,
-    reason = "stubs read nothing until the half's last brief"
-)]
 impl<'scope, 'draft, 'half, 'run> FormatReader<'scope, 'draft, 'half, 'run> {
     fn new(
         scope: &'scope mut TreeNodesScope<'draft, 'half, 'run>,
