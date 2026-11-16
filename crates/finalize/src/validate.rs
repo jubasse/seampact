@@ -5,7 +5,7 @@
 //! the api, the pointer and the rule, never a diagnostic for the author.
 
 use seampact_diagnostics::{InternalError, quote_text};
-use seampact_ir::SourceMap;
+use seampact_ir::{IrInvariantViolation, SourceMap, check_ir_invariants};
 use seampact_ir_check::{IrCheckFailure, check_source_map, check_strict_ir};
 use seampact_json::JsonValue;
 
@@ -40,7 +40,31 @@ fn operation_id_at(candidate: &JsonValue, pointer: &str) -> Option<String> {
 }
 
 // The rule, pointer and detail of a failure.
-fn parts_of(failure: &IrCheckFailure) -> (String, &str, Option<String>) {
+struct FailureParts {
+    rule: String,
+    pointer: String,
+    detail: Option<String>,
+}
+
+fn parts_of(failure: &IrCheckFailure) -> FailureParts {
+    let (rule, pointer, detail) = check_parts_of(failure);
+
+    FailureParts {
+        rule,
+        pointer: pointer.to_owned(),
+        detail,
+    }
+}
+
+fn invariant_parts_of(violation: &IrInvariantViolation) -> FailureParts {
+    FailureParts {
+        rule: format!("invariant '{}'", violation.id),
+        pointer: violation.pointer.clone(),
+        detail: Some(violation.message.clone()),
+    }
+}
+
+fn check_parts_of(failure: &IrCheckFailure) -> (String, &str, Option<String>) {
     match failure {
         IrCheckFailure::Schema {
             keyword,
@@ -71,8 +95,13 @@ fn parts_of(failure: &IrCheckFailure) -> (String, &str, Option<String>) {
     }
 }
 
-fn describe_failure(candidate: &JsonValue, failure: &IrCheckFailure) -> String {
-    let (rule, pointer, detail) = parts_of(failure);
+fn describe_failure(candidate: &JsonValue, failure: &FailureParts) -> String {
+    let FailureParts {
+        rule,
+        pointer,
+        detail,
+    } = failure;
+    let pointer = pointer.as_str();
     let location = match operation_id_at(candidate, pointer) {
         Some(id) => format!("'{pointer}' (operation {})", quote_text(&id)),
         None => format!("'{pointer}'"),
@@ -88,7 +117,7 @@ fn invalid(
     api: &str,
     what: &str,
     candidate: &JsonValue,
-    failures: &[IrCheckFailure],
+    failures: &[FailureParts],
 ) -> InternalError {
     let listed: Vec<String> = failures
         .iter()
@@ -108,16 +137,6 @@ fn invalid(
     ))
 }
 
-// The invariants of ADR 0004 section 13 are checked here once `checkIrInvariants` is ported into
-// `seampact-ir`; until then the schema check above is the whole output check.
-#[expect(
-    clippy::unnecessary_wraps,
-    reason = "the invariant check that replaces this body can fail"
-)]
-fn assert_ir_invariants(_api: &str, _candidate: &JsonValue) -> Result<(), InternalError> {
-    Ok(())
-}
-
 /// Checks the built IR; an internal error naming every failure otherwise.
 ///
 /// # Errors
@@ -128,10 +147,26 @@ pub fn finalize_assert_ir(api: &str, candidate: &JsonValue) -> Result<(), Intern
         check_strict_ir(candidate).map_err(|error| InternalError::new(error.to_string()))?;
 
     if !failures.is_empty() {
-        return Err(invalid(api, "IR", candidate, &failures));
+        let parts: Vec<FailureParts> = failures.iter().map(parts_of).collect();
+
+        return Err(invalid(api, "IR", candidate, &parts));
     }
 
     assert_ir_invariants(api, candidate)
+}
+
+// The invariants of ADR 0004 section 13, checked once the strict form holds.
+fn assert_ir_invariants(api: &str, candidate: &JsonValue) -> Result<(), InternalError> {
+    let violations =
+        check_ir_invariants(candidate).map_err(|error| InternalError::new(error.to_string()))?;
+
+    if violations.is_empty() {
+        return Ok(());
+    }
+
+    let parts: Vec<FailureParts> = violations.iter().map(invariant_parts_of).collect();
+
+    Err(invalid(api, "IR", candidate, &parts))
 }
 
 /// Checks the built side table against its schema; an internal error naming every failure otherwise.
@@ -150,5 +185,7 @@ pub fn finalize_assert_source_map(api: &str, source_map: &SourceMap) -> Result<(
         return Ok(());
     }
 
-    Err(invalid(api, "side table", &candidate, &failures))
+    let parts: Vec<FailureParts> = failures.iter().map(parts_of).collect();
+
+    Err(invalid(api, "side table", &candidate, &parts))
 }
