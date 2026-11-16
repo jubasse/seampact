@@ -517,8 +517,17 @@ fn child_name(
         .map_err(|error| PassError::from(InternalError::new(error.to_string())))
 }
 
-fn same_property(a: &Property, b: &Property) -> Result<bool, PassError> {
-    Err(not_ported_yet("sameProperty"))
+/// Whether two properties agree on everything but their origin and `optional`.
+///
+/// Compared as typed values, so a member order the TypeScript's `JSON.stringify` would tell apart
+/// is not one here.
+fn same_property(a: &Property, b: &Property) -> bool {
+    let mut aligned = b.clone();
+
+    aligned.origin = a.origin.clone();
+    aligned.optional = a.optional;
+
+    *a == aligned
 }
 
 /// The IR form of a name: `status` only on a response name.
@@ -2875,7 +2884,7 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
 
     fn all_of(
         &mut self,
-        value: &JsonObject,
+        value: &'raw JsonObject,
         position: &TreeSchemasPosition,
     ) -> Result<Option<TreeSchemasCompiled>, PassError> {
         let words = words_of(position.name.as_ref())?;
@@ -2890,20 +2899,132 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
 
     fn merged_properties(
         &mut self,
-        value: &JsonObject,
+        value: &'raw JsonObject,
         pointer: &str,
         words: Option<&[String]>,
     ) -> Result<Option<Vec<Property>>, PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.mergedProperties"))
+        let mut merged: IndexMap<String, (Property, String)> = IndexMap::new();
+        let mut failed = false;
+        let members: &[JsonValue] = match value.get("allOf") {
+            Some(JsonValue::Array(members)) => members,
+            _ => &[],
+        };
+
+        for (index, member) in members.iter().enumerate() {
+            let at = tree_schemas_pointer(pointer, &["allOf", &index.to_string()]);
+            let Some(properties) = self.member_properties(member, &at, words)? else {
+                failed = true;
+
+                continue;
+            };
+
+            for property in properties {
+                let Some((before, before_pointer)) = merged.get_mut(&property.name) else {
+                    merged.insert(property.name.clone(), (property, at.clone()));
+
+                    continue;
+                };
+
+                if same_property(before, &property) {
+                    before.optional = before.optional && property.optional;
+
+                    continue;
+                }
+
+                failed = true;
+                self.reporter.error(TreeSchemasProblem {
+                    rule: TreeSchemasRule::AllOfProperty,
+                    pointer: at.clone(),
+                    message: format!(
+                        "the property '{}' is declared twice with different schemas",
+                        property.name
+                    ),
+                    fix: "declare it once, or give both the same schema".to_owned(),
+                    related: Some(vec![TreeSchemasRelated {
+                        pointer: before_pointer.clone(),
+                        message: "the other declaration is in this member".to_owned(),
+                    }]),
+                })?;
+            }
+        }
+
+        if failed {
+            return Ok(None);
+        }
+
+        Ok(Some(
+            merged.into_values().map(|(property, _)| property).collect(),
+        ))
     }
 
     fn member_properties(
         &mut self,
-        member: &JsonValue,
+        member: &'raw JsonValue,
         pointer: &str,
         words: Option<&[String]>,
     ) -> Result<Option<Vec<Property>>, PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.memberProperties"))
+        let written = match member {
+            JsonValue::Object(object) => Some(object),
+            _ => None,
+        };
+
+        // A member's own annotations have no place: the merged object holds the `allOf` schema's.
+        if let Some(object) = written
+            && !self.refuse_annotations(object, "a member of 'allOf'", pointer, &[])?
+        {
+            return Ok(None);
+        }
+
+        let name = match member {
+            JsonValue::String(text) => Some(text),
+            _ => match tree_schemas_member(Some(member), "$ref") {
+                Some(JsonValue::String(text)) => Some(text),
+                _ => None,
+            },
+        };
+
+        if let Some(name) = name {
+            return self.declared_properties(name, pointer, PropertyHolder::AllOf);
+        }
+
+        let Some(object) = written else {
+            self.not_an_object_member(pointer)?;
+
+            return Ok(None);
+        };
+
+        match tree_schemas_shape_of(object) {
+            Some(shape @ Shape::Object) => {
+                if self.check_keywords(object, shape, pointer)? {
+                    self.properties(object, pointer, words)
+                } else {
+                    Ok(None)
+                }
+            }
+            Some(Shape::AllOf) => self.merged_properties(object, pointer, words),
+            Some(shape @ Shape::Derived) => {
+                if self.check_keywords(object, shape, pointer)? {
+                    tree_schemas_derived_properties(object, pointer, self.derived_host())
+                } else {
+                    Ok(None)
+                }
+            }
+            Some(
+                Shape::Reference
+                | Shape::Opaque
+                | Shape::File
+                | Shape::Enum
+                | Shape::Union
+                | Shape::Map
+                | Shape::Array
+                | Shape::Scalar,
+            )
+            | None => {
+                self.not_an_object_member(pointer)?;
+
+                Ok(None)
+            }
+        }
     }
 
     fn declared_properties(
@@ -2970,7 +3091,13 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
     }
 
     fn not_an_object_member(&mut self, pointer: &str) -> Result<(), PassError> {
-        Err(not_ported_yet("TreeSchemasCompiler.notAnObjectMember"))
+        self.reporter.error(TreeSchemasProblem {
+            rule: TreeSchemasRule::AllOfMember,
+            pointer: pointer.to_owned(),
+            message: "a member of 'allOf' is not an object schema".to_owned(),
+            fix: "merge object schemas only".to_owned(),
+            related: None,
+        })
     }
 
     fn check_body_tags(&mut self) -> Result<(), PassError> {
