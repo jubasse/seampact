@@ -19,7 +19,7 @@ use crate::expected::{
 };
 use crate::fixtures::{discover_fixtures, read_excluded};
 use crate::matcher::{ComparedFile, DifferenceLedger, MatchOutcome};
-use crate::raw_text::{AcceptedPointers, identical_outside_accepted};
+use crate::raw_text::{AcceptedPointers, MemberOrder, identical_outside_accepted};
 use crate::rule_ids::check_rule_ids;
 use crate::time_limit::FixtureTimer;
 use crate::verdict::{FirstFailure, ServiceCalls, Verdict};
@@ -715,7 +715,12 @@ impl Run<'_> {
         if !file_fails
             && let (Some(expected_text), Some(actual_text)) = (expected_text, actual_text)
             && !accepted.is_empty()
-            && !identical_outside_accepted(expected_text, actual_text, &accepted)
+            && !identical_outside_accepted(
+                expected_text,
+                actual_text,
+                &accepted,
+                text_member_order(output_file.as_ref()),
+            )
         {
             file_fails = true;
             self.note_failure(
@@ -798,6 +803,15 @@ fn is_unobservable_member_order(output_file: Option<&OutputFile>, mismatch: &Mis
     let is_half_delta = output_file.is_some_and(|file| file.output == OutputKind::Halves);
 
     is_half_delta && mismatch.kind == MismatchKind::MemberOrder
+}
+
+/// Half deltas compare without member order, as `is_unobservable_member_order` holds them.
+fn text_member_order(output_file: Option<&OutputFile>) -> MemberOrder {
+    if output_file.is_some_and(|file| file.output == OutputKind::Halves) {
+        return MemberOrder::Ignored;
+    }
+
+    MemberOrder::Written
 }
 
 /// The diagnostics file beside the delta file `delta_name`, `None` for a name with no `.json`.
