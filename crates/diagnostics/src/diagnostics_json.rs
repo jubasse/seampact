@@ -21,14 +21,15 @@ fn object_of(members: Vec<(&str, JsonValue)>) -> JsonValue {
 }
 
 fn origin_value(origin: &DiagnosticOrigin) -> JsonValue {
-    let mut members = vec![
-        ("layer", JsonValue::String(origin.layer.to_string())),
-        ("pointer", JsonValue::String(origin.pointer.clone())),
-    ];
+    let mut members = Vec::with_capacity(3);
 
+    // One order for every origin, the IR's: the api of a copied origin first.
     if let Some(api) = &origin.api {
         members.push(("api", JsonValue::String(api.clone())));
     }
+
+    members.push(("layer", JsonValue::String(origin.layer.to_string())));
+    members.push(("pointer", JsonValue::String(origin.pointer.clone())));
 
     object_of(members)
 }
@@ -96,10 +97,29 @@ pub fn diagnostics_json(workspace: &[Diagnostic], apis: &[ApiDiagnostics<'_>]) -
 mod tests {
     use std::fs;
 
+    use seampact_json::stringify_json;
     use serde_json::Value;
 
     use super::*;
     use crate::{DiagnosticLayer, RuleId, Severity};
+
+    #[test]
+    fn an_origin_writes_its_api_first_when_it_has_one() {
+        let origin = |api: Option<&str>| DiagnosticOrigin {
+            layer: DiagnosticLayer::Api,
+            pointer: "/formats/house".to_owned(),
+            api: api.map(str::to_owned),
+        };
+
+        assert_eq!(
+            stringify_json(&origin_value(&origin(Some("tasks")))),
+            r#"{"api":"tasks","layer":"api","pointer":"/formats/house"}"#
+        );
+        assert_eq!(
+            stringify_json(&origin_value(&origin(None))),
+            r#"{"layer":"api","pointer":"/formats/house"}"#
+        );
+    }
 
     fn text_of<'value>(value: &'value Value, member: &str) -> &'value str {
         value[member].as_str().expect("fixture member is text")
@@ -166,6 +186,13 @@ mod tests {
         }
     }
 
+    // The TypeScript fixtures write an origin's api last where a copy appended it; Rust writes api first.
+    fn canonical_origin_order(order: &mut Vec<String>) {
+        if *order == ["layer", "pointer", "api"] {
+            *order = vec!["api".to_owned(), "layer".to_owned(), "pointer".to_owned()];
+        }
+    }
+
     fn assert_rebuilds_fixture(path: &str) {
         let full = format!(
             "{}/../../fixtures/expected/{path}/diagnostics.json",
@@ -197,13 +224,14 @@ mod tests {
 
         member_orders(&built, &mut built_orders);
         member_orders(&expected, &mut expected_orders);
+        expected_orders.iter_mut().for_each(canonical_origin_order);
 
         assert_eq!(built, expected, "{path}");
         assert_eq!(built_orders, expected_orders, "member order of {path}");
     }
 
     #[test]
-    fn the_value_keeps_the_member_order_of_a_cross_api_fixture() {
+    fn the_value_writes_every_origin_in_the_canonical_order_of_a_cross_api_fixture() {
         assert_rebuilds_fixture("rules/workspace-relay-cycle");
     }
 
