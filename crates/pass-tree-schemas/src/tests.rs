@@ -3,6 +3,7 @@
 //! functions read by code point.
 
 use indexmap::IndexMap;
+use num_bigint::BigInt;
 use seampact_ir::{Direction, ExtensionKey, ExtensionPrefix, Schema, TypeUse};
 use seampact_json::{JsonObject, JsonValue};
 use seampact_pipeline::testing::{HalfFixture, raw_api_from_json};
@@ -331,25 +332,25 @@ fn a_decimal_reads_a_number_through_its_shortest_form() {
 
     assert_eq!(
         number(1e-7),
-        Ok(Some(TreeSchemasDecimal { units: 1, scale: 7 }))
+        Ok(Some(TreeSchemasDecimal { units: BigInt::from(1), scale: 7 }))
     );
     assert_eq!(
         number(1e21),
         Ok(Some(TreeSchemasDecimal {
-            units: 1_000_000_000_000_000_000_000,
+            units: BigInt::from(10).pow(21),
             scale: 0
         }))
     );
     assert_eq!(
         text("-12.50"),
         Ok(Some(TreeSchemasDecimal {
-            units: -1250,
+            units: BigInt::from(-1250),
             scale: 2
         }))
     );
     assert_eq!(
         text("1e-2"),
-        Ok(Some(TreeSchemasDecimal { units: 1, scale: 2 }))
+        Ok(Some(TreeSchemasDecimal { units: BigInt::from(1), scale: 2 }))
     );
 
     for refused in ["", "+1", ".5", "1.", "1e", "0x10", "1 ", "\u{ff11}"] {
