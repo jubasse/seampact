@@ -6,9 +6,8 @@
 //! alternation whose branches can start with the same character.
 
 use seampact_diagnostics::InternalError;
+use seampact_js::js_number_of_text;
 use seampact_pipeline::PassError;
-
-use crate::not_ported::not_ported_yet;
 
 /// The result of normalising a pattern: its normalised form, or why it is refused and how to fix it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -38,6 +37,10 @@ const MAX_REPEAT: u32 = 1000;
 /// The parser recurses once per group: deeper nesting is refused before it exhausts the stack.
 const MAX_GROUP_DEPTH: usize = 100;
 
+/// What a malformed `{` says.
+const REPETITION_SYNTAX: &str =
+    "a '{' starts a repetition '{n}', '{n,}' or '{n,m}'; escape a literal '{'";
+
 /// The characters ADR 0003 section 9 lets a pattern escape.
 const METACHARACTERS: &str = "\\^$.|?*+()[]{}/";
 
@@ -53,6 +56,14 @@ const LINE_ENDS: [Range; 4] = [(0x0a, 0x0a), (0x0d, 0x0d), (0x85, 0x85), (0x2028
 
 /// The shorthand classes and the ranges each stands for.
 const SHORTHANDS: [(char, &[Range]); 3] = [('d', &DIGITS), ('w', &WORD), ('s', &SPACE)];
+
+/// The ranges of the shorthand class named by its lower-case letter.
+fn shorthand_ranges(letter: char) -> Option<&'static [Range]> {
+    SHORTHANDS
+        .iter()
+        .find(|(name, _)| *name == letter)
+        .map(|(_, ranges)| *ranges)
+}
 
 const PORTABLE_FIX: &str = "rewrite it in the portable subset of ADR 0003 section 9";
 
@@ -161,8 +172,7 @@ impl PatternRefusal {
     }
 }
 
-/// Why a parser step stopped: the pattern is refused (the TypeScript throw), or a callee is not
-/// ported yet.
+/// Why a parser step stopped: the pattern is refused (the TypeScript throw), or the half hit a bug.
 #[derive(Debug)]
 enum PatternFailure {
     Refused(PatternRefusal),
@@ -182,8 +192,11 @@ fn refuse<Never>(reason: &str) -> Result<Never, PatternFailure> {
     )))
 }
 
-fn refuse_backtracking<Never>(reason: &str) -> Result<Never, PassError> {
-    Err(not_ported_yet("refuseBacktracking"))
+fn refuse_backtracking<Never>(reason: &str) -> Result<Never, PatternFailure> {
+    Err(PatternFailure::Refused(PatternRefusal::new(
+        format!("the pattern can backtrack exponentially: {reason}"),
+        BACKTRACKING_FIX.to_owned(),
+    )))
 }
 
 fn overlaps(left: &[Range], right: &[Range]) -> bool {
@@ -218,20 +231,81 @@ fn varies(repetition: Option<&Repetition>) -> bool {
     repetition.is_some_and(|written| Some(written.min) != written.max)
 }
 
-fn refuse_exponential_repetition(atom: &Atom, repetition: &Repetition) -> Result<(), PassError> {
-    Err(not_ported_yet("refuseExponentialRepetition"))
+/// A repetition that can run more than once must not wrap a fragment that can split one text
+/// several ways: one whose trailing repetition can go on into the next pass, or whose branches can
+/// start alike.
+fn refuse_exponential_repetition(
+    atom: &Atom,
+    repetition: &Repetition,
+) -> Result<(), PatternFailure> {
+    if repetition.max.is_some_and(|max| max <= ONCE) {
+        return Ok(());
+    }
+
+    let fragment = &atom.fragment;
+
+    if fragment
+        .varying_tails
+        .iter()
+        .any(|tail| overlaps(tail, &fragment.first))
+    {
+        return refuse_backtracking(&format!(
+            "'{}{}' repeats a group whose trailing repetition can match what the group starts with",
+            fragment.text, repetition.text
+        ));
+    }
+
+    if fragment.overlapping {
+        return refuse_backtracking(&format!(
+            "'{}{}' repeats an alternation whose branches can start with the same character",
+            fragment.text, repetition.text
+        ));
+    }
+
+    Ok(())
 }
 
-fn merged(ranges: &[Range]) -> Result<Vec<Range>, PassError> {
-    Err(not_ported_yet("merged"))
+/// The ranges sorted and joined where they touch or overlap.
+fn merged(ranges: &[Range]) -> Vec<Range> {
+    let mut sorted = ranges.to_vec();
+
+    sorted.sort_by_key(|&(start, _)| start);
+
+    let mut joined: Vec<Range> = Vec::with_capacity(sorted.len());
+
+    for (start, end) in sorted {
+        match joined.last_mut() {
+            Some(last) if start <= last.1.saturating_add(1) => last.1 = last.1.max(end),
+            _ => joined.push((start, end)),
+        }
+    }
+
+    joined
 }
 
-fn complement(ranges: &[Range]) -> Result<Vec<Range>, PassError> {
-    Err(not_ported_yet("complement"))
+/// Every code point the ranges leave out.
+fn complement(ranges: &[Range]) -> Vec<Range> {
+    let mut left_out: Vec<Range> = Vec::new();
+    let mut next: u32 = 0;
+
+    for (start, end) in merged(ranges) {
+        if start > next {
+            left_out.push((next, start - 1));
+        }
+
+        next = end.saturating_add(1);
+    }
+
+    if next <= MAX_CODE_POINT {
+        left_out.push((next, MAX_CODE_POINT));
+    }
+
+    left_out
 }
 
-fn hex(code_point: u32) -> Result<String, PassError> {
-    Err(not_ported_yet("hex"))
+/// Four digits at least, upper case.
+fn hex(code_point: u32) -> String {
+    format!("{code_point:04X}")
 }
 
 const fn is_invisible(code_point: u32) -> bool {
@@ -245,11 +319,11 @@ const fn is_invisible(code_point: u32) -> bool {
 /// escaped.
 fn code_point_text(code_point: u32, syntax: &str) -> Result<String, PassError> {
     if code_point > 0xffff {
-        return Ok(format!("\\u{{{}}}", hex(code_point)?));
+        return Ok(format!("\\u{{{}}}", hex(code_point)));
     }
 
     if is_invisible(code_point) {
-        return Ok(format!("\\u{}", hex(code_point)?));
+        return Ok(format!("\\u{}", hex(code_point)));
     }
 
     let Some(character) = char::from_u32(code_point) else {
@@ -266,7 +340,19 @@ fn code_point_text(code_point: u32, syntax: &str) -> Result<String, PassError> {
 }
 
 fn class_text(ranges: &[Range], negated: bool) -> Result<String, PassError> {
-    Err(not_ported_yet("classText"))
+    let text = |code_point: u32| code_point_text(code_point, CLASS_SYNTAX);
+    let mut body = String::new();
+
+    for (start, end) in merged(ranges) {
+        body.push_str(&text(start)?);
+
+        if start != end {
+            body.push('-');
+            body.push_str(&text(end)?);
+        }
+    }
+
+    Ok(format!("[{}{body}]", if negated { "^" } else { "" }))
 }
 
 fn literal(code_point: u32, syntax: &str) -> Result<Matched, PassError> {
@@ -467,7 +553,7 @@ impl PatternParser {
             '[' => Ok(matching(self.character_class()?)),
             '.' => Ok(matching(Matched {
                 text: class_text(&LINE_ENDS, true)?,
-                ranges: complement(&LINE_ENDS)?,
+                ranges: complement(&LINE_ENDS),
             })),
             '^' | '$' => Ok(Atom {
                 fragment: Fragment {
@@ -526,7 +612,29 @@ impl PatternParser {
     }
 
     fn escape(&mut self) -> Result<Matched, PatternFailure> {
-        Err(not_ported_yet("PatternParser.escape").into())
+        let character = self.next()?;
+        let lowered = character.to_ascii_lowercase();
+
+        if let Some(shorthand) = shorthand_ranges(lowered) {
+            let negated = character != lowered;
+
+            return Ok(Matched {
+                text: class_text(shorthand, negated)?,
+                ranges: if negated {
+                    complement(shorthand)
+                } else {
+                    shorthand.to_vec()
+                },
+            });
+        }
+
+        if METACHARACTERS.contains(character) {
+            return Ok(literal(u32::from(character), METACHARACTERS)?);
+        }
+
+        refuse(&format!(
+            "'\\{character}' is not portable; only a metacharacter may be escaped"
+        ))
     }
 
     fn no_quantifier(&mut self) -> Result<Option<Repetition>, PatternFailure> {
@@ -578,23 +686,158 @@ impl PatternParser {
     }
 
     fn counted(&mut self) -> Result<Repetition, PatternFailure> {
-        Err(not_ported_yet("PatternParser.counted").into())
+        let min = self.count()?;
+        let mut max = Some(min);
+
+        if self.peek(0) == Some(',') {
+            self.at += 1;
+            max = if self.peek(0) == Some('}') {
+                None
+            } else {
+                Some(self.count()?)
+            };
+        }
+
+        if self.next()? != '}' {
+            return refuse(REPETITION_SYNTAX);
+        }
+
+        if let Some(max) = max
+            && max < min
+        {
+            return refuse(&format!("the repetition {{{min},{max}}} has its bounds reversed"));
+        }
+
+        let text = match max {
+            Some(max) if max == min => format!("{{{min}}}"),
+            Some(max) => format!("{{{min},{max}}}"),
+            None => format!("{{{min},}}"),
+        };
+
+        Ok(Repetition { text, min, max })
     }
 
     fn count(&mut self) -> Result<u32, PatternFailure> {
-        Err(not_ported_yet("PatternParser.count").into())
+        let mut digits = String::new();
+
+        while let Some(digit) = self.peek(0).filter(char::is_ascii_digit) {
+            digits.push(digit);
+            self.at += 1;
+        }
+
+        if digits.is_empty() {
+            return refuse(REPETITION_SYNTAX);
+        }
+
+        let count = js_number_of_text(&digits);
+
+        if count > f64::from(MAX_REPEAT) {
+            return refuse(&format!(
+                "a repetition count above {MAX_REPEAT} is not portable"
+            ));
+        }
+
+        // Within 0..=MAX_REPEAT, so the digits parse as a u32.
+        digits.parse::<u32>().map_err(|error| {
+            PatternFailure::Pass(PassError::from(InternalError::new(format!(
+                "tree.schemas reads the repetition count {digits:?}, which is no u32: {error}"
+            ))))
+        })
     }
 
     fn character_class(&mut self) -> Result<Matched, PatternFailure> {
-        Err(not_ported_yet("PatternParser.characterClass").into())
+        let negated = self.peek(0) == Some('^');
+
+        if negated {
+            self.at += 1;
+        }
+
+        let mut ranges: Vec<Range> = Vec::new();
+        let first = self.at;
+
+        while self.peek(0) != Some(']') {
+            let at_first = self.at == first;
+            let Some(start) = self.class_item(&mut ranges, at_first)? else {
+                continue;
+            };
+
+            if self.peek(0) == Some('-') && self.peek(1) != Some(']') {
+                self.at += 1;
+
+                let Some(end) = self.class_item(&mut ranges, false)? else {
+                    return refuse("a range in a class ends with a shorthand");
+                };
+
+                if end < start {
+                    return refuse("a range in a class has its bounds reversed");
+                }
+
+                ranges.push((start, end));
+            } else {
+                ranges.push((start, start));
+            }
+        }
+
+        self.at += 1;
+
+        if self.at - 1 == first {
+            return refuse("an empty class matches nothing");
+        }
+
+        Ok(Matched {
+            text: class_text(&ranges, negated)?,
+            ranges: if negated {
+                complement(&ranges)
+            } else {
+                ranges
+            },
+        })
     }
 
+    /// One class member: a code point, or `None` for a shorthand whose ranges it added to `ranges`.
     fn class_item(
         &mut self,
         ranges: &mut Vec<Range>,
         first: bool,
     ) -> Result<Option<u32>, PatternFailure> {
-        Err(not_ported_yet("PatternParser.classItem").into())
+        let character = self.next()?;
+
+        if character == '-' && !first && self.peek(0) != Some(']') {
+            return refuse(
+                "a literal '-' inside a class must be escaped unless it is first or last",
+            );
+        }
+
+        if character == '{' || character == '}' {
+            return refuse(&format!(
+                "a literal '{character}' must be escaped ('\\{character}')"
+            ));
+        }
+
+        if character != '\\' {
+            return Ok(Some(u32::from(character)));
+        }
+
+        let escaped = self.next()?;
+        let lowered = escaped.to_ascii_lowercase();
+
+        if let Some(shorthand) = shorthand_ranges(lowered) {
+            if escaped == lowered {
+                ranges.extend_from_slice(shorthand);
+            } else {
+                ranges.extend(complement(shorthand));
+            }
+
+            return Ok(None);
+        }
+
+        if METACHARACTERS.contains(escaped) || escaped == '-' {
+            return Ok(Some(u32::from(escaped)));
+        }
+
+        refuse(&format!(
+            "'\\{escaped}' is not portable; only a metacharacter or '-' may be escaped"
+        ))
     }
 }
 
@@ -602,7 +845,7 @@ impl PatternParser {
 ///
 /// # Errors
 ///
-/// [`PassError::NotPortedYet`] while a parser callee is not ported; a refusal is an answer
+/// An internal error for a bug of the parser; a refusal is an answer
 /// ([`TreeSchemasPatternResult::Refused`]), not an error.
 pub fn tree_schemas_normalize_pattern(source: &str) -> Result<TreeSchemasPatternResult, PassError> {
     let mut parser = PatternParser::new(source.chars().collect());

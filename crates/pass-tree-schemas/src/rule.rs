@@ -61,6 +61,7 @@ pub(crate) enum TreeSchemasRule {
 
 impl TreeSchemasRule {
     /// Every rule, in the order `RULE_IDS` lists them.
+    #[cfg(test)]
     pub(crate) const ALL: &'static [Self] = &[
         Self::AllOfMember,
         Self::AllOfProperty,

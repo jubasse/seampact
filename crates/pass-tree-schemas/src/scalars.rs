@@ -426,11 +426,11 @@ impl<'raw> TreeSchemasScalars<'raw> {
             scalar_type: scalar_type.clone(),
             decimal: format == Some(DECIMAL),
         };
-        let Some(refinements) = self.refinements(value, pointer, &target, reporter)? else {
+        let Some(refinements) = Self::refinements(value, pointer, &target, reporter)? else {
             return Ok(None);
         };
 
-        if !self.check_ranges(&refinements, &scalar_type, pointer, reporter)? {
+        if !Self::check_ranges(&refinements, &scalar_type, pointer, reporter)? {
             return Ok(None);
         }
 
@@ -459,7 +459,7 @@ impl<'raw> TreeSchemasScalars<'raw> {
         let pointer = tree_schemas_pointer("/scalars", &[id]);
         let scalar = match tree_schemas_member(self.catalogue, id) {
             Some(JsonValue::Object(value)) => {
-                self.compile_declaration(id, value, &pointer, reporter)?
+                Self::compile_declaration(id, value, &pointer, reporter)?
             }
             _ => None,
         };
@@ -470,7 +470,6 @@ impl<'raw> TreeSchemasScalars<'raw> {
     }
 
     fn compile_declaration(
-        &mut self,
         id: &str,
         value: &JsonObject,
         pointer: &str,
@@ -513,11 +512,11 @@ impl<'raw> TreeSchemasScalars<'raw> {
             scalar_type: scalar_type.clone(),
             decimal: false,
         };
-        let Some(refinements) = self.refinements(value, pointer, &target, reporter)? else {
+        let Some(refinements) = Self::refinements(value, pointer, &target, reporter)? else {
             return Ok(None);
         };
 
-        if !self.check_ranges(&refinements, &scalar_type, pointer, reporter)? {
+        if !Self::check_ranges(&refinements, &scalar_type, pointer, reporter)? {
             return Ok(None);
         }
 
@@ -571,7 +570,7 @@ impl<'raw> TreeSchemasScalars<'raw> {
                 related: None,
             })?;
         } else if format == PASSWORD {
-            self.password_format(&at, reporter)?;
+            Self::password_format(&at, reporter)?;
         } else if self.declaration(format, reporter)?.is_some() {
             reporter.error(TreeSchemasProblem {
                 rule: TreeSchemasRule::FormatType,
@@ -581,7 +580,7 @@ impl<'raw> TreeSchemasScalars<'raw> {
                 related: None,
             })?;
         } else {
-            self.unknown_format(format, &at, reporter)?;
+            Self::unknown_format(format, &at, reporter)?;
         }
 
         Ok(false)
@@ -609,13 +608,13 @@ impl<'raw> TreeSchemasScalars<'raw> {
         }
 
         if format == PASSWORD {
-            self.password_format(&at, reporter)?;
+            Self::password_format(&at, reporter)?;
 
             return Ok(None);
         }
 
         let Some(declared) = self.declaration(format, reporter)? else {
-            self.unknown_format(format, &at, reporter)?;
+            Self::unknown_format(format, &at, reporter)?;
 
             return Ok(None);
         };
@@ -624,7 +623,7 @@ impl<'raw> TreeSchemasScalars<'raw> {
             scalar_type: declared_type.clone(),
             decimal: false,
         };
-        let Some(own) = self.refinements(value, pointer, &target, reporter)? else {
+        let Some(own) = Self::refinements(value, pointer, &target, reporter)? else {
             return Ok(None);
         };
         let declared_keys = refinement_keys(&declared.r#type.refinements);
@@ -649,7 +648,7 @@ impl<'raw> TreeSchemasScalars<'raw> {
 
         let refinements = merged_refinements(declared.r#type.refinements, own);
 
-        if !self.check_ranges(&refinements, &declared_type, pointer, reporter)? {
+        if !Self::check_ranges(&refinements, &declared_type, pointer, reporter)? {
             return Ok(None);
         }
 
@@ -667,7 +666,6 @@ impl<'raw> TreeSchemasScalars<'raw> {
     }
 
     fn check_ranges(
-        &self,
         refinements: &Refinements,
         scalar_type: &ScalarType,
         pointer: &str,
@@ -689,7 +687,6 @@ impl<'raw> TreeSchemasScalars<'raw> {
     }
 
     fn password_format(
-        &self,
         pointer: &str,
         reporter: &mut TreeSchemasReporter<'_, '_>,
     ) -> Result<(), PassError> {
@@ -703,7 +700,6 @@ impl<'raw> TreeSchemasScalars<'raw> {
     }
 
     fn unknown_format(
-        &self,
         format: &str,
         pointer: &str,
         reporter: &mut TreeSchemasReporter<'_, '_>,
@@ -720,7 +716,6 @@ impl<'raw> TreeSchemasScalars<'raw> {
     }
 
     fn refinements(
-        &self,
         value: &JsonObject,
         pointer: &str,
         target: &RefinementTarget,
@@ -757,7 +752,7 @@ impl<'raw> TreeSchemasScalars<'raw> {
             if !is_string || target.decimal {
                 refuse_misplaced("pattern", None, pointer, target, reporter)?;
                 refused = true;
-            } else if !self.pattern(source, pointer, &mut out, reporter)? {
+            } else if !Self::pattern(source, pointer, &mut out, reporter)? {
                 refused = true;
             }
         }
@@ -776,7 +771,7 @@ impl<'raw> TreeSchemasScalars<'raw> {
 
                 refuse_misplaced(key, Some(fix), pointer, target, reporter)?;
                 refused = true;
-            } else if !self.bound(key, bound.to_f64(), pointer, &mut out, reporter)? {
+            } else if !Self::bound(key, bound.to_f64(), pointer, &mut out, reporter)? {
                 refused = true;
             }
         }
@@ -785,7 +780,6 @@ impl<'raw> TreeSchemasScalars<'raw> {
     }
 
     fn pattern(
-        &self,
         source: &str,
         pointer: &str,
         out: &mut Refinements,
@@ -815,7 +809,6 @@ impl<'raw> TreeSchemasScalars<'raw> {
     }
 
     fn bound(
-        &self,
         key: &str,
         bound: f64,
         pointer: &str,

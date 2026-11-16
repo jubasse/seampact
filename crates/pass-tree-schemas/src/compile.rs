@@ -29,7 +29,6 @@ use crate::enums::{EnumValues, tree_schemas_enum_values, tree_schemas_report_enu
 use crate::extensions::{
     TreeSchemasExtensionHolder, tree_schemas_extension_slot, tree_schemas_has_extensions,
 };
-use crate::not_ported::not_ported_yet;
 use crate::raw::{
     TreeSchemasProblem, TreeSchemasRelated, TreeSchemasReporter, tree_schemas_entries,
     tree_schemas_is_object, tree_schemas_member, tree_schemas_pointer,
@@ -346,7 +345,7 @@ enum PropertyHolder {
 const OPERATION_COLLISION_FIX: &str = "rename the schema or set operationId";
 
 /// What the author renames when a derived name meets another.
-fn collision_fix(role: &Role) -> Option<&'static str> {
+fn collision_fix(role: Role) -> Option<&'static str> {
     match role {
         Role::Property => Some("rename the schema or the property"),
         Role::Variant => Some("rename the schema or the variant's tag"),
@@ -1810,7 +1809,7 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
             .and_then(|target| target.kind))
     }
 
-    fn id_of(&self, position: &TreeSchemasPosition) -> Result<String, PassError> {
+    fn id_of(position: &TreeSchemasPosition) -> Result<String, PassError> {
         if let Some(id) = &position.id {
             return Ok(id.clone());
         }
@@ -1845,7 +1844,7 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
 
             return Ok(false);
         };
-        let id = self.id_of(position)?;
+        let id = Self::id_of(position)?;
 
         if position.id.is_some() {
             return Ok(true);
@@ -1861,7 +1860,7 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
             .filter_map(|key| self.claims.get(key))
             .find(|claim| claim.pointer != pointer)
             .cloned();
-        let fix = collision_fix(&name.role).unwrap_or(OPERATION_COLLISION_FIX);
+        let fix = collision_fix(name.role).unwrap_or(OPERATION_COLLISION_FIX);
 
         let Some(other) = other else {
             for key in keys {
@@ -1941,7 +1940,7 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
             return Ok(None);
         }
 
-        let id = self.id_of(position)?;
+        let id = Self::id_of(position)?;
         let Some(name) = &position.name else {
             return Err(InternalError::new(format!(
                 "tree.schemas hoists the schema at {} without a derived name",

@@ -2,16 +2,6 @@
 //! `packages/core/compiler/src/passes/tree/schemas`: the schema catalogues and the schema service
 //! every later half reads.
 
-#![allow(
-    dead_code,
-    unused_variables,
-    clippy::unused_self,
-    clippy::needless_pass_by_value,
-    clippy::trivially_copy_pass_by_ref,
-    clippy::ptr_arg,
-    reason = "functions reached only by stubs, which read none of their parameters, until the half's last brief"
-)]
-
 mod code_params;
 mod compile;
 mod core;
@@ -21,7 +11,6 @@ mod directions;
 mod enums;
 mod example_check;
 mod extensions;
-mod not_ported;
 mod operations;
 mod pass;
 mod pattern;
@@ -106,7 +95,6 @@ pub const RULE_IDS: &[RuleId] = &[
 ///
 /// # Errors
 ///
-/// [`PassError::NotPortedYet`] when the run reaches a function not ported yet, else
 /// [`PassError::Internal`] for a bug.
 pub fn run(
     _draft: &DraftIr,

@@ -26,8 +26,6 @@ use crate::raw::{TreeSchemasProblem, TreeSchemasReporter, tree_schemas_pointer};
 use crate::rule::TreeSchemasRule;
 use crate::scalars::MAX_SAFE_INTEGER;
 
-/// ECMAScript source of a JSON number text.
-const NUMBER_TEXT: &str = r"^-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?$";
 /// The hex digits of each hyphen-separated group of a uuid.
 const UUID_GROUP_LENGTHS: [usize; 5] = [8, 4, 4, 4, 12];
 const HOURS: u32 = 24;
@@ -215,10 +213,6 @@ fn strip_digits(text: &str) -> Option<&str> {
     (rest.len() < text.len()).then_some(rest)
 }
 
-fn is_record(value: &JsonValue) -> bool {
-    matches!(value, JsonValue::Object(_))
-}
-
 /// `YYYY-MM-DD` naming a day that exists. Year 0000 is a day here, as `Date.setUTCFullYear` reads
 /// it, where the IR check starts at year 1; it is a leap year, like 2000.
 fn is_calendar_date(text: &str) -> bool {
@@ -300,15 +294,15 @@ fn is_date_time(text: &str) -> bool {
 /// `^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`.
 fn format_check_uuid(text: &str) -> bool {
     let groups: Vec<&str> = text.split('-').collect();
-    let has_uuid_shape = groups.len() == UUID_GROUP_LENGTHS.len()
+    
+
+    groups.len() == UUID_GROUP_LENGTHS.len()
         && groups
             .iter()
             .zip(UUID_GROUP_LENGTHS)
             .all(|(group, length)| {
                 group.len() == length && group.chars().all(|digit| digit.is_ascii_hexdigit())
-            });
-
-    has_uuid_shape
+            })
 }
 
 /// A written integer without a leading zero: `0|[1-9][0-9]*`.
@@ -375,13 +369,13 @@ impl TreeSchemasExampleChecker {
         text: &str,
         schema_use: &TypeUse,
     ) -> Result<Vec<TreeSchemaExampleIssue>, PassError> {
-        match self.text_value(text, schema_use)? {
+        match Self::text_value(text, schema_use)? {
             TextReading::Problem(message) => Ok(vec![issue_at("", message)]),
             TextReading::Value(value) => self.check(&value, schema_use),
         }
     }
 
-    fn text_value(&self, text: &str, schema_use: &TypeUse) -> Result<TextReading, PassError> {
+    fn text_value(text: &str, schema_use: &TypeUse) -> Result<TextReading, PassError> {
         let scalar = match KnownTypeUseRef::try_from(schema_use)? {
             KnownTypeUseRef::Enum(_) => return Ok(string_reading(text)),
             KnownTypeUseRef::Scalar(scalar) => scalar,
@@ -555,7 +549,7 @@ impl TreeSchemasExampleChecker {
             return Ok(());
         };
 
-        for (key, entry) in object.iter() {
+        for (key, entry) in object {
             let at = tree_schemas_pointer(pointer, &[key]);
 
             if let Some(keys) = &schema.keys {
@@ -752,7 +746,7 @@ impl TreeSchemasExampleChecker {
         pointer: &str,
         issues: &mut Vec<TreeSchemaExampleIssue>,
     ) -> Result<(), PassError> {
-        if let Some(problem) = self.scalar_problem(value, scalar_use)? {
+        if let Some(problem) = Self::scalar_problem(value, scalar_use)? {
             issues.push(issue_at(pointer, problem));
 
             return Ok(());
@@ -766,7 +760,6 @@ impl TreeSchemasExampleChecker {
     }
 
     fn scalar_problem(
-        &self,
         value: &JsonValue,
         scalar_use: &ScalarTypeUse,
     ) -> Result<Option<String>, PassError> {
@@ -783,7 +776,7 @@ impl TreeSchemasExampleChecker {
                 return Ok(Some(format!("{} is not a string{note}", quote(value))));
             };
 
-            return self.string_problem(text, scalar_use);
+            return Self::string_problem(text, scalar_use);
         }
 
         if scalar_use.r#type == ScalarType::Boolean {
@@ -806,14 +799,13 @@ impl TreeSchemasExampleChecker {
             )));
         }
 
-        self.bounds_problem(
+        Self::bounds_problem(
             TreeSchemasDecimalSource::Number(written),
             &scalar_use.refinements,
         )
     }
 
     fn string_problem(
-        &self,
         value: &str,
         scalar_use: &ScalarTypeUse,
     ) -> Result<Option<String>, PassError> {
@@ -870,7 +862,7 @@ impl TreeSchemasExampleChecker {
         }
 
         if matches!(format, Some("int64" | "decimal")) {
-            return self.bounds_problem(TreeSchemasDecimalSource::Text(value), refinements);
+            return Self::bounds_problem(TreeSchemasDecimalSource::Text(value), refinements);
         }
 
         Ok(None)
@@ -910,11 +902,10 @@ impl TreeSchemasExampleChecker {
     }
 
     fn bounds_problem(
-        &self,
         value: TreeSchemasDecimalSource<'_>,
         refinements: &Refinements,
     ) -> Result<Option<String>, PassError> {
-        let Some(decimal) = tree_schemas_decimal_of(value.clone())? else {
+        let Some(decimal) = tree_schemas_decimal_of(value)? else {
             return Ok(Some(format!(
                 "{} is not a decimal number",
                 quoted_source(&value)

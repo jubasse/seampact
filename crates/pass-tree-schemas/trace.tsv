@@ -114,7 +114,7 @@ src/enums.rs#unique_values	packages/core/compiler/src/passes/tree/schemas/enums.
 src/enums.rs#check_fallback	packages/core/compiler/src/passes/tree/schemas/enums.ts#checkFallback
 src/enums.rs#written_code_names	packages/core/compiler/src/passes/tree/schemas/enums.ts#writtenCodeNames
 src/enums.rs#code_names_of	packages/core/compiler/src/passes/tree/schemas/enums.ts#codeNamesOf
-src/example_check.rs#is_record	packages/core/compiler/src/passes/tree/schemas/example-check.ts#isRecord
+-	packages/core/compiler/src/passes/tree/schemas/example-check.ts#isRecord	skip: a type guard; each caller matches JsonValue::Object
 src/example_check.rs#is_calendar_date	packages/core/compiler/src/passes/tree/schemas/example-check.ts#isCalendarDate
 src/example_check.rs#is_date_time	packages/core/compiler/src/passes/tree/schemas/example-check.ts#isDateTime
 src/example_check.rs#format_check_uuid	packages/core/compiler/src/passes/tree/schemas/example-check.ts#FORMAT_CHECKS.uuid

@@ -60,7 +60,7 @@ pub(crate) fn tree_schemas_compile_batch_inputs(
     compiler: &mut TreeSchemasCompiler<'_, '_, '_>,
     nodes: &TreeNodes<'_>,
     names: &IndexMap<String, TreeNodesOperationName>,
-    conventions: &ResolvedConventions<'_>,
+    conventions: ResolvedConventions<'_>,
 ) -> Result<(), PassError> {
     for (_, node) in nodes.iter() {
         let Some(operation) = names.get(&node.pointer).map(|named| &named.name) else {
@@ -90,7 +90,7 @@ fn batch_ids(
     compiler: &mut TreeSchemasCompiler<'_, '_, '_>,
     nodes: &TreeNodes<'_>,
     node: &TreeNode<'_>,
-    conventions: &ResolvedConventions<'_>,
+    conventions: ResolvedConventions<'_>,
 ) -> Result<Option<Property>, PassError> {
     let collection = tree_nodes_op_owner(nodes, node)?;
     let id_type = match collection {

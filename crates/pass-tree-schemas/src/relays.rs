@@ -127,6 +127,10 @@ impl Declaration {
     }
 }
 
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "the callback of every map_err that reads a copy"
+)]
 fn decode_failure(failure: serde_json::Error) -> PassError {
     PassError::from(InternalError::new(format!(
         "tree.schemas cannot read a copied declaration back: {failure}"
@@ -143,16 +147,6 @@ enum CatalogueName {
 }
 
 impl CatalogueName {
-    /// The IR definition a copy is checked against.
-    fn definition(self) -> &'static str {
-        match self {
-            Self::Schemas => "Schema",
-            Self::Enums => "Enum",
-            Self::Scalars => "Scalar",
-            Self::ExtensionKeys => "ExtensionKeyDecl",
-        }
-    }
-
     /// The member of the IR holding the catalogue.
     const fn member(self) -> &'static str {
         match self {
@@ -715,7 +709,7 @@ impl<'compiler, 'raw, 'half, 'run> RelayCopier<'compiler, 'raw, 'half, 'run> {
             return Self::compare_first(&mut self.compiler.reporter, site, kind, relayed, first);
         }
 
-        let copied = self.copied(relayed, site)?;
+        let copied = Self::copied(relayed, site)?;
 
         match &copied {
             Declaration::Schema(schema) => self.copies.schemas.push(schema.as_ref().clone()),
@@ -817,7 +811,6 @@ impl<'compiler, 'raw, 'half, 'run> RelayCopier<'compiler, 'raw, 'half, 'run> {
     }
 
     fn copied(
-        &self,
         relayed: &Declaration,
         site: CopySite<'_, '_>,
     ) -> Result<Declaration, PassError> {

@@ -23,7 +23,6 @@ use crate::extensions::{
     TreeSchemasExtensionSite, tree_schemas_check_extension_values,
     tree_schemas_compile_extension_keys,
 };
-use crate::not_ported::not_ported_yet;
 use crate::operations::{
     tree_schemas_compile_batch_inputs, tree_schemas_compile_version_properties,
 };
@@ -111,7 +110,7 @@ pub(crate) fn tree_schemas_run(context: &HalfContext<'_>) -> Result<TreeSchemasR
     let operation_names = tree_nodes_operation_names(raw, conventions)?;
 
     tree_schemas_compile_routes(&mut compiler, &nodes, &operation_names)?;
-    tree_schemas_compile_batch_inputs(&mut compiler, &nodes, &operation_names, &conventions)?;
+    tree_schemas_compile_batch_inputs(&mut compiler, &nodes, &operation_names, conventions)?;
     tree_schemas_compile_version_properties(&mut compiler, &nodes, &operation_names)?;
     compiler.finish()?;
 
@@ -158,7 +157,7 @@ pub(crate) fn tree_schemas_run(context: &HalfContext<'_>) -> Result<TreeSchemasR
 
     let form_proofs =
         tree_schemas_form_proof_routes(&nodes, context.inherited, merged.get("requirements"))?;
-    let query_wires = tree_schemas_query_wires(&mut compiler, &conventions, &form_proofs)?;
+    let query_wires = tree_schemas_query_wires(&mut compiler, conventions, &form_proofs)?;
     let members = written_members(
         &compiler.schemas,
         scalars,
@@ -213,11 +212,22 @@ fn written_members(
 
 impl TreeSchemaService for TreeSchemasService {
     fn type_use(&self, pointer: &str, direction: Direction) -> Result<Option<TypeUse>, PassError> {
-        Err(not_ported_yet("treeSchemasService.typeUse"))
+        let Some(answer) = self.answers.get(pointer) else {
+            return Ok(None);
+        };
+        let mut answer = answer.clone();
+
+        if direction == Direction::Output
+            && let TypeUse::Ref(reference) = &mut answer
+        {
+            reference.unknown_keys = None;
+        }
+
+        Ok(Some(answer))
     }
 
     fn query_wire(&self, pointer: &str) -> Result<Option<QueryWire>, PassError> {
-        Err(not_ported_yet("treeSchemasService.queryWire"))
+        Ok(self.wires.get(pointer).cloned())
     }
 
     fn check_example(
@@ -225,7 +235,7 @@ impl TreeSchemaService for TreeSchemasService {
         value: &JsonValue,
         schema_use: &TypeUse,
     ) -> Result<Vec<TreeSchemaExampleIssue>, PassError> {
-        Err(not_ported_yet("treeSchemasService.checkExample"))
+        self.checker.check(value, schema_use)
     }
 
     fn check_text_example(
@@ -233,6 +243,6 @@ impl TreeSchemaService for TreeSchemasService {
         text: &str,
         schema_use: &TypeUse,
     ) -> Result<Vec<TreeSchemaExampleIssue>, PassError> {
-        Err(not_ported_yet("treeSchemasService.checkTextExample"))
+        self.checker.check_text(text, schema_use)
     }
 }

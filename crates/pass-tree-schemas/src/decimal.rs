@@ -24,7 +24,7 @@ pub(crate) struct TreeSchemasDecimal {
 }
 
 /// A decimal text or a number, a number read through its shortest form.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) enum TreeSchemasDecimalSource<'text> {
     Number(f64),
     Text(&'text str),
