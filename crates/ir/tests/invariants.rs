@@ -2,6 +2,8 @@
 
 #![expect(
     clippy::expect_used,
+    clippy::panic,
+    clippy::indexing_slicing,
     reason = "test helpers: a sample that lacks what a test breaks fails the test"
 )]
 
@@ -105,6 +107,10 @@ fn accepts_the_valid_samples() {
 
 // Each case breaks the rule at `pointer` of the example and expects exactly that rule.
 #[test]
+#[expect(
+    clippy::too_many_lines,
+    reason = "one table of the rules and their breaks"
+)]
 fn names_each_broken_rule_with_its_id() {
     type Change = fn(&mut Value);
 
@@ -895,7 +901,7 @@ fn a_successor_in_the_same_api_names_an_operation_of_the_document() {
 const TASK_ID: &str = "/operations/2/params/path/0";
 
 // A successor updateTaskV2, an operation of the document with one path param.
-fn with_successor(ir: &mut Value, param: Value) {
+fn with_successor(ir: &mut Value, param: &Value) {
     let mut successor = copy_of(ir, "/operations/1");
 
     successor["id"] = json!("updateTaskV2");
@@ -925,7 +931,7 @@ fn a_successors_path_params_are_the_deprecated_operations_of_the_same_type() {
         after(|ir| {
             let param = copy_of(ir, TASK_ID);
 
-            with_successor(ir, param);
+            with_successor(ir, &param);
         }),
         Found::new()
     );
@@ -933,7 +939,7 @@ fn a_successors_path_params_are_the_deprecated_operations_of_the_same_type() {
         after(|ir| {
             let param = task_id_with(ir, "name", json!("projectId"));
 
-            with_successor(ir, param);
+            with_successor(ir, &param);
         }),
         at(IrInvariantId::DeprecationHeaders, &successor)
     );
@@ -942,7 +948,7 @@ fn a_successors_path_params_are_the_deprecated_operations_of_the_same_type() {
             let integer = json!({"kind": "scalar", "type": "integer", "refinements": {}});
             let param = task_id_with(ir, "type", integer);
 
-            with_successor(ir, param);
+            with_successor(ir, &param);
         }),
         at(IrInvariantId::DeprecationHeaders, &successor)
     );
@@ -959,7 +965,7 @@ fn a_successor_param_differing_only_in_docs_or_examples_is_the_same_type_use() {
 
             let param = task_id_with(ir, "type", annotated);
 
-            with_successor(ir, param);
+            with_successor(ir, &param);
         }),
         Found::new()
     );
@@ -1255,7 +1261,7 @@ fn a_recursive_schema_without_a_sensitive_field_ends() {
     );
 }
 
-fn each(inner: Value) -> Value {
+fn each(inner: &Value) -> Value {
     json!({"kind": "each", "of": "issues", "as": inner})
 }
 
@@ -1315,7 +1321,7 @@ fn a_nested_each_in_role_params_breaks_role_params() {
             &format!("{LOCKED}/roles/0"),
             "params",
             json!({"kind": "object", "members": [
-                {"name": {"kind": "text", "text": "issues"}, "value": each(each(item()))},
+                {"name": {"kind": "text", "text": "issues"}, "value": each(&each(&item()))},
             ]}),
         )),
         at(
@@ -1329,7 +1335,7 @@ fn a_nested_each_in_role_params_breaks_role_params() {
             ir,
             &format!("{LOCKED}/roles/0"),
             "params",
-            json!({"kind": "array", "items": [each(item()), each(item())]}),
+            json!({"kind": "array", "items": [each(&item()), each(&item())]}),
         )),
         Found::new()
     );

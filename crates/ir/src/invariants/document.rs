@@ -2,6 +2,7 @@
 
 use seampact_json::{JsonObject, JsonValue};
 
+use super::catalogue_refs::check_catalogue_id;
 use super::decode::decode_member;
 use super::json_members::{items, record};
 use super::object_rules::{DocumentView, ObjectDefinitions, check_object};
@@ -46,7 +47,7 @@ pub fn check_ir_invariants(ir: &JsonValue) -> Result<Vec<IrInvariantViolation>, 
             schemas: &schemas,
         },
     };
-    let _catalogues = catalogues()?;
+    let catalogue_ids = catalogues()?;
     let root: JsonObject = [(
         "$ref".to_owned(),
         JsonValue::String(ROOT_REFERENCE.to_owned()),
@@ -54,7 +55,7 @@ pub fn check_ir_invariants(ir: &JsonValue) -> Result<Vec<IrInvariantViolation>, 
     .into_iter()
     .collect();
     let mut objects = ObjectDefinitions::new();
-    let references = Violations::default();
+    let mut references = Violations::default();
     let mut rules = Violations::default();
 
     walk_ir_instance(ir, &root, "", &mut |node| match node {
@@ -66,6 +67,22 @@ pub fn check_ir_invariants(ir: &JsonValue) -> Result<Vec<IrInvariantViolation>, 
             objects.insert((*pointer).to_owned(), definition.map(str::to_owned));
 
             check_object(*definition, value, pointer, &view, &objects, &mut rules)
+        }
+        IrInstanceNode::String {
+            pointer,
+            definition,
+            value,
+        } => {
+            check_catalogue_id(
+                definition,
+                pointer,
+                value,
+                document,
+                &catalogue_ids,
+                &mut references,
+            );
+
+            Ok(())
         }
         IrInstanceNode::Union { .. }
         | IrInstanceNode::OpenEnum { .. }
