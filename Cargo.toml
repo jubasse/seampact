@@ -52,6 +52,7 @@ annotate-snippets = "0.12.18"
 flate2 = "1.1.11"
 tar = "0.4.46"
 sha2 = "0.11.1"
+num-bigint = "0.4.8"
 # Tests and benchmarks.
 insta = "1.49.0"
 tempfile = "3.27.0"
