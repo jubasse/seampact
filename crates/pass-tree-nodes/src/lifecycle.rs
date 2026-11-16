@@ -7,7 +7,7 @@ use seampact_diagnostics::{DiagnosticOrigin, InternalError, quote_text};
 use seampact_ir::{
     ApiKind, DeclarationKind, Deprecation, ExtensionKey, ExtensionPrefix, Extensions, IrMap,
     MaturitySource, OperationId, OperationMaturity, OperationRef, Origin, Reason,
-    is_ir_same_type_use,
+    is_ir_calendar_date, is_ir_same_type_use,
 };
 use seampact_js::{cmp_utf16, js_key_order};
 use seampact_json::{JsonObject, JsonValue, js_text_of};
@@ -25,7 +25,6 @@ use crate::diagnostics::{
 };
 use crate::fields::TreeNodesSite;
 use crate::formats::operation_id_of;
-use crate::not_ported::not_ported_yet;
 use crate::pass::TreeNodesScope;
 
 const SERVICE_API: ApiKind = ApiKind::Service;
@@ -46,6 +45,20 @@ impl DeprecationMember {
         match self {
             Self::Since => "since",
             Self::Sunset => "sunset",
+        }
+    }
+
+    const fn rule(self) -> DeprecationRule {
+        match self {
+            Self::Since => DeprecationRule::DeprecatedSince,
+            Self::Sunset => DeprecationRule::DeprecatedSunset,
+        }
+    }
+
+    const fn example_date(self) -> &'static str {
+        match self {
+            Self::Since => "2026-12-31",
+            Self::Sunset => "2027-06-30",
         }
     }
 }
@@ -504,21 +517,73 @@ fn deprecation_dates_hold(
 }
 
 fn since_is_date(
-    _site: &TreeNodesSite<'_, '_>,
-    _origin: &Origin,
-    _since: Option<&JsonValue>,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    origin: &Origin,
+    since: Option<&JsonValue>,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<bool, PassError> {
-    Err(not_ported_yet("sinceIsDate"))
+    deprecation_date_holds(site, origin, DeprecationMember::Since, since, scope)
 }
 
 fn sunset_is_date(
-    _site: &TreeNodesSite<'_, '_>,
-    _origin: &Origin,
-    _sunset: Option<&JsonValue>,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    origin: &Origin,
+    sunset: Option<&JsonValue>,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<bool, PassError> {
-    Err(not_ported_yet("sunsetIsDate"))
+    deprecation_date_holds(site, origin, DeprecationMember::Sunset, sunset, scope)
+}
+
+// The member is a text naming a day that exists; a refusal is reported once per written `deprecated`.
+fn deprecation_date_holds(
+    site: &TreeNodesSite<'_, '_>,
+    origin: &Origin,
+    member: DeprecationMember,
+    written: Option<&JsonValue>,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
+) -> Result<bool, PassError> {
+    let name = member.as_str();
+    let Some(JsonValue::String(date)) = written else {
+        report_deprecation(
+            origin,
+            &DeprecationRefusal {
+                rule: member.rule(),
+                member: None,
+                message: format!(
+                    "The deprecation that reaches {} gives no {name} date.",
+                    site.operation_id
+                ),
+                fix: DEPRECATION_FIX.to_owned(),
+            },
+            scope,
+        )?;
+
+        return Ok(false);
+    };
+
+    if is_ir_calendar_date(date) {
+        return Ok(true);
+    }
+
+    report_deprecation(
+        origin,
+        &DeprecationRefusal {
+            rule: member.rule(),
+            member: Some(member),
+            message: format!(
+                "The {name} date {} of the deprecation that reaches {} is no calendar day.",
+                quote_text(date),
+                site.operation_id
+            ),
+            fix: format!(
+                "Write {name} as a day that exists, as '{}'.",
+                member.example_date()
+            ),
+        },
+        scope,
+    )?;
+
+    Ok(false)
 }
 
 fn report_successor_params(
@@ -605,11 +670,30 @@ fn report_deprecation(
 }
 
 fn report_unknown_service(
-    _site: &TreeNodesSite<'_, '_>,
-    _service: &str,
-    _entry: &InheritedEntry<'_>,
-    _index: usize,
-    _scope: &mut TreeNodesScope<'_, '_, '_>,
+    site: &TreeNodesSite<'_, '_>,
+    service: &str,
+    entry: &InheritedEntry<'_>,
+    index: usize,
+    scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<(), PassError> {
-    Err(not_ported_yet("reportUnknownService"))
+    let pointer = format!("{}/{index}", entry.origin.pointer);
+    let located = scope
+        .context
+        .origin(&pointer)
+        .unwrap_or_else(|| entry.origin.clone());
+    let key = format!("upstream-service:{}#{pointer}", entry.origin.layer);
+    let diagnostic = tree_nodes_error(TreeNodesDiagnosticOptions {
+        rule: TreeNodesRule::UpstreamService,
+        origin: tree_nodes_node_origin(&located)?,
+        message: format!(
+            "The upstream service {service} of {} is not declared in services.",
+            site.operation_id
+        ),
+        fix: format!("Declare {service} in services, or name a declared service."),
+        related: Vec::new(),
+    });
+
+    tree_nodes_report_once(&key, diagnostic, scope);
+
+    Ok(())
 }
