@@ -3,23 +3,30 @@
 use indexmap::IndexMap;
 use seampact_diagnostics::{InternalError, access_rights_quoted};
 use seampact_ir::{
-    DerivationId, DerivedFrom, FieldRestriction, FieldRightSubject, KnownSchemaRef,
-    KnownTypeUseRef, ObjectSchema, OperationScope, SortKey,
+    DerivationId, DerivedFrom, FieldRestriction, FieldRightSubject, KnownRightSubjectRef,
+    KnownSchemaRef, KnownTypeUseRef, ObjectSchema, OperationScope, SortKey, ValueSource,
+    ValueSourceIn,
 };
 use seampact_json::{JsonValue, canonical_json};
 use seampact_pipeline::{DraftOperation, PassError, TreeNodeKind, json_at_pointer, pointer_below};
 
 use crate::catalogues::AccessRightsCatalogues;
-use crate::not_ported::not_ported_yet;
+use crate::field_subjects::access_rights_id_schema_of;
 use crate::read::{access_rights_object, access_rights_string};
 use crate::report::{
     AccessRightsProblem, AccessRightsRelated, AccessRightsReporter, AccessRightsRule,
 };
 use crate::restricted_fields::{AccessRightsDraftSchemas, schema_of};
-use crate::restrictions::{AccessRightsRestrictionChecks, access_rights_restriction_origin};
+use crate::restrictions::{
+    AccessRightsRestrictionChecks, access_rights_check_restriction,
+    access_rights_restriction_origin,
+};
 use crate::routes::{AccessRightsRoute, access_rights_operation_of};
 use crate::schema_use::AccessRightsContext;
-use crate::subjects::AccessRightsSubjectResult;
+use crate::subjects::{
+    AccessRightsSubjectResult, DefaultSubject, access_rights_default_member_id,
+    access_rights_property_schema, access_rights_same_schema,
+};
 
 /// The right of one sort key, with its subject and what it derives from.
 #[derive(Debug, Clone, PartialEq)]
@@ -87,7 +94,7 @@ const SORT_KEY_DERIVATION: DerivationId = DerivationId::from_static("sortKey.res
 ///
 /// # Errors
 ///
-/// An internal error, or a [`PassError::NotPortedYet`] from a key reader.
+/// An internal error.
 pub(crate) fn access_rights_sort_key_rights(
     context: &AccessRightsContext,
     reporter: &mut AccessRightsReporter,
@@ -390,22 +397,159 @@ pub(crate) fn written_right(
 }
 
 pub(crate) fn inherited_right(
-    _context: &AccessRightsContext,
-    _reporter: &mut AccessRightsReporter,
-    _catalogues: &AccessRightsCatalogues,
-    _checks: &mut AccessRightsRestrictionChecks,
-    _use: &KeyUse<'_, '_>,
-    _restriction: &FieldRestriction,
+    context: &AccessRightsContext,
+    reporter: &mut AccessRightsReporter,
+    catalogues: &AccessRightsCatalogues,
+    checks: &mut AccessRightsRestrictionChecks,
+    use_of: &KeyUse<'_, '_>,
+    restriction: &FieldRestriction,
 ) -> Result<Option<InheritedRight>, PassError> {
-    Err(not_ported_yet("inheritedRight"))
+    let Some(checked) =
+        access_rights_check_restriction(context, reporter, catalogues, checks, restriction)?
+    else {
+        return Ok(None);
+    };
+    let origin = access_rights_restriction_origin(restriction)?;
+
+    if checked.params.is_some() {
+        reporter.error(AccessRightsProblem {
+            rule: AccessRightsRule::SortKeyRight,
+            message: format!(
+                "sort key '{}' of route '{}' inherits right '{}' with params from its field, and a sort key's right carries no params",
+                access_rights_quoted(&use_of.key),
+                use_of.route.id,
+                access_rights_quoted(checked.right.id.as_str())
+            ),
+            fix: "remove the key from 'sortable', or restrict the field to a right without params"
+                .to_owned(),
+            pointer: use_of.pointer.clone(),
+            distinct_by: None,
+            related: vec![AccessRightsRelated {
+                pointer: origin.pointer.clone(),
+                message: "the field's restriction with params".to_owned(),
+            }],
+        });
+
+        return Ok(None);
+    }
+
+    Ok(Some(InheritedRight {
+        right: checked.right.id.as_str().to_owned(),
+        derived_from: DerivedFrom {
+            derivation: SORT_KEY_DERIVATION,
+            from: vec![origin.clone()],
+        },
+    }))
 }
 
+// The key's subject (absent for a right without one), or refused after an error.
 pub(crate) fn key_subject(
-    _context: &AccessRightsContext,
-    _reporter: &mut AccessRightsReporter,
-    _catalogues: &AccessRightsCatalogues,
-    _use: &KeyUse<'_, '_>,
-    _right_id: &str,
+    context: &AccessRightsContext,
+    reporter: &mut AccessRightsReporter,
+    catalogues: &AccessRightsCatalogues,
+    use_of: &KeyUse<'_, '_>,
+    right_id: &str,
 ) -> Result<AccessRightsSubjectResult<FieldRightSubject>, PassError> {
-    Err(not_ported_yet("keySubject"))
+    let Some(right) = catalogues.rights.get(right_id) else {
+        return Err(InternalError::new(format!(
+            "sort key '{}' has right '{right_id}', which is not declared",
+            use_of.key
+        ))
+        .into());
+    };
+    let route = use_of.route;
+    let report_unresolved = |reporter: &mut AccessRightsReporter| {
+        reporter.error(AccessRightsProblem {
+            rule: AccessRightsRule::SortKeyRight,
+            message: format!(
+                "sort key '{}' of route '{}' has right '{}', whose subject the route does not resolve",
+                access_rights_quoted(&use_of.key),
+                route.id,
+                access_rights_quoted(right.id.as_str())
+            ),
+            fix: "remove the key from 'sortable', or restrict its field to a right whose subject the route resolves".to_owned(),
+            pointer: use_of.pointer.clone(),
+            distinct_by: None,
+            related: Vec::new(),
+        });
+    };
+    let resource = match KnownRightSubjectRef::try_from(&right.subject)? {
+        KnownRightSubjectRef::NoSubject(_) => {
+            return Ok(AccessRightsSubjectResult::Resolved { subject: None });
+        }
+        KnownRightSubjectRef::Scope(subject) => {
+            // The right's scope is refused: its declaration has the error, so a use adds none.
+            if !catalogues.scopes.contains_key(subject.scope.as_str()) {
+                return Ok(AccessRightsSubjectResult::Refused);
+            }
+
+            if use_of
+                .scopes
+                .iter()
+                .any(|resolved| resolved.scope == subject.scope)
+            {
+                return Ok(AccessRightsSubjectResult::Resolved {
+                    subject: Some(FieldRightSubject {
+                        source: ValueSource {
+                            r#in: ValueSourceIn::Scope,
+                            name: Some(subject.scope.as_str().to_owned()),
+                            prefix_bits: None,
+                        },
+                    }),
+                });
+            }
+
+            report_unresolved(reporter);
+
+            return Ok(AccessRightsSubjectResult::Refused);
+        }
+        KnownRightSubjectRef::Resource(subject) => subject,
+    };
+    let id_schema = access_rights_id_schema_of(catalogues, right, resource);
+    let DefaultSubject::Found { source } =
+        access_rights_default_member_id(context, route.node, &id_schema)?
+    else {
+        report_unresolved(reporter);
+
+        return Ok(AccessRightsSubjectResult::Refused);
+    };
+    let mut item = None;
+
+    for object in &use_of.items {
+        for property in &object.properties {
+            let schema = access_rights_property_schema(context, property);
+
+            if access_rights_same_schema(&schema, &id_schema) {
+                item = Some(object);
+                break;
+            }
+        }
+
+        if item.is_some() {
+            break;
+        }
+    }
+
+    let Some(item) = item else {
+        return Ok(AccessRightsSubjectResult::Resolved {
+            subject: Some(FieldRightSubject { source }),
+        });
+    };
+
+    reporter.error(AccessRightsProblem {
+        rule: AccessRightsRule::SortKeyRight,
+        message: format!(
+            "sort key '{}' of route '{}' has resource right '{}', whose id schema is a property of the list item '{}', so the key would be checked against the route's subject, not each item's",
+            access_rights_quoted(&use_of.key),
+            route.id,
+            access_rights_quoted(right.id.as_str()),
+            access_rights_quoted(item.id.as_str())
+        ),
+        fix: "restrict the key's field to a scope right or a right without subject, or remove the key from 'sortable'".to_owned(),
+        pointer: use_of.pointer.clone(),
+        distinct_by: None,
+        related: Vec::new(),
+    });
+
+    Ok(AccessRightsSubjectResult::Refused)
 }

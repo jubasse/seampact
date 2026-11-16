@@ -5,11 +5,9 @@ use std::collections::HashMap;
 use seampact_diagnostics::InternalError;
 use seampact_ir::{IdentityId, KnownAccessRef, OperationId};
 use seampact_pipeline::{
-    DraftIr, DraftOperation, OperationIndex, PassError, TreeNode, TreeNodeId, TreeNodeKind,
-    TreeNodes,
+    DraftIr, DraftOperation, OperationIndex, TreeNode, TreeNodeId, TreeNodeKind, TreeNodes,
 };
 
-use crate::not_ported::not_ported_yet;
 use crate::read::{access_rights_member, access_rights_object, access_rights_string};
 use crate::schema_use::AccessRightsContext;
 
@@ -210,16 +208,51 @@ pub(crate) fn access_of(
     })
 }
 
+/// The nearest `scope` node at or above `node`, and the collection it belongs to.
 pub(crate) fn access_rights_scope_of(
-    _nodes: &TreeNodes<'_>,
-    _node: TreeNodeId,
-) -> Result<Option<AccessRightsScopeNodes>, PassError> {
-    Err(not_ported_yet("accessRightsScopeOf"))
+    nodes: &TreeNodes<'_>,
+    node: TreeNodeId,
+) -> Result<Option<AccessRightsScopeNodes>, InternalError> {
+    let mut at = Some(node);
+
+    while let Some(current) = at {
+        let at_node = nodes.get(current)?;
+
+        if at_node.kind == TreeNodeKind::Scope
+            && let Some(collection) = at_node.parent
+        {
+            return Ok(Some(AccessRightsScopeNodes {
+                scope: current,
+                collection,
+            }));
+        }
+
+        at = at_node.parent;
+    }
+
+    Ok(None)
 }
 
+/// The collection or single a route belongs to: its nearest such ancestor (ADR 0002 section 2,
+/// `{resource}`).
 pub(crate) fn access_rights_resource_of(
-    _nodes: &TreeNodes<'_>,
-    _node: TreeNodeId,
-) -> Result<Option<TreeNodeId>, PassError> {
-    Err(not_ported_yet("accessRightsResourceOf"))
+    nodes: &TreeNodes<'_>,
+    node: TreeNodeId,
+) -> Result<Option<TreeNodeId>, InternalError> {
+    let mut at = nodes.get(node)?.parent;
+
+    while let Some(current) = at {
+        let at_node = nodes.get(current)?;
+
+        if matches!(
+            at_node.kind,
+            TreeNodeKind::Collection | TreeNodeKind::Single
+        ) {
+            return Ok(Some(current));
+        }
+
+        at = at_node.parent;
+    }
+
+    Ok(None)
 }

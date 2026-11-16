@@ -102,7 +102,7 @@ const PROOF_PLACEMENTS: &[&str] = &["header", "body"];
 ///
 /// # Errors
 ///
-/// An internal error, or a [`PassError::NotPortedYet`] from a declaration builder.
+/// An internal error.
 pub(crate) fn access_rights_catalogues(
     context: &AccessRightsContext,
     reporter: &mut AccessRightsReporter,
@@ -298,7 +298,7 @@ fn error_codes_of(codes: Vec<String>) -> Vec<ErrorCode> {
     codes.into_iter().map(ErrorCode::new).collect()
 }
 
-fn schema_name_of(written: &str) -> Name {
+pub(crate) fn schema_name_of(written: &str) -> Name {
     Name {
         segments: split_name(written),
         role: NameRole::Schema,

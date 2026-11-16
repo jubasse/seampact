@@ -48,6 +48,7 @@ pub(crate) enum AccessRightsRule {
 
 impl AccessRightsRule {
     /// Every rule, in the order of `RULE_IDS`.
+    #[cfg(test)]
     pub(crate) const ALL: &'static [Self] = &[
         Self::RightName,
         Self::RightPattern,

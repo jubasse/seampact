@@ -60,7 +60,7 @@ struct BuiltRoute {
 ///
 /// # Errors
 ///
-/// An internal error, or a [`PassError::NotPortedYet`] from a function not ported yet.
+/// An internal error.
 pub(crate) fn access_rights_run(context: &mut AccessRightsContext) -> Result<(), PassError> {
     let draft = context.draft;
     let mut reporter = access_rights_reporter();

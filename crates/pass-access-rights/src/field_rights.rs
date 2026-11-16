@@ -3,21 +3,23 @@
 use std::cmp::Ordering;
 
 use indexmap::IndexMap;
-use seampact_diagnostics::InternalError;
+use seampact_diagnostics::{InternalError, access_rights_quoted};
 use seampact_ir::{
     DerivationId, DerivedFrom, Direction, FieldRestriction, FieldRight, FieldRightSubject,
     InputPolicy, SchemaId,
 };
 use seampact_js::cmp_utf16;
-use seampact_json::{JsonValue, stringify_json};
+use seampact_json::{JsonValue, canonical_json, stringify_json};
 use seampact_pipeline::{PassError, TreeNodeKind};
 
 use crate::catalogues::AccessRightsCatalogues;
 use crate::field_subjects::{
-    AccessRightsFieldRoute, access_rights_input_subject, access_rights_output_subject,
+    AccessRightsFieldRoute, access_rights_field_text, access_rights_input_subject,
+    access_rights_output_subject,
 };
-use crate::not_ported::not_ported_yet;
-use crate::report::{AccessRightsProblem, AccessRightsReporter, AccessRightsRule};
+use crate::report::{
+    AccessRightsProblem, AccessRightsRelated, AccessRightsReporter, AccessRightsRule,
+};
 use crate::restricted_fields::{
     AccessRightsDraftSchemas, AccessRightsFieldWalk, AccessRightsPositionWalk,
     AccessRightsRestrictedField, FIELD_RIGHTS_PER_OPERATION_LIMIT,
@@ -52,7 +54,7 @@ const FIELD_RIGHT_DERIVATION: DerivationId = DerivationId::from_static("fieldRig
 ///
 /// # Errors
 ///
-/// An internal error, or a [`PassError::NotPortedYet`] from a walk or a builder.
+/// An internal error.
 pub(crate) fn access_rights_field_rights(
     context: &AccessRightsContext,
     reporter: &mut AccessRightsReporter,
@@ -148,7 +150,7 @@ pub(crate) fn access_rights_field_rights(
         let mut conflicting = None;
 
         for (index, other) in others.iter().enumerate() {
-            if !same_entry(Some(first), other.as_ref())? {
+            if !same_entry(Some(first), other.as_ref()) {
                 conflicting = Some(index);
 
                 break;
@@ -233,20 +235,62 @@ pub(crate) fn entry_of(
     )?))
 }
 
-pub(crate) fn same_entry(
-    _left: Option<&FieldRight>,
-    _right: Option<&FieldRight>,
-) -> Result<bool, PassError> {
-    Err(not_ported_yet("sameEntry"))
+// Two entries at one pointer agree when they differ by their derivation only. Params compare by
+// canonical text, so the key order of an object does not matter.
+pub(crate) fn same_entry(left: Option<&FieldRight>, right: Option<&FieldRight>) -> bool {
+    let (Some(left), Some(right)) = (left, right) else {
+        return false;
+    };
+    let canonical_params = |entry: &FieldRight| entry.params.as_ref().map(canonical_json);
+    let without_derivation = |entry: &FieldRight| FieldRight {
+        derived_from: DerivedFrom {
+            derivation: FIELD_RIGHT_DERIVATION,
+            from: Vec::new(),
+        },
+        params: None,
+        ..entry.clone()
+    };
+
+    canonical_params(left) == canonical_params(right)
+        && without_derivation(left) == without_derivation(right)
 }
 
 pub(crate) fn report_conflict(
-    _reporter: &mut AccessRightsReporter,
-    _input: &AccessRightsFieldRightsInput<'_>,
-    _uses: &[Reached<'_>],
-    _conflicting: usize,
-) -> Result<(), PassError> {
-    Err(not_ported_yet("reportConflict"))
+    reporter: &mut AccessRightsReporter,
+    input: &AccessRightsFieldRightsInput<'_>,
+    uses: &[Reached<'_>],
+    conflicting: usize,
+) -> Result<(), InternalError> {
+    let route = &input.field_route.route;
+    let (Some(first), Some(second)) = (uses.first(), uses.get(conflicting)) else {
+        return Err(InternalError::new(format!(
+            "no conflicting field at index {conflicting} of route '{}'",
+            route.id
+        )));
+    };
+    let holder_text =
+        |field: &AccessRightsRestrictedField<'_>| access_rights_quoted(field.holder.id.as_str());
+
+    reporter.error(AccessRightsProblem {
+        rule: AccessRightsRule::FieldRightConflict,
+        message: format!(
+            "{} field '{}' of route '{}' is restricted in '{}' and in '{}' with a different right, params, input policy or subject, and one field right cannot hold both",
+            second.direction,
+            access_rights_field_text(&second.field),
+            route.id,
+            holder_text(&first.field),
+            holder_text(&second.field)
+        ),
+        fix: "give the fields at this pointer the same restrictedTo and subject, or rename one of them".to_owned(),
+        pointer: access_rights_restriction_origin(second.field.restriction)?.pointer.clone(),
+        distinct_by: None,
+        related: vec![AccessRightsRelated {
+            pointer: access_rights_restriction_origin(first.field.restriction)?.pointer.clone(),
+            message: format!("the field of '{}' is restricted here", holder_text(&first.field)),
+        }],
+    });
+
+    Ok(())
 }
 
 pub(crate) fn field_right_of(

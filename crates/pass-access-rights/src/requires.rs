@@ -108,7 +108,7 @@ pub(crate) fn access_rights_item_checks() -> AccessRightsItemChecks {
 ///
 /// # Errors
 ///
-/// An internal error, or a [`PassError::NotPortedYet`] from a check or a builder.
+/// An internal error.
 pub(crate) fn access_rights_requirements<'run>(
     context: &AccessRightsContext<'_, '_, 'run>,
     reporter: &mut AccessRightsReporter,
@@ -166,7 +166,7 @@ pub(crate) fn access_rights_requirements<'run>(
 ///
 /// # Errors
 ///
-/// An internal error, or a [`PassError::NotPortedYet`] from a check.
+/// An internal error.
 pub(crate) fn access_rights_check_requirement_entries(
     context: &AccessRightsContext,
     reporter: &mut AccessRightsReporter,
@@ -230,7 +230,9 @@ pub(crate) fn derived_uses<'run>(
             derivation: DerivationId::new(entry.derivation.clone()),
             from: vec![access_rights_origin_of(context, &pointer)?],
         };
-        let Some((kind, target)) = derived_target(reporter, require, &pointer, input.route)? else {
+        let Some((kind, target)) =
+            derived_target(context, reporter, require, &pointer, input.route)?
+        else {
             continue;
         };
 
@@ -252,6 +254,7 @@ pub(crate) fn derived_uses<'run>(
 // A pack's `require` names a rule, or a right template expanded for the route; `None` after an
 // error.
 fn derived_target(
+    context: &AccessRightsContext,
     reporter: &mut AccessRightsReporter,
     require: &JsonValue,
     pointer: &str,
@@ -270,6 +273,7 @@ fn derived_target(
         .into());
     };
     let expanded = access_rights_expand(
+        context,
         reporter,
         &AccessRightsTemplate {
             text: template.to_owned(),
