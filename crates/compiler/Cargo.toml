@@ -14,6 +14,7 @@ oracle = ["dep:seampact-oracle", "dep:serde", "dep:serde_json"]
 indexmap.workspace = true
 seampact-authoring.workspace = true
 seampact-diagnostics.workspace = true
+seampact-finalize.workspace = true
 seampact-ir.workspace = true
 seampact-json.workspace = true
 seampact-load.workspace = true

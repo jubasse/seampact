@@ -35,6 +35,7 @@ const WORKSPACE_STAGE: &str = "workspace";
 
 /// The stage name of the link rules.
 const LINK_STAGE: &str = "link";
+const FINALIZE_STAGE: &str = "finalize";
 
 /// Why a fixture could not be compiled at all.
 #[derive(Debug, Error)]
@@ -132,6 +133,10 @@ fn rule_id_stages() -> Vec<StageRuleIds> {
         StageRuleIds {
             stage: LINK_STAGE,
             rule_ids: seampact_pass_link::RULE_IDS,
+        },
+        StageRuleIds {
+            stage: FINALIZE_STAGE,
+            rule_ids: seampact_finalize::RULE_IDS,
         },
     ]
 }
