@@ -8,6 +8,7 @@ use std::collections::HashMap;
 
 use seampact_diagnostics::{InternalError, quote_text};
 use seampact_ir::{KnownTypeUseRef, ScalarType};
+use seampact_js::js_number_of_text;
 use seampact_json::{JsonValue, MAX_SAFE_INTEGER};
 use seampact_pipeline::pointer_below;
 
@@ -84,24 +85,7 @@ fn retry_param_problem(
 // A bound is the JavaScript `Number` of its decimal literal, NaN when it does not read as one,
 // which no comparison holds.
 fn bound_holds(bound: Option<&str>, holds: fn(f64) -> bool) -> bool {
-    bound.is_some_and(|text| holds(number_of_decimal_text(text)))
-}
-
-// `Number(text)` for the text of a decimal literal: `Number("")` is 0, and Rust's parser would
-// also read `inf` and `nan`, which JavaScript does not.
-fn number_of_decimal_text(text: &str) -> f64 {
-    if text.is_empty() {
-        return 0.0;
-    }
-
-    let is_decimal_character =
-        |character: char| character.is_ascii_digit() || "+-.eE".contains(character);
-
-    if !text.chars().all(is_decimal_character) {
-        return f64::NAN;
-    }
-
-    text.parse::<f64>().unwrap_or(f64::NAN)
+    bound.is_some_and(|text| holds(js_number_of_text(text)))
 }
 
 // The param's own pointer when the declaration writes its params inline, else the declaration,

@@ -4,8 +4,9 @@
 //! [`cmp_utf16`] and [`Utf16Key`] order strings by UTF-16 code units as `<` and
 //! `.sort()` do, and [`js_key_order`] and [`reorder_in_js_key_order`] give the key
 //! order of `Object.keys` and `JSON.stringify`, and [`FiniteNumber`] writes a number as
-//! `String(n)` and `JSON.stringify(n)` do, [`is_ecmascript_white_space`] is the `\s` class,
-//! and [`utf16_prefix`] is `text.slice(0, units)`.
+//! `String(n)` and `JSON.stringify(n)` do, [`js_number_of_text`] reads a string as `Number(text)`
+//! does, [`is_ecmascript_white_space`] is the `\s` class, and [`utf16_prefix`] is
+//! `text.slice(0, units)`.
 //!
 //! Review rule: map indexing (`map[&key]`) panics on a missing key and has no clippy
 //! lint; use `.get(&key)` and handle the absence.
@@ -13,6 +14,7 @@
 mod key_order;
 mod list_index;
 mod number_text;
+mod string_to_number;
 mod utf16_order;
 mod utf16_prefix;
 mod white_space;
@@ -22,6 +24,7 @@ pub use key_order::{
 };
 pub use list_index::list_index_of_number_text;
 pub use number_text::FiniteNumber;
+pub use string_to_number::js_number_of_text;
 pub use utf16_order::{Utf16Key, cmp_utf16};
 pub use utf16_prefix::utf16_prefix;
 pub use white_space::is_ecmascript_white_space;
