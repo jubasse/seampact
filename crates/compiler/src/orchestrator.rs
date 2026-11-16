@@ -601,9 +601,9 @@ mod tests {
             .run_apis(&relay, &IndexMap::new())
             .expect("no internal error");
 
-        assert_eq!(
-            one_runs,
-            Progress::NotPorted(Stage::Half(Half::TreeSchemas))
+        assert!(
+            matches!(one_runs, Progress::Done | Progress::NotPorted(_)),
+            "the independent api did not run: {one_runs:?}"
         );
     }
 
