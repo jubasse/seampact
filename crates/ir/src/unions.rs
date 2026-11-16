@@ -339,6 +339,15 @@ macro_rules! ir_unions {
                 }
             }
 
+            // A copy of the borrowed variant, as the open union.
+            impl From<$known_ref<'_>> for $name {
+                fn from(known: $known_ref<'_>) -> Self {
+                    match known {
+                        $($known_ref::$variant(variant) => Self::$variant(variant.clone()),)+
+                    }
+                }
+            }
+
             impl<'union> From<&'union $known> for $known_ref<'union> {
                 fn from(known: &'union $known) -> Self {
                     match known {
@@ -610,5 +619,13 @@ mod tests {
             owned.to_string(),
             "the SignatureVerify variant `hardware` is not known to this compiler"
         );
+    }
+
+    #[test]
+    fn a_borrowed_known_variant_copies_back_into_the_open_union() {
+        let open = signature_verify_of(r#"{"verify":"application","headers":[]}"#);
+        let narrowed = KnownSignatureVerifyRef::try_from(&open).unwrap();
+
+        assert_eq!(SignatureVerify::from(narrowed), open);
     }
 }

@@ -8,7 +8,7 @@ use seampact_diagnostics::{InternalError, quote_text};
 use seampact_ir::{
     ArrayTemplate, EachTemplate, KnownMemberNameRef, KnownTemplateRef, KnownTextPartRef,
     KnownTypeUseRef, ObjectSchema, ObjectTemplate, ScalarType, ScalarTypeUse, SlotTemplate,
-    Template, TextTemplate,
+    Template, TextTemplate, TypeUse,
 };
 use seampact_json::{JsonValue, stringify_json};
 use seampact_pipeline::{PassError, pointer_below};
@@ -16,11 +16,10 @@ use seampact_pipeline::{PassError, pointer_below};
 use crate::report::{DeriveErrorsProblem, DeriveErrorsReporter, DeriveErrorsRule};
 use crate::role_param_fit::{
     DeriveErrorsFit, DeriveErrorsJsonKind, DeriveErrorsKinds, DeriveErrorsMisfitKind,
-    DeriveErrorsMisfitReason, DeriveErrorsTyped, derive_errors_copied_use,
-    derive_errors_describe_kinds, derive_errors_kinds_fit, derive_errors_kinds_of,
-    derive_errors_member_misfits, derive_errors_misfit, derive_errors_misfit_reason,
-    derive_errors_no_refinements, derive_errors_object_of_use, derive_errors_ref_use,
-    derive_errors_scalar_use,
+    DeriveErrorsMisfitReason, DeriveErrorsTyped, derive_errors_describe_kinds,
+    derive_errors_kinds_fit, derive_errors_kinds_of, derive_errors_member_misfits,
+    derive_errors_misfit, derive_errors_misfit_reason, derive_errors_no_refinements,
+    derive_errors_object_of_use, derive_errors_ref_use, derive_errors_scalar_use,
 };
 use crate::role_params::{
     DERIVE_ERRORS_ITEM_SLOT, DeriveErrorsRoleParamsSite, derive_errors_datum_always,
@@ -420,7 +419,7 @@ fn check_literal(
     let issues = check
         .fit
         .examples
-        .check_example(value, &derive_errors_copied_use(&accepted.use_))?;
+        .check_example(value, &TypeUse::from(accepted.use_))?;
 
     for issue in issues {
         let located = Position {
