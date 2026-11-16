@@ -834,6 +834,7 @@ dependencies = [
  "indexmap",
  "seampact-authoring",
  "seampact-diagnostics",
+ "seampact-finalize",
  "seampact-ir",
  "seampact-json",
  "seampact-load",
@@ -867,6 +868,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "seampact-finalize"
+version = "2.0.0"
+dependencies = [
+ "indexmap",
+ "seampact-authoring",
+ "seampact-diagnostics",
+ "seampact-ir",
+ "seampact-ir-check",
+ "seampact-js",
+ "seampact-json",
+ "seampact-naming",
+ "seampact-pipeline",
+ "seampact-span",
+ "serde_json",
+]
+
+[[package]]
 name = "seampact-ir"
 version = "2.0.0"
 dependencies = [
@@ -874,6 +892,17 @@ dependencies = [
  "seampact-js",
  "seampact-json",
  "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
+name = "seampact-ir-check"
+version = "2.0.0"
+dependencies = [
+ "jsonschema",
+ "seampact-ir",
+ "seampact-json",
  "serde_json",
  "thiserror",
 ]
