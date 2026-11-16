@@ -17,6 +17,7 @@ mod ids;
 mod imported;
 mod instance_walk;
 mod integers;
+mod invariants;
 mod ir_map;
 mod layer;
 mod open_enums;
@@ -66,6 +67,7 @@ pub use instance_walk::{
     IrInstanceNode, IrUnknown, ir_definition, visit_ir_unknown, walk_ir_instance,
 };
 pub use integers::{HTTP_STATUS_RANGE, optional_count};
+pub use invariants::{IR_PARTITIONS, IrInvariantId, IrInvariantViolation, check_ir_invariants};
 pub use ir_map::IrMap;
 pub use layer::Layer;
 pub use open_enums::{
