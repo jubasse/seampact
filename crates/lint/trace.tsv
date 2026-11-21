@@ -44,3 +44,5 @@ src/resolve.rs#unclaimed_rule_diagnostic	packages/core/lint/src/resolve.ts#uncla
 -	packages/core/lint/src/plugin.ts#assertRule	skip: a rule shape is checked by the type system
 -	packages/core/lint/src/plugin.ts#memberOf	skip: only lintAssertPlugin reads members of an unknown value
 -	packages/core/lint/src/describe-error.ts#describeError	skip: only the rejected rule diagnostic describes a thrown value
+-	packages/core/lint/src/plugin.ts#isDefinedLintPlugin	skip: the plugin API is removed (ADR 0031)
+-	packages/core/lint/src/plugin.ts#defineLintPlugin	skip: the plugin API is removed (ADR 0031)
