@@ -4,15 +4,17 @@ For the lead session only: subagents never read this file. The lead reads it onc
 
 ## Agents
 
-Spawn and message agents as the global AGENTS.md "Sub-agents" table says (Herdr or the Agent tool); the table below gives each task's type, model and effort.
+Spawn and message agents as the global AGENTS.md "Sub-agents" table says (Herdr or the Agent tool); the table below gives each task's type and level.
 
-| Task | Type | Model, effort |
+Levels: N1 Haiku, N2 Sonnet medium, N3 Sonnet high, N4 Opus medium, N5 Opus high.
+
+| Task | Type | Level |
 |---|---|---|
-| lane PR, review fixes, committed docs | `seampact-implementer` | Sonnet medium; Opus medium only for shared runtime code |
-| single review, lens review, synthesis | `seampact-reviewer` | one review per PR: Sonnet medium; Opus high only for a freeze (ADR, IR, format) or shared runtime code; lens panel (Sonnet high) and synthesis (Opus high) only for an IR change |
-| listed nits, rebase plus gate, regeneration | `seampact-mechanical` | Haiku (its default) |
-| one-shot repo-wide script | `seampact-refactor` | Sonnet (its default) |
-| `.work/` brief or decision synthesis | `seampact-writer` | Opus (its default), high for design |
+| lane PR, review fixes, committed docs | `seampact-implementer` | N2; N4 for shared runtime code |
+| single review, lens review, synthesis | `seampact-reviewer` | one review per PR: N2; N5 for a freeze (ADR, IR, format), N4 for shared runtime code; lens panel (N3) and synthesis (N5) only for an IR change or a layer review |
+| listed nits, rebase plus gate, regeneration | `seampact-mechanical` | N1 |
+| one-shot repo-wide script | `seampact-refactor` | N2 |
+| `.work/` brief or decision synthesis | `seampact-writer` | N5 for design, else N4 |
 
 - `general-purpose` only when a task needs a tool the types lack (WebFetch, an MCP server other than context7, the Agent tool); its prompt starts with "Read `.claude/agents/seampact-<role>.md` first"; note the case in the handoff.
 - The `seampact-writer` type has no shell: an audit or brief that must read develop runs as `seampact-reviewer` in a worktree detached at `origin/develop` (the main worktree stays where it is).
@@ -22,13 +24,15 @@ Spawn and message agents as the global AGENTS.md "Sub-agents" table says (Herdr 
 
 ## Rust port
 
-- Grid: Sonnet medium for port lanes, each brief listing the TypeScript test cases and what covers each (see "Port lessons"); Sonnet high for derive and the loader; Opus high for design notes, seams (IR and authoring types, diagnostic type, writer) and freeze reviews. The lead runs Sonnet medium during port waves and Opus at freezes.
+- Levels: port lane N2; derive, loader and lens review N3; design note, a seam that freezes a type, freeze review, security lens and synthesis N5; lead N4, N2 only for a whole wave whose briefs N4 wrote. Each brief lists the TypeScript test cases and what covers each (see "Port lessons").
+- Before a brief: `rg` that every Rust function it calls exists (else a seam item or a grant first); build its context pack (`.work/tools/context-pack.py <prompt>`: the TS bodies of its function list, the `pub fn` lines of the helpers it names); start it only if the window left allows it.
 - One agent per 500-1,000 TypeScript lines, from a complete brief filled from this template:
 
   ```
   Invoke the skills seampact-rust and seampact-rust-port-ts first.
   Task: <port of ... to crate ...>; worktree, branch, tip, report path.
   TS files: <paths>; keep their algorithm and function shape (PORTING.md section 1), each function on a trace.tsv line (skips and merges included). Section 2 rows touched: <rows>; write a Rust test on the edge values of each.
+  Context pack: <path>, read first in one call; it replaces whole-file reads of the TS files: open one only for what it omits.
   Target crate: <name>, design note section <n>, with its designed types (do not redesign them).
   TS test cases to port, as a list: <behaviour per line>.
   Fixture subset and oracle command: <fixtures>, <command>.
@@ -48,7 +52,8 @@ Spawn and message agents as the global AGENTS.md "Sub-agents" table says (Herdr 
 - The design note splits each unit into briefs of about 1,000 TypeScript lines, one PR each. A relay at the call cap is the next brief, not "continue".
 - A dependent lane starts only once its dependency's land has exited 0 (`wave.sh land ... && wave.sh start ...`). Never judge a land from filtered output.
 - Worktrees live in a durable directory (`WAVE_ROOT` outside `/tmp`). An agent paused at the usage limit first commits its work in progress on its branch.
-- A new `fixtures/expected/differences.yaml` entry comes with its update to `crates/oracle/tests/oracle_run.rs`, which pins the stale entries of a self-compare.
+- Reading an oracle run and adding a `differences.yaml` entry: `crates/oracle/README.md`.
+- Layer end: three handoff lines on what each level cost or saved (defects in the review file a higher level would have caught); the user decides any change.
 - A paused lane with one command left is finished by the lead, not by a fresh agent.
 - Lane reports give Rust code lines, Rust test lines and TypeScript lines apart. Layer 1 came out at 4.4 times the TypeScript against 2.4 budgeted.
 - An Opus pattern review after the first merged brief of a layer catches test or pattern bloat early. The layer review still runs at the layer end.
