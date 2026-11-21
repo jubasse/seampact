@@ -136,3 +136,22 @@ schemas:
     expect(located(refused)).toEqual([["name-collision", "/enums/HTTPCode"]]);
   });
 });
+
+describe("a long enum source chain", () => {
+  const LINKS = 1_000;
+  const BUDGET_MS = 4_000;
+
+  test("is followed once per enum, each link keeping the code names of the ones before it", () => {
+    const links = Array.from({ length: LINKS }, (_, index) =>
+      index === 0
+        ? "  Link0: { values: [a, b], codeNames: { a: first }, reason: The root. }"
+        : `  Link${index}: { source: { enum: Link${index - 1} } }`,
+    );
+    const started = Date.now();
+    const run = treeSchemasRunApi(`enums:\n${links.join("\n")}\n`);
+
+    expect(run.diagnostics).toEqual([]);
+    expect(run.draft.enums[`Link${LINKS - 1}`]?.values).toEqual(["a", "b"]);
+    expect(Date.now() - started).toBeLessThan(BUDGET_MS);
+  });
+});
