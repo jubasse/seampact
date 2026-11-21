@@ -965,7 +965,6 @@ dependencies = [
  "flate2",
  "indexmap",
  "jsonschema",
- "seampact-authoring",
  "seampact-compiler",
  "seampact-diagnostics",
  "seampact-finalize",
