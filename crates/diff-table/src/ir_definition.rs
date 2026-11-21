@@ -294,6 +294,7 @@ pub enum IrDefinition {
 impl IrDefinition {
     /// The definition as the IR schema names it.
     #[must_use]
+    #[expect(clippy::too_many_lines, reason = "one arm per definition, generated")]
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::Name => "Name",
