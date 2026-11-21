@@ -103,15 +103,24 @@ pub struct MergeCase {
     pub inputs: Vec<MergeCaseInput>,
 }
 
-/// A diff case: two fixtures and the raw diff options.
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// One side of a diff case: a fixture to compile, or the IR of one api a test built.
+#[derive(Debug, Clone, PartialEq)]
+pub enum DiffSide {
+    /// `before/` or `after/`, a fixture whose every api is diffed.
+    Fixture(Fixture),
+    /// `before.ir.json` or `after.ir.json`, the IR of one api.
+    Ir(JsonValue),
+}
+
+/// A diff case: two sides and the raw diff options.
+#[derive(Debug, Clone, PartialEq)]
 pub struct DiffCase {
     /// The case path under `fixtures/`.
     pub path: String,
-    /// The `before/` fixture.
-    pub before: Fixture,
-    /// The `after/` fixture.
-    pub after: Fixture,
+    /// The before side.
+    pub before: DiffSide,
+    /// The after side.
+    pub after: DiffSide,
     /// The value of `diff.options.json`, `{ "today": "2026-01-01" }` when absent.
     pub options: JsonValue,
 }
@@ -313,11 +322,11 @@ fn kept_operations(mut ir: serde_json::Value, operations: Option<&[String]>) -> 
     ir
 }
 
-/// Reads the diff case at `case_path`: its two fixtures and `diff.options.json`.
+/// Reads the diff case at `case_path`: its two sides and `diff.options.json`.
 ///
 /// # Errors
 ///
-/// When the options file cannot be read or is no JSON object.
+/// When the options file or a side's IR file cannot be read or is no JSON object.
 pub fn read_diff_case(
     repository_root: &Utf8Path,
     case_path: &str,
@@ -344,13 +353,24 @@ pub fn read_diff_case(
 
     Ok(DiffCase {
         path: case_path.to_owned(),
-        before: side_fixture(&directory, case_path, "before"),
-        after: side_fixture(&directory, case_path, "after"),
+        before: diff_side(&directory, case_path, "before")?,
+        after: diff_side(&directory, case_path, "after")?,
         options,
     })
 }
 
-fn side_fixture(case_directory: &Utf8Path, case_path: &str, side: &str) -> Fixture {
+/// The side `side` of a diff case: `<side>.ir.json` when the case holds it, else `<side>/`.
+fn diff_side(
+    case_directory: &Utf8Path,
+    case_path: &str,
+    side: &str,
+) -> Result<DiffSide, OracleError> {
+    let ir_path = case_directory.join(format!("{side}.ir.json"));
+
+    if ir_path.is_file() {
+        return Ok(DiffSide::Ir(read_case_file(&ir_path)?));
+    }
+
     let directory = case_directory.join(side);
     let entry = if directory.join(DEFAULT_WORKSPACE_FILE).exists() {
         DEFAULT_WORKSPACE_FILE
@@ -358,11 +378,11 @@ fn side_fixture(case_directory: &Utf8Path, case_path: &str, side: &str) -> Fixtu
         "api.yaml"
     };
 
-    Fixture {
+    Ok(DiffSide::Fixture(Fixture {
         path: format!("{case_path}/{side}"),
         directory,
         entry: entry.to_owned(),
-    }
+    }))
 }
 
 /// Reads `bundle.json` of the case at `case_path`.

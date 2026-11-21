@@ -18,12 +18,12 @@ use std::time::Duration;
 
 use anyhow::Context;
 use camino::Utf8PathBuf;
-use seampact_oracle::{FixtureGlob, Selection};
+use seampact_oracle::{FixtureGlob, Tool};
 
 use crate::gate::GateMode;
 use crate::outcome::StepOutcome;
 
-const USAGE: &str = "usage: cargo xtask (gate [--fail-fast] | oracle [<glob>] [--half <name>] [--time-limit <seconds>])";
+const USAGE: &str = "usage: cargo xtask (gate [--fail-fast] | oracle [<glob>] [--half <name> | --tool <name>] [--time-limit <seconds>])";
 
 /// The exit code of a command line that names no known task or selects nothing.
 const EXIT_USAGE: u8 = 2;
@@ -33,6 +33,9 @@ const FAIL_FAST_FLAG: &str = "--fail-fast";
 
 /// The flag that compares one pass half alone.
 const HALF_FLAG: &str = "--half";
+
+/// The flag that runs one tool alone.
+const TOOL_FLAG: &str = "--tool";
 
 /// The flag that sets the seconds one fixture may take.
 const TIME_LIMIT_FLAG: &str = "--time-limit";
@@ -58,8 +61,8 @@ fn run() -> anyhow::Result<ExitCode> {
             None => usage_error(None),
         }),
         Some((task, oracle_arguments)) if task == "oracle" => {
-            match oracle_selection(oracle_arguments) {
-                Some(selection) => oracle_task(&workspace_root, &selection),
+            match oracle_request(oracle_arguments) {
+                Some(request) => oracle_task(&workspace_root, &request),
                 None => Ok(usage_error(None)),
             }
         }
@@ -105,9 +108,9 @@ fn gate_task(workspace_root: &camino::Utf8Path, mode: GateMode) -> ExitCode {
 
 fn oracle_task(
     workspace_root: &camino::Utf8Path,
-    selection: &Selection,
+    request: &oracle::OracleRequest,
 ) -> anyhow::Result<ExitCode> {
-    match oracle::run_oracle_task(workspace_root, selection) {
+    match oracle::run_oracle_task(workspace_root, request) {
         Ok(verdict) => {
             println!("{verdict}");
 
@@ -122,10 +125,11 @@ fn oracle_task(
     }
 }
 
-/// The selection of `oracle [<glob>] [--half <name>] [--time-limit <seconds>]`, or `None` when the
-/// arguments are not that.
-fn oracle_selection(arguments: &[String]) -> Option<Selection> {
+/// The request of `oracle [<glob>] [--half <name> | --tool <name>] [--time-limit <seconds>]`, or
+/// `None` when the arguments are not that.
+fn oracle_request(arguments: &[String]) -> Option<oracle::OracleRequest> {
     let mut selection = oracle::default_selection();
+    let mut tool = None;
     let mut remaining = arguments.iter();
 
     while let Some(argument) = remaining.next() {
@@ -137,10 +141,20 @@ fn oracle_selection(arguments: &[String]) -> Option<Selection> {
             continue;
         }
 
+        if argument == TOOL_FLAG {
+            let named = Tool::from_name(remaining.next()?)?;
+
+            if tool.replace(named).is_some() || selection.half.is_some() {
+                return None;
+            }
+
+            continue;
+        }
+
         if argument == HALF_FLAG {
             let half = remaining.next()?;
 
-            if selection.half.replace(half.clone()).is_some() {
+            if selection.half.replace(half.clone()).is_some() || tool.is_some() {
                 return None;
             }
 
@@ -154,7 +168,7 @@ fn oracle_selection(arguments: &[String]) -> Option<Selection> {
         selection.fixture_glob = Some(FixtureGlob::new(argument));
     }
 
-    Some(selection)
+    Some(oracle::OracleRequest { selection, tool })
 }
 
 fn usage_error(problem: Option<&str>) -> ExitCode {
@@ -200,17 +214,21 @@ mod tests {
 
     #[test]
     fn the_oracle_takes_one_glob_and_one_half_in_any_order() {
-        let selection = oracle_selection(&arguments("--half tree.nodes golden/*")).unwrap();
+        let selection = oracle_request(&arguments("--half tree.nodes golden/*"))
+            .unwrap()
+            .selection;
 
         assert_eq!(selection.half.as_deref(), Some("tree.nodes"));
         assert_eq!(selection.fixture_glob, Some(FixtureGlob::new("golden/*")));
-        assert!(oracle_selection(&[]).is_some());
+        assert!(oracle_request(&[]).is_some());
     }
 
     #[test]
     fn the_time_limit_defaults_to_two_minutes_and_a_flag_changes_it() {
-        let default = oracle_selection(&[]).unwrap();
-        let changed = oracle_selection(&arguments("--time-limit 30")).unwrap();
+        let default = oracle_request(&[]).unwrap().selection;
+        let changed = oracle_request(&arguments("--time-limit 30"))
+            .unwrap()
+            .selection;
 
         assert_eq!(default.fixture_time_limit, Some(Duration::from_secs(120)));
         assert_eq!(changed.fixture_time_limit, Some(Duration::from_secs(30)));
@@ -219,14 +237,35 @@ mod tests {
     #[test]
     fn a_time_limit_that_is_not_a_number_of_seconds_is_refused() {
         for refused in ["--time-limit", "--time-limit soon", "--time-limit -1"] {
-            assert!(oracle_selection(&arguments(refused)).is_none(), "{refused}");
+            assert!(oracle_request(&arguments(refused)).is_none(), "{refused}");
         }
     }
 
     #[test]
     fn two_globs_a_half_without_a_name_and_an_unknown_flag_are_refused() {
         for refused in ["a b", "--half", "--half a --half b", "--all"] {
-            assert!(oracle_selection(&arguments(refused)).is_none(), "{refused}");
+            assert!(oracle_request(&arguments(refused)).is_none(), "{refused}");
+        }
+    }
+
+    #[test]
+    fn the_oracle_takes_one_known_tool_never_beside_a_half() {
+        let request = oracle_request(&arguments("cli/** --tool cli-config")).unwrap();
+
+        assert_eq!(request.tool, Some(Tool::CliConfig));
+        assert_eq!(
+            request.selection.fixture_glob,
+            Some(FixtureGlob::new("cli/**"))
+        );
+
+        for refused in [
+            "--tool",
+            "--tool compiler",
+            "--tool cli --tool lint",
+            "--tool cli --half tree.nodes",
+            "--half tree.nodes --tool cli",
+        ] {
+            assert!(oracle_request(&arguments(refused)).is_none(), "{refused}");
         }
     }
 }

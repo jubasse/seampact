@@ -5,13 +5,12 @@ use std::ffi::OsString;
 
 use camino::{Utf8Path, Utf8PathBuf};
 use indexmap::IndexMap;
-use seampact_oracle::{CliCase, SubjectAnswer, Transcript};
+use seampact_oracle::{
+    CASE_TODAY, CliCase, GIT_SOURCE_REPOSITORY, ROOT_TOKEN, SubjectAnswer, Transcript,
+};
 
 use crate::oracle::stub_answer::failed_answer;
 use crate::{CliIo, run_command};
-
-/// The date every CLI case runs on, as the TypeScript oracle fixes it.
-const CASE_TODAY: &str = "2026-01-01";
 
 /// The variable naming the bundle cache directory.
 const CACHE_DIRECTORY_VARIABLE: &str = "SEAMPACT_CACHE_DIR";
@@ -77,7 +76,11 @@ pub(crate) fn cli_answer(case: &CliCase, root: &Utf8Path) -> SubjectAnswer<Trans
         stdout: String::new(),
         stderr: String::new(),
     };
-    let argv: Vec<OsString> = case.argv.iter().map(OsString::from).collect();
+    let argv: Vec<OsString> = case
+        .argv
+        .iter()
+        .map(|argument| OsString::from(argument.replace(ROOT_TOKEN, root.as_str())))
+        .collect();
 
     let exit = match run_command(&argv, &mut io) {
         Ok(exit) => exit,
@@ -108,7 +111,8 @@ pub(crate) fn cli_answer(case: &CliCase, root: &Utf8Path) -> SubjectAnswer<Trans
     })
 }
 
-/// Every file under `root` by its `/`-separated path relative to `root`, sorted by path.
+/// Every file under `root` by its `/`-separated path relative to `root`, sorted by path; the git
+/// source the harness built is not the command's.
 fn files_under(root: &Utf8Path) -> Result<BTreeMap<String, Vec<u8>>, String> {
     let mut files = BTreeMap::new();
     let mut directories = vec![root.to_path_buf()];
@@ -126,7 +130,9 @@ fn files_under(root: &Utf8Path) -> Result<BTreeMap<String, Vec<u8>>, String> {
                 .map_err(|error| format!("cannot read the type of {path}: {error}"))?;
 
             if file_type.is_dir() {
-                directories.push(path);
+                if path != root.join(GIT_SOURCE_REPOSITORY) {
+                    directories.push(path);
+                }
 
                 continue;
             }

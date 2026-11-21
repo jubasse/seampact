@@ -218,7 +218,7 @@ fn only_in_one(pointer: String, kind: MismatchKind) -> Mismatch {
     }
 }
 
-fn unparsable() -> Mismatch {
+pub(crate) fn unparsable() -> Mismatch {
     Mismatch {
         pointer: None,
         kind: MismatchKind::Unparsable,

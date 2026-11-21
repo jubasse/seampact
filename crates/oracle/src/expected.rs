@@ -40,8 +40,45 @@ pub enum OutputKind {
     HalfDiagnostics,
     /// `schema-calls/<api>.json`.
     SchemaCalls,
-    /// OpenAPI documents, not compared yet.
+    /// `openapi/<api>/<document>.yaml` and `openapi-merge/merged.yaml`, compared once parsed.
     Openapi,
+    /// `openapi/<api>.refusals.json` and `openapi-merge/refusals.json`.
+    OpenapiRefusals,
+    /// Listed by the schema, which describes `openapi-merge/merged.yaml` under
+    /// [`OutputKind::Openapi`]: the harness names no file with it.
+    OpenapiMerge,
+    /// `lint/<api>.json`.
+    Lint,
+    /// `diff-table.json`.
+    DiffTable,
+    /// `diff/result.json`.
+    DiffResult,
+    /// `diff/report.txt`, line by line.
+    DiffReport,
+    /// `bundle/files.json`.
+    BundleFiles,
+    /// `bundle/manifest.json`, line by line once normalised.
+    BundleManifest,
+    /// `bundle/integrity.txt`, line by line.
+    BundleIntegrity,
+    /// `bundle/ustar.json`.
+    BundleUstar,
+    /// `bundle/refusals.json`.
+    BundleRefusals,
+    /// `cli-config/<NN>-<function>.json`.
+    CliConfig,
+    /// `editor-schemas/<NN>-<function>.json`.
+    EditorSchemas,
+    /// `bundle-fetch/<NN>-<function>.json`.
+    BundleFetch,
+    /// The `exit` of `cli/transcript.json`.
+    CliExit,
+    /// The `stdout` of `cli/transcript.json`, line by line.
+    CliStdout,
+    /// The `stderr` of `cli/transcript.json`, line by line.
+    CliStderr,
+    /// The `written` and `removed` files of `cli/transcript.json`.
+    CliFiles,
     /// Generated files, not compared yet.
     Generated,
 }
@@ -222,7 +259,7 @@ pub fn read_expected_files(
         .collect()
 }
 
-fn files_below(
+pub(crate) fn files_below(
     path: &Utf8Path,
     name: &str,
     found_names: &mut Vec<String>,

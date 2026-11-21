@@ -88,8 +88,8 @@ pub struct RecordedAnswer {
     pub written: IndexMap<String, Vec<u8>>,
 }
 
-/// What running a CLI case gave; paths relative to the run root, the run root written `<root>`
-/// in both streams.
+/// What running a CLI case gave, paths relative to the run root; the harness writes the run root
+/// `<root>` in both streams before it compares them.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Transcript {
     /// The exit code.
