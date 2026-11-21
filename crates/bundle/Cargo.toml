@@ -9,12 +9,24 @@ publish.workspace = true
 
 [dependencies]
 camino.workspace = true
+flate2.workspace = true
 indexmap.workspace = true
+jsonschema.workspace = true
 seampact-compiler.workspace = true
 seampact-diagnostics.workspace = true
+seampact-finalize.workspace = true
 seampact-ir.workspace = true
+seampact-ir-check.workspace = true
+seampact-js.workspace = true
+seampact-json.workspace = true
 seampact-load.workspace = true
+seampact-pipeline.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
 thiserror.workspace = true
+
+[dev-dependencies]
+seampact-oracle.workspace = true
 
 [lints]
 workspace = true

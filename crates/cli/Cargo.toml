@@ -28,8 +28,8 @@ seampact-diff-table.workspace = true
 seampact-editor-schemas.workspace = true
 seampact-ir.workspace = true
 seampact-json.workspace = true
-seampact-lint.workspace = true
 seampact-load.workspace = true
+seampact-lint.workspace = true
 seampact-openapi.workspace = true
 seampact-oracle = { workspace = true, optional = true }
 seampact-target.workspace = true
