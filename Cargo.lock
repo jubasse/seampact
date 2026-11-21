@@ -1021,6 +1021,7 @@ name = "seampact-diff-table"
 version = "2.0.0"
 dependencies = [
  "seampact-diagnostics",
+ "seampact-ir",
  "seampact-json",
  "thiserror",
 ]
