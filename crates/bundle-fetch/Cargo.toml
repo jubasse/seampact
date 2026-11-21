@@ -1,0 +1,20 @@
+[package]
+name = "seampact-bundle-fetch"
+description = "Fetching contract bundles: the package, git and release channels, the cache and workspace imports."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+camino.workspace = true
+indexmap.workspace = true
+seampact-bundle.workspace = true
+seampact-compiler.workspace = true
+seampact-diagnostics.workspace = true
+seampact-ir.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

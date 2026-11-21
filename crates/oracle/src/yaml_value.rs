@@ -85,7 +85,7 @@ fn read_mapping<'input>(
     loop {
         let key = match next_event(events)? {
             Event::MappingEnd => return Ok(Value::Object(members)),
-            Event::Scalar(key, _, _, None) => key.into_owned(),
+            Event::Scalar(key, style, _, None) => string_key(&key, style)?,
             _ => return Err("a YAML mapping key is not a plain scalar".to_owned()),
         };
 
@@ -94,6 +94,17 @@ fn read_mapping<'input>(
         if members.insert(key.clone(), value).is_some() {
             return Err(format!("the YAML mapping key '{key}' is used twice"));
         }
+    }
+}
+
+/// A mapping key under the core schema: a plain key that resolves to no string (`200`, `true`,
+/// `null`) is refused, so it never equals the quoted key a JSON member name needs.
+fn string_key(key: &str, style: ScalarStyle) -> Result<String, String> {
+    match scalar_value(key, style)? {
+        Value::String(text) => Ok(text),
+        _ => Err(format!(
+            "the YAML mapping key {key} is no string under the core schema; quote it"
+        )),
     }
 }
 
@@ -220,6 +231,18 @@ mod tests {
 
     fn read(text: &str) -> Value {
         yaml_to_json(text).unwrap()
+    }
+
+    #[test]
+    fn a_plain_key_that_resolves_to_no_string_is_refused_and_a_quoted_one_is_kept() {
+        for refused in ["200: a", "true: a", "~: a", "1.5: a"] {
+            assert!(yaml_to_json(refused).is_err(), "{refused}");
+        }
+
+        assert_eq!(
+            read("'200': a\n\"true\": b\nc: d"),
+            serde_json::from_str::<Value>(r#"{"200": "a", "true": "b", "c": "d"}"#).unwrap()
+        );
     }
 
     #[test]

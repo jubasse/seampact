@@ -26,6 +26,7 @@ seampact-pass-derive-wire.workspace = true
 seampact-pass-link.workspace = true
 seampact-pass-tree-nodes.workspace = true
 seampact-pass-tree-schemas.workspace = true
+seampact-pass-tree-shared.workspace = true
 seampact-pipeline.workspace = true
 seampact-span.workspace = true
 seampact-validate.workspace = true

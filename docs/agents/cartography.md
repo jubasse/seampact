@@ -304,15 +304,24 @@ In pipeline order (ADR 0006 section 1).
 ### `crates`
 
 - `crates/authoring`: The authoring grammar data (embedded authoring schemas, markers, keywords, reserved names), the loaded tree the loader hands over and its typed member readers.
+- `crates/bundle`: Contract bundles: build, write (directory, tarball, npm package), read and verify, with no network.
+- `crates/bundle-fetch`: Fetching contract bundles: the package, git and release channels, the cache and workspace imports; the one network crate.
+- `crates/cli`: The seampact binary and its library: argument parsing, dispatch, help, the problem printer and the commands.
+- `crates/cli-config`: The CLI's config reading: the app, root, workspace and run configs and the problems they report.
 - `crates/compiler`: The compiler: the stages in run order (`compile_workspace` with its stop rule, `run_half`), and behind the `oracle` feature the subject `cargo xtask oracle` compiles fixtures and runs halves with.
 - `crates/diagnostics`: Diagnostics of the Rust port: the diagnostic type, its sink, sort order and printed form, and the internal error with its exit code.
+- `crates/diff`: The contract diff: the walk over two contracts, the gate, the deprecations and the text report.
+- `crates/diff-table`: The contract diff's data: the diff codes, the change table, the options and the result types.
+- `crates/editor-schemas`: The editor schemas `compile --editor-schemas` writes: the declarations of each api and the schema files.
 - `crates/finalize`: The finalize stage: the complete draft of one api to its canonical IR and source map, ported from packages/core/compiler/src/finalize.
 - `crates/ir`: The seampact IR and source-map types, their open enums, unions and registries, the embedded IR schema files and the canonical document roots.
 - `crates/ir-check`: The strict IR JSON Schema check and the shared JsonValue to serde_json conversion that writes each number from its f64.
 - `crates/js`: JavaScript semantics shared by every port lane: UTF-16 string order, JavaScript object key order, ECMAScript number text and UTF-16 prefixes.
 - `crates/json`: JSON values as JavaScript holds them, their canonical text (IR, source map and OpenAPI bytes), the indented text of the oracle's diagnostics and halves, the JS-integer reader, `String(value)` of a value and the JSON Pointer escape.
+- `crates/lint`: The contract lint: the core rules over a compiled api and `run_lint`.
 - `crates/load`: The load stage: the workspace readers (disk and memory), authored paths and pack files, the load limits and budget, the load diagnostics, the include fragments, the YAML tree with its plain-scalar resolver, the file store that parses each file and reports its pitfalls, the expansion of `$include`, `$file` and the file form of `$ref` into one layer build per file, the composition of an api's layer builds into its raw tree, and the loader entry that reads a workspace into its raw trees, files, sorted diagnostics and fragments.
 - `crates/naming`: The cross-language naming of ADR 0007: splitting a written name, name roles, reserved words and identifiers per language.
+- `crates/openapi`: The OpenAPI emitter: the documents of one api, the emitter options and the merged document of a monorepo root.
 - `crates/oracle`: The oracle harness of the Rust port: reads fixtures/expected/, compares a compiler subject's outputs with it under differences.yaml, and gives the verdict of `cargo xtask oracle`.
 - `crates/pass-access-identity`: The `access.identity` pass half: identities, schemes and each operation's authentication.
 - `crates/pass-access-rights`: The `access.rights` pass half: rights, rules, scopes and each operation's requirements.
@@ -324,6 +333,7 @@ In pipeline order (ADR 0006 section 1).
 - `crates/pass-tree-shared`: The code of the `tree.nodes` half that earlier halves reach: operation names, raw tree readers and the relay origin.
 - `crates/pipeline`: The pass pipeline: half names, the draft IR, the half outputs and their merge (with the element-owner rule), the derivation table and roles, the schema service trait, the draft delta convention, the readers over the loaded tree (pointers and origins, tree nodes, inherited settings, conventions, units, declared entries) and the half context.
 - `crates/span`: Source spans of the Rust port: file ids, byte ranges, the file table and the conversion to line and UTF-16 column.
+- `crates/target`: What OpenAPI, the CLI and the generator planning share from `codegen-core`: refusals, IR locations, the not-generated fixes and case folding.
 - `crates/templates`: The template reader of ADR 0002 section 13: a raw template read into the IR's template, with the slots of its place.
 - `crates/validate`: The validate stage: the authoring tree checked against the authoring JSON Schemas, ported from packages/core/compiler/src/validate.
 

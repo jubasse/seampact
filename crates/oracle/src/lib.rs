@@ -16,8 +16,18 @@ mod matcher;
 mod raw_text;
 mod rule_ids;
 mod run;
+mod run_root;
 mod subject;
 mod time_limit;
+mod tool_cases;
+mod tool_compare;
+mod tool_discovery;
+mod tool_outputs;
+mod tool_run;
+mod tool_run_cli;
+mod tool_subject;
+mod tool_verdict;
+mod ustar_listing;
 mod verdict;
 mod yaml_value;
 
@@ -42,10 +52,28 @@ pub use rule_ids::{
     rule_id_check,
 };
 pub use run::{Selection, run_oracle};
+pub use run_root::{GIT_SOURCE_REPOSITORY, ROOT_TOKEN, RunRoot, prepared_run_root};
 pub use subject::{
     ApiDeltas, Compilation, CompiledApi, ExpectedDelta, HalfInput, HalfOutput, OracleSubject,
     SubjectAnswer,
 };
 pub use time_limit::TimeLimitAction;
+pub use tool_cases::{
+    BundleCase, CASE_TODAY, CliCase, DiffCase, DiffSide, ExpectedTranscript, ExpectedWrittenFile,
+    MergeCase, MergeCaseInput, RecordedToolFile, Tool, read_bundle_case, read_cli_case,
+    read_diff_case, read_expected_transcript, read_merge_case, read_recorded_tool_file,
+};
+pub use tool_compare::{
+    BUNDLE_MANIFEST_FILE, line_mismatches, manifest_mismatches, normalized_manifest, sha256_hex,
+    written_mismatches, yaml_mismatches,
+};
+pub use tool_discovery::{ToolCaseKind, ToolCasePath, discover_tool_cases};
+pub use tool_run::{ToolSelection, run_tools};
+pub use tool_subject::{
+    BundleAnswer, DiffAnswer, OpenApiAnswer, RecordedAnswer, RecordedToolCall, RecordedUnit,
+    ToolSubject, Transcript,
+};
+pub use tool_verdict::{ToolTally, ToolVerdict};
+pub use ustar_listing::{gunzipped_ustar_entries, ustar_entries};
 pub use verdict::{FirstFailure, ServiceCalls, Verdict};
 pub use yaml_value::yaml_to_json;

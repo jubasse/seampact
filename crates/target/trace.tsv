@@ -1,0 +1,20 @@
+src/refusal.rs#without_repeats	packages/core/codegen-core/src/refusal.ts#withoutRepeats
+-	packages/core/codegen-core/src/refusal.ts#refused	skip: each outcome enum (emit, merge) has its own refused variant; the target result union is layer 3.3's
+src/ir_location.rs#schema_location	packages/core/codegen-core/src/ir-location.ts#schemaLocation
+src/ir_location.rs#operation_location	packages/core/codegen-core/src/ir-location.ts#operationLocation
+src/ir_location.rs#below	packages/core/codegen-core/src/ir-location.ts#below
+src/located_refusals.rs#refuse_not_generated_yet	packages/core/codegen-core/src/located-refusals.ts#refuseNotGeneratedYet
+src/located_refusals.rs#refuse_unknown_value_at	packages/core/codegen-core/src/located-refusals.ts#refuseUnknownValueAt
+src/located_refusals.rs#refuse_inconsistent_ir	packages/core/codegen-core/src/located-refusals.ts#refuseInconsistentIr
+src/located_refusals.rs#location_text	packages/core/codegen-core/src/located-refusals.ts#where
+-	packages/core/codegen-core/src/located-refusals.ts#pointAt	merged: src/located_refusals.rs#refuse_inconsistent_ir
+src/unknown_value.rs#refuse_unknown_value	packages/core/codegen-core/src/unknown-value.ts#refuseUnknownValue
+src/not_generated_fixes.rs#troubleshooting_url	packages/core/codegen-core/src/not-generated-fixes.ts#troubleshootingUrl
+src/case_folded.rs#case_folded	packages/core/codegen-core/src/generated-paths.ts#caseFolded
+-	packages/core/codegen-core/src/generated-paths.ts#unsafePathReason	skip: the writer half of generated-paths, layer 3.3's seampact-writer
+-	packages/core/codegen-core/src/generated-paths.ts#checkGeneratedPaths	skip: the writer half of generated-paths, layer 3.3's seampact-writer
+-	packages/core/codegen-core/src/generated-paths.ts#directoryPrefixes	skip: the writer half of generated-paths, layer 3.3's seampact-writer
+-	packages/core/codegen-core/src/generated-paths.ts#rememberPath	skip: the writer half of generated-paths, layer 3.3's seampact-writer
+-	packages/core/codegen-core/src/generated-paths.ts#pathRefusalReason	skip: the writer half of generated-paths, layer 3.3's seampact-writer
+-	packages/core/codegen-core/src/generated-paths.ts#directoryRefusalReason	skip: the writer half of generated-paths, layer 3.3's seampact-writer
+-	packages/core/codegen-core/src/generated-paths.ts#manifestRefusalReason	skip: the writer half of generated-paths, layer 3.3's seampact-writer

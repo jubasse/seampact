@@ -17,6 +17,9 @@ seampact-js.workspace = true
 seampact-json.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+flate2.workspace = true
+sha2.workspace = true
+tempfile.workspace = true
 thiserror.workspace = true
 
 [lints]

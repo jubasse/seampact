@@ -1,0 +1,17 @@
+[package]
+name = "seampact-editor-schemas"
+description = "The editor schemas compile writes: the declarations of each api and the schema files."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+camino.workspace = true
+seampact-compiler.workspace = true
+seampact-diagnostics.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

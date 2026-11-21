@@ -12,15 +12,24 @@ publish = false
 [workspace.dependencies]
 # Workspace crates.
 seampact-authoring = { path = "crates/authoring", version = "2.0.0" }
+seampact-bundle = { path = "crates/bundle", version = "2.0.0" }
+seampact-bundle-fetch = { path = "crates/bundle-fetch", version = "2.0.0" }
+seampact-cli = { path = "crates/cli", version = "2.0.0" }
+seampact-cli-config = { path = "crates/cli-config", version = "2.0.0" }
 seampact-compiler = { path = "crates/compiler", version = "2.0.0" }
 seampact-diagnostics = { path = "crates/diagnostics", version = "2.0.0" }
+seampact-diff = { path = "crates/diff", version = "2.0.0" }
+seampact-diff-table = { path = "crates/diff-table", version = "2.0.0" }
+seampact-editor-schemas = { path = "crates/editor-schemas", version = "2.0.0" }
 seampact-finalize = { path = "crates/finalize", version = "2.0.0" }
 seampact-ir = { path = "crates/ir", version = "2.0.0" }
 seampact-ir-check = { path = "crates/ir-check", version = "2.0.0" }
 seampact-js = { path = "crates/js", version = "2.0.0" }
 seampact-json = { path = "crates/json", version = "2.0.0" }
+seampact-lint = { path = "crates/lint", version = "2.0.0" }
 seampact-load = { path = "crates/load", version = "2.0.0" }
 seampact-naming = { path = "crates/naming", version = "2.0.0" }
+seampact-openapi = { path = "crates/openapi", version = "2.0.0" }
 seampact-oracle = { path = "crates/oracle", version = "2.0.0" }
 seampact-pass-access-identity = { path = "crates/pass-access-identity", version = "2.0.0" }
 seampact-pass-access-rights = { path = "crates/pass-access-rights", version = "2.0.0" }
@@ -32,6 +41,7 @@ seampact-pass-tree-schemas = { path = "crates/pass-tree-schemas", version = "2.0
 seampact-pass-tree-shared = { path = "crates/pass-tree-shared", version = "2.0.0" }
 seampact-pipeline = { path = "crates/pipeline", version = "2.0.0" }
 seampact-span = { path = "crates/span", version = "2.0.0" }
+seampact-target = { path = "crates/target", version = "2.0.0" }
 seampact-templates = { path = "crates/templates", version = "2.0.0" }
 seampact-validate = { path = "crates/validate", version = "2.0.0" }
 # Parse surface and ordered maps; the number features follow the IR types design note, section 3.
@@ -40,10 +50,11 @@ serde_json = { version = "1.0.154", features = ["preserve_order", "arbitrary_pre
 indexmap = { version = "2.14.2", features = ["serde"] }
 ryu-js = "1.0.3"
 regress = "0.12.0"
-clap = { version = "4.6.7", features = ["derive"] }
 jsonschema = { version = "0.61.2", default-features = false, features = ["arbitrary-precision"] }
 similar = "3.2.1"
 saphyr-parser = "0.3.4"
+# The OpenAPI YAML emitter, at the parser's version: no second parser version.
+saphyr = "=0.3.4"
 camino = "1.2.6"
 thiserror = "2.0.21"
 rayon = "1.12.0"
@@ -52,8 +63,10 @@ text-size = "1.1.1"
 unicode-normalization = "0.1.26"
 annotate-snippets = "0.12.18"
 flate2 = "1.1.11"
-tar = "0.4.46"
 sha2 = "0.11.1"
+# The release channel of seampact-bundle-fetch only: HTTPS through rustls with the ring provider and the OS store.
+ureq = { version = "3.5.2", default-features = false, features = ["rustls-no-provider", "platform-verifier"] }
+rustls = { version = "0.23.46", default-features = false, features = ["ring", "std", "tls12"] }
 num-bigint = "0.4.8"
 # Tests and benchmarks.
 insta = "1.49.0"

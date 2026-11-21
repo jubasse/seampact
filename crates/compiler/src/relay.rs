@@ -13,6 +13,7 @@ use seampact_diagnostics::{
     Diagnostic, DiagnosticOrigin, InternalError, RelatedLocation, RuleId, Severity,
 };
 use seampact_json::JsonValue;
+use seampact_pass_tree_shared::relay_target_api;
 use seampact_pipeline::{TreeNodeKind, pipeline_origin, pipeline_tree_nodes, pointer_below};
 
 use crate::stages::RelayOrder;
@@ -23,6 +24,7 @@ const WORKSPACE_RELAY_CYCLE_RULE: &str = "seampact/workspace/relay-cycle";
 pub(crate) const RELAY_CYCLE_RULE_ID: RuleId = RuleId::from_static(WORKSPACE_RELAY_CYCLE_RULE);
 
 /// Every rule id the relay order reports, read by the oracle's rule id registry.
+#[cfg(feature = "oracle")]
 pub(crate) const RULE_IDS: &[RuleId] = &[RELAY_CYCLE_RULE_ID];
 
 const RELAYS_MEMBER: &str = "relays";
@@ -32,17 +34,6 @@ const RELAYS_MEMBER: &str = "relays";
 struct WorkspaceRelayRoute {
     target: String,
     origin: DiagnosticOrigin,
-}
-
-// `relays: <api>.<operationId>`: the api is the text before the first dot.
-fn relay_target_api(relays: Option<&JsonValue>) -> Option<&str> {
-    let JsonValue::String(text) = relays? else {
-        return None;
-    };
-
-    text.split_once('.')
-        .map(|(api, _)| api)
-        .filter(|api| !api.is_empty())
 }
 
 fn workspace_relay_routes(
@@ -56,7 +47,10 @@ fn workspace_relay_routes(
             continue;
         }
 
-        let Some(target) = relay_target_api(node.settings.get(RELAYS_MEMBER)) else {
+        let Some(JsonValue::String(relays)) = node.settings.get(RELAYS_MEMBER) else {
+            continue;
+        };
+        let Some(target) = relay_target_api(relays) else {
             continue;
         };
 

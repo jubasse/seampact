@@ -1,0 +1,15 @@
+[package]
+name = "seampact-target"
+description = "What OpenAPI, the CLI and the generator planning share from codegen-core: refusals, IR locations, the not-generated fixes."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+seampact-ir.workspace = true
+seampact-json.workspace = true
+
+[lints]
+workspace = true

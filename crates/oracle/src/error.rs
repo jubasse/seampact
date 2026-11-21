@@ -67,6 +67,14 @@ pub enum OracleError {
         /// Every problem, one line each.
         problems: Vec<String>,
     },
+    /// The run root of a CLI case could not be prepared: the tree copy or the git source.
+    #[error("cannot prepare the run root of the cli case {case}: {problem}")]
+    RunRoot {
+        /// The case path under `fixtures/`.
+        case: String,
+        /// What failed and the fix.
+        problem: String,
+    },
 }
 
 impl OracleError {

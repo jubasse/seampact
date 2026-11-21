@@ -47,3 +47,19 @@ src/run.rs#run_oracle	scripts/oracle/commands.ts#checkFixtures
 -	scripts/oracle/commands.ts#checkReport	merged: src/verdict.rs#fmt
 -	scripts/oracle/commands.ts#ruleCoverage	skip: the TS oracle writes rule-coverage.json, which the rule-id check reads
 -	scripts/oracle/commands.ts#coverageCommand	skip: the TS oracle writes rule-coverage.json, which the rule-id check reads
+src/run_root.rs#git	scripts/oracle/git-source.ts#git
+src/run_root.rs#empty_work_tree	scripts/oracle/git-source.ts#emptyWorkTree
+src/run_root.rs#build_git_source	scripts/oracle/git-source.ts#buildGitSource
+src/tool_discovery.rs#kind_of	scripts/oracle/tool-cases.ts#kindOf
+src/tool_discovery.rs#walk	scripts/oracle/tool-cases.ts#walk
+src/tool_discovery.rs#discover_tool_cases	scripts/oracle/tool-cases.ts#discoverToolCases
+-	scripts/oracle/tool-cases.ts#readCaseJson	merged: src/tool_cases.rs#read_case_file
+-	scripts/oracle/tool-cases.ts#isRecord	skip: the case files are read into typed shapes
+-	scripts/oracle/tool-cases.ts#compileCacheOf	skip: the writer compiles the sides; the Rust subject compiles a case itself
+-	scripts/oracle/tool-cases.ts#irOf	skip: the writer reads a compiled IR; the Rust harness reads the expected IR
+src/tool_cases.rs#read_merge_case	scripts/oracle/tool-cases.ts#mergeCaseOf
+src/tool_cases.rs#kept_operations	scripts/oracle/tool-cases.ts#keepOperations
+src/tool_cases.rs#diff_side	scripts/oracle/tool-cases.ts#sideIrs
+src/tool_run.rs#diff_case	scripts/oracle/tool-cases.ts#diffFilesOf
+src/tool_run.rs#openapi_case	scripts/oracle/tool-cases.ts#openApiCaseFiles
+src/tool_run.rs#run_tool	scripts/oracle/tool-cases.ts#toolCaseFiles

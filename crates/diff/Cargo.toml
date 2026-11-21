@@ -1,0 +1,18 @@
+[package]
+name = "seampact-diff"
+description = "The contract diff of the Rust port: changes, gate, deprecations and the report."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+indexmap.workspace = true
+seampact-diagnostics.workspace = true
+seampact-diff-table.workspace = true
+seampact-ir.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

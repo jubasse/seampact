@@ -1,13 +1,17 @@
-//! The oracle task: the harness of `seampact-oracle` run with the compiler subject.
+//! The oracle task: the harness of `seampact-oracle` run with the compiler subject, then the tool
+//! runs with the CLI's tool subject.
 
+use std::fmt;
 use std::time::Duration;
 
 use camino::Utf8Path;
+use seampact_cli::oracle::CliToolSubject;
 use seampact_compiler::oracle::CompilerSubject;
 use seampact_json::JsonValue;
 use seampact_oracle::{
     Compilation, Fixture, HalfInput, HalfOutput, OracleError, OracleSubject, RecordedCall,
-    RuleIdRegistry, Selection, SubjectAnswer, Verdict, run_oracle,
+    RuleIdRegistry, Selection, SubjectAnswer, Tool, ToolSelection, ToolVerdict, Verdict,
+    run_oracle, run_tools,
 };
 
 use crate::outcome::{StepOutcome, StepReport};
@@ -103,7 +107,48 @@ pub fn default_selection() -> Selection {
     }
 }
 
-/// Runs the oracle on `selection` and gives its verdict.
+/// What one oracle task compares: the compiler's selection, and the one tool when `--tool` names
+/// it (the compiler is then left out).
+#[derive(Debug, Clone, Default)]
+pub struct OracleRequest {
+    /// The fixtures, the half and the time limit of the compiler run; the glob also selects the
+    /// tool cases.
+    pub selection: Selection,
+    /// The one tool run alone.
+    pub tool: Option<Tool>,
+}
+
+/// The verdicts of one oracle task: the compiler's when it ran, the tools' when they ran.
+#[derive(Debug, Clone, Default)]
+pub struct OracleOutcome {
+    compiler: Option<Verdict>,
+    tools: Option<ToolVerdict>,
+}
+
+impl OracleOutcome {
+    /// Whether every verdict passes.
+    pub fn passed(&self) -> bool {
+        self.compiler.as_ref().is_none_or(Verdict::passed)
+            && self.tools.as_ref().is_none_or(ToolVerdict::passed)
+    }
+}
+
+impl fmt::Display for OracleOutcome {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let verdicts: Vec<String> = [
+            self.compiler.as_ref().map(ToString::to_string),
+            self.tools.as_ref().map(ToString::to_string),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+
+        write!(formatter, "{}", verdicts.join("\n"))
+    }
+}
+
+/// Runs the oracle on `request` and gives its verdicts: the compiler, then every tool; one tool
+/// alone with `--tool`; the compiler alone with `--half`.
 ///
 /// # Errors
 ///
@@ -111,12 +156,59 @@ pub fn default_selection() -> Selection {
 /// read or is invalid.
 pub fn run_oracle_task(
     workspace_root: &Utf8Path,
-    selection: &Selection,
-) -> Result<Verdict, OracleError> {
-    match compiler_subject() {
-        Some(subject) => run_oracle(workspace_root, selection, &*subject),
-        None => run_oracle(workspace_root, selection, &NothingPortedSubject),
+    request: &OracleRequest,
+) -> Result<OracleOutcome, OracleError> {
+    let tool_selection = ToolSelection {
+        tool: request.tool,
+        case_glob: request.selection.fixture_glob.clone(),
+    };
+
+    if request.tool.is_some() {
+        let tools = run_tools(workspace_root, &tool_selection, &CliToolSubject)?;
+
+        refuse_empty_tool_run(&tools)?;
+
+        return Ok(OracleOutcome {
+            compiler: None,
+            tools: Some(tools),
+        });
     }
+
+    let compiler = match compiler_subject() {
+        Some(subject) => run_oracle(workspace_root, &request.selection, &*subject),
+        None => run_oracle(workspace_root, &request.selection, &NothingPortedSubject),
+    };
+
+    if request.selection.half.is_some() {
+        return Ok(OracleOutcome {
+            compiler: Some(compiler?),
+            tools: None,
+        });
+    }
+
+    let tools = run_tools(workspace_root, &tool_selection, &CliToolSubject)?;
+
+    // A glob may select tool cases only: the compiler's usage error stands when it selects none.
+    let compiler = match compiler {
+        Ok(verdict) => Some(verdict),
+        Err(error) if error.is_usage() && tools.cases() > 0 => None,
+        Err(error) => return Err(error),
+    };
+
+    Ok(OracleOutcome {
+        compiler,
+        tools: Some(tools),
+    })
+}
+
+fn refuse_empty_tool_run(tools: &ToolVerdict) -> Result<(), OracleError> {
+    if tools.cases() > 0 {
+        return Ok(());
+    }
+
+    Err(OracleError::Usage {
+        problem: "the glob matches no case of the tool".to_owned(),
+    })
 }
 
 /// The oracle step of the gate: every fixture, the verdict kept in the report, then the outcome.
@@ -131,7 +223,12 @@ pub fn oracle_gate_step(workspace_root: &Utf8Path) -> StepReport {
         return StepReport::failed_with(ORACLE_STEP, &format!("{ORACLE_STEP}: {problem}"));
     }
 
-    match run_oracle_task(workspace_root, &default_selection()) {
+    let request = OracleRequest {
+        selection: default_selection(),
+        tool: None,
+    };
+
+    match run_oracle_task(workspace_root, &request) {
         Ok(verdict) => {
             let outcome = if verdict.passed() {
                 StepOutcome::Passed { step: ORACLE_STEP }
