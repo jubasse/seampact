@@ -1,5 +1,5 @@
-//! The recorded calls of the bundle fetch: the brief that ports each recorded function reads its arguments and
-//! converts its result here.
+//! The recorded calls of the bundle fetch: the brief that ports each recorded function reads its
+//! arguments and converts its result here.
 
 use camino::Utf8Path;
 use seampact_oracle::{RecordedAnswer, RecordedToolCall, SubjectAnswer};
