@@ -14,6 +14,7 @@ publish = false
 seampact-authoring = { path = "crates/authoring", version = "2.0.0" }
 seampact-bundle = { path = "crates/bundle", version = "2.0.0" }
 seampact-bundle-fetch = { path = "crates/bundle-fetch", version = "2.0.0" }
+seampact-cli = { path = "crates/cli", version = "2.0.0" }
 seampact-cli-config = { path = "crates/cli-config", version = "2.0.0" }
 seampact-compiler = { path = "crates/compiler", version = "2.0.0" }
 seampact-diagnostics = { path = "crates/diagnostics", version = "2.0.0" }

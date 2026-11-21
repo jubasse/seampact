@@ -24,6 +24,7 @@ const WORKSPACE_RELAY_CYCLE_RULE: &str = "seampact/workspace/relay-cycle";
 pub(crate) const RELAY_CYCLE_RULE_ID: RuleId = RuleId::from_static(WORKSPACE_RELAY_CYCLE_RULE);
 
 /// Every rule id the relay order reports, read by the oracle's rule id registry.
+#[cfg(feature = "oracle")]
 pub(crate) const RULE_IDS: &[RuleId] = &[RELAY_CYCLE_RULE_ID];
 
 const RELAYS_MEMBER: &str = "relays";
