@@ -21,6 +21,17 @@ impl JsonObject {
         Self::default()
     }
 
+    /// An object of the listed members, in JavaScript's own-key order.
+    ///
+    /// A repeated name keeps its first place and takes the last value, as assignment does.
+    #[must_use]
+    pub fn from_members<const COUNT: usize>(members: [(&str, JsonValue); COUNT]) -> Self {
+        members
+            .into_iter()
+            .map(|(name, value)| (name.to_owned(), value))
+            .collect()
+    }
+
     /// Sets `key` to `value` and returns the value it replaces.
     ///
     /// A new array-index key goes before every named key and every larger index; a new named
@@ -169,6 +180,19 @@ mod tests {
             keys_of(&object),
             ["7", "b", "01", "-1", "4294967295", "1.0"]
         );
+    }
+
+    #[test]
+    fn listed_members_follow_own_key_order_and_a_repeat_keeps_its_place() {
+        let object = JsonObject::from_members([
+            ("b", JsonValue::Null),
+            ("10", JsonValue::Null),
+            ("2", JsonValue::Null),
+            ("b", JsonValue::Bool(true)),
+        ]);
+
+        assert_eq!(keys_of(&object), ["2", "10", "b"]);
+        assert_eq!(object.get("b"), Some(&JsonValue::Bool(true)));
     }
 
     #[test]
