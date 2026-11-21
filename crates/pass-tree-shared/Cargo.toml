@@ -20,6 +20,7 @@ seampact-pipeline.workspace = true
 [dev-dependencies]
 camino.workspace = true
 seampact-load.workspace = true
+seampact-pipeline = { workspace = true, features = ["test-support"] }
 serde_json.workspace = true
 
 [lints]
