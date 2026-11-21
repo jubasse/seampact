@@ -12,15 +12,21 @@ publish = false
 [workspace.dependencies]
 # Workspace crates.
 seampact-authoring = { path = "crates/authoring", version = "2.0.0" }
+seampact-bundle = { path = "crates/bundle", version = "2.0.0" }
+seampact-bundle-fetch = { path = "crates/bundle-fetch", version = "2.0.0" }
 seampact-compiler = { path = "crates/compiler", version = "2.0.0" }
 seampact-diagnostics = { path = "crates/diagnostics", version = "2.0.0" }
+seampact-diff = { path = "crates/diff", version = "2.0.0" }
+seampact-diff-table = { path = "crates/diff-table", version = "2.0.0" }
 seampact-finalize = { path = "crates/finalize", version = "2.0.0" }
 seampact-ir = { path = "crates/ir", version = "2.0.0" }
 seampact-ir-check = { path = "crates/ir-check", version = "2.0.0" }
 seampact-js = { path = "crates/js", version = "2.0.0" }
 seampact-json = { path = "crates/json", version = "2.0.0" }
+seampact-lint = { path = "crates/lint", version = "2.0.0" }
 seampact-load = { path = "crates/load", version = "2.0.0" }
 seampact-naming = { path = "crates/naming", version = "2.0.0" }
+seampact-openapi = { path = "crates/openapi", version = "2.0.0" }
 seampact-oracle = { path = "crates/oracle", version = "2.0.0" }
 seampact-pass-access-identity = { path = "crates/pass-access-identity", version = "2.0.0" }
 seampact-pass-access-rights = { path = "crates/pass-access-rights", version = "2.0.0" }

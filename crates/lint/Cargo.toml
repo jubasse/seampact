@@ -1,0 +1,19 @@
+[package]
+name = "seampact-lint"
+description = "The contract lint of the Rust port: the core rules and runLint."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+seampact-authoring.workspace = true
+seampact-diagnostics.workspace = true
+seampact-ir.workspace = true
+seampact-pipeline.workspace = true
+seampact-span.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

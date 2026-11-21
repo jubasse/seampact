@@ -827,6 +827,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "seampact-bundle"
+version = "2.0.0"
+dependencies = [
+ "camino",
+ "indexmap",
+ "seampact-compiler",
+ "seampact-diagnostics",
+ "seampact-ir",
+ "seampact-load",
+ "thiserror",
+]
+
+[[package]]
+name = "seampact-bundle-fetch"
+version = "2.0.0"
+dependencies = [
+ "camino",
+ "indexmap",
+ "seampact-bundle",
+ "seampact-compiler",
+ "seampact-diagnostics",
+ "seampact-ir",
+ "thiserror",
+]
+
+[[package]]
 name = "seampact-compiler"
 version = "2.0.0"
 dependencies = [
@@ -866,6 +892,26 @@ dependencies = [
  "seampact-json",
  "seampact-span",
  "serde_json",
+]
+
+[[package]]
+name = "seampact-diff"
+version = "2.0.0"
+dependencies = [
+ "indexmap",
+ "seampact-diagnostics",
+ "seampact-diff-table",
+ "seampact-ir",
+ "thiserror",
+]
+
+[[package]]
+name = "seampact-diff-table"
+version = "2.0.0"
+dependencies = [
+ "seampact-diagnostics",
+ "seampact-json",
+ "thiserror",
 ]
 
 [[package]]
@@ -931,6 +977,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "seampact-lint"
+version = "2.0.0"
+dependencies = [
+ "seampact-authoring",
+ "seampact-diagnostics",
+ "seampact-ir",
+ "seampact-pipeline",
+ "seampact-span",
+ "thiserror",
+]
+
+[[package]]
 name = "seampact-load"
 version = "2.0.0"
 dependencies = [
@@ -956,6 +1014,18 @@ version = "2.0.0"
 dependencies = [
  "serde",
  "serde_json",
+ "thiserror",
+]
+
+[[package]]
+name = "seampact-openapi"
+version = "2.0.0"
+dependencies = [
+ "indexmap",
+ "seampact-diagnostics",
+ "seampact-ir",
+ "seampact-json",
+ "seampact-target",
  "thiserror",
 ]
 
