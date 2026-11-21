@@ -14,10 +14,12 @@ publish = false
 seampact-authoring = { path = "crates/authoring", version = "2.0.0" }
 seampact-bundle = { path = "crates/bundle", version = "2.0.0" }
 seampact-bundle-fetch = { path = "crates/bundle-fetch", version = "2.0.0" }
+seampact-cli-config = { path = "crates/cli-config", version = "2.0.0" }
 seampact-compiler = { path = "crates/compiler", version = "2.0.0" }
 seampact-diagnostics = { path = "crates/diagnostics", version = "2.0.0" }
 seampact-diff = { path = "crates/diff", version = "2.0.0" }
 seampact-diff-table = { path = "crates/diff-table", version = "2.0.0" }
+seampact-editor-schemas = { path = "crates/editor-schemas", version = "2.0.0" }
 seampact-finalize = { path = "crates/finalize", version = "2.0.0" }
 seampact-ir = { path = "crates/ir", version = "2.0.0" }
 seampact-ir-check = { path = "crates/ir-check", version = "2.0.0" }

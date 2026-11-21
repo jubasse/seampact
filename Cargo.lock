@@ -853,6 +853,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "seampact-cli-config"
+version = "2.0.0"
+dependencies = [
+ "camino",
+ "seampact-diagnostics",
+ "thiserror",
+]
+
+[[package]]
 name = "seampact-compiler"
 version = "2.0.0"
 dependencies = [
@@ -911,6 +920,16 @@ version = "2.0.0"
 dependencies = [
  "seampact-diagnostics",
  "seampact-json",
+ "thiserror",
+]
+
+[[package]]
+name = "seampact-editor-schemas"
+version = "2.0.0"
+dependencies = [
+ "camino",
+ "seampact-compiler",
+ "seampact-diagnostics",
  "thiserror",
 ]
 

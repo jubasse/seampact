@@ -1,0 +1,16 @@
+[package]
+name = "seampact-cli-config"
+description = "The CLI's config reading: app, root, workspace and run configs."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+camino.workspace = true
+seampact-diagnostics.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

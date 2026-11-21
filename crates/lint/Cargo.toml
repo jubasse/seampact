@@ -12,7 +12,6 @@ seampact-authoring.workspace = true
 seampact-diagnostics.workspace = true
 seampact-ir.workspace = true
 seampact-pipeline.workspace = true
-seampact-span.workspace = true
 thiserror.workspace = true
 
 [lints]
