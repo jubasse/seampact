@@ -6,7 +6,8 @@
 // repeated group whose tail repetition of variable count can match what the group starts with (`(a+)+`,
 // `(.*,)+`), and a repeated alternation whose branches can start with the same character (`(a|ab)*`), also
 // when the other parts of the repeated group are optional (`((a|aa)b?)*`). Other exponential shapes are not
-// detected.
+// detected. A polynomial one is refused as well: two repetitions of variable count one after the other, with
+// only optional parts between them, that can match the same character (`a*a*b`, `\d+\.?\d*`).
 
 /** The result of normalising a pattern: its normalised form, or why it is refused and how to fix it. */
 export type TreeSchemasPatternResult =
@@ -57,6 +58,9 @@ const PORTABLE_FIX = "rewrite it in the portable subset of ADR 0003 section 9";
 const BACKTRACKING_FIX =
   "rewrite it so no repeated group holds a repetition of variable count or branches that start with the same character, or check that text in the application's code (A45)";
 
+const POLYNOMIAL_FIX =
+  "rewrite it so two repetitions of variable count in a row never match the same character, or check that text in the application's code (A45)";
+
 class PatternRefusal extends Error {
   constructor(
     message: string,
@@ -74,15 +78,24 @@ function refuseBacktracking(reason: string): never {
   throw new PatternRefusal(`the pattern can backtrack exponentially: ${reason}`, BACKTRACKING_FIX);
 }
 
+function refusePolynomialBacktracking(item: string): never {
+  throw new PatternRefusal(
+    `the pattern can backtrack polynomially: '${item}' starts with a repetition of variable count that can match what the repetition just before it can match`,
+    POLYNOMIAL_FIX,
+  );
+}
+
 // What the backtracking checks know of a parsed fragment besides its normalised text: the code points it can
 // start and end with, the characters of each repetition of variable count still in its tail (followed only by
-// optional parts or by required parts it overlaps), whether it can match the empty string, and whether one pass
-// of it can be an alternation whose two branches start with the same code point.
+// optional parts or by required parts it overlaps) or still in its head (preceded only by optional parts),
+// whether it can match the empty string, and whether one pass of it can be an alternation whose two branches
+// start with the same code point.
 interface Fragment {
   readonly text: string;
   readonly first: readonly Range[];
   readonly last: readonly Range[];
   readonly varyingTails: readonly (readonly Range[])[];
+  readonly varyingHeads: readonly (readonly Range[])[];
   readonly nullable: boolean;
   readonly overlapping: boolean;
 }
@@ -113,6 +126,11 @@ const overlaps = (left: readonly Range[], right: readonly Range[]): boolean =>
 
 const anyTwoOverlap = (sets: readonly (readonly Range[])[]): boolean =>
   sets.some((set, index) => sets.slice(index + 1).some((other) => overlaps(set, other)));
+
+const anyOverlap = (
+  lefts: readonly (readonly Range[])[],
+  rights: readonly (readonly Range[])[],
+): boolean => lefts.some((left) => rights.some((right) => overlaps(left, right)));
 
 const runsAtMostOnce = (repetition: Repetition | undefined): boolean =>
   repetition === undefined || (repetition.max !== undefined && repetition.max <= ONCE);
@@ -212,6 +230,7 @@ const matching = ({ text, ranges }: Matched): Atom => ({
   first: ranges,
   last: ranges,
   varyingTails: [],
+  varyingHeads: [],
   nullable: false,
   repeatable: true,
   overlapping: false,
@@ -262,6 +281,7 @@ class PatternParser {
       first: branches.flatMap((branch) => branch.first),
       last: branches.flatMap((branch) => branch.last),
       varyingTails: branches.flatMap((branch) => branch.varyingTails),
+      varyingHeads: branches.flatMap((branch) => branch.varyingHeads),
       nullable: branches.some((branch) => branch.nullable),
       overlapping:
         anyTwoOverlap(branches.map((branch) => branch.first)) ||
@@ -274,6 +294,7 @@ class PatternParser {
     let first: Range[] = [];
     let last: Range[] = [];
     let varyingTails: (readonly Range[])[] = [];
+    let varyingHeads: (readonly Range[])[] = [];
     let nullable = true;
     const items: SequenceItem[] = [];
 
@@ -282,7 +303,11 @@ class PatternParser {
       const repetition = atom.repeatable ? this.quantifier() : this.noQuantifier();
 
       if (repetition !== undefined) refuseExponentialRepetition(atom, repetition);
-      text += atom.text + (repetition?.text ?? "");
+      const itemHeads = varies(repetition) ? [atom.first, ...atom.varyingHeads] : atom.varyingHeads;
+      const itemText = atom.text + (repetition?.text ?? "");
+
+      if (anyOverlap(varyingTails, itemHeads)) refusePolynomialBacktracking(itemText);
+      text += itemText;
       items.push({ atom, repetition });
 
       // An optional item keeps what the items before it can end with; a required one replaces it, but a
@@ -293,7 +318,11 @@ class PatternParser {
         ? varyingTails
         : varyingTails.filter((tail) => overlaps(tail, atom.first));
 
-      if (nullable) first = [...first, ...atom.first];
+      if (nullable) {
+        first = [...first, ...atom.first];
+        varyingHeads = [...varyingHeads, ...itemHeads];
+      }
+
       last = optional ? [...last, ...atom.last] : [...atom.last];
       varyingTails = [...keptTails, ...itemTails];
       nullable = nullable && optional;
@@ -308,7 +337,7 @@ class PatternParser {
         items.every((other, otherIndex) => otherIndex === index || isOptional(other)),
     );
 
-    return { text, first, last, varyingTails, nullable, overlapping };
+    return { text, first, last, varyingTails, varyingHeads, nullable, overlapping };
   }
 
   private atom(): Atom {
@@ -328,6 +357,7 @@ class PatternParser {
           first: [],
           last: [],
           varyingTails: [],
+          varyingHeads: [],
           nullable: true,
           repeatable: false,
           overlapping: false,
