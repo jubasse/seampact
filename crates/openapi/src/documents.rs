@@ -210,7 +210,7 @@ fn build_document(
     let document_format = most_used_format(&formats);
     let paths = paths_object(context, &selected, document_format)?;
     let schemas = drain_schema_components(context)?;
-    let security_schemes = security_schemes_component(context)?;
+    let security_schemes = security_schemes_component(context);
     let mut document = JsonObject::from_iter([
         ("openapi".to_owned(), text_value(OPENAPI_VERSION)),
         ("info".to_owned(), JsonValue::Object(info_object(context))),
@@ -504,7 +504,7 @@ fn operation_object<'ir>(
     let responses = responses_object(context, operation, &examples, &location)?;
 
     object.insert("responses".to_owned(), JsonValue::Object(responses));
-    write_operation_security(context, operation, &mut object, &location)?;
+    write_operation_security(context, operation, &mut object, &location);
     write_operation_rights(context, operation, &mut object, &location)?;
     write_paging(context, operation, &mut object, &location)?;
     write_operation_marks(context, operation, document_format, &mut object, &location);

@@ -2,17 +2,18 @@
 
 use seampact_diagnostics::InternalError;
 use seampact_ir::{
-    ArrayTypeUse, Direction, Docs, EnumTypeUse, Extensions, Int64Wire, KnownSchemaRef,
-    KnownTypeUseRef, ObjectSchema, Property, RefTypeUse, Refinements, ScalarTypeUse, TypeUse,
-    UnknownKeysPolicy,
+    ArrayTypeUse, Direction, Docs, Enum, EnumTypeUse, Extensions, Int64Wire, KnownSchemaRef,
+    KnownTypeUseRef, KnownUnionTagRef, ObjectSchema, OutputEnumForm, Property, RefTypeUse,
+    Refinements, ScalarTypeUse, TypeUse, UnionSchema, UnknownKeysPolicy,
 };
 use seampact_js::js_number_of_text;
 use seampact_json::{JsonNumber, JsonObject, JsonValue};
-use seampact_target::IrLocation;
+use seampact_target::{IrLocation, NotGeneratedForm};
 
 use crate::emit_context::{
     ComponentRequest, EmitContext, SchemaVariant, reason_value, reference_component,
-    refuse_inconsistent, refuse_unknown, write_consumer_extensions, write_extension,
+    refuse_inconsistent, refuse_not_emitted, refuse_unknown, write_consumer_extensions,
+    write_extension,
 };
 use crate::json_value::{optional_integer, optional_text, set_defined, text_value};
 use crate::not_ported::not_ported_yet;
@@ -29,6 +30,12 @@ const DECIMAL_FORMAT: &str = "decimal";
 
 /// The `format` of a sensitive scalar.
 const PASSWORD_FORMAT: &str = "password";
+
+/// The keywords that annotate a schema without asserting anything.
+const ANNOTATION_KEYWORDS: [&str; 4] = ["title", "description", "examples", "default"];
+
+/// The `type` of the JSON `null`.
+const NULL_TYPE: &str = "null";
 
 /// The pattern of an int64 written as a string.
 const INT64_PATTERN: &str = "^-?(0|[1-9][0-9]*)$";
@@ -211,7 +218,7 @@ pub(crate) fn type_use_schema(
     }
 
     if nullable == Some(true) {
-        return nullable_schema(schema);
+        return Ok(nullable_schema(schema));
     }
 
     Ok(schema)
@@ -342,7 +349,9 @@ fn known_use_schema(
             Ok(schema)
         }
         KnownTypeUseRef::File(file) => file_schema(context, &file.media, file.max_size_bytes),
-        KnownTypeUseRef::Enum(enum_use) => enum_use_schema(context, enum_use, variant, location),
+        KnownTypeUseRef::Enum(enum_use) => {
+            Ok(enum_use_schema(context, enum_use, variant, location))
+        }
         KnownTypeUseRef::Scalar(scalar) => scalar_schema(context, scalar, variant, location),
         KnownTypeUseRef::Array(array) => array_schema(context, array, variant, location),
     }
@@ -412,11 +421,11 @@ pub(crate) fn property_schema(
     )?;
 
     if property.sensitive {
-        mark_sensitive(context, &mut type_schema, &location.below(&["sensitive"]))?;
+        mark_sensitive(context, &mut type_schema, &location.below(&["sensitive"]));
     }
 
     let mut schema = if property.nullable {
-        nullable_schema(type_schema)?
+        nullable_schema(type_schema)
     } else {
         type_schema
     };
@@ -569,13 +578,79 @@ fn file_schema(
     Err(not_ported_yet("fileSchema"))
 }
 
-fn enum_use_schema(
-    _context: &mut EmitContext<'_>,
-    _use: &EnumTypeUse,
-    _variant: SchemaVariant,
-    _location: &IrLocation,
-) -> Result<JsonObject, OpenApiError> {
-    Err(not_ported_yet("enumUseSchema"))
+/// Whether an output enum is open and `declared` is used as an output.
+fn is_open_enum(context: &EmitContext<'_>, declared: &Enum) -> bool {
+    context.ir.api.wire.output_enums == OutputEnumForm::Open
+        && declared.directions.contains(&Direction::Output)
+}
+
+/// The component of a declared enum: closed with `enum`, or open with the `enum` extension.
+fn enum_component(context: &mut EmitContext<'_>, declared: &Enum) -> JsonObject {
+    let mut schema = JsonObject::from_members([("type", JsonValue::text("string"))]);
+    let values = text_array(&declared.values);
+
+    if is_open_enum(context, declared) {
+        write_extension(context, &mut schema, ExtensionName::Enum, values);
+
+        if let Some(fallback) = &declared.fallback {
+            write_extension(
+                context,
+                &mut schema,
+                ExtensionName::EnumFallback,
+                JsonValue::text(fallback),
+            );
+        }
+    } else {
+        schema.insert("enum".to_owned(), values);
+    }
+
+    write_docs(&mut schema, Some(&declared.docs));
+
+    schema
+}
+
+/// The reference to an enum component, closed to its narrowed values or, under strict input, to
+/// all its values.
+fn enum_use_schema<'ir>(
+    context: &mut EmitContext<'ir>,
+    use_: &EnumTypeUse,
+    variant: SchemaVariant,
+    location: &IrLocation,
+) -> JsonObject {
+    let ir = context.ir;
+    let Some(declared) = ir.enums.get(use_.r#enum.as_str()) else {
+        refuse_inconsistent(
+            context,
+            "enum.missing",
+            &format!("The enum '{}' is not declared", use_.r#enum),
+            location,
+        );
+
+        return JsonObject::new();
+    };
+    let mut reference = reference_component(
+        context,
+        ComponentRequest {
+            key: use_.r#enum.as_str().to_owned(),
+            build: Box::new(move |build_context| Ok(enum_component(build_context, declared))),
+        },
+    );
+
+    if let Some(narrowed) = &use_.narrowed_to {
+        reference.insert("enum".to_owned(), text_array(&narrowed.values));
+
+        return reference;
+    }
+
+    // Strict input closes an open enum at its input uses, as the boundary refuses an unknown value there.
+    let strict_input = variant == SchemaVariant::Input
+        && context.options.input_schemas == InputSchemasOption::Strict;
+
+    if strict_input && is_open_enum(context, declared) {
+        reference.insert("enum".to_owned(), text_array(&declared.values));
+    }
+
+    reference
 }
 
 fn string_number_schema(
@@ -587,12 +662,24 @@ fn string_number_schema(
     Err(not_ported_yet("stringNumberSchema"))
 }
 
-fn mark_sensitive(
-    _context: &mut EmitContext<'_>,
-    _schema: &mut JsonObject,
-    _location: &IrLocation,
-) -> Result<(), OpenApiError> {
-    Err(not_ported_yet("markSensitive"))
+/// Marks a scalar schema `password`; refuses any other shape.
+pub(crate) fn mark_sensitive(
+    context: &mut EmitContext<'_>,
+    schema: &mut JsonObject,
+    location: &IrLocation,
+) {
+    if matches!(schema.get("type"), Some(JsonValue::String(_))) {
+        schema.insert("format".to_owned(), JsonValue::text(PASSWORD_FORMAT));
+
+        return;
+    }
+
+    refuse_not_emitted(
+        context,
+        NotGeneratedForm::OpenapiSensitiveShape,
+        "A sensitive value that is not a scalar",
+        location,
+    );
 }
 
 fn wire_value(
@@ -603,8 +690,47 @@ fn wire_value(
     Err(not_ported_yet("wireValue"))
 }
 
-fn nullable_schema(_schema: JsonObject) -> Result<JsonObject, OpenApiError> {
-    Err(not_ported_yet("nullableSchema"))
+/// Whether a schema holds annotations and extensions only, so it already accepts any value.
+fn accepts_any_value(schema: &JsonObject) -> bool {
+    schema
+        .keys()
+        .all(|keyword| ANNOTATION_KEYWORDS.contains(&keyword.as_str()) || keyword.starts_with("x-"))
+}
+
+/// The schema widened to accept `null`.
+pub(crate) fn nullable_schema(schema: JsonObject) -> JsonObject {
+    if accepts_any_value(&schema) {
+        return schema;
+    }
+
+    if let Some(JsonValue::String(type_name)) = schema.get("type")
+        && !schema.contains_key("const")
+    {
+        let mut nullable = schema.clone();
+        let types = [JsonValue::text(type_name), JsonValue::text(NULL_TYPE)];
+
+        nullable.insert("type".to_owned(), JsonValue::Array(types.to_vec()));
+
+        if let Some(JsonValue::Array(values)) = schema.get("enum") {
+            let mut widened = values.clone();
+
+            widened.push(JsonValue::Null);
+            nullable.insert("enum".to_owned(), JsonValue::Array(widened));
+        }
+
+        return nullable;
+    }
+
+    JsonObject::from_members([(
+        "oneOf",
+        JsonValue::Array(vec![
+            JsonValue::Object(schema),
+            JsonValue::Object(JsonObject::from_members([(
+                "type",
+                JsonValue::text(NULL_TYPE),
+            )])),
+        ]),
+    )])
 }
 
 fn map_schema(
@@ -616,13 +742,107 @@ fn map_schema(
     Err(not_ported_yet("mapSchema"))
 }
 
+/// The `oneOf` of a union, with its discriminator: the tag's property and mapping, or its header.
 fn union_schema(
-    _context: &mut EmitContext<'_>,
-    _named: &seampact_ir::UnionSchema,
-    _variant: SchemaVariant,
-    _location: &IrLocation,
+    context: &mut EmitContext<'_>,
+    named: &UnionSchema,
+    variant: SchemaVariant,
+    location: &IrLocation,
 ) -> Result<JsonObject, OpenApiError> {
-    Err(not_ported_yet("unionSchema"))
+    let mut schema = JsonObject::new();
+
+    write_docs(&mut schema, Some(&named.docs));
+
+    let Ok(tag) = KnownUnionTagRef::try_from(&named.tag) else {
+        refuse_unknown(context, &location.below(&["tag", "in"]), named.tag.tag());
+
+        return Ok(schema);
+    };
+    let mut branches = Vec::with_capacity(named.variants.len());
+
+    for union_variant in &named.variants {
+        let mut branch = match &tag {
+            KnownUnionTagRef::Body(body) => body_tagged_branch(
+                context,
+                union_variant.schema.as_str(),
+                &body.property,
+                &union_variant.tag,
+                variant,
+            )?,
+            KnownUnionTagRef::Header(_) => {
+                schema_reference(context, union_variant.schema.as_str(), variant)
+            }
+        };
+        let docs = union_variant.docs.as_ref();
+        let description =
+            docs.and_then(|docs| docs.description.as_deref().or(docs.summary.as_deref()));
+
+        set_defined(&mut branch, "description", optional_text(description));
+        branches.push(JsonValue::Object(branch));
+    }
+
+    schema.insert("oneOf".to_owned(), JsonValue::Array(branches));
+
+    let body = match tag {
+        KnownUnionTagRef::Header(header) => {
+            let value = JsonObject::from_members([
+                ("in", JsonValue::text("header")),
+                ("name", JsonValue::text(&header.name)),
+            ]);
+
+            write_extension(
+                context,
+                &mut schema,
+                ExtensionName::Discriminator,
+                JsonValue::Object(value),
+            );
+
+            return Ok(schema);
+        }
+        KnownUnionTagRef::Body(body) => body,
+    };
+
+    // The mapping names each tag's shared variant, under strict input too: the variant's strict twin refuses the tag
+    // member, which only the union's branch declares.
+    let mut mapping = JsonObject::new();
+
+    for union_variant in &named.variants {
+        let reference = schema_reference(
+            context,
+            union_variant.schema.as_str(),
+            SchemaVariant::Shared,
+        );
+
+        if let Some(JsonValue::String(target)) = reference.get("$ref") {
+            mapping.insert(union_variant.tag.clone(), JsonValue::text(target));
+        }
+    }
+
+    schema.insert(
+        "discriminator".to_owned(),
+        JsonValue::Object(JsonObject::from_members([
+            ("propertyName", JsonValue::text(&body.property)),
+            ("mapping", JsonValue::Object(mapping)),
+        ])),
+    );
+
+    Ok(schema)
+}
+
+/// A branch of a body-tagged union: the variant and its tag.
+fn body_tagged_branch(
+    _context: &mut EmitContext<'_>,
+    _schema_id: &str,
+    _tag_property: &str,
+    _tag_value: &str,
+    _variant: SchemaVariant,
+) -> Result<JsonObject, OpenApiError> {
+    Err(not_ported_yet("bodyTaggedBranch"))
+}
+
+/// The JSON strings of a list of texts.
+fn text_array(texts: &[String]) -> JsonValue {
+    JsonValue::Array(texts.iter().map(|text| JsonValue::text(text)).collect())
 }
 
 #[cfg(test)]

@@ -2,7 +2,8 @@
 
 use indexmap::IndexMap;
 use seampact_ir::{
-    Absent, EachTemplate, KnownTemplateRef, MemberName, ObjectTemplate, Template, TextTemplate,
+    Absent, EachTemplate, KnownTemplateRef, KnownTextPartRef, MemberName, ObjectTemplate, Template,
+    TextTemplate,
 };
 use seampact_json::{JsonObject, JsonValue};
 use seampact_target::{IrLocation, NotGeneratedForm};
@@ -10,6 +11,23 @@ use seampact_target::{IrLocation, NotGeneratedForm};
 use crate::OpenApiError;
 use crate::emit_context::{EmitContext, refuse_not_emitted, refuse_unknown};
 use crate::not_ported::not_ported_yet;
+use crate::schemas::nullable_schema;
+
+/// The names `Object.prototype` carries, which the `in` operator finds on any plain object.
+const OBJECT_PROTOTYPE_NAMES: [&str; 12] = [
+    "constructor",
+    "__defineGetter__",
+    "__defineSetter__",
+    "hasOwnProperty",
+    "__lookupGetter__",
+    "__lookupSetter__",
+    "isPrototypeOf",
+    "propertyIsEnumerable",
+    "toString",
+    "valueOf",
+    "__proto__",
+    "toLocaleString",
+];
 
 /// Whether a slot always has a value, may have none, or never has one here.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -87,7 +105,7 @@ pub(crate) fn template_schema(
             slots,
             location,
         )),
-        KnownTemplateRef::Text(text) => text_template_schema(text, slots),
+        KnownTemplateRef::Text(text) => Ok(Some(text_template_schema(text, slots))),
         KnownTemplateRef::Literal(literal) => {
             Ok(Some(SlotValue::always(JsonObject::from_iter([(
                 "const".to_owned(),
@@ -112,13 +130,65 @@ pub(crate) fn template_schema(
 }
 
 /// The JSON a template writes with the slot values `values`, or `None` when a part is refused.
+///
+/// # Errors
+///
+/// As the writer of an object template.
 pub(crate) fn render_template(
+    context: &mut EmitContext<'_>,
+    template: &Template,
+    values: &IndexMap<String, JsonValue>,
+    location: &IrLocation,
+) -> Result<Option<JsonValue>, OpenApiError> {
+    let Ok(known) = KnownTemplateRef::try_from(template) else {
+        refuse_unknown(context, &location.below(&["kind"]), template.tag());
+
+        return Ok(None);
+    };
+
+    match known {
+        KnownTemplateRef::Slot(slot) => {
+            let value = if slot.path.is_empty() {
+                values.get(slot.slot.as_str()).cloned()
+            } else {
+                None
+            };
+
+            if value.is_none() {
+                refuse_not_emitted(
+                    context,
+                    NotGeneratedForm::OpenapiExampleSlot,
+                    &format!("An example through the slot '${}'", slot.slot),
+                    location,
+                );
+            }
+
+            Ok(value)
+        }
+        KnownTemplateRef::Literal(literal) => Ok(Some(literal.value.clone())),
+        KnownTemplateRef::Object(object) => {
+            render_object_template(context, object, values, location)
+        }
+        KnownTemplateRef::Text(_) | KnownTemplateRef::Each(_) | KnownTemplateRef::Array(_) => {
+            refuse_not_emitted(
+                context,
+                NotGeneratedForm::OpenapiExampleTemplate,
+                &format!("An example through a '{}' template", template.tag()),
+                location,
+            );
+
+            Ok(None)
+        }
+    }
+}
+
+fn render_object_template(
     _context: &mut EmitContext<'_>,
-    _template: &Template,
+    _template: &ObjectTemplate,
     _values: &IndexMap<String, JsonValue>,
     _location: &IrLocation,
 ) -> Result<Option<JsonValue>, OpenApiError> {
-    Err(not_ported_yet("renderTemplate"))
+    Err(not_ported_yet("renderObjectTemplate"))
 }
 
 /// The value a slot holds, refusing a member path and a slot the place does not offer.
@@ -154,21 +224,180 @@ fn slot_schema(
     value
 }
 
-fn text_template_schema(
-    _template: &TextTemplate,
-    _slots: &SlotSchemas,
-) -> Result<Option<SlotValue>, OpenApiError> {
-    Err(not_ported_yet("textTemplateSchema"))
+/// The schema of a text template: a constant when every part is one, else a string.
+fn text_template_schema(template: &TextTemplate, slots: &SlotSchemas) -> SlotValue {
+    let schema = match constant_text(template, slots) {
+        Some(constant) => JsonObject::from_members([("const", JsonValue::text(&constant))]),
+        None => JsonObject::from_members([("type", JsonValue::text("string"))]),
+    };
+
+    SlotValue::always(schema)
 }
 
+/// The text a template always writes, or `None` when a part is not a known constant.
+fn constant_text(template: &TextTemplate, slots: &SlotSchemas) -> Option<String> {
+    let mut text = String::new();
+
+    for part in &template.parts {
+        match KnownTextPartRef::try_from(part).ok()? {
+            KnownTextPartRef::Text(plain) => text.push_str(&plain.text),
+            KnownTextPartRef::Slot(slot) => {
+                let value = slots
+                    .get(slot.slot.as_str())
+                    .filter(|_| slot.path.is_empty())?;
+
+                if value.presence != SlotPresence::Always {
+                    return None;
+                }
+
+                let Some(JsonValue::String(constant)) = value.schema.get("const") else {
+                    return None;
+                };
+
+                text.push_str(constant);
+            }
+        }
+    }
+
+    Some(text)
+}
+
+/// Whether `name` is a key of a fresh JavaScript object holding `properties`: its own members and
+/// the names `Object.prototype` carries.
+fn is_in_plain_object(properties: &JsonObject, name: &str) -> bool {
+    properties.contains_key(name) || OBJECT_PROTOTYPE_NAMES.contains(&name)
+}
+
+/// The schema of an object template: its members, the `merge` slot folded in with `allOf`.
 fn object_template_schema(
-    _context: &mut EmitContext<'_>,
-    _template: &ObjectTemplate,
-    _slots: &SlotSchemas,
-    _absent: &Absent,
-    _location: &IrLocation,
+    context: &mut EmitContext<'_>,
+    template: &ObjectTemplate,
+    slots: &SlotSchemas,
+    absent: &Absent,
+    location: &IrLocation,
 ) -> Result<Option<SlotValue>, OpenApiError> {
-    Err(not_ported_yet("objectTemplateSchema"))
+    let mut properties = JsonObject::new();
+    let mut required: Vec<JsonValue> = Vec::new();
+    let mut presence = if template.members.is_empty() {
+        SlotPresence::Always
+    } else {
+        SlotPresence::Maybe
+    };
+
+    for (index, member) in template.members.iter().enumerate() {
+        let member_location = location.below(&["members", &index.to_string()]);
+        let Some(member_name) = member_name_of(
+            context,
+            &member.name,
+            slots,
+            &member_location.below(&["name"]),
+        ) else {
+            continue;
+        };
+
+        if is_in_plain_object(&properties, &member_name) {
+            refuse_not_emitted(
+                context,
+                NotGeneratedForm::OpenapiTemplateMemberRepeated,
+                &format!("The member '{member_name}' written twice in one object"),
+                &member_location.below(&["name"]),
+            );
+
+            continue;
+        }
+
+        let Some(value) = template_schema(
+            context,
+            &member.value,
+            slots,
+            absent,
+            &member_location.below(&["value"]),
+        )?
+        else {
+            continue;
+        };
+
+        if value.presence == SlotPresence::Never {
+            if *absent == Absent::Null {
+                properties.insert(
+                    member_name.clone(),
+                    JsonValue::Object(JsonObject::from_members([(
+                        "type",
+                        JsonValue::text("null"),
+                    )])),
+                );
+                required.push(JsonValue::text(&member_name));
+            }
+
+            continue;
+        }
+
+        if value.presence == SlotPresence::Always {
+            presence = SlotPresence::Always;
+        }
+
+        let null_when_absent = value.presence == SlotPresence::Maybe && *absent == Absent::Null;
+        let member_schema = if null_when_absent {
+            nullable_schema(value.schema)
+        } else {
+            value.schema
+        };
+
+        properties.insert(member_name.clone(), JsonValue::Object(member_schema));
+
+        if value.presence == SlotPresence::Always || null_when_absent {
+            required.push(JsonValue::text(&member_name));
+        }
+    }
+
+    let mut schema = JsonObject::from_members([
+        ("type", JsonValue::text("object")),
+        ("properties", JsonValue::Object(properties)),
+    ]);
+
+    if !required.is_empty() {
+        schema.insert("required".to_owned(), JsonValue::Array(required));
+    }
+
+    let Some(merge) = &template.merge else {
+        return Ok(Some(SlotValue {
+            schema,
+            presence,
+            element: None,
+        }));
+    };
+    let merged = slot_schema(
+        context,
+        merge.as_str(),
+        &[],
+        slots,
+        &location.below(&["merge"]),
+    );
+
+    match merged {
+        Some(merged) if merged.presence != SlotPresence::Never => {
+            let all_of = JsonValue::Array(vec![
+                JsonValue::Object(schema),
+                JsonValue::Object(merged.schema),
+            ]);
+            let merged_presence = if merged.presence == SlotPresence::Always {
+                SlotPresence::Always
+            } else {
+                presence
+            };
+
+            Ok(Some(SlotValue {
+                schema: JsonObject::from_members([("allOf", all_of)]),
+                presence: merged_presence,
+                element: None,
+            }))
+        }
+        Some(_) | None => Ok(Some(SlotValue {
+            schema,
+            presence,
+            element: None,
+        })),
+    }
 }
 
 fn each_schema(
