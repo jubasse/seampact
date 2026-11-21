@@ -1,0 +1,53 @@
+{
+  "ok": true,
+  "api": "tasks",
+  "before": {
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "irRevision": 6,
+    "packs": []
+  },
+  "after": {
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "irRevision": 6,
+    "packs": []
+  },
+  "policy": {
+    "before": "additive-only",
+    "after": "additive-only",
+    "applied": "additive-only"
+  },
+  "settings": {
+    "gate": "clients",
+    "exempt": [
+      "experimental",
+      "sunsetPassed"
+    ]
+  },
+  "changes": [
+    {
+      "kind": "scope",
+      "case": "removed",
+      "pointer": "/operations/7/scopes/0",
+      "position": "input",
+      "operations": [
+        "getTask"
+      ],
+      "breaks": [
+        "servers"
+      ],
+      "classification": "breaking",
+      "before": "channel"
+    }
+  ],
+  "gate": {
+    "passed": true,
+    "failures": []
+  },
+  "deprecations": []
+}

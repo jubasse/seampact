@@ -1,0 +1,51 @@
+{
+  "ok": true,
+  "api": "tasks",
+  "before": {
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "irRevision": 6,
+    "packs": []
+  },
+  "after": {
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "irRevision": 6,
+    "packs": []
+  },
+  "policy": {
+    "before": "additive-only",
+    "after": "additive-only",
+    "applied": "additive-only"
+  },
+  "settings": {
+    "gate": "clients",
+    "exempt": [
+      "experimental",
+      "sunsetPassed"
+    ]
+  },
+  "changes": [
+    {
+      "kind": "param.removed",
+      "case": "optional",
+      "pointer": "/operations/11/params/query/0",
+      "position": "input",
+      "operations": [
+        "listTasks"
+      ],
+      "breaks": [],
+      "classification": "additive",
+      "before": "state"
+    }
+  ],
+  "gate": {
+    "passed": true,
+    "failures": []
+  },
+  "deprecations": []
+}

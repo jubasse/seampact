@@ -2,10 +2,10 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir, loadavg } from "node:os";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
+import { parseTargetOptions, type TargetOption } from "../consumers/consumer-project.ts";
 import { REPO_ROOT } from "../golden/repo-root.ts";
 import { currentCommit, type PackedTarballs, packOnce, prepareProject } from "./bench-project.ts";
 import { isMemoryServers, MEMORY_SERVERS, type MemoryOptions, memoryPair } from "./memory.ts";
-import { parseTargetOptions, type TargetOption } from "../consumers/consumer-project.ts";
 import {
   type BenchPair,
   benchPairs,

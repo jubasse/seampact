@@ -1,15 +1,15 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { Ajv2020 } from "ajv/dist/2020.js";
-import { describe, expect, it } from "vitest";
 import {
+  type ContractIR,
   checkIrInvariants,
   checkIrSupport,
-  type ContractIR,
   createIrValidator,
   IR_REVISION,
   IR_VERSION,
 } from "@seampact/spec/ir";
+import { Ajv2020 } from "ajv/dist/2020.js";
+import { describe, expect, it } from "vitest";
 import { GOLDEN_DIRECTORY } from "./golden.ts";
 import { REPO_ROOT } from "./repo-root.ts";
 

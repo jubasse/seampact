@@ -1,0 +1,74 @@
+{
+  "ok": true,
+  "api": "tasks",
+  "before": {
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "irRevision": 6,
+    "packs": []
+  },
+  "after": {
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "irRevision": 6,
+    "packs": []
+  },
+  "policy": {
+    "before": "additive-only",
+    "after": "additive-only",
+    "applied": "additive-only"
+  },
+  "settings": {
+    "gate": "clients",
+    "exempt": [
+      "experimental",
+      "sunsetPassed"
+    ]
+  },
+  "changes": [
+    {
+      "kind": "enum.value",
+      "case": "added",
+      "pointer": "/enums/TaskState/values/3",
+      "position": "output",
+      "operations": [
+        "archiveTask",
+        "assignTask",
+        "createTask",
+        "getTask",
+        "getTasksBatch",
+        "listTasks",
+        "searchTasks",
+        "updateTask"
+      ],
+      "breaks": [],
+      "classification": "additive",
+      "after": "blocked"
+    },
+    {
+      "kind": "enum.value",
+      "case": "added",
+      "pointer": "/enums/TaskState/values/3",
+      "position": "input",
+      "operations": [
+        "listTasks",
+        "searchTasks",
+        "updateTask"
+      ],
+      "breaks": [
+        "servers"
+      ],
+      "classification": "breaking",
+      "after": "blocked"
+    }
+  ],
+  "gate": {
+    "passed": true,
+    "failures": []
+  },
+  "deprecations": []
+}

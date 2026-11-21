@@ -1,0 +1,11 @@
+{
+  "extensions": "all",
+  "reasons": "include",
+  "inputSchemas": "shared",
+  "servers": [
+    {
+      "url": "https://api.example.com",
+      "description": "Production"
+    }
+  ]
+}

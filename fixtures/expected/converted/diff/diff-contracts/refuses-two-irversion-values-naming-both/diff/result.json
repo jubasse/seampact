@@ -1,0 +1,12 @@
+{
+  "ok": false,
+  "refusals": [
+    {
+      "code": "diff.irVersion.differs",
+      "message": "The baseline IR has irVersion 1 and the new one 2; a diff compares one irVersion.",
+      "fix": "Recompile the older contract with this compiler, then diff again.",
+      "before": 1,
+      "after": 2
+    }
+  ]
+}

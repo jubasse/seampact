@@ -1,0 +1,2 @@
+diff.irRevision.differs: The baseline IR has irRevision 6 and the new one 7; before 1.0 a diff compares one revision. Fix: Rebuild the baseline with this compiler (a bundle carries its sources), then diff again.
+diff.api.name.differs: The baseline is the api tasks and the new IR the api other. Fix: Diff each api against a baseline of the same api.

@@ -1,0 +1,69 @@
+{
+  "ok": true,
+  "api": "tasks",
+  "before": {
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "irRevision": 6,
+    "packs": []
+  },
+  "after": {
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "irRevision": 6,
+    "packs": []
+  },
+  "policy": {
+    "before": "additive-only",
+    "after": "additive-only",
+    "applied": "additive-only"
+  },
+  "settings": {
+    "gate": "clients",
+    "exempt": [
+      "experimental",
+      "sunsetPassed"
+    ]
+  },
+  "changes": [
+    {
+      "kind": "responseHeader.removed",
+      "case": "required",
+      "pointer": "/operations/6/responses/0/headers/0",
+      "position": "output",
+      "operations": [
+        "getPreferences"
+      ],
+      "breaks": [
+        "clients"
+      ],
+      "classification": "breaking",
+      "before": "ETag"
+    }
+  ],
+  "gate": {
+    "passed": false,
+    "failures": [
+      {
+        "kind": "responseHeader.removed",
+        "case": "required",
+        "pointer": "/operations/6/responses/0/headers/0",
+        "position": "output",
+        "breaks": [
+          "clients"
+        ],
+        "operations": [
+          "getPreferences"
+        ],
+        "code": "diff.policy.breaking",
+        "message": "responseHeader.removed (required) at /operations/6/responses/0/headers/0 breaks clients on getPreferences, and compat.policy is additive-only.",
+        "fix": "Make the change additive (keep the old member beside the new one), or publish it as a new api version; a release that breaks on purpose sets compat: { policy: none } in both versions."
+      }
+    ]
+  },
+  "deprecations": []
+}

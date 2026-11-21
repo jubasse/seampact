@@ -1,0 +1,4 @@
+tasks v1: compat.policy additive-only (before additive-only, after additive-only), gate clients
+informative getTask /operations/7/deprecated: deprecation added (2027-01-01)
+deprecation getTask: new, since 2026-01-01, sunset 2027-01-01 (73 days to sunset)
+gate passed

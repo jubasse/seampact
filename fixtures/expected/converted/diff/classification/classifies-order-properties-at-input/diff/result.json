@@ -1,0 +1,50 @@
+{
+  "ok": true,
+  "api": "tasks",
+  "before": {
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "irRevision": 6,
+    "packs": []
+  },
+  "after": {
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "irRevision": 6,
+    "packs": []
+  },
+  "policy": {
+    "before": "additive-only",
+    "after": "additive-only",
+    "applied": "additive-only"
+  },
+  "settings": {
+    "gate": "clients",
+    "exempt": [
+      "experimental",
+      "sunsetPassed"
+    ]
+  },
+  "changes": [
+    {
+      "kind": "order",
+      "case": "properties",
+      "pointer": "/schemas/CreateTask/properties",
+      "position": "input",
+      "operations": [
+        "createTask"
+      ],
+      "breaks": [],
+      "classification": "informative"
+    }
+  ],
+  "gate": {
+    "passed": true,
+    "failures": []
+  },
+  "deprecations": []
+}

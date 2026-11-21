@@ -1,0 +1,70 @@
+{
+  "ok": true,
+  "api": "tasks",
+  "before": {
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "irRevision": 6,
+    "packs": []
+  },
+  "after": {
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "irRevision": 6,
+    "packs": []
+  },
+  "policy": {
+    "before": "additive-only",
+    "after": "additive-only",
+    "applied": "additive-only"
+  },
+  "settings": {
+    "gate": "clients",
+    "exempt": [
+      "experimental",
+      "sunsetPassed"
+    ]
+  },
+  "changes": [
+    {
+      "kind": "bucket",
+      "case": "key",
+      "pointer": "/buckets/write/key",
+      "position": "input",
+      "operations": [
+        "createTask"
+      ],
+      "breaks": [
+        "clients",
+        "servers"
+      ],
+      "classification": "breaking"
+    }
+  ],
+  "gate": {
+    "passed": false,
+    "failures": [
+      {
+        "kind": "bucket",
+        "case": "key",
+        "pointer": "/buckets/write/key",
+        "position": "input",
+        "breaks": [
+          "clients",
+          "servers"
+        ],
+        "operations": [
+          "createTask"
+        ],
+        "code": "diff.policy.breaking",
+        "message": "bucket (key) at /buckets/write/key breaks clients and servers on createTask, and compat.policy is additive-only.",
+        "fix": "Make the change additive (keep the old member beside the new one), or publish it as a new api version; a release that breaks on purpose sets compat: { policy: none } in both versions."
+      }
+    ]
+  },
+  "deprecations": []
+}

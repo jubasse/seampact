@@ -1,0 +1,58 @@
+{
+  "ok": true,
+  "api": "tasks",
+  "before": {
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "irRevision": 6,
+    "packs": []
+  },
+  "after": {
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "irRevision": 6,
+    "packs": []
+  },
+  "policy": {
+    "before": "additive-only",
+    "after": "additive-only",
+    "applied": "additive-only"
+  },
+  "settings": {
+    "gate": "clients",
+    "exempt": [
+      "experimental",
+      "sunsetPassed"
+    ]
+  },
+  "changes": [
+    {
+      "kind": "default.changed",
+      "case": "added",
+      "pointer": "/schemas/Task/properties/3/default",
+      "position": "output",
+      "operations": [
+        "archiveTask",
+        "assignTask",
+        "createTask",
+        "getTask",
+        "getTasksBatch",
+        "listTasks",
+        "searchTasks",
+        "updateTask"
+      ],
+      "breaks": [],
+      "classification": "informative",
+      "after": 1
+    }
+  ],
+  "gate": {
+    "passed": true,
+    "failures": []
+  },
+  "deprecations": []
+}

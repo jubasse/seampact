@@ -1,0 +1,4 @@
+tasks v1: compat.policy additive-only (before additive-only, after additive-only), gate clients
+breaking clients createTask input /schemas/CreateTask/properties/0/type/refinements/maxLength: refinement tightened (200 -> 100)
+diff.policy.breaking: refinement (tightened) at /schemas/CreateTask/properties/0/type/refinements/maxLength breaks clients on createTask, and compat.policy is additive-only. Fix: Make the change additive (keep the old member beside the new one), or publish it as a new api version; a release that breaks on purpose sets compat: { policy: none } in both versions.
+gate failed: 1 failure(s)

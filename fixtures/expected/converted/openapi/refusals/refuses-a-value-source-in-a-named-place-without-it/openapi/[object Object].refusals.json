@@ -1,0 +1,9 @@
+[
+  {
+    "code": "openapi.value-source.name",
+    "message": "A value source in 'path' without its name in operation 'getTask' at /operations/7/scopes/0/source/name.",
+    "fix": "Regenerate the IR with seampact: this document is not one it wrote.",
+    "member": "/operations/7/scopes/0/source/name",
+    "operation": "getTask"
+  }
+]

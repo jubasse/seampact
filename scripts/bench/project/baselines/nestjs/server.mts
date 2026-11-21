@@ -16,9 +16,9 @@ import {
   Res,
 } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
+import type { NestExpressApplication } from "@nestjs/platform-express";
 // The consumer overlay's, which the bench project is assembled on.
 import { useBenchAppInterceptor } from "../../../src/bench-app-interceptor.mjs";
-import type { NestExpressApplication } from "@nestjs/platform-express";
 import { type BaselineReply, type BaselineRequest, runBaselineRoute } from "../route-work.mjs";
 
 const HOST = "127.0.0.1";

@@ -1,0 +1,21 @@
+{
+  "ok": false,
+  "refusals": [
+    {
+      "code": "diff.ir.unknownValue",
+      "message": "/schemas/Task/properties/1/type/kind holds \"tuple\" on archiveTask, assignTask, createTask, getTask, getTasksBatch, listTasks, searchTasks, updateTask, a value this diff does not know.",
+      "fix": "Run a @seampact/diff that reads this IR revision.",
+      "member": "/schemas/Task/properties/1/type/kind",
+      "operations": [
+        "archiveTask",
+        "assignTask",
+        "createTask",
+        "getTask",
+        "getTasksBatch",
+        "listTasks",
+        "searchTasks",
+        "updateTask"
+      ]
+    }
+  ]
+}

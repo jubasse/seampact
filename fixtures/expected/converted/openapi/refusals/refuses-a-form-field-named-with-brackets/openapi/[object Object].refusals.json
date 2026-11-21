@@ -1,0 +1,10 @@
+[
+  {
+    "code": "openapi.input.brackets.unsupported",
+    "message": "A form field named with brackets in operation 'feedbackNotes' is not generated yet.",
+    "fix": "Ask the user first: name the form field without `[` and `]`, or remove the operation from the document's operations.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/1/input/fields/3/wire",
+    "operation": "feedbackNotes"
+  }
+]

@@ -1,0 +1,19 @@
+{
+  "ok": false,
+  "refusals": [
+    {
+      "code": "diff.irRevision.differs",
+      "message": "The baseline IR has irRevision 6 and the new one 7; before 1.0 a diff compares one revision.",
+      "fix": "Rebuild the baseline with this compiler (a bundle carries its sources), then diff again.",
+      "before": 6,
+      "after": 7
+    },
+    {
+      "code": "diff.api.name.differs",
+      "message": "The baseline is the api tasks and the new IR the api other.",
+      "fix": "Diff each api against a baseline of the same api.",
+      "before": "tasks",
+      "after": "other"
+    }
+  ]
+}

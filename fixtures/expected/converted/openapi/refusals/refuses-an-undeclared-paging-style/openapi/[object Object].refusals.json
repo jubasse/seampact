@@ -1,0 +1,16 @@
+[
+  {
+    "code": "openapi.page.style",
+    "message": "A page response without a paging style in operation 'listTasks' at /operations/11/responses/0.",
+    "fix": "Regenerate the IR with seampact: this document is not one it wrote.",
+    "member": "/operations/11/responses/0",
+    "operation": "listTasks"
+  },
+  {
+    "code": "openapi.paging.style",
+    "message": "The paging style 'undeclared' is not declared in operation 'listTasks' at /operations/11/paging/style.",
+    "fix": "Regenerate the IR with seampact: this document is not one it wrote.",
+    "member": "/operations/11/paging/style",
+    "operation": "listTasks"
+  }
+]

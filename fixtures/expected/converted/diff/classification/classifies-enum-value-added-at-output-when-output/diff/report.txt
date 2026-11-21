@@ -1,0 +1,4 @@
+tasks v1: compat.policy additive-only (before additive-only, after additive-only), gate clients
+additive archiveTask,assignTask,createTask,getTask,getTasksBatch,listTasks,searchTasks,updateTask output /enums/TaskState/values/3: enum.value added (blocked)
+breaking servers listTasks,searchTasks,updateTask input /enums/TaskState/values/3: enum.value added (blocked)
+gate passed
