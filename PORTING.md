@@ -58,6 +58,7 @@ Each row is a known trap. Use the shared helper named in the row, never a local 
 - Acceptance is the oracle: the expected outputs in `fixtures/expected/` (IR, diagnostics, source maps, per-half deltas), compared by the Rust harness. A difference is accepted only when exactly one entry of `fixtures/expected/differences.yaml` covers it; an entry that covers no difference is stale and fails the gate.
 - Loop: build, run the touched crate's tests and the oracle on the brief's fixture subset, read the first mismatch (fixture, file, JSON pointer), fix, repeat. Never print whole IR or OpenAPI files.
 - Restart rule: a module that still fails the oracle after 3 loops on the same mismatch is stopped. Commit what is green, write the mismatch and what was tried in the report, and hand back. The lead amends the brief or this file and a fresh agent ports the module again from the branch tip, after the lead's commit that deletes the failed module's files; the failed attempt is not repaired.
+- The tools of layer 3.2 (OpenAPI, its merge, lint, diff, bundles, CLI transcripts) have their own cases and expected files, compared by `cargo xtask oracle --tool <tool>`; OpenAPI YAML is compared parsed, since its text changes once ([cli and tools](docs/maintainers/rust-design/cli-and-tools.md), section 4).
 - A pass half starts from the expected deltas of the halves before it, reads the schema service from the recorded calls (`schema-calls/<api>.json`), and compares its own delta and diagnostics (`<NN>-<half>.diagnostics.json`); the Rust schema service is checked against the same records ([passes](docs/maintainers/rust-design/passes.md), sections 4 and 5).
 
 ## 5. No shortcuts
@@ -113,12 +114,13 @@ Versions are pinned once in `[workspace.dependencies]`. Prefer:
 - `serde`, `serde_json` (`preserve_order`), `indexmap`: the parse surface and ordered maps. Whether `serde_json` gets `arbitrary_precision` is decided in the IR types design note.
 - `ryu-js`: the only maintained ECMAScript number-text implementation, inside the canonical writer.
 - `regress`: ECMAScript regular expressions, every pattern including the bundled schemas'.
-- `clap`: the CLI. `jsonschema` with default features off (no HTTP resolver, no TLS C build): JSON Schema validation. `similar`: text diffs.
-- `saphyr-parser` (events) with our own plain-scalar resolver: YAML 1.2 with spans, resolution stays ours.
+- `jsonschema` with default features off (no HTTP resolver, no TLS C build): JSON Schema validation. `similar`: text diffs.
+- `saphyr-parser` (events) with our own plain-scalar resolver: YAML 1.2 with spans, resolution stays ours. `saphyr` at the parser's version: the OpenAPI YAML emitter.
 - `camino`, `thiserror` (libraries), `rayon` (indexed `collect`, so output order is fixed; the `Send` and `Sync` needs are decided in each layer's design note).
 - `line-index`, `text-size`: byte to UTF-16 position conversion and span newtypes.
 - `unicode-normalization`: NFC; case mapping stays in `std`.
-- `annotate-snippets`: diagnostic rendering. `flate2`, `tar` (>= 0.4.46; refuse absolute paths, `..` and symlinks ourselves), `sha2`: bundles.
+- `annotate-snippets`: diagnostic rendering. `flate2` and `sha2`: bundles; the ustar format is ported from the TypeScript, not read with `tar`.
+- `ureq` (default features off, `rustls-no-provider`, `platform-verifier`) and `rustls` with the `ring` provider: the release channel of bundles, in `seampact-bundle-fetch` only. `git` runs as a process, as in the TypeScript.
 - Tests: `insta`, `snapbox`, `libtest-mimic`, `proptest`, `criterion`, `arbitrary` with `libfuzzer-sys` in a separate `fuzz/` crate.
 - `anyhow` only in the CLI binary and `xtask`.
 
@@ -131,4 +133,4 @@ Avoid:
 - `internment`, `ustr`, `bumpalo`: supply-chain or global-state risk, or lifetimes leaking into every signature.
 - `tera`, `askama`: compile-time cost for five target layouts; generators share a hand-written `CodeWriter`.
 - `quickcheck`, `goldenfile`: `proptest` and `insta` cover them.
-- `ring`: C build. `tower-lsp`: unmaintained. `snafu`, `eyre`: a second error idiom. `icu_*`: data weight.
+- `aws-lc-rs`: C and CMake build, larger. `webpki-roots`: licence outside the allow list (the platform verifier reads the OS store). `git2`: C build; `gix`: a large tree for one `clone`. `clap`: its error texts differ from the CLI's (`util.parseArgs`). `tower-lsp`: unmaintained. `snafu`, `eyre`: a second error idiom. `icu_*`: data weight.

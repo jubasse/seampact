@@ -297,7 +297,7 @@ export function coverageTable(coverage: CrateCoverage): string {
 
 // --- Coverage collection (runs only as a script) ---
 
-interface ReachedFunction {
+export interface ReachedFunction {
   file: string;
   startLine: number;
 }
@@ -345,13 +345,18 @@ interface V8Script {
   functions: V8Function[];
 }
 
-/** V8 precise coverage in this thread: an in-thread inspector session answers synchronously. */
-class CoverageProbe {
+/**
+ * V8 precise coverage in this thread: an in-thread inspector session answers synchronously. `sourceFileOf` names
+ * the source file a script path counts as, or leaves it out.
+ */
+export class CoverageProbe {
   readonly #session = new Session();
+  readonly #sourceFileOf: (path: string) => string | undefined;
   readonly #scripts = new Map<string, ScriptInfo>();
   readonly #lineMappers = new Map<string, (offset: number) => number>();
 
-  constructor() {
+  constructor(fileOf: (path: string) => string | undefined = sourceFileOf) {
+    this.#sourceFileOf = fileOf;
     this.#session.connect();
     this.#session.on("Debugger.scriptParsed", (event) => {
       this.#scripts.set(event.params.scriptId, {
@@ -378,7 +383,7 @@ class CoverageProbe {
     if (!script.url.startsWith("file://")) return [];
 
     const path = fileURLToPath(script.url);
-    const file = sourceFileOf(path);
+    const file = this.#sourceFileOf(path);
 
     if (file === undefined) return [];
 
@@ -611,7 +616,7 @@ function filesUnder(directory: string): string[] {
 }
 
 // The units of one crate reached by each pair: a reached V8 function counts for the innermost unit holding it.
-function pairsOf(
+export function pairsOf(
   units: readonly FunctionUnit[],
   records: readonly ReachedFunction[][],
 ): Set<number>[] {

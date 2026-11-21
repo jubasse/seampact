@@ -1,0 +1,8 @@
+brief	function	file	lines	size	pairs
+1	resolveDiffOptions	diff/src/options.ts	29-54	26	0/0
+1	fixed	diff/src/table/member-rows.ts	22-24	3	0/0
+1	wholeMembers	diff/src/table/member-rows.ts	27-29	3	0/0
+1	memberRow	diff/src/table/member-rows.ts	741-743	3	0/0
+1	classifyCell	diff/src/table/rows.ts	342-355	14	0/0
+1	resolveCell	diff/src/table/rows.ts	357-364	8	0/0
+1	outcomeOf	diff/src/table/rows.ts	366-379	14	0/0

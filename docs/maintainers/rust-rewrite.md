@@ -27,7 +27,7 @@ For maintainers and contributors. This page covers why seampact's compiler and g
 - **Not opinionated, as before.** Every target supports every shape the contract allows. Shared Rust code never caps a stack:
   - what a target refuses is data, recording what it delivers so far;
   - a stack's own idiom stays in that stack's code.
-- **Keep the algorithms, redesign the data.** The port keeps the TypeScript algorithms and the function decomposition, so each Rust function traces back to its TypeScript one through a generated map. Data, ownership and types are redesigned for Rust, as the layer's design note says (crate API, core types, ownership, errors), reviewed before its port PRs. A line-by-line copy is not the goal: the result is clean, idiomatic Rust. The design notes: [the IR and authoring types](rust-design/ir-and-authoring-types.md), [spans and diagnostics](rust-design/spans-and-diagnostics.md).
+- **Keep the algorithms, redesign the data.** The port keeps the TypeScript algorithms and the function decomposition, so each Rust function traces back to its TypeScript one through a generated map. Data, ownership and types are redesigned for Rust, as the layer's design note says (crate API, core types, ownership, errors), reviewed before its port PRs. A line-by-line copy is not the goal: the result is clean, idiomatic Rust. The design notes: [the IR and authoring types](rust-design/ir-and-authoring-types.md), [spans and diagnostics](rust-design/spans-and-diagnostics.md), [the loader and pipeline](rust-design/loader-and-pipeline.md), [the passes](rust-design/passes.md), [OpenAPI, diff, lint, bundles and the CLI](rust-design/cli-and-tools.md).
 - **One rulebook for every lane.** [PORTING.md](../../PORTING.md), the shared TypeScript to Rust rulebook, maps the idioms and lists where JavaScript behaves differently from Rust: numbers as 64-bit floats, string lengths and indices in UTF-16, sort stability, `Object.keys` order, `Map` order, case mapping outside ASCII, regex flavour, number text.
 - **Quality bar from the first PR:**
   - `unsafe_code = forbid`, clippy `all` and `pedantic`, and no `unwrap`, `expect` or `panic` outside tests;
@@ -58,7 +58,7 @@ For maintainers and contributors. This page covers why seampact's compiler and g
 
 ## How the port is checked
 
-- **The TypeScript compiler is the oracle.** `node scripts/oracle/cli.ts write` compiles every fixture and writes its expected diagnostics, IR, source map and per-half deltas under `fixtures/expected/`; `check` compares, `coverage` lists the diagnostic rules no fixture triggers ([tool README](../../scripts/oracle/README.md)). A data-driven Rust harness runs one test per fixture against them, with no Node.js in the gate. The corpus then stays as the Rust regression suite.
+- **The TypeScript compiler is the oracle.** `node scripts/oracle/cli.ts write` compiles every fixture and writes its expected diagnostics, IR, source map and per-half deltas under `fixtures/expected/`, and from layer 3.2 the OpenAPI, lint, diff, bundle and CLI outputs of their cases; `check` compares, `coverage` lists the diagnostic rules no fixture triggers ([tool README](../../scripts/oracle/README.md)). A data-driven Rust harness runs one test per fixture against them, with no Node.js in the gate. The corpus then stays as the Rust regression suite.
 - **The pipeline can be dumped after each pass half**, so the halves port and check in parallel.
 - **Generated code is compared token by token** (whitespace aside) during the port. The formatting change lands once per language family, after parity.
 - **A refusal parity harness** compares the (code, pointer) refusals of the old generators across families, over the golden IRs.
@@ -84,7 +84,7 @@ For maintainers and contributors. This page covers why seampact's compiler and g
 ## Order
 
 1. **Before the first port PR:** the scope ADR (ADR 0031), the rulebook and the agents' Rust skills, a formatter spike, the oracle tooling (expected outputs, pass-half dumps, the expected-differences format), and four small proofs of concept: oracle strength, a two-agent stress test of the rulebook, model choice and restart against repair, and how many lanes build at once on one machine.
-2. **Seams:** the workspace skeleton and lints, source spans and diagnostics, the IR and authoring types, the canonical JSON writer, the generator writer.
+2. **Seams:** the workspace skeleton and lints, source spans and diagnostics, the IR and authoring types, the canonical JSON writer. The generator writer is the seam of layer 3.3 ([cli and tools](rust-design/cli-and-tools.md), section 1).
 3. **Layers:**
    1. the loader and the passes, which are the critical path;
    2. OpenAPI, diff, lint, bundles and the CLI;
