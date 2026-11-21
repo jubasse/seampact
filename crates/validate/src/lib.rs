@@ -15,6 +15,7 @@ mod sentence;
 mod suggest;
 mod validate;
 
+pub use ajv_error::ajv_message;
 pub use json_value::{authored_value_of, serde_value_of};
 pub use rules::{RULE_IDS, ValidateRule};
 pub use suggest::closest_keyword;

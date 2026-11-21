@@ -2,6 +2,7 @@
 
 use jsonschema::error::{TypeKind, ValidationErrorKind};
 use jsonschema::{ValidationError, Validator};
+use seampact_validate::ajv_message;
 use serde_json::Value;
 
 /// The keyword of a failure, with the params the problems read.
@@ -155,20 +156,8 @@ fn other_message(kind: &ValidationErrorKind, error: &ValidationError<'_>) -> Str
         ValidationErrorKind::Type { kind: types } => format!("must be {}", type_names(types)),
         ValidationErrorKind::Enum { .. } => "must be equal to one of the allowed values".to_owned(),
         ValidationErrorKind::Constant { .. } => "must be equal to constant".to_owned(),
-        ValidationErrorKind::MinLength { limit } => {
-            format!("must NOT have fewer than {limit} characters")
-        }
-        ValidationErrorKind::MinItems { limit } => {
-            format!("must NOT have fewer than {limit} items")
-        }
-        ValidationErrorKind::MinProperties { limit } => {
-            format!("must NOT have fewer than {limit} properties")
-        }
-        ValidationErrorKind::MaxProperties { limit } => {
-            format!("must NOT have more than {limit} properties")
-        }
         ValidationErrorKind::Not { .. } => "must NOT be valid".to_owned(),
-        _ => error.to_string(),
+        _ => ajv_message(error).unwrap_or_else(|_| error.to_string()),
     }
 }
 

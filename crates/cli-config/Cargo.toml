@@ -17,6 +17,7 @@ seampact-json.workspace = true
 seampact-load.workspace = true
 seampact-span.workspace = true
 seampact-target.workspace = true
+seampact-validate.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 unicode-normalization.workspace = true

@@ -9,6 +9,9 @@ use seampact_json::JsonValue;
 use crate::json_access::{record, text};
 use crate::node_path::resolved_path;
 
+/// A bundle source as the config writes it, until the bundle crate declares its type.
+pub type UnportedBundleSource = JsonValue;
+
 /// A `path` source with its absolute workspace directory, or a bundle source as the config writes it.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ResolvedSource {
@@ -18,7 +21,7 @@ pub enum ResolvedSource {
         directory: Utf8PathBuf,
     },
     /// A pinned bundle: the `package`, `release`, `git` or `maven` member as written.
-    Bundle(JsonValue),
+    Bundle(UnportedBundleSource),
 }
 
 /// A `path` source resolved against `directory`, or a copy of the bundle source.

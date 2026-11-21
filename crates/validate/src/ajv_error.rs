@@ -210,8 +210,12 @@ fn number_text(limit: &Value) -> Result<String, InternalError> {
     Ok(number.to_string())
 }
 
-// Ajv's message for a keyword whose failure names schema facts only (a bound, a length).
-fn ajv_message(error: &ValidationError<'_>) -> Result<String, InternalError> {
+/// Ajv's message for a keyword whose failure names schema facts only (a bound, a length).
+///
+/// # Errors
+///
+/// An [`InternalError`] for a keyword the authoring schemas do not use.
+pub fn ajv_message(error: &ValidationError<'_>) -> Result<String, InternalError> {
     let message = match error.kind() {
         ValidationErrorKind::MinLength { limit } => {
             format!("must NOT have fewer than {limit} characters")
