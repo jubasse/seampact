@@ -95,9 +95,10 @@ export function accessRightsCatalogues(
   }
 
   const scopes = new Map<string, IrWriter.Scope>();
+  const walked = new Map<string, WithinOutcome>();
 
   for (const [id, declaration] of accessRightsEntries(merged, "scopes")) {
-    const scope = scopeOf(context, reporter, { id, declaration, scopeNames });
+    const scope = scopeOf(context, reporter, { id, declaration, scopeNames, walked });
 
     if (scope !== undefined) scopes.set(id, scope);
   }
@@ -384,13 +385,18 @@ function proofPlacement(placement: string, pointer: string): IrWriter.ProofPlace
 function scopeOf(
   context: AccessRightsContext,
   reporter: AccessRightsReporter,
-  options: { id: string; declaration: AccessRightsRawObject; scopeNames: ReadonlySet<string> },
+  options: {
+    id: string;
+    declaration: AccessRightsRawObject;
+    scopeNames: ReadonlySet<string>;
+    walked: Map<string, WithinOutcome>;
+  },
 ): IrWriter.Scope | undefined {
-  const { id, declaration, scopeNames } = options;
+  const { id, declaration, scopeNames, walked } = options;
   const pointer = pipelinePointerBelow("/scopes", id);
   const within = accessRightsString(declaration, "within");
 
-  if (within !== undefined && !withinChainTerminates(context, reporter, id, scopeNames))
+  if (within !== undefined && !withinChainTerminates(context, reporter, id, { scopeNames, walked }))
     return undefined;
 
   return {
@@ -404,41 +410,73 @@ function scopeOf(
   };
 }
 
-// Follows `within` from a scope up to a root scope: each parent must be declared, and the chain never cycles.
+// What one walk of a `within` chain found, kept for every scope on it: the chain ends at a root scope, or it is
+// refused and `report` says why.
+type WithinOutcome = { terminates: true } | { terminates: false; report: () => void };
+
+// Follows `within` from a scope up to a root scope: each parent must be declared, and the chain never cycles. A
+// walk stops at a scope already walked, and its outcome is kept for each scope of the chain.
 function withinChainTerminates(
   context: AccessRightsContext,
   reporter: AccessRightsReporter,
   id: string,
-  scopeNames: ReadonlySet<string>,
+  options: { scopeNames: ReadonlySet<string>; walked: Map<string, WithinOutcome> },
 ): boolean {
-  const chain = [id];
+  const { scopeNames, walked } = options;
+  const chain: string[] = [];
+  const onChain = new Set<string>();
+  let next: string | undefined = id;
+  let outcome: WithinOutcome = { terminates: true };
 
-  for (
-    let parent = withinOf(context, id);
-    parent !== undefined;
-    parent = withinOf(context, parent)
-  ) {
-    if (!scopeNames.has(parent)) {
-      reporter.error({
-        rule: "scope-within",
-        message: `scope '${chain[chain.length - 1]}' is within '${parent}', which the scopes catalogue does not declare`,
-        fix: "declare the parent scope, or name a declared one in 'within'",
-        pointer: pipelinePointerBelow("/scopes", chain[chain.length - 1] ?? id, "within"),
-      });
+  while (next !== undefined) {
+    const scope: string = next;
+    const known = walked.get(scope);
 
-      return false;
+    if (known !== undefined) {
+      outcome = known;
+      break;
     }
 
-    if (chain.includes(parent)) {
-      reportWithinCycle(reporter, chain.slice(chain.indexOf(parent)));
+    if (onChain.has(scope)) {
+      const cycle = chain.slice(chain.indexOf(scope));
 
-      return false;
+      outcome = { terminates: false, report: () => reportWithinCycle(reporter, cycle) };
+      break;
     }
 
-    chain.push(parent);
+    chain.push(scope);
+    onChain.add(scope);
+    const parent = withinOf(context, scope);
+
+    if (parent !== undefined && !scopeNames.has(parent)) {
+      outcome = {
+        terminates: false,
+        report: () => reportUndeclaredWithin(reporter, scope, parent),
+      };
+      break;
+    }
+
+    next = parent;
   }
 
-  return true;
+  for (const link of chain) walked.set(link, outcome);
+
+  if (!outcome.terminates) outcome.report();
+
+  return outcome.terminates;
+}
+
+function reportUndeclaredWithin(
+  reporter: AccessRightsReporter,
+  scope: string,
+  parent: string,
+): void {
+  reporter.error({
+    rule: "scope-within",
+    message: `scope '${scope}' is within '${parent}', which the scopes catalogue does not declare`,
+    fix: "declare the parent scope, or name a declared one in 'within'",
+    pointer: pipelinePointerBelow("/scopes", scope, "within"),
+  });
 }
 
 // A cycle is reported once, at its first scope by name, whatever scope's chain reached it.
