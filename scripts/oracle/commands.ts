@@ -1,47 +1,69 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { firstMismatch, type Mismatch, printMismatch } from "./compare.ts";
-import { loadOracleCompiler } from "./compiler.ts";
 import {
   expectedFilesOf,
-  expectedFixturePaths,
+  loadOracleContext,
+  type OracleContext,
   readExpectedFiles,
+  unclaimedExpectedDirectories,
   writeExpectedFiles,
 } from "./expected.ts";
-import {
-  discoverFixtures,
-  EXPECTED_ROOT,
-  fixtureMatcher,
-  type OracleFixture,
-  readExcluded,
-} from "./fixtures.ts";
+import { EXPECTED_ROOT, fixtureMatcher, readExcluded } from "./fixtures.ts";
 import { declaredRuleIds } from "./rule-ids.ts";
+import { discoverTargets, type OracleTarget } from "./targets.ts";
+import { DIFF_TABLE_FILE, diffTableText } from "./tool-diff.ts";
 
 export const RULE_COVERAGE_FILE = join(EXPECTED_ROOT, "rule-coverage.json");
 
 const JSON_INDENT = 2;
+const DIFF_TABLE_CASE = "diff-table";
+const DIFF_TABLE_PATH = join(EXPECTED_ROOT, DIFF_TABLE_FILE);
 
-/** The fixtures a command works on: discovered, not excluded, matching the glob. */
-export function selectedFixtures(glob: string | undefined): OracleFixture[] {
+/** Every target not excluded, a fixture the oracle cannot compile alone leaving only its tool case, if any. */
+function discoveredTargets(): OracleTarget[] {
   const excluded = readExcluded().fixtures;
-  const matches = fixtureMatcher(glob);
 
-  return discoverFixtures().filter(({ path }) => excluded[path] === undefined && matches(path));
+  return discoverTargets().flatMap((target) => {
+    if (target.fixture === undefined || excluded[target.path] === undefined) return [target];
+
+    return target.tool === undefined
+      ? []
+      : [{ path: target.path, directory: target.directory, tool: target.tool }];
+  });
 }
 
-/** Compiles the selected fixtures and writes their expected outputs. */
+/** The targets a command works on: discovered, not excluded, matching the glob. */
+export function selectedTargets(glob: string | undefined): OracleTarget[] {
+  const matches = fixtureMatcher(glob);
+
+  return discoveredTargets().filter(({ path }) => matches(path));
+}
+
+/** Whether the glob selects the global `diff-table.json` case. */
+export const selectsDiffTable = (glob: string | undefined): boolean =>
+  fixtureMatcher(glob)(DIFF_TABLE_CASE);
+
+/** Whether the glob selects anything: a target or the global case. */
+export const selectsAnything = (glob: string | undefined): boolean =>
+  selectedTargets(glob).length > 0 || (glob !== undefined && selectsDiffTable(glob));
+
+/** Runs the selected targets and writes their expected outputs. */
 export async function writeCommand(glob: string | undefined): Promise<string> {
-  const compiler = await loadOracleCompiler();
+  const context = await loadOracleContext();
   const excluded = readExcluded();
-  const fixtures = selectedFixtures(glob);
+  const targets = selectedTargets(glob);
 
-  for (const fixture of fixtures)
-    writeExpectedFiles(fixture, expectedFilesOf(compiler, fixture, excluded));
+  for (const target of targets)
+    writeExpectedFiles(target, await expectedFilesOf(context, target, excluded));
 
-  return `oracle: wrote ${fixtures.length} fixtures`;
+  if (selectsDiffTable(glob)) writeFileSync(DIFF_TABLE_PATH, diffTableText(context.tools));
+
+  return `oracle: wrote ${targets.length} cases`;
 }
 
 export interface CheckResult {
+  /** The cases checked: fixtures and tool cases. */
   fixtures: number;
   matching: number;
   differing: number;
@@ -52,23 +74,31 @@ export interface CheckResult {
 }
 
 function treeProblems(): string[] {
-  const known = new Set(discoverFixtures().map(({ path }) => path));
+  const known = new Set(discoveredTargets().map(({ path }) => path));
   const excluded = readExcluded();
-  const kept = new Set(Object.keys(excluded.fixtures));
-  const problems = expectedFixturePaths()
-    .filter((path) => !known.has(path) || kept.has(path))
-    .map((path) => `expected/${path} belongs to no compiled fixture: delete it`);
+  const discovered = new Set(discoverTargets().map(({ path }) => path));
+  const problems = unclaimedExpectedDirectories(known).map(
+    (path) => `expected/${path} belongs to no case: delete it`,
+  );
 
   for (const [list, keys] of Object.entries(excluded))
     for (const path of Object.keys(keys))
-      if (!known.has(path)) problems.push(`excluded.json ${list}: '${path}' names no fixture`);
+      if (!discovered.has(path)) problems.push(`excluded.json ${list}: '${path}' names no fixture`);
 
   return problems;
 }
 
-/** Compiles the selected fixtures and compares them with their expected outputs; a whole run also checks the tree. */
+function diffTableMismatch(context: OracleContext): Mismatch | undefined {
+  const expected = existsSync(DIFF_TABLE_PATH)
+    ? new Map([[DIFF_TABLE_FILE, readFileSync(DIFF_TABLE_PATH, "utf8")]])
+    : new Map<string, string>();
+
+  return firstMismatch(expected, new Map([[DIFF_TABLE_FILE, diffTableText(context.tools)]]));
+}
+
+/** Runs the selected targets and compares them with their expected outputs; a whole run also checks the tree. */
 export async function checkFixtures(glob: string | undefined): Promise<CheckResult> {
-  const compiler = await loadOracleCompiler();
+  const context = await loadOracleContext();
   const excluded = readExcluded();
   const result: CheckResult = {
     fixtures: 0,
@@ -77,10 +107,10 @@ export async function checkFixtures(glob: string | undefined): Promise<CheckResu
     problems: glob === undefined ? treeProblems() : [],
   };
 
-  for (const fixture of selectedFixtures(glob)) {
+  for (const target of selectedTargets(glob)) {
     const mismatch = firstMismatch(
-      readExpectedFiles(fixture),
-      expectedFilesOf(compiler, fixture, excluded),
+      readExpectedFiles(target),
+      await expectedFilesOf(context, target, excluded),
     );
 
     result.fixtures++;
@@ -91,7 +121,19 @@ export async function checkFixtures(glob: string | undefined): Promise<CheckResu
     }
 
     result.differing++;
-    result.first ??= { fixture: fixture.path, mismatch };
+    result.first ??= { fixture: target.path, mismatch };
+  }
+
+  if (selectsDiffTable(glob)) {
+    const mismatch = diffTableMismatch(context);
+
+    result.fixtures++;
+
+    if (mismatch === undefined) result.matching++;
+    else {
+      result.differing++;
+      result.first ??= { fixture: DIFF_TABLE_CASE, mismatch };
+    }
   }
 
   return result;
@@ -120,7 +162,7 @@ export function ruleCoverage(declared: readonly string[] = declaredRuleIds()): R
   const coverage: Record<string, string[]> = Object.fromEntries(declared.map((id) => [id, []]));
   const undeclared = new Set<string>();
 
-  for (const fixture of selectedFixtures(undefined)) {
+  for (const fixture of selectedTargets(undefined)) {
     const text = readExpectedFiles(fixture).get("diagnostics.json");
 
     if (text === undefined) continue;

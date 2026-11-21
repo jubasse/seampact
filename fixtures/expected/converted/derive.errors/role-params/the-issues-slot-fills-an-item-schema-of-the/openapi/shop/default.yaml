@@ -1,0 +1,114 @@
+openapi: 3.1.0
+info:
+  title: shop
+  version: "1"
+x-seampact-api:
+  kind: product
+x-seampact-format: bare
+paths:
+  /v1/ping:
+    get:
+      operationId: ping
+      responses:
+        "204":
+          description: Success.
+        "400":
+          description: shop.invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/shop.invalid"
+          x-seampact-errors:
+            - code: shop.invalid
+              derivedFrom: input.invalid
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+      security: []
+      x-seampact-access:
+        public: The contract checks error declarations and role bindings only.
+      x-seampact-maturity:
+        level: experimental
+        source: api
+components:
+  schemas:
+    Issue:
+      type: object
+      properties:
+        in:
+          type: string
+        pointer:
+          type: string
+        rule:
+          type: string
+    ShopInvalidParams:
+      type: object
+      properties:
+        issues:
+          type: array
+          items:
+            $ref: "#/components/schemas/Issue"
+      required:
+        - issues
+    api.internal:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.internal
+        status:
+          type: integer
+          const: 500
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.internal
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: failed
+    shop.invalid:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: shop.invalid
+            status:
+              type: integer
+              const: 400
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: shop.invalid
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/ShopInvalidParams"
+      x-seampact-nature:
+        base: refused

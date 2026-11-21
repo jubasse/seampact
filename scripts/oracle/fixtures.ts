@@ -55,12 +55,15 @@ export function readExcluded(): ExcludedFixtures {
   return { fixtures: members("fixtures"), halves: members("halves") };
 }
 
-function entryOf(directory: string): string | undefined {
+/** `workspace.yaml` when the directory has one, else `api.yaml`, else undefined. */
+export function entryFileOf(directory: string): string | undefined {
   return ENTRY_FILES.find((name) => existsSync(join(directory, name)));
 }
 
+const CLI_CASE_FILE = "cli.json";
+
 function walk(directory: string, found: OracleFixture[]): void {
-  const entry = entryOf(directory);
+  const entry = entryFileOf(directory);
 
   const path = relative(FIXTURES_ROOT, directory).split("\\").join("/");
 
@@ -68,6 +71,9 @@ function walk(directory: string, found: OracleFixture[]): void {
 
   // A converted fixture is one workspace: the contracts inside it are not fixtures of their own.
   if (entry !== undefined && path.startsWith(CONVERTED_PREFIX)) return;
+
+  // A CLI case's tree is compiled through the CLI only.
+  if (existsSync(join(directory, CLI_CASE_FILE))) return;
 
   for (const name of readdirSync(directory)) {
     const child = join(directory, name);
@@ -78,8 +84,28 @@ function walk(directory: string, found: OracleFixture[]): void {
   }
 }
 
-// The names under a fixture's expected directory that hold its own files: a nested fixture there would collide.
-const OWN_EXPECTED_NAMES = ["diagnostics.json", "ir", "source-map", "halves", "schema-calls"];
+/** The tool outputs written under a case's expected directory, one directory per unit. */
+export const TOOL_UNIT_DIRECTORIES = [
+  "openapi",
+  "openapi-merge",
+  "lint",
+  "diff",
+  "bundle",
+  "cli",
+  "cli-config",
+  "editor-schemas",
+  "bundle-fetch",
+] as const;
+
+/** The names under a case's expected directory that hold its own files: a nested fixture there would collide. */
+export const OWN_EXPECTED_NAMES: readonly string[] = [
+  "diagnostics.json",
+  "ir",
+  "source-map",
+  "halves",
+  "schema-calls",
+  ...TOOL_UNIT_DIRECTORIES,
+];
 
 function refuseCollidingNames(fixtures: readonly OracleFixture[]): void {
   for (const { path } of fixtures) {

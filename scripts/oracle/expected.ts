@@ -1,17 +1,42 @@
-import { mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
-import type { OracleCompilation, OracleCompiler } from "./compiler.ts";
-import { EXPECTED_ROOT, type ExcludedFixtures, type OracleFixture } from "./fixtures.ts";
+import { type OracleCompilation, type OracleCompiler, loadOracleCompiler } from "./compiler.ts";
+import { type ExpectedFiles, jsonText } from "./expected-text.ts";
+import { EXPECTED_ROOT, type ExcludedFixtures, OWN_EXPECTED_NAMES } from "./fixtures.ts";
+import type { OracleTarget } from "./targets.ts";
+import { type CompileCache, compileCacheOf, readCaseJson, toolCaseFiles } from "./tool-cases.ts";
+import { lintFiles } from "./tool-lint.ts";
+import { loadOracleTools, type OracleTools } from "./tool-modules.ts";
+import { openApiFiles } from "./tool-openapi.ts";
 
-// The expected outputs of a fixture as files, keyed by their path under `fixtures/expected/<fixture path>/`:
+// The expected outputs of a target as files, keyed by their path under `fixtures/expected/<path>/`: of a fixture
 // `diagnostics.json`, `ir/<api>.json`, `source-map/<api>.json`, `halves/<api>/<NN>-<half>.json`, and when not empty
-// `halves/<api>/<NN>-<half>.diagnostics.json` and `schema-calls/<api>.json`.
+// `halves/<api>/<NN>-<half>.diagnostics.json` and `schema-calls/<api>.json`, then the `openapi/` and `lint/` files of
+// each api that compiled; of a tool case the files of its unit (README, "Tool outputs").
 
-export type ExpectedFiles = Map<string, string>;
+export type { ExpectedFiles };
 
-const JSON_INDENT = 2;
+export interface OracleContext {
+  compiler: OracleCompiler;
+  tools: OracleTools;
+  cache: CompileCache;
+}
 
-const jsonText = (value: unknown): string => `${JSON.stringify(value, null, JSON_INDENT)}\n`;
+export async function loadOracleContext(): Promise<OracleContext> {
+  const compiler = await loadOracleCompiler();
+
+  return { compiler, tools: await loadOracleTools(), cache: compileCacheOf(compiler) };
+}
+
+const OPENAPI_OPTIONS_FILE = "openapi.options.json";
 
 function diagnosticsText(compilation: OracleCompilation): string {
   return jsonText({
@@ -38,44 +63,101 @@ function halveFiles(
     files.set(`schema-calls/${api}.json`, jsonText(calls));
 }
 
-/** The expected files of one fixture. */
-export function expectedFilesOf(
-  compiler: OracleCompiler,
-  fixture: OracleFixture,
+async function fixtureFiles(
+  context: OracleContext,
+  target: OracleTarget,
   excluded: ExcludedFixtures,
-): ExpectedFiles {
+): Promise<ExpectedFiles> {
+  const { fixture } = target;
+
+  if (fixture === undefined) return new Map();
+
+  const { compiler, tools } = context;
   const compilation = compiler.compile(fixture.directory, fixture.entry);
   const files: ExpectedFiles = new Map([["diagnostics.json", diagnosticsText(compilation)]]);
+  const optionsFile = join(fixture.directory, OPENAPI_OPTIONS_FILE);
+  const rawOptions = existsSync(optionsFile)
+    ? readCaseJson(fixture.directory, OPENAPI_OPTIONS_FILE)
+    : undefined;
 
   for (const { api, irText, sourceMapText } of compilation.apis) {
-    if (irText !== undefined) files.set(`ir/${api}.json`, irText);
+    if (irText !== undefined) {
+      files.set(`ir/${api}.json`, irText);
+
+      for (const [name, text] of openApiFiles(tools, api, irText, rawOptions))
+        files.set(name, text);
+    }
 
     if (sourceMapText !== undefined) files.set(`source-map/${api}.json`, sourceMapText);
   }
+
+  for (const [name, text] of await lintFiles(tools, compilation.apis)) files.set(name, text);
 
   if (excluded.halves[fixture.path] === undefined) halveFiles(compiler, compilation, files);
 
   return files;
 }
 
-export const expectedDirectoryOf = (fixture: OracleFixture): string =>
-  join(EXPECTED_ROOT, fixture.path);
+/** The expected files of one target. */
+export async function expectedFilesOf(
+  context: OracleContext,
+  target: OracleTarget,
+  excluded: ExcludedFixtures,
+): Promise<ExpectedFiles> {
+  const files = await fixtureFiles(context, target, excluded);
 
-const OWN_ENTRIES = ["diagnostics.json", "ir", "source-map", "halves", "schema-calls"] as const;
+  if (target.tool === undefined) return files;
 
-/** The paths under `fixtures/expected/` that hold a `diagnostics.json`: the fixtures that have expected outputs. */
-export function expectedFixturePaths(directory: string = EXPECTED_ROOT, prefix = ""): string[] {
-  const found: string[] = [];
+  for (const [name, text] of await toolCaseFiles(context.tools, context.cache, target.tool))
+    files.set(name, text);
 
+  return files;
+}
+
+export const expectedDirectoryOf = (target: OracleTarget): string =>
+  join(EXPECTED_ROOT, target.path);
+
+const OWN_ENTRIES = OWN_EXPECTED_NAMES;
+
+const GLOBAL_EXPECTED_FILES: readonly string[] = [
+  "differences.yaml",
+  "rule-coverage.json",
+  "diff-table.json",
+];
+
+function expectedFilePaths(directory: string, prefix: string, found: string[]): void {
   for (const name of readdirSync(directory)) {
     const child = join(directory, name);
+    const path = prefix === "" ? name : `${prefix}/${name}`;
 
-    if (name === "diagnostics.json") found.push(prefix);
-    else if (statSync(child).isDirectory() && !(OWN_ENTRIES as readonly string[]).includes(name))
-      found.push(...expectedFixturePaths(child, prefix === "" ? name : `${prefix}/${name}`));
+    if (statSync(child).isDirectory()) expectedFilePaths(child, path, found);
+    else found.push(path);
   }
+}
 
-  return found.filter((path) => path !== "");
+/**
+ * The directories under `fixtures/expected/` holding an expected file that no target claims: a file is claimed when
+ * the directory above its first own entry name (`ir`, `openapi`, ...) is a target, at any depth.
+ */
+export function unclaimedExpectedDirectories(targets: ReadonlySet<string>): string[] {
+  const files: string[] = [];
+
+  expectedFilePaths(EXPECTED_ROOT, "", files);
+
+  const claimed = (file: string): boolean => {
+    const segments = file.split("/");
+
+    return (
+      segments.some(
+        (segment, index) =>
+          index > 0 &&
+          OWN_ENTRIES.includes(segment) &&
+          targets.has(segments.slice(0, index).join("/")),
+      ) || GLOBAL_EXPECTED_FILES.includes(file)
+    );
+  };
+
+  return [...new Set(files.filter((file) => !claimed(file)).map((file) => dirname(file)))].sort();
 }
 
 function filesBelow(path: string, name: string, found: string[]): void {
@@ -100,7 +182,7 @@ function filesBelow(path: string, name: string, found: string[]): void {
 }
 
 /** The expected files on disk, empty when the fixture has none. Its own entries only: a nested fixture's tree sits below. */
-export function readExpectedFiles(fixture: OracleFixture): ExpectedFiles {
+export function readExpectedFiles(fixture: OracleTarget): ExpectedFiles {
   const directory = expectedDirectoryOf(fixture);
   const names: string[] = [];
 
@@ -110,7 +192,7 @@ export function readExpectedFiles(fixture: OracleFixture): ExpectedFiles {
 }
 
 /** Replaces a fixture's expected files; its own files only, never a nested fixture's tree. */
-export function writeExpectedFiles(fixture: OracleFixture, files: ExpectedFiles): void {
+export function writeExpectedFiles(fixture: OracleTarget, files: ExpectedFiles): void {
   const directory = expectedDirectoryOf(fixture);
 
   for (const name of OWN_ENTRIES) rmSync(join(directory, name), { recursive: true, force: true });

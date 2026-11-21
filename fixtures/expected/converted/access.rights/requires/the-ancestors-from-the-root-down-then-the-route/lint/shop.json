@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'note' in rules is reached by no operation, identity or convention.",
+    "fix": "Remove 'note', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/rules/note"
+    },
+    "related": []
+  }
+]

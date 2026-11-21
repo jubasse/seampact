@@ -1,0 +1,90 @@
+[
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'Foo' in schemas is reached by no operation, identity or convention.",
+    "fix": "Remove 'Foo', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Foo"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'Labels' in schemas is reached by no operation, identity or convention.",
+    "fix": "Remove 'Labels', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Labels"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'Id' in schemas is reached by no operation, identity or convention.",
+    "fix": "Remove 'Id', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Id"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'MaybeFoo' in schemas is reached by no operation, identity or convention.",
+    "fix": "Remove 'MaybeFoo', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/MaybeFoo"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'MaybeMaybeFoo' in schemas is reached by no operation, identity or convention.",
+    "fix": "Remove 'MaybeMaybeFoo', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/MaybeMaybeFoo"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'MaybeLabels' in schemas is reached by no operation, identity or convention.",
+    "fix": "Remove 'MaybeLabels', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/MaybeLabels"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'MaybeId' in schemas is reached by no operation, identity or convention.",
+    "fix": "Remove 'MaybeId', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/MaybeId"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'Holder' in schemas is reached by no operation, identity or convention.",
+    "fix": "Remove 'Holder', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Holder"
+    },
+    "related": []
+  }
+]

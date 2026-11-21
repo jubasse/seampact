@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'burst' in buckets is reached by no operation, identity or convention.",
+    "fix": "Remove 'burst', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/buckets/burst"
+    },
+    "related": []
+  }
+]

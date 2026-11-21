@@ -1,0 +1,190 @@
+openapi: 3.1.0
+info:
+  title: tasksDevices
+  version: "1"
+  summary: The status a paired wall display reads.
+x-seampact-api:
+  kind: product
+x-seampact-format: jsonld
+paths:
+  /devices/v1/status:
+    get:
+      operationId: status
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/ld+json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      "@context":
+                        const: /contexts/DeviceStatus
+                      "@id":
+                        type: string
+                        format: uri-reference
+                      "@type":
+                        const: DeviceStatus
+                    required:
+                      - "@context"
+                      - "@id"
+                      - "@type"
+                  - $ref: "#/components/schemas/DeviceStatus"
+        "401":
+          description: api.unauthenticated
+          content:
+            application/ld+json:
+              schema:
+                $ref: "#/components/schemas/api.unauthenticated"
+          x-seampact-errors:
+            - code: api.unauthenticated
+              derivedFrom: identity.authenticate
+        "422":
+          description: api.validation_failed
+          content:
+            application/ld+json:
+              schema:
+                $ref: "#/components/schemas/api.validation_failed"
+          x-seampact-errors:
+            - code: api.validation_failed
+              derivedFrom: input.invalid
+        "500":
+          description: api.internal
+          content:
+            application/ld+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+      security:
+        - deviceToken: []
+      x-seampact-access:
+        identity: device
+      x-seampact-maturity:
+        level: provisional
+        source: api
+components:
+  schemas:
+    ApiValidationFailedParams:
+      type: object
+      properties:
+        violations:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiValidationFailedParamsViolationsItem"
+      required:
+        - violations
+    ApiValidationFailedParamsViolationsItem:
+      type: object
+      properties:
+        propertyPath:
+          type: string
+        message:
+          type: string
+      required:
+        - propertyPath
+        - message
+    DeviceStatus:
+      type: object
+      properties:
+        deviceId:
+          type: string
+          format: uuid
+      required:
+        - deviceId
+    api.internal:
+      type: object
+      properties:
+        "@context":
+          const: /contexts/Error
+        "@id":
+          type: string
+        "@type":
+          const: Error
+        type:
+          type: string
+        detail:
+          type: string
+        status:
+          type: integer
+          const: 500
+        code:
+          type: string
+          const: api.internal
+      required:
+        - "@context"
+        - "@id"
+        - "@type"
+        - type
+        - status
+        - code
+      x-seampact-nature:
+        base: failed
+    api.unauthenticated:
+      type: object
+      properties:
+        "@context":
+          const: /contexts/Error
+        "@id":
+          type: string
+        "@type":
+          const: Error
+        type:
+          type: string
+        detail:
+          type: string
+        status:
+          type: integer
+          const: 401
+        code:
+          type: string
+          const: api.unauthenticated
+      required:
+        - "@context"
+        - "@id"
+        - "@type"
+        - type
+        - status
+        - code
+      x-seampact-nature:
+        base: refused
+    api.validation_failed:
+      allOf:
+        - type: object
+          properties:
+            "@context":
+              const: /contexts/Error
+            "@id":
+              type: string
+            "@type":
+              const: Error
+            type:
+              type: string
+            title:
+              type: string
+            detail:
+              type: string
+            status:
+              type: integer
+              const: 422
+            code:
+              type: string
+              const: api.validation_failed
+          required:
+            - "@context"
+            - "@id"
+            - "@type"
+            - type
+            - title
+            - status
+            - code
+        - $ref: "#/components/schemas/ApiValidationFailedParams"
+      x-seampact-nature:
+        base: refused
+  securitySchemes:
+    deviceToken:
+      type: apiKey
+      in: header
+      name: X-Device-Token

@@ -4,7 +4,7 @@ import {
   checkFixtures,
   checkReport,
   coverageCommand,
-  selectedFixtures,
+  selectsAnything,
   writeCommand,
 } from "./commands.ts";
 
@@ -37,7 +37,7 @@ async function run(command: string | undefined, glob: string | undefined): Promi
   if (
     (command === "write" || command === "check") &&
     glob !== undefined &&
-    selectedFixtures(glob).length === 0
+    !selectsAnything(glob)
   ) {
     console.error(`oracle: the glob '${glob}' matches no fixture`);
 

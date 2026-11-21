@@ -50,6 +50,8 @@ export interface OracleApiResult {
   diagnostics: OracleDiagnostic[];
   irText?: string;
   sourceMapText?: string;
+  /** What `runLint` reads besides the IR; present with the IR. */
+  lintInput?: { ir: object; declared: readonly object[]; locations: object };
 }
 
 export interface OracleCompilation {
@@ -76,7 +78,14 @@ interface PipelineModule {
   pipelineHalves: readonly string[];
   compileWorkspace(options: { reader: object; entry: string; parts: object }): {
     diagnostics: readonly object[];
-    apis: { api: string; diagnostics: readonly object[]; ir?: object; sourceMap?: object }[];
+    apis: {
+      api: string;
+      diagnostics: readonly object[];
+      ir?: object;
+      sourceMap?: object;
+      declared?: readonly object[];
+      locations: object;
+    }[];
   };
   finalizeSerializeJson(value: object): string;
   pipelineCopy<T>(value: T): T;
@@ -266,6 +275,11 @@ function oracleCompiler(pipeline: PipelineModule, deltas: DeltaModule): OracleCo
           api: api.api,
           diagnostics: [...api.diagnostics],
           ...(api.ir === undefined ? {} : { irText: pipeline.finalizeSerializeJson(api.ir) }),
+          ...(api.ir === undefined
+            ? {}
+            : {
+                lintInput: { ir: api.ir, declared: api.declared ?? [], locations: api.locations },
+              }),
           ...(api.sourceMap === undefined
             ? {}
             : { sourceMapText: pipeline.finalizeSerializeJson(api.sourceMap) }),

@@ -1,0 +1,24 @@
+[
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'slack' in schemes is reached by no operation, identity or convention.",
+    "fix": "Remove 'slack', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemes/slack"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'keyed' in schemes is reached by no operation, identity or convention.",
+    "fix": "Remove 'keyed', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemes/keyed"
+    },
+    "related": []
+  }
+]

@@ -1,0 +1,346 @@
+[
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getCoupon' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/38/examples/e1",
+    "operation": "getCoupon"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getCoupon' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/38/examples/e2",
+    "operation": "getCoupon"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getCoupon' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/38/examples/e3",
+    "operation": "getCoupon"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getCreditNote' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/39/examples/e1",
+    "operation": "getCreditNote"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getCreditNote' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/39/examples/e2",
+    "operation": "getCreditNote"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getCreditNote' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/39/examples/e3",
+    "operation": "getCreditNote"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getCustomer' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/40/examples/e1",
+    "operation": "getCustomer"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getCustomer' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/40/examples/e2",
+    "operation": "getCustomer"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getCustomer' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/40/examples/e3",
+    "operation": "getCustomer"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getDispute' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/41/examples/e1",
+    "operation": "getDispute"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getDispute' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/41/examples/e2",
+    "operation": "getDispute"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getDispute' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/41/examples/e3",
+    "operation": "getDispute"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getInvoice' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/42/examples/e1",
+    "operation": "getInvoice"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getInvoice' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/42/examples/e2",
+    "operation": "getInvoice"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getInvoice' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/42/examples/e3",
+    "operation": "getInvoice"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getLedgerEntry' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/43/examples/e1",
+    "operation": "getLedgerEntry"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getLedgerEntry' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/43/examples/e2",
+    "operation": "getLedgerEntry"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getLedgerEntry' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/43/examples/e3",
+    "operation": "getLedgerEntry"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getPayment' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/44/examples/e1",
+    "operation": "getPayment"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getPayment' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/44/examples/e2",
+    "operation": "getPayment"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getPayment' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/44/examples/e3",
+    "operation": "getPayment"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getPayout' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/45/examples/e1",
+    "operation": "getPayout"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getPayout' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/45/examples/e2",
+    "operation": "getPayout"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getPayout' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/45/examples/e3",
+    "operation": "getPayout"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getPlan' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/46/examples/e1",
+    "operation": "getPlan"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getPlan' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/46/examples/e2",
+    "operation": "getPlan"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getPlan' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/46/examples/e3",
+    "operation": "getPlan"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getPriceList' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/47/examples/e1",
+    "operation": "getPriceList"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getPriceList' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/47/examples/e2",
+    "operation": "getPriceList"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getPriceList' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/47/examples/e3",
+    "operation": "getPriceList"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getReceipt' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/48/examples/e1",
+    "operation": "getReceipt"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getReceipt' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/48/examples/e2",
+    "operation": "getReceipt"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getRefund' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/49/examples/e1",
+    "operation": "getRefund"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getRefund' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/49/examples/e2",
+    "operation": "getRefund"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getRefund' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/49/examples/e3",
+    "operation": "getRefund"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getStatement' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/51/examples/e1",
+    "operation": "getStatement"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getStatement' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/51/examples/e2",
+    "operation": "getStatement"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getSubscription' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/52/examples/e1",
+    "operation": "getSubscription"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getSubscription' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/52/examples/e2",
+    "operation": "getSubscription"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getSubscription' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/52/examples/e3",
+    "operation": "getSubscription"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getTaxRate' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/53/examples/e1",
+    "operation": "getTaxRate"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getTaxRate' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/53/examples/e2",
+    "operation": "getTaxRate"
+  },
+  {
+    "code": "openapi.example.error.unsupported",
+    "message": "An error example in operation 'getTaxRate' is not generated yet.",
+    "fix": "Remove the error example: it changes only the document.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/53/examples/e3",
+    "operation": "getTaxRate"
+  }
+]

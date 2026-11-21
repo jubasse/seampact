@@ -1,0 +1,35 @@
+[
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'first' in headers is reached by no operation, identity or convention.",
+    "fix": "Remove 'first', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/headers/first"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'second' in headers is reached by no operation, identity or convention.",
+    "fix": "Remove 'second', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/headers/second"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'Surface' in enums is reached by no operation, identity or convention.",
+    "fix": "Remove 'Surface', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/enums/Surface"
+    },
+    "related": []
+  }
+]

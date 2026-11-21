@@ -1,0 +1,880 @@
+openapi: 3.1.0
+info:
+  title: notes
+  version: "1"
+x-seampact-api:
+  kind: product
+x-seampact-format: bare
+paths:
+  /v1/workspaces/{workspaceId}/notes:
+    get:
+      operationId: listNotes
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: cursor
+          in: query
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 50
+        - name: sort
+          in: query
+          required: false
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+              pattern: ^(?:title|-title|rating|-rating|memo|-memo)$
+      responses:
+        "200":
+          description: Success.
+          headers:
+            Link:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Note"
+        "400":
+          description: api.schema_invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.schema_invalid"
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+        "401":
+          description: api.unauthenticated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unauthenticated"
+          x-seampact-errors:
+            - code: api.unauthenticated
+              derivedFrom: identity.authenticate
+        "403":
+          description: api.sort_key_forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.sort_key_forbidden"
+          x-seampact-errors:
+            - code: api.sort_key_forbidden
+              derivedFrom: sortKey.restricted
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+      security:
+        - bearer: []
+      x-seampact-access:
+        identity: member
+      x-seampact-scopes:
+        - scope: workspace
+          from: path.workspaceId
+      x-seampact-restricted-to:
+        - schema: Note
+          pointer: /cost
+          right: notes.seeCost
+          subject: holderField.noteId
+          direction: output
+        - schema: Note
+          pointer: /memo
+          right: notes.annotate
+          direction: output
+        - schema: Note
+          pointer: /rating
+          right: notes.read
+          subject: scope.workspace
+          direction: output
+      x-seampact-filtered-by: notes.read
+      x-seampact-paging:
+        style: cursor
+        position: cursor
+        roles:
+          cursor: query.cursor
+          limit: query.limit
+          sort: query.sort
+        maxLimit: 50
+        defaultLimit: 50
+        overLimit: reject
+        sortKeys:
+          - key: memo
+            right: notes.annotate
+          - key: rating
+            right: notes.read
+            subject: scope.workspace
+          - key: title
+      x-seampact-maturity:
+        level: experimental
+        source: api
+    post:
+      operationId: createNote
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateNote"
+      responses:
+        "201":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Note"
+        "400":
+          description: api.schema_invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.schema_invalid"
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+        "401":
+          description: api.unauthenticated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unauthenticated"
+          x-seampact-errors:
+            - code: api.unauthenticated
+              derivedFrom: identity.authenticate
+        "403":
+          description: api.forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.forbidden"
+          x-seampact-errors:
+            - code: api.forbidden
+              derivedFrom: fieldRight.restricted
+        "413":
+          description: api.payload_too_large
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.payload_too_large"
+          x-seampact-errors:
+            - code: api.payload_too_large
+              derivedFrom: body.limit
+        "415":
+          description: api.unsupported_media_type
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unsupported_media_type"
+          x-seampact-errors:
+            - code: api.unsupported_media_type
+              derivedFrom: body.media
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+      security:
+        - bearer: []
+      x-seampact-access:
+        identity: member
+      x-seampact-scopes:
+        - scope: workspace
+          from: path.workspaceId
+      x-seampact-restricted-to:
+        - schema: CreateNote
+          pointer: /budget
+          right: workspaceRole
+          params:
+            level: owner
+          subject: scope.workspace
+          direction: input
+          input: reject
+        - schema: CreateNote
+          pointer: /memo
+          right: notes.annotate
+          direction: input
+          input: strip
+        - schema: Note
+          pointer: /cost
+          right: notes.seeCost
+          subject: holderField.noteId
+          direction: output
+        - schema: Note
+          pointer: /memo
+          right: notes.annotate
+          direction: output
+        - schema: Note
+          pointer: /rating
+          right: notes.read
+          subject: scope.workspace
+          direction: output
+      x-seampact-maturity:
+        level: experimental
+        source: api
+  /v1/workspaces/{workspaceId}/notes/by-label:
+    get:
+      operationId: byLabelNotes
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotesByLabel"
+        "400":
+          description: api.schema_invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.schema_invalid"
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+        "401":
+          description: api.unauthenticated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unauthenticated"
+          x-seampact-errors:
+            - code: api.unauthenticated
+              derivedFrom: identity.authenticate
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+      security:
+        - bearer: []
+      x-seampact-access:
+        identity: member
+      x-seampact-scopes:
+        - scope: workspace
+          from: path.workspaceId
+      x-seampact-restricted-to:
+        - schema: NotesByLabel
+          pointer: /*/cost
+          right: notes.seeCost
+          subject: holderField.noteId
+          direction: output
+        - schema: NotesByLabel
+          pointer: /*/memo
+          right: notes.annotate
+          direction: output
+        - schema: NotesByLabel
+          pointer: /*/rating
+          right: notes.read
+          subject: scope.workspace
+          direction: output
+      x-seampact-maturity:
+        level: experimental
+        source: api
+  /v1/workspaces/{workspaceId}/notes/feed:
+    get:
+      operationId: feedNotes
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Feed"
+        "400":
+          description: api.schema_invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.schema_invalid"
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+        "401":
+          description: api.unauthenticated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unauthenticated"
+          x-seampact-errors:
+            - code: api.unauthenticated
+              derivedFrom: identity.authenticate
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+      security:
+        - bearer: []
+      x-seampact-access:
+        identity: member
+      x-seampact-scopes:
+        - scope: workspace
+          from: path.workspaceId
+      x-seampact-restricted-to:
+        - schema: Feed
+          pointer: /latest/cost
+          right: notes.seeCost
+          subject: holderField.noteId
+          direction: output
+        - schema: Feed
+          pointer: /pinned/*/cost
+          right: notes.seeCost
+          subject: holderField.noteId
+          direction: output
+        - schema: Feed
+          pointer: /pinned/*/memo
+          right: notes.annotate
+          direction: output
+        - schema: Feed
+          pointer: /pinned/*/rating
+          right: notes.read
+          subject: scope.workspace
+          direction: output
+      x-seampact-maturity:
+        level: experimental
+        source: api
+  /v1/workspaces/{workspaceId}/notes/{noteId}:
+    patch:
+      operationId: updateNote
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: noteId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateNote"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Note"
+        "400":
+          description: api.schema_invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.schema_invalid"
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+        "401":
+          description: api.unauthenticated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unauthenticated"
+          x-seampact-errors:
+            - code: api.unauthenticated
+              derivedFrom: identity.authenticate
+        "403":
+          description: api.forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.forbidden"
+          x-seampact-errors:
+            - code: api.forbidden
+              derivedFrom: fieldRight.restricted
+        "404":
+          description: api.not_found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.not_found"
+          x-seampact-errors:
+            - code: api.not_found
+              derivedFrom: member.notFound
+        "413":
+          description: api.payload_too_large
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.payload_too_large"
+          x-seampact-errors:
+            - code: api.payload_too_large
+              derivedFrom: body.limit
+        "415":
+          description: api.unsupported_media_type
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unsupported_media_type"
+          x-seampact-errors:
+            - code: api.unsupported_media_type
+              derivedFrom: body.media
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+      security:
+        - bearer: []
+      x-seampact-access:
+        identity: member
+      x-seampact-scopes:
+        - scope: workspace
+          from: path.workspaceId
+      x-seampact-restricted-to:
+        - schema: Note
+          pointer: /cost
+          right: notes.seeCost
+          subject: holderField.noteId
+          direction: output
+        - schema: Note
+          pointer: /memo
+          right: notes.annotate
+          direction: output
+        - schema: Note
+          pointer: /rating
+          right: notes.read
+          subject: scope.workspace
+          direction: output
+        - schema: UpdateNote
+          pointer: /cost
+          right: notes.seeCost
+          subject: path.noteId
+          direction: input
+          input: reject
+      x-seampact-maturity:
+        level: experimental
+        source: api
+components:
+  schemas:
+    Activity:
+      oneOf:
+        - allOf:
+            - $ref: "#/components/schemas/NoteArchived"
+            - type: object
+              properties:
+                kind:
+                  const: archived
+              required:
+                - kind
+        - allOf:
+            - $ref: "#/components/schemas/NoteEdited"
+            - type: object
+              properties:
+                kind:
+                  const: edited
+              required:
+                - kind
+      discriminator:
+        propertyName: kind
+        mapping:
+          archived: "#/components/schemas/NoteArchived"
+          edited: "#/components/schemas/NoteEdited"
+    ApiForbiddenParams:
+      type: object
+      properties:
+        pointer:
+          type: string
+    ApiPayloadTooLargeParams:
+      type: object
+      properties:
+        limitBytes:
+          type: integer
+          minimum: 0
+    ApiSchemaInvalidIssue:
+      type: object
+      properties:
+        in:
+          type: string
+          pattern: ^(?:path|query|header|body)$
+        pointer:
+          type: string
+        rule:
+          type: string
+      required:
+        - in
+        - pointer
+        - rule
+    ApiSchemaInvalidParams:
+      type: object
+      properties:
+        issues:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiSchemaInvalidIssue"
+      required:
+        - issues
+    ApiSortKeyForbiddenParams:
+      type: object
+      properties:
+        key:
+          type: string
+      required:
+        - key
+    CreateNote:
+      type: object
+      properties:
+        title:
+          type: string
+        budget:
+          type: integer
+        memo:
+          type: string
+      required:
+        - title
+    Feed:
+      type: object
+      properties:
+        latest:
+          $ref: "#/components/schemas/Activity"
+        pinned:
+          type: array
+          items:
+            $ref: "#/components/schemas/Note"
+      required:
+        - latest
+        - pinned
+    Note:
+      type: object
+      properties:
+        noteId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        cost:
+          type: integer
+        memo:
+          type: string
+        rating:
+          type: integer
+      required:
+        - noteId
+        - title
+    NoteArchived:
+      type: object
+      properties:
+        noteId:
+          type: string
+          format: uuid
+      required:
+        - noteId
+    NoteEdited:
+      type: object
+      properties:
+        noteId:
+          type: string
+          format: uuid
+        cost:
+          type: integer
+      required:
+        - noteId
+    NotesByLabel:
+      type: object
+      additionalProperties:
+        $ref: "#/components/schemas/Note"
+    UpdateNote:
+      type: object
+      properties:
+        title:
+          type: string
+        cost:
+          type: integer
+    api.forbidden:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: api.forbidden
+            status:
+              type: integer
+              const: 403
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: api.forbidden
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/ApiForbiddenParams"
+      x-seampact-nature:
+        base: refused
+    api.internal:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.internal
+        status:
+          type: integer
+          const: 500
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.internal
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: failed
+    api.not_found:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.not_found
+        status:
+          type: integer
+          const: 404
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.not_found
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: refused
+    api.payload_too_large:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: api.payload_too_large
+            status:
+              type: integer
+              const: 413
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: api.payload_too_large
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/ApiPayloadTooLargeParams"
+      x-seampact-nature:
+        base: refused
+    api.schema_invalid:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: api.schema_invalid
+            status:
+              type: integer
+              const: 400
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: api.schema_invalid
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/ApiSchemaInvalidParams"
+      x-seampact-nature:
+        base: refused
+    api.sort_key_forbidden:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: api.sort_key_forbidden
+            status:
+              type: integer
+              const: 403
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: api.sort_key_forbidden
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/ApiSortKeyForbiddenParams"
+      x-seampact-nature:
+        base: refused
+    api.unauthenticated:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.unauthenticated
+        status:
+          type: integer
+          const: 401
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.unauthenticated
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: refused
+    api.unsupported_media_type:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.unsupported_media_type
+        status:
+          type: integer
+          const: 415
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.unsupported_media_type
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: refused
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer

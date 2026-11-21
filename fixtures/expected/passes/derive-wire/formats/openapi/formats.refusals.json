@@ -1,0 +1,16 @@
+[
+  {
+    "code": "openapi.template.slot.unsupported",
+    "message": "The slot '$id' in this place is not generated yet.",
+    "fix": "Ask the user first: use a slot the format defines in that place, or leave the api out of the app's `openapi` map (`openapi: none` writes no document).",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/formats/jsonApi/success/item/body/members/0/value/members/1/value"
+  },
+  {
+    "code": "openapi.template.slot.unsupported",
+    "message": "The slot '$fields' in this place is not generated yet.",
+    "fix": "Ask the user first: use a slot the format defines in that place, or leave the api out of the app's `openapi` map (`openapi: none` writes no document).",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/formats/jsonApi/success/item/body/members/0/value/members/2/value"
+  }
+]
