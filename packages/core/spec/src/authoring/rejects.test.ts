@@ -219,6 +219,24 @@ test.each([
     { method: "get", paging: { $include: "./p.yaml", cursor: {}, offset: {} } },
     "maxProperties /paging",
   ],
+  [
+    "a schema maxItems past the largest safe integer",
+    "schemas",
+    { Tags: { type: "array", items: { type: "string" }, maxItems: 100000000000000000000 } },
+    "maximum /Tags/maxItems",
+  ],
+  [
+    "a scalar maxLength past the largest safe integer",
+    "scalars",
+    { code: { type: "string", maxLength: 100000000000000000000 } },
+    "maximum /code/maxLength",
+  ],
+  [
+    "a scalar minLength past the largest safe integer",
+    "scalars",
+    { code: { type: "string", minLength: 9007199254740992 } },
+    "maximum /code/minLength",
+  ],
 ] as const)("rejects %s", (_, file, doc, expected) => {
   expect(errors(file, doc)).toContain(expected);
 });
