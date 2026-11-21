@@ -78,67 +78,96 @@ interface Walk {
 // What holds the value being walked, which is also where a sensitive value below it is reported.
 type Holder = Exclude<IrSensitiveReach, { place: "mapKey" }>;
 
+// One thing still to do, in the order the walk meets it: report a reach, or walk a use or a schema.
+type Step =
+  | { readonly step: "reach"; readonly reach: IrSensitiveReach }
+  | { readonly step: "use"; readonly use: unknown; readonly holder: Holder }
+  | { readonly step: "schema"; readonly id: string; readonly holder: Holder };
+
+// An explicit stack, so a long chain of schemas cannot overflow the call stack. Each step pushes its children
+// in reverse, so they come off in the order a recursive walk would meet them.
 function walkUse(use: unknown, holder: Holder, walk: Walk): void {
-  if (!isRecord(use)) return;
+  const pending: Step[] = [{ step: "use", use, holder }];
 
-  switch (use.kind) {
-    case "array":
-      walkUse(use.items, holder, walk);
-
-      return;
-    case "scalar":
-      if (use.sensitive === true) walk.reaches.push(holder);
-
-      if (isRecord(use.content)) walkUse(use.content.schema, holder, walk);
-
-      return;
-    case "ref":
-      if (typeof use.schema === "string") walkSchema(use.schema, holder, walk);
-
-      return;
-    default:
-      return;
+  for (let next = pending.pop(); next !== undefined; next = pending.pop()) {
+    for (const child of stepsOf(next, walk).toReversed()) pending.push(child);
   }
 }
 
-function walkSchema(id: string, holder: Holder, walk: Walk): void {
+function stepsOf(next: Step, walk: Walk): Step[] {
+  switch (next.step) {
+    case "reach":
+      walk.reaches.push(next.reach);
+
+      return [];
+    case "use":
+      return stepsOfUse(next.use, next.holder);
+    case "schema":
+      return stepsOfSchema(next.id, next.holder, walk);
+  }
+}
+
+function stepsOfUse(use: unknown, holder: Holder): Step[] {
+  if (!isRecord(use)) return [];
+
+  switch (use.kind) {
+    case "array":
+      return [{ step: "use", use: use.items, holder }];
+    case "scalar":
+      return [
+        ...(use.sensitive === true ? [{ step: "reach", reach: holder } as const] : []),
+        ...(isRecord(use.content)
+          ? [{ step: "use", use: use.content.schema, holder } as const]
+          : []),
+      ];
+    case "ref":
+      return typeof use.schema === "string" ? [{ step: "schema", id: use.schema, holder }] : [];
+    default:
+      return [];
+  }
+}
+
+function stepsOfSchema(id: string, holder: Holder, walk: Walk): Step[] {
   const visit = `${holder.place} ${id}`;
 
-  if (walk.visited.has(visit)) return;
+  if (walk.visited.has(visit)) return [];
 
   if (!Object.hasOwn(walk.schemas, id)) {
     walk.onMissingSchema?.(id);
 
-    return;
+    return [];
   }
 
   walk.visited.add(visit);
   const schema = walk.schemas[id];
 
-  if (!isRecord(schema)) return;
+  if (!isRecord(schema)) return [];
 
   switch (schema.kind) {
     case "object":
-      walkProperties(id, schema.properties, holder, walk);
-
-      return;
+      return stepsOfProperties(id, schema.properties, holder);
     case "map":
-      if (isRecord(schema.keys) && schema.keys.sensitive === true)
-        walk.reaches.push({ place: "mapKey", response: holder.response, schema: id });
-
-      walkUse(schema.values, holder, walk);
-
-      return;
+      return [
+        ...(isRecord(schema.keys) && schema.keys.sensitive === true
+          ? [
+              {
+                step: "reach",
+                reach: { place: "mapKey", response: holder.response, schema: id },
+              } as const,
+            ]
+          : []),
+        { step: "use", use: schema.values, holder },
+      ];
     case "union":
-      walkVariants(schema.variants, holder, walk);
-
-      return;
+      return stepsOfVariants(schema.variants, holder);
     default:
-      return;
+      return [];
   }
 }
 
-function walkProperties(id: string, properties: unknown, holder: Holder, walk: Walk): void {
+function stepsOfProperties(id: string, properties: unknown, holder: Holder): Step[] {
+  const steps: Step[] = [];
+
   for (const property of listOf(properties)) {
     if (!isRecord(property)) continue;
 
@@ -153,21 +182,21 @@ function walkProperties(id: string, properties: unknown, holder: Holder, walk: W
             property: String(property.name),
           };
 
-    if (property.sensitive === true) {
-      walk.reaches.push(field);
-
-      continue;
-    }
-
-    walkUse(property.type, field, walk);
+    if (property.sensitive === true) steps.push({ step: "reach", reach: field });
+    else steps.push({ step: "use", use: property.type, holder: field });
   }
+
+  return steps;
 }
 
-function walkVariants(variants: unknown, holder: Holder, walk: Walk): void {
-  for (const variant of listOf(variants)) {
+function stepsOfVariants(variants: unknown, holder: Holder): Step[] {
+  const steps: Step[] = [];
+
+  for (const variant of listOf(variants))
     if (isRecord(variant) && typeof variant.schema === "string")
-      walkSchema(variant.schema, holder, walk);
-  }
+      steps.push({ step: "schema", id: variant.schema, holder });
+
+  return steps;
 }
 
 /** The reach as a phrase for a message: what is sensitive and where. */
