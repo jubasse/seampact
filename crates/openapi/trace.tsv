@@ -50,7 +50,7 @@ src/templates.rs#member_name_of	packages/core/openapi/src/templates.ts#memberNam
 src/operation_marks.rs#write_deprecation	packages/core/openapi/src/operation-marks.ts#writeDeprecation
 src/operation_marks.rs#write_unknown_query	packages/core/openapi/src/operation-marks.ts#writeUnknownQuery
 src/bodies.rs#body_media	packages/core/openapi/src/bodies.ts#bodyMedia
--	packages/core/openapi/src/documents.ts#unsupportedIrRefusals	skip: not ported yet, brief 1
+src/documents.rs#unsupported_ir_refusals	packages/core/openapi/src/documents.ts#unsupportedIrRefusals
 -	packages/core/openapi/src/documents.ts#serversArray	skip: not ported yet, brief 4
 -	packages/core/openapi/src/documents.ts#methodRank	skip: not ported yet, brief 3
 -	packages/core/openapi/src/documents.ts#operationObject	skip: not ported yet, brief 2

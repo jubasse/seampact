@@ -1,8 +1,10 @@
 //! The OpenAPI documents of one api.
 
 use indexmap::{IndexMap, IndexSet};
+use seampact_diagnostics::InternalError;
 use seampact_ir::{
-    ApiDocument, ContractIr, DocumentId, InternalPolicy, KnownApiVersionRef, Operation,
+    ApiDocument, ContractIr, DocumentId, IR_REVISION, IR_VERSION, InternalPolicy, IrSupport,
+    KnownApiVersionRef, Operation, OperationId, check_ir_support,
 };
 use seampact_js::cmp_utf16;
 use seampact_json::{JsonObject, JsonValue};
@@ -19,6 +21,13 @@ use crate::{EmitterOptions, ExtensionName, OpenApiError};
 
 /// The OpenAPI version every document declares.
 const OPENAPI_VERSION: &str = "3.1.0";
+
+/// The declaration kind of an HTTP operation.
+const HTTP_OPERATION_KIND: &str = "httpOperation";
+
+/// What to do about an IR this release does not read.
+const UNSUPPORTED_IR_FIX: &str =
+    "Use the @seampact/openapi release built for the IR this seampact version writes.";
 
 /// One document to write: its name, and the surfaces and internal routes it keeps.
 struct DocumentPlan {
@@ -122,9 +131,29 @@ pub(crate) fn every_surface_selection(ir: &ContractIr) -> ApiDocument {
 ///
 /// # Errors
 ///
-/// [`OpenApiError::NotPortedYet`] until the function is ported.
-pub(crate) fn unsupported_ir_refusals(_ir: &ContractIr) -> Result<Vec<Refusal>, OpenApiError> {
-    Err(not_ported_yet("unsupportedIrRefusals"))
+/// [`OpenApiError::Internal`] when the IR does not encode as JSON.
+pub(crate) fn unsupported_ir_refusals(ir: &ContractIr) -> Result<Vec<Refusal>, OpenApiError> {
+    let document = ir
+        .to_json_value()
+        .map_err(|error| InternalError::new(format!("the IR does not encode: {error}")))?;
+    let support = IrSupport {
+        ir_versions: &[IR_VERSION],
+        ir_revision: IR_REVISION,
+        kinds: &[HTTP_OPERATION_KIND],
+        features: &[],
+    };
+
+    Ok(check_ir_support(&document, &support)
+        .into_iter()
+        .map(|mismatch| Refusal {
+            code: mismatch.code.as_str().to_owned(),
+            message: mismatch.message,
+            fix: UNSUPPORTED_IR_FIX.to_owned(),
+            operation: mismatch.operation.map(OperationId::new),
+            member: Some(mismatch.member),
+            docs: None,
+        })
+        .collect())
 }
 
 /// One planned document and the refusals met while writing it.
@@ -542,6 +571,34 @@ mod tests {
         assert_eq!(
             plans.first().map(|plan| plan.selection.surfaces.len()),
             Some(ir.api.surfaces.len())
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn an_ir_of_another_revision_is_refused_with_the_fix_and_a_supported_one_is_not()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let mut ir = fixture_ir()?;
+
+        assert_eq!(unsupported_ir_refusals(&ir)?, Vec::new());
+
+        ir.ir_revision += 1;
+
+        let refusals = unsupported_ir_refusals(&ir)?;
+
+        assert_eq!(
+            refusals
+                .iter()
+                .map(|refusal| refusal.code.as_str())
+                .collect::<Vec<_>>(),
+            ["ir.revision.mismatch"]
+        );
+        assert_eq!(
+            refusals
+                .first()
+                .and_then(|refusal| refusal.member.as_deref()),
+            Some("/irRevision")
         );
 
         Ok(())
