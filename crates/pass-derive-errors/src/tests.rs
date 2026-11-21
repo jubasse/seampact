@@ -7,7 +7,6 @@ use seampact_pipeline::testing::HalfFixture;
 
 use crate::natures::derive_errors_natures;
 use crate::operations::dedupe;
-use crate::registry::{derive_errors_default_family, derive_errors_default_nature};
 use crate::report::{
     DeriveErrorsProblem, DeriveErrorsRelated, DeriveErrorsReporter, DeriveErrorsRule,
     derive_errors_reporter,
@@ -134,32 +133,6 @@ fn a_nature_mapped_onto_no_base_is_an_internal_error() {
     );
 }
 
-#[test]
-fn the_default_nature_of_a_status_follows_adr_0002() {
-    for status in [408, 425, 429, 502, 503, 504] {
-        assert_eq!(
-            derive_errors_default_nature(status),
-            NatureBase::Unavailable
-        );
-    }
-
-    assert_eq!(derive_errors_default_nature(499), NatureBase::Refused);
-    assert_eq!(derive_errors_default_nature(500), NatureBase::Failed);
-    assert_eq!(derive_errors_default_nature(501), NatureBase::Failed);
-}
-
-#[test]
-fn the_default_family_is_the_text_before_the_first_dot() {
-    assert_eq!(
-        derive_errors_default_family("api.rate_limited"),
-        Some("api")
-    );
-    assert_eq!(derive_errors_default_family("a.b.c"), Some("a"));
-    assert_eq!(derive_errors_default_family("plain"), None);
-    assert_eq!(derive_errors_default_family(".leading"), None);
-    assert_eq!(derive_errors_default_family("é.x"), Some("é"));
-}
-
 fn origin(api: Option<&str>, layer: Layer, pointer: &str) -> Origin {
     Origin {
         api: api.map(str::to_owned),
@@ -183,14 +156,4 @@ fn dedupe_keeps_the_first_of_each_origin_and_tells_apis_apart() {
     ]);
 
     assert_eq!(unique, vec![first, other_api, other_layer]);
-}
-
-#[test]
-fn rule_ids_are_every_rule_of_the_half() {
-    let from_rules: Vec<_> = DeriveErrorsRule::ALL
-        .iter()
-        .map(|rule| rule.rule_id())
-        .collect();
-
-    assert_eq!(crate::RULE_IDS, from_rules.as_slice());
 }

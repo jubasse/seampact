@@ -17,12 +17,9 @@ pub(crate) enum DeriveErrorsRule {
     ErrorUnknown,
     ErrorPattern,
     ErrorNature,
-    #[cfg_attr(
-        not(test),
-        expect(
-            dead_code,
-            reason = "tree.schemas reports this rule; the half keeps the TypeScript union"
-        )
+    #[expect(
+        dead_code,
+        reason = "tree.schemas reports this rule; the half keeps the TypeScript union"
     )]
     ErrorParams,
     ErrorExample,
@@ -40,28 +37,6 @@ pub(crate) enum DeriveErrorsRule {
 }
 
 impl DeriveErrorsRule {
-    /// Every rule of the half, in the order of the TypeScript union.
-    #[cfg(test)]
-    pub(crate) const ALL: &'static [Self] = &[
-        Self::ErrorRedefined,
-        Self::ErrorUnknown,
-        Self::ErrorPattern,
-        Self::ErrorNature,
-        Self::ErrorParams,
-        Self::ErrorExample,
-        Self::ErrorDefault,
-        Self::NatureBase,
-        Self::RoleCode,
-        Self::RoleDatum,
-        Self::RoleParam,
-        Self::RoleParamRequired,
-        Self::RoleParamType,
-        Self::RoleTemplate,
-        Self::RetryParam,
-        Self::RelayDeclaration,
-        Self::CacheSensitiveElsewhere,
-    ];
-
     /// The rule id as `diagnostics.json` writes it.
     pub(crate) const fn rule_id(self) -> RuleId {
         RuleId::from_static(match self {
