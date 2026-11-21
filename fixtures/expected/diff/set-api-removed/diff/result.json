@@ -1,7 +1,45 @@
 {
-  "bigints": {
+  "ordering": {
     "ok": true,
-    "api": "bigints",
+    "api": "ordering",
+    "before": {
+      "version": {
+        "kind": "path",
+        "number": 1
+      },
+      "irRevision": 6,
+      "packs": []
+    },
+    "after": {
+      "version": {
+        "kind": "path",
+        "number": 1
+      },
+      "irRevision": 6,
+      "packs": []
+    },
+    "policy": {
+      "before": "none",
+      "after": "none",
+      "applied": "none"
+    },
+    "settings": {
+      "gate": "clients",
+      "exempt": [
+        "experimental",
+        "sunsetPassed"
+      ]
+    },
+    "changes": [],
+    "gate": {
+      "passed": true,
+      "failures": []
+    },
+    "deprecations": []
+  },
+  "second": {
+    "ok": true,
+    "api": "second",
     "before": {
       "version": {
         "kind": "path",
@@ -37,53 +75,29 @@
         "pointer": "/operations/0",
         "position": "none",
         "operations": [
-          "counter"
+          "event"
         ],
         "breaks": [
           "clients"
         ],
         "classification": "breaking",
-        "before": "counter"
+        "before": "event"
+      },
+      {
+        "kind": "operation.removed",
+        "case": "removed",
+        "pointer": "/operations/1",
+        "position": "none",
+        "operations": [
+          "mixed"
+        ],
+        "breaks": [
+          "clients"
+        ],
+        "classification": "breaking",
+        "before": "mixed"
       }
     ],
-    "gate": {
-      "passed": true,
-      "failures": []
-    },
-    "deprecations": []
-  },
-  "ordering": {
-    "ok": true,
-    "api": "ordering",
-    "before": {
-      "version": {
-        "kind": "path",
-        "number": 1
-      },
-      "irRevision": 6,
-      "packs": []
-    },
-    "after": {
-      "version": {
-        "kind": "path",
-        "number": 1
-      },
-      "irRevision": 6,
-      "packs": []
-    },
-    "policy": {
-      "before": "none",
-      "after": "none",
-      "applied": "none"
-    },
-    "settings": {
-      "gate": "clients",
-      "exempt": [
-        "experimental",
-        "sunsetPassed"
-      ]
-    },
-    "changes": [],
     "gate": {
       "passed": true,
       "failures": []

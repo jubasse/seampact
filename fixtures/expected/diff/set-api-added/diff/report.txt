@@ -1,9 +1,10 @@
-== bigints ==
-bigints v1: compat.policy none (before none, after none), gate clients
-additive counter /operations/0: operation.added added (counter)
-gate passed
-
 == ordering ==
 ordering v1: compat.policy none (before none, after none), gate clients
 no change
+gate passed
+
+== second ==
+second v1: compat.policy none (before none, after none), gate clients
+additive event /operations/0: operation.added added (event)
+additive mixed /operations/1: operation.added added (mixed)
 gate passed

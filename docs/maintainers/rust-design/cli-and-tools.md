@@ -213,7 +213,7 @@ Merges after seam T, rebased, with the oracle reading the real expected files (e
 | Crate | Function lines | Skeleton (Rust lines, estimate) | Briefs | Lines per brief | Pairs comparable after each brief |
 |---|---|---|---|---|---|
 | `target` | 119 | 225 | in seam R | 119 | 304 of 354 reach it |
-| `openapi` | 3,613 | 2,610 | 4 | 672 986 987 968 | 49 49 325 354 of 354 |
+| `openapi` | 3,613 | 2,610 | 4 | 672 986 976 979 | 49 49 324 354 of 354 |
 | `diff-table` | 71 (plus about 1,100 lines of table data) | 105 | 1 | 71 | no pair: its one case reads the table data |
 | `diff` | 3,957 | 2,655 | 5 | 672 987 952 963 383 | 5 42 82 100 100 of 100 |
 | `lint` | 548 | 690 | 1 | 548 | 332 of 332 |

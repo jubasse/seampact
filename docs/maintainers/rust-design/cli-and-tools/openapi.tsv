@@ -28,7 +28,7 @@ brief	function	file	lines	size	pairs
 1	reasonValue	openapi/src/emit-context.ts	81-83	3	161/354
 1	optionalReason	openapi/src/emit-context.ts	86-91	6	304/354
 1	emittedShapeOf	openapi/src/body-slots.ts	27-31	5	265/354
-1	writtenBySecurity	openapi/src/parameters.ts	40-44	5	256/354
+1	writtenBySecurity	openapi/src/parameters.ts	40-44	5	260/354
 1	writeNumericRefinements	openapi/src/schemas.ts	301-307	7	303/354
 1	urlSchema	openapi/src/body-slots.ts	34-39	6	265/354
 1	referenceComponent	openapi/src/emit-context.ts	52-59	8	304/354
@@ -40,9 +40,9 @@ brief	function	file	lines	size	pairs
 1	retryHeaders	openapi/src/errors.ts	145-157	13	304/354
 1	membersWritingSlot	openapi/src/templates.ts	265-277	13	304/354
 1	writeDeprecation	openapi/src/operation-marks.ts	131-144	14	304/354
+1	knownSchemaComponent	openapi/src/schemas.ts	420-434	15	303/354
 1	bodyMedia	openapi/src/bodies.ts	112-116	5	135/354
 1	refusesUnknownKeys	openapi/src/schemas.ts	149-153	5	134/354
-1	knownSchemaComponent	openapi/src/schemas.ts	420-434	15	303/354
 1	arraySchema	openapi/src/schemas.ts	320-335	16	303/354
 1	errorItem	openapi/src/errors.ts	126-142	17	304/354
 1	memberNameOf	openapi/src/templates.ts	172-189	18	304/354
@@ -58,8 +58,8 @@ brief	function	file	lines	size	pairs
 2	slotSchema	openapi/src/templates.ts	144-169	26	304/354
 2	refSchema	openapi/src/schemas.ts	121-146	26	303/354
 2	knownUseSchema	openapi/src/schemas.ts	78-104	27	303/354
+2	pagingLimitDefault	openapi/src/paging.ts	95-109	15	206/354
 2	propertySchema	openapi/src/schemas.ts	472-500	29	303/354
-2	pagingLimitDefault	openapi/src/paging.ts	95-109	15	202/354
 2	responsesObject	openapi/src/documents.ts	335-364	30	304/354
 2	templateSchema	openapi/src/templates.ts	28-57	30	304/354
 2	writeIdempotency	openapi/src/operation-marks.ts	77-108	32	304/354
@@ -88,13 +88,13 @@ brief	function	file	lines	size	pairs
 3	originKey	openapi/src/ir-text.ts	44-48	5	50/354
 3	optionalReadSchemes	openapi/src/security.ts	66-76	11	25/354
 3	bearerScheme	openapi/src/security.ts	181-208	28	201/354
-3	parameterObject	openapi/src/parameters.ts	46-81	36	202/354
-3	identityHeaderSemantic	openapi/src/parameters.ts	84-95	12	125/354
+3	parameterObject	openapi/src/parameters.ts	46-81	36	206/354
+3	identityHeaderSemantic	openapi/src/parameters.ts	84-95	12	129/354
 3	valueSourceText	openapi/src/ir-text.ts	13-38	26	137/354
 3	headerObject	openapi/src/responses.ts	237-260	24	126/354
 3	pagingRoleSlots	openapi/src/paging.ts	182-207	26	103/354
 3	pageBodySchema	openapi/src/paging.ts	112-179	68	103/354
-3	copyJsonValue	openapi/src/json-value.ts	10-28	19	116/354
+3	copyJsonValue	openapi/src/json-value.ts	10-28	19	112/354
 3	isOpenEnum	openapi/src/schemas.ts	213-217	5	86/354
 3	requirementItem	openapi/src/rights.ts	110-145	36	93/354
 3	methodRank	openapi/src/documents.ts	293-297	5	64/354
@@ -104,8 +104,7 @@ brief	function	file	lines	size	pairs
 3	bodyEncoding	openapi/src/bodies.ts	217-258	42	135/354
 3	markSensitive	openapi/src/schemas.ts	503-515	13	57/354
 3	refuseNotEmitted	openapi/src/emit-context.ts	111-118	8	11/354
-3	wireValue	openapi/src/schemas.ts	338-348	11	5/354
-3	unionSchema	openapi/src/schemas.ts	544-594	51	32/354
+3	unionSchema	openapi/src/schemas.ts	544-594	51	36/354
 3	scopeItem	openapi/src/rights.ts	95-108	14	42/354
 3	derivedFromValue	openapi/src/ir-text.ts	51-53	3	32/354
 3	isJsonObject	openapi/src/json-value.ts	30-32	3	31/354
@@ -121,6 +120,7 @@ brief	function	file	lines	size	pairs
 3	nullableSchema	openapi/src/schemas.ts	354-366	13	11/354
 4	eachSchema	openapi/src/templates.ts	98-142	45	5/354
 4	mapSchema	openapi/src/schemas.ts	517-539	23	10/354
+4	wireValue	openapi/src/schemas.ts	338-348	11	1/354
 4	writeUnknownKeys	openapi/src/bodies.ts	92-109	18	10/354
 4	isRecord	openapi/src/emitter-options.ts	211-213	3	8/354
 4	renderObjectTemplate	openapi/src/templates.ts	324-361	38	2/354
