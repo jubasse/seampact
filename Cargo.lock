@@ -846,6 +846,7 @@ dependencies = [
  "seampact-pass-link",
  "seampact-pass-tree-nodes",
  "seampact-pass-tree-schemas",
+ "seampact-pass-tree-shared",
  "seampact-pipeline",
  "seampact-span",
  "seampact-validate",

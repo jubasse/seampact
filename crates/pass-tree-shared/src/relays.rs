@@ -21,17 +21,23 @@ pub struct RelayTarget {
 /// empty; `None` for a text with no dot or no api.
 #[must_use]
 pub fn relay_target(text: &str) -> Option<RelayTarget> {
-    let (api, id) = text.split_once('.')?;
-
-    if api.is_empty() {
-        return None;
-    }
+    let (api, id) = relay_target_parts(text)?;
 
     Some(RelayTarget {
         api: api.to_owned(),
         id: id.to_owned(),
         text: text.to_owned(),
     })
+}
+
+/// The api a written `relays` names, borrowed from it: as [`relay_target`], without the copies.
+#[must_use]
+pub fn relay_target_api(text: &str) -> Option<&str> {
+    relay_target_parts(text).map(|(api, _)| api)
+}
+
+fn relay_target_parts(text: &str) -> Option<(&str, &str)> {
+    text.split_once('.').filter(|(api, _)| !api.is_empty())
 }
 
 /// The origin an element copied from another api carries.
@@ -74,6 +80,9 @@ mod tests {
         );
         assert_eq!(target(".listUsers"), None);
         assert_eq!(target("nodot"), None);
+        assert_eq!(relay_target_api("public.a.b"), Some("public"));
+        assert_eq!(relay_target_api(".listUsers"), None);
+        assert_eq!(relay_target_api("nodot"), None);
         assert_eq!(
             relay_target("public.listUsers").map(|found| found.text),
             Some("public.listUsers".to_owned())

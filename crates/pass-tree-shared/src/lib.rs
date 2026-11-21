@@ -22,4 +22,6 @@ pub use raw::{
     tree_nodes_member, tree_nodes_object_of, tree_nodes_origin_at, tree_nodes_schema,
     tree_nodes_setting, tree_nodes_tag_header, tree_nodes_text, tree_nodes_written_convention,
 };
-pub use relays::{RelayTarget, TREE_NODES_OPERATION_KIND, relay_target, tree_nodes_relay_origin};
+pub use relays::{
+    RelayTarget, TREE_NODES_OPERATION_KIND, relay_target, relay_target_api, tree_nodes_relay_origin,
+};
