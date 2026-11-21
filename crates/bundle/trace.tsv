@@ -75,21 +75,21 @@ src/tarball_read.rs#header_path	packages/core/compiler/src/bundle/tarball-read.t
 src/tarball_read.rs#text	packages/core/compiler/src/bundle/tarball-read.ts#text
 src/tarball_read.rs#octal	packages/core/compiler/src/bundle/tarball-read.ts#octal
 src/tarball_read.rs#pax_overrides	packages/core/compiler/src/bundle/tarball-read.ts#paxOverrides
--	packages/core/compiler/src/bundle/ir-check.ts#validator	pending: brief 1
--	packages/core/compiler/src/bundle/ir-check.ts#checkBundleIr	pending: brief 1
--	packages/core/compiler/src/bundle/ir-check.ts#supportFailure	pending: brief 1
--	packages/core/compiler/src/bundle/ir-check.ts#declaredVersion	pending: brief 1
--	packages/core/compiler/src/bundle/ir-check.ts#validIr	pending: brief 1
--	packages/core/compiler/src/bundle/ir-check.ts#reportProblems	pending: brief 1
--	packages/core/compiler/src/bundle/ir-check.ts#isContractIr	pending: brief 1
-src/verify.rs#verify_bundle	packages/core/compiler/src/bundle/verify.ts#verifyBundle	pending: brief 2
--	packages/core/compiler/src/bundle/verify.ts#walkBundle	pending: brief 2
--	packages/core/compiler/src/bundle/verify.ts#overCap	pending: brief 2
--	packages/core/compiler/src/bundle/verify.ts#checkFiles	pending: brief 2
--	packages/core/compiler/src/bundle/verify.ts#isNpmFile	pending: brief 2
--	packages/core/compiler/src/bundle/verify.ts#checkIntegrity	pending: brief 2
--	packages/core/compiler/src/bundle/local-packages.ts#findLocalPackageSources	pending: brief 2
--	packages/core/compiler/src/bundle/local-packages.ts#dependencySpecs	pending: brief 2
+-	packages/core/compiler/src/bundle/ir-check.ts#validator	pending: the open IR validator is in no crate
+src/bundle_ir_check.rs#check_bundle_ir	packages/core/compiler/src/bundle/ir-check.ts#checkBundleIr
+src/bundle_ir_check.rs#support_failure	packages/core/compiler/src/bundle/ir-check.ts#supportFailure
+src/bundle_ir_check.rs#declaration_failure	packages/core/compiler/src/bundle/ir-check.ts#declaredVersion
+src/bundle_ir_check.rs#valid_ir	packages/core/compiler/src/bundle/ir-check.ts#validIr	pending: the open IR validator is in no crate
+-	packages/core/compiler/src/bundle/ir-check.ts#reportProblems	pending: the open IR validator is in no crate
+-	packages/core/compiler/src/bundle/ir-check.ts#isContractIr	pending: the open IR validator is in no crate
+src/verify.rs#verify_bundle	packages/core/compiler/src/bundle/verify.ts#verifyBundle
+src/bundle_walk.rs#walk_bundle	packages/core/compiler/src/bundle/verify.ts#walkBundle
+src/bundle_walk.rs#over_cap	packages/core/compiler/src/bundle/verify.ts#overCap
+src/bundle_file_check.rs#check_files	packages/core/compiler/src/bundle/verify.ts#checkFiles
+src/bundle_file_check.rs#is_npm_file	packages/core/compiler/src/bundle/verify.ts#isNpmFile
+src/pin_check.rs#check_integrity	packages/core/compiler/src/bundle/verify.ts#checkIntegrity
+src/local_packages.rs#find_local_package_sources	packages/core/compiler/src/bundle/local-packages.ts#findLocalPackageSources
+src/local_packages.rs#dependency_specs	packages/core/compiler/src/bundle/local-packages.ts#dependencySpecs
 -	packages/core/compiler/src/bundle/fetch-package.ts#installedBundlePackage	skip: ported in seampact-bundle-fetch
--	packages/core/compiler/src/bundle/fetch-package.ts#installedPackageDirectory	pending: brief 2
+src/installed_package.rs#installed_package_directory	packages/core/compiler/src/bundle/fetch-package.ts#installedPackageDirectory
 -	packages/core/compiler/src/bundle/fetch-package.ts#installedVersion	skip: ported in seampact-bundle-fetch

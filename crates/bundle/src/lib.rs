@@ -2,25 +2,27 @@
 //! `packages/core/compiler/src/bundle`: [`build_bundle`] builds a bundle from a workspace and
 //! [`verify_bundle`] checks one on disk. Nothing here reaches the network.
 
-#![allow(
-    dead_code,
-    reason = "functions reached only by stubs until the crate's last brief"
-)]
-
 mod build;
+mod bundle_file_check;
+mod bundle_ir_check;
+mod bundle_walk;
 mod contents;
 mod error;
 mod failure;
 mod file_list;
+mod installed_package;
 mod integrity;
 mod label;
 mod limits;
+mod local_packages;
 mod manifest;
 mod manifest_read;
 mod manifest_rules;
 mod not_ported;
 mod path;
+mod pin_check;
 mod recording_reader;
+mod refetch;
 mod source;
 mod tarball_read;
 mod tarball_write;
@@ -42,6 +44,7 @@ pub use limits::{
     BUNDLE_ARCHIVE_BYTES_MAX, BUNDLE_ENTRIES_MAX, BUNDLE_EXTRACTED_BYTES_MAX,
     BUNDLE_MANIFEST_BYTES_MAX,
 };
+pub use local_packages::{LocalPackageReason, LocalPackageSource, find_local_package_sources};
 pub use manifest::{
     BUNDLE_FORMAT_VERSION, BUNDLE_IR_DIRECTORY, BUNDLE_MANIFEST_FILE, BUNDLE_SOURCES_DIRECTORY,
     BundleApi, BundleFile, BundleManifest, BundleNamedVersion,
