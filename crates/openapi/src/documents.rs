@@ -1,4 +1,4 @@
-//! The `OpenAPI` documents of one api.
+//! The OpenAPI documents of one api.
 
 use seampact_ir::{ContractIr, DocumentId};
 use seampact_target::Refusal;
@@ -24,7 +24,7 @@ pub enum EmitOutcome {
     Refused(Vec<Refusal>),
 }
 
-/// The `OpenAPI` documents of an api, or the refusals that stop them.
+/// The OpenAPI documents of an api, or the refusals that stop them.
 ///
 /// # Errors
 ///

@@ -6,7 +6,7 @@ use seampact_json::JsonValue;
 
 use crate::{BundleCase, CliCase, DiffCase, Fixture, MergeCase, RuleIdRegistry, SubjectAnswer};
 
-/// What emitting `OpenAPI` documents gave: the documents, or the refusals.
+/// What emitting OpenAPI documents gave: the documents, or the refusals.
 #[derive(Debug, Clone, PartialEq)]
 pub enum OpenApiAnswer {
     /// Each document's name (`default` for the one document of an api that declares none) and

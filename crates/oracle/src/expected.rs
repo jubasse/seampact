@@ -40,7 +40,7 @@ pub enum OutputKind {
     HalfDiagnostics,
     /// `schema-calls/<api>.json`.
     SchemaCalls,
-    /// `OpenAPI` documents, not compared yet.
+    /// OpenAPI documents, not compared yet.
     Openapi,
     /// Generated files, not compared yet.
     Generated,

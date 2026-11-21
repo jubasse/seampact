@@ -21,6 +21,7 @@ mod time_limit;
 mod tool_cases;
 mod tool_compare;
 mod tool_subject;
+mod ustar_listing;
 mod verdict;
 mod yaml_value;
 
@@ -63,5 +64,6 @@ pub use tool_subject::{
     BundleAnswer, DiffAnswer, OpenApiAnswer, RecordedAnswer, RecordedToolCall, RecordedUnit,
     ToolSubject, Transcript,
 };
+pub use ustar_listing::{gunzipped_ustar_entries, ustar_entries};
 pub use verdict::{FirstFailure, ServiceCalls, Verdict};
 pub use yaml_value::yaml_to_json;

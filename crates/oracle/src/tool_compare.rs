@@ -1,4 +1,4 @@
-//! The comparisons of tool outputs: `OpenAPI` YAML parsed, texts line by line, the bundle manifest
+//! The comparisons of tool outputs: OpenAPI YAML parsed, texts line by line, the bundle manifest
 //! normalised, written files by hash and text.
 
 use std::fmt::Write as _;
@@ -8,12 +8,13 @@ use seampact_json::{JsonValue, canonical_document, escape_pointer};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
+use crate::ustar_listing::gunzipped_ustar_entries;
 use crate::{ExpectedWrittenFile, Mismatch, MismatchKind, value_mismatches, yaml_to_json};
 
 /// The file name of a bundle manifest, compared once normalised wherever it is written.
 pub const BUNDLE_MANIFEST_FILE: &str = "seampact-bundle.json";
 
-/// Every difference between two `OpenAPI` YAML texts, both parsed: values and member order count,
+/// Every difference between two OpenAPI YAML texts, both parsed: values and member order count,
 /// quoting and wrapping do not.
 ///
 /// # Errors
@@ -112,7 +113,7 @@ pub fn sha256_hex(bytes: &[u8]) -> String {
 
 /// Every difference between the files expected written and those written, each at the pointer
 /// `/<path>`: a path in one side only, then per path the text line by line when the expected file
-/// has text, else the hash; a bundle manifest is compared normalised.
+/// has text, else the hash; a bundle manifest is compared normalised, an archive by its listing.
 #[must_use]
 pub fn written_mismatches(
     expected: &IndexMap<String, ExpectedWrittenFile>,
@@ -148,6 +149,10 @@ fn file_mismatches(
     expected: &ExpectedWrittenFile,
     actual_bytes: &[u8],
 ) -> Vec<Mismatch> {
+    if let Some(expected_entries) = &expected.ustar {
+        return listing_mismatches(pointer, expected_entries, actual_bytes);
+    }
+
     let actual_text = std::str::from_utf8(actual_bytes).ok();
 
     if let (Some(expected_text), Some(actual_text)) = (expected.text.as_deref(), actual_text) {
@@ -177,6 +182,31 @@ fn file_mismatches(
         expected: Some(Value::String(expected.sha256.clone())),
         actual: Some(Value::String(actual_sha256)),
     }]
+}
+
+/// The archive's listing against the expected one, each mismatch below `<pointer>/ustar`.
+fn listing_mismatches(
+    pointer: &str,
+    expected_entries: &Value,
+    actual_bytes: &[u8],
+) -> Vec<Mismatch> {
+    let Ok(actual_entries) = gunzipped_ustar_entries(actual_bytes) else {
+        return vec![Mismatch {
+            pointer: Some(pointer.to_owned()),
+            ..unparsable()
+        }];
+    };
+
+    value_mismatches(expected_entries, &actual_entries)
+        .into_iter()
+        .map(|mismatch| Mismatch {
+            pointer: Some(format!(
+                "{pointer}/ustar{}",
+                mismatch.pointer.unwrap_or_default()
+            )),
+            ..mismatch
+        })
+        .collect()
 }
 
 fn only_in_one(pointer: String, kind: MismatchKind) -> Mismatch {
@@ -266,6 +296,7 @@ b: 1
                 ExpectedWrittenFile {
                     sha256: sha256_hex(b"x\n"),
                     text: Some("x\n".to_owned()),
+                    ustar: None,
                 },
             ),
             (
@@ -273,6 +304,7 @@ b: 1
                 ExpectedWrittenFile {
                     sha256: sha256_hex(&[0, 255]),
                     text: None,
+                    ustar: None,
                 },
             ),
             (
@@ -280,6 +312,7 @@ b: 1
                 ExpectedWrittenFile {
                     sha256: sha256_hex(b""),
                     text: Some(String::new()),
+                    ustar: None,
                 },
             ),
         ]

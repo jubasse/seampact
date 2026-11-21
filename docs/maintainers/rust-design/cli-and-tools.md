@@ -105,7 +105,7 @@ One JSON shape per expected file:
 - `*refusals.json` (OpenAPI, merge): `[{ "code", "message", "fix", "operation"?, "member"?, "docs"? }]`, the `Refusal` list in emit order. `bundle/refusals.json`: the `BundleFailure` list as the TypeScript returns it.
 - `lint/<api>.json`: the diagnostics `runLint` gives, each in the shape of one entry of `diagnostics.json`, sorted as it sorts them. The lint config is the compiled IR's own (`runLint` reads it there); `declared` and `locations` come from compiling the fixture, so a lint case needs no file of its own.
 - `diff-table.json`: `{ "codes": DIFF_CODES, "table": DIFF_TABLE }` as `JSON.stringify` writes them.
-- `diff/result.json`: the `DiffResult` (`diffContracts`, or `diffContractSets` when `before/` or `after/` holds several apis) as `JSON.stringify` writes it; `diff/report.txt`: `formatDiffReport`'s text.
+- `diff/result.json`: the `DiffResult` of `diffContracts` as `JSON.stringify` writes it, or `{ "<api>": DiffResult }` in api-name order (`diffContractSets`) when `before/` or `after/` holds several apis; `diff/report.txt`: `formatDiffReport`'s text, for several apis each report preceded by a line `== <api> ==`, a blank line between reports.
 - `bundle/files.json`: `[{ "path", "size", "sha256" }]`, the files the manifest lists (the manifest is not one of them); `bundle/manifest.json`: the manifest's bytes; `bundle/integrity.txt`: the integrity and a newline; `bundle/ustar.json`: `[{ "path", "size", "mode", "uid", "gid", "mtime", "type", "uname", "gname", "sha256" }]`, one per tar entry in order, with `size` and `sha256` left out for `seampact-bundle.json` (the header byte layout is checked by the vectors test).
 - `<unit>/<NN>-<function>.json` (`cli-config`: `readAppConfig`, `readRootConfig`, `readWorkspaceConfigs`, `readRunConfig`; `editor-schemas`: `editorDeclarations`, `writeEditorSchemas`; `bundle-fetch`: `fetchBundle`, `compileWorkspaceWithImports`): `{ "function": string, "args": [...], "result": <the answer as JSON.stringify writes it>, "written"?: { "<path>": { "sha256", "text"? } } }`, `NN` the call's position in the case, every absolute path written relative to the run root as `<root>/...`. The Rust subject replays each call on the case's tree as it was before the command; the recorded calls are reads that come before the command's writes.
 - `cli/transcript.json`: `{ "exit": number, "stdout": string, "stderr": string, "written": { "<path>": { "sha256": string, "text"?: string } }, "removed": [string] }`, paths relative to the run root, the run root written `<root>` in both streams, `text` present for UTF-8 files.
@@ -179,7 +179,7 @@ Merges after seam T, rebased, with the oracle reading the real expected files (e
   pub fn diff_table_json() -> JsonValue; // DIFF_CODES and DIFF_TABLE, for the oracle
   // seampact-diff
   pub fn diff_contracts(before: &ContractIr, after: &ContractIr, options: &DiffOptions) -> Result<DiffResult, DiffError>;
-  pub fn diff_contract_sets(before: &IndexMap<String, ContractIr>, after: &IndexMap<String, ContractIr>, options: &DiffOptions) -> Result<DiffResult, DiffError>;
+  pub fn diff_contract_sets(before: &IndexMap<String, ContractIr>, after: &IndexMap<String, ContractIr>, options: &DiffOptions) -> Result<IndexMap<String, DiffResult>, DiffError>;
   pub fn format_diff_report(result: &DiffResult) -> Result<String, DiffError>;
   // seampact-lint
   pub fn run_lint(input: &RunLintInput<'_>) -> Result<Vec<Diagnostic>, LintError>;

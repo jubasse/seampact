@@ -20,7 +20,9 @@ pub fn diff_contracts(
     Err(not_ported_yet("diffContracts"))
 }
 
-/// The diff of two sets of apis, by api name.
+/// The diff of each api of two sets, keyed and ordered by api name.
+///
+/// An api only in `before` has every operation removed, one only in `after` every operation added.
 ///
 /// # Errors
 ///
@@ -29,6 +31,6 @@ pub fn diff_contract_sets(
     _before: &IndexMap<String, ContractIr>,
     _after: &IndexMap<String, ContractIr>,
     _options: &DiffOptions,
-) -> Result<DiffResult, DiffError> {
+) -> Result<IndexMap<String, DiffResult>, DiffError> {
     Err(not_ported_yet("diffContractSets"))
 }

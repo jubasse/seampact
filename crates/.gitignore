@@ -1,2 +1,0 @@
-# The root .gitignore leaves out every target/ build directory; the seampact-target crate is source.
-!/target/

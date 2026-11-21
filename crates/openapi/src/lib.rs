@@ -1,4 +1,4 @@
-//! The emitter of `OpenAPI` documents, ported from `packages/core/openapi`.
+//! The emitter of OpenAPI documents, ported from `packages/core/openapi`.
 //!
 //! [`emit_documents`] writes the documents of one api or the [`Refusal`](seampact_target::Refusal)s
 //! that stop them, [`parse_emitter_options`] reads the `openapi` options of a config, and

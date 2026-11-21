@@ -6,6 +6,7 @@ use indexmap::IndexMap;
 use seampact_json::{JsonObject, JsonValue};
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
+use serde_json::Value;
 
 use crate::{EXPECTED_DIRECTORY, FIXTURES_DIRECTORY, Fixture, OracleError, RecordedToolCall};
 
@@ -147,7 +148,8 @@ pub struct CliCase {
     pub allow_local: Option<String>,
 }
 
-/// An expected file a command or a recorded call wrote: its hash, and its text when UTF-8.
+/// An expected file a command or a recorded call wrote: its hash, its text when UTF-8, its listing
+/// when an archive.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ExpectedWrittenFile {
@@ -155,6 +157,8 @@ pub struct ExpectedWrittenFile {
     pub sha256: String,
     /// The text, when the file is UTF-8.
     pub text: Option<String>,
+    /// The listing of a `.tgz`, gunzipped, as `bundle/ustar.json`; its hash is then not compared.
+    pub ustar: Option<Value>,
 }
 
 /// `<unit>/<NN>-<function>.json`: one recorded call and what it gave.
