@@ -65,3 +65,29 @@ pub(crate) fn derived_from_value(derived_from: &DerivedFrom) -> JsonObject {
         ("from".to_owned(), JsonValue::Array(from)),
     ])
 }
+
+#[cfg(test)]
+mod tests {
+    use seampact_ir::Layer;
+
+    use super::*;
+
+    fn origin(api: Option<&str>, layer: Layer, pointer: &str) -> Origin {
+        Origin {
+            api: api.map(str::to_owned),
+            layer,
+            pointer: pointer.to_owned(),
+        }
+    }
+
+    #[test]
+    fn an_origin_copied_from_another_api_leads_with_it_apart_from_a_pack_layer() {
+        let pack = Layer::Pack(seampact_ir::PackName::new("api".to_owned()));
+
+        assert_eq!(origin_key(&origin(None, pack, "/x")), "pack:api#/x");
+        assert_eq!(
+            origin_key(&origin(Some("pack"), Layer::Api, "/x")),
+            "pack#api#/x"
+        );
+    }
+}

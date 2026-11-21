@@ -1,5 +1,7 @@
 //! The OpenAPI documents of one api.
 
+use std::collections::BTreeSet;
+
 use indexmap::{IndexMap, IndexSet};
 use seampact_ir::{
     ApiDocument, ContractIr, DocumentId, IR_REVISION, IR_VERSION, InternalPolicy, IrSupport,
@@ -9,12 +11,22 @@ use seampact_js::cmp_utf16;
 use seampact_json::{JsonObject, JsonValue};
 use seampact_target::{IrLocation, Refusal, without_repeats};
 
+use crate::bodies::request_body;
 use crate::emit_context::{
-    EmitContext, create_emit_context, refuse_unknown, write_consumer_extensions, write_extension,
+    EmitContext, create_emit_context, refuse_inconsistent, refuse_unknown,
+    write_consumer_extensions, write_extension,
 };
+use crate::errors::error_responses;
+use crate::examples::{ExampleSet, collect_examples};
 use crate::json_value::{optional_text, set_defined, text_value};
 use crate::not_ported::not_ported_yet;
+use crate::operation_marks::write_operation_marks;
+use crate::paging::write_paging;
+use crate::parameters::operation_parameters;
+use crate::responses::success_responses;
+use crate::rights::write_operation_rights;
 use crate::security::security_schemes_component;
+use crate::security::write_operation_security;
 use crate::serialize::serialize_document;
 use crate::{EmitterOptions, ExtensionName, OpenApiError};
 
@@ -265,7 +277,12 @@ fn tag_objects(selected: &[SelectedOperation<'_>]) -> Vec<JsonValue> {
     tags.sort_by(|left, right| cmp_utf16(left, right));
 
     tags.into_iter()
-        .map(|name| JsonValue::Object(JsonObject::from_iter([("name".to_owned(), text_value(name))])))
+        .map(|name| {
+            JsonValue::Object(JsonObject::from_iter([(
+                "name".to_owned(),
+                text_value(name),
+            )]))
+        })
         .collect()
 }
 
@@ -355,9 +372,9 @@ pub(crate) fn most_used_format<'format>(formats: &[&'format str]) -> Option<&'fo
 }
 
 /// The `paths` object of the selected operations.
-fn paths_object(
-    context: &mut EmitContext<'_>,
-    selected: &[SelectedOperation<'_>],
+fn paths_object<'ir>(
+    context: &mut EmitContext<'ir>,
+    selected: &[SelectedOperation<'ir>],
     document_format: Option<&str>,
 ) -> Result<JsonObject, OpenApiError> {
     paths_by_route(
@@ -433,14 +450,101 @@ fn method_rank(method: &str) -> usize {
         .unwrap_or(METHOD_ORDER.len())
 }
 
-/// The object of one operation.
-fn operation_object(
-    _context: &mut EmitContext<'_>,
-    _operation: &Operation,
-    _index: usize,
-    _document_format: Option<&str>,
+/// The object of one operation: its docs, parameters, bodies, responses, security and marks.
+///
+/// # Errors
+///
+/// As the writers of its parts.
+fn operation_object<'ir>(
+    context: &mut EmitContext<'ir>,
+    operation: &'ir Operation,
+    index: usize,
+    document_format: Option<&str>,
 ) -> Result<JsonObject, OpenApiError> {
-    Err(not_ported_yet("operationObject"))
+    let location = IrLocation::operation_location(index, operation.id.clone());
+    let mut object = JsonObject::new();
+
+    if !operation.tags.is_empty() {
+        let tags = operation.tags.iter().map(|tag| text_value(tag)).collect();
+
+        object.insert("tags".to_owned(), JsonValue::Array(tags));
+    }
+
+    set_defined(
+        &mut object,
+        "summary",
+        optional_text(operation.docs.summary.as_deref()),
+    );
+    set_defined(
+        &mut object,
+        "description",
+        optional_text(operation.docs.description.as_deref()),
+    );
+    object.insert("operationId".to_owned(), text_value(operation.id.as_str()));
+
+    if operation.deprecated.is_some() {
+        object.insert("deprecated".to_owned(), JsonValue::Bool(true));
+    }
+
+    let parameters = operation_parameters(context, operation, &location)?;
+
+    if !parameters.is_empty() {
+        let written = parameters.into_iter().map(JsonValue::Object).collect();
+
+        object.insert("parameters".to_owned(), JsonValue::Array(written));
+    }
+
+    let examples = collect_examples(context, operation, &location);
+    let body = request_body(context, operation, examples.request.as_ref(), &location)?;
+
+    if let Some(request_body) = body {
+        object.insert("requestBody".to_owned(), JsonValue::Object(request_body));
+    }
+
+    let responses = responses_object(context, operation, &examples, &location)?;
+
+    object.insert("responses".to_owned(), JsonValue::Object(responses));
+    write_operation_security(context, operation, &mut object, &location)?;
+    write_operation_rights(context, operation, &mut object, &location)?;
+    write_paging(context, operation, &mut object, &location)?;
+    write_operation_marks(context, operation, document_format, &mut object, &location);
+    write_consumer_extensions(&mut object, &operation.extensions);
+
+    Ok(object)
+}
+
+/// The `responses` of an operation: success and error responses by status.
+fn responses_object<'ir>(
+    context: &mut EmitContext<'ir>,
+    operation: &'ir Operation,
+    examples: &ExampleSet<'_>,
+    location: &IrLocation,
+) -> Result<JsonObject, OpenApiError> {
+    let mut success = success_responses(context, operation, examples, location)?;
+    let mut errors = error_responses(context, operation, location);
+    let statuses: BTreeSet<i64> = success.keys().chain(errors.keys()).copied().collect();
+    let mut responses = JsonObject::new();
+
+    for status in statuses {
+        if success.contains_key(&status) && errors.contains_key(&status) {
+            refuse_inconsistent(
+                context,
+                "response.status",
+                &format!("The status {status} is both a success and an error response"),
+                location,
+            );
+        }
+
+        let response = success
+            .shift_remove(&status)
+            .or_else(|| errors.shift_remove(&status));
+
+        if let Some(written) = response {
+            responses.insert(status.to_string(), JsonValue::Object(written));
+        }
+    }
+
+    Ok(responses)
 }
 
 /// Writes every component referenced, those they reference included, sorted by key.
@@ -516,5 +620,4 @@ mod tests {
 
         Ok(())
     }
-
 }
