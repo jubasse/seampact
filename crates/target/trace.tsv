@@ -18,3 +18,6 @@ src/case_folded.rs#case_folded	packages/core/codegen-core/src/generated-paths.ts
 -	packages/core/codegen-core/src/generated-paths.ts#pathRefusalReason	skip: the writer half of generated-paths, layer 3.3's seampact-writer
 -	packages/core/codegen-core/src/generated-paths.ts#directoryRefusalReason	skip: the writer half of generated-paths, layer 3.3's seampact-writer
 -	packages/core/codegen-core/src/generated-paths.ts#manifestRefusalReason	skip: the writer half of generated-paths, layer 3.3's seampact-writer
+-	packages/core/codegen-core/src/ir-support-refusal.ts#refuseUnsupportedIr	skip: no tool reaches it; the first layer 3.3 generator ports it
+-	packages/core/codegen-core/src/ir-support-refusal.ts#toRefusal	skip: no tool reaches it; the first layer 3.3 generator ports it
+-	packages/core/codegen-core/src/ir-support-refusal.ts#fixFor	skip: no tool reaches it; the first layer 3.3 generator ports it

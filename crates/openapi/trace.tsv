@@ -51,82 +51,124 @@ src/operation_marks.rs#write_deprecation	packages/core/openapi/src/operation-mar
 src/operation_marks.rs#write_unknown_query	packages/core/openapi/src/operation-marks.ts#writeUnknownQuery
 src/bodies.rs#body_media	packages/core/openapi/src/bodies.ts#bodyMedia
 src/documents.rs#unsupported_ir_refusals	packages/core/openapi/src/documents.ts#unsupportedIrRefusals
--	packages/core/openapi/src/documents.ts#serversArray	skip: not ported yet, brief 4
--	packages/core/openapi/src/documents.ts#methodRank	skip: not ported yet, brief 3
--	packages/core/openapi/src/documents.ts#operationObject	skip: not ported yet, brief 2
--	packages/core/openapi/src/documents.ts#responsesObject	skip: not ported yet, brief 2
--	packages/core/openapi/src/emit-context.ts#refuseUnknown	skip: not ported yet, brief 3
--	packages/core/openapi/src/emit-context.ts#refuseNotEmitted	skip: not ported yet, brief 3
--	packages/core/openapi/src/emit-context.ts#refuseInconsistent	skip: not ported yet, brief 3
--	packages/core/openapi/src/emitter-options.ts#parseExtensions	skip: not ported yet, brief 4
--	packages/core/openapi/src/emitter-options.ts#parseChoice	skip: not ported yet, brief 4
--	packages/core/openapi/src/emitter-options.ts#parseServers	skip: not ported yet, brief 4
--	packages/core/openapi/src/emitter-options.ts#parseServer	skip: not ported yet, brief 4
--	packages/core/openapi/src/emitter-options.ts#isRecord	skip: not ported yet, brief 4
--	packages/core/openapi/src/emitter-options.ts#optionRefusal	skip: not ported yet, brief 4
--	packages/core/openapi/src/emitter-options.ts#refusedWith	skip: not ported yet, brief 4
--	packages/core/openapi/src/emitter-options.ts#optionValueText	skip: not ported yet, brief 4
--	packages/core/openapi/src/json-value.ts#copyJsonValue	skip: not ported yet, brief 3
--	packages/core/openapi/src/json-value.ts#isJsonObject	skip: not ported yet, brief 3
--	packages/core/openapi/src/json-value.ts#objectMember	skip: not ported yet, brief 4
--	packages/core/openapi/src/security.ts#writeOperationSecurity	skip: not ported yet, brief 2
--	packages/core/openapi/src/security.ts#optionalReadSchemes	skip: not ported yet, brief 3
--	packages/core/openapi/src/security.ts#requirementsOf	skip: not ported yet, brief 2
--	packages/core/openapi/src/security.ts#securityScheme	skip: not ported yet, brief 2
--	packages/core/openapi/src/security.ts#bearerScheme	skip: not ported yet, brief 3
--	packages/core/openapi/src/security.ts#signatureScheme	skip: not ported yet, brief 3
--	packages/core/openapi/src/security.ts#schemeKeyValue	skip: not ported yet, brief 3
--	packages/core/openapi/src/merge/merge-documents.ts#prefixRefusals	skip: not ported yet, brief 4
--	packages/core/openapi/src/merge/merge-documents.ts#buildInputDocument	skip: not ported yet, brief 4
--	packages/core/openapi/src/merge/merge-documents.ts#inputSelection	skip: not ported yet, brief 4
--	packages/core/openapi/src/schemas.ts#knownUseSchema	skip: not ported yet, brief 2
--	packages/core/openapi/src/schemas.ts#fileSchema	skip: not ported yet, brief 4
--	packages/core/openapi/src/schemas.ts#refSchema	skip: not ported yet, brief 2
--	packages/core/openapi/src/schemas.ts#schemaReference	skip: not ported yet, brief 2
--	packages/core/openapi/src/schemas.ts#enumUseSchema	skip: not ported yet, brief 3
--	packages/core/openapi/src/schemas.ts#isOpenEnum	skip: not ported yet, brief 3
--	packages/core/openapi/src/schemas.ts#enumComponent	skip: not ported yet, brief 3
--	packages/core/openapi/src/schemas.ts#scalarSchema	skip: not ported yet, brief 2
--	packages/core/openapi/src/schemas.ts#stringNumberSchema	skip: not ported yet, brief 4
--	packages/core/openapi/src/schemas.ts#wireValue	skip: not ported yet, brief 4
--	packages/core/openapi/src/schemas.ts#nullableSchema	skip: not ported yet, brief 3
--	packages/core/openapi/src/schemas.ts#acceptsAnyValue	skip: not ported yet, brief 3
--	packages/core/openapi/src/schemas.ts#namedSchemaComponent	skip: not ported yet, brief 2
--	packages/core/openapi/src/schemas.ts#objectSchema	skip: not ported yet, brief 2
--	packages/core/openapi/src/schemas.ts#propertySchema	skip: not ported yet, brief 2
--	packages/core/openapi/src/schemas.ts#markSensitive	skip: not ported yet, brief 3
--	packages/core/openapi/src/schemas.ts#mapSchema	skip: not ported yet, brief 4
--	packages/core/openapi/src/schemas.ts#unionSchema	skip: not ported yet, brief 3
--	packages/core/openapi/src/schemas.ts#bodyTaggedBranch	skip: not ported yet, brief 4
--	packages/core/openapi/src/body-slots.ts#successSlots	skip: not ported yet, brief 2
--	packages/core/openapi/src/body-slots.ts#addMetaSlot	skip: not ported yet, brief 3
--	packages/core/openapi/src/parameters.ts#operationParameters	skip: not ported yet, brief 2
--	packages/core/openapi/src/parameters.ts#parameterObject	skip: not ported yet, brief 3
--	packages/core/openapi/src/parameters.ts#identityHeaderSemantic	skip: not ported yet, brief 3
--	packages/core/openapi/src/responses.ts#successResponses	skip: not ported yet, brief 2
--	packages/core/openapi/src/responses.ts#responseBodySchema	skip: not ported yet, brief 2
--	packages/core/openapi/src/responses.ts#responseHeaders	skip: not ported yet, brief 2
--	packages/core/openapi/src/responses.ts#headerObject	skip: not ported yet, brief 3
--	packages/core/openapi/src/errors.ts#errorResponses	skip: not ported yet, brief 2
--	packages/core/openapi/src/errors.ts#codesByStatus	skip: not ported yet, brief 2
--	packages/core/openapi/src/errors.ts#errorResponse	skip: not ported yet, brief 2
--	packages/core/openapi/src/errors.ts#errorCodeComponent	skip: not ported yet, brief 2
--	packages/core/openapi/src/templates.ts#templateSchema	skip: not ported yet, brief 2
--	packages/core/openapi/src/templates.ts#textTemplateSchema	skip: not ported yet, brief 3
--	packages/core/openapi/src/templates.ts#constantText	skip: not ported yet, brief 3
--	packages/core/openapi/src/templates.ts#eachSchema	skip: not ported yet, brief 4
--	packages/core/openapi/src/templates.ts#slotSchema	skip: not ported yet, brief 2
--	packages/core/openapi/src/templates.ts#objectTemplateSchema	skip: not ported yet, brief 3
--	packages/core/openapi/src/templates.ts#renderTemplate	skip: not ported yet, brief 3
--	packages/core/openapi/src/templates.ts#renderObjectTemplate	skip: not ported yet, brief 4
--	packages/core/openapi/src/operation-marks.ts#writeOperationMarks	skip: not ported yet, brief 2
--	packages/core/openapi/src/operation-marks.ts#writeIdempotency	skip: not ported yet, brief 2
--	packages/core/openapi/src/bodies.ts#requestBody	skip: not ported yet, brief 2
--	packages/core/openapi/src/bodies.ts#writeUnknownKeys	skip: not ported yet, brief 4
--	packages/core/openapi/src/bodies.ts#bodySchema	skip: not ported yet, brief 3
--	packages/core/openapi/src/bodies.ts#inputTopLevel	skip: not ported yet, brief 4
--	packages/core/openapi/src/bodies.ts#proofsSchema	skip: not ported yet, brief 3
--	packages/core/openapi/src/bodies.ts#bodyEncoding	skip: not ported yet, brief 3
--	packages/core/openapi/src/bodies.ts#formFieldEncoding	skip: not ported yet, brief 4
--	packages/core/openapi/src/bodies.ts#proofField	skip: not ported yet, brief 4
--	packages/core/openapi/src/bodies.ts#fileFieldMedia	skip: not ported yet, brief 4
+src/documents.rs#servers_array	packages/core/openapi/src/documents.ts#serversArray	pending: brief 4
+src/documents.rs#method_rank	packages/core/openapi/src/documents.ts#methodRank	pending: brief 3
+src/documents.rs#operation_object	packages/core/openapi/src/documents.ts#operationObject	pending: brief 2
+-	packages/core/openapi/src/documents.ts#responsesObject	pending: brief 2
+src/emit_context.rs#refuse_unknown	packages/core/openapi/src/emit-context.ts#refuseUnknown	pending: brief 3
+src/emit_context.rs#refuse_not_emitted	packages/core/openapi/src/emit-context.ts#refuseNotEmitted	pending: brief 3
+src/emit_context.rs#refuse_inconsistent	packages/core/openapi/src/emit-context.ts#refuseInconsistent	pending: brief 3
+src/emitter_options.rs#parse_extensions	packages/core/openapi/src/emitter-options.ts#parseExtensions	pending: brief 4
+src/emitter_options.rs#parse_choice	packages/core/openapi/src/emitter-options.ts#parseChoice	pending: brief 4
+src/emitter_options.rs#parse_servers	packages/core/openapi/src/emitter-options.ts#parseServers	pending: brief 4
+-	packages/core/openapi/src/emitter-options.ts#parseServer	pending: brief 4
+-	packages/core/openapi/src/emitter-options.ts#isRecord	pending: brief 4
+src/emitter_options.rs#option_refusal	packages/core/openapi/src/emitter-options.ts#optionRefusal	pending: brief 4
+src/emitter_options.rs#refused_with	packages/core/openapi/src/emitter-options.ts#refusedWith	pending: brief 4
+src/emitter_options.rs#option_value_text	packages/core/openapi/src/emitter-options.ts#optionValueText	pending: brief 4
+-	packages/core/openapi/src/json-value.ts#copyJsonValue	pending: brief 3
+-	packages/core/openapi/src/json-value.ts#isJsonObject	pending: brief 3
+-	packages/core/openapi/src/json-value.ts#objectMember	pending: brief 4
+-	packages/core/openapi/src/security.ts#writeOperationSecurity	pending: brief 2
+-	packages/core/openapi/src/security.ts#optionalReadSchemes	pending: brief 3
+-	packages/core/openapi/src/security.ts#requirementsOf	pending: brief 2
+src/security.rs#security_scheme	packages/core/openapi/src/security.ts#securityScheme	pending: brief 2
+-	packages/core/openapi/src/security.ts#bearerScheme	pending: brief 3
+-	packages/core/openapi/src/security.ts#signatureScheme	pending: brief 3
+-	packages/core/openapi/src/security.ts#schemeKeyValue	pending: brief 3
+src/merge_documents.rs#prefix_refusals	packages/core/openapi/src/merge/merge-documents.ts#prefixRefusals	pending: brief 4
+src/merge_documents.rs#build_input_document	packages/core/openapi/src/merge/merge-documents.ts#buildInputDocument	pending: brief 4
+-	packages/core/openapi/src/merge/merge-documents.ts#inputSelection	pending: brief 4
+src/schemas.rs#known_use_schema	packages/core/openapi/src/schemas.ts#knownUseSchema	pending: brief 2
+-	packages/core/openapi/src/schemas.ts#fileSchema	pending: brief 4
+-	packages/core/openapi/src/schemas.ts#refSchema	pending: brief 2
+-	packages/core/openapi/src/schemas.ts#schemaReference	pending: brief 2
+-	packages/core/openapi/src/schemas.ts#enumUseSchema	pending: brief 3
+-	packages/core/openapi/src/schemas.ts#isOpenEnum	pending: brief 3
+-	packages/core/openapi/src/schemas.ts#enumComponent	pending: brief 3
+-	packages/core/openapi/src/schemas.ts#scalarSchema	pending: brief 2
+-	packages/core/openapi/src/schemas.ts#stringNumberSchema	pending: brief 4
+src/schemas.rs#wire_value	packages/core/openapi/src/schemas.ts#wireValue	pending: brief 4
+src/schemas.rs#nullable_schema	packages/core/openapi/src/schemas.ts#nullableSchema	pending: brief 3
+-	packages/core/openapi/src/schemas.ts#acceptsAnyValue	pending: brief 3
+-	packages/core/openapi/src/schemas.ts#namedSchemaComponent	pending: brief 2
+src/schemas.rs#object_schema	packages/core/openapi/src/schemas.ts#objectSchema	pending: brief 2
+-	packages/core/openapi/src/schemas.ts#propertySchema	pending: brief 2
+-	packages/core/openapi/src/schemas.ts#markSensitive	pending: brief 3
+src/schemas.rs#map_schema	packages/core/openapi/src/schemas.ts#mapSchema	pending: brief 4
+src/schemas.rs#union_schema	packages/core/openapi/src/schemas.ts#unionSchema	pending: brief 3
+-	packages/core/openapi/src/schemas.ts#bodyTaggedBranch	pending: brief 4
+-	packages/core/openapi/src/body-slots.ts#successSlots	pending: brief 2
+-	packages/core/openapi/src/body-slots.ts#addMetaSlot	pending: brief 3
+-	packages/core/openapi/src/parameters.ts#operationParameters	pending: brief 2
+-	packages/core/openapi/src/parameters.ts#parameterObject	pending: brief 3
+-	packages/core/openapi/src/parameters.ts#identityHeaderSemantic	pending: brief 3
+-	packages/core/openapi/src/responses.ts#successResponses	pending: brief 2
+src/responses.rs#response_body_schema	packages/core/openapi/src/responses.ts#responseBodySchema	pending: brief 2
+src/responses.rs#response_headers	packages/core/openapi/src/responses.ts#responseHeaders	pending: brief 2
+-	packages/core/openapi/src/responses.ts#headerObject	pending: brief 3
+-	packages/core/openapi/src/errors.ts#errorResponses	pending: brief 2
+-	packages/core/openapi/src/errors.ts#codesByStatus	pending: brief 2
+-	packages/core/openapi/src/errors.ts#errorResponse	pending: brief 2
+src/errors.rs#error_code_component	packages/core/openapi/src/errors.ts#errorCodeComponent	pending: brief 2
+-	packages/core/openapi/src/templates.ts#templateSchema	pending: brief 2
+-	packages/core/openapi/src/templates.ts#textTemplateSchema	pending: brief 3
+-	packages/core/openapi/src/templates.ts#constantText	pending: brief 3
+-	packages/core/openapi/src/templates.ts#eachSchema	pending: brief 4
+-	packages/core/openapi/src/templates.ts#slotSchema	pending: brief 2
+-	packages/core/openapi/src/templates.ts#objectTemplateSchema	pending: brief 3
+-	packages/core/openapi/src/templates.ts#renderTemplate	pending: brief 3
+-	packages/core/openapi/src/templates.ts#renderObjectTemplate	pending: brief 4
+-	packages/core/openapi/src/operation-marks.ts#writeOperationMarks	pending: brief 2
+-	packages/core/openapi/src/operation-marks.ts#writeIdempotency	pending: brief 2
+-	packages/core/openapi/src/bodies.ts#requestBody	pending: brief 2
+-	packages/core/openapi/src/bodies.ts#writeUnknownKeys	pending: brief 4
+-	packages/core/openapi/src/bodies.ts#bodySchema	pending: brief 3
+-	packages/core/openapi/src/bodies.ts#inputTopLevel	pending: brief 4
+-	packages/core/openapi/src/bodies.ts#proofsSchema	pending: brief 3
+-	packages/core/openapi/src/bodies.ts#bodyEncoding	pending: brief 3
+-	packages/core/openapi/src/bodies.ts#formFieldEncoding	pending: brief 4
+-	packages/core/openapi/src/bodies.ts#proofField	pending: brief 4
+-	packages/core/openapi/src/bodies.ts#fileFieldMedia	pending: brief 4
+-	packages/core/openapi/src/paging.ts#writePaging	pending: brief 3
+-	packages/core/openapi/src/paging.ts#pagingLimitDefault	pending: brief 2
+-	packages/core/openapi/src/paging.ts#pageBodySchema	pending: brief 3
+-	packages/core/openapi/src/paging.ts#pagingRoleSlots	pending: brief 3
+-	packages/core/openapi/src/examples.ts#collectExamples	pending: brief 2
+-	packages/core/openapi/src/examples.ts#responseExamples	pending: brief 2
+-	packages/core/openapi/src/rights.ts#writeOperationRights	pending: brief 3
+-	packages/core/openapi/src/rights.ts#scopeItem	pending: brief 3
+-	packages/core/openapi/src/rights.ts#requirementItem	pending: brief 3
+-	packages/core/openapi/src/ir-text.ts#valueSourceText	pending: brief 3
+src/ir_text.rs#origin_key	packages/core/openapi/src/ir-text.ts#originKey	pending: brief 3
+-	packages/core/openapi/src/ir-text.ts#derivedFromValue	pending: brief 3
+-	packages/core/openapi/src/extension-names.ts#isExtensionName	pending: brief 4
+-	packages/core/openapi/src/extension-names.ts#extensionSchemaPath	pending: brief 4
+-	packages/core/openapi/src/merge/prefix-document.ts#isValidPrefix	pending: brief 4
+-	packages/core/openapi/src/merge/prefix-document.ts#prefixDocument	pending: brief 4
+-	packages/core/openapi/src/merge/prefix-document.ts#withSchemaReferences	pending: brief 4
+-	packages/core/openapi/src/merge/prefix-document.ts#renamedMember	pending: brief 4
+-	packages/core/openapi/src/merge/prefix-document.ts#prefixedReference	pending: brief 4
+-	packages/core/openapi/src/merge/prefix-document.ts#prefixedSchemaKey	pending: brief 4
+-	packages/core/openapi/src/merge/prefix-document.ts#withPrefixedKeyMember	pending: brief 4
+-	packages/core/openapi/src/merge/prefix-document.ts#prefixedDiscriminator	pending: brief 4
+-	packages/core/openapi/src/merge/prefix-document.ts#prefixedComponents	pending: brief 4
+-	packages/core/openapi/src/merge/prefix-document.ts#prefixedKeys	pending: brief 4
+-	packages/core/openapi/src/merge/prefix-document.ts#prefixOperation	pending: brief 4
+src/merge_documents.rs#assemble_merged_document	packages/core/openapi/src/merge/merged-document.ts#assembleMergedDocument	pending: brief 4
+-	packages/core/openapi/src/merge/merged-document.ts#placeSource	pending: brief 4
+-	packages/core/openapi/src/merge/merged-document.ts#placeComponents	pending: brief 4
+-	packages/core/openapi/src/merge/merged-document.ts#placeOperations	pending: brief 4
+-	packages/core/openapi/src/merge/merged-document.ts#place	pending: brief 4
+-	packages/core/openapi/src/merge/merged-document.ts#clashRefusal	pending: brief 4
+-	packages/core/openapi/src/merge/merged-document.ts#mergedDocument	pending: brief 4
+-	packages/core/openapi/src/merge/merged-document.ts#mergedVersion	pending: brief 4
+-	packages/core/openapi/src/merge/merged-document.ts#apiHeader	pending: brief 4
+-	packages/core/openapi/src/merge/merged-document.ts#mergedPaths	pending: brief 4
+-	packages/core/openapi/src/merge/merged-document.ts#mergedOperation	pending: brief 4
+-	packages/core/openapi/src/merge/merged-document.ts#sortedEntries	pending: brief 4
+-	packages/core/openapi/src/merge/merged-document.ts#sortedValues	pending: brief 4
+-	packages/core/openapi/src/merge/merged-document.ts#isConsumerExtension	pending: brief 4
+-	packages/core/openapi/src/merge/merged-document.ts#arrayMember	pending: brief 4
+-	packages/core/openapi/src/merge/merged-document.ts#stringMember	pending: brief 4
+-	packages/core/openapi/src/drift.ts#findDocumentDrift	pending: brief 4
