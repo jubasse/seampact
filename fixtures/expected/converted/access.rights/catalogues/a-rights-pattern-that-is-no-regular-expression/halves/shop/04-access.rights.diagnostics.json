@@ -2,8 +2,8 @@
   {
     "severity": "error",
     "rule": "seampact/access/right-pattern",
-    "message": "conventions.rights.pattern '(' is no regular expression: SyntaxError: Invalid regular expression: /(/u: Unterminated group",
-    "fix": "write a regular expression every right name must match",
+    "message": "conventions.rights.pattern '(' is refused: the pattern is not portable: the pattern ends inside a construct",
+    "fix": "rewrite it in the portable subset of ADR 0003 section 9",
     "origin": {
       "layer": "api",
       "pointer": "/conventions/rights/pattern"

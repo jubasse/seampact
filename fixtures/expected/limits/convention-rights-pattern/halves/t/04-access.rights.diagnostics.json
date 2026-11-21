@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/access/right-pattern",
+    "message": "conventions.rights.pattern '^(a|a)*$' is refused: the pattern can backtrack exponentially: '(a|a)*' repeats an alternation whose branches can start with the same character",
+    "fix": "rewrite it so no repeated group holds a repetition of variable count or branches that start with the same character, or check that text in the application's code (A45)",
+    "origin": {
+      "layer": "api",
+      "pointer": "/conventions/rights/pattern"
+    },
+    "related": []
+  }
+]

@@ -1,0 +1,11 @@
+api: { name: t, version: 1 }
+conventions:
+  rights: { pattern: '^(a|a)*$' }
+rights:
+  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab: {}
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: The fixture checks one limit only. }
+    routes:
+      ping: { method: get }
