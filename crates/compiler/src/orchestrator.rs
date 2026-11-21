@@ -527,7 +527,14 @@ mod tests {
         run.run_apis(&relay, &IndexMap::new())
             .expect("no internal error");
 
-        assert!(!run.drafts.is_empty(), "the independent api did not run");
+        let has_draft = run.drafts.contains_key(&names[1]);
+        let reported = !run
+            .run_of(&names[1])
+            .expect("registered")
+            .diagnostics
+            .is_empty();
+
+        assert!(has_draft || reported, "the independent api did not run");
     }
 
     #[test]
