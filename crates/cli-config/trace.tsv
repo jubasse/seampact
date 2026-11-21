@@ -1,0 +1,94 @@
+src/config_file.rs#parse_config_file	packages/core/cli/src/config/config-file.ts#parseConfigFile
+src/config_file.rs#parsed_value	packages/core/cli/src/config/config-file.ts#parsedValue
+src/config_schema.rs#validate_config	packages/core/cli/src/config/config-file.ts#validateConfig
+src/config_waits.rs#wait_problems	packages/core/cli/src/config/config-file.ts#waitProblems
+src/config_file.rs#read_config_text	packages/core/cli/src/config/config-file.ts#readConfigText
+src/config_file.rs#file_size	packages/core/cli/src/config/config-file.ts#fileSize
+src/config_file.rs#yaml_problems	packages/core/cli/src/config/config-file.ts#yamlProblems
+src/config_file.rs#reserved_key_problems	packages/core/cli/src/config/config-file.ts#reservedKeyProblems
+src/schema_problems.rs#schema_error_problems	packages/core/cli/src/config/config-file.ts#schemaErrorProblems
+src/config_waits.rs#find_config_waits	packages/core/cli/src/config/config-waits.ts#findConfigWaits
+src/config_waits.rs#target_entry_waits	packages/core/cli/src/config/config-waits.ts#targetEntryWaits
+src/config_waits.rs#waiting_keys_of	packages/core/cli/src/config/config-waits.ts#waitingKeysOf
+src/path_containment.rs#is_strictly_inside	packages/core/cli/src/config/path-containment.ts#isStrictlyInside
+src/path_containment.rs#is_inside_or_equal	packages/core/cli/src/config/path-containment.ts#isInsideOrEqual
+src/find_root_config.rs#find_root_config	packages/core/cli/src/config/find-root-config.ts#findRootConfig
+src/find_root_config.rs#root_config_at	packages/core/cli/src/config/find-root-config.ts#rootConfigAt
+src/resolved_source.rs#resolved_source	packages/core/cli/src/config/resolved-source.ts#resolvedSource
+src/resolved_source.rs#resolved_sources	packages/core/cli/src/config/resolved-source.ts#resolvedSources
+src/maven_source.rs#unpinned_maven_problems	packages/core/cli/src/config/maven-source.ts#unpinnedMavenProblems
+src/read_app_config.rs#read_app_config	packages/core/cli/src/config/read-app-config.ts#readAppConfig
+src/read_app_config.rs#read_app_config_alone	packages/core/cli/src/config/read-app-config.ts#readAppConfigAlone
+src/read_app_config.rs#resolve_app_config	packages/core/cli/src/config/read-app-config.ts#resolveAppConfig
+src/read_app_config.rs#duplicate_id_problems	packages/core/cli/src/config/read-app-config.ts#duplicateIdProblems
+src/read_app_config.rs#switched_off_allow_list_problems	packages/core/cli/src/config/read-app-config.ts#switchedOffAllowListProblems
+src/read_app_config.rs#framework_docs_conflict_problems	packages/core/cli/src/config/read-app-config.ts#frameworkDocsConflictProblems
+src/read_app_config.rs#outside_out_dir_problems	packages/core/cli/src/config/read-app-config.ts#outsideOutDirProblems
+src/read_app_config.rs#overlapping_out_problems	packages/core/cli/src/config/read-app-config.ts#overlappingOutProblems
+src/document_plan.rs#open_api_api_names	packages/core/cli/src/config/document-plan.ts#openApiApiNames
+-	packages/core/cli/src/config/config-file.ts#refusedWith	merged: src/config_file.rs#read_config_text
+src/config_file.rs#yaml_error_sentence	packages/core/cli/src/config/config-file.ts#yamlErrorSentence
+src/schema_problems.rs#holds_reported_path	packages/core/cli/src/config/config-file.ts#holdsReportedPath
+src/schema_problems.rs#has_deeper_path	packages/core/cli/src/config/config-file.ts#hasDeeperPath
+src/schema_problems.rs#is_at_or_under	packages/core/cli/src/config/config-file.ts#isAtOrUnder
+src/schema_problems.rs#schema_error_problem	packages/core/cli/src/config/config-file.ts#schemaErrorProblem
+src/schema_problems.rs#is_framework_route_path	packages/core/cli/src/config/config-file.ts#isFrameworkRoutePath
+src/schema_problems.rs#one_of_sentences	packages/core/cli/src/config/config-file.ts#oneOfSentences
+src/schema_problems.rs#instance_path_of	packages/core/cli/src/config/config-file.ts#instancePathOf
+src/config_position.rs#where_of	packages/core/cli/src/config/config-file.ts#whereOf
+src/config_position.rs#key_offset	packages/core/cli/src/config/config-file.ts#keyOffset
+src/config_position.rs#position_text	packages/core/cli/src/config/config-file.ts#positionText
+src/config_waits.rs#capitalized	packages/core/cli/src/config/config-file.ts#capitalized
+src/config_kind.rs#articled	packages/core/cli/src/config/config-file.ts#articled
+src/config_waits.rs#artefact_switch_waits	packages/core/cli/src/config/config-waits.ts#artefactSwitchWaits
+src/config_waits.rs#module_link_waits	packages/core/cli/src/config/config-waits.ts#moduleLinkWaits
+src/key_path.rs#format_key_path	packages/core/cli/src/config/key-path.ts#formatKeyPath
+src/maven_source.rs#is_unpinned_version	packages/core/cli/src/config/maven-source.ts#isUnpinnedVersion
+src/read_app_config.rs#read_listed_app_config	packages/core/cli/src/config/read-app-config.ts#readListedAppConfig
+src/read_app_config.rs#root_config_problem	packages/core/cli/src/config/read-app-config.ts#rootConfigProblem
+src/read_app_config.rs#fold_root_config	packages/core/cli/src/config/read-app-config.ts#foldRootConfig
+src/read_app_config.rs#unlisted_app_outcome	packages/core/cli/src/config/read-app-config.ts#unlistedAppOutcome
+src/read_app_config.rs#switch_off_key	packages/core/cli/src/config/read-app-config.ts#switchOffKey
+src/read_app_config.rs#case_folded_after_nfc	packages/core/cli/src/config/read-app-config.ts#caseFoldedAfterNfc
+src/read_app_config.rs#is_nested_or_same	packages/core/cli/src/config/read-app-config.ts#isNestedOrSame
+src/read_root_config.rs#read_root_config	packages/core/cli/src/config/read-root-config.ts#readRootConfig
+src/read_root_config.rs#app_only_key_problems	packages/core/cli/src/config/read-root-config.ts#appOnlyKeyProblems
+src/read_root_config.rs#resolve_root_config	packages/core/cli/src/config/read-root-config.ts#resolveRootConfig
+src/read_root_config.rs#loaded_merged_document	packages/core/cli/src/config/read-root-config.ts#loadedMergedDocument
+src/read_root_config.rs#document_options_of	packages/core/cli/src/config/read-root-config.ts#documentOptionsOf
+src/read_root_config.rs#app_placement_problems	packages/core/cli/src/config/read-root-config.ts#appPlacementProblems
+src/read_root_config.rs#duplicate_app_problems	packages/core/cli/src/config/read-root-config.ts#duplicateAppProblems
+src/read_root_config.rs#find_listed_app	packages/core/cli/src/config/read-root-config.ts#findListedApp
+src/read_root_config.rs#listed_app	packages/core/cli/src/config/read-root-config.ts#listedApp
+src/read_root_config.rs#unknown_merged_app_problems	packages/core/cli/src/config/read-root-config.ts#unknownMergedAppProblems
+-	packages/core/cli/src/config/read-workspace-configs.ts#readWorkspaceConfigs	pending: brief 2
+-	packages/core/cli/src/config/read-run-config.ts#readRunConfig	pending: brief 2
+src/artefact_switches.rs#is_framework_route_check_off	packages/core/cli/src/config/artefact-switches.ts#isFrameworkRouteCheckOff
+src/artefact_switches.rs#framework_routes_switch_of	packages/core/cli/src/config/artefact-switches.ts#frameworkRoutesSwitchOf
+-	packages/core/cli/src/config/document-plan.ts#planAppDocuments	skip: reached only by generate and check, ported with the generator layer
+-	packages/core/cli/src/config/document-plan.ts#defaultDocumentDirectory	skip: reached only by generate and check, ported with the generator layer
+-	packages/core/cli/src/config/document-plan.ts#defaultDocuments	skip: reached only by generate and check, ported with the generator layer
+-	packages/core/cli/src/config/document-plan.ts#addServedApi	skip: reached only by generate and check, ported with the generator layer
+-	packages/core/cli/src/config/document-plan.ts#listedDocuments	skip: reached only by generate and check, ported with the generator layer
+-	packages/core/cli/src/config/document-plan.ts#apiPlacements	skip: reached only by generate and check, ported with the generator layer
+-	packages/core/cli/src/config/document-plan.ts#isOnePlacement	skip: reached only by generate and check, ported with the generator layer
+-	packages/core/cli/src/config/document-plan.ts#placed	skip: reached only by generate and check, ported with the generator layer
+-	packages/core/cli/src/config/document-plan.ts#findApi	skip: reached only by generate and check, ported with the generator layer
+-	packages/core/cli/src/config/document-plan.ts#documentInsideOutputProblems	skip: reached only by generate and check, ported with the generator layer
+-	packages/core/cli/src/config/document-plan.ts#pathConflictProblems	skip: reached only by generate and check, ported with the generator layer
+-	packages/core/cli/src/config/document-plan.ts#nameOf	skip: reached only by generate and check, ported with the generator layer
+-	packages/core/cli/src/config/document-plan.ts#roleOf	skip: reached only by generate and check, ported with the generator layer
+-	packages/core/cli/src/config/document-plan.ts#planMergedDocuments	skip: reached only by generate and check, ported with the generator layer
+-	packages/core/cli/src/config/document-plan.ts#appContributions	skip: reached only by generate and check, ported with the generator layer
+-	packages/core/cli/src/config/document-plan.ts#refused	skip: reached only by generate and check, ported with the generator layer
+-	packages/core/cli/src/config/artefact-switches.ts#selectArtefacts	skip: reached only by generate and check, ported with the generator layer
+-	packages/core/cli/src/config/artefact-switches.ts#hookCheckSwitchOf	skip: reached only by generate and check, ported with the generator layer
+-	packages/core/cli/src/config/artefact-switches.ts#hookCheckLevelOf	skip: reached only by generate and check, ported with the generator layer
+-	packages/core/cli/src/config/artefact-switches.ts#isFrameworkRouteCheckStrict	skip: reached only by generate and check, ported with the generator layer
+-	packages/core/cli/src/config/artefact-switches.ts#booleanSwitchesOf	skip: reached only by generate and check, ported with the generator layer
+-	packages/core/cli/src/config/artefact-switches.ts#unknownSwitchProblems	skip: reached only by generate and check, ported with the generator layer
+-	packages/core/cli/src/config/artefact-switches.ts#unknownSwitchFix	skip: reached only by generate and check, ported with the generator layer
+-	packages/core/cli/src/config/artefact-switches.ts#dropUnwrittenWithoutNeeds	skip: reached only by generate and check, ported with the generator layer
+-	packages/core/cli/src/config/artefact-switches.ts#neededArtefactProblems	skip: reached only by generate and check, ported with the generator layer
+-	packages/core/cli/src/config/artefact-switches.ts#noArtefactProblem	skip: reached only by generate and check, ported with the generator layer
+-	packages/core/cli/src/config/artefact-switches.ts#quotedList	skip: reached only by generate and check, ported with the generator layer
