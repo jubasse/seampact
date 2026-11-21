@@ -15,9 +15,7 @@ use seampact_oracle::{
 use seampact_pipeline::Half;
 use thiserror::Error;
 
-use crate::{
-    PipelineApiResult, PipelineOptions, PipelineResult, PipelineRun, compile_workspace, relay,
-};
+use crate::{PipelineApiResult, PipelineOptions, PipelineResult, compile_workspace, relay};
 
 mod half;
 mod recorded_service;
@@ -161,10 +159,9 @@ fn compile_fixture(fixture: &Fixture) -> Result<SubjectAnswer<Compilation>, Comp
         imports: &no_imports,
     };
 
-    match compile_workspace(&options)? {
-        PipelineRun::Finished(result) => Ok(SubjectAnswer::Ported(compilation_of(&result)?)),
-        PipelineRun::NotPorted(_) => Ok(SubjectAnswer::NotPorted),
-    }
+    let result = compile_workspace(&options)?;
+
+    Ok(SubjectAnswer::Ported(compilation_of(&result)?))
 }
 
 fn compilation_of(result: &PipelineResult) -> Result<Compilation, IrError> {

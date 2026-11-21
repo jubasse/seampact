@@ -5,7 +5,7 @@ use std::fmt::Write;
 
 use indexmap::IndexMap;
 use seampact_authoring::{RawApi, RawWorkspace};
-use seampact_compiler::{RelayOrder, StageAnswer, workspace_relay_order};
+use seampact_compiler::{RelayOrder, workspace_relay_order};
 use seampact_diagnostics::{DiagnosticLayer, Severity};
 use seampact_load::{LoadOptions, MemoryReader, load_workspace};
 
@@ -53,10 +53,7 @@ fn workspace_of(apis: &[(&str, &[&str])]) -> Result<RawWorkspace, Box<dyn Error>
 }
 
 fn relay_of(workspace: &RawWorkspace) -> Result<RelayOrder, Box<dyn Error>> {
-    match workspace_relay_order(workspace)? {
-        StageAnswer::Ported(relay) => Ok(relay),
-        StageAnswer::NotPorted => Err("the relay order is not ported".into()),
-    }
+    Ok(workspace_relay_order(workspace)?)
 }
 
 fn relays_to_of(pairs: &[(&str, &[&str])]) -> IndexMap<String, Vec<String>> {

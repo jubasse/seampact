@@ -1,6 +1,4 @@
-//! The stages the orchestrator runs besides the halves, and the answer of one that is not ported.
-//!
-//! Validate, the relay order, link and finalize are ported.
+//! The stages the orchestrator runs besides the halves: validate, the relay order, link and finalize.
 
 use indexmap::IndexMap;
 use seampact_authoring::{RawApi, RawWorkspace};
@@ -8,32 +6,10 @@ use seampact_diagnostics::{Diagnostic, InternalError};
 use seampact_finalize::{FinalizeContext, Finalized, PackFileParts, PackFiles, finalize};
 use seampact_ir::ImportedIr;
 use seampact_load::{is_inside, pack_file_parts, pack_vendored_file};
-use seampact_pipeline::{DraftIr, Half};
+use seampact_pipeline::DraftIr;
 use seampact_span::SourceFiles;
 
 use crate::relay;
-
-/// A stage of the orchestrator, named where a run reaches one that is not ported.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Stage {
-    /// The validation of the loaded workspace.
-    Validate,
-    /// The relay order of the workspace's apis.
-    RelayOrder,
-    /// One half of one api.
-    Half(Half),
-    /// The link pass over every api's draft.
-    Link,
-}
-
-/// What a stage answers: its result, or that it is not ported yet.
-#[derive(Debug, Clone, PartialEq)]
-pub enum StageAnswer<Output> {
-    /// The stage ran.
-    Ported(Output),
-    /// The stage is not ported: the run stops here without a diagnostic.
-    NotPorted,
-}
 
 /// The diagnostics of the validation, workspace-wide and per api.
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -70,19 +46,17 @@ pub struct FinalizeRun {
 /// # Errors
 ///
 /// An [`InternalError`] from the validate stage.
-pub fn validate_workspace(
-    workspace: &RawWorkspace,
-) -> Result<StageAnswer<Validated>, InternalError> {
+pub fn validate_workspace(workspace: &RawWorkspace) -> Result<Validated, InternalError> {
     let validated = seampact_validate::validate_workspace(workspace)?;
 
-    Ok(StageAnswer::Ported(Validated {
+    Ok(Validated {
         workspace: validated.workspace,
         apis: validated
             .apis
             .into_iter()
             .map(|entry| (entry.api, entry.diagnostics))
             .collect(),
-    }))
+    })
 }
 
 /// The relay order of the workspace's apis.
@@ -90,10 +64,8 @@ pub fn validate_workspace(
 /// # Errors
 ///
 /// An [`InternalError`] from the relay order.
-pub fn workspace_relay_order(
-    workspace: &RawWorkspace,
-) -> Result<StageAnswer<RelayOrder>, InternalError> {
-    relay::workspace_relay_order(workspace).map(StageAnswer::Ported)
+pub fn workspace_relay_order(workspace: &RawWorkspace) -> Result<RelayOrder, InternalError> {
+    relay::workspace_relay_order(workspace)
 }
 
 /// Links every api's derived draft, in workspace order; answers the diagnostics it reports, each
@@ -106,10 +78,10 @@ pub fn link_workspace(
     drafts: &IndexMap<String, DraftIr>,
     workspace: &RawWorkspace,
     imports: &IndexMap<String, ImportedIr>,
-) -> Result<StageAnswer<Vec<(String, Diagnostic)>>, InternalError> {
+) -> Result<Vec<(String, Diagnostic)>, InternalError> {
     let reported = seampact_pass_link::run(drafts, workspace, imports)?;
 
-    Ok(StageAnswer::Ported(reported))
+    Ok(reported)
 }
 
 /// Finalizes one api's complete draft, which it takes by value: its parts move into the IR.
