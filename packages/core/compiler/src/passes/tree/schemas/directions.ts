@@ -25,14 +25,32 @@ function addDirection(directions: IrWriter.Direction[], direction: IrWriter.Dire
   return true;
 }
 
+// A use to follow, or a schema id (a reference or a union variant).
+type ReachItem = IrWriter.TypeUse | string;
+
+// An explicit worklist: a long reference chain must not grow the call stack.
 function reach(
   use: IrWriter.TypeUse,
   direction: IrWriter.Direction,
   targets: DirectionTargets,
 ): void {
+  const pending: ReachItem[] = [use];
+
+  for (let item = pending.pop(); item !== undefined; item = pending.pop()) {
+    if (typeof item === "string") reachSchema(item, direction, targets, pending);
+    else reachUse(item, direction, targets, pending);
+  }
+}
+
+function reachUse(
+  use: IrWriter.TypeUse,
+  direction: IrWriter.Direction,
+  targets: DirectionTargets,
+  pending: ReachItem[],
+): void {
   switch (use.kind) {
     case "ref":
-      reachSchema(use.schema, direction, targets);
+      pending.push(use.schema);
 
       return;
     case "enum": {
@@ -44,7 +62,7 @@ function reach(
     }
 
     case "array":
-      reach(use.items, direction, targets);
+      pending.push(use.items);
 
       return;
     case "scalar": {
@@ -52,7 +70,7 @@ function reach(
 
       if (named !== undefined) addDirection(named.directions, direction);
 
-      if (use.content !== undefined) reach(use.content.schema, direction, targets);
+      if (use.content !== undefined) pending.push(use.content.schema);
 
       return;
     }
@@ -63,25 +81,30 @@ function reach(
   }
 }
 
-function reachSchema(id: string, direction: IrWriter.Direction, targets: DirectionTargets): void {
+function reachSchema(
+  id: string,
+  direction: IrWriter.Direction,
+  targets: DirectionTargets,
+  pending: ReachItem[],
+): void {
   const schema = targets.schemas.get(id);
 
   if (schema === undefined || !addDirection(schema.directions, direction)) return;
 
   if (schema.kind === "object") {
-    for (const property of schema.properties) reach(property.type, direction, targets);
+    for (const property of schema.properties) pending.push(property.type);
 
     return;
   }
 
   if (schema.kind === "map") {
-    if (schema.keys !== undefined) reach(schema.keys, direction, targets);
-    reach(schema.values, direction, targets);
+    if (schema.keys !== undefined) pending.push(schema.keys);
+    pending.push(schema.values);
 
     return;
   }
 
-  for (const variant of schema.variants) reachSchema(variant.schema, direction, targets);
+  for (const variant of schema.variants) pending.push(variant.schema);
 }
 
 /**

@@ -325,6 +325,7 @@ export class TreeSchemasCompiler {
   private readonly catalogue: TreeSchemasRaw | undefined;
   private readonly enums: TreeSchemasRaw | undefined;
   private readonly declared = new Map<string, TreeSchemasCompiled | "compiling" | undefined>();
+  private readonly declaredTargets = new Map<string, DeclaredTarget>();
   /**
    * The schema holding each id and each identifier (by its words): every declared schema, then each hoisted one.
    * Both are checked: `AB` declared gives the words `ab`, the hoisted `A.b` gives `a b`, and both have the id `AB`.
@@ -840,7 +841,7 @@ export class TreeSchemasCompiler {
 
   // A schema name: a ref to a named object, map or union, or the declared scalar, array or enum use inlined.
   private reference(name: string, position: TreeSchemasPosition): TreeSchemasCompiled | undefined {
-    const target = this.declaredTarget(name, new Set());
+    const target = this.declaredTarget(name);
 
     if (target === undefined) {
       this.reporter.error({
@@ -885,26 +886,78 @@ export class TreeSchemasCompiler {
   }
 
   // A declared name followed through plain references: its kind when it is a named object, map or union, and
-  // whether an alias on the way is nullable (`MaybeFoo: { $ref: Foo, nullable: true }`).
-  private declaredTarget(name: string, seen: Set<string>): DeclaredTarget | undefined {
-    const value = treeSchemasMember(this.catalogue, name);
+  // whether an alias on the way is nullable (`MaybeFoo: { $ref: Foo, nullable: true }`). The chain is walked once
+  // with a list, never by recursion, and each name outside a cycle is remembered.
+  private declaredTarget(name: string): DeclaredTarget | undefined {
+    const chain: string[] = [];
+    const indexOnChain = new Map<string, number>();
+    let current = name;
+    let end: DeclaredTarget | undefined;
+    let cycleStart = -1;
 
-    if (value === undefined) return this.seededCoreTarget(name);
-    const alias = typeof value === "string" ? value : treeSchemasMember(value, "$ref");
+    for (;;) {
+      const remembered = this.declaredTargets.get(current);
 
-    if (typeof alias === "string" && !seen.has(name)) {
-      seen.add(name);
-      const target = this.declaredTarget(alias, seen);
+      if (remembered !== undefined) {
+        end = remembered;
+        break;
+      }
 
-      if (target === undefined)
-        return { id: name, kind: undefined, value, nullable: false, keysFrom: undefined };
-      const nullable = target.nullable || treeSchemasMember(value, "nullable") === true;
-      const keysFrom =
-        treeSchemasIsObject(value) && has(value, "unknownKeys") ? name : target.keysFrom;
+      const value = treeSchemasMember(this.catalogue, current);
 
-      return { ...target, nullable, keysFrom };
+      if (value === undefined) {
+        end = this.seededCoreTarget(current);
+        break;
+      }
+
+      const alias = typeof value === "string" ? value : treeSchemasMember(value, "$ref");
+
+      if (typeof alias !== "string") {
+        end = this.plainTarget(current, value);
+        break;
+      }
+
+      const seenAt = indexOnChain.get(current);
+
+      if (seenAt !== undefined) {
+        end = this.plainTarget(current, value);
+        cycleStart = seenAt;
+        break;
+      }
+
+      indexOnChain.set(current, chain.length);
+      chain.push(current);
+      current = alias;
     }
 
+    const rememberedUntil = cycleStart === -1 ? chain.length : cycleStart;
+    let target = end;
+
+    for (let index = chain.length - 1; index >= 0; index--) {
+      const alias = chain[index] as string;
+
+      target = this.aliasTarget(alias, target);
+
+      if (index < rememberedUntil) this.declaredTargets.set(alias, target);
+    }
+
+    return target;
+  }
+
+  // An alias over the target it reaches; the alias alone when that target is not declared.
+  private aliasTarget(name: string, target: DeclaredTarget | undefined): DeclaredTarget {
+    const value = treeSchemasMember(this.catalogue, name);
+
+    if (target === undefined)
+      return { id: name, kind: undefined, value, nullable: false, keysFrom: undefined };
+    const nullable = target.nullable || treeSchemasMember(value, "nullable") === true;
+    const keysFrom =
+      treeSchemasIsObject(value) && has(value, "unknownKeys") ? name : target.keysFrom;
+
+    return { ...target, nullable, keysFrom };
+  }
+
+  private plainTarget(name: string, value: TreeSchemasRaw): DeclaredTarget {
     const shape = treeSchemasIsObject(value) ? treeSchemasShapeOf(value) : undefined;
     const kind: NamedKind | undefined =
       shape === "object" || shape === "allOf" || shape === "derived"
@@ -1008,7 +1061,7 @@ export class TreeSchemasCompiler {
 
     if (schema !== undefined) return schema.kind;
 
-    return this.declaredTarget(id, new Set())?.kind;
+    return this.declaredTarget(id)?.kind;
   }
 
   private idOf(position: TreeSchemasPosition): string {
@@ -1754,7 +1807,7 @@ export class TreeSchemasCompiler {
     pointer: string,
     holder: "allOf" | "derived",
   ): IrWriter.Property[] | undefined {
-    const target = this.declaredTarget(name, new Set());
+    const target = this.declaredTarget(name);
 
     if (target === undefined) {
       this.reporter.error({
