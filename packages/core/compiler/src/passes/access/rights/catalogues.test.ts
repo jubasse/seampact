@@ -162,4 +162,24 @@ surfaces:
     expect(refused.diagnostics[0]?.message.length).toBeLessThan(400);
     expect(unmatched.diagnostics[0]?.message.length).toBeLessThan(400);
   });
+
+  test("a long chain of parent scopes is walked once", () => {
+    const LINKS = 10_000;
+    const BUDGET_MS = 3_000;
+    const scopes = Array.from({ length: LINKS }, (_, index) =>
+      index === LINKS - 1
+        ? `  scope${index}: { id: TeamId }`
+        : `  scope${index}: { id: TeamId, within: scope${index + 1} }`,
+    );
+    const started = Date.now();
+    const { draft, diagnostics } = accessRightsRunContract(
+      accessRightsLoadFiles({
+        "api.yaml": `api: { name: shop, version: 1 }\nschemas:\n  TeamId: { type: string }\nscopes:\n${scopes.join("\n")}\n${PING_ROUTES}`,
+      }),
+    );
+
+    expect(diagnostics).toEqual([]);
+    expect(Object.keys(draft.scopes)).toHaveLength(LINKS);
+    expect(Date.now() - started).toBeLessThan(BUDGET_MS);
+  });
 });
