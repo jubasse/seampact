@@ -266,8 +266,13 @@ fn write_sort(
                 scope,
             )?;
         }
-        // An open enum no pass must act on: a style this compiler does not know gets no parameter.
-        PagingParamStyle::Unknown(_) => {}
+        PagingParamStyle::Unknown(_) => {
+            return Err(InternalError::new(
+                "derive.wire reached a paging param style this IR revision does not know"
+                    .to_owned(),
+            )
+            .into());
+        }
     }
 
     Ok(())

@@ -15,6 +15,7 @@ use seampact_ir::{
 use seampact_js::{cmp_utf16, regexp_source};
 use seampact_json::{JsonObject, JsonValue, js_integer_in_range, stringify_json};
 use seampact_naming::{NameSource, SegmentsOptions, SegmentsResult, segments_of, split_name};
+use seampact_pass_tree_schemas::{TreeSchemasPatternResult, tree_schemas_normalize_pattern};
 use seampact_pipeline::{ConventionReading, PassError, parse_duration, pointer_below};
 
 use crate::read::{
@@ -91,6 +92,23 @@ pub(crate) struct DeclarationWithScopes<'raw, 'names> {
     pub(crate) scope_names: &'names HashSet<String>,
 }
 
+/// What one walk of a `within` chain found, kept for every scope on it: the chain ends at a root
+/// scope, closes a cycle, or reaches a parent the catalogue does not declare.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum WithinOutcome {
+    Terminates,
+    Cycle(Vec<String>),
+    Undeclared { scope: String, parent: String },
+}
+
+/// The outcome of each scope whose `within` chain was walked, so a long chain is walked once.
+/// Outcomes live in one list and each scope holds its index, so a cycle is stored once.
+#[derive(Debug, Default)]
+pub(crate) struct WithinWalks {
+    outcomes: Vec<WithinOutcome>,
+    outcome_of: HashMap<String, usize>,
+}
+
 /// The largest prefix an address bucket key may count (an IPv6 address).
 const ADDRESS_BITS: i64 = 128;
 
@@ -145,6 +163,7 @@ pub(crate) fn access_rights_catalogues(
     }
 
     let mut scopes = IrMap::new();
+    let mut within_walks = WithinWalks::default();
 
     for (id, declaration) in access_rights_entries(merged, "scopes") {
         let declared = DeclarationWithScopes {
@@ -153,7 +172,7 @@ pub(crate) fn access_rights_catalogues(
             scope_names: &scope_names,
         };
 
-        if let Some(scope) = scope_of(context, reporter, &declared)? {
+        if let Some(scope) = scope_of(context, reporter, &declared, &mut within_walks)? {
             scopes.insert(ScopeId::new(id.to_owned()), scope);
         }
     }
@@ -224,6 +243,24 @@ pub(crate) fn right_pattern_of(
         return Ok(None);
     };
 
+    if let TreeSchemasPatternResult::Refused { message, fix } =
+        tree_schemas_normalize_pattern(written)?
+    {
+        reporter.error(AccessRightsProblem {
+            rule: AccessRightsRule::RightPattern,
+            message: format!(
+                "conventions.rights.pattern '{}' is refused: {message}",
+                access_rights_quoted(written)
+            ),
+            fix,
+            pointer: RIGHT_PATTERN_POINTER.to_owned(),
+            distinct_by: None,
+            related: Vec::new(),
+        });
+
+        return Ok(None);
+    }
+
     match Regex::with_flags(written, "u") {
         Ok(pattern) => Ok(Some(AccessRightsRightPattern {
             pattern,
@@ -234,7 +271,11 @@ pub(crate) fn right_pattern_of(
             reporter.error(AccessRightsProblem {
                 rule: AccessRightsRule::RightPattern,
                 message: format!(
-                    "conventions.rights.pattern '{written}' is no regular expression: SyntaxError: Invalid regular expression: /{written}/u: {error}"
+                    "conventions.rights.pattern '{}' is no regular expression: {}",
+                    access_rights_quoted(written),
+                    access_rights_quoted(&format!(
+                        "SyntaxError: Invalid regular expression: /{written}/u: {error}"
+                    ))
                 ),
                 fix: "write a regular expression every right name must match".to_owned(),
                 pointer: RIGHT_PATTERN_POINTER.to_owned(),
@@ -293,6 +334,7 @@ pub(crate) fn scope_of(
     context: &AccessRightsContext,
     reporter: &mut AccessRightsReporter,
     options: &DeclarationWithScopes<'_, '_>,
+    within_walks: &mut WithinWalks,
 ) -> Result<Option<Scope>, PassError> {
     let DeclarationWithScopes {
         id,
@@ -302,7 +344,9 @@ pub(crate) fn scope_of(
     let pointer = pointer_below("/scopes", &[id]);
     let within = access_rights_string(Some(declaration), "within");
 
-    if within.is_some() && !within_chain_terminates(context, reporter, id, scope_names)? {
+    if within.is_some()
+        && !within_chain_terminates(context, reporter, id, scope_names, within_walks)?
+    {
         return Ok(None);
     }
 
@@ -464,7 +508,7 @@ pub(crate) fn access_rights_check_name(
             rule: AccessRightsRule::RightPattern,
             message: format!(
                 "right '{id}' does not match conventions.rights.pattern '{}'",
-                right_pattern.source
+                access_rights_quoted(&right_pattern.source)
             ),
             fix: "rename the right to match the pattern, or change the pattern".to_owned(),
             pointer: pointer.clone(),
@@ -724,45 +768,95 @@ pub(crate) fn within_of<'run>(
 }
 
 /// Follows `within` from a scope up to a root scope: each parent must be declared, and the chain
-/// never cycles.
+/// never cycles. A walk stops at a scope already walked, and its outcome is kept for each scope of
+/// the chain.
 pub(crate) fn within_chain_terminates(
     context: &AccessRightsContext,
     reporter: &mut AccessRightsReporter,
     id: &str,
     scope_names: &HashSet<String>,
+    within_walks: &mut WithinWalks,
 ) -> Result<bool, InternalError> {
-    let mut chain = vec![id.to_owned()];
-    let mut parent = within_of(context, id);
+    let mut chain: Vec<String> = Vec::new();
+    let mut index_on_chain: HashMap<String, usize> = HashMap::new();
+    let mut next = Some(id);
+    let mut known: Option<usize> = None;
+    let mut found = WithinOutcome::Terminates;
 
-    while let Some(name) = parent {
-        if !scope_names.contains(name) {
-            let last = chain.last().map_or(id, String::as_str);
+    while let Some(scope) = next {
+        if let Some(outcome_index) = within_walks.outcome_of.get(scope) {
+            known = Some(*outcome_index);
 
-            reporter.error(AccessRightsProblem {
-                rule: AccessRightsRule::ScopeWithin,
-                message: format!(
-                    "scope '{last}' is within '{name}', which the scopes catalogue does not declare"
-                ),
-                fix: "declare the parent scope, or name a declared one in 'within'".to_owned(),
-                pointer: pointer_below("/scopes", &[last, "within"]),
-                distinct_by: None,
-                related: Vec::new(),
-            });
-
-            return Ok(false);
+            break;
         }
 
-        if let Some(start) = chain.iter().position(|seen| seen == name) {
-            report_within_cycle(reporter, chain.get(start..).unwrap_or_default())?;
+        if let Some(start) = index_on_chain.get(scope) {
+            found = WithinOutcome::Cycle(chain.iter().skip(*start).cloned().collect());
 
-            return Ok(false);
+            break;
         }
 
-        chain.push(name.to_owned());
-        parent = within_of(context, name);
+        index_on_chain.insert(scope.to_owned(), chain.len());
+        chain.push(scope.to_owned());
+
+        let parent = within_of(context, scope);
+
+        if let Some(name) = parent
+            && !scope_names.contains(name)
+        {
+            found = WithinOutcome::Undeclared {
+                scope: scope.to_owned(),
+                parent: name.to_owned(),
+            };
+
+            break;
+        }
+
+        next = parent;
     }
 
-    Ok(true)
+    let outcome_index = known.unwrap_or_else(|| {
+        within_walks.outcomes.push(found);
+
+        within_walks.outcomes.len() - 1
+    });
+
+    for link in chain {
+        within_walks.outcome_of.insert(link, outcome_index);
+    }
+
+    let Some(outcome) = within_walks.outcomes.get(outcome_index) else {
+        return Err(InternalError::new(format!(
+            "access.rights lost the 'within' outcome of scope '{id}'"
+        )));
+    };
+
+    match outcome {
+        WithinOutcome::Terminates => Ok(true),
+        WithinOutcome::Cycle(cycle) => {
+            report_within_cycle(reporter, cycle)?;
+
+            Ok(false)
+        }
+        WithinOutcome::Undeclared { scope, parent } => {
+            report_undeclared_within(reporter, scope, parent);
+
+            Ok(false)
+        }
+    }
+}
+
+fn report_undeclared_within(reporter: &mut AccessRightsReporter, scope: &str, parent: &str) {
+    reporter.error(AccessRightsProblem {
+        rule: AccessRightsRule::ScopeWithin,
+        message: format!(
+            "scope '{scope}' is within '{parent}', which the scopes catalogue does not declare"
+        ),
+        fix: "declare the parent scope, or name a declared one in 'within'".to_owned(),
+        pointer: pointer_below("/scopes", &[scope, "within"]),
+        distinct_by: None,
+        related: Vec::new(),
+    });
 }
 
 // A cycle is reported once, at its first scope by name, whatever scope's chain reached it.
@@ -779,7 +873,14 @@ pub(crate) fn report_within_cycle(
             "access.rights found an empty 'within' cycle".to_owned(),
         ));
     };
-    let start = cycle.iter().position(|name| name == *first).unwrap_or(0);
+    let start = cycle
+        .iter()
+        .position(|name| name == *first)
+        .ok_or_else(|| {
+            InternalError::new(
+                "access.rights found a 'within' cycle without its first scope".to_owned(),
+            )
+        })?;
     let mut path: Vec<&str> = cycle
         .iter()
         .skip(start)

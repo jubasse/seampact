@@ -535,8 +535,11 @@ pub(crate) fn source_schema(
         | ValueSourceIn::Subdomain
         | ValueSourceIn::Address
         | ValueSourceIn::Resolver
-        | ValueSourceIn::HolderField
-        | ValueSourceIn::Unknown(_) => Ok(None),
+        | ValueSourceIn::HolderField => Ok(None),
+        ValueSourceIn::Unknown(_) => Err(InternalError::new(
+            "access.rights reached a value source this IR revision does not know".to_owned(),
+        )
+        .into()),
     }
 }
 

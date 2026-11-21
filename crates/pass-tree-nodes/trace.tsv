@@ -108,7 +108,9 @@ src/formats.rs#each_element	packages/core/compiler/src/passes/tree/nodes/formats
 src/formats.rs#check_merge	packages/core/compiler/src/passes/tree/nodes/formats.ts#checkMerge
 src/formats.rs#report_payload	packages/core/compiler/src/passes/tree/nodes/formats.ts#reportPayload
 src/formats.rs#origin_of_operation	packages/core/compiler/src/passes/tree/nodes/formats.ts#originOfOperation
-src/input.rs#join_path	packages/core/compiler/src/passes/tree/nodes/input.ts#joinPath
+-	packages/core/compiler/src/passes/tree/nodes/input.ts#joinPath	merged: src/input.rs#render
+src/input.rs#use_steps	packages/core/compiler/src/passes/tree/nodes/input.ts#useSteps
+src/input.rs#schema_steps	packages/core/compiler/src/passes/tree/nodes/input.ts#schemaSteps
 src/input.rs#tree_nodes_input	packages/core/compiler/src/passes/tree/nodes/input.ts#treeNodesInput
 src/input.rs#media_of	packages/core/compiler/src/passes/tree/nodes/input.ts#mediaOf
 src/input.rs#report_nested_files	packages/core/compiler/src/passes/tree/nodes/input.ts#reportNestedFiles
@@ -244,7 +246,7 @@ src/relays.rs#copied_responses	packages/core/compiler/src/passes/tree/nodes/rela
 src/relays.rs#copied_paging	packages/core/compiler/src/passes/tree/nodes/relays.ts#copiedPaging
 src/relays.rs#path_under_prefix	packages/core/compiler/src/passes/tree/nodes/relays.ts#pathUnderPrefix
 src/relays.rs#relay_path	packages/core/compiler/src/passes/tree/nodes/relays.ts#relayPath
-src/relays.rs#relay_target	packages/core/compiler/src/passes/tree/nodes/relays.ts#relayTarget
+-	packages/core/compiler/src/passes/tree/nodes/relays.ts#relayTarget	merged: ../pass-tree-shared/src/relays.rs#relay_target
 src/relays.rs#relay_source	packages/core/compiler/src/passes/tree/nodes/relays.ts#relaySource
 src/relays.rs#relayed_source	packages/core/compiler/src/passes/tree/nodes/relays.ts#relayedSource
 src/relays.rs#imported_source	packages/core/compiler/src/passes/tree/nodes/relays.ts#importedSource

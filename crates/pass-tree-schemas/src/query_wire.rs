@@ -145,7 +145,12 @@ fn single_kind(schema_use: &TypeUse) -> Result<Option<SingleKind>, PassError> {
             ScalarType::String => Some(SingleKind::Text),
             ScalarType::Boolean => Some(SingleKind::Boolean),
             ScalarType::Integer | ScalarType::Number => Some(SingleKind::Number),
-            ScalarType::Unknown(_) => None,
+            ScalarType::Unknown(_) => {
+                return Err(InternalError::new(
+                    "tree.schemas reached a scalar type this IR revision does not know".to_owned(),
+                )
+                .into());
+            }
         },
         KnownTypeUseRef::Ref(_)
         | KnownTypeUseRef::Opaque(_)

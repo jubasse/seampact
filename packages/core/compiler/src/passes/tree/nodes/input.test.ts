@@ -250,6 +250,30 @@ test("bodies beyond JSON: files only in multipart within the body limit, form in
   );
 });
 
+test("a file at the end of a schema chain longer than the call stack is found and refused", () => {
+  const LINKS = 20_000;
+  const workspace = treeNodesLoadDirectory(`${TREE_NODES_FIXTURES}bodies-refused/`);
+  const raw = treeNodesApiOf(workspace);
+  const link = (index: number): string => `Link${index}`;
+  const treeSchemas = treeNodesStubService({
+    typeUses: { [refusedInput("jsonFile")]: { kind: "ref", schema: link(0) } },
+  });
+  const draft = treeNodesDraftWith(
+    ...Array.from({ length: LINKS }, (_, index) =>
+      treeNodesObjectSchema(link(index), `/schemas/${link(index)}`, {
+        [index === LINKS - 1 ? "file" : "next"]:
+          index === LINKS - 1 ? file() : { kind: "ref", schema: link(index + 1) },
+      }),
+    ),
+  );
+  const { diagnostics } = treeNodesRun(raw, workspace, { treeSchemas, draft });
+  const refused = diagnostics.filter(({ rule }) => rule === "seampact/tree/input-file");
+
+  expect(refused.map(({ origin }) => origin)).toEqual([
+    { layer: "api", pointer: `/schemas/${link(LINKS - 1)}/properties/file` },
+  ]);
+});
+
 const FIELD = "/schemas/Form/properties/field";
 
 test.each<{ use: IrWriter.TypeUse; answer?: IrWriter.QueryWire; expected: IrWriter.FieldWire }>([

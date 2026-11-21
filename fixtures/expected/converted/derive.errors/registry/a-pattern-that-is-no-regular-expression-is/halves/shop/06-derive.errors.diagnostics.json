@@ -2,8 +2,8 @@
   {
     "severity": "error",
     "rule": "seampact/derive/error-pattern",
-    "message": "conventions.errors.pattern '[' is no regular expression: 'SyntaxError: Invalid regular expression: /[/u: Unterminated character class'",
-    "fix": "write a regular expression every error code must match",
+    "message": "conventions.errors.pattern '[' is refused: the pattern is not portable: the pattern ends inside a construct",
+    "fix": "rewrite it in the portable subset of ADR 0003 section 9",
     "origin": {
       "layer": "api",
       "pointer": "/conventions/errors/pattern"

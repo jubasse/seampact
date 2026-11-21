@@ -1,0 +1,26 @@
+{
+  "rights": {
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab": {
+      "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab"
+      }
+    }
+  },
+  "operations": {
+    "ping": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    }
+  }
+}

@@ -190,7 +190,8 @@ One lane per 500 to 1,000 TypeScript lines (non-test lines below), at most three
   - a BOM inside the text (`a: 1\n\uFEFFb: 2`): refused as a syntax error, accepted by the `yaml` package;
   - a paired surrogate escape in YAML (`"\ud83d\ude00"`): refused as a syntax error, accepted by the `yaml` package;
   - a lone surrogate escape in a `$file` JSON (`"\ud800"`): `file-invalid` ("unexpected end of hex escape"), accepted by `JSON.parse`;
-  - the three depth cases of section 3: 256 flow levels at the root, the `too-deep` column at 257 or more flow levels, block nesting past Node's stack.
+  - the three depth cases of section 3: 256 flow levels at the root, the `too-deep` column at 257 or more flow levels, block nesting past Node's stack;
+  - a regex syntax error in a convention pattern (`conventions.errors.pattern`, `conventions.rights.pattern`) that passes the portable check: `regress`'s wording where the TypeScript prints V8's.
 
   No fixture outside `expected/` holds a tab, a BOM, a CR or a surrogate escape, so only the syntax-error message is expected from the fixtures today.
 - **A TypeScript unit test the parser cannot meet.** The lane ports it with the Rust expectation, and a comment naming the `differences.yaml` entry id that records the difference (the lane proposes the entry to the lead, who records it); the test is never dropped or weakened beyond that expectation.

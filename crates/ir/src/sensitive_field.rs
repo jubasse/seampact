@@ -137,9 +137,9 @@ struct Walk<'ir> {
 /// # Errors
 ///
 /// [`MissingSchemaError`] for the first referenced schema that `schemas` lacks.
-pub fn find_ir_sensitive_reaches(
-    responses: &[Response],
-    schemas: &IrMap<SchemaId, Schema>,
+pub fn find_ir_sensitive_reaches<'ir>(
+    responses: &'ir [Response],
+    schemas: &'ir IrMap<SchemaId, Schema>,
 ) -> Result<Vec<IrSensitiveReach>, MissingSchemaError> {
     walk_responses(responses, schemas, MissingSchemas::Refuse)
 }
@@ -149,16 +149,16 @@ pub fn find_ir_sensitive_reaches(
 /// The TypeScript walk without an `onMissingSchema` handler: the reaches beside a missing
 /// schema are kept.
 #[must_use]
-pub fn find_ir_sensitive_reaches_skipping_missing(
-    responses: &[Response],
-    schemas: &IrMap<SchemaId, Schema>,
+pub fn find_ir_sensitive_reaches_skipping_missing<'ir>(
+    responses: &'ir [Response],
+    schemas: &'ir IrMap<SchemaId, Schema>,
 ) -> Vec<IrSensitiveReach> {
     walk_responses(responses, schemas, MissingSchemas::Skip).unwrap_or_default()
 }
 
-fn walk_responses(
-    responses: &[Response],
-    schemas: &IrMap<SchemaId, Schema>,
+fn walk_responses<'ir>(
+    responses: &'ir [Response],
+    schemas: &'ir IrMap<SchemaId, Schema>,
     missing: MissingSchemas,
 ) -> Result<Vec<IrSensitiveReach>, MissingSchemaError> {
     let mut walk = Walk {
@@ -170,7 +170,7 @@ fn walk_responses(
 
     for (index, response) in responses.iter().enumerate() {
         if let Some(body) = &response.body {
-            walk_use(body, &Holder::Body { response: index }, &mut walk)?;
+            walk_use(body, Holder::Body { response: index }, &mut walk)?;
         }
 
         for header in &response.headers {
@@ -179,7 +179,7 @@ fn walk_responses(
                 header: header.name.clone(),
             };
 
-            walk_use(&header.r#type, &holder, &mut walk)?;
+            walk_use(&header.r#type, holder, &mut walk)?;
         }
     }
 
@@ -193,25 +193,25 @@ fn walk_responses(
 /// # Errors
 ///
 /// [`MissingSchemaError`] for the first referenced schema that `schemas` lacks.
-pub fn find_ir_sensitive_param_reaches(
-    params: &SchemaId,
-    schemas: &IrMap<SchemaId, Schema>,
+pub fn find_ir_sensitive_param_reaches<'ir>(
+    params: &'ir SchemaId,
+    schemas: &'ir IrMap<SchemaId, Schema>,
 ) -> Result<Vec<IrSensitiveReach>, MissingSchemaError> {
     walk_params(params, schemas, MissingSchemas::Refuse)
 }
 
 /// Like [`find_ir_sensitive_param_reaches`], but a referenced schema the map lacks is skipped.
 #[must_use]
-pub fn find_ir_sensitive_param_reaches_skipping_missing(
-    params: &SchemaId,
-    schemas: &IrMap<SchemaId, Schema>,
+pub fn find_ir_sensitive_param_reaches_skipping_missing<'ir>(
+    params: &'ir SchemaId,
+    schemas: &'ir IrMap<SchemaId, Schema>,
 ) -> Vec<IrSensitiveReach> {
     walk_params(params, schemas, MissingSchemas::Skip).unwrap_or_default()
 }
 
-fn walk_params(
-    params: &SchemaId,
-    schemas: &IrMap<SchemaId, Schema>,
+fn walk_params<'ir>(
+    params: &'ir SchemaId,
+    schemas: &'ir IrMap<SchemaId, Schema>,
     missing: MissingSchemas,
 ) -> Result<Vec<IrSensitiveReach>, MissingSchemaError> {
     let mut walk = Walk {
@@ -221,85 +221,163 @@ fn walk_params(
         reaches: Vec::new(),
     };
 
-    walk_schema(params, &Holder::Body { response: 0 }, &mut walk)?;
+    walk_schema(params, Holder::Body { response: 0 }, &mut walk)?;
 
     Ok(walk.reaches)
 }
 
-fn walk_use(
-    type_use: &TypeUse,
-    holder: &Holder,
-    walk: &mut Walk<'_>,
-) -> Result<(), MissingSchemaError> {
-    match type_use {
-        TypeUse::Array(array) => walk_use(&array.items, holder, walk),
-        TypeUse::Scalar(scalar) => {
-            if scalar.sensitive == Some(true) {
-                walk.reaches.push(holder.to_reach());
-            }
+/// One thing still to do, in the order the walk meets it: report a reach, or walk a use or a schema.
+enum Step<'ir> {
+    Reach(IrSensitiveReach),
+    Use {
+        type_use: &'ir TypeUse,
+        holder: Holder,
+    },
+    Schema {
+        id: &'ir SchemaId,
+        holder: Holder,
+    },
+}
 
-            match &scalar.content {
-                Some(content) => walk_use(&content.schema, holder, walk),
-                None => Ok(()),
-            }
+/// Walks with an explicit stack, so a long chain of schemas cannot overflow the call stack. Each
+/// step pushes its children in reverse, so they come off in the order a recursive walk meets them.
+fn walk_use<'ir>(
+    type_use: &'ir TypeUse,
+    holder: Holder,
+    walk: &mut Walk<'ir>,
+) -> Result<(), MissingSchemaError> {
+    walk_steps(Step::Use { type_use, holder }, walk)
+}
+
+fn walk_schema<'ir>(
+    id: &'ir SchemaId,
+    holder: Holder,
+    walk: &mut Walk<'ir>,
+) -> Result<(), MissingSchemaError> {
+    walk_steps(Step::Schema { id, holder }, walk)
+}
+
+fn walk_steps<'ir>(first: Step<'ir>, walk: &mut Walk<'ir>) -> Result<(), MissingSchemaError> {
+    let mut pending = vec![first];
+
+    while let Some(step) = pending.pop() {
+        let mut children = steps_of(step, walk)?;
+
+        children.reverse();
+        pending.extend(children);
+    }
+
+    Ok(())
+}
+
+fn steps_of<'ir>(
+    step: Step<'ir>,
+    walk: &mut Walk<'ir>,
+) -> Result<Vec<Step<'ir>>, MissingSchemaError> {
+    match step {
+        Step::Reach(reach) => {
+            walk.reaches.push(reach);
+
+            Ok(Vec::new())
         }
-        TypeUse::Ref(reference) => walk_schema(&reference.schema, holder, walk),
-        _ => Ok(()),
+        Step::Use { type_use, holder } => Ok(steps_of_use(type_use, holder)),
+        Step::Schema { id, holder } => steps_of_schema(id, holder, walk),
     }
 }
 
-fn walk_schema(
-    id: &SchemaId,
-    holder: &Holder,
-    walk: &mut Walk<'_>,
-) -> Result<(), MissingSchemaError> {
+fn steps_of_use(type_use: &TypeUse, holder: Holder) -> Vec<Step<'_>> {
+    match type_use {
+        TypeUse::Array(array) => vec![Step::Use {
+            type_use: &array.items,
+            holder,
+        }],
+        TypeUse::Scalar(scalar) => {
+            let mut steps = Vec::new();
+
+            if scalar.sensitive == Some(true) {
+                steps.push(Step::Reach(holder.to_reach()));
+            }
+
+            if let Some(content) = &scalar.content {
+                steps.push(Step::Use {
+                    type_use: &content.schema,
+                    holder,
+                });
+            }
+
+            steps
+        }
+        TypeUse::Ref(reference) => vec![Step::Schema {
+            id: &reference.schema,
+            holder,
+        }],
+        _ => Vec::new(),
+    }
+}
+
+fn steps_of_schema<'ir>(
+    id: &'ir SchemaId,
+    holder: Holder,
+    walk: &mut Walk<'ir>,
+) -> Result<Vec<Step<'ir>>, MissingSchemaError> {
     let visit = (holder.place(), id.clone());
 
     if walk.visited.contains(&visit) {
-        return Ok(());
+        return Ok(Vec::new());
     }
 
     let schemas = walk.schemas;
     let Some(schema) = schemas.get(id) else {
         return match walk.missing {
             MissingSchemas::Refuse => Err(MissingSchemaError { schema: id.clone() }),
-            MissingSchemas::Skip => Ok(()),
+            MissingSchemas::Skip => Ok(Vec::new()),
         };
     };
 
     walk.visited.insert(visit);
 
-    match schema {
-        Schema::Object(object) => walk_properties(id, &object.properties, holder, walk),
+    let steps = match schema {
+        Schema::Object(object) => steps_of_properties(id, &object.properties, &holder),
         Schema::Map(map) => {
+            let mut steps = Vec::new();
+
             if let Some(TypeUse::Scalar(keys)) = &map.keys
                 && keys.sensitive == Some(true)
             {
-                walk.reaches.push(IrSensitiveReach::MapKey {
+                steps.push(Step::Reach(IrSensitiveReach::MapKey {
                     response: holder.response(),
                     schema: id.clone(),
-                });
+                }));
             }
 
-            walk_use(&map.values, holder, walk)
-        }
-        Schema::Union(union) => {
-            for variant in &union.variants {
-                walk_schema(&variant.schema, holder, walk)?;
-            }
+            steps.push(Step::Use {
+                type_use: &map.values,
+                holder,
+            });
 
-            Ok(())
+            steps
         }
-        Schema::Unknown(_) => Ok(()),
-    }
+        Schema::Union(union) => union
+            .variants
+            .iter()
+            .map(|variant| Step::Schema {
+                id: &variant.schema,
+                holder: holder.clone(),
+            })
+            .collect(),
+        Schema::Unknown(_) => Vec::new(),
+    };
+
+    Ok(steps)
 }
 
-fn walk_properties(
+fn steps_of_properties<'ir>(
     id: &SchemaId,
-    properties: &[Property],
+    properties: &'ir [Property],
     holder: &Holder,
-    walk: &mut Walk<'_>,
-) -> Result<(), MissingSchemaError> {
+) -> Vec<Step<'ir>> {
+    let mut steps = Vec::new();
+
     for property in properties {
         // A header keeps its own name as the holder: the header is what carries the value.
         let field = match holder {
@@ -312,15 +390,16 @@ fn walk_properties(
         };
 
         if property.sensitive {
-            walk.reaches.push(field.to_reach());
-
-            continue;
+            steps.push(Step::Reach(field.to_reach()));
+        } else {
+            steps.push(Step::Use {
+                type_use: &property.r#type,
+                holder: field,
+            });
         }
-
-        walk_use(&property.r#type, &field, walk)?;
     }
 
-    Ok(())
+    steps
 }
 
 // The phrase `sensitive_reach_text` returns.
@@ -498,6 +577,52 @@ mod tests {
                     schema: id("SecretKeys")?
                 },
             ])
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn a_long_schema_chain_is_walked_without_overflowing_the_stack() -> TestResult {
+        const LINKS: usize = 100_000;
+        const SMALL_STACK_BYTES: usize = 2 * 1024 * 1024;
+
+        let found = std::thread::Builder::new()
+            .stack_size(SMALL_STACK_BYTES)
+            .spawn(|| {
+                let mut schemas: Vec<Value> = (0..LINKS)
+                    .map(|index| {
+                        object(
+                            &format!("N{index}"),
+                            vec![property(
+                                "next",
+                                false,
+                                reference(&format!("N{}", index + 1)),
+                            )],
+                        )
+                    })
+                    .collect();
+
+                schemas.push(object(
+                    &format!("N{LINKS}"),
+                    vec![property("secret", true, PLAIN_USE())],
+                ));
+
+                reaches(vec![response(Some(reference("N0")), vec![])], schemas)
+                    .ok()
+                    .and_then(Result::ok)
+            })
+            .map_err(serde_json::Error::io)?
+            .join();
+
+        assert_eq!(
+            found.ok().flatten(),
+            Some(vec![IrSensitiveReach::Field {
+                response: 0,
+                schema: id(&format!("N{LINKS}"))?,
+                property: "secret".to_owned(),
+            }]),
+            "the walk of {LINKS} links ended with the reach"
         );
 
         Ok(())

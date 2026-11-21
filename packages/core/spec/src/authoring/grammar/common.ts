@@ -47,6 +47,13 @@ export const KEYS = {
   extensionKey: "[a-z][a-z0-9]*(?:-[a-z0-9]+)*",
 } as const;
 
+// A length or an item count: a whole number the IR can hold (it refuses one past 2^53 - 1).
+export const COUNT_BOUND: JsonSchema = {
+  type: "integer",
+  minimum: 0,
+  maximum: Number.MAX_SAFE_INTEGER,
+};
+
 // A relative path: './' or '../', then no backslash, '#' or `CONTROL` character. Containment in the
 // workspace root is the loader's check; this is defence in depth for editors and the stage.
 export const PATH = `\\.\\.?/[^\\\\#${CONTROL}]+`;

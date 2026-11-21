@@ -253,12 +253,15 @@ fn elements_of<'list>(
                     .get(*index)
                     .map(|derived| &derived.response.headers),
                 None => None,
-            };
-            let mut elements: Vec<NamedRef<'list>> = Vec::new();
-
-            if let Some(headers) = own_headers {
-                elements.extend(headers.iter().map(NamedRef::from));
             }
+            .ok_or_else(|| {
+                InternalError::new(format!(
+                    "derive.wire read the headers of response {response} of operation {}, which has no such response",
+                    operation.position()
+                ))
+            })?;
+            let mut elements: Vec<NamedRef<'list>> =
+                own_headers.iter().map(NamedRef::from).collect();
 
             let draft_count = elements.len();
 

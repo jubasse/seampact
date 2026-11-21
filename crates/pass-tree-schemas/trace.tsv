@@ -40,6 +40,8 @@ src/compile.rs#refuse_annotations	packages/core/compiler/src/passes/tree/schemas
 src/compile.rs#reference	packages/core/compiler/src/passes/tree/schemas/compile.ts#TreeSchemasCompiler.reference
 src/compile.rs#record_unknown_keys_use	packages/core/compiler/src/passes/tree/schemas/compile.ts#TreeSchemasCompiler.recordUnknownKeysUse
 src/compile.rs#declared_target	packages/core/compiler/src/passes/tree/schemas/compile.ts#TreeSchemasCompiler.declaredTarget
+src/compile.rs#alias_target	packages/core/compiler/src/passes/tree/schemas/compile.ts#TreeSchemasCompiler.aliasTarget
+src/compile.rs#plain_target	packages/core/compiler/src/passes/tree/schemas/compile.ts#TreeSchemasCompiler.plainTarget
 src/compile.rs#seeded_core_target	packages/core/compiler/src/passes/tree/schemas/compile.ts#TreeSchemasCompiler.seededCoreTarget
 src/compile.rs#compile_declared	packages/core/compiler/src/passes/tree/schemas/compile.ts#TreeSchemasCompiler.compileDeclared
 src/compile.rs#report_cycle	packages/core/compiler/src/passes/tree/schemas/compile.ts#TreeSchemasCompiler.reportCycle
@@ -98,6 +100,7 @@ src/derived.rs#overlay_property	packages/core/compiler/src/passes/tree/schemas/d
 src/derived.rs#check_required_overlay	packages/core/compiler/src/passes/tree/schemas/derived.ts#checkRequiredOverlay
 src/directions.rs#add_direction	packages/core/compiler/src/passes/tree/schemas/directions.ts#addDirection
 src/directions.rs#reach	packages/core/compiler/src/passes/tree/schemas/directions.ts#reach
+src/directions.rs#reach_use	packages/core/compiler/src/passes/tree/schemas/directions.ts#reachUse
 src/directions.rs#reach_schema	packages/core/compiler/src/passes/tree/schemas/directions.ts#reachSchema
 src/directions.rs#tree_schemas_write_directions	packages/core/compiler/src/passes/tree/schemas/directions.ts#treeSchemasWriteDirections
 src/directions.rs#within	packages/core/compiler/src/passes/tree/schemas/directions.ts#within
@@ -105,6 +108,8 @@ src/directions.rs#directions_at	packages/core/compiler/src/passes/tree/schemas/d
 src/directions.rs#tree_schemas_refuse_output_unknown_keys	packages/core/compiler/src/passes/tree/schemas/directions.ts#treeSchemasRefuseOutputUnknownKeys
 src/enums.rs#strings	packages/core/compiler/src/passes/tree/schemas/enums.ts#strings
 src/enums.rs#tree_schemas_enum_values	packages/core/compiler/src/passes/tree/schemas/enums.ts#treeSchemasEnumValues
+src/enums.rs#chain_step	packages/core/compiler/src/passes/tree/schemas/enums.ts#chainStep
+-	packages/core/compiler/src/passes/tree/schemas/enums.ts#newChainMemo	skip: EnumChainMemo derives Default
 src/enums.rs#tree_schemas_report_enum_without_values	packages/core/compiler/src/passes/tree/schemas/enums.ts#treeSchemasReportEnumWithoutValues
 src/enums.rs#tree_schemas_compile_enums	packages/core/compiler/src/passes/tree/schemas/enums.ts#treeSchemasCompileEnums
 src/enums.rs#compile_enum	packages/core/compiler/src/passes/tree/schemas/enums.ts#compileEnum
@@ -159,18 +164,20 @@ src/operations.rs#refers_to_schema	packages/core/compiler/src/passes/tree/schema
 src/operations.rs#check_version_field	packages/core/compiler/src/passes/tree/schemas/operations.ts#checkVersionField
 src/operations.rs#item_property	packages/core/compiler/src/passes/tree/schemas/operations.ts#itemProperty
 src/operations.rs#field_type	packages/core/compiler/src/passes/tree/schemas/operations.ts#fieldType
-src/pass.rs#copied_map	packages/core/compiler/src/passes/tree/schemas/pass.ts#copiedMap
+-	packages/core/compiler/src/passes/tree/schemas/pass.ts#copiedMap	skip: the service owns the state of the run, so nothing is copied
 src/pass.rs#tree_schemas_service	packages/core/compiler/src/passes/tree/schemas/pass.ts#treeSchemasService
 src/pattern.rs#tree_schemas_escape_pattern_literal	packages/core/compiler/src/passes/tree/schemas/pattern.ts#treeSchemasEscapePatternLiteral
 src/pattern.rs#new	packages/core/compiler/src/passes/tree/schemas/pattern.ts#PatternRefusal.constructor
 src/pattern.rs#refuse	packages/core/compiler/src/passes/tree/schemas/pattern.ts#refuse
 src/pattern.rs#refuse_backtracking	packages/core/compiler/src/passes/tree/schemas/pattern.ts#refuseBacktracking
+src/pattern.rs#refuse_polynomial_backtracking	packages/core/compiler/src/passes/tree/schemas/pattern.ts#refusePolynomialBacktracking
 src/pattern.rs#overlaps	packages/core/compiler/src/passes/tree/schemas/pattern.ts#overlaps
 src/pattern.rs#any_two_overlap	packages/core/compiler/src/passes/tree/schemas/pattern.ts#anyTwoOverlap
 src/pattern.rs#runs_at_most_once	packages/core/compiler/src/passes/tree/schemas/pattern.ts#runsAtMostOnce
 src/pattern.rs#is_optional	packages/core/compiler/src/passes/tree/schemas/pattern.ts#isOptional
 src/pattern.rs#varies	packages/core/compiler/src/passes/tree/schemas/pattern.ts#varies
 src/pattern.rs#refuse_exponential_repetition	packages/core/compiler/src/passes/tree/schemas/pattern.ts#refuseExponentialRepetition
+src/pattern.rs#any_overlap	packages/core/compiler/src/passes/tree/schemas/pattern.ts#anyOverlap
 src/pattern.rs#merged	packages/core/compiler/src/passes/tree/schemas/pattern.ts#merged
 src/pattern.rs#complement	packages/core/compiler/src/passes/tree/schemas/pattern.ts#complement
 src/pattern.rs#hex	packages/core/compiler/src/passes/tree/schemas/pattern.ts#hex
@@ -223,7 +230,7 @@ src/raw.rs#origin	packages/core/compiler/src/passes/tree/schemas/raw.ts#TreeSche
 src/raw.rs#resolves	packages/core/compiler/src/passes/tree/schemas/raw.ts#TreeSchemasReporter.resolves
 src/raw.rs#error	packages/core/compiler/src/passes/tree/schemas/raw.ts#TreeSchemasReporter.error
 src/raw.rs#located	packages/core/compiler/src/passes/tree/schemas/raw.ts#TreeSchemasReporter.located
-src/relays.rs#relay_target	packages/core/compiler/src/passes/tree/schemas/relays.ts#relayTarget
+-	packages/core/compiler/src/passes/tree/schemas/relays.ts#relayTarget	merged: ../pass-tree-shared/src/relays.rs#relay_target
 src/relays.rs#operation_uses	packages/core/compiler/src/passes/tree/schemas/relays.ts#operationUses
 src/relays.rs#is_copied_origin	packages/core/compiler/src/passes/tree/schemas/relays.ts#isCopiedOrigin
 src/relays.rs#with_api_origin	packages/core/compiler/src/passes/tree/schemas/relays.ts#withApiOrigin

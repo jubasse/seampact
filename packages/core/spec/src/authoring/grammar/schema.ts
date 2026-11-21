@@ -17,7 +17,7 @@ import {
 } from "../dsl.js";
 import { REFUSED_SCHEMA_KEYWORDS, schemaKeyword } from "../keywords.js";
 import { MARKERS } from "../markers.js";
-import { KEYS, PATH, POINTER } from "./common.js";
+import { COUNT_BOUND, KEYS, PATH, POINTER } from "./common.js";
 
 const S1 = A3(1);
 
@@ -84,8 +84,6 @@ const annotationsOfDerived = (): Record<string, JsonSchema> => {
   return rest;
 };
 
-const integerBound = (): JsonSchema => ({ type: "integer", minimum: 0 });
-
 function plainProps(): Record<string, JsonSchema> {
   return {
     type: kw(S1, {
@@ -141,11 +139,11 @@ function plainProps(): Record<string, JsonSchema> {
     exclusiveMaximum: kw(S1, { type: "number" }),
     minimum: kw(S1, { type: "number" }),
     exclusiveMinimum: kw(S1, { type: "number" }),
-    maxLength: kw(S1, integerBound()),
-    minLength: kw(S1, integerBound()),
+    maxLength: kw(S1, { ...COUNT_BOUND }),
+    minLength: kw(S1, { ...COUNT_BOUND }),
     pattern: kw(A3(9), str(), "A portable regular expression (ADR 0003 section 9)."),
-    maxItems: kw(S1, integerBound()),
-    minItems: kw(S1, integerBound()),
+    maxItems: kw(S1, { ...COUNT_BOUND }),
+    minItems: kw(S1, { ...COUNT_BOUND }),
     required: kw(A3(5), list(str())),
     format: kw(
       A3(8),

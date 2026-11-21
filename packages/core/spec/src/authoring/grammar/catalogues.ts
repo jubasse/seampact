@@ -16,7 +16,7 @@ import {
   str,
   when,
 } from "../dsl.js";
-import { KEYS } from "./common.js";
+import { COUNT_BOUND, KEYS } from "./common.js";
 import { errorDeclarationProps } from "./node.js";
 
 const schema = (): JsonSchema => ref("schema", "schema");
@@ -133,8 +133,8 @@ export function catalogues(): Catalogue[] {
           props: {
             type: kw(A3(8), oneOfValues("string", "integer")),
             pattern: kw(A3(9), str()),
-            minLength: kw(A3(8), { type: "integer", minimum: 0 }),
-            maxLength: kw(A3(8), { type: "integer", minimum: 0 }),
+            minLength: kw(A3(8), { ...COUNT_BOUND }),
+            maxLength: kw(A3(8), { ...COUNT_BOUND }),
             minimum: kw(A3(8), { type: "number" }),
             maximum: kw(A3(8), { type: "number" }),
             exclusiveMinimum: kw(A3(8), { type: "number" }),

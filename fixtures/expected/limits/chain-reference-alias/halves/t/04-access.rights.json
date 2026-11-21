@@ -1,0 +1,9 @@
+{
+  "operations": {
+    "read": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    }
+  }
+}

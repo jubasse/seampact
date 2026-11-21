@@ -95,6 +95,7 @@ src/proofs.rs#header_param_of	packages/core/compiler/src/passes/access/rights/pr
 src/proofs.rs#takes_route_header	packages/core/compiler/src/passes/access/rights/proofs.ts#takesRouteHeader
 src/proofs.rs#report_schema_clash	packages/core/compiler/src/passes/access/rights/proofs.ts#reportSchemaClash
 src/catalogues.rs#within_chain_terminates	packages/core/compiler/src/passes/access/rights/catalogues.ts#withinChainTerminates
+src/catalogues.rs#report_undeclared_within	packages/core/compiler/src/passes/access/rights/catalogues.ts#reportUndeclaredWithin
 src/subjects.rs#scope_subject	packages/core/compiler/src/passes/access/rights/subjects.ts#scopeSubject
 src/catalogues.rs#report_within_cycle	packages/core/compiler/src/passes/access/rights/catalogues.ts#reportWithinCycle
 src/restrictions.rs#access_rights_restriction_origin	packages/core/compiler/src/passes/access/rights/restrictions.ts#accessRightsRestrictionOrigin

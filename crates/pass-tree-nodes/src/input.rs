@@ -57,14 +57,6 @@ struct NestedFile {
     origin: Option<Origin>,
 }
 
-fn join_path(path: &str, member: &str) -> String {
-    if path.is_empty() {
-        return member.to_owned();
-    }
-
-    format!("{path}.{member}")
-}
-
 /// The input a route or an op entry declares (`input`), or `None` when it declares none.
 ///
 /// The schema is the input use the service answers for the written schema; reads `schemas` for the fields of a
@@ -187,82 +179,181 @@ fn report_nested_files(
     }
 }
 
+/// The members from the top level down to a use below it, kept as a chain so a path is written only
+/// where a file is found.
+#[derive(Debug)]
+struct PathSegment<'draft> {
+    parent: Option<usize>,
+    member: &'draft str,
+}
+
+/// One thing still to do: walk a use, or enter a schema, each at its path in `FileWalk::segments`.
+enum FileStep<'draft> {
+    Use {
+        use_: &'draft TypeUse,
+        path: Option<usize>,
+        origin: Option<&'draft Origin>,
+    },
+    Schema {
+        id: &'draft str,
+        path: Option<usize>,
+    },
+}
+
 /// The files one walk of `files_below` has found and the schemas it has entered.
 struct FileWalk<'draft> {
     draft: &'draft DraftIr,
     found: Vec<NestedFile>,
     visited: HashSet<&'draft str>,
+    segments: Vec<PathSegment<'draft>>,
 }
 
 impl<'draft> FileWalk<'draft> {
-    fn visit(
-        &mut self,
-        at: &'draft TypeUse,
-        at_path: &str,
-        origin: Option<&Origin>,
-    ) -> Result<(), InternalError> {
-        match KnownTypeUseRef::try_from(at)? {
-            KnownTypeUseRef::File(_) => self.found.push(NestedFile {
-                path: at_path.to_owned(),
-                origin: origin.cloned(),
-            }),
-            KnownTypeUseRef::Array(array) => self.visit(&array.items, at_path, origin)?,
-            KnownTypeUseRef::Ref(reference) => {
-                self.visit_schema(reference.schema.as_str(), at_path)?;
-            }
-            KnownTypeUseRef::Scalar(scalar) => {
-                if let Some(content) = &scalar.content {
-                    self.visit(&content.schema, at_path, origin)?;
-                }
-            }
-            KnownTypeUseRef::Enum(_) | KnownTypeUseRef::Opaque(_) => {}
+    /// Walks with an explicit stack, so a long chain of schemas cannot overflow the call stack;
+    /// children are pushed in reverse to come off in the order a recursive walk meets them.
+    fn walk(&mut self, first: FileStep<'draft>) -> Result<(), InternalError> {
+        let mut pending = vec![first];
+
+        while let Some(step) = pending.pop() {
+            let mut children = match step {
+                FileStep::Use { use_, path, origin } => self.use_steps(use_, path, origin)?,
+                FileStep::Schema { id, path } => self.schema_steps(id, path)?,
+            };
+
+            children.reverse();
+            pending.extend(children);
         }
 
         Ok(())
     }
 
-    fn visit_schema(&mut self, id: &'draft str, at_path: &str) -> Result<(), InternalError> {
+    fn use_steps(
+        &mut self,
+        at: &'draft TypeUse,
+        path: Option<usize>,
+        origin: Option<&'draft Origin>,
+    ) -> Result<Vec<FileStep<'draft>>, InternalError> {
+        let steps = match KnownTypeUseRef::try_from(at)? {
+            KnownTypeUseRef::File(_) => {
+                self.found.push(NestedFile {
+                    path: self.render(path),
+                    origin: origin.cloned(),
+                });
+
+                Vec::new()
+            }
+            KnownTypeUseRef::Array(array) => vec![FileStep::Use {
+                use_: &array.items,
+                path,
+                origin,
+            }],
+            KnownTypeUseRef::Ref(reference) => vec![FileStep::Schema {
+                id: reference.schema.as_str(),
+                path,
+            }],
+            KnownTypeUseRef::Scalar(scalar) => scalar
+                .content
+                .iter()
+                .map(|content| FileStep::Use {
+                    use_: &content.schema,
+                    path,
+                    origin,
+                })
+                .collect(),
+            KnownTypeUseRef::Enum(_) | KnownTypeUseRef::Opaque(_) => Vec::new(),
+        };
+
+        Ok(steps)
+    }
+
+    fn schema_steps(
+        &mut self,
+        id: &'draft str,
+        path: Option<usize>,
+    ) -> Result<Vec<FileStep<'draft>>, InternalError> {
         if !self.visited.insert(id) {
-            return Ok(());
+            return Ok(Vec::new());
         }
 
-        match KnownSchemaRef::try_from(tree_nodes_draft_schema(self.draft, id)?)? {
-            KnownSchemaRef::Object(object) => {
-                for property in &object.properties {
-                    let property_path = join_path(at_path, &property.name);
+        let steps = match KnownSchemaRef::try_from(tree_nodes_draft_schema(self.draft, id)?)? {
+            KnownSchemaRef::Object(object) => object
+                .properties
+                .iter()
+                .map(|property| FileStep::Use {
+                    use_: &property.r#type,
+                    path: Some(self.extend(path, &property.name)),
+                    origin: Some(&property.origin),
+                })
+                .collect(),
+            KnownSchemaRef::Map(map) => vec![FileStep::Use {
+                use_: &map.values,
+                path,
+                origin: Some(&map.origin),
+            }],
+            KnownSchemaRef::Union(union) => union
+                .variants
+                .iter()
+                .map(|variant| FileStep::Schema {
+                    id: variant.schema.as_str(),
+                    path: Some(self.extend(path, &variant.tag)),
+                })
+                .collect(),
+        };
 
-                    self.visit(&property.r#type, &property_path, Some(&property.origin))?;
-                }
-            }
-            KnownSchemaRef::Map(map) => self.visit(&map.values, at_path, Some(&map.origin))?,
-            KnownSchemaRef::Union(union) => {
-                for variant in &union.variants {
-                    let variant_path = join_path(at_path, &variant.tag);
+        Ok(steps)
+    }
 
-                    self.visit_schema(variant.schema.as_str(), &variant_path)?;
-                }
-            }
+    /// The index of a new segment below `parent`.
+    fn extend(&mut self, parent: Option<usize>, member: &'draft str) -> usize {
+        self.segments.push(PathSegment { parent, member });
+
+        self.segments.len() - 1
+    }
+
+    /// The dot-joined members of a path; a member after an empty path is not preceded by a dot.
+    fn render(&self, path: Option<usize>) -> String {
+        let mut members: Vec<&str> = Vec::new();
+        let mut at = path;
+
+        while let Some(segment) = at.and_then(|index| self.segments.get(index)) {
+            members.push(segment.member);
+            at = segment.parent;
         }
 
-        Ok(())
+        let mut rendered = String::new();
+
+        for member in members.into_iter().rev() {
+            if !rendered.is_empty() {
+                rendered.push('.');
+            }
+
+            rendered.push_str(member);
+        }
+
+        rendered
     }
 }
 
 // Every file reached from `type_use` (a file itself included), through schemas, items, map values, union variants
 // and the schema of a JSON text field; each at its path below `type_use`, located at the nearest property, else
 // `use_origin`.
-fn files_below(
-    type_use: &TypeUse,
-    use_origin: Option<&Origin>,
-    scope: &TreeNodesScope<'_, '_, '_>,
+fn files_below<'draft>(
+    type_use: &'draft TypeUse,
+    use_origin: Option<&'draft Origin>,
+    scope: &TreeNodesScope<'draft, '_, '_>,
 ) -> Result<Vec<NestedFile>, PassError> {
     let mut walk = FileWalk {
         draft: scope.draft,
         found: Vec::new(),
         visited: HashSet::new(),
+        segments: Vec::new(),
     };
 
-    walk.visit(type_use, "", use_origin)?;
+    walk.walk(FileStep::Use {
+        use_: type_use,
+        path: None,
+        origin: use_origin,
+    })?;
 
     Ok(walk.found)
 }
@@ -479,12 +570,137 @@ fn check_file_field(
 
 #[cfg(test)]
 mod tests {
-    use super::join_path;
+    use std::collections::HashSet;
+    use std::thread;
+
+    use seampact_ir::{IrMap, Schema, SchemaId, TypeUse};
+    use seampact_pipeline::DraftIr;
+    use serde_json::{Value, json};
+
+    use super::{FileStep, FileWalk, NestedFile};
+
+    const FILE: fn() -> Value = || json!({"kind": "file", "media": []});
+    const SMALL_STACK_BYTES: usize = 2 * 1024 * 1024;
+
+    fn property(name: &str, type_use: &Value) -> Value {
+        json!({
+            "name": name, "type": type_use, "optional": false, "nullable": false,
+            "sensitive": false, "deprecated": false, "docs": {}, "extensions": {},
+            "origin": {"layer": "api", "pointer": "/schemas"},
+        })
+    }
+
+    fn object(id: &str, properties: &[Value]) -> (String, Value) {
+        let schema = json!({
+            "id": id,
+            "name": {"segments": [id], "role": "schema"},
+            "directions": ["input"],
+            "examples": [], "docs": {}, "extensions": {},
+            "origin": {"layer": "api", "pointer": "/schemas"},
+            "kind": "object", "properties": properties,
+        });
+
+        (id.to_owned(), schema)
+    }
+
+    fn reference(id: &str) -> Value {
+        json!({"kind": "ref", "schema": id})
+    }
+
+    fn draft_of(schemas: Vec<(String, Value)>) -> DraftIr {
+        let entries: serde_json::Map<String, Value> = schemas.into_iter().collect();
+        let catalogue: IrMap<SchemaId, Schema> =
+            serde_json::from_value(Value::Object(entries)).expect("schemas");
+        let mut draft = DraftIr::new();
+
+        draft.schemas = catalogue;
+
+        draft
+    }
+
+    fn files_below_ref(draft: &DraftIr, root: &str) -> Vec<NestedFile> {
+        let start: TypeUse = serde_json::from_value(reference(root)).expect("use");
+        let mut walk = FileWalk {
+            draft,
+            found: Vec::new(),
+            visited: HashSet::new(),
+            segments: Vec::new(),
+        };
+
+        walk.walk(FileStep::Use {
+            use_: &start,
+            path: None,
+            origin: None,
+        })
+        .expect("walk");
+
+        walk.found
+    }
+
+    fn paths(files: &[NestedFile]) -> Vec<&str> {
+        files.iter().map(|file| file.path.as_str()).collect()
+    }
 
     #[test]
-    fn a_path_below_the_top_level_is_dot_joined() {
-        assert_eq!(join_path("", "file"), "file");
-        assert_eq!(join_path("a", "b"), "a.b");
-        assert_eq!(join_path("a.b", ""), "a.b.");
+    fn a_path_below_the_top_level_is_dot_joined_in_walk_order() {
+        let draft = draft_of(vec![
+            object(
+                "Root",
+                &[
+                    property("first", &FILE()),
+                    property("inner", &reference("Inner")),
+                    property("", &reference("Blank")),
+                    property("last", &FILE()),
+                ],
+            ),
+            object("Inner", &[property("deep", &FILE())]),
+            object(
+                "Blank",
+                &[property("under", &FILE()), property("", &FILE())],
+            ),
+        ]);
+
+        // A member written after an empty path is not preceded by a dot, and one written after a
+        // path is, even when it is empty.
+        assert_eq!(
+            paths(&files_below_ref(&draft, "Root")),
+            ["first", "inner.deep", "under", "", "last"]
+        );
+    }
+
+    #[test]
+    fn a_long_schema_chain_ending_in_a_file_is_walked_without_overflowing_the_stack() {
+        const LINKS: usize = 100_000;
+
+        let found = thread::Builder::new()
+            .stack_size(SMALL_STACK_BYTES)
+            .spawn(|| {
+                let mut schemas: Vec<(String, Value)> = (0..LINKS)
+                    .map(|index| {
+                        object(
+                            &format!("N{index}"),
+                            &[property("n", &reference(&format!("N{}", index + 1)))],
+                        )
+                    })
+                    .collect();
+
+                schemas.push(object(&format!("N{LINKS}"), &[property("file", &FILE())]));
+
+                let draft = draft_of(schemas);
+
+                files_below_ref(&draft, "N0")
+                    .into_iter()
+                    .map(|file| file.path.len())
+                    .collect::<Vec<usize>>()
+            })
+            .expect("thread")
+            .join();
+
+        // LINKS members "n" with a dot between each, then the dot and "file".
+        assert_eq!(
+            found.ok(),
+            Some(vec![LINKS * 2 + "file".len()]),
+            "the walk of {LINKS} links found the file"
+        );
     }
 }

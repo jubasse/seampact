@@ -2,6 +2,9 @@
 //! escaping, the reporter over a fake context, and the text the pattern and extension key
 //! functions read by code point.
 
+use std::thread;
+use std::time::{Duration, Instant};
+
 use indexmap::IndexMap;
 use num_bigint::BigInt;
 use seampact_ir::{Direction, ExtensionKey, ExtensionPrefix, Schema, TypeUse};
@@ -10,11 +13,10 @@ use seampact_pipeline::testing::{HalfFixture, raw_api_from_json};
 
 use crate::compile::TreeSchemasCompiler;
 use crate::decimal::{TreeSchemasDecimal, TreeSchemasDecimalSource, tree_schemas_decimal_of};
-use crate::directions::{DirectionHolder, directions_at, within};
+use crate::directions::{DirectionHolder, directions_at, tree_schemas_write_directions, within};
+use crate::enums::tree_schemas_compile_enums;
 use crate::example_check::TreeSchemasExampleChecker;
-use crate::extensions::{
-    extension_key_parts, tree_schemas_extension_slot, tree_schemas_has_extensions,
-};
+use crate::extensions::{tree_schemas_extension_slot, tree_schemas_has_extensions};
 use crate::pattern::{
     TreeSchemasPatternResult, tree_schemas_escape_pattern_literal, tree_schemas_normalize_pattern,
 };
@@ -59,22 +61,6 @@ fn a_literal_pattern_escapes_each_metacharacter_by_code_point() {
         "a\\.b\\*\\(c\\)\\/\\\\\u{1F600}"
     );
     assert_eq!(tree_schemas_escape_pattern_literal(""), "");
-}
-
-#[test]
-fn an_extension_key_needs_a_lowercase_prefix_and_a_one_line_key() {
-    assert_eq!(extension_key_parts("x-acme-a-b"), Some(("acme", "a-b")));
-    assert_eq!(extension_key_parts("x-a1-k"), Some(("a1", "k")));
-    assert_eq!(extension_key_parts("x-1a-k"), None);
-    assert_eq!(extension_key_parts("x-Acme-k"), None);
-    assert_eq!(extension_key_parts("x-acme-"), None);
-    assert_eq!(extension_key_parts("x-acme"), None);
-    assert_eq!(extension_key_parts("x-acme-a\nb"), None);
-    assert_eq!(extension_key_parts("x-acme-a\u{2028}"), None);
-    assert_eq!(
-        extension_key_parts("x-acme-\u{1F600}"),
-        Some(("acme", "\u{1F600}"))
-    );
 }
 
 #[test]
@@ -292,7 +278,8 @@ fn an_example_string_is_measured_in_code_points() {
             "Long":{"type":"string","minLength":2}
         }}"#,
     );
-    let checker = TreeSchemasExampleChecker::new(schemas, IndexMap::new());
+    let no_enums = IndexMap::new();
+    let checker = TreeSchemasExampleChecker::new(&schemas, &no_enums);
     let emoji = JsonValue::String("\u{1F600}".to_owned());
     let long = uses.get("/schemas/Long").expect("Long use");
     let shorter = checker.check(&emoji, long).expect("check");
@@ -382,4 +369,131 @@ fn a_pattern_is_normalised_by_code_point_and_refused_with_its_fix() {
         message,
         "the pattern is not portable: '*' has nothing to repeat"
     );
+}
+
+const CHAIN_LINKS: usize = 100_000;
+const SMALL_STACK_BYTES: usize = 2 * 1024 * 1024;
+const CHAIN_BUDGET: Duration = Duration::from_secs(5);
+/// A compile of 100,000 links takes about a second alone and several under a loaded run; a walk
+/// that repeats per link takes far longer.
+const COMPILE_CHAIN_BUDGET: Duration = Duration::from_secs(30);
+
+/// Runs `work` on a thread with a 2 MiB stack, as a host thread may have, and returns its answer.
+fn on_small_stack<T: Send + 'static>(work: impl FnOnce() -> T + Send + 'static) -> T {
+    thread::Builder::new()
+        .stack_size(SMALL_STACK_BYTES)
+        .spawn(work)
+        .expect("thread")
+        .join()
+        .expect("the walk ended without overflowing the stack")
+}
+
+#[test]
+fn a_long_alias_chain_reaches_its_object_without_overflowing_the_stack() {
+    let (schemas, messages, elapsed) = on_small_stack(|| {
+        let aliases: Vec<String> = (0..CHAIN_LINKS)
+            .map(|index| format!(r#""A{index}":"A{}""#, index + 1))
+            .collect();
+        let text = format!(
+            r#"{{"schemas":{{"A{CHAIN_LINKS}":{{"type":"object","properties":{{"last":{{"type":"string"}}}}}},{},"Holder":{{"type":"object","properties":{{"first":"A0"}}}}}}}}"#,
+            aliases.join(",")
+        );
+        let started = Instant::now();
+        let (schemas, _, messages) = compiled_catalogue(&text);
+
+        (schemas, messages, started.elapsed())
+    });
+
+    assert_eq!(messages, Vec::<String>::new());
+    assert!(schemas.contains_key("Holder"));
+    assert!(
+        elapsed < COMPILE_CHAIN_BUDGET,
+        "alias chain took {elapsed:?}"
+    );
+}
+
+#[test]
+fn a_long_object_chain_gives_its_directions_to_every_link() {
+    let (last_directions, elapsed) = on_small_stack(|| {
+        let links: Vec<String> = (0..CHAIN_LINKS)
+            .map(|index| {
+                format!(
+                    r#""N{index}":{{"type":"object","properties":{{"next":"N{}"}}}}"#,
+                    index + 1
+                )
+            })
+            .collect();
+        let text = format!(
+            r#"{{"schemas":{{{},"N{CHAIN_LINKS}":{{"type":"object","properties":{{"last":{{"type":"string"}}}}}}}}}}"#,
+            links.join(",")
+        );
+        let mut fixture = HalfFixture::from_json(&text).expect("fixture");
+        fixture
+            .with_context(|context| {
+                let merged = &context.raw.merged;
+                let mut compiler =
+                    TreeSchemasCompiler::new(merged, TreeSchemasReporter::new(context))
+                        .expect("compiler");
+
+                compiler.compile_catalogue().expect("catalogue");
+                compiler
+                    .position_directions
+                    .insert("/schemas/N0".to_owned(), vec![Direction::Input]);
+
+                let started = Instant::now();
+
+                tree_schemas_write_directions(&mut compiler, &mut [], &mut [], &[])
+                    .expect("directions");
+
+                let directions = match compiler.schemas.get(&format!("N{CHAIN_LINKS}")) {
+                    Some(Schema::Object(object)) => object.directions.clone(),
+                    other => panic!("the last link expected, got {other:?}"),
+                };
+
+                (directions, started.elapsed())
+            })
+            .expect("context")
+    });
+
+    assert_eq!(last_directions, [Direction::Input]);
+    assert!(
+        elapsed < CHAIN_BUDGET,
+        "the directions walk took {elapsed:?}"
+    );
+}
+
+#[test]
+fn a_long_source_enum_chain_is_followed_once_not_once_per_link() {
+    const LINKS: usize = 1_000;
+
+    let links: Vec<String> = (1..LINKS)
+        .map(|index| format!(r#""E{index}":{{"source":{{"enum":"E{}"}}}}"#, index - 1))
+        .collect();
+    let text = format!(
+        r#"{{"enums":{{"E0":{{"values":["a","b"],"codeNames":{{"a":"Alpha"}},"reason":"local"}},{}}}}}"#,
+        links.join(",")
+    );
+    let mut fixture = HalfFixture::from_json(&text).expect("fixture");
+    let (compiled, messages, elapsed) = fixture
+        .with_context(|context| {
+            let merged = &context.raw.merged;
+            let mut reporter = TreeSchemasReporter::new(context);
+            let started = Instant::now();
+            let compiled = tree_schemas_compile_enums(merged.get("enums"), &mut reporter);
+
+            (compiled, reporter.into_reported(), started.elapsed())
+        })
+        .expect("context");
+    let compiled = compiled.expect("enums");
+    let last = compiled.last().expect("the last link");
+
+    assert_eq!(messages.len(), 0);
+    assert_eq!(compiled.len(), LINKS);
+    assert_eq!(last.values, ["a", "b"]);
+    assert!(
+        last.code_names
+            .as_ref()
+            .is_some_and(|names| names.get("a").is_some())
+    );
+    assert!(elapsed < CHAIN_BUDGET, "enum chain took {elapsed:?}");
 }

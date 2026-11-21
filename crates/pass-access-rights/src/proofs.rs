@@ -96,7 +96,7 @@ pub(crate) fn access_rights_proofs(
     let mut headers = Vec::new();
     let mut header_uses = Vec::new();
 
-    for header_use in shared_by_name(reporter, &input.route, &uses, &ProofPlacement::Header) {
+    for header_use in shared_by_name(reporter, &input.route, &uses, &ProofPlacement::Header)? {
         if !takes_route_header(reporter, &input.route, &taken_headers, &header_use) {
             header_uses.push(header_use);
         }
@@ -106,7 +106,7 @@ pub(crate) fn access_rights_proofs(
         headers.push(header_param_of(header_use));
     }
 
-    let body_uses = shared_by_name(reporter, &input.route, &uses, &ProofPlacement::Body);
+    let body_uses = shared_by_name(reporter, &input.route, &uses, &ProofPlacement::Body)?;
     let declared = access_rights_operation_of(context, &input.route)?
         .input
         .as_ref();
@@ -243,11 +243,24 @@ pub(crate) fn requirement_origins(requirement: &Requirement) -> Result<Vec<Origi
         .unwrap_or_default())
 }
 
-/// Header names are case-insensitive (RFC 9110 section 5.1); a body name is a JSON member name.
-pub(crate) fn name_key(placement: &ProofPlacement, name: &str) -> String {
+/// Header names are case-insensitive (RFC 9110 section 5.1).
+fn header_name_key(name: &str) -> String {
+    name.to_lowercase()
+}
+
+/// The key a proof name is merged under: a header name folded, a body name as written (a JSON
+/// member name).
+///
+/// # Errors
+///
+/// An internal error for a placement this IR revision does not know.
+pub(crate) fn name_key(placement: &ProofPlacement, name: &str) -> Result<String, InternalError> {
     match placement {
-        ProofPlacement::Header => name.to_lowercase(),
-        ProofPlacement::Body | ProofPlacement::Unknown(_) => name.to_owned(),
+        ProofPlacement::Header => Ok(header_name_key(name)),
+        ProofPlacement::Body => Ok(name.to_owned()),
+        ProofPlacement::Unknown(_) => Err(InternalError::new(
+            "access.rights reached a proof placement this IR revision does not know".to_owned(),
+        )),
     }
 }
 
@@ -259,7 +272,7 @@ pub(crate) fn shared_by_name(
     route: &AccessRightsRoute,
     uses: &[ProofUse],
     placement: &ProofPlacement,
-) -> Vec<ProofUse> {
+) -> Result<Vec<ProofUse>, InternalError> {
     let mut by_name: IndexMap<String, ProofUse> = IndexMap::new();
 
     for use_of in uses {
@@ -267,7 +280,7 @@ pub(crate) fn shared_by_name(
             continue;
         }
 
-        let key = name_key(placement, &use_of.proof.name);
+        let key = name_key(placement, &use_of.proof.name)?;
         let Some(first) = by_name.get_mut(&key) else {
             by_name.insert(key, use_of.clone());
 
@@ -288,7 +301,7 @@ pub(crate) fn shared_by_name(
         }
     }
 
-    by_name.into_values().collect()
+    Ok(by_name.into_values().collect())
 }
 
 // The declared request headers, then the credential and CSRF headers of the route identity's
@@ -429,10 +442,10 @@ pub(crate) fn takes_route_header(
     taken_headers: &[RouteHeader],
     use_of: &ProofUse,
 ) -> bool {
-    let key = name_key(&ProofPlacement::Header, &use_of.proof.name);
+    let key = header_name_key(&use_of.proof.name);
     let Some(taken) = taken_headers
         .iter()
-        .find(|header| name_key(&ProofPlacement::Header, &header.name) == key)
+        .find(|header| header_name_key(&header.name) == key)
     else {
         return false;
     };
@@ -812,11 +825,13 @@ mod name_tests {
 
     #[test]
     fn a_header_name_folds_case_and_a_body_name_does_not() {
-        assert_eq!(name_key(&ProofPlacement::Header, "X-Token"), "x-token");
-        assert_eq!(name_key(&ProofPlacement::Body, "X-Token"), "X-Token");
+        let key = |placement: &ProofPlacement, name: &str| name_key(placement, name).unwrap();
+
+        assert_eq!(key(&ProofPlacement::Header, "X-Token"), "x-token");
+        assert_eq!(key(&ProofPlacement::Body, "X-Token"), "X-Token");
         // JavaScript's toLowerCase maps U+0130 to "i" and a combining dot, as Rust does.
-        assert_eq!(name_key(&ProofPlacement::Header, "\u{130}"), "i\u{307}");
-        assert_eq!(name_key(&ProofPlacement::Header, "\u{3a3}"), "\u{3c3}");
-        assert_eq!(name_key(&ProofPlacement::Header, "A\u{3a3}"), "a\u{3c2}");
+        assert_eq!(key(&ProofPlacement::Header, "\u{130}"), "i\u{307}");
+        assert_eq!(key(&ProofPlacement::Header, "\u{3a3}"), "\u{3c3}");
+        assert_eq!(key(&ProofPlacement::Header, "A\u{3a3}"), "a\u{3c2}");
     }
 }

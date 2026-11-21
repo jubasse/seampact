@@ -46,21 +46,23 @@ pub(crate) struct TreeSchemasServiceState {
 pub(crate) struct TreeSchemasService {
     answers: IndexMap<String, TypeUse>,
     wires: IndexMap<String, QueryWire>,
-    checker: TreeSchemasExampleChecker,
+    schemas: IndexMap<String, Schema>,
+    enums: IndexMap<String, Enum>,
 }
 
-fn copied_map<Value: Clone>(entries: &IndexMap<String, Value>) -> IndexMap<String, Value> {
-    entries.clone()
+impl TreeSchemasService {
+    fn checker(&self) -> TreeSchemasExampleChecker<'_> {
+        TreeSchemasExampleChecker::new(&self.schemas, &self.enums)
+    }
 }
 
-pub(crate) fn tree_schemas_service(state: &TreeSchemasServiceState) -> TreeSchemasService {
+/// The service owns the state of the run: nothing else reaches it, and each answer is a copy.
+pub(crate) fn tree_schemas_service(state: TreeSchemasServiceState) -> TreeSchemasService {
     TreeSchemasService {
-        answers: copied_map(&state.uses),
-        wires: copied_map(&state.query_wires),
-        checker: TreeSchemasExampleChecker::new(
-            copied_map(&state.schemas),
-            enums_by_id(&state.enums),
-        ),
+        answers: state.uses,
+        wires: state.query_wires,
+        schemas: state.schemas,
+        enums: enums_by_id(&state.enums),
     }
 }
 
@@ -151,7 +153,7 @@ pub(crate) fn tree_schemas_run(context: &HalfContext<'_>) -> Result<TreeSchemasR
     )?;
     tree_schemas_check_written_examples(
         &compiler.example_checks,
-        &TreeSchemasExampleChecker::new(compiler.schemas.clone(), enums_by_id(&enums)),
+        &TreeSchemasExampleChecker::new(&compiler.schemas, &enums_by_id(&enums)),
         &mut compiler.reporter,
     )?;
 
@@ -174,7 +176,7 @@ pub(crate) fn tree_schemas_run(context: &HalfContext<'_>) -> Result<TreeSchemasR
     Ok(TreeSchemasRun {
         output: TreeSchemasOutput {
             members,
-            service: Box::new(tree_schemas_service(&state)),
+            service: Box::new(tree_schemas_service(state)),
         },
         diagnostics: compiler.reporter.into_reported(),
     })
@@ -235,7 +237,7 @@ impl TreeSchemaService for TreeSchemasService {
         value: &JsonValue,
         schema_use: &TypeUse,
     ) -> Result<Vec<TreeSchemaExampleIssue>, PassError> {
-        self.checker.check(value, schema_use)
+        self.checker().check(value, schema_use)
     }
 
     fn check_text_example(
@@ -243,6 +245,6 @@ impl TreeSchemaService for TreeSchemasService {
         text: &str,
         schema_use: &TypeUse,
     ) -> Result<Vec<TreeSchemaExampleIssue>, PassError> {
-        self.checker.check_text(text, schema_use)
+        self.checker().check_text(text, schema_use)
     }
 }

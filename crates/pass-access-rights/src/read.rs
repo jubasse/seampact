@@ -5,6 +5,7 @@ use seampact_diagnostics::InternalError;
 use seampact_ir::{Docs, ExtensionKey, ExtensionPrefix, Extensions, IrMap, Origin};
 use seampact_js::js_key_order;
 use seampact_json::{JsonObject, JsonValue, json_at_object, pointer_segments};
+use seampact_pass_tree_shared::extension_key_parts;
 
 use crate::schema_use::AccessRightsContext;
 
@@ -92,26 +93,6 @@ pub(crate) fn access_rights_entries<'raw>(
             access_rights_object(Some(value)).map(|entry| (name.as_str(), entry))
         })
         .collect()
-}
-
-/// The prefix and key of an `x-<prefix>-<key>` extension member name; the prefix holds no dash,
-/// so the key is everything after it.
-fn extension_key_parts(name: &str) -> Option<(&str, &str)> {
-    let rest = name.strip_prefix("x-")?;
-    let first = rest.chars().next()?;
-
-    if !first.is_ascii_lowercase() {
-        return None;
-    }
-
-    let prefix_length = rest
-        .find(|character: char| !(character.is_ascii_lowercase() || character.is_ascii_digit()))
-        .unwrap_or(rest.len());
-    let (prefix, after_prefix) = rest.split_at_checked(prefix_length)?;
-    let key = after_prefix.strip_prefix('-')?;
-    let has_line_terminator = key.contains(['\n', '\r', '\u{2028}', '\u{2029}']);
-
-    (!key.is_empty() && !has_line_terminator).then_some((prefix, key))
 }
 
 /// The written `summary` and `description` of a declaration.
@@ -222,22 +203,6 @@ mod tests {
         let names: Vec<&str> = entries.iter().map(|(name, _)| *name).collect();
 
         assert_eq!(names, ["zeta", "alpha"]);
-    }
-
-    #[test]
-    fn extension_keys_split_at_the_first_dash_after_the_prefix() {
-        assert_eq!(extension_key_parts("x-acme-flag"), Some(("acme", "flag")));
-        assert_eq!(extension_key_parts("x-a1-b-c"), Some(("a1", "b-c")));
-        assert_eq!(
-            extension_key_parts("x-acme-__proto__"),
-            Some(("acme", "__proto__"))
-        );
-
-        for refused in [
-            "x-acme", "x-acme-", "x-1a-b", "x-Acme-b", "y-acme-b", "x--b", "x-a-b\nc",
-        ] {
-            assert_eq!(extension_key_parts(refused), None, "member {refused:?}");
-        }
     }
 
     #[test]

@@ -15,7 +15,7 @@ use seampact_ir::{
     TypeUse, check_ir_closed_declaration,
 };
 use seampact_json::{JsonObject, JsonValue, canonical_json};
-use seampact_pass_tree_shared::tree_nodes_relay_origin;
+use seampact_pass_tree_shared::{RelayTarget, relay_target, tree_nodes_relay_origin};
 use seampact_pipeline::{
     DraftIr, DraftOperation, DraftOperationInputRef, HalfContext, PassError, TreeNodeKind,
     TreeNodes,
@@ -241,30 +241,6 @@ struct FirstCopy {
     /// The pointer of the route's `relays` member.
     pointer: String,
     relays: String,
-}
-
-/// A relay target: the api and operation id `relays: <api>.<operationId>` names.
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct RelayTarget {
-    api: String,
-    operation_id: String,
-}
-
-/// `relays: <api>.<operationId>`: the api is the text before the first dot.
-fn relay_target(relays: &JsonValue) -> Option<RelayTarget> {
-    let JsonValue::String(text) = relays else {
-        return None;
-    };
-    let (api, operation_id) = text.split_once('.')?;
-
-    if api.is_empty() {
-        return None;
-    }
-
-    Some(RelayTarget {
-        api: api.to_owned(),
-        operation_id: operation_id.to_owned(),
-    })
 }
 
 /// The members of a relayed operation a copied shape is read from.
@@ -903,11 +879,10 @@ fn public_operation<'context>(
     target: &RelayTarget,
 ) -> Result<Option<(CopySource<'context>, RelayedOperation<'context>)>, PassError> {
     if let Some(relayed) = context.relayed(&target.api) {
-        let operation = relayed.operations.iter().find(|each| {
-            each.id
-                .as_ref()
-                .is_some_and(|id| id.as_str() == target.operation_id)
-        });
+        let operation = relayed
+            .operations
+            .iter()
+            .find(|each| each.id.as_ref().is_some_and(|id| id.as_str() == target.id));
 
         return Ok(operation.map(|operation| {
             (
@@ -925,7 +900,7 @@ fn public_operation<'context>(
         .operations
         .iter()
         .enumerate()
-        .find(|(_, each)| each.id.as_str() == target.operation_id);
+        .find(|(_, each)| each.id.as_str() == target.id);
     let Some((index, operation)) = found else {
         return Ok(None);
     };
@@ -960,21 +935,23 @@ pub(crate) fn tree_schemas_copy_relay_declarations(
         let Some(relays) = node.settings.get("relays") else {
             continue;
         };
-        let Some(target) = relay_target(relays) else {
+        let JsonValue::String(written) = relays else {
+            continue;
+        };
+        let Some(target) = relay_target(written) else {
             continue;
         };
         let Some((source, operation)) = public_operation(context, &target)? else {
             continue;
         };
         let pointer = tree_schemas_pointer(&node.pointer, &["relays"]);
-        let relays_text = format!("{}.{}", target.api, target.operation_id);
 
         copier.copy_route(
             CopySite {
                 source,
                 api: &target.api,
                 pointer: &pointer,
-                relays: &relays_text,
+                relays: &target.text,
             },
             operation,
         )?;
@@ -986,11 +963,6 @@ pub(crate) fn tree_schemas_copy_relay_declarations(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn target(text: &str) -> Option<(String, String)> {
-        relay_target(&JsonValue::String(text.to_owned()))
-            .map(|found| (found.api, found.operation_id))
-    }
 
     fn json(text: &str) -> JsonValue {
         let parsed: serde_json::Value = serde_json::from_str(text).expect("test JSON");
@@ -1045,24 +1017,5 @@ mod tests {
             canonical_json(&without_ignored(&first)),
             canonical_json(&without_ignored(&different))
         );
-    }
-
-    #[test]
-    fn a_relay_target_splits_at_the_first_dot_and_needs_an_api() {
-        assert_eq!(
-            target("public.listUsers"),
-            Some(("public".to_owned(), "listUsers".to_owned()))
-        );
-        assert_eq!(
-            target("public.a.b"),
-            Some(("public".to_owned(), "a.b".to_owned()))
-        );
-        assert_eq!(
-            target("public."),
-            Some(("public".to_owned(), String::new()))
-        );
-        assert_eq!(target(".listUsers"), None);
-        assert_eq!(target("nodot"), None);
-        assert_eq!(relay_target(&JsonValue::Null), None);
     }
 }

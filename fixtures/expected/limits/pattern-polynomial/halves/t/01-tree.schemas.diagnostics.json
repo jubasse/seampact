@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "error",
+    "rule": "seampact/tree/pattern",
+    "message": "the pattern can backtrack polynomially: 'a*' starts with a repetition of variable count that can match what the repetition just before it can match",
+    "fix": "rewrite it so two repetitions of variable count in a row never match the same character, or check that text in the application's code (A45)",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Sample/properties/code/pattern"
+    },
+    "related": []
+  }
+]

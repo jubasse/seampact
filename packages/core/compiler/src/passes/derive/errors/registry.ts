@@ -13,6 +13,7 @@ import {
   pipelineTreeNodes,
 } from "../../../pipeline/seam.js";
 import { quote } from "../../../validate/diagnostics.js";
+import { treeSchemasNormalizePattern } from "../../tree/schemas/index.js";
 import { deriveErrorsIsBaseNature } from "./natures.js";
 import {
   type DeriveErrorsRawObject,
@@ -119,6 +120,19 @@ function errorPattern(
   const written = context.conventions.get("errors.pattern")?.value;
 
   if (typeof written !== "string") return undefined;
+
+  const normalized = treeSchemasNormalizePattern(written);
+
+  if (!normalized.ok) {
+    reporter.error({
+      rule: "error-pattern",
+      message: `conventions.errors.pattern ${quote(written)} is refused: ${normalized.message}`,
+      fix: normalized.fix,
+      pointer: ERROR_PATTERN_POINTER,
+    });
+
+    return undefined;
+  }
 
   try {
     return new RegExp(written, "u");

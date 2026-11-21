@@ -17,6 +17,7 @@ use seampact_ir::{
 };
 use seampact_js::regexp_source;
 use seampact_json::{JsonObject, JsonValue, canonical_json, js_integer_in_range};
+use seampact_pass_tree_schemas::{TreeSchemasPatternResult, tree_schemas_normalize_pattern};
 use seampact_pipeline::{
     ConventionReading, DerivationRole, PassError, TreeSchemaService, derivation_params_schema_id,
     derivation_roles, pipeline_tree_nodes, pointer_below,
@@ -195,6 +196,23 @@ fn error_pattern(
     else {
         return Ok(None);
     };
+
+    if let TreeSchemasPatternResult::Refused { message, fix } =
+        tree_schemas_normalize_pattern(written)?
+    {
+        reporter.error(DeriveErrorsProblem {
+            rule: DeriveErrorsRule::ErrorPattern,
+            message: format!(
+                "conventions.errors.pattern {} is refused: {message}",
+                quote_text(written)
+            ),
+            fix,
+            pointer: ERROR_PATTERN_POINTER.to_owned(),
+            related: Vec::new(),
+        })?;
+
+        return Ok(None);
+    }
 
     match Regex::with_flags(written, "u") {
         Ok(regex) => Ok(Some(ErrorPattern {
@@ -736,6 +754,57 @@ mod tests {
     use seampact_json::JsonNumber;
 
     use super::*;
+    use crate::tests::with_reporter;
+
+    fn pattern_problems(written_pattern: &str) -> (bool, Vec<String>) {
+        let text = format!(r#"{{"conventions":{{"errors":{{"pattern":"{written_pattern}"}}}}}}"#);
+        let (pattern, diagnostics) = with_reporter(&text, |reporter| {
+            error_pattern(reporter.context(), reporter)
+        })
+        .unwrap();
+        let messages = diagnostics
+            .into_iter()
+            .map(|diagnostic| diagnostic.message)
+            .collect();
+
+        (pattern.unwrap().is_some(), messages)
+    }
+
+    #[test]
+    fn a_pattern_that_can_backtrack_is_refused_before_it_runs_on_a_code() {
+        let (kept, messages) = pattern_problems("^(a|a)*$");
+
+        assert!(!kept);
+        assert_eq!(messages.len(), 1, "messages {messages:?}");
+        assert!(
+            messages[0]
+                .starts_with("conventions.errors.pattern '^(a|a)*$' is refused: the pattern can backtrack exponentially"),
+            "message {}",
+            messages[0]
+        );
+    }
+
+    #[test]
+    fn a_pattern_outside_the_portable_subset_is_refused_and_cut_in_the_message() {
+        let (kept, messages) = pattern_problems(&format!("(?={})", "a".repeat(1000)));
+
+        assert!(!kept);
+        assert_eq!(messages.len(), 1, "messages {messages:?}");
+        assert!(messages[0].contains("is refused: the pattern is not portable"));
+        assert!(
+            messages[0].len() < 400,
+            "message of {} bytes",
+            messages[0].len()
+        );
+    }
+
+    #[test]
+    fn a_portable_pattern_is_kept() {
+        let (kept, messages) = pattern_problems("^[a-z]+$");
+
+        assert!(kept);
+        assert_eq!(messages.len(), 0);
+    }
 
     fn status_of(text: &str) -> Result<i64, InternalError> {
         let number = JsonNumber::from_json_text(text).unwrap();

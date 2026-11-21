@@ -318,16 +318,16 @@ fn format_check_int64(text: &str) -> bool {
 }
 
 /// Checks values against type uses over the compiled schemas and enums, which it never changes.
-#[derive(Debug, Clone, PartialEq)]
-pub(crate) struct TreeSchemasExampleChecker {
-    schemas: IndexMap<String, Schema>,
-    enums: IndexMap<String, Enum>,
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) struct TreeSchemasExampleChecker<'catalogues> {
+    schemas: &'catalogues IndexMap<String, Schema>,
+    enums: &'catalogues IndexMap<String, Enum>,
 }
 
-impl TreeSchemasExampleChecker {
+impl<'catalogues> TreeSchemasExampleChecker<'catalogues> {
     pub(crate) const fn new(
-        schemas: IndexMap<String, Schema>,
-        enums: IndexMap<String, Enum>,
+        schemas: &'catalogues IndexMap<String, Schema>,
+        enums: &'catalogues IndexMap<String, Enum>,
     ) -> Self {
         Self { schemas, enums }
     }

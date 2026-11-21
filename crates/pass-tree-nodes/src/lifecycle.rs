@@ -12,7 +12,8 @@ use seampact_ir::{
 use seampact_js::{cmp_utf16, js_key_order};
 use seampact_json::{JsonObject, JsonValue, js_text_of};
 use seampact_pass_tree_shared::{
-    TREE_NODES_BATCH_OP, TREE_NODES_MATURITIES, tree_nodes_member, tree_nodes_op_shorthand,
+    TREE_NODES_BATCH_OP, TREE_NODES_MATURITIES, extension_key_parts, tree_nodes_member,
+    tree_nodes_op_shorthand,
 };
 use seampact_pipeline::{
     DraftOperation, InheritedEntry, NearestSetting, PassError, TreeNodeId, TreeNodes, UnionSetting,
@@ -141,24 +142,6 @@ fn add_object_extensions(written: &JsonObject, values: &mut ExtensionValues) {
     }
 }
 
-/// The prefix and the name of an extension key, `x-<prefix>-<name>`: the TypeScript's
-/// `/^x-([a-z][a-z0-9]*)-(.+)$/`.
-pub(crate) fn extension_key_parts(key: &str) -> Option<(&str, &str)> {
-    let rest = key.strip_prefix("x-")?;
-    let first = rest.chars().next()?;
-
-    if !first.is_ascii_lowercase() {
-        return None;
-    }
-
-    let prefix_end = rest
-        .find(|character: char| !(character.is_ascii_lowercase() || character.is_ascii_digit()))?;
-    let (prefix, from_dash) = rest.split_at(prefix_end);
-    let name = from_dash.strip_prefix('-')?;
-    let has_line_terminator = name.contains(['\n', '\r', '\u{2028}', '\u{2029}']);
-
-    (!name.is_empty() && !has_line_terminator).then_some((prefix, name))
-}
 /// The extension values that reach a tree node, `{ <prefix>: { <key>: value } }`, the nearest of each key.
 pub(crate) fn tree_nodes_extensions(
     node_id: TreeNodeId,
