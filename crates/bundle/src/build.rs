@@ -154,12 +154,12 @@ pub fn build_bundle(options: &BundleBuildOptions<'_>) -> Result<BundleBuildResul
     Ok(BundleBuildResult::Built {
         contents: Box::new(BundleContents {
             manifest: BundleManifest {
-                contract: contract_value,
+                contract: Box::new(contract_value),
                 apis: irs.apis,
-                compiler: BundleNamedVersion {
+                compiler: Box::new(BundleNamedVersion {
                     name: COMPILER_NAME.to_owned(),
                     version: env!("CARGO_PKG_VERSION").to_owned(),
-                },
+                }),
                 packs: irs.packs,
                 files: listed,
                 integrity,

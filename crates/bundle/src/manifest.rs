@@ -55,11 +55,11 @@ pub struct BundleFile {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BundleManifest {
     /// The contract package the bundle was made from.
-    pub contract: BundleNamedVersion,
+    pub contract: Box<BundleNamedVersion>,
     /// Each api of the workspace.
     pub apis: Vec<BundleApi>,
     /// The compiler that wrote the IR.
-    pub compiler: BundleNamedVersion,
+    pub compiler: Box<BundleNamedVersion>,
     /// The packs the apis apply, sorted by name then version.
     pub packs: Vec<BundleNamedVersion>,
     /// Every file but the manifest, sorted by path in code-unit order.
@@ -143,12 +143,12 @@ impl BundleManifest {
         let root = object_of(document, "the manifest")?;
 
         Ok(Self {
-            contract: named_version(member(root, "contract")?)?,
+            contract: Box::new(named_version(member(root, "contract")?)?),
             apis: list(root, "apis")?
                 .iter()
                 .map(api_of)
                 .collect::<Result<_, _>>()?,
-            compiler: named_version(member(root, "compiler")?)?,
+            compiler: Box::new(named_version(member(root, "compiler")?)?),
             packs: list(root, "packs")?
                 .iter()
                 .map(named_version)

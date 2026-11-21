@@ -12,7 +12,6 @@ camino.workspace = true
 flate2.workspace = true
 indexmap.workspace = true
 jsonschema.workspace = true
-seampact-authoring.workspace = true
 seampact-compiler.workspace = true
 seampact-diagnostics.workspace = true
 seampact-finalize.workspace = true

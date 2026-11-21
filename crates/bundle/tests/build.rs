@@ -72,7 +72,7 @@ fn a_contract_applying_an_npm_pack_vendors_it() {
         ]
     );
     assert_eq!(
-        contents.manifest.contract,
+        *contents.manifest.contract,
         BundleNamedVersion {
             name: "@acme/contract".to_owned(),
             version: "3.1.0".to_owned()

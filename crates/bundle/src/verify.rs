@@ -24,7 +24,7 @@ pub enum BundleVerifyResult {
     /// The bundle passed.
     Verified {
         /// The `manifest` member.
-        manifest: Box<BundleManifest>,
+        manifest: BundleManifest,
         /// The `integrity` member.
         integrity: String,
         /// Each api's IR by api name.
