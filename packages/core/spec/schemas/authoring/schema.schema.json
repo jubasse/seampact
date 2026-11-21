@@ -285,11 +285,13 @@
         "maxLength": {
           "type": "integer",
           "minimum": 0,
+          "maximum": 9007199254740991,
           "$comment": "ADR 0003 section 1"
         },
         "minLength": {
           "type": "integer",
           "minimum": 0,
+          "maximum": 9007199254740991,
           "$comment": "ADR 0003 section 1"
         },
         "pattern": {
@@ -300,11 +302,13 @@
         "maxItems": {
           "type": "integer",
           "minimum": 0,
+          "maximum": 9007199254740991,
           "$comment": "ADR 0003 section 1"
         },
         "minItems": {
           "type": "integer",
           "minimum": 0,
+          "maximum": 9007199254740991,
           "$comment": "ADR 0003 section 1"
         },
         "required": {
