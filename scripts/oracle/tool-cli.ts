@@ -17,6 +17,9 @@ import type { OracleTools } from "./tool-modules.ts";
 // keeps its transcript (`cli/transcript.json`) and the calls it made to the config readers, the editor schemas and
 // the bundle fetch (`<unit>/<NN>-<function>.json`).
 
+// `init` writes the config its own run then reads: replaying a read on the tree before the command cannot match.
+const CONFIG_WRITING_COMMAND = "init";
+
 export interface CliSpec {
   argv: string[];
   cwd?: string;
@@ -162,5 +165,12 @@ async function runCase(tools: OracleTools, root: string, spec: CliSpec): Promise
     removed: [...before.keys()].filter((path) => !after.has(path)).sort(),
   };
 
-  return new Map([["cli/transcript.json", jsonText(transcript)], ...recordedFiles(calls, root)]);
+  const replayable = calls.filter(
+    (call) => !(call.unit === "cli-config" && spec.argv[0] === CONFIG_WRITING_COMMAND),
+  );
+
+  return new Map([
+    ["cli/transcript.json", jsonText(transcript)],
+    ...recordedFiles(replayable, root),
+  ]);
 }
