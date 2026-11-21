@@ -51,7 +51,7 @@ pub enum PassError {
 - The dispatch maps `NotPortedYet` to `HalfRun::NotPorted` and `Internal` to `Err(InternalError)`; the oracle counts a not-ported pair as skipped, never as a match.
 - Diagnostics reported before a `NotPortedYet` are dropped for that pair by construction: `run_halves` and `run_fixture_half` give each half a fresh sink and merge its output and diagnostics only on `Ok`.
 - End of a half: its last brief deletes `not_ported.rs` and the `allow`; `rg 'NotPortedYet|not_ported_yet|allow\(dead_code' crates/pass-<half>/src` prints nothing and `cargo xtask oracle --half <half>` reports 0 not ported (for `tree.schemas`, also 0 not-ported service calls, section 5).
-- End of the layer: one scripted change removes the `NotPortedYet` variant and `HalfRun::NotPorted`, and turns `PassError` into `InternalError` in every signature.
+- `PassError` stays, with its one `Internal` variant: service methods and the half entries return it and convert to `InternalError` through `From`.
 
 ## 3. Scope, owned output and cross-half helpers
 
@@ -146,7 +146,7 @@ A type the seam reads that has no serde form gets a reader in `seampact_compiler
 
   Each arm calls its crate's entry function, maps `PassError` (section 2) and merges the output with `merge_into` on `Ok`.
 - `run_halves` (`orchestrator.rs`): `run_tree_schemas` with a fresh sink, then `LaterHalf::RUN_ORDER` through `run_half` with a fresh sink each and the service as `&*service`. The stop rule is today's, applied after each of the six: `NotPorted` ends with `HalvesEnd::NotPorted(half)`, an error diagnostic ends the api.
-- Link: `link_workspace` (`stages.rs`) calls `seampact_pass_link::run` and answers `Result<StageAnswer<_>, InternalError>`: `NotPortedYet` is `StageAnswer::NotPorted`, so the run stops at `Stage::Link` as today; `Internal` is the `Err`.
+- Link: `link_workspace` (`stages.rs`) calls `seampact_pass_link::run` and answers `Result<_, InternalError>`.
 - Six pass crates and `seampact-pass-link`, each with its entry function as a stub, `src/not_ported.rs`, the `allow`, an empty `trace.tsv` and `pub const RULE_IDS: &[RuleId] = &[];`, which brief 1 of the half fills. `rule_id_registry()` of `seampact_compiler::oracle` reads every crate's `RULE_IDS`.
 - `text.rs` with `quote`, `unsafe`, `accessRightsQuoted` and the `JSON.stringify`-order writer (section 1), with their unit tests.
 - Oracle `run_half` answers `HalfOutput { delta, diagnostics }`; the harness compares `diagnostics` with `<NN>-<half>.diagnostics.json` (an absent file is `[]`).

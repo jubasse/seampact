@@ -45,7 +45,9 @@ fn write_members(ir: &mut JsonValue) -> Result<(), InternalError> {
     if let Some(JsonValue::Array(operations)) = root.get_mut("operations") {
         for operation in operations {
             let JsonValue::Object(members) = operation else {
-                continue;
+                return Err(InternalError::new(
+                    "an operation of the draft is no JSON object",
+                ));
             };
             let features = finalize_operation_features(members, FEATURE_TABLE);
 
