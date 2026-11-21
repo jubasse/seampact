@@ -942,12 +942,14 @@ dependencies = [
  "seampact-bundle",
  "seampact-bundle-fetch",
  "seampact-cli-config",
+ "seampact-compiler",
  "seampact-diagnostics",
  "seampact-diff-table",
  "seampact-editor-schemas",
  "seampact-ir",
  "seampact-json",
  "seampact-lint",
+ "seampact-load",
  "seampact-openapi",
  "seampact-oracle",
  "seampact-target",
@@ -1102,10 +1104,15 @@ dependencies = [
 name = "seampact-lint"
 version = "2.0.0"
 dependencies = [
+ "indexmap",
  "seampact-authoring",
  "seampact-diagnostics",
  "seampact-ir",
+ "seampact-json",
+ "seampact-naming",
  "seampact-pipeline",
+ "seampact-span",
+ "seampact-validate",
  "thiserror",
 ]
 

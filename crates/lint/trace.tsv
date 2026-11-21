@@ -1,0 +1,48 @@
+src/run_lint.rs#run_lint	packages/core/lint/src/run-lint.ts#runLint
+-	packages/core/lint/src/run-lint.ts#checkRule	skip: a core rule cannot throw; the plugin API that made a check fallible is removed (ADR 0031)
+-	packages/core/lint/src/run-lint.ts#refuseDuplicatePlugins	skip: the core plugin is the only one, so no name repeats
+src/resolve.rs#lint_severity_of	packages/core/lint/src/resolve.ts#lintSeverityOf
+src/resolve.rs#mentions_of	packages/core/lint/src/resolve.ts#mentionsOf
+src/resolve.rs#lint_unknown_rule_diagnostics	packages/core/lint/src/resolve.ts#lintUnknownRuleDiagnostics
+src/core_rule.rs#as_str	packages/core/lint/src/plugin.ts#lintRuleId
+src/rules/cookie_without_csrf.rs#check	packages/core/lint/src/core/cookie-without-csrf.ts#cookieWithoutCsrf.check
+src/rules/credential_name.rs#check	packages/core/lint/src/core/credential-name.ts#credentialName.check
+src/rules/not_found_role.rs#check	packages/core/lint/src/core/not-found-role.ts#notFoundRole.check
+src/origins.rs#lint_group_by_origin	packages/core/lint/src/core/origins.ts#lintGroupByOrigin
+src/rules/redundant_maturity.rs#check	packages/core/lint/src/core/redundant-maturity.ts#redundantMaturity.check
+src/rules/subtree_exception.rs#check	packages/core/lint/src/core/subtree-exception.ts#subtreeException.check
+src/rules/unused_declaration.rs#check	packages/core/lint/src/core/unused-declaration.ts#unusedDeclaration.check
+src/origins.rs#lint_origin_key	packages/core/lint/src/core/origins.ts#lintOriginKey
+src/origins.rs#lint_owns_origin	packages/core/lint/src/core/origins.ts#lintOwnsOrigin
+src/rules/not_found_role.rs#answers_not_found_role	packages/core/lint/src/core/not-found-role.ts#answersNotFoundRole
+src/rules/credential_name.rs#looks_like_credential	packages/core/lint/src/core/credential-name.ts#looksLikeCredential
+src/origins.rs#lint_node_of	packages/core/lint/src/core/origins.ts#lintNodeOf
+src/rules/not_found_role.rs#competing_codes	packages/core/lint/src/core/not-found-role.ts#competingCodes
+src/rules/subtree_exception.rs#exceptions_of	packages/core/lint/src/core/subtree-exception.ts#exceptionsOf
+src/resolve.rs#lint_is_allowed	packages/core/lint/src/resolve.ts#lintIsAllowed
+src/resolve.rs#diagnostic_origin_of	packages/core/lint/src/resolve.ts#diagnosticOriginOf
+src/run_lint.rs#diagnostic_of	packages/core/lint/src/run-lint.ts#diagnosticOf
+src/run_lint.rs#finding_origin	packages/core/lint/src/run-lint.ts#findingOrigin
+src/rules/redundant_maturity.rs#derived_level	packages/core/lint/src/core/redundant-maturity.ts#derivedLevel
+src/rules/not_found_role.rs#takes_not_found_role	packages/core/lint/src/core/not-found-role.ts#takesNotFoundRole
+src/rules/not_found_role.rs#attached_by_every_only	packages/core/lint/src/core/not-found-role.ts#attachedByEveryOnly
+src/origins.rs#lint_routes_named	packages/core/lint/src/core/origins.ts#lintRoutesNamed
+src/rules/not_found_role.rs#attached_for_the_member	packages/core/lint/src/core/not-found-role.ts#attachedForTheMember
+src/rules/not_found_role.rs#fix_of	packages/core/lint/src/core/not-found-role.ts#fixOf
+-	packages/core/lint/src/run-lint.ts#rejectedRuleDiagnostic	skip: reports a plugin rule that threw; core rules cannot (ADR 0031)
+src/resolve.rs#same_origin	packages/core/lint/src/resolve.ts#sameOrigin
+src/resolve.rs#is_below	packages/core/lint/src/resolve.ts#isBelow
+src/resolve.rs#allow_covers	packages/core/lint/src/resolve.ts#allowCovers
+src/resolve.rs#plugin_prefix	packages/core/lint/src/resolve.ts#pluginPrefix
+src/resolve.rs#allow_entry_origin	packages/core/lint/src/resolve.ts#allowEntryOrigin
+src/resolve.rs#unknown_rule_diagnostic	packages/core/lint/src/resolve.ts#unknownRuleDiagnostic
+src/resolve.rs#unclaimed_rule_diagnostic	packages/core/lint/src/resolve.ts#unclaimedRuleDiagnostic
+-	packages/core/lint/src/plugin.ts#lintPluginApiVersion	skip: the plugin API is removed (ADR 0031)
+-	packages/core/lint/src/plugin.ts#defineCoreLintPlugin	skip: the core plugin is the CoreRule enum, a type, not a checked value
+-	packages/core/lint/src/plugin.ts#frozenPlugin	skip: the core plugin is the CoreRule enum, immutable by type
+-	packages/core/lint/src/plugin.ts#lintAssertPlugin	skip: a plugin shape is checked by the type system, no plugin value is read
+-	packages/core/lint/src/plugin.ts#assertRule	skip: a rule shape is checked by the type system
+-	packages/core/lint/src/plugin.ts#memberOf	skip: only lintAssertPlugin reads members of an unknown value
+-	packages/core/lint/src/describe-error.ts#describeError	skip: only the rejected rule diagnostic describes a thrown value
+-	packages/core/lint/src/plugin.ts#isDefinedLintPlugin	skip: the plugin API is removed (ADR 0031)
+-	packages/core/lint/src/plugin.ts#defineLintPlugin	skip: the plugin API is removed (ADR 0031)
