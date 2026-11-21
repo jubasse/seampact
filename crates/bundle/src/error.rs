@@ -1,16 +1,10 @@
-//! The error of a bundle: a function not ported yet, a bug, or the environment.
+//! The error of a bundle: a bug, or the environment.
 
 use seampact_diagnostics::InternalError;
 
-/// What stops a bundle: a stub reached, a bug, or the environment.
+/// What stops a bundle: a bug, or the environment.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum BundleError {
-    /// A stub was reached: the TypeScript function `function` is not ported yet.
-    #[error("not ported yet: {function}")]
-    NotPortedYet {
-        /// The TypeScript function name.
-        function: &'static str,
-    },
     /// A bug.
     #[error(transparent)]
     Internal(#[from] InternalError),
