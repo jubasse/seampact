@@ -118,8 +118,16 @@ impl Holder {
     }
 }
 
+/// What a walk does at a referenced schema the map lacks.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum MissingSchemas {
+    Refuse,
+    Skip,
+}
+
 struct Walk<'ir> {
     schemas: &'ir IrMap<SchemaId, Schema>,
+    missing: MissingSchemas,
     visited: HashSet<(HolderPlace, SchemaId)>,
     reaches: Vec<IrSensitiveReach>,
 }
@@ -133,8 +141,29 @@ pub fn find_ir_sensitive_reaches(
     responses: &[Response],
     schemas: &IrMap<SchemaId, Schema>,
 ) -> Result<Vec<IrSensitiveReach>, MissingSchemaError> {
+    walk_responses(responses, schemas, MissingSchemas::Refuse)
+}
+
+/// Like [`find_ir_sensitive_reaches`], but a referenced schema the map lacks is skipped.
+///
+/// The TypeScript walk without an `onMissingSchema` handler: the reaches beside a missing
+/// schema are kept.
+#[must_use]
+pub fn find_ir_sensitive_reaches_skipping_missing(
+    responses: &[Response],
+    schemas: &IrMap<SchemaId, Schema>,
+) -> Vec<IrSensitiveReach> {
+    walk_responses(responses, schemas, MissingSchemas::Skip).unwrap_or_default()
+}
+
+fn walk_responses(
+    responses: &[Response],
+    schemas: &IrMap<SchemaId, Schema>,
+    missing: MissingSchemas,
+) -> Result<Vec<IrSensitiveReach>, MissingSchemaError> {
     let mut walk = Walk {
         schemas,
+        missing,
         visited: HashSet::new(),
         reaches: Vec::new(),
     };
@@ -168,8 +197,26 @@ pub fn find_ir_sensitive_param_reaches(
     params: &SchemaId,
     schemas: &IrMap<SchemaId, Schema>,
 ) -> Result<Vec<IrSensitiveReach>, MissingSchemaError> {
+    walk_params(params, schemas, MissingSchemas::Refuse)
+}
+
+/// Like [`find_ir_sensitive_param_reaches`], but a referenced schema the map lacks is skipped.
+#[must_use]
+pub fn find_ir_sensitive_param_reaches_skipping_missing(
+    params: &SchemaId,
+    schemas: &IrMap<SchemaId, Schema>,
+) -> Vec<IrSensitiveReach> {
+    walk_params(params, schemas, MissingSchemas::Skip).unwrap_or_default()
+}
+
+fn walk_params(
+    params: &SchemaId,
+    schemas: &IrMap<SchemaId, Schema>,
+    missing: MissingSchemas,
+) -> Result<Vec<IrSensitiveReach>, MissingSchemaError> {
     let mut walk = Walk {
         schemas,
+        missing,
         visited: HashSet::new(),
         reaches: Vec::new(),
     };
@@ -214,7 +261,10 @@ fn walk_schema(
 
     let schemas = walk.schemas;
     let Some(schema) = schemas.get(id) else {
-        return Err(MissingSchemaError { schema: id.clone() });
+        return match walk.missing {
+            MissingSchemas::Refuse => Err(MissingSchemaError { schema: id.clone() }),
+            MissingSchemas::Skip => Ok(()),
+        };
     };
 
     walk.visited.insert(visit);

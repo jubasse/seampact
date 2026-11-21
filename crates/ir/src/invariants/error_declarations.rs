@@ -6,7 +6,8 @@ use super::json_members::{entry, is_string, items, js_number_of, record, string,
 use super::violation::{IrInvariantId, Violations};
 use crate::instance_walk::{IrInstanceNode, walk_ir_instance};
 use crate::{
-    IrError, IrMap, Schema, SchemaId, find_ir_sensitive_param_reaches, sensitive_reach_text,
+    IrError, IrMap, Schema, SchemaId, find_ir_sensitive_param_reaches_skipping_missing,
+    sensitive_reach_text,
 };
 
 /// The status of the code a retry header sits on.
@@ -248,9 +249,7 @@ pub(super) fn check_error_sensitive_no_store(
     let params = SchemaId::new(params.to_owned());
 
     // A params schema the document lacks is `ir.ref.resolves`' to name, not a reach.
-    let Ok(reaches) = find_ir_sensitive_param_reaches(&params, schemas) else {
-        return;
-    };
+    let reaches = find_ir_sensitive_param_reaches_skipping_missing(&params, schemas);
     let Some(found) = reaches.first() else {
         return;
     };

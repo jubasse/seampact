@@ -8,7 +8,8 @@ use super::error_declarations::bindings_in;
 use super::json_members::{entry, is_string, items, record, text_of};
 use super::violation::{IrInvariantId, Violations};
 use crate::{
-    IrError, IrMap, Response, Schema, SchemaId, find_ir_sensitive_reaches, sensitive_reach_text,
+    IrError, IrMap, Response, Schema, SchemaId, find_ir_sensitive_reaches_skipping_missing,
+    sensitive_reach_text,
 };
 
 /// What the rules of an operation read beside the operation.
@@ -85,9 +86,7 @@ fn check_sensitive_no_store(
     };
 
     // A response schema the document lacks is `ir.ref.resolves`' to name, not a reach.
-    let Ok(reaches) = find_ir_sensitive_reaches(&responses, schemas) else {
-        return Ok(());
-    };
+    let reaches = find_ir_sensitive_reaches_skipping_missing(&responses, schemas);
     let Some(found) = reaches.first() else {
         return Ok(());
     };

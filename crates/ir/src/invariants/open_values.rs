@@ -5,10 +5,7 @@ use std::collections::HashMap;
 use seampact_json::JsonValue;
 
 use crate::IrError;
-use crate::instance_walk::ir_definition;
-
-/// The known-values annotation of an open enum (`packages/core/spec/schemas/ir/README.md`).
-const KNOWN_VALUES_KEYWORD: &str = "x-seampact-known";
+use crate::instance_walk::{KNOWN_VALUES_KEYWORD, ir_definition};
 
 /// The members of the document root and of the api whose keys are ids.
 const CATALOGUE_OWNERS: [(&str, CatalogueOwner); 2] = [

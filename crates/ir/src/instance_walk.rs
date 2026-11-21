@@ -8,7 +8,7 @@ use seampact_json::{JsonObject, JsonValue, escape_pointer, js_text_of};
 use crate::{IR_SCHEMA_FILES, IrError};
 
 /// The known-values annotation of an open enum (`packages/core/spec/schemas/ir/README.md`).
-const KNOWN_VALUES_KEYWORD: &str = "x-seampact-known";
+pub const KNOWN_VALUES_KEYWORD: &str = "x-seampact-known";
 
 /// The must-act annotation of a union or an open enum: an unknown value makes the IR invalid for
 /// every reader.

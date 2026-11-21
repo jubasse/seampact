@@ -64,7 +64,8 @@ pub use ids::{
 };
 pub use imported::ImportedIr;
 pub use instance_walk::{
-    IrInstanceNode, IrUnknown, ir_definition, visit_ir_unknown, walk_ir_instance,
+    IrInstanceNode, IrUnknown, KNOWN_VALUES_KEYWORD, ir_definition, visit_ir_unknown,
+    walk_ir_instance,
 };
 pub use integers::{HTTP_STATUS_RANGE, optional_count};
 pub use invariants::{IR_PARTITIONS, IrInvariantId, IrInvariantViolation, check_ir_invariants};
@@ -99,7 +100,8 @@ pub use schemas::{
 };
 pub use sensitive_field::{
     IrSensitiveReach, MissingSchemaError, find_ir_sensitive_param_reaches,
-    find_ir_sensitive_reaches, sensitive_reach_text,
+    find_ir_sensitive_param_reaches_skipping_missing, find_ir_sensitive_reaches,
+    find_ir_sensitive_reaches_skipping_missing, sensitive_reach_text,
 };
 pub use source_map::{SourceLocation, SourceMap};
 pub use unions::{
