@@ -12,6 +12,8 @@ indexmap.workspace = true
 seampact-diagnostics.workspace = true
 seampact-diff-table.workspace = true
 seampact-ir.workspace = true
+seampact-js.workspace = true
+seampact-json.workspace = true
 thiserror.workspace = true
 
 [lints]
