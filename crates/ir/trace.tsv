@@ -65,3 +65,6 @@ src/invariants/operation.rs#check_sensitive_no_store	packages/core/spec/src/ir/i
 src/invariants/error_declarations.rs#check_error_sensitive_no_store	packages/core/spec/src/ir/invariants.ts#checkErrorSensitiveNoStore
 src/invariants/operation.rs#check_operation_members	packages/core/spec/src/ir/invariants.ts#checkOperationMembers
 src/invariants/document.rs#check_ir_invariants	packages/core/spec/src/ir/invariants.ts#checkIrInvariants
+src/support.rs#check_ir_support	packages/core/spec/src/ir/support.ts#checkIrSupport
+src/support.rs#json_type	packages/core/spec/src/ir/support.ts#jsonType
+src/support.rs#shown	packages/core/spec/src/ir/support.ts#shown
