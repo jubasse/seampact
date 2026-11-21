@@ -16,22 +16,58 @@ type EnumValues = { values: string[] } | { cycle: string[] } | undefined;
 const strings = (value: TreeSchemasRaw | undefined): string[] =>
   Array.isArray(value) ? value.filter((item) => typeof item === "string") : [];
 
-/** The values of the enum `name`, followed through `source.enum`; `path` holds the enums already followed. */
-export function treeSchemasEnumValues(
-  enums: TreeSchemasRaw | undefined,
-  name: string,
-  path: readonly string[] = [],
-): EnumValues {
-  if (path.includes(name)) return { cycle: [...path.slice(path.indexOf(name)), name] };
+/** What an enum chain already resolved: the values each enum ends on, the code names each one inherits. */
+interface EnumChainMemo {
+  readonly values: Map<string, string[] | undefined>;
+  readonly codeNames: Map<string, WrittenCodeNames>;
+}
+
+type WrittenCodeNames = Map<string, { name: TreeSchemasRaw; pointer: string }>;
+
+const newChainMemo = (): EnumChainMemo => ({ values: new Map(), codeNames: new Map() });
+
+// Where a chain stops at `name`: its own values, none, or the enum it takes its values from.
+type ChainStep = { end: string[] | undefined } | { next: string };
+
+function chainStep(enums: TreeSchemasRaw | undefined, name: string): ChainStep {
   const declared = treeSchemasMember(enums, name);
   const values = treeSchemasMember(declared, "values");
 
-  if (Array.isArray(values)) return { values: strings(values) };
+  if (Array.isArray(values)) return { end: strings(values) };
   const source = treeSchemasMember(treeSchemasMember(declared, "source"), "enum");
 
-  return typeof source === "string"
-    ? treeSchemasEnumValues(enums, source, [...path, name])
-    : undefined;
+  return typeof source === "string" ? { next: source } : { end: undefined };
+}
+
+/**
+ * The values of the enum `name`, followed through `source.enum` with a list, never by recursion. `memo` keeps
+ * the enums of a catalogue already resolved, so each chain is walked once.
+ */
+export function treeSchemasEnumValues(
+  enums: TreeSchemasRaw | undefined,
+  name: string,
+  memo: EnumChainMemo = newChainMemo(),
+): EnumValues {
+  const path: string[] = [];
+  const onPath = new Set<string>();
+  let current = name;
+
+  for (;;) {
+    if (onPath.has(current)) return { cycle: [...path.slice(path.indexOf(current)), current] };
+    const step = memo.values.has(current)
+      ? { end: memo.values.get(current) }
+      : chainStep(enums, current);
+
+    if ("end" in step) {
+      for (const link of [...path, current]) memo.values.set(link, step.end);
+
+      return step.end === undefined ? undefined : { values: [...step.end] };
+    }
+
+    onPath.add(current);
+    path.push(current);
+    current = step.next;
+  }
 }
 
 /** Reports why an enum named at `pointer` has no values: it is unknown, or its sources form a cycle. */
@@ -67,8 +103,10 @@ export function treeSchemasCompileEnums(
   enums: TreeSchemasRaw | undefined,
   reporter: TreeSchemasReporter,
 ): IrWriter.Enum[] {
+  const memo = newChainMemo();
+
   return treeSchemasEntries(enums).flatMap(([id, declared]) => {
-    const compiled = compileEnum(enums, id, declared, reporter);
+    const compiled = compileEnum(enums, id, declared, reporter, memo);
 
     return compiled === undefined ? [] : [compiled];
   });
@@ -79,9 +117,10 @@ function compileEnum(
   id: string,
   declared: TreeSchemasRaw,
   reporter: TreeSchemasReporter,
+  memo: EnumChainMemo,
 ): IrWriter.Enum | undefined {
   const pointer = treeSchemasPointer("/enums", id);
-  const values = valuesOf(enums, id, declared, pointer, reporter);
+  const values = valuesOf(enums, id, declared, pointer, reporter, memo);
   const source = sourceOf(declared);
   const reason = treeSchemasMember(declared, "reason");
   const fallback = treeSchemasMember(declared, "fallback");
@@ -99,7 +138,7 @@ function compileEnum(
     });
   }
 
-  const codeNames = codeNamesOf(values, { enums, id, pointer }, reporter);
+  const codeNames = codeNamesOf(values, { enums, id, pointer, memo }, reporter);
 
   if (failed || codeNames === undefined) return undefined;
   const summary = treeSchemasMember(declared, "summary");
@@ -138,6 +177,7 @@ function valuesOf(
   declared: TreeSchemasRaw,
   pointer: string,
   reporter: TreeSchemasReporter,
+  memo: EnumChainMemo,
 ): string[] | undefined {
   const written = treeSchemasMember(declared, "values");
   const other = treeSchemasMember(treeSchemasMember(declared, "source"), "enum");
@@ -161,7 +201,7 @@ function valuesOf(
   }
 
   if (typeof other === "string") {
-    const found = treeSchemasEnumValues(enums, id);
+    const found = treeSchemasEnumValues(enums, id, memo);
 
     if (found !== undefined && "values" in found) return found.values;
     treeSchemasReportEnumWithoutValues(
@@ -215,31 +255,70 @@ function checkFallback(
 
 // ADR 0007 sections 1 and 2: a code name replaces a value's segments, a value with none is named `value<position>`,
 // and two values with equal segments collide.
-// An enum taking another's values takes its code names too, its own winning.
+// An enum taking another's values takes its code names too, its own winning. The `source.enum` chain is walked
+// once, then folded from its root, so a long chain costs one pass and no recursion. A chain that comes back on
+// itself is refused before this runs, and its names are not kept.
 function writtenCodeNames(
   enums: TreeSchemasRaw | undefined,
   id: string,
-  seen: readonly string[] = [],
-): Map<string, { name: TreeSchemasRaw; pointer: string }> {
-  const declared = treeSchemasMember(enums, id);
-  const source = treeSchemasMember(treeSchemasMember(declared, "source"), "enum");
-  const names =
-    typeof source === "string" && !seen.includes(source)
-      ? writtenCodeNames(enums, source, [...seen, id])
-      : new Map<string, { name: TreeSchemasRaw; pointer: string }>();
+  memo: EnumChainMemo,
+): WrittenCodeNames {
+  const chain: string[] = [];
+  const before = new Set<string>();
+  let current = id;
+  let inherited: WrittenCodeNames = new Map();
+  let cyclic = false;
 
-  for (const [value, name] of treeSchemasEntries(treeSchemasMember(declared, "codeNames")))
-    names.set(value, { name, pointer: treeSchemasPointer("/enums", id, "codeNames", value) });
+  for (;;) {
+    const known = memo.codeNames.get(current);
 
-  return names;
+    if (known !== undefined) {
+      inherited = known;
+      break;
+    }
+
+    chain.push(current);
+    const source = treeSchemasMember(
+      treeSchemasMember(treeSchemasMember(enums, current), "source"),
+      "enum",
+    );
+
+    if (typeof source !== "string") break;
+    cyclic = before.has(source);
+
+    if (cyclic) break;
+    before.add(current);
+    current = source;
+  }
+
+  for (const link of chain.toReversed()) {
+    inherited = new Map(inherited);
+
+    for (const [value, name] of treeSchemasEntries(
+      treeSchemasMember(treeSchemasMember(enums, link), "codeNames"),
+    ))
+      inherited.set(value, {
+        name,
+        pointer: treeSchemasPointer("/enums", link, "codeNames", value),
+      });
+
+    if (!cyclic) memo.codeNames.set(link, inherited);
+  }
+
+  return inherited;
 }
 
 function codeNamesOf(
   values: readonly string[],
-  { enums, id, pointer }: { enums: TreeSchemasRaw | undefined; id: string; pointer: string },
+  {
+    enums,
+    id,
+    pointer,
+    memo,
+  }: { enums: TreeSchemasRaw | undefined; id: string; pointer: string; memo: EnumChainMemo },
   reporter: TreeSchemasReporter,
 ): Record<string, IrWriter.Name> | undefined {
-  const written = writtenCodeNames(enums, id);
+  const written = writtenCodeNames(enums, id, memo);
   const valuesPointer =
     treeSchemasMember(treeSchemasMember(enums, id), "values") !== undefined
       ? treeSchemasPointer(pointer, "values")
