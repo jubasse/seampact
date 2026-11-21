@@ -129,4 +129,37 @@ surfaces:
     ]);
     expect(Object.keys(draft.rights)).toEqual(["Anything"]);
   });
+
+  test("a rights pattern that can backtrack exponentially is refused before it runs on a right", () => {
+    const right = `${"a".repeat(32)}b`;
+    const { draft, diagnostics } = accessRightsRunContract(
+      accessRightsLoadFiles({
+        "api.yaml": `api: { name: shop, version: 1 }\nconventions:\n  rights: { pattern: '^(a|a)*$' }\nrights:\n  ${right}: {}\n${PING_ROUTES}`,
+      }),
+    );
+
+    expect(diagnostics.map(({ rule, origin }) => [rule, origin.pointer])).toEqual([
+      ["seampact/access/right-pattern", "/conventions/rights/pattern"],
+    ]);
+    expect(diagnostics[0]?.message).toContain(
+      "is refused: the pattern can backtrack exponentially",
+    );
+    expect(Object.keys(draft.rights)).toEqual([right]);
+  });
+
+  test("a long rights pattern is cut in the messages that quote it", () => {
+    const refused = accessRightsRunContract(
+      accessRightsLoadFiles({
+        "api.yaml": `api: { name: shop, version: 1 }\nconventions:\n  rights: { pattern: '(?=${"a".repeat(1000)})' }\nrights:\n  Anything: {}\n${PING_ROUTES}`,
+      }),
+    );
+    const unmatched = accessRightsRunContract(
+      accessRightsLoadFiles({
+        "api.yaml": `api: { name: shop, version: 1 }\nconventions:\n  rights: { pattern: '^${"a".repeat(1000)}$' }\nrights:\n  Anything: {}\n${PING_ROUTES}`,
+      }),
+    );
+
+    expect(refused.diagnostics[0]?.message.length).toBeLessThan(400);
+    expect(unmatched.diagnostics[0]?.message.length).toBeLessThan(400);
+  });
 });
