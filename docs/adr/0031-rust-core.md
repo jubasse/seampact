@@ -73,6 +73,7 @@ The server HTTP suite is ported into the binary as `seampact test`, so a JVM, PH
 - The generated code's formatting, once per language family after parity: blank lines before `return`, `if`, loops, `switch`, `try` and `throw`, after a group of declarations and after a block; per family, TypeScript and JavaScript with 2-space indents within 100 columns, PHP with 4 spaces within 120 (PSR-12), Python with 4 spaces within 88 (Black and Ruff), Java with 2 spaces within 100 (Google Java Style). The binary emits the blank lines itself; formatters keep blank lines but never add them.
 - The OpenAPI YAML text (quoting and wrapping of the YAML emitter). OpenAPI JSON keeps its bytes.
 - The gzip bytes of the bundle tarball. The integrity hash covers the file list, not the gzip stream, so existing pins keep working. Reproducibility is stated per binary version (ADR 0011).
+- The bundle manifest's `compiler` member: `{ "name": "seampact", "version": <the binary's version> }` instead of the npm compiler package's name and version. The integrity does not cover the manifest, so existing pins keep working.
 - Diagnostic message text, now from the binary's own catalogue instead of ajv. Rule ids, pointers, severities and positions stay.
 - Refusal codes: one code per fault on every stack, from one list; the troubleshooting tables are generated from it. A few codes change name.
 - Integers above 2^53, as above.
