@@ -101,6 +101,52 @@ ${DERIVE_ERRORS_PING_SURFACE}`,
     ]);
   });
 
+  test("a pattern that can backtrack exponentially is refused before it runs on a code", () => {
+    const code = `${"a".repeat(32)}b`;
+    const run = deriveErrorsRunContract(
+      deriveErrorsLoadFiles({
+        "api.yaml": `api: { name: shop, version: 1 }
+conventions: { errors: { pattern: '^(a|a)*$' } }
+errors:
+  ${code}: { status: 500 }
+${DERIVE_ERRORS_PING_SURFACE}`,
+      }),
+    );
+
+    expect(run.diagnostics.map(deriveErrorsLocated)).toEqual([
+      {
+        rule: "seampact/derive/error-pattern",
+        pointer: "/conventions/errors/pattern",
+        related: [],
+      },
+    ]);
+    expect(run.diagnostics[0]?.message).toContain(
+      "is refused: the pattern can backtrack exponentially",
+    );
+  });
+
+  test("a pattern outside the portable subset is refused at the convention, cut in the message", () => {
+    const run = deriveErrorsRunContract(
+      deriveErrorsLoadFiles({
+        "api.yaml": `api: { name: shop, version: 1 }
+conventions: { errors: { pattern: '(?=${"a".repeat(1000)})' } }
+errors:
+  shop.failed: { status: 500 }
+${DERIVE_ERRORS_PING_SURFACE}`,
+      }),
+    );
+
+    expect(run.diagnostics.map(deriveErrorsLocated)).toEqual([
+      {
+        rule: "seampact/derive/error-pattern",
+        pointer: "/conventions/errors/pattern",
+        related: [],
+      },
+    ]);
+    expect(run.diagnostics[0]?.message).toContain("is refused: the pattern is not portable");
+    expect(run.diagnostics[0]?.message.length).toBeLessThan(400);
+  });
+
   test("an example missing a required param is located at the example", () => {
     const run = deriveErrorsRunContract(
       deriveErrorsLoadFiles({

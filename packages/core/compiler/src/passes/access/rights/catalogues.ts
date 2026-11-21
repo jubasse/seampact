@@ -1,6 +1,7 @@
 import type { IrWriter } from "@seampact/spec/ir";
 import { segmentsOf, splitName } from "@seampact/spec/naming";
 import { pipelineParseDuration, pipelinePointerBelow } from "../../../pipeline/seam.js";
+import { treeSchemasNormalizePattern } from "../../tree/schemas/index.js";
 import {
   type AccessRightsRawObject,
   type AccessRightsRawValue,
@@ -160,12 +161,25 @@ function rightPatternOf(
 
   if (typeof written !== "string") return undefined;
 
+  const normalized = treeSchemasNormalizePattern(written);
+
+  if (!normalized.ok) {
+    reporter.error({
+      rule: "right-pattern",
+      message: `conventions.rights.pattern '${accessRightsQuoted(written)}' is refused: ${normalized.message}`,
+      fix: normalized.fix,
+      pointer: RIGHT_PATTERN_POINTER,
+    });
+
+    return undefined;
+  }
+
   try {
     return { pattern: new RegExp(written, "u"), pointer: RIGHT_PATTERN_POINTER };
   } catch (error) {
     reporter.error({
       rule: "right-pattern",
-      message: `conventions.rights.pattern '${written}' is no regular expression: ${String(error)}`,
+      message: `conventions.rights.pattern '${accessRightsQuoted(written)}' is no regular expression: ${accessRightsQuoted(String(error))}`,
       fix: "write a regular expression every right name must match",
       pointer: RIGHT_PATTERN_POINTER,
     });
@@ -193,7 +207,7 @@ export function accessRightsCheckName(
   if (rightPattern !== undefined && !rightPattern.pattern.test(id)) {
     reporter.error({
       rule: "right-pattern",
-      message: `right '${id}' does not match conventions.rights.pattern '${rightPattern.pattern.source}'`,
+      message: `right '${id}' does not match conventions.rights.pattern '${accessRightsQuoted(rightPattern.pattern.source)}'`,
       fix: "rename the right to match the pattern, or change the pattern",
       pointer,
       related: [{ pointer: rightPattern.pointer, message: "the pattern is set here" }],
