@@ -75,6 +75,35 @@ describe("portable patterns", () => {
   });
 
   test.each([
+    "a*a*a*a*a*a*a*a*a*a*a*a*a*a*b",
+    "^a+a+b$",
+    "^\\d+\\.?\\d*$",
+    "^(a*)(a*)b$",
+    "^a*(?:x?)a*b$",
+    "^[a-c]*[b-d]?$",
+    "^(?:a|b)*[ab]{1,3}$",
+  ])("%s is refused as backtracking polynomially", (source) => {
+    const result = treeSchemasNormalizePattern(source);
+
+    expect(result).toMatchObject({ ok: false, fix: expect.stringContaining("A45") });
+
+    if (!result.ok) expect(result.message).toContain("backtrack polynomially");
+  });
+
+  test.each([
+    "^a*b*$",
+    "^[a-z]*[0-9]+$",
+    "^[a-z]+-[a-z]+$",
+    "^\\d+(?:\\.\\d+)?$",
+    "^\\d{1,3}(?:,\\d{3})*$",
+    "^a*ba*$",
+    "^a*a$",
+    "^-?\\d+$",
+  ])("%s keeps its repetitions apart and stays accepted", (source) => {
+    expect(treeSchemasNormalizePattern(source).ok).toBe(true);
+  });
+
+  test.each([
     "^[a-z0-9]+(?:-[a-z0-9]+)*$",
     "(\\d+,)*",
     "^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]{2,}$",
