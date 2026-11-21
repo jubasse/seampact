@@ -374,6 +374,9 @@ fn a_pattern_is_normalised_by_code_point_and_refused_with_its_fix() {
 const CHAIN_LINKS: usize = 100_000;
 const SMALL_STACK_BYTES: usize = 2 * 1024 * 1024;
 const CHAIN_BUDGET: Duration = Duration::from_secs(5);
+/// A compile of 100,000 links takes about a second alone and several under a loaded run; a walk
+/// that repeats per link takes far longer.
+const COMPILE_CHAIN_BUDGET: Duration = Duration::from_secs(30);
 
 /// Runs `work` on a thread with a 2 MiB stack, as a host thread may have, and returns its answer.
 fn on_small_stack<T: Send + 'static>(work: impl FnOnce() -> T + Send + 'static) -> T {
@@ -403,7 +406,10 @@ fn a_long_alias_chain_reaches_its_object_without_overflowing_the_stack() {
 
     assert_eq!(messages, Vec::<String>::new());
     assert!(schemas.contains_key("Holder"));
-    assert!(elapsed < CHAIN_BUDGET, "alias chain took {elapsed:?}");
+    assert!(
+        elapsed < COMPILE_CHAIN_BUDGET,
+        "alias chain took {elapsed:?}"
+    );
 }
 
 #[test]
