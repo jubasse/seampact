@@ -18,6 +18,9 @@ mod rule_ids;
 mod run;
 mod subject;
 mod time_limit;
+mod tool_cases;
+mod tool_compare;
+mod tool_subject;
 mod verdict;
 mod yaml_value;
 
@@ -47,5 +50,18 @@ pub use subject::{
     SubjectAnswer,
 };
 pub use time_limit::TimeLimitAction;
+pub use tool_cases::{
+    BundleCase, CASE_TODAY, CliCase, DiffCase, ExpectedTranscript, ExpectedWrittenFile, MergeCase,
+    MergeCaseInput, RecordedToolFile, Tool, read_bundle_case, read_cli_case, read_diff_case,
+    read_expected_transcript, read_merge_case, read_recorded_tool_file,
+};
+pub use tool_compare::{
+    BUNDLE_MANIFEST_FILE, line_mismatches, manifest_mismatches, normalized_manifest, sha256_hex,
+    written_mismatches, yaml_mismatches,
+};
+pub use tool_subject::{
+    BundleAnswer, DiffAnswer, OpenApiAnswer, RecordedAnswer, RecordedToolCall, RecordedUnit,
+    ToolSubject, Transcript,
+};
 pub use verdict::{FirstFailure, ServiceCalls, Verdict};
 pub use yaml_value::yaml_to_json;
