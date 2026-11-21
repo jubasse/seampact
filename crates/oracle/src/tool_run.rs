@@ -321,6 +321,7 @@ impl ToolRun<'_> {
             })
             .collect();
 
+        apis.sort_unstable();
         apis.dedup();
 
         if let [api] = apis.as_slice() {
