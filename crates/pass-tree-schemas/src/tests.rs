@@ -14,6 +14,7 @@ use seampact_pipeline::testing::{HalfFixture, raw_api_from_json};
 use crate::compile::TreeSchemasCompiler;
 use crate::decimal::{TreeSchemasDecimal, TreeSchemasDecimalSource, tree_schemas_decimal_of};
 use crate::directions::{DirectionHolder, directions_at, tree_schemas_write_directions, within};
+use crate::enums::tree_schemas_compile_enums;
 use crate::example_check::TreeSchemasExampleChecker;
 use crate::extensions::{
     extension_key_parts, tree_schemas_extension_slot, tree_schemas_has_extensions,
@@ -470,4 +471,40 @@ fn a_long_object_chain_gives_its_directions_to_every_link() {
         elapsed < CHAIN_BUDGET,
         "the directions walk took {elapsed:?}"
     );
+}
+
+#[test]
+fn a_long_source_enum_chain_is_followed_once_not_once_per_link() {
+    const LINKS: usize = 1_000;
+
+    let links: Vec<String> = (1..LINKS)
+        .map(|index| format!(r#""E{index}":{{"source":{{"enum":"E{}"}}}}"#, index - 1))
+        .collect();
+    let text = format!(
+        r#"{{"enums":{{"E0":{{"values":["a","b"],"codeNames":{{"a":"Alpha"}},"reason":"local"}},{}}}}}"#,
+        links.join(",")
+    );
+    let mut fixture = HalfFixture::from_json(&text).expect("fixture");
+    let (compiled, messages, elapsed) = fixture
+        .with_context(|context| {
+            let merged = &context.raw.merged;
+            let mut reporter = TreeSchemasReporter::new(context);
+            let started = Instant::now();
+            let compiled = tree_schemas_compile_enums(merged.get("enums"), &mut reporter);
+
+            (compiled, reporter.into_reported(), started.elapsed())
+        })
+        .expect("context");
+    let compiled = compiled.expect("enums");
+    let last = compiled.last().expect("the last link");
+
+    assert_eq!(messages.len(), 0);
+    assert_eq!(compiled.len(), LINKS);
+    assert_eq!(last.values, ["a", "b"]);
+    assert!(
+        last.code_names
+            .as_ref()
+            .is_some_and(|names| names.get("a").is_some())
+    );
+    assert!(elapsed < CHAIN_BUDGET, "enum chain took {elapsed:?}");
 }

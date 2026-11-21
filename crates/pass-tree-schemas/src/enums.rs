@@ -1,7 +1,8 @@
 //! The enums catalogue: values in written order, their source or local reason, code names and
 //! fallback. An enum taking another's values (`source.enum`) holds them as its own.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::mem;
 
 use indexmap::IndexMap;
 use seampact_diagnostics::InternalError;
@@ -55,38 +56,76 @@ fn strings(value: Option<&JsonValue>) -> Vec<String> {
         .collect()
 }
 
-/// The values of the enum `name`, following `source.enum` through `path`; `None` when it has none.
-pub(crate) fn tree_schemas_enum_values(
-    enums: Option<&JsonValue>,
-    name: &str,
-    path: &[String],
-) -> Option<EnumValues> {
-    if let Some(at) = path.iter().position(|followed| followed == name) {
-        let mut cycle: Vec<String> = path.iter().skip(at).cloned().collect();
+/// What an enum chain already resolved: the values each enum ends on and the code names each one
+/// inherits, so each chain of a catalogue is walked once.
+#[derive(Debug, Default)]
+pub(crate) struct EnumChainMemo<'raw> {
+    values: HashMap<String, Option<Vec<String>>>,
+    code_names: HashMap<String, IndexMap<String, WrittenCodeName<'raw>>>,
+}
 
-        cycle.push(name.to_owned());
+/// Where a chain stops at one enum: its own values, none, or the enum it takes its values from.
+enum ChainStep {
+    End(Option<Vec<String>>),
+    Next(String),
+}
 
-        return Some(EnumValues::Cycle(cycle));
-    }
-
+fn chain_step(enums: Option<&JsonValue>, name: &str) -> ChainStep {
     let declared = tree_schemas_member(enums, name);
     let values = tree_schemas_member(declared, "values");
 
     if let Some(JsonValue::Array(_)) = values {
-        return Some(EnumValues::Values(strings(values)));
+        return ChainStep::End(Some(strings(values)));
     }
 
-    let source = tree_schemas_member(tree_schemas_member(declared, "source"), "enum");
+    match tree_schemas_member(tree_schemas_member(declared, "source"), "enum") {
+        Some(JsonValue::String(other)) => ChainStep::Next(other.clone()),
+        _ => ChainStep::End(None),
+    }
+}
 
-    match source {
-        Some(JsonValue::String(other)) => {
-            let mut followed = path.to_vec();
+/// The values of the enum `name`, followed through `source.enum` with a list, never by recursion;
+/// `None` when it has none. `memo` keeps the enums of a catalogue already resolved.
+pub(crate) fn tree_schemas_enum_values(
+    enums: Option<&JsonValue>,
+    name: &str,
+    memo: &mut EnumChainMemo<'_>,
+) -> Option<EnumValues> {
+    let mut path: Vec<String> = Vec::new();
+    let mut on_path: HashSet<String> = HashSet::new();
+    let mut current = name.to_owned();
 
-            followed.push(name.to_owned());
+    loop {
+        if on_path.contains(&current) {
+            let mut cycle: Vec<String> = path
+                .iter()
+                .skip_while(|followed| **followed != current)
+                .cloned()
+                .collect();
 
-            tree_schemas_enum_values(enums, other, &followed)
+            cycle.push(current);
+
+            return Some(EnumValues::Cycle(cycle));
         }
-        _ => None,
+
+        let step = match memo.values.get(&current) {
+            Some(end) => ChainStep::End(end.clone()),
+            None => chain_step(enums, &current),
+        };
+
+        match step {
+            ChainStep::End(end) => {
+                for link in path.into_iter().chain([current]) {
+                    memo.values.insert(link, end.clone());
+                }
+
+                return end.map(EnumValues::Values);
+            }
+            ChainStep::Next(next) => {
+                on_path.insert(current.clone());
+                path.push(mem::replace(&mut current, next));
+            }
+        }
     }
 }
 
@@ -124,9 +163,10 @@ pub(crate) fn tree_schemas_compile_enums(
     reporter: &mut TreeSchemasReporter<'_, '_>,
 ) -> Result<Vec<Enum>, PassError> {
     let mut compiled = Vec::new();
+    let mut memo = EnumChainMemo::default();
 
     for (id, declared) in tree_schemas_entries(enums) {
-        if let Some(declared_enum) = compile_enum(enums, id, declared, reporter)? {
+        if let Some(declared_enum) = compile_enum(enums, id, declared, reporter, &mut memo)? {
             compiled.push(declared_enum);
         }
     }
@@ -134,14 +174,15 @@ pub(crate) fn tree_schemas_compile_enums(
     Ok(compiled)
 }
 
-fn compile_enum(
-    enums: Option<&JsonValue>,
+fn compile_enum<'raw>(
+    enums: Option<&'raw JsonValue>,
     id: &str,
     declared: &JsonValue,
     reporter: &mut TreeSchemasReporter<'_, '_>,
+    memo: &mut EnumChainMemo<'raw>,
 ) -> Result<Option<Enum>, PassError> {
     let pointer = tree_schemas_pointer("/enums", &[id]);
-    let values = values_of(enums, id, declared, &pointer, reporter)?;
+    let values = values_of(enums, id, declared, &pointer, reporter, memo)?;
     let source = source_of(declared);
     let reason = tree_schemas_member(Some(declared), "reason");
     let fallback = tree_schemas_member(Some(declared), "fallback");
@@ -172,6 +213,7 @@ fn compile_enum(
             pointer: &pointer,
         },
         reporter,
+        memo,
     )?;
 
     let Some(code_names) = code_names else {
@@ -253,6 +295,7 @@ fn values_of(
     declared: &JsonValue,
     pointer: &str,
     reporter: &mut TreeSchemasReporter<'_, '_>,
+    memo: &mut EnumChainMemo<'_>,
 ) -> Result<Option<Vec<String>>, PassError> {
     let written = tree_schemas_member(Some(declared), "values");
     let other = match tree_schemas_member(tree_schemas_member(Some(declared), "source"), "enum") {
@@ -284,7 +327,7 @@ fn values_of(
     }
 
     if let Some(other) = other {
-        let found = tree_schemas_enum_values(enums, id, &[]);
+        let found = tree_schemas_enum_values(enums, id, memo);
 
         if let Some(EnumValues::Values(values)) = found {
             return Ok(Some(values));
@@ -362,45 +405,74 @@ fn check_fallback(
 
 // ADR 0007 sections 1 and 2: a code name replaces a value's segments, a value with none is named
 // `value<position>`, and two values with equal segments collide. An enum taking another's values
-// takes its code names too, its own winning.
+// takes its code names too, its own winning. The `source.enum` chain is walked once, then folded
+// from its root, so a long chain costs one pass and no recursion. A chain that comes back on itself
+// is refused before this runs, and its names are not kept.
 fn written_code_names<'raw>(
     enums: Option<&'raw JsonValue>,
     id: &str,
-    seen: &[String],
+    memo: &mut EnumChainMemo<'raw>,
 ) -> IndexMap<String, WrittenCodeName<'raw>> {
-    let declared = tree_schemas_member(enums, id);
-    let source = tree_schemas_member(tree_schemas_member(declared, "source"), "enum");
-    let mut names = match source {
-        Some(JsonValue::String(other)) if !seen.contains(other) => {
-            let mut followed = seen.to_vec();
+    let mut chain: Vec<String> = Vec::new();
+    let mut before: HashSet<String> = HashSet::new();
+    let mut current = id.to_owned();
+    let mut inherited: IndexMap<String, WrittenCodeName<'raw>> = IndexMap::new();
+    let mut cyclic = false;
 
-            followed.push(id.to_owned());
+    loop {
+        if let Some(known) = memo.code_names.get(&current) {
+            inherited.clone_from(known);
 
-            written_code_names(enums, other, &followed)
+            break;
         }
-        _ => IndexMap::new(),
-    };
 
-    for (value, name) in tree_schemas_entries(tree_schemas_member(declared, "codeNames")) {
-        names.insert(
-            value.to_owned(),
-            WrittenCodeName {
-                name,
-                pointer: tree_schemas_pointer("/enums", &[id, "codeNames", value]),
-            },
-        );
+        chain.push(current.clone());
+
+        let declared = tree_schemas_member(enums, &current);
+        let Some(JsonValue::String(source)) =
+            tree_schemas_member(tree_schemas_member(declared, "source"), "enum")
+        else {
+            break;
+        };
+
+        cyclic = before.contains(source);
+
+        if cyclic {
+            break;
+        }
+
+        before.insert(mem::replace(&mut current, source.clone()));
     }
 
-    names
+    for link in chain.into_iter().rev() {
+        let declared = tree_schemas_member(enums, &link);
+
+        for (value, name) in tree_schemas_entries(tree_schemas_member(declared, "codeNames")) {
+            inherited.insert(
+                value.to_owned(),
+                WrittenCodeName {
+                    name,
+                    pointer: tree_schemas_pointer("/enums", &[&link, "codeNames", value]),
+                },
+            );
+        }
+
+        if !cyclic {
+            memo.code_names.insert(link, inherited.clone());
+        }
+    }
+
+    inherited
 }
 
-fn code_names_of(
+fn code_names_of<'raw>(
     values: &[String],
-    site: CodeNamesSite<'_, '_>,
+    site: CodeNamesSite<'raw, '_>,
     reporter: &mut TreeSchemasReporter<'_, '_>,
+    memo: &mut EnumChainMemo<'raw>,
 ) -> Result<Option<IndexMap<String, Name>>, PassError> {
     let CodeNamesSite { enums, id, pointer } = site;
-    let written = written_code_names(enums, id, &[]);
+    let written = written_code_names(enums, id, memo);
     let values_pointer = if tree_schemas_member(tree_schemas_member(enums, id), "values").is_some()
     {
         tree_schemas_pointer(pointer, &["values"])

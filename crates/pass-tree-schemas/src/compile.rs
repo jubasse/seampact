@@ -26,7 +26,9 @@ use seampact_pipeline::{PassError, parse_size};
 
 use crate::core::TreeSchemasReservation;
 use crate::derived::{TreeSchemasDerivedHost, tree_schemas_derived_properties};
-use crate::enums::{EnumValues, tree_schemas_enum_values, tree_schemas_report_enum_without_values};
+use crate::enums::{
+    EnumChainMemo, EnumValues, tree_schemas_enum_values, tree_schemas_report_enum_without_values,
+};
 use crate::extensions::{
     TreeSchemasExtensionHolder, tree_schemas_extension_slot, tree_schemas_has_extensions,
 };
@@ -2694,7 +2696,7 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
             Some(JsonValue::String(name)) => name.as_str(),
             _ => guaranteed_string(tree_schemas_member(written, "narrow"), "narrow", pointer)?,
         };
-        let found = tree_schemas_enum_values(self.enums, name, &[]);
+        let found = tree_schemas_enum_values(self.enums, name, &mut EnumChainMemo::default());
         let values = match &found {
             Some(EnumValues::Values(values)) => values,
             Some(EnumValues::Cycle(_)) | None => {
