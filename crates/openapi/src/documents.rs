@@ -1,10 +1,9 @@
 //! The OpenAPI documents of one api.
 
 use indexmap::{IndexMap, IndexSet};
-use seampact_diagnostics::InternalError;
 use seampact_ir::{
     ApiDocument, ContractIr, DocumentId, IR_REVISION, IR_VERSION, InternalPolicy, IrSupport,
-    KnownApiVersionRef, Operation, OperationId, check_ir_support,
+    KnownApiVersionRef, Operation, check_contract_ir_support,
 };
 use seampact_js::cmp_utf16;
 use seampact_json::{JsonObject, JsonValue};
@@ -74,7 +73,7 @@ pub fn emit_documents(
     ir: &ContractIr,
     options: &EmitterOptions,
 ) -> Result<EmitOutcome, OpenApiError> {
-    let unsupported = unsupported_ir_refusals(ir)?;
+    let unsupported = unsupported_ir_refusals(ir);
 
     if !unsupported.is_empty() {
         return Ok(EmitOutcome::Refused(unsupported));
@@ -128,14 +127,7 @@ pub(crate) fn every_surface_selection(ir: &ContractIr) -> ApiDocument {
 }
 
 /// The refusals of an IR this emitter's release does not support.
-///
-/// # Errors
-///
-/// [`OpenApiError::Internal`] when the IR does not encode as JSON.
-pub(crate) fn unsupported_ir_refusals(ir: &ContractIr) -> Result<Vec<Refusal>, OpenApiError> {
-    let document = ir
-        .to_json_value()
-        .map_err(|error| InternalError::new(format!("the IR does not encode: {error}")))?;
+pub(crate) fn unsupported_ir_refusals(ir: &ContractIr) -> Vec<Refusal> {
     let support = IrSupport {
         ir_versions: &[IR_VERSION],
         ir_revision: IR_REVISION,
@@ -143,17 +135,17 @@ pub(crate) fn unsupported_ir_refusals(ir: &ContractIr) -> Result<Vec<Refusal>, O
         features: &[],
     };
 
-    Ok(check_ir_support(&document, &support)
+    check_contract_ir_support(ir, &support)
         .into_iter()
         .map(|mismatch| Refusal {
             code: mismatch.code.as_str().to_owned(),
             message: mismatch.message,
             fix: UNSUPPORTED_IR_FIX.to_owned(),
-            operation: mismatch.operation.map(OperationId::new),
+            operation: mismatch.operation,
             member: Some(mismatch.member),
             docs: None,
         })
-        .collect())
+        .collect()
 }
 
 /// One planned document and the refusals met while writing it.
@@ -581,11 +573,11 @@ mod tests {
     -> Result<(), Box<dyn std::error::Error>> {
         let mut ir = fixture_ir()?;
 
-        assert_eq!(unsupported_ir_refusals(&ir)?, Vec::new());
+        assert_eq!(unsupported_ir_refusals(&ir), Vec::new());
 
         ir.ir_revision += 1;
 
-        let refusals = unsupported_ir_refusals(&ir)?;
+        let refusals = unsupported_ir_refusals(&ir);
 
         assert_eq!(
             refusals
