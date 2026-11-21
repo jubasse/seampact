@@ -13,15 +13,19 @@ pub struct IrLocation {
 }
 
 impl IrLocation {
+    /// The location of the document root, below which a format or a scheme is addressed.
+    #[must_use]
+    pub fn root() -> Self {
+        Self {
+            member: String::new(),
+            operation: None,
+        }
+    }
+
     /// The location of the schema `schema_id`: `/schemas/<schema id>`.
     #[must_use]
     pub fn schema_location(schema_id: &str) -> Self {
-        let root = Self {
-            member: String::new(),
-            operation: None,
-        };
-
-        root.below(&["schemas", schema_id])
+        Self::root().below(&["schemas", schema_id])
     }
 
     /// The location of the operation at `operation_index` of the IR's `operations`.

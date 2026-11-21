@@ -8,7 +8,7 @@ use seampact_target::{IrLocation, NotGeneratedForm};
 use crate::body_slots::{EmittedShape, PAYLOAD_SLOT, add_meta_slot, success_slots};
 use crate::emit_context::{
     EmitContext, SchemaVariant, refuse_inconsistent, refuse_not_emitted, refuse_unknown,
-    root_location, write_extension,
+    write_extension,
 };
 use crate::examples::{ExampleSet, response_examples};
 use crate::json_value::text_value;
@@ -159,7 +159,7 @@ fn response_body_schema(
     };
     let success_shape = shape.success_of(&format.success);
     let format_location =
-        root_location().below(&["formats", format.id.as_str(), "success", shape.as_str()]);
+        IrLocation::root().below(&["formats", format.id.as_str(), "success", shape.as_str()]);
 
     if !success_shape.headers.is_empty() {
         refuse_not_emitted(

@@ -11,7 +11,7 @@ use seampact_target::IrLocation;
 use crate::ExtensionName;
 use crate::OpenApiError;
 use crate::emit_context::{
-    EmitContext, reason_value, refuse_inconsistent, refuse_unknown, root_location, write_extension,
+    EmitContext, reason_value, refuse_inconsistent, refuse_unknown, write_extension,
 };
 use crate::json_value::text_value;
 use crate::not_ported::not_ported_yet;
@@ -79,7 +79,7 @@ pub(crate) fn security_schemes_component(
     ids.sort_by(|left, right| cmp_utf16(left.as_str(), right.as_str()));
 
     for id in ids {
-        let location = root_location().below(&["schemes", id.as_str()]);
+        let location = IrLocation::root().below(&["schemes", id.as_str()]);
 
         // A missing scheme was refused where an operation named it.
         let Some(scheme) = ir.schemes.get(id.as_str()) else {
