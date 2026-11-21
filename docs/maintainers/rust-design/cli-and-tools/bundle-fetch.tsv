@@ -22,7 +22,6 @@ brief	function	file	lines	size	pairs
 1	asTheUrlParserReadsIt	compiler/src/bundle/printable-url.ts	48-58	11	0/0
 1	isControlOrSpace	compiler/src/bundle/printable-url.ts	60-62	3	0/0
 1	installedBundlePackage	compiler/src/bundle/fetch-package.ts	17-43	27	0/0
-1	installedPackageDirectory	compiler/src/bundle/fetch-package.ts	46-54	9	0/0
 1	installedVersion	compiler/src/bundle/fetch-package.ts	56-64	9	0/0
 1	gitSourceProblem	compiler/src/bundle/fetch-git.ts	62-90	29	0/0
 1	fetchGitBundle	compiler/src/bundle/fetch-git.ts	93-129	37	0/0

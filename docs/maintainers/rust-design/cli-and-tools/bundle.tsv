@@ -91,3 +91,4 @@ brief	function	file	lines	size	pairs
 2	checkIntegrity	compiler/src/bundle/verify.ts	246-279	34	0/0
 2	findLocalPackageSources	compiler/src/bundle/local-packages.ts	25-47	23	0/0
 2	dependencySpecs	compiler/src/bundle/local-packages.ts	50-73	24	0/0
+2	installedPackageDirectory	compiler/src/bundle/fetch-package.ts	46-54	9	0/0

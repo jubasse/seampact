@@ -37,6 +37,8 @@ export interface ToolCrateSpec {
   sources: readonly string[];
   /** `file#function` or `file#*` not ported here: removed, ported in another crate, or waiting for a later layer. */
   skipped?: readonly string[];
+  /** `file#function` of files outside the sources, ported here. */
+  movedIn?: readonly string[];
 }
 
 const CODEGEN_CORE = "codegen-core/src/";
@@ -133,6 +135,7 @@ export const TOOL_CRATES: readonly ToolCrateSpec[] = [
       `${BUNDLE}verify.ts`,
       `${BUNDLE}local-packages.ts`,
     ],
+    movedIn: [`${BUNDLE}fetch-package.ts#installedPackageDirectory`],
   },
   {
     crate: "bundle-fetch",
@@ -148,6 +151,7 @@ export const TOOL_CRATES: readonly ToolCrateSpec[] = [
       `${BUNDLE}fetch-git.ts`,
       `${BUNDLE}fetch-release.ts`,
     ],
+    skipped: [`${BUNDLE}fetch-package.ts#installedPackageDirectory`],
   },
   {
     crate: "cli-config",
@@ -164,8 +168,6 @@ export const TOOL_CRATES: readonly ToolCrateSpec[] = [
       `${CONFIG}read-root-config.ts`,
       `${CONFIG}read-workspace-configs.ts`,
       `${CONFIG}read-run-config.ts`,
-      `${CONFIG}artefact-switches.ts`,
-      `${CONFIG}document-plan.ts`,
       `${CONFIG}resolve-target.ts`,
       `${CONFIG}compatibility-check.ts`,
       `${CONFIG}installed-version.ts`,
@@ -176,6 +178,12 @@ export const TOOL_CRATES: readonly ToolCrateSpec[] = [
       `${CONFIG}compatibility-check.ts#*`,
       `${CONFIG}installed-version.ts#*`,
       `${CONFIG}package-manager.ts#*`,
+    ],
+    // The rest of these two files reads generator types and only `generate` and `check` reach it.
+    movedIn: [
+      `${CONFIG}artefact-switches.ts#isFrameworkRouteCheckOff`,
+      `${CONFIG}artefact-switches.ts#frameworkRoutesSwitchOf`,
+      `${CONFIG}document-plan.ts#openApiApiNames`,
     ],
   },
   { crate: "editor-schemas", pairs: "pending", sources: [`${CLI}editor-schemas/`] },
@@ -212,7 +220,7 @@ export const TOOL_CRATES: readonly ToolCrateSpec[] = [
   },
 ];
 
-/** The commands and config files of `generate` and `check`, ported with the generator layer. */
+/** The files of `generate` and `check`, ported with the generator layer (two config files but the functions `cli-config` moves in). */
 export const LATER_LAYER_SOURCES: readonly string[] = [
   `${COMMANDS}app-plan.ts`,
   `${COMMANDS}run-preparation.ts`,
@@ -233,6 +241,8 @@ export const LATER_LAYER_SOURCES: readonly string[] = [
   `${COMMANDS}filter-operations.ts`,
   `${COMMANDS}generate-command.ts`,
   `${COMMANDS}check-command.ts`,
+  `${CONFIG}artefact-switches.ts`,
+  `${CONFIG}document-plan.ts`,
 ];
 
 // A path under `packages/core/` with tests and test support left out.
@@ -279,6 +289,25 @@ export function toolUnitsOf(spec: ToolCrateSpec): FunctionUnit[] {
         lines: found.endLine - found.startLine + 1,
       });
     }
+  }
+
+  for (const moved of spec.movedIn ?? []) {
+    const [file = "", name = ""] = moved.split("#");
+    const path = join(PACKAGES, file);
+    const found = listTypeScriptFunctionRanges(path, readFileSync(path, "utf8")).find(
+      (candidate) => candidate.name === name,
+    );
+
+    if (found === undefined) throw new Error(`${spec.crate}: ${moved} names no function`);
+
+    units.push({
+      id: units.length,
+      file,
+      name,
+      startLine: found.startLine,
+      endLine: found.endLine,
+      lines: found.endLine - found.startLine + 1,
+    });
   }
 
   return units;
