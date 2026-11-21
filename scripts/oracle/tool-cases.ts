@@ -155,9 +155,9 @@ function sideIrs(cache: CompileCache, caseDirectory: string, name: string, where
   const irFile = join(caseDirectory, `${name}.ir.json`);
 
   if (existsSync(irFile)) {
-    const ir = readCaseJson(caseDirectory, `${name}.ir.json`) as { api: { name: string } };
+    const ir = readCaseJson(caseDirectory, `${name}.ir.json`) as { api: { id: string } };
 
-    return new Map([[ir.api.name, ir]]);
+    return new Map([[ir.api.id, ir]]);
   }
 
   const { apis } = cache.compile(join(caseDirectory, name));
