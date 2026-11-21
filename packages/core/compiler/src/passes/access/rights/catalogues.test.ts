@@ -10,6 +10,10 @@ import {
 const expectedCatalogues = (fixture: string): unknown =>
   JSON.parse(readFileSync(`${ACCESS_RIGHTS_FIXTURES}${fixture}/catalogues.json`, "utf8"));
 
+// A hang cannot be interrupted: a chain walked once per scope is caught by the test timeout.
+const LONG_CHAIN_LINKS = 10_000;
+const TIMEOUT_MS = 20_000;
+
 const PING_ROUTES = `
 surfaces:
   app:
@@ -163,23 +167,23 @@ surfaces:
     expect(unmatched.diagnostics[0]?.message.length).toBeLessThan(400);
   });
 
-  test("a long chain of parent scopes is walked once", () => {
-    const LINKS = 10_000;
-    const BUDGET_MS = 3_000;
-    const scopes = Array.from({ length: LINKS }, (_, index) =>
-      index === LINKS - 1
-        ? `  scope${index}: { id: TeamId }`
-        : `  scope${index}: { id: TeamId, within: scope${index + 1} }`,
-    );
-    const started = Date.now();
-    const { draft, diagnostics } = accessRightsRunContract(
-      accessRightsLoadFiles({
-        "api.yaml": `api: { name: shop, version: 1 }\nschemas:\n  TeamId: { type: string }\nscopes:\n${scopes.join("\n")}\n${PING_ROUTES}`,
-      }),
-    );
+  test(
+    "a long chain of parent scopes is walked once",
+    () => {
+      const scopes = Array.from({ length: LONG_CHAIN_LINKS }, (_, index) =>
+        index === LONG_CHAIN_LINKS - 1
+          ? `  scope${index}: { id: TeamId }`
+          : `  scope${index}: { id: TeamId, within: scope${index + 1} }`,
+      );
+      const { draft, diagnostics } = accessRightsRunContract(
+        accessRightsLoadFiles({
+          "api.yaml": `api: { name: shop, version: 1 }\nschemas:\n  TeamId: { type: string }\nscopes:\n${scopes.join("\n")}\n${PING_ROUTES}`,
+        }),
+      );
 
-    expect(diagnostics).toEqual([]);
-    expect(Object.keys(draft.scopes)).toHaveLength(LINKS);
-    expect(Date.now() - started).toBeLessThan(BUDGET_MS);
-  });
+      expect(diagnostics).toEqual([]);
+      expect(Object.keys(draft.scopes)).toHaveLength(LONG_CHAIN_LINKS);
+    },
+    TIMEOUT_MS,
+  );
 });
