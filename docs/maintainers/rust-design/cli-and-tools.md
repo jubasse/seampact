@@ -208,20 +208,20 @@ Merges after seam T, rebased, with the oracle reading the real expected files (e
 
 - `scripts/rust/tools-coverage.ts` writes one TSV per crate in `docs/maintainers/rust-design/cli-and-tools/` (`<crate>.tsv`, the columns of passes.md section 6). It reuses `cutBriefs`, `coverageTable`, `pairsOf` and `CoverageProbe` of `pass-coverage.ts`; its crate list is section 2, its skips section 1.
 - Rerun: `node --experimental-transform-types --no-warnings --import ./scripts/ir-models/register.ts scripts/rust/tools-coverage.ts`.
-- A pair is one OpenAPI emit of a (fixture, api) today; seam T adds one pair per lint, diff-table, diff, bundle, recorded call and CLI case. Until then the pending tables have no pair, and their briefs are cut in the order of the crate's `sources` (entry first, then the files in call order). Seam T's rerun recuts every brief of the pending crates (`diff-table`, `diff`, `lint`, `bundle`, `bundle-fetch`, `cli-config`, `editor-schemas`, `cli`), brief 1 included, since `cutBriefs` recomputes the spine; no lane of them starts before it.
+- A pair is one run of a case's writer: an OpenAPI emit of a (fixture, api), a converted IR or a merge case; a lint of a fixture api; a diff, bundle or CLI case; the one `diff-table` case. A CLI case is also a pair of `bundle-fetch`, `cli-config` and `editor-schemas`: the whole run is measured, not only the recorded calls. Every table is cut from its pairs; the briefs of the pending crates were recut when seam T landed.
 
 | Crate | Function lines | Skeleton (Rust lines, estimate) | Briefs | Lines per brief | Pairs comparable after each brief |
 |---|---|---|---|---|---|
-| `target` | 119 | 225 | in seam R | 119 | 258 of 306 reach it |
-| `openapi` | 3,613 | 2,610 | 4 | 693 955 992 973 | 48 48 299 306 of 306 |
-| `diff-table` | 71 (plus about 1,100 lines of table data) | 105 | 1 | 71 | pending |
-| `diff` | 3,957 | 2,655 | 5 | 643 988 967 1,000 359 | pending |
-| `lint` | 548 | 690 | 1 | 548 | pending |
-| `bundle` | 1,516 | 1,395 | 2 | 986 530 | pending |
-| `bundle-fetch` | 685 | 675 | 1 | 685 | pending |
-| `cli-config` | 1,077 | 1,005 | 2 | 999 78 | pending |
-| `editor-schemas` | 246 | 345 | 1 | 246 | pending |
-| `cli` | 2,129 | 2,085 | 3 | 925 957 247 | pending |
+| `target` | 119 | 225 | in seam R | 119 | 289 of 339 reach it |
+| `openapi` | 3,613 | 2,610 | 4 | 672 986 999 956 | 49 49 321 339 of 339 |
+| `diff-table` | 71 (plus about 1,100 lines of table data) | 105 | 1 | 71 | no pair: its one case reads the table data |
+| `diff` | 3,957 | 2,655 | 5 | 667 982 992 989 327 | 2 9 9 9 9 of 9 |
+| `lint` | 548 | 690 | 1 | 548 | 332 of 332 |
+| `bundle` | 1,516 | 1,395 | 2 | 986 530 | 6 6 of 6 |
+| `bundle-fetch` | 685 | 675 | 1 | 685 | 21 of 21 |
+| `cli-config` | 1,077 | 1,005 | 2 | 988 89 | 28 28 of 28 |
+| `editor-schemas` | 246 | 345 | 1 | 246 | 4 of 4 |
+| `cli` | 2,129 | 2,085 | 3 | 957 999 173 | 30 36 36 of 36 |
 
 ## 7. Briefs
 

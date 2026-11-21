@@ -26,7 +26,7 @@ const octalField = (block: Uint8Array, offset: number, length: number): number =
   Number.parseInt(textField(block, offset, length).trim() || "0", OCTAL);
 
 /** The entries of an uncompressed ustar archive, in order. */
-function ustarEntries(archive: Uint8Array): object[] {
+export function ustarEntries(archive: Uint8Array): object[] {
   const entries: object[] = [];
   let offset = 0;
 

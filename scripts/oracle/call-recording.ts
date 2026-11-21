@@ -2,6 +2,8 @@ import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { registerHooks } from "node:module";
 import { join, relative } from "node:path";
+import { gunzipSync } from "node:zlib";
+import { ustarEntries } from "./tool-bundle.ts";
 
 // Records the calls the CLI makes to the functions the Rust units replay one by one (`cli-config`, `editor-schemas`
 // and `bundle-fetch`). The compiler's sources are read through a load hook that renames each recorded function and
@@ -47,7 +49,11 @@ export const RECORDED_FUNCTIONS: readonly RecordedFunction[] = [
 export interface FileState {
   sha256: string;
   text?: string;
+  /** The entries of a `.tgz`, gunzipped: its gzip bytes are not compared, its listing is. */
+  ustar?: object[];
 }
+
+const TARBALL_SUFFIX = ".tgz";
 
 export interface RecordedCall {
   unit: RecordedUnit;
@@ -95,6 +101,14 @@ export function fileStateOf(bytes: Uint8Array): FileState {
   }
 }
 
+function fileStateOfPath(path: string, bytes: Uint8Array): FileState {
+  const state = fileStateOf(bytes);
+
+  return path.endsWith(TARBALL_SUFFIX)
+    ? { ...state, ustar: ustarEntries(gunzipSync(bytes)) }
+    : state;
+}
+
 /** Every file below `root` as `/`-separated relative paths, `skip` names left out. */
 export function snapshotTree(root: string, skip: readonly string[] = []): Map<string, FileState> {
   const files = new Map<string, FileState>();
@@ -107,7 +121,7 @@ export function snapshotTree(root: string, skip: readonly string[] = []): Map<st
       if (skip.includes(relativePath)) continue;
 
       if (statSync(path).isDirectory()) walk(path);
-      else files.set(relativePath, fileStateOf(readFileSync(path)));
+      else files.set(relativePath, fileStateOfPath(relativePath, readFileSync(path)));
     }
   };
 
