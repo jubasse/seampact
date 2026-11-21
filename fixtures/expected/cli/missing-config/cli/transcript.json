@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "config.file.missing: No app config at nowhere.yaml. Fix: Create `seampact.config.yaml` in the app's directory, or pass its path with `--config`.\n",
+  "written": {},
+  "removed": []
+}

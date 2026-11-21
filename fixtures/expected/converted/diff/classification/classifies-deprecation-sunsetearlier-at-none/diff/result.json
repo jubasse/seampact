@@ -1,0 +1,81 @@
+{
+  "ok": true,
+  "api": "tasks",
+  "before": {
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "irRevision": 6,
+    "packs": []
+  },
+  "after": {
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "irRevision": 6,
+    "packs": []
+  },
+  "policy": {
+    "before": "additive-only",
+    "after": "additive-only",
+    "applied": "additive-only"
+  },
+  "settings": {
+    "gate": "clients",
+    "exempt": [
+      "experimental",
+      "sunsetPassed"
+    ]
+  },
+  "changes": [
+    {
+      "kind": "deprecation",
+      "case": "sunsetEarlier",
+      "pointer": "/operations/7/deprecated/sunset",
+      "position": "none",
+      "operations": [
+        "getTask"
+      ],
+      "breaks": [
+        "clients"
+      ],
+      "classification": "breaking",
+      "before": "2027-06-01",
+      "after": "2027-01-01"
+    }
+  ],
+  "gate": {
+    "passed": false,
+    "failures": [
+      {
+        "kind": "deprecation",
+        "case": "sunsetEarlier",
+        "pointer": "/operations/7/deprecated/sunset",
+        "position": "none",
+        "breaks": [
+          "clients"
+        ],
+        "operations": [
+          "getTask"
+        ],
+        "code": "diff.policy.breaking",
+        "message": "deprecation (sunsetEarlier) at /operations/7/deprecated/sunset breaks clients on getTask, and compat.policy is additive-only.",
+        "fix": "Make the change additive (keep the old member beside the new one), or publish it as a new api version; a release that breaks on purpose sets compat: { policy: none } in both versions."
+      }
+    ]
+  },
+  "deprecations": [
+    {
+      "subject": "operation",
+      "operation": "getTask",
+      "pointer": "/operations/7/deprecated",
+      "status": "sunsetEarlier",
+      "since": "2026-01-01",
+      "sunset": "2027-01-01",
+      "daysToSunset": 73,
+      "pastSunset": false
+    }
+  ]
+}

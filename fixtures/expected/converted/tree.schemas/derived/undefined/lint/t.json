@@ -1,0 +1,90 @@
+[
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'Article' in schemas is reached by no operation, identity or convention.",
+    "fix": "Remove 'Article', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Article"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'Written' in schemas is reached by no operation, identity or convention.",
+    "fix": "Remove 'Written', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Written"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'Picked' in schemas is reached by no operation, identity or convention.",
+    "fix": "Remove 'Picked', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Picked"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'Omitted' in schemas is reached by no operation, identity or convention.",
+    "fix": "Remove 'Omitted', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Omitted"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'FromMerged' in schemas is reached by no operation, identity or convention.",
+    "fix": "Remove 'FromMerged', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/FromMerged"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'Merged' in schemas is reached by no operation, identity or convention.",
+    "fix": "Remove 'Merged', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Merged"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'FromDerived' in schemas is reached by no operation, identity or convention.",
+    "fix": "Remove 'FromDerived', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/FromDerived"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'InlineMember' in schemas is reached by no operation, identity or convention.",
+    "fix": "Remove 'InlineMember', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/InlineMember"
+    },
+    "related": []
+  }
+]

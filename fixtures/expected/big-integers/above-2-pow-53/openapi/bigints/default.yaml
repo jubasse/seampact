@@ -1,0 +1,215 @@
+openapi: 3.1.0
+info:
+  title: bigints
+  version: "1"
+x-seampact-api:
+  kind: product
+x-seampact-format: bare
+paths:
+  /v1/counter:
+    post:
+      operationId: counter
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Counter"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Counter"
+        "400":
+          description: api.schema_invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.schema_invalid"
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+        "413":
+          description: api.payload_too_large
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.payload_too_large"
+          x-seampact-errors:
+            - code: api.payload_too_large
+              derivedFrom: body.limit
+        "415":
+          description: api.unsupported_media_type
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unsupported_media_type"
+          x-seampact-errors:
+            - code: api.unsupported_media_type
+              derivedFrom: body.media
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+      security: []
+      x-seampact-access:
+        public: The big integer fixture has no identity.
+      x-seampact-maturity:
+        level: provisional
+        source: api
+components:
+  schemas:
+    ApiPayloadTooLargeParams:
+      type: object
+      properties:
+        limitBytes:
+          type: integer
+          minimum: 0
+    ApiSchemaInvalidIssue:
+      type: object
+      properties:
+        in:
+          type: string
+          pattern: ^(?:path|query|header|body)$
+        pointer:
+          type: string
+        rule:
+          type: string
+      required:
+        - in
+        - pointer
+        - rule
+    ApiSchemaInvalidParams:
+      type: object
+      properties:
+        issues:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiSchemaInvalidIssue"
+      required:
+        - issues
+    Counter:
+      type: object
+      properties:
+        total:
+          type: number
+          default: 9223372036854776000
+    api.internal:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.internal
+        status:
+          type: integer
+          const: 500
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.internal
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: failed
+    api.payload_too_large:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: api.payload_too_large
+            status:
+              type: integer
+              const: 413
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: api.payload_too_large
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/ApiPayloadTooLargeParams"
+      x-seampact-nature:
+        base: refused
+    api.schema_invalid:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: api.schema_invalid
+            status:
+              type: integer
+              const: 400
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: api.schema_invalid
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/ApiSchemaInvalidParams"
+      x-seampact-nature:
+        base: refused
+    api.unsupported_media_type:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.unsupported_media_type
+        status:
+          type: integer
+          const: 415
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.unsupported_media_type
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: refused

@@ -1,0 +1,24 @@
+[
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'Account' in schemas is reached by no operation, identity or convention.",
+    "fix": "Remove 'Account', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Account"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'Secret' in schemas is reached by no operation, identity or convention.",
+    "fix": "Remove 'Secret', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Secret"
+    },
+    "related": []
+  }
+]

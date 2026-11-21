@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "init.file-exists: `seampact init` writes a new project here, and seampact.config.yaml and contract already exist; nothing was written. Fix: Run `seampact init` in a folder without them, or run `seampact init --modelines` to add the modelines to the contracts of an existing app config.\n",
+  "written": {},
+  "removed": []
+}

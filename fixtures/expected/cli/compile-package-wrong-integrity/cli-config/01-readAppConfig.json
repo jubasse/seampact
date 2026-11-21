@@ -1,0 +1,36 @@
+{
+  "function": "readAppConfig",
+  "args": [
+    "<root>/seampact.config.yaml",
+    "seampact.config.yaml"
+  ],
+  "result": {
+    "status": "read",
+    "config": {
+      "file": "<root>/seampact.config.yaml",
+      "outDir": "<root>/src/__generated__",
+      "sources": {
+        "notes": {
+          "kind": "bundle",
+          "bundle": {
+            "package": "@seampact-fixtures/notes",
+            "version": "1.0.0",
+            "integrity": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+          }
+        }
+      },
+      "entries": [
+        {
+          "entry": {
+            "id": "types",
+            "use": "@seampact/codegen-ts",
+            "apis": [
+              "notes"
+            ]
+          },
+          "root": "<root>/src/__generated__/types"
+        }
+      ]
+    }
+  }
+}

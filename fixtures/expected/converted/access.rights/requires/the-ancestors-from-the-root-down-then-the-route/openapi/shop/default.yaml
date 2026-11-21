@@ -1,0 +1,261 @@
+openapi: 3.1.0
+info:
+  title: shop
+  version: "1"
+x-seampact-api:
+  kind: product
+x-seampact-format: bare
+paths:
+  /v1/orders/refund:
+    post:
+      operationId: refundOrders
+      responses:
+        "204":
+          description: Success.
+        "400":
+          description: api.schema_invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.schema_invalid"
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+        "401":
+          description: api.unauthenticated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unauthenticated"
+          x-seampact-errors:
+            - code: api.unauthenticated
+              derivedFrom: identity.authenticate
+        "403":
+          description: api.forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.forbidden"
+          x-seampact-errors:
+            - code: api.forbidden
+              derivedFrom: requirement.errors
+        "429":
+          description: api.rate_limited
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.rate_limited"
+          x-seampact-errors:
+            - code: api.rate_limited
+              derivedFrom: rule.bucket
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+      security:
+        - bearer: []
+      x-seampact-access:
+        identity: user
+      x-seampact-requires:
+        - rule: audit
+        - right: staff
+          params:
+            level: 3
+          entry: seniorStaff
+        - rule: throttle
+          bucket: perUser
+          entry: writeThrottle
+        - right: shop.open
+        - right: staff
+          params:
+            level: 1
+      x-seampact-maturity:
+        level: experimental
+        source: api
+components:
+  schemas:
+    ApiForbiddenParams:
+      type: object
+      properties:
+        pointer:
+          type: string
+    ApiRateLimitedParams:
+      type: object
+      properties:
+        retryAfterMs:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+    ApiSchemaInvalidIssue:
+      type: object
+      properties:
+        in:
+          type: string
+          pattern: ^(?:path|query|header|body)$
+        pointer:
+          type: string
+        rule:
+          type: string
+      required:
+        - in
+        - pointer
+        - rule
+    ApiSchemaInvalidParams:
+      type: object
+      properties:
+        issues:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiSchemaInvalidIssue"
+      required:
+        - issues
+    api.forbidden:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: api.forbidden
+            status:
+              type: integer
+              const: 403
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: api.forbidden
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/ApiForbiddenParams"
+      x-seampact-nature:
+        base: refused
+    api.internal:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.internal
+        status:
+          type: integer
+          const: 500
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.internal
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: failed
+    api.rate_limited:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: api.rate_limited
+            status:
+              type: integer
+              const: 429
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: api.rate_limited
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/ApiRateLimitedParams"
+      x-seampact-nature:
+        base: unavailable
+    api.schema_invalid:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: api.schema_invalid
+            status:
+              type: integer
+              const: 400
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: api.schema_invalid
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/ApiSchemaInvalidParams"
+      x-seampact-nature:
+        base: refused
+    api.unauthenticated:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.unauthenticated
+        status:
+          type: integer
+          const: 401
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.unauthenticated
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: refused
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer

@@ -1,0 +1,24 @@
+[
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'throttled' in natures is reached by no operation, identity or convention.",
+    "fix": "Remove 'throttled', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/natures/throttled"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'api.idempotency_in_progress' in errors is reached by no operation, identity or convention.",
+    "fix": "Remove 'api.idempotency_in_progress', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/errors/api.idempotency_in_progress"
+    },
+    "related": []
+  }
+]

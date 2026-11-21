@@ -1,0 +1,60 @@
+openapi: 3.1.0
+info:
+  title: edge
+  version: "1"
+x-seampact-api:
+  kind: product
+x-seampact-format: bare
+paths:
+  /v1/ping:
+    get:
+      operationId: ping
+      responses:
+        "204":
+          description: Success.
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+      security: []
+      x-seampact-access:
+        public: The contract checks the query policy only.
+      x-seampact-unknown-query:
+        ignore: Probes add a cache buster.
+      x-seampact-maturity:
+        level: experimental
+        source: api
+components:
+  schemas:
+    api.internal:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.internal
+        status:
+          type: integer
+          const: 500
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.internal
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: failed

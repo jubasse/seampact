@@ -1,0 +1,35 @@
+[
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'Base' in enums is reached by no operation, identity or convention.",
+    "fix": "Remove 'Base', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/enums/Base"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'Narrow' in enums is reached by no operation, identity or convention.",
+    "fix": "Remove 'Narrow', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/enums/Narrow"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'Box' in schemas is reached by no operation, identity or convention.",
+    "fix": "Remove 'Box', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Box"
+    },
+    "related": []
+  }
+]

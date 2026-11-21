@@ -1,0 +1,9 @@
+[
+  {
+    "code": "ir.value.unknown",
+    "message": "The value 'stream' of /operations/7/responses/0/shape in operation 'getTask' is not one this target knows.",
+    "fix": "Update the target to a release that supports this value, or change the contract so it is not used.",
+    "member": "/operations/7/responses/0/shape",
+    "operation": "getTask"
+  }
+]

@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "warning",
+    "rule": "seampact/cookie-without-csrf",
+    "message": "The cookie scheme 'sessionCookie' has no csrf, so no CSRF check is derived for the routes it reaches.",
+    "fix": "Add csrf: <header scheme> to 'sessionCookie', or allow seampact/cookie-without-csrf on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemes/sessionCookie"
+    },
+    "related": []
+  }
+]

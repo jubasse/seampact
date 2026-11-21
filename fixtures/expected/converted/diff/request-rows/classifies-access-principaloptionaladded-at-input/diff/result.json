@@ -1,0 +1,64 @@
+{
+  "ok": true,
+  "api": "tasks",
+  "before": {
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "irRevision": 6,
+    "packs": []
+  },
+  "after": {
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "irRevision": 6,
+    "packs": []
+  },
+  "policy": {
+    "before": "additive-only",
+    "after": "additive-only",
+    "applied": "additive-only"
+  },
+  "settings": {
+    "gate": "clients",
+    "exempt": [
+      "experimental",
+      "sunsetPassed"
+    ]
+  },
+  "changes": [
+    {
+      "kind": "access",
+      "case": "principalOptionalAdded",
+      "pointer": "/operations/7/access",
+      "position": "input",
+      "operations": [
+        "getTask"
+      ],
+      "breaks": [],
+      "classification": "additive",
+      "before": "public",
+      "after": "optional"
+    },
+    {
+      "kind": "annotation",
+      "case": "reason",
+      "pointer": "/operations/7/access/reason",
+      "position": "input",
+      "operations": [
+        "getTask"
+      ],
+      "breaks": [],
+      "classification": "informative",
+      "before": "open data"
+    }
+  ],
+  "gate": {
+    "passed": true,
+    "failures": []
+  },
+  "deprecations": []
+}

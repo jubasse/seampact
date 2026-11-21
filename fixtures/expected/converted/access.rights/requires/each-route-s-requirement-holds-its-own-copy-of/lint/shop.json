@@ -1,0 +1,79 @@
+[
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'shop.open' in rights is reached by no operation, identity or convention.",
+    "fix": "Remove 'shop.open', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/rights/shop.open"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'throttle' in rules is reached by no operation, identity or convention.",
+    "fix": "Remove 'throttle', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/rules/throttle"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'audit' in rules is reached by no operation, identity or convention.",
+    "fix": "Remove 'audit', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/rules/audit"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'note' in rules is reached by no operation, identity or convention.",
+    "fix": "Remove 'note', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/rules/note"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'perUser' in buckets is reached by no operation, identity or convention.",
+    "fix": "Remove 'perUser', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/buckets/perUser"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'seniorStaff' in requirements is reached by no operation, identity or convention.",
+    "fix": "Remove 'seniorStaff', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/requirements/seniorStaff"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'writeThrottle' in requirements is reached by no operation, identity or convention.",
+    "fix": "Remove 'writeThrottle', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/requirements/writeThrottle"
+    },
+    "related": []
+  }
+]

@@ -1,0 +1,7 @@
+{
+  "exit": 0,
+  "stdout": "# seampact explain notes.getNote\noperationId: getNote                             # ops.get, api.yaml:46\nsurface: app\nmethod: get\npath: /v1/notes/{noteId}\naccess: { public: \"Anyone may call this api: it has no accounts.\" }  # api.yaml:36\nparams:\n  path.noteId: { type: uuid, required: true }    # api.yaml:40\nunknownQuery: refuse\nresponses:\n  - { status: 200, shape: item, body: Note }     # response.format, built in, api.yaml:41\nerrors:\n  - { status: 400, code: api.schema_invalid }    # input.invalid, api.yaml:46\n  - { status: 404, code: api.not_found }         # member.notFound, api.yaml:46\n  - { status: 500, code: api.internal }          # response.undeclared, api.yaml:46\nmaturity: { level: provisional, source: api }    # api.yaml:8\nformat: bare\n# not shown yet: errors.roles\n",
+  "stderr": "",
+  "written": {},
+  "removed": []
+}

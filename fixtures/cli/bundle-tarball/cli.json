@@ -1,0 +1,11 @@
+{
+  "argv": [
+    "bundle",
+    "--tarball",
+    "notes.tgz",
+    "--name",
+    "@seampact-fixtures/notes",
+    "--version",
+    "1.0.0"
+  ]
+}

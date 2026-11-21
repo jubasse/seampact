@@ -1,0 +1,3 @@
+tasks v1: compat.policy additive-only (before additive-only, after additive-only), gate clients
+breaking servers getTask input /operations/7/callerKinds: callerKind added (anonymous)
+gate passed

@@ -1,0 +1,5 @@
+{
+  "workspace": "../../bundle-channels/imports/workspace.template.yaml",
+  "name": "@seampact-fixtures/case",
+  "version": "1.0.0"
+}

@@ -1,0 +1,33 @@
+{
+  "apis": [
+    {
+      "file": "ir/ordering.json",
+      "irRevision": 6,
+      "irVersion": 1,
+      "name": "ordering"
+    }
+  ],
+  "compiler": {
+    "name": "@seampact/compiler",
+    "version": "1.1.0"
+  },
+  "contract": {
+    "name": "@seampact-fixtures/case",
+    "version": "1.0.0"
+  },
+  "files": [
+    {
+      "path": "ir/ordering.json",
+      "sha256": "f82884d34d72f686f2c77813eabde8084b5a510aa79a7fe46a8efbb3d36e32e1",
+      "size": 30989
+    },
+    {
+      "path": "sources/api.yaml",
+      "sha256": "5ce98fc5b5502b25002b4e1a7a9519d0ab0027d060d53cea12892946cb6b411b",
+      "size": 1584
+    }
+  ],
+  "formatVersion": 1,
+  "integrity": "sha256-7poDuVwb86K7dJR+6led5Sreu2spIJySBMVwn1hZNqc=",
+  "packs": []
+}

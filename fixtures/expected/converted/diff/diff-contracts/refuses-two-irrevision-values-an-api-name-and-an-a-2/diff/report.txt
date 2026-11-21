@@ -1,0 +1,1 @@
+diff.api.version.differs: The api tasks moves from version v1 to v2; a new path version is a new api. Fix: Diff the new version against a baseline of the same version; the old version keeps its own.

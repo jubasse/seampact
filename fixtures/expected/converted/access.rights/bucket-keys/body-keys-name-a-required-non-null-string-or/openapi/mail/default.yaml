@@ -1,0 +1,328 @@
+openapi: 3.1.0
+info:
+  title: mail
+  version: "1"
+x-seampact-api:
+  kind: product
+x-seampact-format: bare
+paths:
+  /v1/send:
+    post:
+      operationId: send
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Message"
+      responses:
+        "204":
+          description: Success.
+        "400":
+          description: api.schema_invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.schema_invalid"
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+        "401":
+          description: api.unauthenticated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unauthenticated"
+          x-seampact-errors:
+            - code: api.unauthenticated
+              derivedFrom: identity.authenticate
+        "413":
+          description: api.payload_too_large
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.payload_too_large"
+          x-seampact-errors:
+            - code: api.payload_too_large
+              derivedFrom: body.limit
+        "415":
+          description: api.unsupported_media_type
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unsupported_media_type"
+          x-seampact-errors:
+            - code: api.unsupported_media_type
+              derivedFrom: body.media
+        "429":
+          description: api.rate_limited
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.rate_limited"
+          x-seampact-errors:
+            - code: api.rate_limited
+              derivedFrom: rule.bucket
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+      security:
+        - bearer: []
+      x-seampact-access:
+        identity: user
+      x-seampact-requires:
+        - rule: throttle
+          bucket: perRecipient
+        - rule: throttle
+          bucket: perCount
+      x-seampact-maturity:
+        level: experimental
+        source: api
+components:
+  schemas:
+    ApiPayloadTooLargeParams:
+      type: object
+      properties:
+        limitBytes:
+          type: integer
+          minimum: 0
+    ApiRateLimitedParams:
+      type: object
+      properties:
+        retryAfterMs:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+    ApiSchemaInvalidIssue:
+      type: object
+      properties:
+        in:
+          type: string
+          pattern: ^(?:path|query|header|body)$
+        pointer:
+          type: string
+        rule:
+          type: string
+      required:
+        - in
+        - pointer
+        - rule
+    ApiSchemaInvalidParams:
+      type: object
+      properties:
+        issues:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiSchemaInvalidIssue"
+      required:
+        - issues
+    Kind:
+      type: string
+      enum:
+        - plain
+        - digest
+    Message:
+      type: object
+      properties:
+        to:
+          type: string
+        count:
+          type: integer
+        urgent:
+          type: boolean
+        kind:
+          $ref: "#/components/schemas/Kind"
+        cc:
+          type: string
+        replyTo:
+          type:
+            - string
+            - "null"
+        secret:
+          type: string
+          format: password
+      required:
+        - to
+        - count
+        - urgent
+        - kind
+        - replyTo
+        - secret
+    api.internal:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.internal
+        status:
+          type: integer
+          const: 500
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.internal
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: failed
+    api.payload_too_large:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: api.payload_too_large
+            status:
+              type: integer
+              const: 413
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: api.payload_too_large
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/ApiPayloadTooLargeParams"
+      x-seampact-nature:
+        base: refused
+    api.rate_limited:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: api.rate_limited
+            status:
+              type: integer
+              const: 429
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: api.rate_limited
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/ApiRateLimitedParams"
+      x-seampact-nature:
+        base: unavailable
+    api.schema_invalid:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: api.schema_invalid
+            status:
+              type: integer
+              const: 400
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: api.schema_invalid
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/ApiSchemaInvalidParams"
+      x-seampact-nature:
+        base: refused
+    api.unauthenticated:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.unauthenticated
+        status:
+          type: integer
+          const: 401
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.unauthenticated
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: refused
+    api.unsupported_media_type:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.unsupported_media_type
+        status:
+          type: integer
+          const: 415
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.unsupported_media_type
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: refused
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer

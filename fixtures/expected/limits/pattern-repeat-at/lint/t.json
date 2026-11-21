@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'Id' in schemas is reached by no operation, identity or convention.",
+    "fix": "Remove 'Id', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Id"
+    },
+    "related": []
+  }
+]

@@ -1,0 +1,9 @@
+{
+  "extensions": [
+    "access",
+    "paging"
+  ],
+  "reasons": "include",
+  "inputSchemas": "shared",
+  "servers": []
+}

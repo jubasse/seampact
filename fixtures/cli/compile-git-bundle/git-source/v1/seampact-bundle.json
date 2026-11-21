@@ -1,0 +1,33 @@
+{
+  "apis": [
+    {
+      "file": "ir/notes.json",
+      "irRevision": 6,
+      "irVersion": 1,
+      "name": "notes"
+    }
+  ],
+  "compiler": {
+    "name": "@seampact/compiler",
+    "version": "1.1.0"
+  },
+  "contract": {
+    "name": "@seampact-fixtures/notes",
+    "version": "1.0.0"
+  },
+  "files": [
+    {
+      "path": "ir/notes.json",
+      "sha256": "fa8e4b59a69abd56d416a08bb1fcafd212b64efdea2d38cb6e6746bc8bc30656",
+      "size": 21684
+    },
+    {
+      "path": "sources/api.yaml",
+      "sha256": "a0a2817e9ab85eee4964323af8e0381e5d8e3f0f4f1ba7af571505417716d3ce",
+      "size": 1267
+    }
+  ],
+  "formatVersion": 1,
+  "integrity": "sha256-m1Dx5GL/JzlteMx5ojBeXbRHBV8Wx7YgA3+v5h4xLDs=",
+  "packs": []
+}

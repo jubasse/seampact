@@ -1,0 +1,46 @@
+[
+  {
+    "severity": "warning",
+    "rule": "seampact/not-found-role",
+    "message": "The 404 code 'stock.missing' is listed on routes 'deleteBin', 'deleteWarehouse', 'getBin', 'getWarehouse', 'updateBin', 'updateWarehouse', which also answer the derived notFound code, so they have two 404 codes.",
+    "fix": "Add errorRoles: { notFound: stock.missing } on the member node of the collection that lists 'stock.missing', or allow seampact/not-found-role on the catalogue entry with a reason.",
+    "origin": {
+      "layer": "shared",
+      "pointer": "/errors/stock.missing"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/not-found-role",
+    "message": "The 404 code 'shelf.missing' is listed on routes 'deleteBin', 'getBin', 'updateBin', which also answer the derived notFound code, so they have two 404 codes.",
+    "fix": "Add errorRoles: { notFound: shelf.missing } on the member node of the collection that lists 'shelf.missing', or allow seampact/not-found-role on the catalogue entry with a reason.",
+    "origin": {
+      "layer": "shared",
+      "pointer": "/errors/shelf.missing"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/not-found-role",
+    "message": "The 404 code 'supplier.missing' is listed on routes 'deleteSupplier', 'getSupplier', 'updateSupplier', which also answer the derived notFound code, so they have two 404 codes.",
+    "fix": "Add errorRoles: { notFound: supplier.missing } on the member node of the collection that lists 'supplier.missing', or allow seampact/not-found-role on the catalogue entry with a reason.",
+    "origin": {
+      "layer": "shared",
+      "pointer": "/errors/supplier.missing"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/not-found-role",
+    "message": "The 404 code 'transfer.missing' is listed on routes 'deletePallet', 'getPallet', 'sealPallet', 'updatePallet', which also answer the derived notFound code, so they have two 404 codes.",
+    "fix": "Add errorRoles: { notFound: transfer.missing } on the member node of the collection that lists 'transfer.missing', or allow seampact/not-found-role on the catalogue entry with a reason.",
+    "origin": {
+      "layer": "shared",
+      "pointer": "/errors/transfer.missing"
+    },
+    "related": []
+  }
+]

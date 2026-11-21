@@ -1,0 +1,792 @@
+openapi: 3.1.0
+info:
+  title: reference
+  version: tasks 1
+x-seampact-apis:
+  - name: tasks
+    kind: product
+    version: "1"
+    summary: Tasks shared inside channels.
+x-seampact-format: bare
+paths:
+  /v1/channels/{channelId}/tasks:
+    post:
+      operationId: Tasks.createTask
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Tasks.CreateTask"
+      responses:
+        "201":
+          description: Success.
+          headers:
+            Idempotency-Replayed:
+              schema:
+                type: boolean
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tasks.Task"
+        "400":
+          description: api.schema_invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Tasks.api.schema_invalid"
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+        "401":
+          description: api.unauthenticated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Tasks.api.unauthenticated"
+          x-seampact-errors:
+            - code: api.unauthenticated
+              derivedFrom: identity.authenticate
+        "403":
+          description: api.csrf_invalid, api.forbidden
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/Tasks.api.csrf_invalid"
+                  - $ref: "#/components/schemas/Tasks.api.forbidden"
+                discriminator:
+                  propertyName: code
+                  mapping:
+                    api.csrf_invalid: "#/components/schemas/Tasks.api.csrf_invalid"
+                    api.forbidden: "#/components/schemas/Tasks.api.forbidden"
+          x-seampact-errors:
+            - code: api.csrf_invalid
+              derivedFrom: csrf.cookieWrite
+            - code: api.forbidden
+              derivedFrom: requirement.errors
+        "404":
+          description: api.not_found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Tasks.api.not_found"
+          x-seampact-errors:
+            - code: api.not_found
+              derivedFrom: scope.errors
+        "409":
+          description: api.idempotency_in_progress
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Tasks.api.idempotency_in_progress"
+          x-seampact-errors:
+            - code: api.idempotency_in_progress
+              derivedFrom: idempotency.write
+        "413":
+          description: api.payload_too_large
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Tasks.api.payload_too_large"
+          x-seampact-errors:
+            - code: api.payload_too_large
+              derivedFrom: body.limit
+        "415":
+          description: api.unsupported_media_type
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Tasks.api.unsupported_media_type"
+          x-seampact-errors:
+            - code: api.unsupported_media_type
+              derivedFrom: body.media
+        "422":
+          description: api.idempotency_key_reused
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Tasks.api.idempotency_key_reused"
+          x-seampact-errors:
+            - code: api.idempotency_key_reused
+              derivedFrom: idempotency.write
+        "429":
+          description: api.rate_limited
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+                minimum: 0
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Tasks.api.rate_limited"
+          x-seampact-errors:
+            - code: api.rate_limited
+              derivedFrom: requirement.errors
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Tasks.api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+      security:
+        - Tasks.bearer: []
+        - Tasks.sessionCookie: []
+          Tasks.csrfToken: []
+      x-seampact-access:
+        identity: user
+      x-seampact-scopes:
+        - scope: channel
+          from: path.channelId
+      x-seampact-requires:
+        - rule: throttle
+          bucket: write
+          entry: writeThrottle
+        - right: roles
+          params:
+            allowed:
+              - owner
+              - editor
+          subject: scope.channel
+          entry: channelEditor
+      x-seampact-restricted-to:
+        - schema: Tasks.CreateTask
+          pointer: /effort
+          right: roles
+          params:
+            allowed:
+              - owner
+          subject: scope.channel
+          direction: input
+          input: reject
+        - schema: Tasks.Task
+          pointer: /effort
+          right: tasks.seeEffort
+          subject: holderField.taskId
+          direction: output
+      x-seampact-idempotency:
+        header: Idempotency-Key
+        replayHeader: Idempotency-Replayed
+        lifetimeMs: 86400000
+        required: true
+        enforce: boundary
+      x-seampact-maturity:
+        level: provisional
+        source: api
+      x-seampact-source-api: tasks
+  /v1/channels/{channelId}/tasks/{taskId}/archive:
+    post:
+      operationId: Tasks.archiveTask
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Tasks.ArchiveTask"
+      responses:
+        "200":
+          description: Success.
+          headers:
+            Idempotency-Replayed:
+              schema:
+                type: boolean
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tasks.Task"
+        "400":
+          description: api.schema_invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Tasks.api.schema_invalid"
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+        "401":
+          description: api.unauthenticated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Tasks.api.unauthenticated"
+          x-seampact-errors:
+            - code: api.unauthenticated
+              derivedFrom: identity.authenticate
+        "403":
+          description: api.csrf_invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Tasks.api.csrf_invalid"
+          x-seampact-errors:
+            - code: api.csrf_invalid
+              derivedFrom: csrf.cookieWrite
+        "404":
+          description: api.not_found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Tasks.api.not_found"
+          x-seampact-errors:
+            - code: api.not_found
+              derivedFrom: member.notFound
+        "409":
+          description: api.idempotency_in_progress, state.conflict
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/Tasks.api.idempotency_in_progress"
+                  - $ref: "#/components/schemas/Tasks.state.conflict"
+                discriminator:
+                  propertyName: code
+                  mapping:
+                    api.idempotency_in_progress: "#/components/schemas/Tasks.api.idempotency_in_progress"
+                    state.conflict: "#/components/schemas/Tasks.state.conflict"
+          x-seampact-errors:
+            - code: api.idempotency_in_progress
+              derivedFrom: idempotency.write
+            - code: state.conflict
+              derivedFrom: concurrency.version
+        "413":
+          description: api.payload_too_large
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Tasks.api.payload_too_large"
+          x-seampact-errors:
+            - code: api.payload_too_large
+              derivedFrom: body.limit
+        "415":
+          description: api.unsupported_media_type
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Tasks.api.unsupported_media_type"
+          x-seampact-errors:
+            - code: api.unsupported_media_type
+              derivedFrom: body.media
+        "422":
+          description: api.idempotency_key_reused
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Tasks.api.idempotency_key_reused"
+          x-seampact-errors:
+            - code: api.idempotency_key_reused
+              derivedFrom: idempotency.write
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Tasks.api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+      security:
+        - Tasks.bearer: []
+        - Tasks.sessionCookie: []
+          Tasks.csrfToken: []
+      x-seampact-access:
+        identity: user
+      x-seampact-scopes:
+        - scope: channel
+          from: path.channelId
+      x-seampact-restricted-to:
+        - schema: Tasks.Task
+          pointer: /effort
+          right: tasks.seeEffort
+          subject: holderField.taskId
+          direction: output
+      x-seampact-concurrency:
+        version: body.expectedVersion
+        field: version
+      x-seampact-idempotency:
+        header: Idempotency-Key
+        replayHeader: Idempotency-Replayed
+        lifetimeMs: 86400000
+        required: true
+        enforce: boundary
+      x-seampact-maturity:
+        level: provisional
+        source: api
+      x-seampact-internal: true
+      x-seampact-source-api: tasks
+components:
+  schemas:
+    Tasks.ApiForbiddenParams:
+      type: object
+      properties:
+        pointer:
+          type: string
+    Tasks.ApiPayloadTooLargeParams:
+      type: object
+      properties:
+        limitBytes:
+          type: integer
+          minimum: 0
+    Tasks.ApiRateLimitedParams:
+      type: object
+      properties:
+        retryAfterMs:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+      required:
+        - retryAfterMs
+    Tasks.ApiSchemaInvalidParams:
+      type: object
+      properties:
+        issues:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tasks.IssuesItem"
+      required:
+        - issues
+    Tasks.ArchiveTask:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+        expectedVersion:
+          type: integer
+          minimum: 1
+      required:
+        - reason
+        - expectedVersion
+    Tasks.CreateTask:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        effort:
+          type: integer
+          minimum: 0
+      required:
+        - title
+    Tasks.IssuesItem:
+      type: object
+      properties:
+        pointer:
+          type: string
+        rule:
+          type: string
+      required:
+        - pointer
+        - rule
+    Tasks.Task:
+      type: object
+      properties:
+        taskId:
+          type: string
+          format: uuid
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        state:
+          $ref: "#/components/schemas/Tasks.TaskState"
+        effort:
+          type: integer
+          minimum: 0
+        version:
+          type: integer
+          minimum: 1
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - taskId
+        - title
+        - state
+        - version
+        - createdAt
+    Tasks.TaskState:
+      type: string
+      enum:
+        - open
+        - done
+        - archived
+    Tasks.api.csrf_invalid:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.csrf_invalid
+        status:
+          type: integer
+          const: 403
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.csrf_invalid
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: refused
+    Tasks.api.forbidden:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: api.forbidden
+            status:
+              type: integer
+              const: 403
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: api.forbidden
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/Tasks.ApiForbiddenParams"
+      x-seampact-nature:
+        base: refused
+    Tasks.api.idempotency_in_progress:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.idempotency_in_progress
+        status:
+          type: integer
+          const: 409
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.idempotency_in_progress
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: unavailable
+    Tasks.api.idempotency_key_reused:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.idempotency_key_reused
+        status:
+          type: integer
+          const: 422
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.idempotency_key_reused
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: refused
+    Tasks.api.internal:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.internal
+        status:
+          type: integer
+          const: 500
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.internal
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: failed
+    Tasks.api.not_found:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.not_found
+        status:
+          type: integer
+          const: 404
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.not_found
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: refused
+    Tasks.api.payload_too_large:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: api.payload_too_large
+            status:
+              type: integer
+              const: 413
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: api.payload_too_large
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/Tasks.ApiPayloadTooLargeParams"
+      x-seampact-nature:
+        base: refused
+    Tasks.api.rate_limited:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: api.rate_limited
+            status:
+              type: integer
+              const: 429
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: api.rate_limited
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/Tasks.ApiRateLimitedParams"
+      x-seampact-nature:
+        base: unavailable
+    Tasks.api.schema_invalid:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: api.schema_invalid
+            status:
+              type: integer
+              const: 400
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: api.schema_invalid
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/Tasks.ApiSchemaInvalidParams"
+      x-seampact-nature:
+        base: refused
+    Tasks.api.unauthenticated:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.unauthenticated
+        status:
+          type: integer
+          const: 401
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.unauthenticated
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: refused
+    Tasks.api.unsupported_media_type:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.unsupported_media_type
+        status:
+          type: integer
+          const: 415
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.unsupported_media_type
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: refused
+    Tasks.state.conflict:
+      type: object
+      properties:
+        type:
+          type: string
+          const: state.conflict
+        status:
+          type: integer
+          const: 409
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: state.conflict
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: refused
+  securitySchemes:
+    Tasks.bearer:
+      type: http
+      scheme: bearer
+    Tasks.csrfToken:
+      type: apiKey
+      in: header
+      name: X-Csrf-Token
+    Tasks.sessionCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-session

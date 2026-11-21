@@ -1,0 +1,10 @@
+== ordering ==
+ordering v1: compat.policy none (before none, after none), gate clients
+no change
+gate passed
+
+== second ==
+second v1: compat.policy none (before none, after none), gate clients
+breaking clients event /operations/0: operation.removed removed (event)
+breaking clients mixed /operations/1: operation.removed removed (mixed)
+gate passed

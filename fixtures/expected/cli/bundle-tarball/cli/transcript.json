@@ -1,0 +1,47 @@
+{
+  "exit": 0,
+  "stdout": "Wrote the bundle of @seampact-fixtures/notes@1.0.0 (notes) to <root>/notes.tgz.\nintegrity: sha256-m1Dx5GL/JzlteMx5ojBeXbRHBV8Wx7YgA3+v5h4xLDs=\n",
+  "stderr": "",
+  "written": {
+    "notes.tgz": {
+      "sha256": "ec8cd60a73bd11efe08115c1bdf11548d23e43791447b609371e667f67cc1d6d",
+      "ustar": [
+        {
+          "path": "ir/notes.json",
+          "size": 21684,
+          "mode": 420,
+          "uid": 0,
+          "gid": 0,
+          "mtime": 0,
+          "type": "0",
+          "uname": "",
+          "gname": "",
+          "sha256": "fa8e4b59a69abd56d416a08bb1fcafd212b64efdea2d38cb6e6746bc8bc30656"
+        },
+        {
+          "path": "seampact-bundle.json",
+          "mode": 420,
+          "uid": 0,
+          "gid": 0,
+          "mtime": 0,
+          "type": "0",
+          "uname": "",
+          "gname": ""
+        },
+        {
+          "path": "sources/api.yaml",
+          "size": 1267,
+          "mode": 420,
+          "uid": 0,
+          "gid": 0,
+          "mtime": 0,
+          "type": "0",
+          "uname": "",
+          "gname": "",
+          "sha256": "a0a2817e9ab85eee4964323af8e0381e5d8e3f0f4f1ba7af571505417716d3ce"
+        }
+      ]
+    }
+  },
+  "removed": []
+}

@@ -1,0 +1,27 @@
+{
+  "function": "fetchBundle",
+  "args": [
+    {
+      "package": "@seampact-fixtures/notes",
+      "version": "1.0.0",
+      "integrity": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+    },
+    {
+      "baseDirectory": "<root>",
+      "localSources": "allow"
+    }
+  ],
+  "result": {
+    "ok": false,
+    "failures": [
+      {
+        "code": "bundle.pin-mismatch",
+        "message": "The pinned integrity is sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=; the bundle's is sha256-m1Dx5GL/JzlteMx5ojBeXbRHBV8Wx7YgA3+v5h4xLDs=.",
+        "fix": "Fetch the bundle the pin names, or review this one and pin it: integrity: sha256-m1Dx5GL/JzlteMx5ojBeXbRHBV8Wx7YgA3+v5h4xLDs=",
+        "expected": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+        "actual": "sha256-m1Dx5GL/JzlteMx5ojBeXbRHBV8Wx7YgA3+v5h4xLDs="
+      }
+    ],
+    "integrity": "sha256-m1Dx5GL/JzlteMx5ojBeXbRHBV8Wx7YgA3+v5h4xLDs="
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "explain.operation.unknown: The api 'notes' has no operation 'nothing' (getNote, listNotes). Fix: Name one of its operation ids, as the IR and the OpenAPI document spell it.\n",
+  "written": {},
+  "removed": []
+}

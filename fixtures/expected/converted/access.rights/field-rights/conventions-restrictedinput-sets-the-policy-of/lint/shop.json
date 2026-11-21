@@ -1,0 +1,57 @@
+[
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'ShopId' in schemas is reached by no operation, identity or convention.",
+    "fix": "Remove 'ShopId', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/ShopId"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'shop' in scopes is reached by no operation, identity or convention.",
+    "fix": "Remove 'shop', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/scopes/shop"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'shop.role' in rights is reached by no operation, identity or convention.",
+    "fix": "Remove 'shop.role', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/rights/shop.role"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'audit' in rights is reached by no operation, identity or convention.",
+    "fix": "Remove 'audit', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/rights/audit"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'audit2' in rights is reached by no operation, identity or convention.",
+    "fix": "Remove 'audit2', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/rights/audit2"
+    },
+    "related": []
+  }
+]

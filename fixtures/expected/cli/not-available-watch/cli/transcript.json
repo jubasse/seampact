@@ -1,0 +1,7 @@
+{
+  "exit": 2,
+  "stdout": "",
+  "stderr": "cli.not-available: The flag '--watch' is not available yet. Fix: Use `init`, `seampact compile`, `generate`, `check`, `lint`, `diff`, `explain` or `bundle`.\n",
+  "written": {},
+  "removed": []
+}

@@ -1,0 +1,46 @@
+[
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'Order' in schemas is reached by no operation, identity or convention.",
+    "fix": "Remove 'Order', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Order"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'tasks.update' in rights is reached by no operation, identity or convention.",
+    "fix": "Remove 'tasks.update', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/rights/tasks.update"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'recentAuth' in rules is reached by no operation, identity or convention.",
+    "fix": "Remove 'recentAuth', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/rules/recentAuth"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration '404-gone' in errors is reached by no operation, identity or convention.",
+    "fix": "Remove '404-gone', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/errors/404-gone"
+    },
+    "related": []
+  }
+]

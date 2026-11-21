@@ -1,0 +1,97 @@
+{
+  "ok": true,
+  "api": "tasks",
+  "before": {
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "irRevision": 6,
+    "packs": []
+  },
+  "after": {
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "irRevision": 6,
+    "packs": []
+  },
+  "policy": {
+    "before": "additive-only",
+    "after": "additive-only",
+    "applied": "additive-only"
+  },
+  "settings": {
+    "gate": "clients",
+    "exempt": [
+      "experimental",
+      "sunsetPassed"
+    ]
+  },
+  "changes": [
+    {
+      "kind": "union.variant",
+      "case": "added",
+      "pointer": "/schemas/Shape/variants/2",
+      "position": "output",
+      "operations": [
+        "archiveTask",
+        "assignTask",
+        "createTask",
+        "getTask",
+        "getTasksBatch",
+        "listTasks",
+        "searchTasks",
+        "updateTask"
+      ],
+      "breaks": [
+        "clients"
+      ],
+      "classification": "breaking",
+      "after": "preferences"
+    },
+    {
+      "kind": "union.variant",
+      "case": "added",
+      "pointer": "/schemas/Shape/variants/2",
+      "position": "input",
+      "operations": [
+        "createTask"
+      ],
+      "breaks": [
+        "servers"
+      ],
+      "classification": "breaking",
+      "after": "preferences"
+    }
+  ],
+  "gate": {
+    "passed": false,
+    "failures": [
+      {
+        "kind": "union.variant",
+        "case": "added",
+        "pointer": "/schemas/Shape/variants/2",
+        "position": "output",
+        "breaks": [
+          "clients"
+        ],
+        "operations": [
+          "archiveTask",
+          "assignTask",
+          "createTask",
+          "getTask",
+          "getTasksBatch",
+          "listTasks",
+          "searchTasks",
+          "updateTask"
+        ],
+        "code": "diff.policy.breaking",
+        "message": "union.variant (added) at /schemas/Shape/variants/2 breaks clients on archiveTask, assignTask, createTask, getTask, getTasksBatch, listTasks, searchTasks, updateTask, and compat.policy is additive-only.",
+        "fix": "Make the change additive (keep the old member beside the new one), or publish it as a new api version; a release that breaks on purpose sets compat: { policy: none } in both versions."
+      }
+    ]
+  },
+  "deprecations": []
+}

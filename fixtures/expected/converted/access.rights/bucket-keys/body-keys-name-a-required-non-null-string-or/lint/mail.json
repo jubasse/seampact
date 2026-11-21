@@ -1,0 +1,101 @@
+[
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'recentAuth' in rules is reached by no operation, identity or convention.",
+    "fix": "Remove 'recentAuth', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/rules/recentAuth"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'perUser' in buckets is reached by no operation, identity or convention.",
+    "fix": "Remove 'perUser', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/buckets/perUser"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'perUrgency' in buckets is reached by no operation, identity or convention.",
+    "fix": "Remove 'perUrgency', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/buckets/perUrgency"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'perKind' in buckets is reached by no operation, identity or convention.",
+    "fix": "Remove 'perKind', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/buckets/perKind"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'perCc' in buckets is reached by no operation, identity or convention.",
+    "fix": "Remove 'perCc', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/buckets/perCc"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'perReplyTo' in buckets is reached by no operation, identity or convention.",
+    "fix": "Remove 'perReplyTo', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/buckets/perReplyTo"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'perSecret' in buckets is reached by no operation, identity or convention.",
+    "fix": "Remove 'perSecret', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/buckets/perSecret"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'perSubject' in buckets is reached by no operation, identity or convention.",
+    "fix": "Remove 'perSubject', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/buckets/perSubject"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'perToken' in buckets is reached by no operation, identity or convention.",
+    "fix": "Remove 'perToken', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/buckets/perToken"
+    },
+    "related": []
+  }
+]

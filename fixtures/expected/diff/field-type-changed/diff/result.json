@@ -1,0 +1,71 @@
+{
+  "ok": true,
+  "api": "ordering",
+  "before": {
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "irRevision": 6,
+    "packs": []
+  },
+  "after": {
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "irRevision": 6,
+    "packs": []
+  },
+  "policy": {
+    "before": "none",
+    "after": "none",
+    "applied": "none"
+  },
+  "settings": {
+    "gate": "clients",
+    "exempt": [
+      "experimental",
+      "sunsetPassed"
+    ]
+  },
+  "changes": [
+    {
+      "kind": "type.changed",
+      "case": "scalarType",
+      "pointer": "/schemas/Mixed/properties/0/type/type",
+      "position": "input",
+      "operations": [
+        "mixed"
+      ],
+      "breaks": [
+        "clients",
+        "servers"
+      ],
+      "classification": "breaking",
+      "before": "string",
+      "after": "integer"
+    },
+    {
+      "kind": "type.changed",
+      "case": "scalarType",
+      "pointer": "/schemas/Mixed/properties/0/type/type",
+      "position": "output",
+      "operations": [
+        "mixed"
+      ],
+      "breaks": [
+        "clients",
+        "servers"
+      ],
+      "classification": "breaking",
+      "before": "string",
+      "after": "integer"
+    }
+  ],
+  "gate": {
+    "passed": true,
+    "failures": []
+  },
+  "deprecations": []
+}

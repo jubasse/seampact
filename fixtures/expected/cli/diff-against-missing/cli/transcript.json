@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "diff.against.invalid: '<root>/nowhere' does not exist, and `--against` reads a file or a directory (a bundle or a git ref is not read yet). Fix: Pass `--against` an IR file, or a directory of `<api>.ir.json` files as `seampact compile --out` writes them.\n",
+  "written": {},
+  "removed": []
+}

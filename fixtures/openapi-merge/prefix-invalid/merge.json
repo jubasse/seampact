@@ -1,0 +1,13 @@
+{
+  "name": "reference",
+  "prefix": {
+    "tasks": "not valid!"
+  },
+  "inputs": [
+    {
+      "fixture": "reference",
+      "api": "tasks",
+      "operations": ["createTask"]
+    }
+  ]
+}

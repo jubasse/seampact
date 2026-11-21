@@ -1,0 +1,13 @@
+[
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'api.limit_exceeded' in errors is reached by no operation, identity or convention.",
+    "fix": "Remove 'api.limit_exceeded', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/errors/api.limit_exceeded"
+    },
+    "related": []
+  }
+]

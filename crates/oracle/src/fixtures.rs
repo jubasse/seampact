@@ -25,6 +25,24 @@ const ENTRY_FILES: [&str; 2] = ["workspace.yaml", "api.yaml"];
 /// A directory the fixture walk never enters.
 const NODE_MODULES: &str = "node_modules";
 
+/// A directory holding this file is a CLI case: its tree is compiled through the CLI only, so the
+/// walk stops below it.
+const CLI_CASE_FILE: &str = "cli.json";
+
+/// The tool outputs a case's expected directory holds beside the compiler's own entries: a fixture
+/// nested under one of these names would collide with them.
+const TOOL_UNIT_DIRECTORIES: [&str; 9] = [
+    "openapi",
+    "openapi-merge",
+    "lint",
+    "diff",
+    "bundle",
+    "cli",
+    "cli-config",
+    "editor-schemas",
+    "bundle-fetch",
+];
+
 /// The names under a fixture's expected directory that hold its own files.
 pub(crate) const OWN_EXPECTED_ENTRIES: [&str; 5] = [
     "diagnostics.json",
@@ -149,6 +167,10 @@ fn walk(
         }
     }
 
+    if directory.join(CLI_CASE_FILE).is_file() {
+        return Ok(());
+    }
+
     for child in child_directories(directory)? {
         if child == expected_root || child.file_name() == Some(NODE_MODULES) {
             continue;
@@ -233,7 +255,9 @@ fn refuse_colliding_names(fixtures: &[Fixture]) -> Result<(), OracleError> {
 
         let first_segment = below.split_once('/').map_or(below, |(first, _)| first);
 
-        if OWN_EXPECTED_ENTRIES.contains(&first_segment) {
+        if OWN_EXPECTED_ENTRIES.contains(&first_segment)
+            || TOOL_UNIT_DIRECTORIES.contains(&first_segment)
+        {
             return Err(OracleError::CollidingFixture {
                 fixture: fixture.path.clone(),
                 parent: parent.path.clone(),
@@ -265,6 +289,27 @@ mod tests {
             Err(OracleError::CollidingFixture { fixture, parent }) if fixture == "a/ir/b" && parent == "a"
         ));
         assert!(refuse_colliding_names(&[fixture("a"), fixture("a/irs")]).is_ok());
+    }
+
+    #[test]
+    fn a_fixture_nested_under_a_tool_output_name_is_refused() {
+        assert!(matches!(
+            refuse_colliding_names(&[fixture("a"), fixture("a/diff/b")]),
+            Err(OracleError::CollidingFixture { .. })
+        ));
+    }
+
+    #[test]
+    fn the_tree_of_a_cli_case_is_no_fixture() {
+        let root = Utf8Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let fixtures = discover_fixtures(&root).expect("the repository fixtures are readable");
+
+        assert!(
+            !fixtures
+                .iter()
+                .any(|found| found.path.starts_with("cli/") || found.path.contains("/tree/")),
+            "a CLI case's tree was discovered as a fixture"
+        );
     }
 
     #[test]

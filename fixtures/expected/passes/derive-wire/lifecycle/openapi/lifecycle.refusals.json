@@ -1,0 +1,17 @@
+[
+  {
+    "code": "openapi.response.shape.unsupported",
+    "message": "A 'binary' response in operation 'export' is not generated yet.",
+    "fix": "Ask the user first: remove the download or redirect operation from the document's operations.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/5/responses/0/shape",
+    "operation": "export"
+  },
+  {
+    "code": "openapi.paging.headers.unsupported",
+    "message": "A paging style header is not generated yet.",
+    "fix": "Ask the user first: remove the headers from the paging style's `response`.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/pagings/githubPages/response/headers"
+  }
+]

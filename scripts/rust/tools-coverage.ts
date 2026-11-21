@@ -4,9 +4,8 @@
 //   node --experimental-transform-types --no-warnings --import ./scripts/ir-models/register.ts \
 //     scripts/rust/tools-coverage.ts
 // It writes one table per crate under `docs/maintainers/rust-design/cli-and-tools/` (the design note
-// `docs/maintainers/rust-design/cli-and-tools.md` says how the briefs read them). OpenAPI pairs are measured: one per
-// (fixture, api) whose expected IR the emitter reads with the default options. A crate whose oracle cases do not exist
-// yet has no pair: its table is cut in the order of its `sources`, and cut again once the cases exist.
+// `docs/maintainers/rust-design/cli-and-tools.md` says how the briefs read them). A pair is one oracle case run under the
+// probe (`tools-pairs.ts`): the cases and their writers are those of `scripts/oracle`.
 
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -20,14 +19,15 @@ import {
   pairsOf,
   type ReachedFunction,
 } from "./pass-coverage.ts";
+import { collectToolRecords, type ToolRecords } from "./tools-pairs.ts";
 import { listTypeScriptFunctionRanges } from "./trace.ts";
 
 const PACKAGES = join(REPO_ROOT, "packages/core");
 const EXPECTED_DIRECTORY = join(REPO_ROOT, "fixtures/expected");
 const OUTPUT_DIRECTORY = join(REPO_ROOT, "docs/maintainers/rust-design/cli-and-tools");
 
-/** Where a crate's pairs come from: measured OpenAPI emits, or none until the oracle extension writes the cases. */
-type PairSource = "openapi" | "pending";
+/** Where a crate's pairs come from: the records the oracle cases of one tool give (`tools-pairs.ts`). */
+type PairSource = keyof ToolRecords;
 
 /** One table: a crate and the TypeScript functions it ports. */
 export interface ToolCrateSpec {
@@ -66,7 +66,7 @@ export const TOOL_CRATES: readonly ToolCrateSpec[] = [
   { crate: "openapi", pairs: "openapi", sources: ["openapi/src/"] },
   {
     crate: "diff-table",
-    pairs: "pending",
+    pairs: "diff-table",
     sources: [
       "diff/src/diff-codes.ts",
       "diff/src/result.ts",
@@ -76,7 +76,7 @@ export const TOOL_CRATES: readonly ToolCrateSpec[] = [
   },
   {
     crate: "diff",
-    pairs: "pending",
+    pairs: "diff",
     sources: [
       "diff/src/diff-contracts.ts",
       "diff/src/walk/walk.ts",
@@ -102,7 +102,7 @@ export const TOOL_CRATES: readonly ToolCrateSpec[] = [
   },
   {
     crate: "lint",
-    pairs: "pending",
+    pairs: "lint",
     sources: [
       "lint/src/run-lint.ts",
       "lint/src/resolve.ts",
@@ -119,7 +119,7 @@ export const TOOL_CRATES: readonly ToolCrateSpec[] = [
   },
   {
     crate: "bundle",
-    pairs: "pending",
+    pairs: "bundle",
     sources: [
       "spec/src/bundle/",
       `${BUNDLE}contents.ts`,
@@ -139,7 +139,7 @@ export const TOOL_CRATES: readonly ToolCrateSpec[] = [
   },
   {
     crate: "bundle-fetch",
-    pairs: "pending",
+    pairs: "cli",
     sources: [
       `${BUNDLE}fetch.ts`,
       `${BUNDLE}fetch-failure.ts`,
@@ -155,7 +155,7 @@ export const TOOL_CRATES: readonly ToolCrateSpec[] = [
   },
   {
     crate: "cli-config",
-    pairs: "pending",
+    pairs: "cli",
     sources: [
       `${CONFIG}config-file.ts`,
       `${CONFIG}config-waits.ts`,
@@ -186,10 +186,10 @@ export const TOOL_CRATES: readonly ToolCrateSpec[] = [
       `${CONFIG}document-plan.ts#openApiApiNames`,
     ],
   },
-  { crate: "editor-schemas", pairs: "pending", sources: [`${CLI}editor-schemas/`] },
+  { crate: "editor-schemas", pairs: "cli", sources: [`${CLI}editor-schemas/`] },
   {
     crate: "cli",
-    pairs: "pending",
+    pairs: "cli",
     sources: [
       `${CLI}run-cli.ts`,
       `${CLI}cli-io.ts`,
@@ -313,47 +313,15 @@ export function toolUnitsOf(spec: ToolCrateSpec): FunctionUnit[] {
   return units;
 }
 
-function expectedIrFiles(directory: string): string[] {
-  return readdirSync(directory, { recursive: true, encoding: "utf8" })
-    .filter((name) => name.split("/").at(-2) === "ir" && name.endsWith(".json"))
-    .map((name) => join(directory, name))
-    .sort();
-}
-
-type EmitDocuments = (ir: unknown) => unknown;
-
-function isEmitDocuments(value: unknown): value is EmitDocuments {
-  return typeof value === "function";
-}
-
-// One record per (fixture, api): what emitting its documents with the default options reached.
-async function openApiRecords(probe: CoverageProbe): Promise<ReachedFunction[][]> {
-  const openapi: unknown = await import(pathToFileURL(join(PACKAGES, "openapi/src/index.ts")).href);
-  const emitDocuments: unknown = Reflect.get(Object(openapi), "emitDocuments");
-
-  if (!isEmitDocuments(emitDocuments))
-    throw new Error("the OpenAPI package exports no emitDocuments");
-
-  const records: ReachedFunction[][] = [];
-
-  for (const file of expectedIrFiles(EXPECTED_DIRECTORY)) {
-    probe.take();
-    emitDocuments(JSON.parse(readFileSync(file, "utf8")));
-    records.push(probe.take());
-  }
-
-  return records;
-}
-
 async function main(): Promise<void> {
   const probe = new CoverageProbe(toolSourceFileOf);
-  const openApi = await openApiRecords(probe);
+  const collected = await collectToolRecords(probe);
 
   mkdirSync(OUTPUT_DIRECTORY, { recursive: true });
 
   for (const spec of TOOL_CRATES) {
     const units = toolUnitsOf(spec);
-    const records = spec.pairs === "openapi" ? openApi : [];
+    const records = collected[spec.pairs];
     const pairs = pairsOf(units, records).filter((pair) => pair.size > 0);
     const coverage = cutBriefs(units, pairs);
     const lines = units.reduce((sum, unit) => sum + unit.lines, 0);
@@ -371,7 +339,7 @@ async function main(): Promise<void> {
   }
 
   const reachedElsewhere = new Set(
-    openApi
+    collected.openapi
       .flat()
       .map((reached) => reached.file)
       .filter((file) => !file.startsWith("openapi/")),

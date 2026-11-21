@@ -1,0 +1,10 @@
+[
+  {
+    "code": "openapi.sensitive.shape.unsupported",
+    "message": "A sensitive value that is not a scalar in operation 'purgeTask' is not generated yet.",
+    "fix": "Ask the user first: mark only scalar values as sensitive.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/operations/13/input/proofs/0/schema",
+    "operation": "purgeTask"
+  }
+]

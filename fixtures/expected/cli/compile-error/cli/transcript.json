@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "In source 'notes' (<root>/contract):\napi.yaml:7:3: error seampact/validate/invalid-value: 'kind' is 'nonsense', not one of its values. Fix: Write one of \"product\", \"service\".\n",
+  "written": {},
+  "removed": []
+}

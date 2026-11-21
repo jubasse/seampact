@@ -1,0 +1,103 @@
+{
+  "ordering": {
+    "ok": true,
+    "api": "ordering",
+    "before": {
+      "version": {
+        "kind": "path",
+        "number": 1
+      },
+      "irRevision": 6,
+      "packs": []
+    },
+    "after": {
+      "version": {
+        "kind": "path",
+        "number": 1
+      },
+      "irRevision": 6,
+      "packs": []
+    },
+    "policy": {
+      "before": "none",
+      "after": "none",
+      "applied": "none"
+    },
+    "settings": {
+      "gate": "clients",
+      "exempt": [
+        "experimental",
+        "sunsetPassed"
+      ]
+    },
+    "changes": [],
+    "gate": {
+      "passed": true,
+      "failures": []
+    },
+    "deprecations": []
+  },
+  "second": {
+    "ok": true,
+    "api": "second",
+    "before": {
+      "version": {
+        "kind": "path",
+        "number": 1
+      },
+      "irRevision": 6,
+      "packs": []
+    },
+    "after": {
+      "version": {
+        "kind": "path",
+        "number": 1
+      },
+      "irRevision": 6,
+      "packs": []
+    },
+    "policy": {
+      "before": "none",
+      "after": "none",
+      "applied": "none"
+    },
+    "settings": {
+      "gate": "clients",
+      "exempt": [
+        "experimental",
+        "sunsetPassed"
+      ]
+    },
+    "changes": [
+      {
+        "kind": "operation.added",
+        "case": "added",
+        "pointer": "/operations/0",
+        "position": "none",
+        "operations": [
+          "event"
+        ],
+        "breaks": [],
+        "classification": "additive",
+        "after": "event"
+      },
+      {
+        "kind": "operation.added",
+        "case": "added",
+        "pointer": "/operations/1",
+        "position": "none",
+        "operations": [
+          "mixed"
+        ],
+        "breaks": [],
+        "classification": "additive",
+        "after": "mixed"
+      }
+    ],
+    "gate": {
+      "passed": true,
+      "failures": []
+    },
+    "deprecations": []
+  }
+}

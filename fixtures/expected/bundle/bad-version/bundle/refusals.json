@@ -1,0 +1,7 @@
+[
+  {
+    "code": "bundle.label-invalid",
+    "message": "The contract version 'not a version' is empty or holds a character outside printable ASCII (a space, a control or a non-ASCII character); the manifest cannot hold it.",
+    "fix": "Give the contract (package.json, or the passed name and version) and its packs names and versions of printable ASCII, at most 214 characters."
+  }
+]

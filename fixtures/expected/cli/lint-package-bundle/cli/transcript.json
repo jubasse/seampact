@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "Skipped the bundle source 'notes': it holds a compiled IR, and lint reads the contract.\n",
+  "stderr": "lint.no-source: The app config has no `path` source whose contract could be linted. Fix: Add a source `{ path: <contract workspace directory> }` to `sources`.\n",
+  "written": {},
+  "removed": []
+}

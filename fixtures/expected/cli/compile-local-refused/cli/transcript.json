@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "config.source.local: source 'notes': The source 'notes' is a local path (<root>/contract), and local sources are refused here (SEAMPACT_ALLOW_LOCAL=false). Fix: Use a pinned bundle source instead: `{ package, version, integrity }`, `{ release: { url }, integrity }` or `{ git: { url, tag, directory }, integrity }`. The source is read because an api is named alone ('notes'); name each as `<source>/<api>` and only that source is read.\n",
+  "written": {},
+  "removed": []
+}

@@ -1,0 +1,9 @@
+[
+  {
+    "code": "openapi.template.member-repeated.unsupported",
+    "message": "The member 'data' written twice in one object is not generated yet.",
+    "fix": "Ask the user first: write each member once in the format's object.",
+    "docs": "https://jubasse.github.io/seampact/troubleshooting/generate/#openapi-documents",
+    "member": "/formats/bare/success/item/body/members/1/name"
+  }
+]

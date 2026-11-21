@@ -1,0 +1,3 @@
+tasks v1: compat.policy additive-only (before additive-only, after additive-only), gate clients
+additive createTask output /operations/2/errors/9/retryHeader: error retryHeaderAdded (Retry-After)
+gate passed

@@ -1,0 +1,7 @@
+[
+  {
+    "code": "bundle.compile-failed",
+    "message": "The workspace does not compile: 2 error diagnostics; no bundle was written.",
+    "fix": "Fix the diagnostics `seampact compile` prints, then bundle again."
+  }
+]

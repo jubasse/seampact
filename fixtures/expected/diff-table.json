@@ -1,0 +1,850 @@
+{
+  "codes": {
+    "irVersionDiffers": "diff.irVersion.differs",
+    "irRevisionDiffers": "diff.irRevision.differs",
+    "apiNameDiffers": "diff.api.name.differs",
+    "apiVersionDiffers": "diff.api.version.differs",
+    "unknownValue": "diff.ir.unknownValue",
+    "policyBreaking": "diff.policy.breaking",
+    "maturityStable": "diff.maturity.stable"
+  },
+  "table": {
+    "operation.added": {
+      "added": {
+        "none": "-"
+      }
+    },
+    "operation.removed": {
+      "removed": {
+        "none": "C"
+      }
+    },
+    "operation.route": {
+      "method": {
+        "none": "CS"
+      },
+      "path": {
+        "none": "CS"
+      },
+      "surface": {
+        "none": "CS"
+      },
+      "surfacePrefix": {
+        "none": "CS"
+      },
+      "pathVersion": {
+        "none": "CS"
+      },
+      "safe": {
+        "none": "CS"
+      }
+    },
+    "operation.format": {
+      "changed": {
+        "none": "CS"
+      }
+    },
+    "property.added": {
+      "optional": {
+        "input": "-",
+        "output": "-",
+        "none": "info"
+      },
+      "required": {
+        "input": "C",
+        "output": "S",
+        "none": "info"
+      }
+    },
+    "property.removed": {
+      "required": {
+        "input": "CS",
+        "output": "C",
+        "none": "info"
+      },
+      "optional": {
+        "input": {
+          "when": "afterRefusesUnknownKeys",
+          "holds": "C",
+          "otherwise": "-"
+        },
+        "output": "-",
+        "none": "info"
+      }
+    },
+    "property.required": {
+      "optionalToRequired": {
+        "input": "C",
+        "output": "S",
+        "none": "info"
+      },
+      "requiredToOptional": {
+        "input": "S",
+        "output": "C",
+        "none": "info"
+      }
+    },
+    "nullable": {
+      "added": {
+        "input": "S",
+        "output": "C",
+        "none": "info"
+      },
+      "removed": {
+        "input": "C",
+        "output": "S",
+        "none": "info"
+      }
+    },
+    "type.changed": {
+      "kind": {
+        "input": "CS",
+        "output": "CS",
+        "none": "info"
+      },
+      "scalarType": {
+        "input": "CS",
+        "output": "CS",
+        "none": "info"
+      },
+      "format": {
+        "input": "CS",
+        "output": "CS",
+        "none": "info"
+      },
+      "ref": {
+        "input": "CS",
+        "output": "CS",
+        "none": "info"
+      },
+      "enum": {
+        "input": "CS",
+        "output": "CS",
+        "none": "info"
+      },
+      "keys": {
+        "input": "CS",
+        "output": "CS",
+        "none": "info"
+      },
+      "content": {
+        "input": "CS",
+        "output": "CS",
+        "none": "info"
+      },
+      "body": {
+        "input": "CS",
+        "output": "CS",
+        "none": "info"
+      },
+      "variantSchema": {
+        "input": "CS",
+        "output": "CS",
+        "none": "info"
+      },
+      "int64Wire": {
+        "input": "CS",
+        "output": "CS",
+        "none": "info"
+      },
+      "outputEnums": {
+        "input": "CS",
+        "output": "CS",
+        "none": "info"
+      },
+      "urls": {
+        "input": "CS",
+        "output": "CS",
+        "none": "info"
+      },
+      "wire": {
+        "input": "CS",
+        "none": "info"
+      }
+    },
+    "refinement": {
+      "tightened": {
+        "input": "C",
+        "output": "S",
+        "none": "info"
+      },
+      "loosened": {
+        "input": "S",
+        "output": "C",
+        "none": "info"
+      },
+      "changed": {
+        "input": "CS",
+        "output": "CS",
+        "none": "info"
+      }
+    },
+    "pattern.changed": {
+      "changed": {
+        "input": "CS",
+        "output": "CS",
+        "none": "info"
+      }
+    },
+    "enum.value": {
+      "added": {
+        "input": "S",
+        "output": {
+          "when": "outputEnumsOpenInBoth",
+          "holds": "-",
+          "otherwise": "C"
+        },
+        "none": "info"
+      },
+      "removed": {
+        "input": "C",
+        "output": "S",
+        "none": "info"
+      }
+    },
+    "union.variant": {
+      "added": {
+        "input": "S",
+        "output": "C",
+        "none": "info"
+      },
+      "removed": {
+        "input": "C",
+        "output": "S",
+        "none": "info"
+      }
+    },
+    "union.tag": {
+      "changed": {
+        "input": "CS",
+        "output": "CS",
+        "none": "info"
+      }
+    },
+    "default.changed": {
+      "added": {
+        "input": "C",
+        "output": "info",
+        "none": "info"
+      },
+      "changed": {
+        "input": "C",
+        "output": "info",
+        "none": "info"
+      },
+      "removed": {
+        "input": "C",
+        "output": "info",
+        "none": "info"
+      }
+    },
+    "param.added": {
+      "optional": {
+        "input": "-"
+      },
+      "required": {
+        "input": "C"
+      }
+    },
+    "param.removed": {
+      "required": {
+        "input": "CS"
+      },
+      "optional": {
+        "input": {
+          "when": "afterRefusesUnknownQuery",
+          "holds": "C",
+          "otherwise": "-"
+        }
+      }
+    },
+    "param.required": {
+      "optionalToRequired": {
+        "input": "C"
+      },
+      "requiredToOptional": {
+        "input": "S"
+      }
+    },
+    "unknownQuery": {
+      "refused": {
+        "input": "C"
+      },
+      "ignored": {
+        "input": "-"
+      }
+    },
+    "unknownKeys": {
+      "refused": {
+        "input": "C",
+        "none": "info"
+      },
+      "ignored": {
+        "input": "-",
+        "none": "info"
+      },
+      "kept": {
+        "input": "S",
+        "none": "info"
+      }
+    },
+    "body": {
+      "added": {
+        "input": "C"
+      },
+      "removed": {
+        "input": "CS"
+      },
+      "mediaRemoved": {
+        "input": "C"
+      },
+      "rawBody": {
+        "input": "S"
+      }
+    },
+    "proof": {
+      "added": {
+        "input": "C"
+      },
+      "removed": {
+        "input": "CS"
+      }
+    },
+    "response": {
+      "added": {
+        "output": "C"
+      },
+      "removed": {
+        "output": "S"
+      },
+      "changed": {
+        "output": "CS"
+      },
+      "mediaChanged": {
+        "output": "CS"
+      },
+      "shape": {
+        "output": "CS"
+      }
+    },
+    "responseHeader.added": {
+      "optional": {
+        "output": "-"
+      },
+      "required": {
+        "output": "S"
+      }
+    },
+    "responseHeader.removed": {
+      "required": {
+        "output": "C"
+      },
+      "optional": {
+        "output": "-"
+      }
+    },
+    "responseHeader.required": {
+      "optionalToRequired": {
+        "output": "S"
+      },
+      "requiredToOptional": {
+        "output": "C"
+      }
+    },
+    "responseHeader.semantic": {
+      "changed": {
+        "output": "CS"
+      }
+    },
+    "access": {
+      "tightened": {
+        "input": "C"
+      },
+      "loosened": {
+        "input": "S"
+      },
+      "principalOptionalAdded": {
+        "input": "-"
+      },
+      "principalOptionalRemoved": {
+        "input": "S"
+      },
+      "identity": {
+        "input": "CS"
+      },
+      "schemeAdded": {
+        "input": "-"
+      },
+      "schemeRemoved": {
+        "input": "C"
+      }
+    },
+    "callerKind": {
+      "added": {
+        "input": "S"
+      },
+      "removed": {
+        "input": "C"
+      }
+    },
+    "principalRequirement": {
+      "added": {
+        "input": "C"
+      },
+      "removed": {
+        "input": "S"
+      }
+    },
+    "scope": {
+      "added": {
+        "input": "C"
+      },
+      "removed": {
+        "input": "S"
+      },
+      "changed": {
+        "input": "CS"
+      },
+      "within": {
+        "input": "CS",
+        "output": "CS",
+        "none": "info"
+      }
+    },
+    "requirement": {
+      "added": {
+        "input": "C"
+      },
+      "removed": {
+        "input": "S"
+      },
+      "changed": {
+        "input": "CS"
+      }
+    },
+    "binding": {
+      "added": {
+        "input": "C"
+      },
+      "removed": {
+        "input": "S"
+      },
+      "changed": {
+        "input": "CS"
+      }
+    },
+    "csrf": {
+      "added": {
+        "input": "C"
+      },
+      "removed": {
+        "input": "S"
+      },
+      "changed": {
+        "input": "CS"
+      }
+    },
+    "owner": {
+      "added": {
+        "input": "C"
+      },
+      "removed": {
+        "input": "S"
+      },
+      "changed": {
+        "input": "CS"
+      }
+    },
+    "concurrency": {
+      "added": {
+        "input": "C"
+      },
+      "removed": {
+        "input": "S"
+      },
+      "changed": {
+        "input": "CS"
+      }
+    },
+    "fieldRight": {
+      "added": {
+        "input": "C",
+        "output": "C",
+        "none": "info"
+      },
+      "removed": {
+        "input": "S",
+        "output": "-",
+        "none": "info"
+      },
+      "changed": {
+        "input": "CS",
+        "output": "CS",
+        "none": "info"
+      }
+    },
+    "filteredBy": {
+      "added": {
+        "output": "C"
+      },
+      "removed": {
+        "output": "S"
+      },
+      "changed": {
+        "output": "CS"
+      }
+    },
+    "idempotency": {
+      "addedRequired": {
+        "input": "C"
+      },
+      "addedOptional": {
+        "input": "-"
+      },
+      "removed": {
+        "input": "S"
+      },
+      "optionalToRequired": {
+        "input": "C"
+      },
+      "requiredToOptional": {
+        "input": "S"
+      },
+      "header": {
+        "input": "CS"
+      },
+      "replayHeader": {
+        "output": "C"
+      },
+      "lifetimeShortened": {
+        "input": "S"
+      },
+      "lifetimeLengthened": {
+        "input": "C"
+      },
+      "lifetimeLengthenedUnenforced": {
+        "input": "-"
+      },
+      "enforceDropped": {
+        "input": "S"
+      },
+      "enforceAdded": {
+        "input": "C"
+      }
+    },
+    "paging": {
+      "added": {
+        "input": "CS"
+      },
+      "removed": {
+        "input": "CS"
+      },
+      "style": {
+        "input": "CS"
+      },
+      "token": {
+        "input": "CS"
+      },
+      "defaultLimit": {
+        "input": "CS"
+      },
+      "overLimitRejected": {
+        "input": "C"
+      },
+      "overLimitClamped": {
+        "input": "-"
+      },
+      "sortKeyAdded": {
+        "input": "S"
+      },
+      "sortKeyRemoved": {
+        "input": "C"
+      },
+      "sortKeyChanged": {
+        "input": "CS"
+      }
+    },
+    "error": {
+      "added": {
+        "output": "C"
+      },
+      "removed": {
+        "output": "S"
+      },
+      "roles": {
+        "output": "CS"
+      },
+      "retryHeaderAdded": {
+        "output": "-"
+      },
+      "retryHeaderRemoved": {
+        "output": "C"
+      },
+      "retryHeaderChanged": {
+        "output": "CS"
+      },
+      "status": {
+        "output": "CS",
+        "none": "info"
+      },
+      "nature": {
+        "output": "C",
+        "none": "info"
+      },
+      "family": {
+        "output": "C",
+        "none": "info"
+      }
+    },
+    "declaration": {
+      "added": {
+        "none": "info"
+      },
+      "removed": {
+        "none": "info"
+      }
+    },
+    "format": {
+      "media": {
+        "output": "CS",
+        "none": "info"
+      },
+      "absent": {
+        "output": "CS",
+        "none": "info"
+      },
+      "success": {
+        "output": "CS",
+        "none": "info"
+      },
+      "meta": {
+        "output": "CS",
+        "none": "info"
+      },
+      "error": {
+        "output": "CS",
+        "none": "info"
+      }
+    },
+    "pagingStyle": {
+      "position": {
+        "input": "CS",
+        "output": "CS",
+        "none": "info"
+      },
+      "absent": {
+        "output": "CS",
+        "none": "info"
+      },
+      "request": {
+        "input": "CS",
+        "none": "info"
+      },
+      "response": {
+        "output": "CS",
+        "none": "info"
+      },
+      "handlerResult": {
+        "output": "S",
+        "none": "info"
+      }
+    },
+    "scheme": {
+      "kind": {
+        "input": "C",
+        "none": "info"
+      },
+      "name": {
+        "input": "C",
+        "none": "info"
+      },
+      "csrf": {
+        "input": "C",
+        "none": "info"
+      },
+      "signature": {
+        "input": "CS",
+        "none": "info"
+      }
+    },
+    "identity": {
+      "kind": {
+        "input": "CS",
+        "none": "info"
+      },
+      "schemeAdded": {
+        "input": "-",
+        "none": "info"
+      },
+      "schemeRemoved": {
+        "input": "C",
+        "none": "info"
+      },
+      "schemeRoles": {
+        "input": "CS",
+        "none": "info"
+      },
+      "principal": {
+        "input": "CS",
+        "none": "info"
+      },
+      "unknownKeys": {
+        "input": "CS",
+        "none": "info"
+      },
+      "headerAddedRequired": {
+        "input": "C",
+        "none": "info"
+      },
+      "headerAddedOptional": {
+        "input": "-",
+        "none": "info"
+      },
+      "headerRemoved": {
+        "input": "S",
+        "none": "info"
+      },
+      "headerChanged": {
+        "input": "CS",
+        "none": "info"
+      }
+    },
+    "right": {
+      "subject": {
+        "input": "CS",
+        "output": "CS",
+        "none": "info"
+      },
+      "guestAdded": {
+        "input": "S",
+        "output": "S",
+        "none": "info"
+      },
+      "guestRemoved": {
+        "input": "C",
+        "output": "C",
+        "none": "info"
+      }
+    },
+    "rule": {
+      "takesBucket": {
+        "input": "CS",
+        "none": "info"
+      },
+      "proof": {
+        "input": "CS",
+        "none": "info"
+      }
+    },
+    "bucket": {
+      "key": {
+        "input": "CS",
+        "none": "info"
+      }
+    },
+    "header": {
+      "semantic": {
+        "input": "CS",
+        "none": "info"
+      },
+      "name": {
+        "input": "CS",
+        "none": "info"
+      }
+    },
+    "maturity": {
+      "lowered": {
+        "none": "C"
+      },
+      "raised": {
+        "none": "info"
+      }
+    },
+    "deprecation": {
+      "added": {
+        "none": "info"
+      },
+      "removed": {
+        "none": "info"
+      },
+      "sinceChanged": {
+        "none": "info"
+      },
+      "sunsetLater": {
+        "none": "info"
+      },
+      "successorChanged": {
+        "none": "info"
+      },
+      "sunsetEarlier": {
+        "none": "C"
+      }
+    },
+    "compat.policy": {
+      "changed": {
+        "none": "info"
+      }
+    },
+    "pack.upgraded": {
+      "added": {
+        "none": "info"
+      },
+      "removed": {
+        "none": "info"
+      },
+      "version": {
+        "none": "info"
+      }
+    },
+    "order": {
+      "properties": {
+        "input": "info",
+        "output": "info",
+        "none": "info"
+      },
+      "variants": {
+        "input": "info",
+        "output": "info",
+        "none": "info"
+      },
+      "values": {
+        "input": "info",
+        "output": "info",
+        "none": "info"
+      },
+      "params": {
+        "input": "info"
+      },
+      "packs": {
+        "none": "info"
+      },
+      "scopes": {
+        "input": "info"
+      },
+      "requires": {
+        "input": "info"
+      }
+    },
+    "name": {
+      "any": {
+        "input": "info",
+        "output": "info",
+        "none": "info"
+      }
+    },
+    "annotation": {
+      "any": {
+        "input": "info",
+        "output": "info",
+        "none": "info"
+      }
+    },
+    "unclassified": {
+      "any": {
+        "input": "CS",
+        "output": "CS",
+        "none": "CS"
+      }
+    }
+  }
+}

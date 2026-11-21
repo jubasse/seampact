@@ -1,0 +1,1520 @@
+{
+  "function": "compileWorkspaceWithImports",
+  "args": [
+    {
+      "reader": {
+        "root": "<root>/contract"
+      },
+      "entry": "api.yaml",
+      "fetch": {
+        "baseDirectory": "<root>/contract",
+        "localSources": "allow"
+      }
+    }
+  ],
+  "result": {
+    "ok": true,
+    "compiled": {
+      "files": [
+        "api.yaml"
+      ],
+      "diagnostics": [],
+      "locations": {},
+      "apis": [
+        {
+          "api": "notes",
+          "diagnostics": [],
+          "locations": {
+            "api#": {
+              "file": "api.yaml",
+              "line": 4,
+              "column": 1,
+              "endLine": 48,
+              "endColumn": 1
+            },
+            "api#/api/name": {
+              "file": "api.yaml",
+              "line": 5,
+              "column": 3,
+              "endLine": 5,
+              "endColumn": 14
+            },
+            "api#/api/version": {
+              "file": "api.yaml",
+              "line": 6,
+              "column": 3,
+              "endLine": 6,
+              "endColumn": 13
+            },
+            "api#/api/kind": {
+              "file": "api.yaml",
+              "line": 7,
+              "column": 3,
+              "endLine": 7,
+              "endColumn": 16
+            },
+            "api#/api/maturity": {
+              "file": "api.yaml",
+              "line": 8,
+              "column": 3,
+              "endLine": 8,
+              "endColumn": 24
+            },
+            "api#/api/summary": {
+              "file": "api.yaml",
+              "line": 9,
+              "column": 3,
+              "endLine": 9,
+              "endColumn": 30
+            },
+            "api#/api": {
+              "file": "api.yaml",
+              "line": 4,
+              "column": 1,
+              "endLine": 10,
+              "endColumn": 1
+            },
+            "api#/pagings/cursor/request/cursor/query": {
+              "file": "api.yaml",
+              "line": 15,
+              "column": 17,
+              "endLine": 15,
+              "endColumn": 30
+            },
+            "api#/pagings/cursor/request/cursor": {
+              "file": "api.yaml",
+              "line": 15,
+              "column": 7,
+              "endLine": 15,
+              "endColumn": 32
+            },
+            "api#/pagings/cursor/request/limit/query": {
+              "file": "api.yaml",
+              "line": 16,
+              "column": 16,
+              "endLine": 16,
+              "endColumn": 28
+            },
+            "api#/pagings/cursor/request/limit": {
+              "file": "api.yaml",
+              "line": 16,
+              "column": 7,
+              "endLine": 16,
+              "endColumn": 30
+            },
+            "api#/pagings/cursor/request": {
+              "file": "api.yaml",
+              "line": 14,
+              "column": 5,
+              "endLine": 17,
+              "endColumn": 1
+            },
+            "api#/pagings/cursor/response/body": {
+              "file": "api.yaml",
+              "line": 18,
+              "column": 7,
+              "endLine": 18,
+              "endColumn": 19
+            },
+            "api#/pagings/cursor/response/links/next": {
+              "file": "api.yaml",
+              "line": 19,
+              "column": 16,
+              "endLine": 19,
+              "endColumn": 27
+            },
+            "api#/pagings/cursor/response/links": {
+              "file": "api.yaml",
+              "line": 19,
+              "column": 7,
+              "endLine": 19,
+              "endColumn": 29
+            },
+            "api#/pagings/cursor/response": {
+              "file": "api.yaml",
+              "line": 17,
+              "column": 5,
+              "endLine": 20,
+              "endColumn": 1
+            },
+            "api#/pagings/cursor": {
+              "file": "api.yaml",
+              "line": 13,
+              "column": 3,
+              "endLine": 20,
+              "endColumn": 1
+            },
+            "api#/pagings": {
+              "file": "api.yaml",
+              "line": 12,
+              "column": 1,
+              "endLine": 20,
+              "endColumn": 1
+            },
+            "api#/schemas/NoteId/type": {
+              "file": "api.yaml",
+              "line": 23,
+              "column": 13,
+              "endLine": 23,
+              "endColumn": 25
+            },
+            "api#/schemas/NoteId/format": {
+              "file": "api.yaml",
+              "line": 23,
+              "column": 27,
+              "endLine": 23,
+              "endColumn": 39
+            },
+            "api#/schemas/NoteId": {
+              "file": "api.yaml",
+              "line": 23,
+              "column": 3,
+              "endLine": 23,
+              "endColumn": 41
+            },
+            "api#/schemas/Note/type": {
+              "file": "api.yaml",
+              "line": 25,
+              "column": 5,
+              "endLine": 25,
+              "endColumn": 17
+            },
+            "api#/schemas/Note/required/0": {
+              "file": "api.yaml",
+              "line": 26,
+              "column": 16,
+              "endLine": 26,
+              "endColumn": 22
+            },
+            "api#/schemas/Note/required/1": {
+              "file": "api.yaml",
+              "line": 26,
+              "column": 24,
+              "endLine": 26,
+              "endColumn": 29
+            },
+            "api#/schemas/Note/required": {
+              "file": "api.yaml",
+              "line": 26,
+              "column": 5,
+              "endLine": 26,
+              "endColumn": 30
+            },
+            "api#/schemas/Note/properties/noteId": {
+              "file": "api.yaml",
+              "line": 28,
+              "column": 7,
+              "endLine": 28,
+              "endColumn": 21
+            },
+            "api#/schemas/Note/properties/title/type": {
+              "file": "api.yaml",
+              "line": 29,
+              "column": 16,
+              "endLine": 29,
+              "endColumn": 28
+            },
+            "api#/schemas/Note/properties/title/minLength": {
+              "file": "api.yaml",
+              "line": 29,
+              "column": 30,
+              "endLine": 29,
+              "endColumn": 42
+            },
+            "api#/schemas/Note/properties/title/maxLength": {
+              "file": "api.yaml",
+              "line": 29,
+              "column": 44,
+              "endLine": 29,
+              "endColumn": 58
+            },
+            "api#/schemas/Note/properties/title": {
+              "file": "api.yaml",
+              "line": 29,
+              "column": 7,
+              "endLine": 29,
+              "endColumn": 60
+            },
+            "api#/schemas/Note/properties/body/type": {
+              "file": "api.yaml",
+              "line": 30,
+              "column": 15,
+              "endLine": 30,
+              "endColumn": 27
+            },
+            "api#/schemas/Note/properties/body/maxLength": {
+              "file": "api.yaml",
+              "line": 30,
+              "column": 29,
+              "endLine": 30,
+              "endColumn": 44
+            },
+            "api#/schemas/Note/properties/body": {
+              "file": "api.yaml",
+              "line": 30,
+              "column": 7,
+              "endLine": 30,
+              "endColumn": 46
+            },
+            "api#/schemas/Note/properties/pinned/type": {
+              "file": "api.yaml",
+              "line": 31,
+              "column": 17,
+              "endLine": 31,
+              "endColumn": 30
+            },
+            "api#/schemas/Note/properties/pinned": {
+              "file": "api.yaml",
+              "line": 31,
+              "column": 7,
+              "endLine": 31,
+              "endColumn": 32
+            },
+            "api#/schemas/Note/properties": {
+              "file": "api.yaml",
+              "line": 27,
+              "column": 5,
+              "endLine": 32,
+              "endColumn": 1
+            },
+            "api#/schemas/Note": {
+              "file": "api.yaml",
+              "line": 24,
+              "column": 3,
+              "endLine": 32,
+              "endColumn": 1
+            },
+            "api#/schemas": {
+              "file": "api.yaml",
+              "line": 22,
+              "column": 1,
+              "endLine": 32,
+              "endColumn": 1
+            },
+            "api#/surfaces/app/prefix": {
+              "file": "api.yaml",
+              "line": 36,
+              "column": 5,
+              "endLine": 36,
+              "endColumn": 24
+            },
+            "api#/surfaces/app/access/public": {
+              "file": "api.yaml",
+              "line": 37,
+              "column": 15,
+              "endLine": 37,
+              "endColumn": 70
+            },
+            "api#/surfaces/app/access": {
+              "file": "api.yaml",
+              "line": 37,
+              "column": 5,
+              "endLine": 37,
+              "endColumn": 72
+            },
+            "api#/surfaces/app/routes/notes/kind": {
+              "file": "api.yaml",
+              "line": 40,
+              "column": 9,
+              "endLine": 40,
+              "endColumn": 25
+            },
+            "api#/surfaces/app/routes/notes/id/noteId": {
+              "file": "api.yaml",
+              "line": 41,
+              "column": 15,
+              "endLine": 41,
+              "endColumn": 29
+            },
+            "api#/surfaces/app/routes/notes/id": {
+              "file": "api.yaml",
+              "line": 41,
+              "column": 9,
+              "endLine": 41,
+              "endColumn": 31
+            },
+            "api#/surfaces/app/routes/notes/item": {
+              "file": "api.yaml",
+              "line": 42,
+              "column": 9,
+              "endLine": 42,
+              "endColumn": 19
+            },
+            "api#/surfaces/app/routes/notes/ops/list/paging/cursor/maxLimit": {
+              "file": "api.yaml",
+              "line": 45,
+              "column": 39,
+              "endLine": 45,
+              "endColumn": 51
+            },
+            "api#/surfaces/app/routes/notes/ops/list/paging/cursor": {
+              "file": "api.yaml",
+              "line": 45,
+              "column": 29,
+              "endLine": 45,
+              "endColumn": 53
+            },
+            "api#/surfaces/app/routes/notes/ops/list/paging": {
+              "file": "api.yaml",
+              "line": 45,
+              "column": 19,
+              "endLine": 45,
+              "endColumn": 55
+            },
+            "api#/surfaces/app/routes/notes/ops/list": {
+              "file": "api.yaml",
+              "line": 45,
+              "column": 11,
+              "endLine": 45,
+              "endColumn": 57
+            },
+            "api#/surfaces/app/routes/notes/ops/get": {
+              "file": "api.yaml",
+              "line": 47,
+              "column": 11,
+              "endLine": 47,
+              "endColumn": 18
+            },
+            "api#/surfaces/app/routes/notes/ops": {
+              "file": "api.yaml",
+              "line": 43,
+              "column": 9,
+              "endLine": 48,
+              "endColumn": 1
+            },
+            "api#/surfaces/app/routes/notes": {
+              "file": "api.yaml",
+              "line": 39,
+              "column": 7,
+              "endLine": 48,
+              "endColumn": 1
+            },
+            "api#/surfaces/app/routes": {
+              "file": "api.yaml",
+              "line": 38,
+              "column": 5,
+              "endLine": 48,
+              "endColumn": 1
+            },
+            "api#/surfaces/app": {
+              "file": "api.yaml",
+              "line": 35,
+              "column": 3,
+              "endLine": 48,
+              "endColumn": 1
+            },
+            "api#/surfaces": {
+              "file": "api.yaml",
+              "line": 34,
+              "column": 1,
+              "endLine": 48,
+              "endColumn": 1
+            }
+          },
+          "ir": {
+            "packs": [],
+            "conventions": {},
+            "formats": {
+              "bare": {
+                "id": "bare",
+                "origin": {
+                  "layer": "core",
+                  "pointer": "/formats/bare"
+                },
+                "media": "application/json",
+                "absent": "omit",
+                "success": {
+                  "item": {
+                    "body": {
+                      "kind": "slot",
+                      "slot": "payload",
+                      "path": []
+                    },
+                    "headers": []
+                  },
+                  "table": {
+                    "body": {
+                      "kind": "slot",
+                      "slot": "payload",
+                      "path": []
+                    },
+                    "headers": []
+                  },
+                  "list": {
+                    "body": {
+                      "kind": "slot",
+                      "slot": "payload",
+                      "path": []
+                    },
+                    "headers": []
+                  },
+                  "page": {
+                    "body": {
+                      "kind": "slot",
+                      "slot": "items",
+                      "path": []
+                    },
+                    "headers": []
+                  }
+                },
+                "meta": {},
+                "error": {
+                  "media": "application/problem+json",
+                  "body": {
+                    "kind": "object",
+                    "members": [
+                      {
+                        "name": {
+                          "kind": "text",
+                          "text": "type"
+                        },
+                        "value": {
+                          "kind": "slot",
+                          "slot": "code",
+                          "path": []
+                        }
+                      },
+                      {
+                        "name": {
+                          "kind": "text",
+                          "text": "title"
+                        },
+                        "value": {
+                          "kind": "slot",
+                          "slot": "title",
+                          "path": []
+                        }
+                      },
+                      {
+                        "name": {
+                          "kind": "text",
+                          "text": "status"
+                        },
+                        "value": {
+                          "kind": "slot",
+                          "slot": "status",
+                          "path": []
+                        }
+                      },
+                      {
+                        "name": {
+                          "kind": "text",
+                          "text": "detail"
+                        },
+                        "value": {
+                          "kind": "slot",
+                          "slot": "detail",
+                          "path": []
+                        }
+                      },
+                      {
+                        "name": {
+                          "kind": "text",
+                          "text": "instance"
+                        },
+                        "value": {
+                          "kind": "slot",
+                          "slot": "instance",
+                          "path": []
+                        }
+                      },
+                      {
+                        "name": {
+                          "kind": "text",
+                          "text": "code"
+                        },
+                        "value": {
+                          "kind": "slot",
+                          "slot": "code",
+                          "path": []
+                        }
+                      },
+                      {
+                        "name": {
+                          "kind": "text",
+                          "text": "nature"
+                        },
+                        "value": {
+                          "kind": "slot",
+                          "slot": "nature",
+                          "path": []
+                        }
+                      },
+                      {
+                        "name": {
+                          "kind": "text",
+                          "text": "traceId"
+                        },
+                        "value": {
+                          "kind": "slot",
+                          "slot": "traceId",
+                          "path": []
+                        }
+                      }
+                    ],
+                    "merge": "params"
+                  },
+                  "headers": []
+                }
+              }
+            },
+            "pagings": {
+              "cursor": {
+                "id": "cursor",
+                "origin": {
+                  "layer": "api",
+                  "pointer": "/pagings/cursor"
+                },
+                "position": "cursor",
+                "absent": "omit",
+                "request": [
+                  {
+                    "role": "cursor",
+                    "in": "query",
+                    "name": "cursor"
+                  },
+                  {
+                    "role": "limit",
+                    "in": "query",
+                    "name": "limit"
+                  }
+                ],
+                "response": {
+                  "body": {
+                    "kind": "slot",
+                    "slot": "items",
+                    "path": []
+                  },
+                  "meta": [],
+                  "headers": [],
+                  "links": [
+                    {
+                      "rel": "next",
+                      "role": "next"
+                    }
+                  ]
+                },
+                "handlerResult": [
+                  "nextCursor"
+                ]
+              }
+            },
+            "schemas": {
+              "ApiSchemaInvalidParams": {
+                "kind": "object",
+                "id": "ApiSchemaInvalidParams",
+                "name": {
+                  "segments": [
+                    "api",
+                    "schema",
+                    "invalid"
+                  ],
+                  "role": "params"
+                },
+                "directions": [
+                  "output"
+                ],
+                "examples": [],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                  "layer": "core",
+                  "pointer": "/errors/api.schema_invalid/params"
+                },
+                "properties": [
+                  {
+                    "name": "issues",
+                    "type": {
+                      "kind": "array",
+                      "items": {
+                        "kind": "ref",
+                        "schema": "ApiSchemaInvalidIssue"
+                      }
+                    },
+                    "optional": false,
+                    "origin": {
+                      "layer": "core",
+                      "pointer": "/errors/api.schema_invalid/params/issues"
+                    },
+                    "nullable": false,
+                    "sensitive": false,
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {}
+                  }
+                ]
+              },
+              "ApiSchemaInvalidIssue": {
+                "kind": "object",
+                "id": "ApiSchemaInvalidIssue",
+                "name": {
+                  "segments": [
+                    "api",
+                    "schema",
+                    "invalid",
+                    "issue"
+                  ],
+                  "role": "schema"
+                },
+                "directions": [
+                  "output"
+                ],
+                "examples": [],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                  "layer": "core",
+                  "pointer": "/errors/api.schema_invalid/params/issues/items"
+                },
+                "properties": [
+                  {
+                    "name": "in",
+                    "type": {
+                      "kind": "scalar",
+                      "type": "string",
+                      "refinements": {
+                        "pattern": {
+                          "source": "^(?:path|query|header|body)$",
+                          "normalized": "^(?:path|query|header|body)$"
+                        }
+                      }
+                    },
+                    "optional": false,
+                    "origin": {
+                      "layer": "core",
+                      "pointer": "/errors/api.schema_invalid/params/issues/items/properties/in"
+                    },
+                    "nullable": false,
+                    "sensitive": false,
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {}
+                  },
+                  {
+                    "name": "pointer",
+                    "type": {
+                      "kind": "scalar",
+                      "type": "string",
+                      "refinements": {}
+                    },
+                    "optional": false,
+                    "origin": {
+                      "layer": "core",
+                      "pointer": "/errors/api.schema_invalid/params/issues/items/properties/pointer"
+                    },
+                    "nullable": false,
+                    "sensitive": false,
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {}
+                  },
+                  {
+                    "name": "rule",
+                    "type": {
+                      "kind": "scalar",
+                      "type": "string",
+                      "refinements": {}
+                    },
+                    "optional": false,
+                    "origin": {
+                      "layer": "core",
+                      "pointer": "/errors/api.schema_invalid/params/issues/items/properties/rule"
+                    },
+                    "nullable": false,
+                    "sensitive": false,
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {}
+                  }
+                ]
+              },
+              "Note": {
+                "kind": "object",
+                "properties": [
+                  {
+                    "name": "noteId",
+                    "type": {
+                      "kind": "scalar",
+                      "type": "string",
+                      "format": "uuid",
+                      "refinements": {}
+                    },
+                    "optional": false,
+                    "nullable": false,
+                    "sensitive": false,
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {},
+                    "origin": {
+                      "layer": "api",
+                      "pointer": "/schemas/Note/properties/noteId"
+                    }
+                  },
+                  {
+                    "name": "title",
+                    "type": {
+                      "kind": "scalar",
+                      "type": "string",
+                      "refinements": {
+                        "minLength": 1,
+                        "maxLength": 100
+                      }
+                    },
+                    "optional": false,
+                    "nullable": false,
+                    "sensitive": false,
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {},
+                    "origin": {
+                      "layer": "api",
+                      "pointer": "/schemas/Note/properties/title"
+                    }
+                  },
+                  {
+                    "name": "body",
+                    "type": {
+                      "kind": "scalar",
+                      "type": "string",
+                      "refinements": {
+                        "maxLength": 2000
+                      }
+                    },
+                    "optional": true,
+                    "nullable": false,
+                    "sensitive": false,
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {},
+                    "origin": {
+                      "layer": "api",
+                      "pointer": "/schemas/Note/properties/body"
+                    }
+                  },
+                  {
+                    "name": "pinned",
+                    "type": {
+                      "kind": "scalar",
+                      "type": "boolean",
+                      "refinements": {}
+                    },
+                    "optional": true,
+                    "nullable": false,
+                    "sensitive": false,
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {},
+                    "origin": {
+                      "layer": "api",
+                      "pointer": "/schemas/Note/properties/pinned"
+                    }
+                  }
+                ],
+                "id": "Note",
+                "name": {
+                  "segments": [
+                    "note"
+                  ],
+                  "role": "schema"
+                },
+                "directions": [
+                  "output"
+                ],
+                "examples": [],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                  "layer": "api",
+                  "pointer": "/schemas/Note"
+                }
+              }
+            },
+            "scalars": {},
+            "enums": {},
+            "errors": {
+              "api.schema_invalid": {
+                "code": "api.schema_invalid",
+                "family": "api",
+                "nature": "refused",
+                "http": {
+                  "status": 400
+                },
+                "params": "ApiSchemaInvalidParams",
+                "docs": {},
+                "origin": {
+                  "layer": "core",
+                  "pointer": "/errors/api.schema_invalid"
+                },
+                "default": "schemaInvalid"
+              },
+              "api.not_found": {
+                "code": "api.not_found",
+                "family": "api",
+                "nature": "refused",
+                "http": {
+                  "status": 404
+                },
+                "docs": {},
+                "origin": {
+                  "layer": "core",
+                  "pointer": "/errors/api.not_found"
+                },
+                "default": "notFound"
+              },
+              "api.internal": {
+                "code": "api.internal",
+                "family": "api",
+                "nature": "failed",
+                "http": {
+                  "status": 500
+                },
+                "docs": {},
+                "origin": {
+                  "layer": "core",
+                  "pointer": "/errors/api.internal"
+                },
+                "default": "undeclaredStatus"
+              }
+            },
+            "natures": {},
+            "schemes": {},
+            "headers": {},
+            "identities": {},
+            "rights": {},
+            "rules": {},
+            "scopes": {},
+            "buckets": {},
+            "services": {},
+            "extensionKeys": {},
+            "operations": [
+              {
+                "kind": "httpOperation",
+                "id": "getNote",
+                "name": {
+                  "segments": [
+                    "get",
+                    "note"
+                  ],
+                  "role": "operation"
+                },
+                "surface": "app",
+                "op": "get",
+                "resource": {
+                  "type": "notes",
+                  "idParam": "noteId",
+                  "idProperty": "noteId"
+                },
+                "method": "get",
+                "safe": true,
+                "path": "/v1/notes/{noteId}",
+                "params": {
+                  "path": [
+                    {
+                      "name": "noteId",
+                      "type": {
+                        "kind": "scalar",
+                        "type": "string",
+                        "format": "uuid",
+                        "refinements": {}
+                      },
+                      "required": true,
+                      "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/app/routes/notes/id/noteId"
+                      }
+                    }
+                  ],
+                  "query": [],
+                  "header": []
+                },
+                "unknownQuery": {
+                  "policy": "refuse"
+                },
+                "responses": [
+                  {
+                    "status": 200,
+                    "media": "application/json",
+                    "body": {
+                      "kind": "ref",
+                      "schema": "Note"
+                    },
+                    "shape": "item",
+                    "headers": [],
+                    "origin": {
+                      "layer": "api",
+                      "pointer": "/surfaces/app/routes/notes/item"
+                    },
+                    "derivedFrom": {
+                      "derivation": "response.format",
+                      "from": [
+                        {
+                          "layer": "core",
+                          "pointer": "/formats/bare"
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "format": "bare",
+                "examples": {},
+                "upstream": [],
+                "internal": false,
+                "tags": [],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/notes/ops/get"
+                },
+                "access": {
+                  "kind": "public",
+                  "reason": "Anyone may call this api: it has no accounts.",
+                  "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/access"
+                  }
+                },
+                "callerKinds": [
+                  "anonymous"
+                ],
+                "principalRequires": [],
+                "bindings": [],
+                "scopes": [],
+                "requires": [],
+                "fieldRights": [],
+                "maturity": {
+                  "level": "provisional",
+                  "source": "api",
+                  "origin": {
+                    "layer": "api",
+                    "pointer": "/api/maturity"
+                  }
+                },
+                "errors": [
+                  {
+                    "code": "api.schema_invalid",
+                    "roles": [
+                      {
+                        "role": "schemaInvalid",
+                        "params": {
+                          "kind": "object",
+                          "members": [
+                            {
+                              "name": {
+                                "kind": "text",
+                                "text": "issues"
+                              },
+                              "value": {
+                                "kind": "slot",
+                                "slot": "issues",
+                                "path": []
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "derivedFrom": {
+                      "derivation": "input.invalid",
+                      "from": [
+                        {
+                          "layer": "api",
+                          "pointer": "/surfaces/app/routes/notes/ops/get"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "code": "api.not_found",
+                    "roles": [
+                      {
+                        "role": "notFound"
+                      }
+                    ],
+                    "derivedFrom": {
+                      "derivation": "member.notFound",
+                      "from": [
+                        {
+                          "layer": "api",
+                          "pointer": "/surfaces/app/routes/notes/ops/get"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "code": "api.internal",
+                    "roles": [
+                      {
+                        "role": "undeclaredStatus"
+                      }
+                    ],
+                    "derivedFrom": {
+                      "derivation": "response.undeclared",
+                      "from": [
+                        {
+                          "layer": "api",
+                          "pointer": "/surfaces/app/routes/notes/ops/get"
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "features": []
+              },
+              {
+                "kind": "httpOperation",
+                "id": "listNotes",
+                "name": {
+                  "segments": [
+                    "list",
+                    "notes"
+                  ],
+                  "role": "operation"
+                },
+                "surface": "app",
+                "op": "list",
+                "resource": {
+                  "type": "notes",
+                  "idProperty": "noteId"
+                },
+                "method": "get",
+                "safe": true,
+                "path": "/v1/notes",
+                "params": {
+                  "path": [],
+                  "query": [
+                    {
+                      "name": "cursor",
+                      "type": {
+                        "kind": "scalar",
+                        "type": "string",
+                        "refinements": {}
+                      },
+                      "required": false,
+                      "wire": {
+                        "kind": "text",
+                        "style": "form",
+                        "explode": true,
+                        "brackets": false
+                      },
+                      "derivedFrom": {
+                        "derivation": "paging.params",
+                        "from": [
+                          {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/notes/ops/list/paging"
+                          },
+                          {
+                            "layer": "api",
+                            "pointer": "/pagings/cursor"
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "name": "limit",
+                      "type": {
+                        "kind": "scalar",
+                        "type": "integer",
+                        "refinements": {
+                          "minimum": "1",
+                          "maximum": "50"
+                        }
+                      },
+                      "required": false,
+                      "wire": {
+                        "kind": "number",
+                        "style": "form",
+                        "explode": true,
+                        "brackets": false
+                      },
+                      "derivedFrom": {
+                        "derivation": "paging.params",
+                        "from": [
+                          {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/notes/ops/list/paging"
+                          },
+                          {
+                            "layer": "api",
+                            "pointer": "/pagings/cursor"
+                          }
+                        ]
+                      }
+                    }
+                  ],
+                  "header": []
+                },
+                "unknownQuery": {
+                  "policy": "refuse"
+                },
+                "responses": [
+                  {
+                    "status": 200,
+                    "media": "application/json",
+                    "body": {
+                      "kind": "ref",
+                      "schema": "Note"
+                    },
+                    "shape": "page",
+                    "headers": [
+                      {
+                        "name": "Link",
+                        "type": {
+                          "kind": "scalar",
+                          "type": "string",
+                          "refinements": {}
+                        },
+                        "required": false,
+                        "derivedFrom": {
+                          "derivation": "paging.params",
+                          "from": [
+                            {
+                              "layer": "api",
+                              "pointer": "/surfaces/app/routes/notes/ops/list/paging"
+                            },
+                            {
+                              "layer": "api",
+                              "pointer": "/pagings/cursor"
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "origin": {
+                      "layer": "api",
+                      "pointer": "/surfaces/app/routes/notes/item"
+                    },
+                    "derivedFrom": {
+                      "derivation": "response.format",
+                      "from": [
+                        {
+                          "layer": "core",
+                          "pointer": "/formats/bare"
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "paging": {
+                  "style": "cursor",
+                  "maxLimit": 50,
+                  "defaultLimit": 50,
+                  "overLimit": "reject",
+                  "sortKeys": [],
+                  "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/notes/ops/list/paging"
+                  }
+                },
+                "format": "bare",
+                "examples": {},
+                "upstream": [],
+                "internal": false,
+                "tags": [],
+                "docs": {},
+                "extensions": {},
+                "origin": {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/notes/ops/list"
+                },
+                "access": {
+                  "kind": "public",
+                  "reason": "Anyone may call this api: it has no accounts.",
+                  "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/access"
+                  }
+                },
+                "callerKinds": [
+                  "anonymous"
+                ],
+                "principalRequires": [],
+                "bindings": [],
+                "scopes": [],
+                "requires": [],
+                "fieldRights": [],
+                "maturity": {
+                  "level": "provisional",
+                  "source": "api",
+                  "origin": {
+                    "layer": "api",
+                    "pointer": "/api/maturity"
+                  }
+                },
+                "errors": [
+                  {
+                    "code": "api.schema_invalid",
+                    "roles": [
+                      {
+                        "role": "schemaInvalid",
+                        "params": {
+                          "kind": "object",
+                          "members": [
+                            {
+                              "name": {
+                                "kind": "text",
+                                "text": "issues"
+                              },
+                              "value": {
+                                "kind": "slot",
+                                "slot": "issues",
+                                "path": []
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "derivedFrom": {
+                      "derivation": "input.invalid",
+                      "from": [
+                        {
+                          "layer": "api",
+                          "pointer": "/surfaces/app/routes/notes/ops/list"
+                        },
+                        {
+                          "layer": "api",
+                          "pointer": "/surfaces/app/routes/notes/ops/list/paging"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "code": "api.internal",
+                    "roles": [
+                      {
+                        "role": "undeclaredStatus"
+                      }
+                    ],
+                    "derivedFrom": {
+                      "derivation": "response.undeclared",
+                      "from": [
+                        {
+                          "layer": "api",
+                          "pointer": "/surfaces/app/routes/notes/ops/list"
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "features": []
+              }
+            ],
+            "api": {
+              "id": "notes",
+              "name": {
+                "segments": [
+                  "notes"
+                ],
+                "role": "schema"
+              },
+              "version": {
+                "kind": "path",
+                "number": 1
+              },
+              "kind": "product",
+              "pathVersion": {
+                "value": "prefix",
+                "origin": {
+                  "layer": "api",
+                  "pointer": "/api/version"
+                }
+              },
+              "maturity": "provisional",
+              "compat": {
+                "policy": "none"
+              },
+              "surfaces": {
+                "app": {
+                  "name": {
+                    "segments": [
+                      "app"
+                    ],
+                    "role": "schema"
+                  },
+                  "prefix": "/v1",
+                  "pathVersion": "prefix",
+                  "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/app"
+                  }
+                }
+              },
+              "documents": {},
+              "docs": {
+                "summary": "A small notes api."
+              },
+              "extensions": {},
+              "origin": {
+                "layer": "api",
+                "pointer": "/api"
+              },
+              "wire": {
+                "int64": "string",
+                "outputEnums": "enum",
+                "urls": "relative"
+              }
+            },
+            "lint": {
+              "rules": {},
+              "allows": []
+            },
+            "irVersion": 1,
+            "irRevision": 6,
+            "kinds": [
+              "httpOperation"
+            ],
+            "features": []
+          },
+          "sourceMap": {
+            "irRevision": 6,
+            "locations": {
+              "api#/pagings/cursor": {
+                "file": "api.yaml",
+                "line": 13,
+                "column": 3,
+                "endLine": 20,
+                "endColumn": 1
+              },
+              "api#/schemas/Note/properties/noteId": {
+                "file": "api.yaml",
+                "line": 28,
+                "column": 7,
+                "endLine": 28,
+                "endColumn": 21
+              },
+              "api#/schemas/Note/properties/title": {
+                "file": "api.yaml",
+                "line": 29,
+                "column": 7,
+                "endLine": 29,
+                "endColumn": 60
+              },
+              "api#/schemas/Note/properties/body": {
+                "file": "api.yaml",
+                "line": 30,
+                "column": 7,
+                "endLine": 30,
+                "endColumn": 46
+              },
+              "api#/schemas/Note/properties/pinned": {
+                "file": "api.yaml",
+                "line": 31,
+                "column": 7,
+                "endLine": 31,
+                "endColumn": 32
+              },
+              "api#/schemas/Note": {
+                "file": "api.yaml",
+                "line": 24,
+                "column": 3,
+                "endLine": 32,
+                "endColumn": 1
+              },
+              "api#/surfaces/app/routes/notes/id/noteId": {
+                "file": "api.yaml",
+                "line": 41,
+                "column": 15,
+                "endLine": 41,
+                "endColumn": 29
+              },
+              "api#/surfaces/app/routes/notes/item": {
+                "file": "api.yaml",
+                "line": 42,
+                "column": 9,
+                "endLine": 42,
+                "endColumn": 19
+              },
+              "api#/surfaces/app/routes/notes/ops/get": {
+                "file": "api.yaml",
+                "line": 47,
+                "column": 11,
+                "endLine": 47,
+                "endColumn": 18
+              },
+              "api#/surfaces/app/access": {
+                "file": "api.yaml",
+                "line": 37,
+                "column": 5,
+                "endLine": 37,
+                "endColumn": 72
+              },
+              "api#/api/maturity": {
+                "file": "api.yaml",
+                "line": 8,
+                "column": 3,
+                "endLine": 8,
+                "endColumn": 24
+              },
+              "api#/surfaces/app/routes/notes/ops/list/paging": {
+                "file": "api.yaml",
+                "line": 45,
+                "column": 19,
+                "endLine": 45,
+                "endColumn": 55
+              },
+              "api#/surfaces/app/routes/notes/ops/list": {
+                "file": "api.yaml",
+                "line": 45,
+                "column": 11,
+                "endLine": 45,
+                "endColumn": 57
+              },
+              "api#/api/version": {
+                "file": "api.yaml",
+                "line": 6,
+                "column": 3,
+                "endLine": 6,
+                "endColumn": 13
+              },
+              "api#/surfaces/app": {
+                "file": "api.yaml",
+                "line": 35,
+                "column": 3,
+                "endLine": 48,
+                "endColumn": 1
+              },
+              "api#/api": {
+                "file": "api.yaml",
+                "line": 4,
+                "column": 1,
+                "endLine": 10,
+                "endColumn": 1
+              }
+            }
+          },
+          "declared": [
+            {
+              "catalogue": "schemas",
+              "id": "NoteId",
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/NoteId"
+              },
+              "reached": true
+            },
+            {
+              "catalogue": "schemas",
+              "id": "Note",
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/Note"
+              },
+              "reached": true
+            },
+            {
+              "catalogue": "pagings",
+              "id": "cursor",
+              "origin": {
+                "layer": "api",
+                "pointer": "/pagings/cursor"
+              },
+              "reached": true
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

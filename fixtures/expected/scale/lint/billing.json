@@ -1,0 +1,46 @@
+[
+  {
+    "severity": "warning",
+    "rule": "seampact/not-found-role",
+    "message": "The 404 code 'invoice.missing' is listed on routes 'deleteInvoice', 'getInvoice', 'sendInvoice', 'updateInvoice', which also answer the derived notFound code, so they have two 404 codes.",
+    "fix": "Add errorRoles: { notFound: invoice.missing } on the member node of the collection that lists 'invoice.missing', or allow seampact/not-found-role on the catalogue entry with a reason.",
+    "origin": {
+      "layer": "shared",
+      "pointer": "/errors/invoice.missing"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/not-found-role",
+    "message": "The 404 code 'payment.missing' is listed on routes 'deleteDispute', 'getDispute', 'updateDispute', which also answer the derived notFound code, so they have two 404 codes.",
+    "fix": "Add errorRoles: { notFound: payment.missing } on the member node of the collection that lists 'payment.missing', or allow seampact/not-found-role on the catalogue entry with a reason.",
+    "origin": {
+      "layer": "shared",
+      "pointer": "/errors/payment.missing"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/not-found-role",
+    "message": "The 404 code 'refund.missing' is listed on routes 'cancelCustomer', 'deleteCustomer', 'getCustomer', 'updateCustomer', which also answer the derived notFound code, so they have two 404 codes.",
+    "fix": "Add errorRoles: { notFound: refund.missing } on the member node of the collection that lists 'refund.missing', or allow seampact/not-found-role on the catalogue entry with a reason.",
+    "origin": {
+      "layer": "shared",
+      "pointer": "/errors/refund.missing"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/not-found-role",
+    "message": "The 404 code 'tax.missing' is listed on routes 'deleteReceipt', 'getReceipt', 'updateReceipt', which also answer the derived notFound code, so they have two 404 codes.",
+    "fix": "Add errorRoles: { notFound: tax.missing } on the member node of the collection that lists 'tax.missing', or allow seampact/not-found-role on the catalogue entry with a reason.",
+    "origin": {
+      "layer": "shared",
+      "pointer": "/errors/tax.missing"
+    },
+    "related": []
+  }
+]

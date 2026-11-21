@@ -1,0 +1,14 @@
+[
+  {
+    "code": "openapi.options.invalid",
+    "message": "'unknown' is not an OpenAPI option.",
+    "fix": "Use one of extensions, reasons, inputSchemas, servers.",
+    "member": "/unknown"
+  },
+  {
+    "code": "openapi.options.invalid",
+    "message": "'bogus' is not a value of 'reasons'.",
+    "fix": "Use one of include, omit.",
+    "member": "/reasons"
+  }
+]

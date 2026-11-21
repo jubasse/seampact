@@ -1,0 +1,4 @@
+workspace:
+  apis:
+    ordering: ./ordering/api.yaml
+    second: ./second/api.yaml

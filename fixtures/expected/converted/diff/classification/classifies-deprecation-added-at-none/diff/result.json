@@ -1,0 +1,62 @@
+{
+  "ok": true,
+  "api": "tasks",
+  "before": {
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "irRevision": 6,
+    "packs": []
+  },
+  "after": {
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "irRevision": 6,
+    "packs": []
+  },
+  "policy": {
+    "before": "additive-only",
+    "after": "additive-only",
+    "applied": "additive-only"
+  },
+  "settings": {
+    "gate": "clients",
+    "exempt": [
+      "experimental",
+      "sunsetPassed"
+    ]
+  },
+  "changes": [
+    {
+      "kind": "deprecation",
+      "case": "added",
+      "pointer": "/operations/7/deprecated",
+      "position": "none",
+      "operations": [
+        "getTask"
+      ],
+      "breaks": [],
+      "classification": "informative",
+      "after": "2027-01-01"
+    }
+  ],
+  "gate": {
+    "passed": true,
+    "failures": []
+  },
+  "deprecations": [
+    {
+      "subject": "operation",
+      "operation": "getTask",
+      "pointer": "/operations/7/deprecated",
+      "status": "new",
+      "since": "2026-01-01",
+      "sunset": "2027-01-01",
+      "daysToSunset": 73,
+      "pastSunset": false
+    }
+  ]
+}

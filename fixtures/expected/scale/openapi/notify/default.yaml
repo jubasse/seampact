@@ -1,0 +1,3527 @@
+openapi: 3.1.0
+info:
+  title: notify
+  version: "1"
+  summary: Templates and the deliveries made from them.
+x-seampact-api:
+  kind: product
+x-seampact-format: bare
+paths:
+  /internal/v1/dispatch:
+    post:
+      operationId: dispatch
+      parameters:
+        - name: X-Deadline
+          in: header
+          required: true
+          schema:
+            type: string
+          x-seampact-semantic: deadline
+        - name: traceparent
+          in: header
+          required: false
+          schema:
+            type: string
+          x-seampact-semantic: traceContext
+        - name: X-Actor-Surface
+          in: header
+          required: true
+          schema:
+            $ref: "#/components/schemas/Surface"
+          x-seampact-semantic: actorSurface
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DispatchInput"
+      responses:
+        "204":
+          description: Success.
+        "400":
+          description: api.schema_invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.schema_invalid"
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+        "401":
+          description: api.unauthenticated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unauthenticated"
+          x-seampact-errors:
+            - code: api.unauthenticated
+              derivedFrom: identity.authenticate
+        "413":
+          description: api.payload_too_large
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.payload_too_large"
+          x-seampact-errors:
+            - code: api.payload_too_large
+              derivedFrom: body.limit
+        "415":
+          description: api.unsupported_media_type
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unsupported_media_type"
+          x-seampact-errors:
+            - code: api.unsupported_media_type
+              derivedFrom: body.media
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+        "504":
+          description: api.deadline_exceeded
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.deadline_exceeded"
+          x-seampact-errors:
+            - code: api.deadline_exceeded
+              derivedFrom: identity.deadline
+      security:
+        - internalToken: []
+      x-seampact-access:
+        identity: service
+      x-seampact-maturity:
+        level: provisional
+        source: api
+  /v1/deliveries:
+    get:
+      operationId: listDeliveries
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 100
+        - name: sort
+          in: query
+          required: false
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+              pattern: ^(?:createdAt|-createdAt)$
+      responses:
+        "200":
+          description: Success.
+          headers:
+            Link:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Delivery"
+        "400":
+          description: api.schema_invalid, delivery.rejected
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/api.schema_invalid"
+                  - $ref: "#/components/schemas/delivery.rejected"
+                discriminator:
+                  propertyName: code
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+            - code: delivery.rejected
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "401":
+          description: api.unauthenticated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unauthenticated"
+          x-seampact-errors:
+            - code: api.unauthenticated
+              derivedFrom: identity.authenticate
+        "403":
+          description: delivery.suspended
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.suspended"
+          x-seampact-errors:
+            - code: delivery.suspended
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "404":
+          description: delivery.missing
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.missing"
+          x-seampact-errors:
+            - code: delivery.missing
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "409":
+          description: delivery.duplicated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.duplicated"
+          x-seampact-errors:
+            - code: delivery.duplicated
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "410":
+          description: delivery.expired
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.expired"
+          x-seampact-errors:
+            - code: delivery.expired
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "412":
+          description: delivery.outdated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.outdated"
+          x-seampact-errors:
+            - code: delivery.outdated
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "422":
+          description: delivery.mismatched
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.mismatched"
+          x-seampact-errors:
+            - code: delivery.mismatched
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "423":
+          description: delivery.locked
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.locked"
+          x-seampact-errors:
+            - code: delivery.locked
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "429":
+          description: delivery.limited
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.limited"
+          x-seampact-errors:
+            - code: delivery.limited
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+        "503":
+          description: delivery.unavailable
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.unavailable"
+          x-seampact-errors:
+            - code: delivery.unavailable
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+      security:
+        - bearer: []
+      x-seampact-access:
+        identity: partner
+      x-seampact-paging:
+        style: cursor
+        position: cursor
+        roles:
+          cursor: query.cursor
+          limit: query.limit
+          sort: query.sort
+        maxLimit: 100
+        defaultLimit: 100
+        overLimit: reject
+        sortKeys:
+          - key: createdAt
+      x-seampact-maturity:
+        level: provisional
+        source: api
+    post:
+      operationId: createDelivery
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDelivery"
+            examples:
+              minimal:
+                value:
+                  kind: north
+                  name: Evening batch
+                  state: piece
+      responses:
+        "201":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Delivery"
+        "400":
+          description: api.schema_invalid, delivery.rejected
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/api.schema_invalid"
+                  - $ref: "#/components/schemas/delivery.rejected"
+                discriminator:
+                  propertyName: code
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+            - code: delivery.rejected
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "401":
+          description: api.unauthenticated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unauthenticated"
+          x-seampact-errors:
+            - code: api.unauthenticated
+              derivedFrom: identity.authenticate
+        "403":
+          description: delivery.suspended
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.suspended"
+          x-seampact-errors:
+            - code: delivery.suspended
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "404":
+          description: delivery.missing
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.missing"
+          x-seampact-errors:
+            - code: delivery.missing
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "409":
+          description: delivery.duplicated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.duplicated"
+          x-seampact-errors:
+            - code: delivery.duplicated
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "410":
+          description: delivery.expired
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.expired"
+          x-seampact-errors:
+            - code: delivery.expired
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "412":
+          description: delivery.outdated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.outdated"
+          x-seampact-errors:
+            - code: delivery.outdated
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "413":
+          description: api.payload_too_large
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.payload_too_large"
+          x-seampact-errors:
+            - code: api.payload_too_large
+              derivedFrom: body.limit
+        "415":
+          description: api.unsupported_media_type
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unsupported_media_type"
+          x-seampact-errors:
+            - code: api.unsupported_media_type
+              derivedFrom: body.media
+        "422":
+          description: delivery.mismatched
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.mismatched"
+          x-seampact-errors:
+            - code: delivery.mismatched
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "423":
+          description: delivery.locked
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.locked"
+          x-seampact-errors:
+            - code: delivery.locked
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "429":
+          description: api.rate_limited, delivery.limited
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+                minimum: 0
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/api.rate_limited"
+                  - $ref: "#/components/schemas/delivery.limited"
+                discriminator:
+                  propertyName: code
+          x-seampact-errors:
+            - code: api.rate_limited
+              derivedFrom: requirement.errors
+            - code: delivery.limited
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+        "503":
+          description: delivery.unavailable
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.unavailable"
+          x-seampact-errors:
+            - code: delivery.unavailable
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+      security:
+        - bearer: []
+      x-seampact-access:
+        identity: partner
+      x-seampact-requires:
+        - rule: throttle
+          bucket: write
+          entry: writeThrottle
+      x-seampact-maturity:
+        level: provisional
+        source: api
+  /v1/deliveries/{deliveryId}:
+    get:
+      operationId: getDelivery
+      parameters:
+        - name: deliveryId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Delivery"
+        "400":
+          description: api.schema_invalid, delivery.rejected
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/api.schema_invalid"
+                  - $ref: "#/components/schemas/delivery.rejected"
+                discriminator:
+                  propertyName: code
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+            - code: delivery.rejected
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "401":
+          description: api.unauthenticated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unauthenticated"
+          x-seampact-errors:
+            - code: api.unauthenticated
+              derivedFrom: identity.authenticate
+        "403":
+          description: delivery.suspended
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.suspended"
+          x-seampact-errors:
+            - code: delivery.suspended
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "404":
+          description: api.not_found, delivery.missing
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/api.not_found"
+                  - $ref: "#/components/schemas/delivery.missing"
+                discriminator:
+                  propertyName: code
+          x-seampact-errors:
+            - code: api.not_found
+              derivedFrom: member.notFound
+            - code: delivery.missing
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "409":
+          description: delivery.duplicated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.duplicated"
+          x-seampact-errors:
+            - code: delivery.duplicated
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "410":
+          description: delivery.expired
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.expired"
+          x-seampact-errors:
+            - code: delivery.expired
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "412":
+          description: delivery.outdated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.outdated"
+          x-seampact-errors:
+            - code: delivery.outdated
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "422":
+          description: delivery.mismatched
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.mismatched"
+          x-seampact-errors:
+            - code: delivery.mismatched
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "423":
+          description: delivery.locked
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.locked"
+          x-seampact-errors:
+            - code: delivery.locked
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "429":
+          description: delivery.limited
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.limited"
+          x-seampact-errors:
+            - code: delivery.limited
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+        "503":
+          description: delivery.unavailable
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.unavailable"
+          x-seampact-errors:
+            - code: delivery.unavailable
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+      security:
+        - bearer: []
+      x-seampact-access:
+        identity: partner
+      x-seampact-maturity:
+        level: provisional
+        source: api
+    delete:
+      operationId: deleteDelivery
+      parameters:
+        - name: deliveryId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Success.
+        "400":
+          description: api.schema_invalid, delivery.rejected
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/api.schema_invalid"
+                  - $ref: "#/components/schemas/delivery.rejected"
+                discriminator:
+                  propertyName: code
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+            - code: delivery.rejected
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "401":
+          description: api.unauthenticated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unauthenticated"
+          x-seampact-errors:
+            - code: api.unauthenticated
+              derivedFrom: identity.authenticate
+        "403":
+          description: delivery.suspended
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.suspended"
+          x-seampact-errors:
+            - code: delivery.suspended
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "404":
+          description: api.not_found, delivery.missing
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/api.not_found"
+                  - $ref: "#/components/schemas/delivery.missing"
+                discriminator:
+                  propertyName: code
+          x-seampact-errors:
+            - code: api.not_found
+              derivedFrom: member.notFound
+            - code: delivery.missing
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "409":
+          description: delivery.duplicated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.duplicated"
+          x-seampact-errors:
+            - code: delivery.duplicated
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "410":
+          description: delivery.expired
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.expired"
+          x-seampact-errors:
+            - code: delivery.expired
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "412":
+          description: delivery.outdated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.outdated"
+          x-seampact-errors:
+            - code: delivery.outdated
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "422":
+          description: delivery.mismatched
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.mismatched"
+          x-seampact-errors:
+            - code: delivery.mismatched
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "423":
+          description: delivery.locked
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.locked"
+          x-seampact-errors:
+            - code: delivery.locked
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "429":
+          description: delivery.limited
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.limited"
+          x-seampact-errors:
+            - code: delivery.limited
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+        "503":
+          description: delivery.unavailable
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.unavailable"
+          x-seampact-errors:
+            - code: delivery.unavailable
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+      security:
+        - bearer: []
+      x-seampact-access:
+        identity: partner
+      x-seampact-maturity:
+        level: provisional
+        source: api
+    patch:
+      operationId: updateDelivery
+      parameters:
+        - name: deliveryId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDelivery"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Delivery"
+        "400":
+          description: api.schema_invalid, delivery.rejected
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/api.schema_invalid"
+                  - $ref: "#/components/schemas/delivery.rejected"
+                discriminator:
+                  propertyName: code
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+            - code: delivery.rejected
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "401":
+          description: api.unauthenticated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unauthenticated"
+          x-seampact-errors:
+            - code: api.unauthenticated
+              derivedFrom: identity.authenticate
+        "403":
+          description: delivery.suspended
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.suspended"
+          x-seampact-errors:
+            - code: delivery.suspended
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "404":
+          description: api.not_found, delivery.missing
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/api.not_found"
+                  - $ref: "#/components/schemas/delivery.missing"
+                discriminator:
+                  propertyName: code
+          x-seampact-errors:
+            - code: api.not_found
+              derivedFrom: member.notFound
+            - code: delivery.missing
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "409":
+          description: delivery.duplicated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.duplicated"
+          x-seampact-errors:
+            - code: delivery.duplicated
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "410":
+          description: delivery.expired
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.expired"
+          x-seampact-errors:
+            - code: delivery.expired
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "412":
+          description: delivery.outdated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.outdated"
+          x-seampact-errors:
+            - code: delivery.outdated
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "413":
+          description: api.payload_too_large
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.payload_too_large"
+          x-seampact-errors:
+            - code: api.payload_too_large
+              derivedFrom: body.limit
+        "415":
+          description: api.unsupported_media_type
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unsupported_media_type"
+          x-seampact-errors:
+            - code: api.unsupported_media_type
+              derivedFrom: body.media
+        "422":
+          description: delivery.mismatched
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.mismatched"
+          x-seampact-errors:
+            - code: delivery.mismatched
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "423":
+          description: delivery.locked
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.locked"
+          x-seampact-errors:
+            - code: delivery.locked
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "429":
+          description: delivery.limited
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.limited"
+          x-seampact-errors:
+            - code: delivery.limited
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+        "503":
+          description: delivery.unavailable
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.unavailable"
+          x-seampact-errors:
+            - code: delivery.unavailable
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+      security:
+        - bearer: []
+      x-seampact-access:
+        identity: partner
+      x-seampact-maturity:
+        level: provisional
+        source: api
+  /v1/deliveries/{deliveryId}/retry:
+    post:
+      operationId: retryDelivery
+      parameters:
+        - name: deliveryId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RetryDeliveryInput"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Delivery"
+        "400":
+          description: api.schema_invalid, delivery.rejected
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/api.schema_invalid"
+                  - $ref: "#/components/schemas/delivery.rejected"
+                discriminator:
+                  propertyName: code
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+            - code: delivery.rejected
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "401":
+          description: api.unauthenticated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unauthenticated"
+          x-seampact-errors:
+            - code: api.unauthenticated
+              derivedFrom: identity.authenticate
+        "403":
+          description: delivery.suspended
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.suspended"
+          x-seampact-errors:
+            - code: delivery.suspended
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "404":
+          description: api.not_found, delivery.missing
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/api.not_found"
+                  - $ref: "#/components/schemas/delivery.missing"
+                discriminator:
+                  propertyName: code
+          x-seampact-errors:
+            - code: api.not_found
+              derivedFrom: member.notFound
+            - code: delivery.missing
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "409":
+          description: delivery.duplicated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.duplicated"
+          x-seampact-errors:
+            - code: delivery.duplicated
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "410":
+          description: delivery.expired
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.expired"
+          x-seampact-errors:
+            - code: delivery.expired
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "412":
+          description: delivery.outdated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.outdated"
+          x-seampact-errors:
+            - code: delivery.outdated
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "413":
+          description: api.payload_too_large
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.payload_too_large"
+          x-seampact-errors:
+            - code: api.payload_too_large
+              derivedFrom: body.limit
+        "415":
+          description: api.unsupported_media_type
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unsupported_media_type"
+          x-seampact-errors:
+            - code: api.unsupported_media_type
+              derivedFrom: body.media
+        "422":
+          description: delivery.mismatched
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.mismatched"
+          x-seampact-errors:
+            - code: delivery.mismatched
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "423":
+          description: delivery.locked
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.locked"
+          x-seampact-errors:
+            - code: delivery.locked
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "429":
+          description: delivery.limited
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.limited"
+          x-seampact-errors:
+            - code: delivery.limited
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+        "503":
+          description: delivery.unavailable
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/delivery.unavailable"
+          x-seampact-errors:
+            - code: delivery.unavailable
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/deliveries
+      security:
+        - bearer: []
+      x-seampact-access:
+        identity: partner
+      x-seampact-maturity:
+        level: provisional
+        source: api
+  /v1/templates:
+    get:
+      operationId: listTemplates
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 50
+        - name: sort
+          in: query
+          required: false
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+              pattern: ^(?:createdAt|-createdAt)$
+      responses:
+        "200":
+          description: Success.
+          headers:
+            Link:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Template"
+        "400":
+          description: api.schema_invalid, template.rejected
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/api.schema_invalid"
+                  - $ref: "#/components/schemas/template.rejected"
+                discriminator:
+                  propertyName: code
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+            - code: template.rejected
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "401":
+          description: api.unauthenticated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unauthenticated"
+          x-seampact-errors:
+            - code: api.unauthenticated
+              derivedFrom: identity.authenticate
+        "403":
+          description: template.suspended
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.suspended"
+          x-seampact-errors:
+            - code: template.suspended
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "404":
+          description: template.missing
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.missing"
+          x-seampact-errors:
+            - code: template.missing
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "409":
+          description: template.duplicated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.duplicated"
+          x-seampact-errors:
+            - code: template.duplicated
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "410":
+          description: template.expired
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.expired"
+          x-seampact-errors:
+            - code: template.expired
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "412":
+          description: template.outdated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.outdated"
+          x-seampact-errors:
+            - code: template.outdated
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "422":
+          description: template.mismatched
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.mismatched"
+          x-seampact-errors:
+            - code: template.mismatched
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "423":
+          description: template.locked
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.locked"
+          x-seampact-errors:
+            - code: template.locked
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "429":
+          description: template.limited
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.limited"
+          x-seampact-errors:
+            - code: template.limited
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+        "503":
+          description: template.unavailable
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.unavailable"
+          x-seampact-errors:
+            - code: template.unavailable
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+      security:
+        - bearer: []
+      x-seampact-access:
+        identity: partner
+      x-seampact-paging:
+        style: cursor
+        position: cursor
+        roles:
+          cursor: query.cursor
+          limit: query.limit
+          sort: query.sort
+        maxLimit: 50
+        defaultLimit: 50
+        overLimit: reject
+        sortKeys:
+          - key: createdAt
+      x-seampact-maturity:
+        level: provisional
+        source: api
+    post:
+      operationId: createTemplate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTemplate"
+            examples:
+              minimal:
+                value:
+                  kind: a
+                  name: Welcome note
+                  state: eur
+      responses:
+        "201":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Template"
+        "400":
+          description: api.schema_invalid, template.rejected
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/api.schema_invalid"
+                  - $ref: "#/components/schemas/template.rejected"
+                discriminator:
+                  propertyName: code
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+            - code: template.rejected
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "401":
+          description: api.unauthenticated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unauthenticated"
+          x-seampact-errors:
+            - code: api.unauthenticated
+              derivedFrom: identity.authenticate
+        "403":
+          description: template.suspended
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.suspended"
+          x-seampact-errors:
+            - code: template.suspended
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "404":
+          description: template.missing
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.missing"
+          x-seampact-errors:
+            - code: template.missing
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "409":
+          description: template.duplicated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.duplicated"
+          x-seampact-errors:
+            - code: template.duplicated
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "410":
+          description: template.expired
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.expired"
+          x-seampact-errors:
+            - code: template.expired
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "412":
+          description: template.outdated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.outdated"
+          x-seampact-errors:
+            - code: template.outdated
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "413":
+          description: api.payload_too_large
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.payload_too_large"
+          x-seampact-errors:
+            - code: api.payload_too_large
+              derivedFrom: body.limit
+        "415":
+          description: api.unsupported_media_type
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unsupported_media_type"
+          x-seampact-errors:
+            - code: api.unsupported_media_type
+              derivedFrom: body.media
+        "422":
+          description: template.mismatched
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.mismatched"
+          x-seampact-errors:
+            - code: template.mismatched
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "423":
+          description: template.locked
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.locked"
+          x-seampact-errors:
+            - code: template.locked
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "429":
+          description: api.rate_limited, template.limited
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+                minimum: 0
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/api.rate_limited"
+                  - $ref: "#/components/schemas/template.limited"
+                discriminator:
+                  propertyName: code
+          x-seampact-errors:
+            - code: api.rate_limited
+              derivedFrom: requirement.errors
+            - code: template.limited
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+        "503":
+          description: template.unavailable
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.unavailable"
+          x-seampact-errors:
+            - code: template.unavailable
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+      security:
+        - bearer: []
+      x-seampact-access:
+        identity: partner
+      x-seampact-requires:
+        - rule: throttle
+          bucket: write
+          entry: writeThrottle
+      x-seampact-maturity:
+        level: provisional
+        source: api
+  /v1/templates/{templateId}:
+    get:
+      operationId: getTemplate
+      parameters:
+        - name: templateId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: If-None-Match
+          in: header
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Success.
+          headers:
+            ETag:
+              required: true
+              schema:
+                type: string
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - private, max-age=60
+              x-seampact-cache-control:
+                identified: private, max-age=60
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Template"
+        "304":
+          description: Redirection.
+          headers:
+            ETag:
+              required: true
+              schema:
+                type: string
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - private, max-age=60
+              x-seampact-cache-control:
+                identified: private, max-age=60
+        "400":
+          description: api.schema_invalid, template.rejected
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/api.schema_invalid"
+                  - $ref: "#/components/schemas/template.rejected"
+                discriminator:
+                  propertyName: code
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+            - code: template.rejected
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "401":
+          description: api.unauthenticated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unauthenticated"
+          x-seampact-errors:
+            - code: api.unauthenticated
+              derivedFrom: identity.authenticate
+        "403":
+          description: template.suspended
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.suspended"
+          x-seampact-errors:
+            - code: template.suspended
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "404":
+          description: api.not_found, template.missing
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/api.not_found"
+                  - $ref: "#/components/schemas/template.missing"
+                discriminator:
+                  propertyName: code
+          x-seampact-errors:
+            - code: api.not_found
+              derivedFrom: member.notFound
+            - code: template.missing
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "409":
+          description: template.duplicated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.duplicated"
+          x-seampact-errors:
+            - code: template.duplicated
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "410":
+          description: template.expired
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.expired"
+          x-seampact-errors:
+            - code: template.expired
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "412":
+          description: template.outdated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.outdated"
+          x-seampact-errors:
+            - code: template.outdated
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "422":
+          description: template.mismatched
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.mismatched"
+          x-seampact-errors:
+            - code: template.mismatched
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "423":
+          description: template.locked
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.locked"
+          x-seampact-errors:
+            - code: template.locked
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "429":
+          description: template.limited
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.limited"
+          x-seampact-errors:
+            - code: template.limited
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+        "503":
+          description: template.unavailable
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.unavailable"
+          x-seampact-errors:
+            - code: template.unavailable
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+      security:
+        - bearer: []
+      x-seampact-access:
+        identity: partner
+      x-seampact-maturity:
+        level: provisional
+        source: api
+    delete:
+      operationId: deleteTemplate
+      parameters:
+        - name: templateId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Success.
+        "400":
+          description: api.schema_invalid, template.rejected
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/api.schema_invalid"
+                  - $ref: "#/components/schemas/template.rejected"
+                discriminator:
+                  propertyName: code
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+            - code: template.rejected
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "401":
+          description: api.unauthenticated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unauthenticated"
+          x-seampact-errors:
+            - code: api.unauthenticated
+              derivedFrom: identity.authenticate
+        "403":
+          description: template.suspended
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.suspended"
+          x-seampact-errors:
+            - code: template.suspended
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "404":
+          description: api.not_found, template.missing
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/api.not_found"
+                  - $ref: "#/components/schemas/template.missing"
+                discriminator:
+                  propertyName: code
+          x-seampact-errors:
+            - code: api.not_found
+              derivedFrom: member.notFound
+            - code: template.missing
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "409":
+          description: template.duplicated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.duplicated"
+          x-seampact-errors:
+            - code: template.duplicated
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "410":
+          description: template.expired
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.expired"
+          x-seampact-errors:
+            - code: template.expired
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "412":
+          description: template.outdated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.outdated"
+          x-seampact-errors:
+            - code: template.outdated
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "422":
+          description: template.mismatched
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.mismatched"
+          x-seampact-errors:
+            - code: template.mismatched
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "423":
+          description: template.locked
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.locked"
+          x-seampact-errors:
+            - code: template.locked
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "429":
+          description: template.limited
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.limited"
+          x-seampact-errors:
+            - code: template.limited
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+        "503":
+          description: template.unavailable
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.unavailable"
+          x-seampact-errors:
+            - code: template.unavailable
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+      security:
+        - bearer: []
+      x-seampact-access:
+        identity: partner
+      x-seampact-maturity:
+        level: provisional
+        source: api
+    patch:
+      operationId: updateTemplate
+      parameters:
+        - name: templateId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTemplate"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Template"
+        "400":
+          description: api.schema_invalid, template.rejected
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/api.schema_invalid"
+                  - $ref: "#/components/schemas/template.rejected"
+                discriminator:
+                  propertyName: code
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+            - code: template.rejected
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "401":
+          description: api.unauthenticated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unauthenticated"
+          x-seampact-errors:
+            - code: api.unauthenticated
+              derivedFrom: identity.authenticate
+        "403":
+          description: template.suspended
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.suspended"
+          x-seampact-errors:
+            - code: template.suspended
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "404":
+          description: api.not_found, template.missing
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/api.not_found"
+                  - $ref: "#/components/schemas/template.missing"
+                discriminator:
+                  propertyName: code
+          x-seampact-errors:
+            - code: api.not_found
+              derivedFrom: member.notFound
+            - code: template.missing
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "409":
+          description: template.duplicated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.duplicated"
+          x-seampact-errors:
+            - code: template.duplicated
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "410":
+          description: template.expired
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.expired"
+          x-seampact-errors:
+            - code: template.expired
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "412":
+          description: template.outdated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.outdated"
+          x-seampact-errors:
+            - code: template.outdated
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "413":
+          description: api.payload_too_large
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.payload_too_large"
+          x-seampact-errors:
+            - code: api.payload_too_large
+              derivedFrom: body.limit
+        "415":
+          description: api.unsupported_media_type
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unsupported_media_type"
+          x-seampact-errors:
+            - code: api.unsupported_media_type
+              derivedFrom: body.media
+        "422":
+          description: template.mismatched
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.mismatched"
+          x-seampact-errors:
+            - code: template.mismatched
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "423":
+          description: template.locked
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.locked"
+          x-seampact-errors:
+            - code: template.locked
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "429":
+          description: template.limited
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.limited"
+          x-seampact-errors:
+            - code: template.limited
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+        "503":
+          description: template.unavailable
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.unavailable"
+          x-seampact-errors:
+            - code: template.unavailable
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+      security:
+        - bearer: []
+      x-seampact-access:
+        identity: partner
+      x-seampact-maturity:
+        level: provisional
+        source: api
+  /v1/templates/{templateId}/publish:
+    post:
+      operationId: publishTemplate
+      parameters:
+        - name: templateId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PublishTemplateInput"
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Template"
+        "400":
+          description: api.schema_invalid, template.rejected
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/api.schema_invalid"
+                  - $ref: "#/components/schemas/template.rejected"
+                discriminator:
+                  propertyName: code
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+            - code: template.rejected
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "401":
+          description: api.unauthenticated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unauthenticated"
+          x-seampact-errors:
+            - code: api.unauthenticated
+              derivedFrom: identity.authenticate
+        "403":
+          description: template.suspended
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.suspended"
+          x-seampact-errors:
+            - code: template.suspended
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "404":
+          description: api.not_found, template.missing
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/api.not_found"
+                  - $ref: "#/components/schemas/template.missing"
+                discriminator:
+                  propertyName: code
+          x-seampact-errors:
+            - code: api.not_found
+              derivedFrom: member.notFound
+            - code: template.missing
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "409":
+          description: template.duplicated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.duplicated"
+          x-seampact-errors:
+            - code: template.duplicated
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "410":
+          description: template.expired
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.expired"
+          x-seampact-errors:
+            - code: template.expired
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "412":
+          description: template.outdated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.outdated"
+          x-seampact-errors:
+            - code: template.outdated
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "413":
+          description: api.payload_too_large
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.payload_too_large"
+          x-seampact-errors:
+            - code: api.payload_too_large
+              derivedFrom: body.limit
+        "415":
+          description: api.unsupported_media_type
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unsupported_media_type"
+          x-seampact-errors:
+            - code: api.unsupported_media_type
+              derivedFrom: body.media
+        "422":
+          description: template.mismatched
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.mismatched"
+          x-seampact-errors:
+            - code: template.mismatched
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "423":
+          description: template.locked
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.locked"
+          x-seampact-errors:
+            - code: template.locked
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "429":
+          description: template.limited
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.limited"
+          x-seampact-errors:
+            - code: template.limited
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+        "503":
+          description: template.unavailable
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/template.unavailable"
+          x-seampact-errors:
+            - code: template.unavailable
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/templates
+      security:
+        - bearer: []
+      x-seampact-access:
+        identity: partner
+      x-seampact-maturity:
+        level: provisional
+        source: api
+components:
+  schemas:
+    ApiPayloadTooLargeParams:
+      type: object
+      properties:
+        limitBytes:
+          type: integer
+          minimum: 0
+    ApiRateLimitedParams:
+      type: object
+      properties:
+        retryAfterMs:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+      required:
+        - retryAfterMs
+    ApiSchemaInvalidParams:
+      type: object
+      properties:
+        issues:
+          type: array
+          items:
+            $ref: "#/components/schemas/IssuesItem"
+      required:
+        - issues
+    BulkWeight:
+      type: object
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 60
+        currency:
+          $ref: "#/components/schemas/Currency"
+        quantity:
+          type: integer
+          minimum: 0
+          maximum: 100
+        inner:
+          $ref: "#/components/schemas/ChilledMargin"
+      required:
+        - label
+    ChilledCount:
+      type: object
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 80
+        region:
+          $ref: "#/components/schemas/Region"
+        quantity:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        inner:
+          $ref: "#/components/schemas/ChilledSpan"
+      required:
+        - label
+    ChilledLimit:
+      type: object
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 60
+        priority:
+          $ref: "#/components/schemas/Priority"
+        quantity:
+          type: integer
+          minimum: 0
+          maximum: 100
+      required:
+        - label
+    ChilledMargin:
+      type: object
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 80
+        condition:
+          $ref: "#/components/schemas/Condition"
+        quantity:
+          type: integer
+          minimum: 0
+          maximum: 1000
+      required:
+        - label
+    ChilledRate:
+      type: object
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 120
+        rating:
+          $ref: "#/components/schemas/Rating"
+        quantity:
+          type: integer
+          minimum: 0
+          maximum: 100
+        inner:
+          $ref: "#/components/schemas/ChilledWindow"
+      required:
+        - label
+    ChilledSpan:
+      type: object
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 120
+        grade:
+          $ref: "#/components/schemas/Grade"
+        quantity:
+          type: integer
+          minimum: 0
+          maximum: 10000
+      required:
+        - label
+    ChilledTally:
+      type: object
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 120
+        visibility:
+          $ref: "#/components/schemas/Visibility"
+        quantity:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        inner:
+          $ref: "#/components/schemas/ChilledLimit"
+      required:
+        - label
+    ChilledWindow:
+      type: object
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 120
+        stage:
+          $ref: "#/components/schemas/Stage"
+        quantity:
+          type: integer
+          minimum: 0
+          maximum: 10000
+      required:
+        - label
+    Condition:
+      type: string
+      enum:
+        - new
+        - used
+        - damaged
+    CreateDelivery:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        state:
+          $ref: "#/components/schemas/Unit"
+        kind:
+          $ref: "#/components/schemas/Region"
+      required:
+        - name
+        - state
+        - kind
+    CreateTemplate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        state:
+          $ref: "#/components/schemas/Currency"
+        kind:
+          $ref: "#/components/schemas/Grade"
+      required:
+        - name
+        - state
+        - kind
+    Currency:
+      type: string
+      enum:
+        - eur
+        - usd
+        - gbp
+        - jpy
+    Delivery:
+      type: object
+      properties:
+        deliveryId:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        state:
+          $ref: "#/components/schemas/Unit"
+        kind:
+          $ref: "#/components/schemas/Region"
+        detail:
+          $ref: "#/components/schemas/ChilledTally"
+        extra:
+          $ref: "#/components/schemas/BulkWeight"
+        createdAt:
+          type: string
+          format: date-time
+        version:
+          type: integer
+          minimum: 1
+      required:
+        - deliveryId
+        - name
+        - state
+        - kind
+        - detail
+        - createdAt
+        - version
+    DeliveryDuplicatedParams:
+      type: object
+      properties:
+        existingId:
+          type: string
+          format: uuid
+      required:
+        - existingId
+    DeliveryExpiredParams:
+      type: object
+      properties:
+        expiredAt:
+          type: string
+          format: date-time
+      required:
+        - expiredAt
+    DeliveryLimitedParams:
+      type: object
+      properties:
+        limit:
+          type: integer
+          minimum: 0
+      required:
+        - limit
+    DeliveryLockedParams:
+      type: object
+      properties:
+        lockedBy:
+          type: string
+          format: uuid
+      required:
+        - lockedBy
+    DeliveryMismatchedParams:
+      type: object
+      properties:
+        field:
+          type: string
+          maxLength: 80
+      required:
+        - field
+    DeliveryMissingParams:
+      type: object
+      properties:
+        target:
+          type: string
+          maxLength: 80
+      required:
+        - target
+    DeliveryOutdatedParams:
+      type: object
+      properties:
+        currentVersion:
+          type: integer
+          minimum: 1
+      required:
+        - currentVersion
+    DeliveryRejectedParams:
+      type: object
+      properties:
+        issues:
+          type: array
+          items:
+            $ref: "#/components/schemas/IssuesItem"
+      required:
+        - issues
+    DeliverySuspendedParams:
+      type: object
+      properties:
+        reason:
+          type: string
+          maxLength: 200
+      required:
+        - reason
+    DeliveryUnavailableParams:
+      type: object
+      properties:
+        waitMs:
+          type: integer
+          minimum: 0
+      required:
+        - waitMs
+    DispatchInput:
+      type: object
+      properties:
+        deliveryId:
+          type: string
+          format: uuid
+      required:
+        - deliveryId
+    Grade:
+      type: string
+      enum:
+        - a
+        - b
+        - c
+    IssuesItem:
+      type: object
+      properties:
+        pointer:
+          type: string
+        rule:
+          type: string
+      required:
+        - pointer
+        - rule
+    Priority:
+      type: string
+      enum:
+        - low
+        - normal
+        - high
+        - urgent
+    PublishTemplateInput:
+      type: object
+      properties:
+        audience:
+          $ref: "#/components/schemas/Visibility"
+      required:
+        - audience
+    Rating:
+      type: string
+      enum:
+        - poor
+        - fair
+        - good
+        - excellent
+    Region:
+      type: string
+      enum:
+        - north
+        - south
+        - east
+        - west
+        - central
+    RetryDeliveryInput:
+      type: object
+      properties:
+        delayMs:
+          type: integer
+          minimum: 0
+          maximum: 3600000
+    Stage:
+      type: string
+      enum:
+        - draft
+        - active
+        - closed
+    Surface:
+      type: string
+      enum:
+        - app
+        - studio
+    Template:
+      type: object
+      properties:
+        templateId:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        state:
+          $ref: "#/components/schemas/Currency"
+        kind:
+          $ref: "#/components/schemas/Grade"
+        detail:
+          $ref: "#/components/schemas/ChilledCount"
+        extra:
+          $ref: "#/components/schemas/ChilledRate"
+        createdAt:
+          type: string
+          format: date-time
+        version:
+          type: integer
+          minimum: 1
+      required:
+        - templateId
+        - name
+        - state
+        - kind
+        - detail
+        - createdAt
+        - version
+    TemplateDuplicatedParams:
+      type: object
+      properties:
+        existingId:
+          type: string
+          format: uuid
+      required:
+        - existingId
+    TemplateExpiredParams:
+      type: object
+      properties:
+        expiredAt:
+          type: string
+          format: date-time
+      required:
+        - expiredAt
+    TemplateLimitedParams:
+      type: object
+      properties:
+        limit:
+          type: integer
+          minimum: 0
+      required:
+        - limit
+    TemplateLockedParams:
+      type: object
+      properties:
+        lockedBy:
+          type: string
+          format: uuid
+      required:
+        - lockedBy
+    TemplateMismatchedParams:
+      type: object
+      properties:
+        field:
+          type: string
+          maxLength: 80
+      required:
+        - field
+    TemplateMissingParams:
+      type: object
+      properties:
+        target:
+          type: string
+          maxLength: 80
+      required:
+        - target
+    TemplateOutdatedParams:
+      type: object
+      properties:
+        currentVersion:
+          type: integer
+          minimum: 1
+      required:
+        - currentVersion
+    TemplateRejectedParams:
+      type: object
+      properties:
+        issues:
+          type: array
+          items:
+            $ref: "#/components/schemas/IssuesItem"
+      required:
+        - issues
+    TemplateSuspendedParams:
+      type: object
+      properties:
+        reason:
+          type: string
+          maxLength: 200
+      required:
+        - reason
+    TemplateUnavailableParams:
+      type: object
+      properties:
+        waitMs:
+          type: integer
+          minimum: 0
+      required:
+        - waitMs
+    Unit:
+      type: string
+      enum:
+        - piece
+        - kilogram
+        - litre
+        - metre
+    UpdateDelivery:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        state:
+          $ref: "#/components/schemas/Unit"
+    UpdateTemplate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        state:
+          $ref: "#/components/schemas/Currency"
+    Visibility:
+      type: string
+      enum:
+        - private
+        - team
+        - public
+    api.deadline_exceeded:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.deadline_exceeded
+        status:
+          type: integer
+          const: 504
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.deadline_exceeded
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: unavailable
+    api.internal:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.internal
+        status:
+          type: integer
+          const: 500
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.internal
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: failed
+    api.not_found:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.not_found
+        status:
+          type: integer
+          const: 404
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.not_found
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: refused
+    api.payload_too_large:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: api.payload_too_large
+            status:
+              type: integer
+              const: 413
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: api.payload_too_large
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/ApiPayloadTooLargeParams"
+      x-seampact-nature:
+        base: refused
+    api.rate_limited:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: api.rate_limited
+            status:
+              type: integer
+              const: 429
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: api.rate_limited
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/ApiRateLimitedParams"
+      x-seampact-nature:
+        base: unavailable
+    api.schema_invalid:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: api.schema_invalid
+            status:
+              type: integer
+              const: 400
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: api.schema_invalid
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/ApiSchemaInvalidParams"
+      x-seampact-nature:
+        base: refused
+    api.unauthenticated:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.unauthenticated
+        status:
+          type: integer
+          const: 401
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.unauthenticated
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: refused
+    api.unsupported_media_type:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.unsupported_media_type
+        status:
+          type: integer
+          const: 415
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.unsupported_media_type
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: refused
+    delivery.duplicated:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: delivery.duplicated
+            status:
+              type: integer
+              const: 409
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: delivery.duplicated
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/DeliveryDuplicatedParams"
+      x-seampact-nature:
+        base: refused
+    delivery.expired:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: delivery.expired
+            status:
+              type: integer
+              const: 410
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: delivery.expired
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/DeliveryExpiredParams"
+      x-seampact-nature:
+        base: refused
+    delivery.limited:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: delivery.limited
+            status:
+              type: integer
+              const: 429
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: delivery.limited
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/DeliveryLimitedParams"
+      x-seampact-nature:
+        base: unavailable
+    delivery.locked:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: delivery.locked
+            status:
+              type: integer
+              const: 423
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: delivery.locked
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/DeliveryLockedParams"
+      x-seampact-nature:
+        base: refused
+    delivery.mismatched:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: delivery.mismatched
+            status:
+              type: integer
+              const: 422
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: delivery.mismatched
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/DeliveryMismatchedParams"
+      x-seampact-nature:
+        base: refused
+    delivery.missing:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: delivery.missing
+            status:
+              type: integer
+              const: 404
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: delivery.missing
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/DeliveryMissingParams"
+      x-seampact-nature:
+        base: refused
+    delivery.outdated:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: delivery.outdated
+            status:
+              type: integer
+              const: 412
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: delivery.outdated
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/DeliveryOutdatedParams"
+      x-seampact-nature:
+        base: refused
+    delivery.rejected:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: delivery.rejected
+            status:
+              type: integer
+              const: 400
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: delivery.rejected
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/DeliveryRejectedParams"
+      x-seampact-nature:
+        base: refused
+    delivery.suspended:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: delivery.suspended
+            status:
+              type: integer
+              const: 403
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: delivery.suspended
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/DeliverySuspendedParams"
+      x-seampact-nature:
+        base: refused
+    delivery.unavailable:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: delivery.unavailable
+            status:
+              type: integer
+              const: 503
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: delivery.unavailable
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/DeliveryUnavailableParams"
+      x-seampact-nature:
+        base: unavailable
+    template.duplicated:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: template.duplicated
+            status:
+              type: integer
+              const: 409
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: template.duplicated
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/TemplateDuplicatedParams"
+      x-seampact-nature:
+        base: refused
+    template.expired:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: template.expired
+            status:
+              type: integer
+              const: 410
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: template.expired
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/TemplateExpiredParams"
+      x-seampact-nature:
+        base: refused
+    template.limited:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: template.limited
+            status:
+              type: integer
+              const: 429
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: template.limited
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/TemplateLimitedParams"
+      x-seampact-nature:
+        base: unavailable
+    template.locked:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: template.locked
+            status:
+              type: integer
+              const: 423
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: template.locked
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/TemplateLockedParams"
+      x-seampact-nature:
+        base: refused
+    template.mismatched:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: template.mismatched
+            status:
+              type: integer
+              const: 422
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: template.mismatched
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/TemplateMismatchedParams"
+      x-seampact-nature:
+        base: refused
+    template.missing:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: template.missing
+            status:
+              type: integer
+              const: 404
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: template.missing
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/TemplateMissingParams"
+      x-seampact-nature:
+        base: refused
+    template.outdated:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: template.outdated
+            status:
+              type: integer
+              const: 412
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: template.outdated
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/TemplateOutdatedParams"
+      x-seampact-nature:
+        base: refused
+    template.rejected:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: template.rejected
+            status:
+              type: integer
+              const: 400
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: template.rejected
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/TemplateRejectedParams"
+      x-seampact-nature:
+        base: refused
+    template.suspended:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: template.suspended
+            status:
+              type: integer
+              const: 403
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: template.suspended
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/TemplateSuspendedParams"
+      x-seampact-nature:
+        base: refused
+    template.unavailable:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: template.unavailable
+            status:
+              type: integer
+              const: 503
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: template.unavailable
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/TemplateUnavailableParams"
+      x-seampact-nature:
+        base: unavailable
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+    internalToken:
+      type: http
+      scheme: bearer
+      bearerFormat: jwt

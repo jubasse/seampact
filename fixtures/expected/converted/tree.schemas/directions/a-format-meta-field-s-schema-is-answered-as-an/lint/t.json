@@ -1,0 +1,24 @@
+[
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'Region' in enums is reached by no operation, identity or convention.",
+    "fix": "Remove 'Region', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/enums/Region"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'house' in formats is reached by no operation, identity or convention.",
+    "fix": "Remove 'house', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/formats/house"
+    },
+    "related": []
+  }
+]

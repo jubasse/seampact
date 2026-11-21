@@ -1,0 +1,427 @@
+openapi: 3.1.0
+info:
+  title: shop
+  version: "1"
+x-seampact-api:
+  kind: product
+x-seampact-format: bare
+paths:
+  /v1/items:
+    get:
+      operationId: listItems
+      parameters:
+        - name: offset
+          in: query
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: integer
+            minimum: 0
+        - name: limit
+          in: query
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 50
+        - name: sort
+          in: query
+          required: false
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+              pattern: ^(?:name|-name)$
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Item"
+        "400":
+          description: api.schema_invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.schema_invalid"
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+        "401":
+          description: api.unauthenticated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unauthenticated"
+          x-seampact-errors:
+            - code: api.unauthenticated
+              derivedFrom: identity.authenticate
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+      security:
+        - bearer: []
+      x-seampact-access:
+        identity: clerk
+      x-seampact-restricted-to:
+        - schema: Item
+          pointer: /cost
+          right: items.cost
+          direction: output
+        - schema: Item
+          pointer: /grade
+          right: items.grade
+          params:
+            level: high
+          direction: output
+        - schema: Item
+          pointer: /margin
+          right: items.margin
+          subject: holderField.itemId
+          direction: output
+      x-seampact-paging:
+        style: offset
+        position: offset
+        roles:
+          offset: query.offset
+          limit: query.limit
+          sort: query.sort
+        maxLimit: 50
+        defaultLimit: 50
+        overLimit: reject
+        sortKeys:
+          - key: name
+      x-seampact-maturity:
+        level: experimental
+        source: api
+  /v1/items/{itemId}/remarks:
+    get:
+      operationId: listRemarks
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: offset
+          in: query
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: integer
+            minimum: 0
+        - name: limit
+          in: query
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 50
+        - name: sort
+          in: query
+          required: false
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+              pattern: ^(?:name|-name)$
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Remark"
+        "400":
+          description: api.schema_invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.schema_invalid"
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+        "401":
+          description: api.unauthenticated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unauthenticated"
+          x-seampact-errors:
+            - code: api.unauthenticated
+              derivedFrom: identity.authenticate
+        "403":
+          description: api.sort_key_forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.sort_key_forbidden"
+          x-seampact-errors:
+            - code: api.sort_key_forbidden
+              derivedFrom: sortKey.restricted
+        "404":
+          description: api.not_found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.not_found"
+          x-seampact-errors:
+            - code: api.not_found
+              derivedFrom: member.notFound
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+      security:
+        - bearer: []
+      x-seampact-access:
+        identity: clerk
+      x-seampact-paging:
+        style: offset
+        position: offset
+        roles:
+          offset: query.offset
+          limit: query.limit
+          sort: query.sort
+        maxLimit: 50
+        defaultLimit: 50
+        overLimit: reject
+        sortKeys:
+          - key: name
+            right: items.margin
+            subject: path.itemId
+      x-seampact-maturity:
+        level: experimental
+        source: api
+components:
+  schemas:
+    ApiSchemaInvalidIssue:
+      type: object
+      properties:
+        in:
+          type: string
+          pattern: ^(?:path|query|header|body)$
+        pointer:
+          type: string
+        rule:
+          type: string
+      required:
+        - in
+        - pointer
+        - rule
+    ApiSchemaInvalidParams:
+      type: object
+      properties:
+        issues:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiSchemaInvalidIssue"
+      required:
+        - issues
+    ApiSortKeyForbiddenParams:
+      type: object
+      properties:
+        key:
+          type: string
+      required:
+        - key
+    Item:
+      type: object
+      properties:
+        itemId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        cost:
+          type: integer
+        grade:
+          type: integer
+        margin:
+          type: integer
+      required:
+        - itemId
+        - name
+    Remark:
+      type: object
+      properties:
+        remarkId:
+          type: string
+          format: uuid
+        name:
+          type: string
+      required:
+        - remarkId
+        - name
+    api.internal:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.internal
+        status:
+          type: integer
+          const: 500
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.internal
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: failed
+    api.not_found:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.not_found
+        status:
+          type: integer
+          const: 404
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.not_found
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: refused
+    api.schema_invalid:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: api.schema_invalid
+            status:
+              type: integer
+              const: 400
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: api.schema_invalid
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/ApiSchemaInvalidParams"
+      x-seampact-nature:
+        base: refused
+    api.sort_key_forbidden:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: api.sort_key_forbidden
+            status:
+              type: integer
+              const: 403
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: api.sort_key_forbidden
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/ApiSortKeyForbiddenParams"
+      x-seampact-nature:
+        base: refused
+    api.unauthenticated:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.unauthenticated
+        status:
+          type: integer
+          const: 401
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.unauthenticated
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: refused
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer

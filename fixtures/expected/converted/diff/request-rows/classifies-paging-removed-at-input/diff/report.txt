@@ -1,0 +1,4 @@
+tasks v1: compat.policy additive-only (before additive-only, after additive-only), gate clients
+breaking clients and servers listTasks input /operations/11/paging: paging removed (cursor)
+diff.policy.breaking: paging (removed) at /operations/11/paging breaks clients and servers on listTasks, and compat.policy is additive-only. Fix: Make the change additive (keep the old member beside the new one), or publish it as a new api version; a release that breaks on purpose sets compat: { policy: none } in both versions.
+gate failed: 1 failure(s)

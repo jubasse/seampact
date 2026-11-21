@@ -1,0 +1,26 @@
+{
+  "function": "fetchBundle",
+  "args": [
+    {
+      "git": {
+        "url": "../git-source.git",
+        "tag": "v1"
+      },
+      "integrity": "sha256-m1Dx5GL/JzlteMx5ojBeXbRHBV8Wx7YgA3+v5h4xLDs="
+    },
+    {
+      "baseDirectory": "<root>/app",
+      "localSources": "refuse"
+    }
+  ],
+  "result": {
+    "ok": false,
+    "failures": [
+      {
+        "code": "bundle.source-local",
+        "message": "The git repository '../git-source.git' is local, and local sources are refused here.",
+        "fix": "Name the repository by its https: or ssh URL."
+      }
+    ]
+  }
+}

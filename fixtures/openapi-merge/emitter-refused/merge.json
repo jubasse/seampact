@@ -1,0 +1,17 @@
+{
+  "name": "reference",
+  "prefix": {
+    "tasks": "Tasks"
+  },
+  "emitter": {
+    "reasons": "bogus",
+    "unknown": 1
+  },
+  "inputs": [
+    {
+      "fixture": "reference",
+      "api": "tasks",
+      "operations": ["createTask"]
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+[
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'Notice' in schemas is reached by no operation, identity or convention.",
+    "fix": "Remove 'Notice', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Notice"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'TaskDone' in schemas is reached by no operation, identity or convention.",
+    "fix": "Remove 'TaskDone', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/TaskDone"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'GithubEvent' in schemas is reached by no operation, identity or convention.",
+    "fix": "Remove 'GithubEvent', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/GithubEvent"
+    },
+    "related": []
+  }
+]

@@ -1,0 +1,16 @@
+{
+  "name": "reference",
+  "prefix": {},
+  "inputs": [
+    {
+      "fixture": "reference",
+      "api": "tasks",
+      "operations": ["createTask"]
+    },
+    {
+      "fixture": "reference",
+      "api": "tasksService",
+      "operations": ["getTask"]
+    }
+  ]
+}

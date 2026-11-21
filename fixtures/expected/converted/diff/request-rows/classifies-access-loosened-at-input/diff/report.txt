@@ -1,0 +1,5 @@
+tasks v1: compat.policy additive-only (before additive-only, after additive-only), gate clients
+breaking servers getTask input /operations/7/access: access loosened (identity -> public)
+informative getTask input /operations/7/access/origin: annotation origin
+informative getTask input /operations/7/access/reason: annotation reason (open data)
+gate passed

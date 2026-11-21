@@ -16,24 +16,31 @@ src/differences.rs#has_anchor	scripts/oracle/differences.ts#hasAnchor
 src/differences.rs#anchor_problem	scripts/oracle/differences.ts#anchorProblem
 src/differences.rs#differences_problems	scripts/oracle/differences.ts#differencesProblems
 src/differences.rs#read_differences	scripts/oracle/differences.ts#readDifferences
--	scripts/oracle/expected.ts#jsonText	skip: seampact_json::indented_json
+-	scripts/oracle/expected-text.ts#jsonText	skip: seampact_json::indented_json
 -	scripts/oracle/expected.ts#diagnosticsText	skip: the subject gives the diagnostics value
 src/run.rs#compare_halves	scripts/oracle/expected.ts#halveFiles
 src/run.rs#compare_compilation	scripts/oracle/expected.ts#expectedFilesOf
 src/expected.rs#expected_directory_of	scripts/oracle/expected.ts#expectedDirectoryOf
-src/expected.rs#expected_fixture_paths	scripts/oracle/expected.ts#expectedFixturePaths
+src/expected.rs#expected_fixture_paths	scripts/oracle/expected.ts#unclaimedExpectedDirectories
+-	scripts/oracle/expected.ts#expectedFilePaths	merged: src/expected.rs#collect_expected_fixture_paths
+-	scripts/oracle/expected.ts#loadOracleContext	skip: the TS oracle loads the tools it runs
+-	scripts/oracle/expected.ts#fixtureFiles	skip: the subject gives the compilation; the tool outputs of a fixture are compared by the tool subjects
 src/expected.rs#files_below	scripts/oracle/expected.ts#filesBelow
 src/expected.rs#read_expected_files	scripts/oracle/expected.ts#readExpectedFiles
 -	scripts/oracle/expected.ts#writeExpectedFiles	skip: the TS oracle writes the expected files
 -	scripts/oracle/fixtures.ts#byCodeUnits	skip: seampact_js::cmp_utf16
 src/fixtures.rs#read_excluded	scripts/oracle/fixtures.ts#readExcluded
-src/fixtures.rs#entry_of	scripts/oracle/fixtures.ts#entryOf
+src/fixtures.rs#entry_of	scripts/oracle/fixtures.ts#entryFileOf
 src/fixtures.rs#walk	scripts/oracle/fixtures.ts#walk
 src/fixtures.rs#refuse_colliding_names	scripts/oracle/fixtures.ts#refuseCollidingNames
 src/fixtures.rs#discover_fixtures	scripts/oracle/fixtures.ts#discoverFixtures
 -	scripts/oracle/fixtures.ts#escapeRegExp	skip: the glob is matched without a regular expression
 src/glob.rs#matches	scripts/oracle/fixtures.ts#fixtureMatcher
-src/run.rs#selected_fixtures	scripts/oracle/commands.ts#selectedFixtures
+src/run.rs#selected_fixtures	scripts/oracle/commands.ts#selectedTargets
+-	scripts/oracle/commands.ts#discoveredTargets	skip: the tool cases are run by the tool subjects
+-	scripts/oracle/commands.ts#selectsDiffTable	skip: the diff-table case is a tool case
+-	scripts/oracle/commands.ts#selectsAnything	skip: the Rust harness reports a glob that selects nothing itself
+-	scripts/oracle/commands.ts#diffTableMismatch	skip: the diff-table case is a tool case
 -	scripts/oracle/commands.ts#writeCommand	skip: the TS oracle writes the expected files
 src/run.rs#tree_problems	scripts/oracle/commands.ts#treeProblems
 src/run.rs#run_oracle	scripts/oracle/commands.ts#checkFixtures

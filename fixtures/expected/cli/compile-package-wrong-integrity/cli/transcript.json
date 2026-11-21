@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "bundle.pin-mismatch: source 'notes': The pinned integrity is sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=; the bundle's is sha256-m1Dx5GL/JzlteMx5ojBeXbRHBV8Wx7YgA3+v5h4xLDs=. Fix: Fetch the bundle the pin names, or review this one and pin it: integrity: sha256-m1Dx5GL/JzlteMx5ojBeXbRHBV8Wx7YgA3+v5h4xLDs= The source is read because an api is named alone ('notes'); name each as `<source>/<api>` and only that source is read.\n",
+  "written": {},
+  "removed": []
+}

@@ -1,0 +1,228 @@
+openapi: 3.1.0
+info:
+  title: edge
+  version: "1"
+x-seampact-api:
+  kind: product
+  role: gateway
+x-seampact-format: bare
+paths:
+  /v1/ping:
+    get:
+      operationId: ping
+      responses:
+        "204":
+          description: Success.
+        "400":
+          description: api.schema_invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.schema_invalid"
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+        "502":
+          description: api.upstream_unavailable
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.upstream_unavailable"
+          x-seampact-errors:
+            - code: api.upstream_unavailable
+              derivedFrom: api.gateway
+        "503":
+          description: api.service_unavailable
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.service_unavailable"
+          x-seampact-errors:
+            - code: api.service_unavailable
+              derivedFrom: api.gateway
+        "504":
+          description: api.upstream_timeout
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.upstream_timeout"
+          x-seampact-errors:
+            - code: api.upstream_timeout
+              derivedFrom: api.gateway
+      security: []
+      x-seampact-access:
+        public: The contract checks the gateway codes only.
+      x-seampact-maturity:
+        level: experimental
+        source: api
+components:
+  schemas:
+    ApiSchemaInvalidIssue:
+      type: object
+      properties:
+        in:
+          type: string
+          pattern: ^(?:path|query|header|body)$
+        pointer:
+          type: string
+        rule:
+          type: string
+      required:
+        - in
+        - pointer
+        - rule
+    ApiSchemaInvalidParams:
+      type: object
+      properties:
+        issues:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiSchemaInvalidIssue"
+      required:
+        - issues
+    api.internal:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.internal
+        status:
+          type: integer
+          const: 500
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.internal
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: failed
+    api.schema_invalid:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: api.schema_invalid
+            status:
+              type: integer
+              const: 400
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: api.schema_invalid
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/ApiSchemaInvalidParams"
+      x-seampact-nature:
+        base: refused
+    api.service_unavailable:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.service_unavailable
+        status:
+          type: integer
+          const: 503
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.service_unavailable
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: unavailable
+    api.upstream_timeout:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.upstream_timeout
+        status:
+          type: integer
+          const: 504
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.upstream_timeout
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: unavailable
+    api.upstream_unavailable:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.upstream_unavailable
+        status:
+          type: integer
+          const: 502
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.upstream_unavailable
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: unavailable

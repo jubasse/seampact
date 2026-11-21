@@ -1,0 +1,32 @@
+{
+  "function": "readAppConfig",
+  "args": [
+    "<root>/app/seampact.config.yaml",
+    "seampact.config.yaml"
+  ],
+  "result": {
+    "status": "read",
+    "config": {
+      "file": "<root>/app/seampact.config.yaml",
+      "outDir": "<root>/app/src/__generated__",
+      "sources": {
+        "notes": {
+          "kind": "path",
+          "directory": "<root>/app/contract"
+        }
+      },
+      "entries": [
+        {
+          "entry": {
+            "id": "types",
+            "use": "@seampact/codegen-ts",
+            "apis": [
+              "notes"
+            ]
+          },
+          "root": "<root>/app/src/__generated__/types"
+        }
+      ]
+    }
+  }
+}

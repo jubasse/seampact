@@ -1,0 +1,7 @@
+{
+  "exit": 0,
+  "stdout": "notes v1: compat.policy none (before none, after none), gate clients\nadditive getNote,listNotes output /schemas/Note/properties/3: property.added optional (pinned)\ngate passed\n",
+  "stderr": "",
+  "written": {},
+  "removed": []
+}

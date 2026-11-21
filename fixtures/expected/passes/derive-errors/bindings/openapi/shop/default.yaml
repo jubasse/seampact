@@ -1,0 +1,276 @@
+openapi: 3.1.0
+info:
+  title: shop
+  version: "1"
+x-seampact-api:
+  kind: product
+x-seampact-format: bare
+paths:
+  /v1/members:
+    get:
+      operationId: listMembers
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Member"
+        "400":
+          description: shop.invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/shop.invalid"
+          x-seampact-errors:
+            - code: shop.invalid
+              derivedFrom: input.invalid
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+      security: []
+      x-seampact-access:
+        public: The fixture checks role bindings only.
+      x-seampact-paging:
+        none: true
+      x-seampact-maturity:
+        level: experimental
+        source: api
+  /v1/members/{userId}:
+    get:
+      operationId: getUser
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+        "400":
+          description: shop.invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/shop.invalid"
+          x-seampact-errors:
+            - code: shop.invalid
+              derivedFrom: input.invalid
+        "404":
+          description: members.not_found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/members.not_found"
+          x-seampact-errors:
+            - code: members.not_found
+              derivedFrom: member.notFound
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+      security: []
+      x-seampact-access:
+        public: The fixture checks role bindings only.
+      x-seampact-maturity:
+        level: experimental
+        source: api
+  /v1/members/{userId}/history:
+    get:
+      operationId: historyUser
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Success.
+        "400":
+          description: shop.invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/shop.invalid"
+          x-seampact-errors:
+            - code: shop.invalid
+              derivedFrom: input.invalid
+        "404":
+          description: members.gone
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/members.gone"
+          x-seampact-errors:
+            - code: members.gone
+              derivedFrom: member.notFound
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+      security: []
+      x-seampact-access:
+        public: The fixture checks role bindings only.
+      x-seampact-maturity:
+        level: experimental
+        source: api
+components:
+  schemas:
+    Member:
+      type: object
+      properties:
+        userId:
+          type: string
+      required:
+        - userId
+    ShopInvalidParams:
+      type: object
+      properties:
+        problems:
+          type: array
+          items:
+            $ref: "#/components/schemas/ShopInvalidParamsProblemsItem"
+      required:
+        - problems
+    ShopInvalidParamsProblemsItem:
+      type: object
+      properties:
+        at:
+          type: string
+    api.internal:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.internal
+        status:
+          type: integer
+          const: 500
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.internal
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: failed
+    members.gone:
+      type: object
+      properties:
+        type:
+          type: string
+          const: members.gone
+        title:
+          type: string
+        status:
+          type: integer
+          const: 404
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: members.gone
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - title
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: refused
+    members.not_found:
+      type: object
+      properties:
+        type:
+          type: string
+          const: members.not_found
+        status:
+          type: integer
+          const: 404
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: members.not_found
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: refused
+    shop.invalid:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: shop.invalid
+            status:
+              type: integer
+              const: 400
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: shop.invalid
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/ShopInvalidParams"
+      x-seampact-nature:
+        base: refused

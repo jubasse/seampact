@@ -1,0 +1,40 @@
+{
+  "operations": {
+    "mixed": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "public",
+        "reason": "The ordering fixture has no identity.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/mixed/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    },
+    "event": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "public",
+        "reason": "The ordering fixture has no identity.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/event/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    }
+  }
+}

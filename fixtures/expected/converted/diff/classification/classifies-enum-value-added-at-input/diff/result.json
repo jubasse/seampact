@@ -1,0 +1,99 @@
+{
+  "ok": true,
+  "api": "tasks",
+  "before": {
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "irRevision": 6,
+    "packs": []
+  },
+  "after": {
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "irRevision": 6,
+    "packs": []
+  },
+  "policy": {
+    "before": "additive-only",
+    "after": "additive-only",
+    "applied": "additive-only"
+  },
+  "settings": {
+    "gate": "clients",
+    "exempt": [
+      "experimental",
+      "sunsetPassed"
+    ]
+  },
+  "changes": [
+    {
+      "kind": "enum.value",
+      "case": "added",
+      "pointer": "/enums/TaskState/values/3",
+      "position": "output",
+      "operations": [
+        "archiveTask",
+        "assignTask",
+        "createTask",
+        "getTask",
+        "getTasksBatch",
+        "listTasks",
+        "searchTasks",
+        "updateTask"
+      ],
+      "breaks": [
+        "clients"
+      ],
+      "classification": "breaking",
+      "after": "blocked"
+    },
+    {
+      "kind": "enum.value",
+      "case": "added",
+      "pointer": "/enums/TaskState/values/3",
+      "position": "input",
+      "operations": [
+        "listTasks",
+        "searchTasks",
+        "updateTask"
+      ],
+      "breaks": [
+        "servers"
+      ],
+      "classification": "breaking",
+      "after": "blocked"
+    }
+  ],
+  "gate": {
+    "passed": false,
+    "failures": [
+      {
+        "kind": "enum.value",
+        "case": "added",
+        "pointer": "/enums/TaskState/values/3",
+        "position": "output",
+        "breaks": [
+          "clients"
+        ],
+        "operations": [
+          "archiveTask",
+          "assignTask",
+          "createTask",
+          "getTask",
+          "getTasksBatch",
+          "listTasks",
+          "searchTasks",
+          "updateTask"
+        ],
+        "code": "diff.policy.breaking",
+        "message": "enum.value (added) at /enums/TaskState/values/3 breaks clients on archiveTask, assignTask, createTask, getTask, getTasksBatch, listTasks, searchTasks, updateTask, and compat.policy is additive-only.",
+        "fix": "Make the change additive (keep the old member beside the new one), or publish it as a new api version; a release that breaks on purpose sets compat: { policy: none } in both versions."
+      }
+    ]
+  },
+  "deprecations": []
+}

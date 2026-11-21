@@ -1,0 +1,19 @@
+{
+  "operations": {
+    "mixed": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "mixedAgain": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    },
+    "event": {
+      "scopes": [],
+      "requires": [],
+      "fieldRights": []
+    }
+  }
+}

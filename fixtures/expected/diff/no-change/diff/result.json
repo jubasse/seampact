@@ -1,0 +1,38 @@
+{
+  "ok": true,
+  "api": "ordering",
+  "before": {
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "irRevision": 6,
+    "packs": []
+  },
+  "after": {
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "irRevision": 6,
+    "packs": []
+  },
+  "policy": {
+    "before": "none",
+    "after": "none",
+    "applied": "none"
+  },
+  "settings": {
+    "gate": "clients",
+    "exempt": [
+      "experimental",
+      "sunsetPassed"
+    ]
+  },
+  "changes": [],
+  "gate": {
+    "passed": true,
+    "failures": []
+  },
+  "deprecations": []
+}

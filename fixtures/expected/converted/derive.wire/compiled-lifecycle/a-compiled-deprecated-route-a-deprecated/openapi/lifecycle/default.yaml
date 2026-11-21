@@ -1,0 +1,262 @@
+openapi: 3.1.0
+info:
+  title: lifecycle
+  version: "1"
+x-seampact-api:
+  kind: product
+x-seampact-format: bare
+paths:
+  /v1/legacy/links/{id}:
+    get:
+      operationId: legacyLink
+      deprecated: true
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Redirection.
+          headers:
+            Location:
+              required: true
+              schema:
+                type: string
+                format: uri-reference
+        "400":
+          description: api.schema_invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.schema_invalid"
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+      security: []
+      x-seampact-access:
+        public: Tasks are public.
+      x-seampact-maturity:
+        level: experimental
+        source: api
+      x-seampact-deprecation:
+        since: 2026-06-01
+        sunset: 2027-01-31
+  /v1/legacy/tasks/{id}:
+    get:
+      operationId: legacyTask
+      deprecated: true
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Success.
+          headers:
+            Deprecation:
+              required: true
+              schema:
+                type: string
+              x-seampact-semantic: deprecation
+            Sunset:
+              required: true
+              schema:
+                type: string
+              x-seampact-semantic: sunset
+            Link:
+              description: The successor operation, with rel "successor-version".
+              required: true
+              schema:
+                type: string
+              x-seampact-semantic: successorLink
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          description: api.schema_invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.schema_invalid"
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+      security: []
+      x-seampact-access:
+        public: Tasks are public.
+      x-seampact-maturity:
+        level: experimental
+        source: api
+      x-seampact-deprecation:
+        since: 2026-06-01
+        sunset: 2027-01-31
+        successor:
+          api: lifecycle
+          operationId: getTask
+        successorRel: successor-version
+  /v1/tasks/{id}:
+    get:
+      operationId: getTask
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Success.
+          headers:
+            X-Degraded:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          description: api.schema_invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.schema_invalid"
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+      security: []
+      x-seampact-access:
+        public: Tasks are public.
+      x-seampact-maturity:
+        level: experimental
+        source: api
+      x-seampact-degradable:
+        paths:
+          - stats
+        header: X-Degraded
+components:
+  schemas:
+    ApiSchemaInvalidIssue:
+      type: object
+      properties:
+        in:
+          type: string
+          pattern: ^(?:path|query|header|body)$
+        pointer:
+          type: string
+        rule:
+          type: string
+      required:
+        - in
+        - pointer
+        - rule
+    ApiSchemaInvalidParams:
+      type: object
+      properties:
+        issues:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiSchemaInvalidIssue"
+      required:
+        - issues
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+        stats:
+          $ref: "#/components/schemas/TaskStats"
+      required:
+        - id
+    TaskStats:
+      type: object
+      properties:
+        views:
+          type: integer
+    api.internal:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.internal
+        status:
+          type: integer
+          const: 500
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.internal
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: failed
+    api.schema_invalid:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: api.schema_invalid
+            status:
+              type: integer
+              const: 400
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: api.schema_invalid
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/ApiSchemaInvalidParams"
+      x-seampact-nature:
+        base: refused

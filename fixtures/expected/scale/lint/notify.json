@@ -1,0 +1,24 @@
+[
+  {
+    "severity": "warning",
+    "rule": "seampact/not-found-role",
+    "message": "The 404 code 'template.missing' is listed on routes 'deleteTemplate', 'getTemplate', 'publishTemplate', 'updateTemplate', which also answer the derived notFound code, so they have two 404 codes.",
+    "fix": "Add errorRoles: { notFound: template.missing } on the member node of the collection that lists 'template.missing', or allow seampact/not-found-role on the catalogue entry with a reason.",
+    "origin": {
+      "layer": "shared",
+      "pointer": "/errors/template.missing"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/not-found-role",
+    "message": "The 404 code 'delivery.missing' is listed on routes 'deleteDelivery', 'getDelivery', 'retryDelivery', 'updateDelivery', which also answer the derived notFound code, so they have two 404 codes.",
+    "fix": "Add errorRoles: { notFound: delivery.missing } on the member node of the collection that lists 'delivery.missing', or allow seampact/not-found-role on the catalogue entry with a reason.",
+    "origin": {
+      "layer": "shared",
+      "pointer": "/errors/delivery.missing"
+    },
+    "related": []
+  }
+]

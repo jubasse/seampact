@@ -1,0 +1,35 @@
+[
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'Article' in schemas is reached by no operation, identity or convention.",
+    "fix": "Remove 'Article', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Article"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'Tag' in schemas is reached by no operation, identity or convention.",
+    "fix": "Remove 'Tag', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Tag"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'MaybeId' in schemas is reached by no operation, identity or convention.",
+    "fix": "Remove 'MaybeId', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/MaybeId"
+    },
+    "related": []
+  }
+]

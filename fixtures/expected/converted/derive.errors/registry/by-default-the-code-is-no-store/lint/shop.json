@@ -1,0 +1,46 @@
+[
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'Token' in schemas is reached by no operation, identity or convention.",
+    "fix": "Remove 'Token', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/schemas/Token"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'shop.keyed' in errors is reached by no operation, identity or convention.",
+    "fix": "Remove 'shop.keyed', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/errors/shop.keyed"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'shop.leaked' in errors is reached by no operation, identity or convention.",
+    "fix": "Remove 'shop.leaked', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/errors/shop.leaked"
+    },
+    "related": []
+  },
+  {
+    "severity": "warning",
+    "rule": "seampact/unused-declaration",
+    "message": "The declaration 'shop.plain' in errors is reached by no operation, identity or convention.",
+    "fix": "Remove 'shop.plain', use it, or allow seampact/unused-declaration on it with a reason.",
+    "origin": {
+      "layer": "api",
+      "pointer": "/errors/shop.plain"
+    },
+    "related": []
+  }
+]

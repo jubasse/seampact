@@ -1,0 +1,637 @@
+openapi: 3.1.0
+info:
+  title: shop
+  version: "1"
+x-seampact-api:
+  kind: product
+x-seampact-format: bare
+paths:
+  /v1/me:
+    get:
+      operationId: getMe
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+        "400":
+          description: api.schema_invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.schema_invalid"
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+        "404":
+          description: TASK_NOT_FOUND
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/TASK_NOT_FOUND"
+          x-seampact-errors:
+            - code: TASK_NOT_FOUND
+              derivedFrom: node.errors
+              origin: api#/surfaces/app
+        "429":
+          description: api.rate_limited
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.rate_limited"
+          x-seampact-errors:
+            - code: api.rate_limited
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/me
+        "500":
+          description: api.internal, shop.failed
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/api.internal"
+                  - $ref: "#/components/schemas/shop.failed"
+                discriminator:
+                  propertyName: code
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+            - code: shop.failed
+              derivedFrom: conventions.every
+        "503":
+          description: shop.maintenance
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/shop.maintenance"
+          x-seampact-errors:
+            - code: shop.maintenance
+              derivedFrom: node.errors
+              origin: api#/surfaces/app
+      security: []
+      x-seampact-access:
+        public: The fixture checks error declarations only.
+      x-seampact-maturity:
+        level: experimental
+        source: api
+  /v1/members:
+    get:
+      operationId: listMembers
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Member"
+        "400":
+          description: api.schema_invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.schema_invalid"
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+        "404":
+          description: TASK_NOT_FOUND
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/TASK_NOT_FOUND"
+          x-seampact-errors:
+            - code: TASK_NOT_FOUND
+              derivedFrom: node.errors
+              origin: api#/surfaces/app
+        "409":
+          description: members.full
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/members.full"
+          x-seampact-errors:
+            - code: members.full
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/members/collection
+        "500":
+          description: api.internal, shop.failed
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/api.internal"
+                  - $ref: "#/components/schemas/shop.failed"
+                discriminator:
+                  propertyName: code
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+            - code: shop.failed
+              derivedFrom: conventions.every
+        "503":
+          description: shop.maintenance
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/shop.maintenance"
+          x-seampact-errors:
+            - code: shop.maintenance
+              derivedFrom: node.errors
+              origin: api#/surfaces/app
+      security: []
+      x-seampact-access:
+        public: The fixture checks error declarations only.
+      x-seampact-paging:
+        none: true
+      x-seampact-maturity:
+        level: experimental
+        source: api
+  /v1/members/{userId}:
+    get:
+      operationId: getUser
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+        "400":
+          description: api.schema_invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.schema_invalid"
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+        "404":
+          description: TASK_NOT_FOUND
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/TASK_NOT_FOUND"
+          x-seampact-errors:
+            - code: TASK_NOT_FOUND
+              derivedFrom: member.notFound
+              origin: api#/surfaces/app
+        "409":
+          description: members.full
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/members.full"
+          x-seampact-errors:
+            - code: members.full
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/members/member
+        "410":
+          description: 404-gone
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/404-gone"
+          x-seampact-errors:
+            - code: 404-gone
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/members/member
+        "500":
+          description: api.internal, shop.failed
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/api.internal"
+                  - $ref: "#/components/schemas/shop.failed"
+                discriminator:
+                  propertyName: code
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+            - code: shop.failed
+              derivedFrom: conventions.every
+        "503":
+          description: shop.maintenance
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/shop.maintenance"
+          x-seampact-errors:
+            - code: shop.maintenance
+              derivedFrom: node.errors
+              origin: api#/surfaces/app
+      security: []
+      x-seampact-access:
+        public: The fixture checks error declarations only.
+      x-seampact-maturity:
+        level: experimental
+        source: api
+  /v1/ping:
+    get:
+      operationId: ping
+      responses:
+        "204":
+          description: Success.
+        "400":
+          description: api.schema_invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.schema_invalid"
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+        "404":
+          description: TASK_NOT_FOUND
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/TASK_NOT_FOUND"
+          x-seampact-errors:
+            - code: TASK_NOT_FOUND
+              derivedFrom: node.errors
+              origin: api#/surfaces/app
+        "500":
+          description: api.internal, shop.failed
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/api.internal"
+                  - $ref: "#/components/schemas/shop.failed"
+                discriminator:
+                  propertyName: code
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+            - code: shop.failed
+              derivedFrom: conventions.every
+        "503":
+          description: E1042, shop.maintenance
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/E1042"
+                  - $ref: "#/components/schemas/shop.maintenance"
+                discriminator:
+                  propertyName: code
+          x-seampact-errors:
+            - code: E1042
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/ping
+            - code: shop.maintenance
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/ping
+        "504":
+          description: ping.slow
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ping.slow"
+          x-seampact-errors:
+            - code: ping.slow
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/ping
+      security: []
+      x-seampact-access:
+        public: The fixture checks error declarations only.
+      x-seampact-maturity:
+        level: experimental
+        source: api
+components:
+  schemas:
+    404-gone:
+      type: object
+      properties:
+        type:
+          type: string
+          const: 404-gone
+        status:
+          type: integer
+          const: 410
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: 404-gone
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: refused
+        name: conflicted
+    ApiRateLimitedParams:
+      type: object
+      properties:
+        retryAfterMs:
+          type: integer
+          minimum: 0
+        scope:
+          type: string
+      required:
+        - retryAfterMs
+    ApiSchemaInvalidIssue:
+      type: object
+      properties:
+        in:
+          type: string
+          pattern: ^(?:path|query|header|body)$
+        pointer:
+          type: string
+        rule:
+          type: string
+      required:
+        - in
+        - pointer
+        - rule
+    ApiSchemaInvalidParams:
+      type: object
+      properties:
+        issues:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiSchemaInvalidIssue"
+      required:
+        - issues
+    E1042:
+      type: object
+      properties:
+        type:
+          type: string
+          const: E1042
+        status:
+          type: integer
+          const: 503
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: E1042
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      title: The index is rebuilding.
+      x-seampact-nature:
+        base: unavailable
+    Member:
+      type: object
+      properties:
+        userId:
+          type: string
+      required:
+        - userId
+    TASK_NOT_FOUND:
+      type: object
+      properties:
+        type:
+          type: string
+          const: TASK_NOT_FOUND
+        title:
+          type: string
+        status:
+          type: integer
+          const: 404
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: TASK_NOT_FOUND
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - title
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: refused
+    api.internal:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.internal
+        status:
+          type: integer
+          const: 500
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.internal
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: failed
+    api.rate_limited:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: api.rate_limited
+            status:
+              type: integer
+              const: 429
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: api.rate_limited
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/ApiRateLimitedParams"
+      x-seampact-nature:
+        base: unavailable
+    api.schema_invalid:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: api.schema_invalid
+            status:
+              type: integer
+              const: 400
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: api.schema_invalid
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/ApiSchemaInvalidParams"
+      x-seampact-nature:
+        base: refused
+    members.full:
+      type: object
+      properties:
+        type:
+          type: string
+          const: members.full
+        status:
+          type: integer
+          const: 409
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: members.full
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: refused
+    ping.slow:
+      type: object
+      properties:
+        type:
+          type: string
+          const: ping.slow
+        status:
+          type: integer
+          const: 504
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: ping.slow
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: unavailable
+    shop.failed:
+      type: object
+      properties:
+        type:
+          type: string
+          const: shop.failed
+        title:
+          type: string
+        status:
+          type: integer
+          const: 500
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: shop.failed
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - title
+        - status
+        - code
+        - nature
+      description: Retry later or call support.
+      x-seampact-nature:
+        base: failed
+    shop.maintenance:
+      type: object
+      properties:
+        type:
+          type: string
+          const: shop.maintenance
+        status:
+          type: integer
+          const: 503
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: shop.maintenance
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: unavailable
+        name: throttled

@@ -1,0 +1,229 @@
+{
+  "irRevision": 6,
+  "locations": {
+    "api#/api": {
+      "column": 1,
+      "endColumn": 74,
+      "endLine": 3,
+      "file": "api.yaml",
+      "line": 3
+    },
+    "api#/api/maturity": {
+      "column": 51,
+      "endColumn": 72,
+      "endLine": 3,
+      "file": "api.yaml",
+      "line": 3
+    },
+    "api#/api/version": {
+      "column": 24,
+      "endColumn": 34,
+      "endLine": 3,
+      "file": "api.yaml",
+      "line": 3
+    },
+    "api#/schemas/Event": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 25,
+      "file": "api.yaml",
+      "line": 16
+    },
+    "api#/schemas/Mixed": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 16,
+      "file": "api.yaml",
+      "line": 6
+    },
+    "api#/schemas/Mixed/properties/Zebra": {
+      "column": 7,
+      "endColumn": 52,
+      "endLine": 10,
+      "file": "api.yaml",
+      "line": 10
+    },
+    "api#/schemas/Mixed/properties/zebra": {
+      "column": 7,
+      "endColumn": 30,
+      "endLine": 9,
+      "file": "api.yaml",
+      "line": 9
+    },
+    "api#/schemas/Mixed/properties/élan": {
+      "column": 7,
+      "endColumn": 29,
+      "endLine": 11,
+      "file": "api.yaml",
+      "line": 11
+    },
+    "api#/schemas/Mixed/properties/ꙮ": {
+      "column": 7,
+      "endColumn": 46,
+      "endLine": 15,
+      "file": "api.yaml",
+      "line": 15
+    },
+    "api#/schemas/Mixed/properties/𝒜": {
+      "column": 7,
+      "endColumn": 46,
+      "endLine": 13,
+      "file": "api.yaml",
+      "line": 13
+    },
+    "api#/schemas/Mixed/properties/😀": {
+      "column": 7,
+      "endColumn": 43,
+      "endLine": 14,
+      "file": "api.yaml",
+      "line": 14
+    },
+    "api#/schemas/Mixed/properties/ｚ": {
+      "column": 7,
+      "endColumn": 48,
+      "endLine": 12,
+      "file": "api.yaml",
+      "line": 12
+    },
+    "api#/schemas/Variant1": {
+      "column": 3,
+      "endColumn": 67,
+      "endLine": 25,
+      "file": "api.yaml",
+      "line": 25
+    },
+    "api#/schemas/Variant1/properties/v1": {
+      "column": 43,
+      "endColumn": 63,
+      "endLine": 25,
+      "file": "api.yaml",
+      "line": 25
+    },
+    "api#/schemas/Variant2": {
+      "column": 3,
+      "endColumn": 67,
+      "endLine": 26,
+      "file": "api.yaml",
+      "line": 26
+    },
+    "api#/schemas/Variant2/properties/v2": {
+      "column": 43,
+      "endColumn": 63,
+      "endLine": 26,
+      "file": "api.yaml",
+      "line": 26
+    },
+    "api#/schemas/Variant3": {
+      "column": 3,
+      "endColumn": 67,
+      "endLine": 27,
+      "file": "api.yaml",
+      "line": 27
+    },
+    "api#/schemas/Variant3/properties/v3": {
+      "column": 43,
+      "endColumn": 63,
+      "endLine": 27,
+      "file": "api.yaml",
+      "line": 27
+    },
+    "api#/schemas/Variant4": {
+      "column": 3,
+      "endColumn": 67,
+      "endLine": 28,
+      "file": "api.yaml",
+      "line": 28
+    },
+    "api#/schemas/Variant4/properties/v4": {
+      "column": 43,
+      "endColumn": 63,
+      "endLine": 28,
+      "file": "api.yaml",
+      "line": 28
+    },
+    "api#/schemas/Variant5": {
+      "column": 3,
+      "endColumn": 67,
+      "endLine": 29,
+      "file": "api.yaml",
+      "line": 29
+    },
+    "api#/schemas/Variant5/properties/v5": {
+      "column": 43,
+      "endColumn": 63,
+      "endLine": 29,
+      "file": "api.yaml",
+      "line": 29
+    },
+    "api#/schemas/Variant6": {
+      "column": 3,
+      "endColumn": 67,
+      "endLine": 30,
+      "file": "api.yaml",
+      "line": 30
+    },
+    "api#/schemas/Variant6/properties/v6": {
+      "column": 43,
+      "endColumn": 63,
+      "endLine": 30,
+      "file": "api.yaml",
+      "line": 30
+    },
+    "api#/surfaces/app": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 47,
+      "file": "api.yaml",
+      "line": 33
+    },
+    "api#/surfaces/app/routes/event": {
+      "column": 7,
+      "endColumn": 1,
+      "endLine": 47,
+      "file": "api.yaml",
+      "line": 43
+    },
+    "api#/surfaces/app/routes/event/access": {
+      "column": 9,
+      "endColumn": 68,
+      "endLine": 45,
+      "file": "api.yaml",
+      "line": 45
+    },
+    "api#/surfaces/app/routes/event/input": {
+      "column": 9,
+      "endColumn": 21,
+      "endLine": 46,
+      "file": "api.yaml",
+      "line": 46
+    },
+    "api#/surfaces/app/routes/mixed": {
+      "column": 7,
+      "endColumn": 1,
+      "endLine": 43,
+      "file": "api.yaml",
+      "line": 38
+    },
+    "api#/surfaces/app/routes/mixed/access": {
+      "column": 9,
+      "endColumn": 68,
+      "endLine": 40,
+      "file": "api.yaml",
+      "line": 40
+    },
+    "api#/surfaces/app/routes/mixed/input": {
+      "column": 9,
+      "endColumn": 21,
+      "endLine": 41,
+      "file": "api.yaml",
+      "line": 41
+    },
+    "api#/surfaces/app/routes/mixed/output": {
+      "column": 9,
+      "endColumn": 22,
+      "endLine": 42,
+      "file": "api.yaml",
+      "line": 42
+    }
+  }
+}

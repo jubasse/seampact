@@ -1,0 +1,82 @@
+{
+  "ok": true,
+  "api": "tasks",
+  "before": {
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "irRevision": 6,
+    "packs": []
+  },
+  "after": {
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "irRevision": 6,
+    "packs": []
+  },
+  "policy": {
+    "before": "additive-only",
+    "after": "additive-only",
+    "applied": "additive-only"
+  },
+  "settings": {
+    "gate": "clients",
+    "exempt": [
+      "experimental",
+      "sunsetPassed"
+    ]
+  },
+  "changes": [
+    {
+      "kind": "declaration",
+      "case": "added",
+      "pointer": "/pagings/offset",
+      "position": "none",
+      "operations": [],
+      "breaks": [],
+      "classification": "informative",
+      "after": "offset"
+    },
+    {
+      "kind": "paging",
+      "case": "style",
+      "pointer": "/operations/11/paging/style",
+      "position": "input",
+      "operations": [
+        "listTasks"
+      ],
+      "breaks": [
+        "clients",
+        "servers"
+      ],
+      "classification": "breaking",
+      "before": "cursor",
+      "after": "offset"
+    }
+  ],
+  "gate": {
+    "passed": false,
+    "failures": [
+      {
+        "kind": "paging",
+        "case": "style",
+        "pointer": "/operations/11/paging/style",
+        "position": "input",
+        "breaks": [
+          "clients",
+          "servers"
+        ],
+        "operations": [
+          "listTasks"
+        ],
+        "code": "diff.policy.breaking",
+        "message": "paging (style) at /operations/11/paging/style breaks clients and servers on listTasks, and compat.policy is additive-only.",
+        "fix": "Make the change additive (keep the old member beside the new one), or publish it as a new api version; a release that breaks on purpose sets compat: { policy: none } in both versions."
+      }
+    ]
+  },
+  "deprecations": []
+}
