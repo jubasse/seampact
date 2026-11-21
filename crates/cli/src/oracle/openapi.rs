@@ -1,6 +1,6 @@
 //! The OpenAPI cases: the documents of one IR, and the merge of several.
 
-use seampact_ir::ContractIr;
+use seampact_ir::{ContractIr, OperationId};
 use seampact_json::{JsonObject, JsonValue, canonical_document};
 use seampact_openapi::{
     EmitOutcome, OpenApiError, ParsedEmitterOptions, emit_documents, parse_emitter_options,
@@ -71,36 +71,30 @@ pub(crate) fn openapi_merge_answer(_case: &MergeCase) -> SubjectAnswer<OpenApiAn
 
 /// The refusals as `openapi/refusals.json` holds them, absent members left out.
 fn refusals_json(refusals: &[Refusal]) -> JsonValue {
-    let entries = refusals
-        .iter()
-        .map(|refusal| {
-            let mut entry = JsonObject::new();
+    JsonValue::Array(refusals.iter().map(refusal_json).collect())
+}
 
-            entry.insert("code".to_owned(), JsonValue::String(refusal.code.clone()));
-            entry.insert(
-                "message".to_owned(),
-                JsonValue::String(refusal.message.clone()),
-            );
-            entry.insert("fix".to_owned(), JsonValue::String(refusal.fix.clone()));
+fn refusal_json(refusal: &Refusal) -> JsonValue {
+    let text = |value: &str| JsonValue::String(value.to_owned());
+    let mut entry = JsonObject::from_iter([
+        ("code".to_owned(), text(&refusal.code)),
+        ("message".to_owned(), text(&refusal.message)),
+        ("fix".to_owned(), text(&refusal.fix)),
+    ]);
+    let optional_members = [
+        (
+            "operation",
+            refusal.operation.as_ref().map(OperationId::as_str),
+        ),
+        ("member", refusal.member.as_deref()),
+        ("docs", refusal.docs.as_deref()),
+    ];
 
-            if let Some(operation) = &refusal.operation {
-                entry.insert(
-                    "operation".to_owned(),
-                    JsonValue::String(operation.as_str().to_owned()),
-                );
-            }
+    for (name, value) in optional_members {
+        if let Some(present) = value {
+            entry.insert(name.to_owned(), text(present));
+        }
+    }
 
-            if let Some(member) = &refusal.member {
-                entry.insert("member".to_owned(), JsonValue::String(member.clone()));
-            }
-
-            if let Some(docs) = &refusal.docs {
-                entry.insert("docs".to_owned(), JsonValue::String(docs.clone()));
-            }
-
-            JsonValue::Object(entry)
-        })
-        .collect();
-
-    JsonValue::Array(entries)
+    JsonValue::Object(entry)
 }
