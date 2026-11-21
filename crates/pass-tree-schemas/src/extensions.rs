@@ -10,6 +10,7 @@ use seampact_ir::{
     IrMap,
 };
 use seampact_json::{JsonObject, JsonValue};
+use seampact_pass_tree_shared::extension_key_parts;
 use seampact_pipeline::{PassError, TreeNodes};
 
 use crate::compile::{
@@ -37,24 +38,6 @@ pub(crate) struct TreeSchemasExtensionHolder<'raw> {
 pub(crate) struct TreeSchemasExtensionSite<'tree, 'raw> {
     pub(crate) merged: &'raw JsonObject,
     pub(crate) nodes: &'tree TreeNodes<'raw>,
-}
-
-/// The prefix and the key of `x-<prefix>-<key>` (`^x-([a-z][a-z0-9]*)-(.+)$`): the prefix holds no
-/// dash, so the key is everything after it, and `.` matches no line terminator.
-pub(crate) fn extension_key_parts(written: &str) -> Option<(&str, &str)> {
-    let (prefix, key) = written.strip_prefix("x-")?.split_once('-')?;
-    let mut prefix_characters = prefix.chars();
-    let prefix_is_word = prefix_characters
-        .next()
-        .is_some_and(|first| first.is_ascii_lowercase())
-        && prefix_characters.all(|next| next.is_ascii_lowercase() || next.is_ascii_digit());
-    let key_has_terminator = key.chars().any(is_line_terminator);
-
-    (prefix_is_word && !key.is_empty() && !key_has_terminator).then_some((prefix, key))
-}
-
-fn is_line_terminator(character: char) -> bool {
-    matches!(character, '\n' | '\r' | '\u{2028}' | '\u{2029}')
 }
 
 /// The places an extension key may be declared for.

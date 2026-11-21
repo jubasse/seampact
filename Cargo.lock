@@ -1001,6 +1001,7 @@ dependencies = [
  "seampact-naming",
  "seampact-pass-tree-nodes",
  "seampact-pass-tree-schemas",
+ "seampact-pass-tree-shared",
  "seampact-pipeline",
 ]
 

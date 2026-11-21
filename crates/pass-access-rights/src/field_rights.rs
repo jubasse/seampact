@@ -302,7 +302,12 @@ pub(crate) fn field_right_of(
 ) -> Result<FieldRight, InternalError> {
     let input_policy = match direction {
         Direction::Input => Some(input_policy_of(context, field.restriction)?),
-        Direction::Output | Direction::Unknown(_) => None,
+        Direction::Output => None,
+        Direction::Unknown(_) => {
+            return Err(InternalError::new(format!(
+                "a restricted field was reached in direction '{direction}', which is neither input nor output"
+            )));
+        }
     };
 
     Ok(FieldRight {

@@ -16,9 +16,7 @@ use crate::decimal::{TreeSchemasDecimal, TreeSchemasDecimalSource, tree_schemas_
 use crate::directions::{DirectionHolder, directions_at, tree_schemas_write_directions, within};
 use crate::enums::tree_schemas_compile_enums;
 use crate::example_check::TreeSchemasExampleChecker;
-use crate::extensions::{
-    extension_key_parts, tree_schemas_extension_slot, tree_schemas_has_extensions,
-};
+use crate::extensions::{tree_schemas_extension_slot, tree_schemas_has_extensions};
 use crate::pattern::{
     TreeSchemasPatternResult, tree_schemas_escape_pattern_literal, tree_schemas_normalize_pattern,
 };
@@ -63,22 +61,6 @@ fn a_literal_pattern_escapes_each_metacharacter_by_code_point() {
         "a\\.b\\*\\(c\\)\\/\\\\\u{1F600}"
     );
     assert_eq!(tree_schemas_escape_pattern_literal(""), "");
-}
-
-#[test]
-fn an_extension_key_needs_a_lowercase_prefix_and_a_one_line_key() {
-    assert_eq!(extension_key_parts("x-acme-a-b"), Some(("acme", "a-b")));
-    assert_eq!(extension_key_parts("x-a1-k"), Some(("a1", "k")));
-    assert_eq!(extension_key_parts("x-1a-k"), None);
-    assert_eq!(extension_key_parts("x-Acme-k"), None);
-    assert_eq!(extension_key_parts("x-acme-"), None);
-    assert_eq!(extension_key_parts("x-acme"), None);
-    assert_eq!(extension_key_parts("x-acme-a\nb"), None);
-    assert_eq!(extension_key_parts("x-acme-a\u{2028}"), None);
-    assert_eq!(
-        extension_key_parts("x-acme-\u{1F600}"),
-        Some(("acme", "\u{1F600}"))
-    );
 }
 
 #[test]
@@ -296,7 +278,8 @@ fn an_example_string_is_measured_in_code_points() {
             "Long":{"type":"string","minLength":2}
         }}"#,
     );
-    let checker = TreeSchemasExampleChecker::new(schemas, IndexMap::new());
+    let no_enums = IndexMap::new();
+    let checker = TreeSchemasExampleChecker::new(&schemas, &no_enums);
     let emoji = JsonValue::String("\u{1F600}".to_owned());
     let long = uses.get("/schemas/Long").expect("Long use");
     let shorter = checker.check(&emoji, long).expect("check");

@@ -17,6 +17,7 @@ seampact-json.workspace = true
 seampact-naming.workspace = true
 seampact-pass-tree-nodes.workspace = true
 seampact-pass-tree-schemas.workspace = true
+seampact-pass-tree-shared.workspace = true
 seampact-pipeline.workspace = true
 
 [dev-dependencies]

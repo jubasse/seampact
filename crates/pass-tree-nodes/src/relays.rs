@@ -15,7 +15,7 @@ use seampact_ir::{
 };
 use seampact_json::JsonValue;
 use seampact_pass_tree_shared::{
-    TREE_NODES_OPERATION_KIND, tree_nodes_relay_origin, tree_nodes_text,
+    RelayTarget, TREE_NODES_OPERATION_KIND, relay_target, tree_nodes_relay_origin, tree_nodes_text,
 };
 use seampact_pipeline::{
     DraftConcurrency, DraftIr, DraftOperation, DraftOperationInput, DraftOperationInputRef,
@@ -191,14 +191,6 @@ pub(crate) struct TreeNodesRelayDeclaration<'node, 'raw> {
     value: RelayDeclarationValue,
 }
 
-/// The target a relay route names: `relays: <api>.<operationId>`.
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct RelayTarget {
-    api: String,
-    id: String,
-    text: String,
-}
-
 /// Where an element was copied from.
 #[derive(Debug, Clone)]
 struct RelayStamp {
@@ -223,7 +215,7 @@ pub(crate) fn tree_nodes_relay_shape<'node, 'raw>(
     declarations: &mut Vec<TreeNodesRelayDeclaration<'node, 'raw>>,
     scope: &mut TreeNodesScope<'_, '_, '_>,
 ) -> Result<Option<DraftOperation>, PassError> {
-    let target = relay_target(site)?;
+    let target = relay_route_target(site)?;
     let Some(source) = relay_source(site, &target, scope)? else {
         return Ok(None);
     };
@@ -635,11 +627,8 @@ fn relay_path(source: &RelaySource<'_>, own_prefix: &str) -> Result<String, Pass
 }
 
 // The authoring schema admits `relays` as `<api>.<operationId>` only.
-fn relay_target(site: &TreeNodesSite<'_, '_>) -> Result<RelayTarget, PassError> {
-    let target = tree_nodes_text(site.node, "relays")
-        .and_then(|text| Some((text, text.split_once('.')?)))
-        .filter(|(_, (api, _))| !api.is_empty());
-    let Some((text, (api, id))) = target else {
+fn relay_route_target(site: &TreeNodesSite<'_, '_>) -> Result<RelayTarget, PassError> {
+    let Some(target) = tree_nodes_text(site.node, "relays").and_then(relay_target) else {
         return Err(InternalError::new(format!(
             "the relay route at {} has no relays <api>.<operationId>",
             site.node.pointer
@@ -647,11 +636,7 @@ fn relay_target(site: &TreeNodesSite<'_, '_>) -> Result<RelayTarget, PassError> 
         .into());
     };
 
-    Ok(RelayTarget {
-        api: api.to_owned(),
-        id: id.to_owned(),
-        text: text.to_owned(),
-    })
+    Ok(target)
 }
 
 fn relay_source<'run>(

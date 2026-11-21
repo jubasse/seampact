@@ -16,7 +16,6 @@ use crate::api::{
     trim_trailing_slash,
 };
 use crate::field_wire::{tree_nodes_field_wire, tree_nodes_is_file_field};
-use crate::lifecycle::extension_key_parts;
 use crate::pagings::sent_key;
 use seampact_ir::PagingParamPlacement;
 
@@ -99,21 +98,6 @@ fn a_route_key_blanks_each_placeholder_by_position() {
     assert_eq!(blank_placeholders("/tasks/{id}/x/{}"), "/tasks/{}/x/{}");
     assert_eq!(blank_placeholders("/tasks/me"), "/tasks/me");
     assert_eq!(blank_placeholders("{a{b}"), "{a{}");
-}
-
-#[test]
-fn an_extension_key_needs_a_lowercase_prefix_and_a_one_line_name() {
-    assert_eq!(extension_key_parts("x-acme-flag"), Some(("acme", "flag")));
-    assert_eq!(extension_key_parts("x-a1-b-c"), Some(("a1", "b-c")));
-    assert_eq!(
-        extension_key_parts("x-acme-__proto__"),
-        Some(("acme", "__proto__"))
-    );
-    assert_eq!(extension_key_parts("x-acme-"), None);
-    assert_eq!(extension_key_parts("x-Acme-flag"), None);
-    assert_eq!(extension_key_parts("x-1a-flag"), None);
-    assert_eq!(extension_key_parts("x-acme-a\nb"), None);
-    assert_eq!(extension_key_parts("acme-flag"), None);
 }
 
 #[test]
