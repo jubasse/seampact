@@ -1,9 +1,0 @@
-{
-  "operations": {
-    "send": {
-      "scopes": [],
-      "requires": [],
-      "fieldRights": []
-    }
-  }
-}
