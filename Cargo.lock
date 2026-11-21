@@ -962,11 +962,22 @@ name = "seampact-bundle"
 version = "2.0.0"
 dependencies = [
  "camino",
+ "flate2",
  "indexmap",
+ "jsonschema",
+ "seampact-authoring",
  "seampact-compiler",
  "seampact-diagnostics",
+ "seampact-finalize",
  "seampact-ir",
+ "seampact-ir-check",
+ "seampact-js",
+ "seampact-json",
  "seampact-load",
+ "seampact-oracle",
+ "seampact-pipeline",
+ "serde_json",
+ "sha2",
  "thiserror",
 ]
 
