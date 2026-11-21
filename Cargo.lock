@@ -1211,11 +1211,13 @@ name = "seampact-openapi"
 version = "2.0.0"
 dependencies = [
  "indexmap",
+ "proptest",
  "saphyr",
  "seampact-diagnostics",
  "seampact-ir",
  "seampact-js",
  "seampact-json",
+ "seampact-oracle",
  "seampact-target",
  "serde_json",
  "thiserror",
