@@ -20,11 +20,11 @@ import {
   type ReachedFunction,
 } from "./pass-coverage.ts";
 import { collectToolRecords, type ToolRecords } from "./tools-pairs.ts";
-import { listTypeScriptFunctionRanges } from "./trace.ts";
+import { listTypeScriptFunctionRanges, TOOL_SOURCES_ROOT, TOOL_TABLES_DIR } from "./trace.ts";
 
-const PACKAGES = join(REPO_ROOT, "packages/core");
+const PACKAGES = join(REPO_ROOT, TOOL_SOURCES_ROOT);
 const EXPECTED_DIRECTORY = join(REPO_ROOT, "fixtures/expected");
-const OUTPUT_DIRECTORY = join(REPO_ROOT, "docs/maintainers/rust-design/cli-and-tools");
+const OUTPUT_DIRECTORY = join(REPO_ROOT, TOOL_TABLES_DIR);
 
 /** Where a crate's pairs come from: the records the oracle cases of one tool give (`tools-pairs.ts`). */
 type PairSource = keyof ToolRecords;

@@ -100,8 +100,10 @@ fn file_json(file: &BundleFile) -> JsonValue {
         ("path", text(&file.path)),
         (
             "size",
-            JsonNumber::from_json_text(&file.size.to_string())
-                .map_or(JsonValue::Null, JsonValue::Number),
+            // A size past i64 is no file a bundle holds; null makes the oracle report it.
+            i64::try_from(file.size).map_or(JsonValue::Null, |size| {
+                JsonValue::Number(JsonNumber::from_i64(size))
+            }),
         ),
         ("sha256", text(&file.sha256)),
     ])

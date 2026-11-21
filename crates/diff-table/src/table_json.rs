@@ -2,17 +2,13 @@
 
 use seampact_json::{JsonObject, JsonValue};
 
-use crate::DiffTableError;
 use crate::diff_cell::DiffCell;
 use crate::diff_code::DIFF_CODES;
 use crate::diff_table::DIFF_TABLE;
 
 /// `{ "codes": DIFF_CODES, "table": DIFF_TABLE }` as `JSON.stringify` writes them.
-///
-/// # Errors
-///
-/// Never today: the `Result` stays until `seampact-cli`'s oracle wiring stops matching it.
-pub fn diff_table_json() -> Result<JsonValue, DiffTableError> {
+#[must_use]
+pub fn diff_table_json() -> JsonValue {
     let codes: JsonObject = DIFF_CODES
         .iter()
         .map(|(member, code)| {
@@ -45,7 +41,7 @@ pub fn diff_table_json() -> Result<JsonValue, DiffTableError> {
     document.insert("codes".to_owned(), JsonValue::Object(codes));
     document.insert("table".to_owned(), JsonValue::Object(table));
 
-    Ok(JsonValue::Object(document))
+    JsonValue::Object(document)
 }
 
 fn cell_json(cell: &DiffCell) -> JsonValue {

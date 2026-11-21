@@ -1,7 +1,9 @@
-//! What a reader declares it reads, checked against an IR document read as untrusted data
-//! (ADR 0005 sections 2 and 3).
+//! What a reader declares it reads, checked against an IR document read as untrusted data or
+//! against a typed IR (ADR 0005 sections 2 and 3).
 
 use seampact_json::{JsonNumber, JsonObject, JsonValue, stringify_json};
+
+use crate::{ContractIr, DeclarationKind, Feature, OperationId};
 
 /// What a reader declares it reads: the `irVersion` values, the exact `irRevision`, and the
 /// declaration kinds and must-understand features it supports.
@@ -18,7 +20,7 @@ pub struct IrSupport<'support> {
 }
 
 /// Why a document is not one a reader reads.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum IrSupportCode {
     /// `ir.version.unsupported`.
     VersionUnsupported,
@@ -47,7 +49,7 @@ impl IrSupportCode {
 }
 
 /// A value a mismatch shows: a string or a number.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum IrSupportValue {
     /// A string, or the JSON text of another value.
     Text(String),
@@ -56,7 +58,7 @@ pub enum IrSupportValue {
 }
 
 /// One unsupported member of a document.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct IrSupportMismatch {
     /// The mismatch's code.
     pub code: IrSupportCode,
@@ -66,8 +68,9 @@ pub struct IrSupportMismatch {
     pub value: IrSupportValue,
     /// What the reader supports.
     pub expected: Vec<IrSupportValue>,
-    /// The operation id, for a per-operation kind or feature.
-    pub operation: Option<String>,
+    /// The operation id, for a per-operation kind or feature; `#<index>` for an operation of an
+    /// untrusted document that has no string id.
+    pub operation: Option<OperationId>,
     /// The message.
     pub message: String,
 }
@@ -87,25 +90,26 @@ pub fn check_ir_support(ir: &JsonValue, support: &IrSupport<'_>) -> Vec<IrSuppor
         if support.ir_versions.iter().any(|supported| is_integer(number, *supported)));
 
     if !version_supported {
-        return vec![version_mismatch(version, support)];
+        return vec![version_mismatch(shown(version), support)];
     }
 
     let mut mismatches = Vec::new();
+    let revision = document.get("irRevision");
 
-    if !matches!(document.get("irRevision"), Some(JsonValue::Number(number))
+    if !matches!(revision, Some(JsonValue::Number(number))
         if is_integer(number, support.ir_revision))
     {
-        mismatches.push(revision_mismatch(document.get("irRevision"), support));
+        mismatches.push(revision_mismatch(shown(revision), support));
     }
 
     let kinds = list_of(document.get("kinds"), "/kinds", None, &mut mismatches);
 
     unknown_in(
         kinds,
-        support.kinds,
         UnknownKind::Kind,
         "/kinds",
         None,
+        support,
         &mut mismatches,
     );
 
@@ -113,10 +117,10 @@ pub fn check_ir_support(ir: &JsonValue, support: &IrSupport<'_>) -> Vec<IrSuppor
 
     unknown_in(
         features,
-        support.features,
         UnknownKind::Feature,
         "/features",
         None,
+        support,
         &mut mismatches,
     );
 
@@ -134,10 +138,100 @@ pub fn check_ir_support(ir: &JsonValue, support: &IrSupport<'_>) -> Vec<IrSuppor
     mismatches
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+/// The mismatches [`check_ir_support`] finds in the encoding of `ir`, read from its typed members
+/// so a reader holding a [`ContractIr`] does not encode it. A typed IR has every list, so no
+/// `ir.support.malformed` mismatch is possible.
+#[must_use]
+pub fn check_contract_ir_support(
+    ir: &ContractIr,
+    support: &IrSupport<'_>,
+) -> Vec<IrSupportMismatch> {
+    if !support.ir_versions.contains(&ir.ir_version) {
+        return vec![version_mismatch(integer_shown(ir.ir_version), support)];
+    }
+
+    let mut mismatches = Vec::new();
+
+    if ir.ir_revision != support.ir_revision {
+        mismatches.push(revision_mismatch(integer_shown(ir.ir_revision), support));
+    }
+
+    let kinds = ir.kinds.iter().map(DeclarationKind::as_str);
+
+    unknown_names_in(
+        kinds,
+        UnknownKind::Kind,
+        "/kinds",
+        None,
+        support,
+        &mut mismatches,
+    );
+
+    let features = ir.features.iter().map(Feature::as_str);
+
+    unknown_names_in(
+        features,
+        UnknownKind::Feature,
+        "/features",
+        None,
+        support,
+        &mut mismatches,
+    );
+
+    for (index, operation) in ir.operations.iter().enumerate() {
+        let kind = operation.kind.as_str();
+
+        if !support.kinds.contains(&kind) {
+            mismatches.push(operation_kind_mismatch(
+                index,
+                IrSupportValue::Text(kind.to_owned()),
+                &operation.id,
+                support,
+            ));
+        }
+
+        let features = operation.features.iter().map(Feature::as_str);
+
+        unknown_names_in(
+            features,
+            UnknownKind::Feature,
+            &format!("/operations/{index}/features"),
+            Some(&operation.id),
+            support,
+            &mut mismatches,
+        );
+    }
+
+    mismatches
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum UnknownKind {
     Kind,
     Feature,
+}
+
+impl UnknownKind {
+    fn code(self) -> IrSupportCode {
+        match self {
+            Self::Kind => IrSupportCode::KindUnsupported,
+            Self::Feature => IrSupportCode::FeatureUnsupported,
+        }
+    }
+
+    fn noun(self) -> &'static str {
+        match self {
+            Self::Kind => "declaration kind",
+            Self::Feature => "feature",
+        }
+    }
+
+    fn known<'support>(self, support: &IrSupport<'support>) -> &'support [&'support str] {
+        match self {
+            Self::Kind => support.kinds,
+            Self::Feature => support.features,
+        }
+    }
 }
 
 fn is_integer(number: &JsonNumber, expected: i64) -> bool {
@@ -165,9 +259,13 @@ fn shown(value: Option<&JsonValue>) -> IrSupportValue {
     }
 }
 
-fn shown_text(value: Option<&JsonValue>) -> String {
-    match shown(value) {
-        IrSupportValue::Text(text) => text,
+fn integer_shown(value: i64) -> IrSupportValue {
+    IrSupportValue::Number(JsonNumber::from_i64(value))
+}
+
+fn shown_text(value: &IrSupportValue) -> String {
+    match value {
+        IrSupportValue::Text(text) => text.clone(),
         IrSupportValue::Number(number) => number.to_string(),
     }
 }
@@ -179,46 +277,43 @@ fn texts(values: &[&str]) -> Vec<IrSupportValue> {
         .collect()
 }
 
-fn version_mismatch(version: Option<&JsonValue>, support: &IrSupport<'_>) -> IrSupportMismatch {
+fn version_mismatch(version: IrSupportValue, support: &IrSupport<'_>) -> IrSupportMismatch {
     let versions: Vec<String> = support.ir_versions.iter().map(i64::to_string).collect();
     let expected = support
         .ir_versions
         .iter()
-        .filter_map(|supported| JsonNumber::from_json_text(&supported.to_string()))
-        .map(IrSupportValue::Number)
+        .map(|supported| integer_shown(*supported))
         .collect();
+    let message = format!(
+        "irVersion {} is not one this reader reads ({}).",
+        shown_text(&version),
+        versions.join(", ")
+    );
 
     IrSupportMismatch {
         code: IrSupportCode::VersionUnsupported,
         member: "/irVersion".to_owned(),
-        value: shown(version),
+        value: version,
         expected,
         operation: None,
-        message: format!(
-            "irVersion {} is not one this reader reads ({}).",
-            shown_text(version),
-            versions.join(", ")
-        ),
+        message,
     }
 }
 
-fn revision_mismatch(revision: Option<&JsonValue>, support: &IrSupport<'_>) -> IrSupportMismatch {
-    let expected = JsonNumber::from_json_text(&support.ir_revision.to_string())
-        .map(IrSupportValue::Number)
-        .into_iter()
-        .collect();
+fn revision_mismatch(revision: IrSupportValue, support: &IrSupport<'_>) -> IrSupportMismatch {
+    let message = format!(
+        "irRevision {} differs from the revision this reader was built for ({}).",
+        shown_text(&revision),
+        support.ir_revision
+    );
 
     IrSupportMismatch {
         code: IrSupportCode::RevisionMismatch,
         member: "/irRevision".to_owned(),
-        value: shown(revision),
-        expected,
+        value: revision,
+        expected: vec![integer_shown(support.ir_revision)],
         operation: None,
-        message: format!(
-            "irRevision {} differs from the revision this reader was built for ({}).",
-            shown_text(revision),
-            support.ir_revision
-        ),
+        message,
     }
 }
 
@@ -227,7 +322,7 @@ fn revision_mismatch(revision: Option<&JsonValue>, support: &IrSupport<'_>) -> I
 fn list_of<'doc>(
     value: Option<&'doc JsonValue>,
     member: &str,
-    operation: Option<&str>,
+    operation: Option<&OperationId>,
     mismatches: &mut Vec<IrSupportMismatch>,
 ) -> &'doc [JsonValue] {
     if let Some(JsonValue::Array(items)) = value {
@@ -241,7 +336,7 @@ fn list_of<'doc>(
         member: member.to_owned(),
         value: IrSupportValue::Text(found.to_owned()),
         expected: texts(&["array"]),
-        operation: operation.map(str::to_owned),
+        operation: operation.cloned(),
         message: format!(
             "{member} is {found}, not an array: this reader cannot check what it supports."
         ),
@@ -252,35 +347,92 @@ fn list_of<'doc>(
 
 fn unknown_in(
     values: &[JsonValue],
-    known: &[&str],
     what: UnknownKind,
     member: &str,
-    operation: Option<&str>,
+    operation: Option<&OperationId>,
+    support: &IrSupport<'_>,
     mismatches: &mut Vec<IrSupportMismatch>,
 ) {
-    let (code, noun) = match what {
-        UnknownKind::Kind => (IrSupportCode::KindUnsupported, "declaration kind"),
-        UnknownKind::Feature => (IrSupportCode::FeatureUnsupported, "feature"),
-    };
-
     for (index, value) in values.iter().enumerate() {
-        if matches!(value, JsonValue::String(text) if known.contains(&text.as_str())) {
+        if matches!(value, JsonValue::String(text) if what.known(support).contains(&text.as_str()))
+        {
             continue;
         }
 
-        let where_ = operation.map_or_else(String::new, |id| format!(" in operation '{id}'"));
+        let item = format!("{member}/{index}");
 
-        mismatches.push(IrSupportMismatch {
-            code,
-            member: format!("{member}/{index}"),
-            value: shown(Some(value)),
-            expected: texts(known),
-            operation: operation.map(str::to_owned),
-            message: format!(
-                "The {noun} '{}'{where_} is not supported by this reader.",
-                shown_text(Some(value))
-            ),
-        });
+        mismatches.push(unknown_mismatch(
+            what,
+            item,
+            shown(Some(value)),
+            operation,
+            support,
+        ));
+    }
+}
+
+fn unknown_names_in<'ir>(
+    names: impl Iterator<Item = &'ir str>,
+    what: UnknownKind,
+    member: &str,
+    operation: Option<&OperationId>,
+    support: &IrSupport<'_>,
+    mismatches: &mut Vec<IrSupportMismatch>,
+) {
+    for (index, name) in names.enumerate() {
+        if what.known(support).contains(&name) {
+            continue;
+        }
+
+        let item = format!("{member}/{index}");
+        let value = IrSupportValue::Text(name.to_owned());
+
+        mismatches.push(unknown_mismatch(what, item, value, operation, support));
+    }
+}
+
+fn unknown_mismatch(
+    what: UnknownKind,
+    member: String,
+    value: IrSupportValue,
+    operation: Option<&OperationId>,
+    support: &IrSupport<'_>,
+) -> IrSupportMismatch {
+    let where_ = operation.map_or_else(String::new, |id| format!(" in operation '{id}'"));
+    let message = format!(
+        "The {} '{}'{where_} is not supported by this reader.",
+        what.noun(),
+        shown_text(&value)
+    );
+
+    IrSupportMismatch {
+        code: what.code(),
+        member,
+        value,
+        expected: texts(what.known(support)),
+        operation: operation.cloned(),
+        message,
+    }
+}
+
+fn operation_kind_mismatch(
+    index: usize,
+    kind: IrSupportValue,
+    id: &OperationId,
+    support: &IrSupport<'_>,
+) -> IrSupportMismatch {
+    let message = format!(
+        "The declaration kind '{}' of operation '{id}' is not supported by this reader.",
+        shown_text(&kind)
+    );
+
+    IrSupportMismatch {
+        code: IrSupportCode::KindUnsupported,
+        member: format!("/operations/{index}/kind"),
+        value: kind,
+        expected: texts(support.kinds),
+        operation: Some(id.clone()),
+        message,
     }
 }
 
@@ -296,23 +448,13 @@ fn check_operation(
         _ => &empty,
     };
     let id = match operation.get("id") {
-        Some(JsonValue::String(text)) => text.clone(),
-        _ => format!("#{index}"),
+        Some(JsonValue::String(text)) => OperationId::new(text.clone()),
+        _ => OperationId::new(format!("#{index}")),
     };
     let kind = operation.get("kind");
 
     if !matches!(kind, Some(JsonValue::String(text)) if support.kinds.contains(&text.as_str())) {
-        mismatches.push(IrSupportMismatch {
-            code: IrSupportCode::KindUnsupported,
-            member: format!("/operations/{index}/kind"),
-            value: shown(kind),
-            expected: texts(support.kinds),
-            operation: Some(id.clone()),
-            message: format!(
-                "The declaration kind '{}' of operation '{id}' is not supported by this reader.",
-                shown_text(kind)
-            ),
-        });
+        mismatches.push(operation_kind_mismatch(index, shown(kind), &id, support));
     }
 
     let member = format!("/operations/{index}/features");
@@ -320,10 +462,10 @@ fn check_operation(
 
     unknown_in(
         features,
-        support.features,
         UnknownKind::Feature,
         &member,
         Some(&id),
+        support,
         mismatches,
     );
 }
@@ -417,9 +559,10 @@ mod tests {
         );
 
         assert_eq!(
-            mismatches
-                .first()
-                .map(|mismatch| (mismatch.operation.as_deref(), mismatch.message.as_str())),
+            mismatches.first().map(|mismatch| (
+                mismatch.operation.as_ref().map(OperationId::as_str),
+                mismatch.message.as_str()
+            )),
             Some((
                 Some("#0"),
                 "The declaration kind 'missing' of operation '#0' is not supported by this reader."

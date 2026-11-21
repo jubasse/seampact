@@ -5,14 +5,27 @@ import ts from "typescript";
 export const CRATES_DIR = "crates";
 export const TRACE_FILE = "trace.tsv";
 export const XTASK_DIR = "xtask";
+/** The per-crate tables of the tools layer: the TypeScript functions each crate ports, by brief. */
+export const TOOL_TABLES_DIR = "docs/maintainers/rust-design/cli-and-tools";
+/** The root the file column of a tool table is relative to. */
+export const TOOL_SOURCES_ROOT = "packages/core";
+/** The module a crate keeps while some of its functions wait for a later brief. */
+export const NOT_PORTED_MODULE = "src/not_ported.rs";
 
 const NOT_PORTED = "-";
 const SKIP_PREFIX = "skip: ";
 const MERGED_PREFIX = "merged: ";
+const PENDING_PATTERN = /^pending: brief [1-9][0-9]*$/;
+const TOOL_TABLE_HEADER = "brief";
+const TOOL_TABLE_FILE_COLUMN = 2;
 const FUNCTION_SEPARATOR = "#";
 const COLUMN_SEPARATOR = "\t";
 const PORTED_COLUMNS = 2;
-const NOT_PORTED_COLUMNS = 3;
+const DISPOSITION_COLUMNS = 3;
+const MALFORMED_DISPOSITION =
+  "malformed line: the third column is `skip: <reason>`, `merged: <rust path>` or `pending: brief <k>`";
+const MALFORMED_PORTED_DISPOSITION =
+  "malformed line: the third column of a ported line is only `pending: brief <k>`";
 
 /** One line of a `trace.tsv`: where a TypeScript function went in the crate. */
 interface TraceLine {
@@ -20,7 +33,7 @@ interface TraceLine {
   rustPath: string;
   typeScriptFile: string;
   typeScriptFunction: string;
-  /** The `skip:` or `merged:` column of a function not ported. */
+  /** The `skip:`, `merged:` or `pending:` column of a function not ported, or of a stub. */
   disposition: string | undefined;
 }
 
@@ -232,18 +245,81 @@ export function checkTraceFile(root: string, crateDirectory: string, traceText: 
   }
 
   problems.push(...checkTypeScriptCoverage(root, traceName, lines));
+  problems.push(...checkPendingLines(root, crateDirectory, traceName, lines));
+  problems.push(...checkToolTableFiles(root, crateDirectory, traceName, lines));
 
   return problems;
+}
+
+/** A `pending:` line is allowed only while the crate keeps its not-ported module. */
+function checkPendingLines(
+  root: string,
+  crateDirectory: string,
+  traceName: string,
+  lines: TraceLine[],
+): string[] {
+  if (existsSync(join(root, crateDirectory, NOT_PORTED_MODULE))) return [];
+
+  return lines
+    .filter((line) => line.disposition !== undefined && PENDING_PATTERN.test(line.disposition))
+    .map(
+      (line) =>
+        `${traceName}:${line.lineNumber}: \`${line.disposition}\` but \`${crateDirectory}/${NOT_PORTED_MODULE}\` is gone: port the function or give a \`skip:\` reason`,
+    );
+}
+
+/**
+ * Once a crate's trace has a line, every TypeScript file of its tool table has one too, so a file
+ * left out of the first brief cannot hide a stub. An empty trace is a crate not started.
+ */
+function checkToolTableFiles(
+  root: string,
+  crateDirectory: string,
+  traceName: string,
+  lines: TraceLine[],
+): string[] {
+  const crateName = crateDirectory.split("/").at(-1) ?? crateDirectory;
+  const tablePath = join(root, TOOL_TABLES_DIR, `${crateName}.tsv`);
+
+  if (lines.length === 0 || !existsSync(tablePath)) return [];
+
+  const tracedFiles = new Set(lines.map((line) => line.typeScriptFile));
+
+  return toolTableFiles(readFileSync(tablePath, "utf8"))
+    .filter((file) => !tracedFiles.has(file))
+    .map(
+      (file) =>
+        `${traceName}: \`${file}\` is in \`${TOOL_TABLES_DIR}/${crateName}.tsv\` but has no line`,
+    );
+}
+
+/** The distinct TypeScript files of a tool table, relative to the repository root. */
+function toolTableFiles(tableText: string): string[] {
+  const files = new Set<string>();
+
+  for (const row of tableText.split("\n")) {
+    const columns = row.split(COLUMN_SEPARATOR);
+    const file = columns[TOOL_TABLE_FILE_COLUMN];
+
+    if (columns[0] === TOOL_TABLE_HEADER || file === undefined || file === "") continue;
+
+    files.add(`${TOOL_SOURCES_ROOT}/${file}`);
+  }
+
+  return [...files];
 }
 
 function parseTraceLine(text: string, lineNumber: number): TraceLine | string {
   const columns = text.split(COLUMN_SEPARATOR);
   const [rustPath = "", typeScriptReference = "", disposition] = columns;
-  const expectedColumns = rustPath === NOT_PORTED ? NOT_PORTED_COLUMNS : PORTED_COLUMNS;
+  const isNotPorted = rustPath === NOT_PORTED;
+  const columnsAllowed = isNotPorted
+    ? columns.length === DISPOSITION_COLUMNS
+    : columns.length === PORTED_COLUMNS || columns.length === DISPOSITION_COLUMNS;
 
-  if (columns.length !== expectedColumns) {
-    return rustPath === NOT_PORTED
-      ? "malformed line: a `-` line needs a third column, `skip: <reason>` or `merged: <rust path>`"
+  if (!columnsAllowed) {
+    return isNotPorted
+      ? "malformed line: a `-` line needs a third column, `skip: <reason>`, `merged: <rust path>` or `pending: brief <k>`"
       : "malformed line: expected `<rust path>\\t<ts file>#<function>`";
   }
 
@@ -254,9 +330,11 @@ function parseTraceLine(text: string, lineNumber: number): TraceLine | string {
     return "malformed line: expected `<rust path>\\t<ts file>#<function>`";
   }
 
-  if (disposition !== undefined && !isValidDisposition(disposition)) {
-    return "malformed line: the third column is `skip: <reason>` or `merged: <rust path>`";
+  if (disposition !== undefined && !isNotPorted && !PENDING_PATTERN.test(disposition)) {
+    return MALFORMED_PORTED_DISPOSITION;
   }
+
+  if (disposition !== undefined && !isValidDisposition(disposition)) return MALFORMED_DISPOSITION;
 
   return {
     lineNumber,
@@ -268,6 +346,8 @@ function parseTraceLine(text: string, lineNumber: number): TraceLine | string {
 }
 
 function isValidDisposition(disposition: string): boolean {
+  if (PENDING_PATTERN.test(disposition)) return true;
+
   const prefix = [SKIP_PREFIX, MERGED_PREFIX].find((candidate) =>
     disposition.startsWith(candidate),
   );

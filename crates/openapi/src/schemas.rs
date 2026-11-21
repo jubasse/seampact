@@ -90,23 +90,16 @@ pub(crate) fn write_docs(schema: &mut JsonObject, docs: Option<&Docs>) {
 }
 
 /// Writes the length and pattern refinements.
-///
-/// # Errors
-///
-/// [`OpenApiError::Internal`] for a length no JSON number holds.
-fn write_length_refinements(
-    schema: &mut JsonObject,
-    refinements: &Refinements,
-) -> Result<(), OpenApiError> {
+fn write_length_refinements(schema: &mut JsonObject, refinements: &Refinements) {
     set_defined(
         schema,
         "minLength",
-        optional_integer(refinements.min_length)?,
+        optional_integer(refinements.min_length),
     );
     set_defined(
         schema,
         "maxLength",
-        optional_integer(refinements.max_length)?,
+        optional_integer(refinements.max_length),
     );
     set_defined(
         schema,
@@ -118,8 +111,6 @@ fn write_length_refinements(
                 .map(|pattern| pattern.normalized.as_str()),
         ),
     );
-
-    Ok(())
 }
 
 /// Writes the numeric refinements.
@@ -166,8 +157,8 @@ fn array_schema(
 
     schema.insert("type".to_owned(), text_value("array"));
     schema.insert("items".to_owned(), JsonValue::Object(items));
-    set_defined(&mut schema, "minItems", optional_integer(use_.min_items)?);
-    set_defined(&mut schema, "maxItems", optional_integer(use_.max_items)?);
+    set_defined(&mut schema, "minItems", optional_integer(use_.min_items));
+    set_defined(&mut schema, "maxItems", optional_integer(use_.max_items));
 
     Ok(schema)
 }

@@ -105,7 +105,10 @@ pub use sensitive_field::{
     find_ir_sensitive_reaches_skipping_missing, sensitive_reach_text,
 };
 pub use source_map::{SourceLocation, SourceMap};
-pub use support::{IrSupport, IrSupportCode, IrSupportMismatch, IrSupportValue, check_ir_support};
+pub use support::{
+    IrSupport, IrSupportCode, IrSupportMismatch, IrSupportValue, check_contract_ir_support,
+    check_ir_support,
+};
 pub use unions::{
     Access, ApiVersion, Csrf, EnumSource, Idempotency, Identity, KeysPolicy, KnownAccess,
     KnownAccessRef, KnownApiVersion, KnownApiVersionRef, KnownCsrf, KnownCsrfRef, KnownEnumSource,

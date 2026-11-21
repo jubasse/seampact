@@ -174,11 +174,58 @@ describe("checkTraces", () => {
     const wrongReason = COMPLETE_TRACE.replace("skip: no consumer", "later");
 
     expect(checkTraces(repositoryWithTrace(missingReason))).toContain(
-      "crates/load/trace.tsv:3: malformed line: a `-` line needs a third column, `skip: <reason>` or `merged: <rust path>`",
+      "crates/load/trace.tsv:3: malformed line: a `-` line needs a third column, `skip: <reason>`, `merged: <rust path>` or `pending: brief <k>`",
     );
     expect(checkTraces(repositoryWithTrace(wrongReason))).toContain(
-      "crates/load/trace.tsv:3: malformed line: the third column is `skip: <reason>` or `merged: <rust path>`",
+      "crates/load/trace.tsv:3: malformed line: the third column is `skip: <reason>`, `merged: <rust path>` or `pending: brief <k>`",
     );
+  });
+
+  it("accepts `pending:` lines, a stub or `-`, while the crate keeps its not-ported module", () => {
+    const trace = COMPLETE_TRACE.replace(
+      "src/lib.rs#resolve\tpackages/core/load.ts#resolve",
+      "src/lib.rs#resolve\tpackages/core/load.ts#resolve\tpending: brief 2",
+    ).replace("skip: no consumer", "pending: brief 3");
+    const root = repositoryWithTrace(trace);
+
+    writeFileSync(join(root, "crates/load/src/not_ported.rs"), "");
+
+    expect(checkTraces(root)).toEqual([]);
+  });
+
+  it("fails on a `pending:` line once the not-ported module is gone", () => {
+    const trace = COMPLETE_TRACE.replace("skip: no consumer", "pending: brief 3");
+
+    expect(checkTraces(repositoryWithTrace(trace))).toEqual([
+      "crates/load/trace.tsv:3: `pending: brief 3` but `crates/load/src/not_ported.rs` is gone: port the function or give a `skip:` reason",
+    ]);
+  });
+
+  it("fails on a ported line whose third column is not `pending:`", () => {
+    const trace = COMPLETE_TRACE.replace(
+      "packages/core/load.ts#load",
+      "packages/core/load.ts#load\tskip: no consumer",
+    );
+
+    expect(checkTraces(repositoryWithTrace(trace))).toContain(
+      "crates/load/trace.tsv:1: malformed line: the third column of a ported line is only `pending: brief <k>`",
+    );
+  });
+
+  it("fails on a file of the crate's tool table with no line, once the trace has one", () => {
+    const table = "brief\tfunction\tfile\n1\tload\tload.ts\n2\topen\topen.ts\n";
+    const root = repositoryWithTrace(COMPLETE_TRACE);
+
+    writeFileSync(join(root, "packages/core/open.ts"), "export function open() {}");
+    mkdirSync(join(root, "docs/maintainers/rust-design/cli-and-tools"), { recursive: true });
+    writeFileSync(join(root, "docs/maintainers/rust-design/cli-and-tools/load.tsv"), table);
+    mkdirSync(join(root, "crates/fresh"));
+    writeFileSync(join(root, "crates/fresh/trace.tsv"), "");
+    writeFileSync(join(root, "docs/maintainers/rust-design/cli-and-tools/fresh.tsv"), table);
+
+    expect(checkTraces(root)).toEqual([
+      "crates/load/trace.tsv: `packages/core/open.ts` is in `docs/maintainers/rust-design/cli-and-tools/load.tsv` but has no line",
+    ]);
   });
 
   it("fails on a function traced twice", () => {

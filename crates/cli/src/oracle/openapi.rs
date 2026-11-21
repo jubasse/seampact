@@ -2,11 +2,19 @@
 
 use seampact_ir::ContractIr;
 use seampact_json::{JsonObject, JsonValue, canonical_document};
-use seampact_openapi::{EmitOutcome, ParsedEmitterOptions, emit_documents, parse_emitter_options};
+use seampact_openapi::{
+    EmitOutcome, OpenApiError, ParsedEmitterOptions, emit_documents, parse_emitter_options,
+};
 use seampact_oracle::{MergeCase, OpenApiAnswer, SubjectAnswer};
 use seampact_target::Refusal;
 
-use crate::oracle::stub_answer::failed_answer;
+use crate::oracle::stub_answer::{StubError, failed_answer};
+
+impl StubError for OpenApiError {
+    fn is_not_ported(&self) -> bool {
+        matches!(self, Self::NotPortedYet { .. })
+    }
+}
 
 /// The document name of an api that declares none, as `openapi/default.yaml` names it.
 const DEFAULT_DOCUMENT_NAME: &str = "default";
