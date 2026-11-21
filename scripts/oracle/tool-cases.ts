@@ -179,7 +179,7 @@ function diffFilesOf(tools: OracleTools, cache: CompileCache, toolCase: ToolCase
 /** A converted OpenAPI case: an IR in `ir.json` and the emitter options as the config writes them. */
 function openApiCaseFiles(tools: OracleTools, toolCase: ToolCase): ExpectedFiles {
   const irText = readFileSync(join(toolCase.directory, IR_FILE), "utf8");
-  const api = (JSON.parse(irText) as { api: { name: string } }).api.name;
+  const api = (JSON.parse(irText) as { api: { id: string } }).api.id;
   const rawOptions = existsSync(join(toolCase.directory, OPENAPI_OPTIONS_FILE))
     ? readCaseJson(toolCase.directory, OPENAPI_OPTIONS_FILE)
     : undefined;
