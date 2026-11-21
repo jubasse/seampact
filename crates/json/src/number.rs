@@ -35,6 +35,23 @@ impl JsonNumber {
         FiniteNumber::new(value).map(|number| Self(Repr::Finite(number)))
     }
 
+    /// The number of an integer, as [`JsonNumber::from_json_text`] reads its decimal text: past
+    /// 2^53 in magnitude it keeps its digits.
+    #[must_use]
+    pub fn from_i64(value: i64) -> Self {
+        let rounded = FiniteNumber::from_i64(value);
+        let digits = value.to_string();
+
+        if is_above_two_pow_53(&digits) {
+            return Self(Repr::ExactInteger {
+                digits: digits.into_boxed_str(),
+                rounded,
+            });
+        }
+
+        Self(Repr::Finite(rounded))
+    }
+
     /// The number a JSON number text denotes, or `None` when the text is no JSON number or
     /// denotes no finite `f64` (`1e400`).
     ///
@@ -294,5 +311,31 @@ mod tests {
     fn nan_and_infinities_are_refused() {
         assert!(JsonNumber::from_f64(f64::NAN).is_none());
         assert!(JsonNumber::from_f64(f64::INFINITY).is_none());
+    }
+
+    #[test]
+    fn an_integer_reads_as_its_decimal_text() {
+        for value in [
+            0,
+            -5,
+            9_007_199_254_740_992,
+            9_007_199_254_740_993,
+            i64::MIN,
+            i64::MAX,
+        ] {
+            let from_integer = JsonNumber::from_i64(value);
+            let from_text = number(&value.to_string());
+
+            assert_eq!(
+                from_integer.to_string(),
+                from_text.to_string(),
+                "input {value}"
+            );
+            assert_eq!(
+                from_integer.exact_digits(),
+                from_text.exact_digits(),
+                "input {value}"
+            );
+        }
     }
 }

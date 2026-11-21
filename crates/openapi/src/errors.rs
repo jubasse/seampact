@@ -34,15 +34,11 @@ pub(crate) struct StatusError<'ir> {
 }
 
 /// The retry headers of a rate-limited status, one per error that names one.
-///
-/// # Errors
-///
-/// [`OpenApiError::Internal`] for a minimum no JSON number holds.
-fn retry_headers(group: &StatusCodes<'_>) -> Result<JsonObject, OpenApiError> {
+fn retry_headers(group: &StatusCodes<'_>) -> JsonObject {
     let mut headers = JsonObject::new();
 
     if group.status != RATE_LIMITED_STATUS {
-        return Ok(headers);
+        return headers;
     }
 
     for entry in &group.errors {
@@ -52,7 +48,7 @@ fn retry_headers(group: &StatusCodes<'_>) -> Result<JsonObject, OpenApiError> {
         let mut schema = JsonObject::new();
 
         schema.insert("type".to_owned(), text_value("integer"));
-        schema.insert("minimum".to_owned(), integer_value(0)?);
+        schema.insert("minimum".to_owned(), integer_value(0));
 
         let mut header = JsonObject::new();
 
@@ -60,7 +56,7 @@ fn retry_headers(group: &StatusCodes<'_>) -> Result<JsonObject, OpenApiError> {
         headers.insert(retry_header.name.clone(), JsonValue::Object(header));
     }
 
-    Ok(headers)
+    headers
 }
 
 /// The item of an error list: its code and where it comes from.
@@ -167,14 +163,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn only_a_rate_limited_status_has_retry_headers() -> Result<(), OpenApiError> {
+    fn only_a_rate_limited_status_has_retry_headers() {
         let other = StatusCodes {
             status: 503,
             errors: Vec::new(),
         };
 
-        assert!(retry_headers(&other)?.is_empty());
-
-        Ok(())
+        assert!(retry_headers(&other).is_empty());
     }
 }

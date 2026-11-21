@@ -710,9 +710,7 @@ pub(crate) fn equality_key(requirement: &Requirement) -> Result<String, Internal
             right
                 .subject
                 .as_ref()
-                .map_or(Ok(JsonValue::Null), |subject| {
-                    source_json_of(&subject.source)
-                })?,
+                .map_or(JsonValue::Null, |subject| source_json_of(&subject.source)),
         ),
         KnownRequirementRef::Rule(rule) => (
             "rule",
@@ -737,7 +735,7 @@ pub(crate) fn equality_key(requirement: &Requirement) -> Result<String, Internal
     ])))
 }
 
-fn source_json_of(source: &ValueSource) -> Result<JsonValue, InternalError> {
+fn source_json_of(source: &ValueSource) -> JsonValue {
     let mut object = JsonObject::new();
 
     object.insert("in".to_owned(), JsonValue::String(source.r#in.to_string()));
@@ -747,14 +745,13 @@ fn source_json_of(source: &ValueSource) -> Result<JsonValue, InternalError> {
     }
 
     if let Some(prefix_bits) = source.prefix_bits {
-        let number = JsonNumber::from_json_text(&prefix_bits.to_string()).ok_or_else(|| {
-            InternalError::new(format!("the prefix {prefix_bits} is no JSON number"))
-        })?;
-
-        object.insert("prefixBits".to_owned(), JsonValue::Number(number));
+        object.insert(
+            "prefixBits".to_owned(),
+            JsonValue::Number(JsonNumber::from_i64(prefix_bits)),
+        );
     }
 
-    Ok(JsonValue::Object(object))
+    JsonValue::Object(object)
 }
 
 pub(crate) fn without_repeats(

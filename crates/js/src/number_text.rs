@@ -20,6 +20,19 @@ impl FiniteNumber {
         value.is_finite().then_some(Self(value))
     }
 
+    /// The number JavaScript's `Number` gives an integer: always finite, and past 2^53 in
+    /// magnitude rounded to the nearest `f64`, as `Number(9007199254740993n)` rounds.
+    #[must_use]
+    pub fn from_i64(value: i64) -> Self {
+        #[expect(
+            clippy::cast_precision_loss,
+            reason = "past 2^53 an integer rounds to the nearest f64, as JavaScript's Number does"
+        )]
+        let rounded = value as f64;
+
+        Self(rounded)
+    }
+
     /// The `f64` JavaScript holds.
     #[must_use]
     pub fn get(self) -> f64 {
@@ -133,5 +146,26 @@ mod tests {
         assert!(FiniteNumber::new(-0.0).unwrap().is_integer());
         assert!(!FiniteNumber::new(1e-17).unwrap().is_integer());
         assert!(!FiniteNumber::new(1.5).unwrap().is_integer());
+    }
+
+    #[test]
+    fn from_i64_rounds_past_two_pow_53_as_number_does() {
+        let above = 9_007_199_254_740_993_i64;
+
+        assert_eq!(
+            FiniteNumber::from_i64(above).get(),
+            TWO_POW_53,
+            "input {above}"
+        );
+        assert_eq!(
+            number_text(FiniteNumber::from_i64(above).get()),
+            "9007199254740992"
+        );
+        assert_eq!(
+            FiniteNumber::from_i64(i64::MIN).to_string(),
+            "-9223372036854776000",
+            "input {}",
+            i64::MIN
+        );
     }
 }

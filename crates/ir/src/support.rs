@@ -184,8 +184,7 @@ fn version_mismatch(version: Option<&JsonValue>, support: &IrSupport<'_>) -> IrS
     let expected = support
         .ir_versions
         .iter()
-        .filter_map(|supported| JsonNumber::from_json_text(&supported.to_string()))
-        .map(IrSupportValue::Number)
+        .map(|supported| IrSupportValue::Number(JsonNumber::from_i64(*supported)))
         .collect();
 
     IrSupportMismatch {
@@ -203,10 +202,9 @@ fn version_mismatch(version: Option<&JsonValue>, support: &IrSupport<'_>) -> IrS
 }
 
 fn revision_mismatch(revision: Option<&JsonValue>, support: &IrSupport<'_>) -> IrSupportMismatch {
-    let expected = JsonNumber::from_json_text(&support.ir_revision.to_string())
-        .map(IrSupportValue::Number)
-        .into_iter()
-        .collect();
+    let expected = vec![IrSupportValue::Number(JsonNumber::from_i64(
+        support.ir_revision,
+    ))];
 
     IrSupportMismatch {
         code: IrSupportCode::RevisionMismatch,
