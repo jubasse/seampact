@@ -1000,6 +1000,7 @@ dependencies = [
  "seampact-json",
  "seampact-naming",
  "seampact-pass-tree-nodes",
+ "seampact-pass-tree-schemas",
  "seampact-pipeline",
 ]
 
@@ -1014,6 +1015,7 @@ dependencies = [
  "seampact-ir",
  "seampact-js",
  "seampact-json",
+ "seampact-pass-tree-schemas",
  "seampact-pass-tree-shared",
  "seampact-pipeline",
  "seampact-templates",

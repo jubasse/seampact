@@ -1,10 +1,11 @@
 //! Tests of the functions that read the context: the member ids, the scope order and the input
 //! policy, on a fake half context.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::time::{Duration, Instant};
 
 use seampact_authoring::ApiLayer;
-use seampact_diagnostics::InternalError;
+use seampact_diagnostics::{Diagnostic, InternalError};
 use seampact_ir::{
     DerivationId, DerivedFrom, Direction, Docs, Extensions, FieldRestriction, FieldRight,
     InputMediaType, InputPolicy, IrMap, Layer, OperationId, Origin, PackName, ProofPlacement,
@@ -17,11 +18,14 @@ use seampact_pipeline::{
     TreeNodeKind, pipeline_tree_nodes,
 };
 
-use crate::catalogues::{AccessRightsCatalogues, AccessRightsDeclared, report_within_cycle};
+use crate::catalogues::{
+    AccessRightsCatalogues, AccessRightsDeclared, AccessRightsNameCheck, WithinWalks,
+    access_rights_check_name, report_within_cycle, right_pattern_of, within_chain_terminates,
+};
 use crate::field_rights::{input_policy_of, same_entry};
 use crate::packs::access_rights_derive_entries;
 use crate::proofs::{AccessRightsProofsInput, ProofUse, fits_declared_input};
-use crate::report::access_rights_reporter;
+use crate::report::{access_rights_reporter, report_queued};
 use crate::restricted_fields::AccessRightsDraftSchemas;
 use crate::routes::{
     AccessRightsAccessKind, AccessRightsApi, AccessRightsRoute, AccessRightsScopeNodes,
@@ -35,11 +39,19 @@ fn with_context<R>(
     text: &str,
     body: impl FnOnce(&mut AccessRightsContext<'_, '_, '_>) -> Result<R, InternalError>,
 ) -> Result<R, InternalError> {
+    Ok(with_context_reported(text, body)?.0)
+}
+
+/// Like [`with_context`], and the diagnostics the body reported through the context.
+fn with_context_reported<R>(
+    text: &str,
+    body: impl FnOnce(&mut AccessRightsContext<'_, '_, '_>) -> Result<R, InternalError>,
+) -> Result<(R, Vec<Diagnostic>), InternalError> {
     let mut fixture = HalfFixture::from_json(text)?;
     let draft = DraftIr::new();
     let schemas = FakeSchemaService::new();
 
-    fixture.with_context(|half| {
+    let result = fixture.with_context(|half| {
         let nodes = pipeline_tree_nodes(half.raw)?;
         let mut context = AccessRightsContext {
             draft: &draft,
@@ -56,7 +68,9 @@ fn with_context<R>(
         };
 
         body(&mut context)
-    })?
+    })??;
+
+    Ok((result, fixture.into_diagnostics()))
 }
 
 fn first_node_of(
@@ -468,6 +482,167 @@ fn a_body_proof_on_an_input_whose_schema_was_not_compiled_is_refused() -> Result
 
     assert!(!fits);
     assert_eq!(errors, 1);
+
+    Ok(())
+}
+
+/// The diagnostics of reading the rights pattern of `pattern_json` and checking the right
+/// `Anything` against it, and whether the pattern was kept.
+fn right_pattern_messages(pattern_json: &str) -> Result<(bool, Vec<String>), InternalError> {
+    let text = format!(
+        r#"{{"conventions":{{"rights":{{"pattern":{pattern_json}}}}},"rights":{{"Anything":{{}}}}}}"#
+    );
+    let (kept, diagnostics) = with_context_reported(&text, |context| {
+        let mut reporter = access_rights_reporter();
+        let pattern = right_pattern_of(context, &mut reporter)?;
+
+        if let Some(pattern) = &pattern {
+            access_rights_check_name(
+                &mut reporter,
+                &AccessRightsNameCheck {
+                    id: "Anything".to_owned(),
+                    code_name: None,
+                    pointer: "/rights/Anything".to_owned(),
+                    right_pattern: Some(pattern),
+                },
+            )?;
+        }
+
+        report_queued(reporter, context)?;
+
+        Ok(pattern.is_some())
+    })?;
+
+    Ok((
+        kept,
+        diagnostics
+            .into_iter()
+            .map(|diagnostic| diagnostic.message)
+            .collect(),
+    ))
+}
+
+#[test]
+fn a_rights_pattern_that_can_backtrack_is_refused_before_it_runs_on_a_right()
+-> Result<(), InternalError> {
+    let (kept, messages) = right_pattern_messages(r#""^(a|a)*$""#)?;
+
+    assert!(!kept);
+    assert_eq!(messages.len(), 1, "messages {messages:?}");
+    assert!(
+        messages[0].starts_with(
+            "conventions.rights.pattern '^(a|a)*$' is refused: the pattern can backtrack exponentially"
+        ),
+        "message {}",
+        messages[0]
+    );
+
+    Ok(())
+}
+
+#[test]
+fn a_long_rights_pattern_is_cut_in_every_message_that_quotes_it() -> Result<(), InternalError> {
+    let long = "a".repeat(1000);
+    let (refused_kept, refused) = right_pattern_messages(&format!(r#""(?={long})""#))?;
+    let (unmatched_kept, unmatched) = right_pattern_messages(&format!(r#""^{long}$""#))?;
+
+    assert!(!refused_kept);
+    assert!(unmatched_kept);
+    assert_eq!(refused.len(), 1, "messages {refused:?}");
+    assert_eq!(unmatched.len(), 1, "messages {unmatched:?}");
+    assert!(
+        refused[0].len() < 400,
+        "message of {} bytes",
+        refused[0].len()
+    );
+    assert!(
+        unmatched[0].len() < 400,
+        "message of {} bytes",
+        unmatched[0].len()
+    );
+
+    Ok(())
+}
+
+const WITHIN_CHAIN_SCOPES: usize = 10_000;
+const WITHIN_BUDGET: Duration = Duration::from_secs(5);
+
+/// For each scope of `scopes_json`, in written order, whether its `within` chain terminates, and
+/// the messages reported while walking them with one shared record of walked chains.
+fn within_walk(scopes_json: &str) -> Result<(Vec<bool>, Vec<String>, Duration), InternalError> {
+    let text = format!(r#"{{"scopes":{scopes_json}}}"#);
+    let ((answers, elapsed), diagnostics) = with_context_reported(&text, |context| {
+        let scopes = context.context.raw.merged.get("scopes");
+        let ids: Vec<String> = match scopes {
+            Some(JsonValue::Object(object)) => object.keys().cloned().collect(),
+            _ => Vec::new(),
+        };
+        let names: HashSet<String> = ids.iter().cloned().collect();
+        let mut reporter = access_rights_reporter();
+        let mut walks = WithinWalks::default();
+        let started = Instant::now();
+        let mut answers = Vec::new();
+
+        for id in &ids {
+            answers.push(within_chain_terminates(
+                context,
+                &mut reporter,
+                id,
+                &names,
+                &mut walks,
+            )?);
+        }
+
+        let elapsed = started.elapsed();
+
+        report_queued(reporter, context)?;
+
+        Ok((answers, elapsed))
+    })?;
+    let messages = diagnostics
+        .into_iter()
+        .map(|diagnostic| diagnostic.message)
+        .collect();
+
+    Ok((answers, messages, elapsed))
+}
+
+#[test]
+fn a_long_within_chain_is_walked_once_not_once_per_scope() -> Result<(), InternalError> {
+    let scopes: Vec<String> = (0..WITHIN_CHAIN_SCOPES)
+        .map(|index| {
+            if index + 1 == WITHIN_CHAIN_SCOPES {
+                format!(r#""S{index}":{{}}"#)
+            } else {
+                format!(r#""S{index}":{{"within":"S{}"}}"#, index + 1)
+            }
+        })
+        .collect();
+    let (answers, messages, elapsed) = within_walk(&format!("{{{}}}", scopes.join(",")))?;
+
+    assert_eq!(answers.len(), WITHIN_CHAIN_SCOPES);
+    assert!(answers.iter().all(|terminates| *terminates));
+    assert_eq!(messages.len(), 0);
+    assert!(elapsed < WITHIN_BUDGET, "within chain took {elapsed:?}");
+
+    Ok(())
+}
+
+#[test]
+fn a_chain_ending_at_an_undeclared_scope_or_in_a_cycle_is_refused_for_each_scope_on_it()
+-> Result<(), InternalError> {
+    let (answers, messages, _) = within_walk(
+        r#"{"A":{"within":"B"},"B":{"within":"Gone"},"C":{"within":"D"},"D":{"within":"C"},"E":{"within":"C"}}"#,
+    )?;
+
+    assert_eq!(answers, [false, false, false, false, false]);
+    assert_eq!(
+        messages,
+        [
+            "scope 'B' is within 'Gone', which the scopes catalogue does not declare",
+            "scope 'C' is within itself through C -> D -> C",
+        ]
+    );
 
     Ok(())
 }
