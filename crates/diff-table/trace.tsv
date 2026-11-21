@@ -1,6 +1,6 @@
 src/options.rs#resolve_diff_options	packages/core/diff/src/options.ts#resolveDiffOptions
 src/member_row.rs#fixed	packages/core/diff/src/table/member-rows.ts#fixed
--	packages/core/diff/src/table/member-rows.ts#wholeMembers	skip: expanded into the MEMBER_ROWS data
+-	packages/core/diff/src/table/member-rows.ts#wholeMembers	skip: expanded into the MEMBER_ROWS data by scripts/rust/member-rows-rust.ts
 src/member_row.rs#member_row	packages/core/diff/src/table/member-rows.ts#memberRow
 src/diff_cell.rs#classify_cell	packages/core/diff/src/table/rows.ts#classifyCell
 src/diff_cell.rs#resolve_cell	packages/core/diff/src/table/rows.ts#resolveCell

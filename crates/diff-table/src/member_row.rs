@@ -1,6 +1,7 @@
 //! The row of an IR definition's member in the classification table.
 
 use crate::diff_kind::DiffKind;
+use crate::ir_definition::IrDefinition;
 use crate::member_rows_data::MEMBER_ROWS;
 
 /// The row a member's changes land on.
@@ -27,7 +28,7 @@ pub(crate) const fn fixed(kind: DiffKind, case_name: &'static str) -> MemberRow 
 /// Unlike the TypeScript lookup, a member named like an `Object.prototype` property
 /// (`constructor`, `toString`) is not listed either, so it is `unclassified`.
 #[must_use]
-pub fn member_row(definition: &str, member: &str) -> MemberRow {
+pub fn member_row(definition: IrDefinition, member: &str) -> MemberRow {
     MEMBER_ROWS
         .iter()
         .find(|(name, _)| *name == definition)

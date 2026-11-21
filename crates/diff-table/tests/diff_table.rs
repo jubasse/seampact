@@ -4,7 +4,8 @@ use std::collections::HashSet;
 
 use seampact_diff_table::{
     DiffBreak, DiffClassification, DiffExemption, DiffFact, DiffGateScope, DiffKind, DiffOptions,
-    DiffPosition, DiffTableError, MemberRow, classify_cell, member_row, resolve_diff_options,
+    DiffPosition, DiffTableError, IrDefinition, MemberRow, classify_cell, member_row,
+    resolve_diff_options,
 };
 
 fn facts(listed: &[DiffFact]) -> HashSet<DiffFact> {
@@ -98,14 +99,14 @@ fn an_absent_case_or_position_has_no_cell() {
 #[test]
 fn a_member_is_looked_up_by_definition_then_name() {
     assert_eq!(
-        member_row("ErrorHttp", "status"),
+        member_row(IrDefinition::ErrorHttp, "status"),
         MemberRow::Fixed {
             kind: DiffKind::Error,
             case_name: "status"
         }
     );
     assert_eq!(
-        member_row("Name", "segments"),
+        member_row(IrDefinition::Name, "segments"),
         MemberRow::Kind(DiffKind::Name)
     );
 }
@@ -113,15 +114,15 @@ fn a_member_is_looked_up_by_definition_then_name() {
 #[test]
 fn an_unlisted_member_is_unclassified() {
     for (definition, member) in [
-        ("Name", "nothing"),
-        ("NoSuchDefinition", "segments"),
-        ("Name", "constructor"),
-        ("toString", "length"),
+        (IrDefinition::Name, "nothing"),
+        (IrDefinition::Name, "constructor"),
+        (IrDefinition::Docs, "length"),
     ] {
         assert_eq!(
             member_row(definition, member),
             MemberRow::Kind(DiffKind::Unclassified),
-            "{definition}.{member}"
+            "{}.{member}",
+            definition.as_str()
         );
     }
 }
