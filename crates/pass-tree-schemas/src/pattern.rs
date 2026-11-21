@@ -3,7 +3,9 @@
 //! out: `.` and the shorthands become explicit ASCII classes, and a class becomes its sorted, merged
 //! code point ranges. Two shapes that backtrack exponentially are refused too: a repeated group whose
 //! tail repetition of variable count can match what the group starts with, and a repeated
-//! alternation whose branches can start with the same character.
+//! alternation whose branches can start with the same character. A polynomial one is refused as
+//! well: two repetitions of variable count one after the other, with only optional parts between
+//! them, that can match the same character.
 
 use seampact_diagnostics::InternalError;
 use seampact_js::js_number_of_text;
@@ -67,6 +69,8 @@ fn shorthand_ranges(letter: char) -> Option<&'static [Range]> {
 
 const PORTABLE_FIX: &str = "rewrite it in the portable subset of ADR 0003 section 9";
 
+const POLYNOMIAL_FIX: &str = "rewrite it so two repetitions of variable count in a row never match the same character, or check that text in the application's code (A45)";
+
 const BACKTRACKING_FIX: &str = "rewrite it so no repeated group holds a repetition of variable count or branches that start with the same character, or check that text in the application's code (A45)";
 
 /// What the parser throws when a pattern is refused.
@@ -78,14 +82,16 @@ struct PatternRefusal {
 
 /// What the backtracking checks know of a parsed fragment besides its normalised text: the code
 /// points it can start and end with, the characters of each repetition of variable count still in its
-/// tail, whether it can match the empty string, and whether one pass of it can be an alternation whose
-/// two branches start with the same code point.
+/// tail (followed only by optional parts or by required parts it overlaps) or still in its head
+/// (preceded only by optional parts), whether it can match the empty string, and whether one pass of
+/// it can be an alternation whose two branches start with the same code point.
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Fragment {
     text: String,
     first: Vec<Range>,
     last: Vec<Range>,
     varying_tails: Vec<Vec<Range>>,
+    varying_heads: Vec<Vec<Range>>,
     nullable: bool,
     overlapping: bool,
 }
@@ -199,12 +205,27 @@ fn refuse_backtracking<Never>(reason: &str) -> Result<Never, PatternFailure> {
     )))
 }
 
+fn refuse_polynomial_backtracking<Never>(item: &str) -> Result<Never, PatternFailure> {
+    Err(PatternFailure::Refused(PatternRefusal::new(
+        format!(
+            "the pattern can backtrack polynomially: '{item}' starts with a repetition of variable count that can match what the repetition just before it can match"
+        ),
+        POLYNOMIAL_FIX.to_owned(),
+    )))
+}
+
 fn overlaps(left: &[Range], right: &[Range]) -> bool {
     left.iter().any(|&(left_start, left_end)| {
         right
             .iter()
             .any(|&(right_start, right_end)| left_start <= right_end && right_start <= left_end)
     })
+}
+
+fn any_overlap(lefts: &[Vec<Range>], rights: &[Vec<Range>]) -> bool {
+    lefts
+        .iter()
+        .any(|left| rights.iter().any(|right| overlaps(left, right)))
 }
 
 fn any_two_overlap(sets: &[&[Range]]) -> bool {
@@ -369,6 +390,7 @@ fn matching(matched: Matched) -> Atom {
             first: matched.ranges.clone(),
             last: matched.ranges,
             varying_tails: Vec::new(),
+            varying_heads: Vec::new(),
             nullable: false,
             overlapping: false,
         },
@@ -448,6 +470,10 @@ impl PatternParser {
                 .iter()
                 .flat_map(|branch| branch.varying_tails.clone())
                 .collect(),
+            varying_heads: branches
+                .iter()
+                .flat_map(|branch| branch.varying_heads.clone())
+                .collect(),
             nullable: branches.iter().any(|branch| branch.nullable),
             overlapping,
         })
@@ -458,6 +484,7 @@ impl PatternParser {
         let mut first: Vec<Range> = Vec::new();
         let mut last: Vec<Range> = Vec::new();
         let mut varying_tails: Vec<Vec<Range>> = Vec::new();
+        let mut varying_heads: Vec<Vec<Range>> = Vec::new();
         let mut nullable = true;
         let mut items: Vec<SequenceItem> = Vec::new();
 
@@ -476,11 +503,27 @@ impl PatternParser {
                 refuse_exponential_repetition(&atom, repetition)?;
             }
 
-            text.push_str(&atom.fragment.text);
+            let item_heads: Vec<Vec<Range>> = if varies(repetition.as_ref()) {
+                let mut heads = vec![atom.fragment.first.clone()];
 
-            if let Some(repetition) = &repetition {
-                text.push_str(&repetition.text);
+                heads.extend(atom.fragment.varying_heads.iter().cloned());
+                heads
+            } else {
+                atom.fragment.varying_heads.clone()
+            };
+            let item_text = format!(
+                "{}{}",
+                atom.fragment.text,
+                repetition
+                    .as_ref()
+                    .map_or("", |written| written.text.as_str())
+            );
+
+            if any_overlap(&varying_tails, &item_heads) {
+                return refuse_polynomial_backtracking(&item_text);
             }
+
+            text.push_str(&item_text);
 
             let item = SequenceItem { atom, repetition };
 
@@ -507,6 +550,7 @@ impl PatternParser {
 
             if nullable {
                 first.extend(item.atom.fragment.first.iter().copied());
+                varying_heads.extend(item_heads);
             }
 
             if optional {
@@ -537,6 +581,7 @@ impl PatternParser {
             first,
             last,
             varying_tails,
+            varying_heads,
             nullable,
             overlapping,
         })
@@ -561,6 +606,7 @@ impl PatternParser {
                     first: Vec::new(),
                     last: Vec::new(),
                     varying_tails: Vec::new(),
+                    varying_heads: Vec::new(),
                     nullable: true,
                     overlapping: false,
                 },
@@ -927,6 +973,51 @@ mod tests {
         assert!(refusal(r"[a-\d]").contains("ends with a shorthand"));
         assert!(refusal(r"\q").contains("'\\q' is not portable"));
         assert!(refusal("[a").contains("ends inside a construct"));
+    }
+
+    #[test]
+    fn two_overlapping_repetitions_in_a_row_are_refused_as_polynomial() {
+        for source in [
+            "a*a*a*a*a*a*a*a*a*a*a*a*a*a*b",
+            "^a+a+b$",
+            r"^\d+\.?\d*$",
+            "^(a*)(a*)b$",
+            "^a*(?:x?)a*b$",
+            "^[a-c]*[b-d]?$",
+            "^(?:a|b)*[ab]{1,3}$",
+        ] {
+            assert!(
+                refusal(source).contains("backtrack polynomially"),
+                "pattern {source:?}"
+            );
+        }
+
+        assert_eq!(
+            refusal("a*a*b"),
+            "the pattern can backtrack polynomially: 'a*' starts with a repetition of variable count that can match what the repetition just before it can match"
+        );
+    }
+
+    #[test]
+    fn repetitions_kept_apart_or_run_once_stay_accepted() {
+        for source in [
+            "^a*b*$",
+            "^[a-z]*[0-9]+$",
+            "^[a-z]+-[a-z]+$",
+            r"^\d+(?:\.\d+)?$",
+            r"^\d{1,3}(?:,\d{3})*$",
+            "^a*ba*$",
+            "^a*a$",
+            r"^-?\d+$",
+        ] {
+            assert!(
+                matches!(
+                    tree_schemas_normalize_pattern(source),
+                    Ok(TreeSchemasPatternResult::Normalized { .. })
+                ),
+                "pattern {source:?}"
+            );
+        }
     }
 
     #[test]
