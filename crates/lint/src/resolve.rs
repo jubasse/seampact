@@ -233,3 +233,177 @@ pub(crate) fn lint_unknown_rule_diagnostics(
 
     Ok(diagnostics)
 }
+
+#[cfg(test)]
+mod tests {
+    use seampact_ir::{IrMap, Layer, LintRule, Reason};
+
+    use super::*;
+
+    fn origin(layer: Layer, pointer: &str) -> Origin {
+        Origin {
+            api: None,
+            layer,
+            pointer: pointer.to_owned(),
+        }
+    }
+
+    fn allow(rule: &str, at: Origin, subtree: bool) -> LintAllow {
+        LintAllow {
+            rule: rule.to_owned(),
+            at,
+            reason: Reason::new("because".to_owned()),
+            subtree,
+        }
+    }
+
+    fn lint_with(rules: Vec<(&str, LintSeverity, Origin)>, allows: Vec<LintAllow>) -> Lint {
+        let mut set = IrMap::new();
+
+        for (id, severity, origin) in rules {
+            set.insert(id.to_owned(), LintRule { severity, origin });
+        }
+
+        Lint { rules: set, allows }
+    }
+
+    const DEFAULT: EffectiveSeverity = EffectiveSeverity::Reported(Severity::Warning);
+
+    #[test]
+    fn a_rule_reports_at_its_default_severity_unless_the_contract_sets_it() {
+        let here = origin(Layer::Api, "/lint/rules/a");
+        let lint = lint_with(
+            vec![
+                ("a", LintSeverity::Error, here.clone()),
+                ("b", LintSeverity::Disabled, here),
+            ],
+            vec![],
+        );
+
+        assert_eq!(lint_severity_of(&lint, "none", DEFAULT), Ok(DEFAULT));
+        assert_eq!(
+            lint_severity_of(&lint, "a", DEFAULT),
+            Ok(EffectiveSeverity::Reported(Severity::Error))
+        );
+        assert_eq!(
+            lint_severity_of(&lint, "b", DEFAULT),
+            Ok(EffectiveSeverity::Disabled)
+        );
+    }
+
+    #[test]
+    fn an_id_named_like_a_prototype_member_has_no_setting() {
+        let lint = lint_with(vec![], vec![]);
+
+        assert_eq!(lint_severity_of(&lint, "constructor", DEFAULT), Ok(DEFAULT));
+    }
+
+    #[test]
+    fn an_allow_covers_its_own_place_and_a_subtree_allow_the_places_below() {
+        let at = origin(Layer::Api, "/surfaces/app");
+        let exact = lint_with(vec![], vec![allow("r", at.clone(), false)]);
+        let subtree = lint_with(vec![], vec![allow("r", at.clone(), true)]);
+        let below = origin(Layer::Api, "/surfaces/app/routes/a");
+        let lookalike = origin(Layer::Api, "/surfaces/application");
+        let other_layer = origin(Layer::Shared, "/surfaces/app");
+
+        assert!(lint_is_allowed(&exact, "r", std::slice::from_ref(&at)));
+        assert!(!lint_is_allowed(&exact, "r", std::slice::from_ref(&below)));
+        assert!(lint_is_allowed(&subtree, "r", std::slice::from_ref(&below)));
+        assert!(!lint_is_allowed(
+            &subtree,
+            "r",
+            std::slice::from_ref(&lookalike)
+        ));
+        assert!(!lint_is_allowed(
+            &subtree,
+            "r",
+            std::slice::from_ref(&other_layer)
+        ));
+        assert!(!lint_is_allowed(
+            &subtree,
+            "other",
+            std::slice::from_ref(&at)
+        ));
+        assert!(lint_is_allowed(&exact, "r", &[lookalike, at]));
+    }
+
+    #[test]
+    fn an_unknown_core_id_names_the_closest_rule_and_is_located_at_its_entry() {
+        let rule_origin = origin(Layer::Api, "/lint/rules/seampact~1credential-nam");
+        let lint = lint_with(
+            vec![("seampact/credential-nam", LintSeverity::Error, rule_origin)],
+            vec![],
+        );
+        let diagnostics = lint_unknown_rule_diagnostics(&lint, &Locations::new());
+
+        let Ok(diagnostics) = diagnostics else {
+            panic!("the diagnostics are expected");
+        };
+        let [diagnostic] = diagnostics.as_slice() else {
+            panic!("one diagnostic is expected, got {diagnostics:?}");
+        };
+
+        assert_eq!(diagnostic.severity, Severity::Error);
+        assert_eq!(diagnostic.rule, LintSettingRule::UnknownRule.rule_id());
+        assert_eq!(
+            diagnostic.fix,
+            "Use 'seampact/credential-name', or remove the entry."
+        );
+        assert_eq!(
+            diagnostic.message,
+            "lint.rules names the lint rule 'seampact/credential-nam', which the plugin 'seampact' does not have"
+        );
+    }
+
+    #[test]
+    fn an_id_no_plugin_owns_is_a_warning_and_the_reserved_id_is_accepted() {
+        let here = origin(Layer::Api, "/lint/rules/x");
+        let lint = lint_with(
+            vec![
+                ("house/rule", LintSeverity::Error, here.clone()),
+                ("seampact/field-right-unresolved", LintSeverity::Error, here),
+            ],
+            vec![],
+        );
+        let diagnostics = lint_unknown_rule_diagnostics(&lint, &Locations::new());
+
+        let Ok(diagnostics) = diagnostics else {
+            panic!("the diagnostics are expected");
+        };
+        let rules: Vec<&str> = diagnostics.iter().map(|d| d.rule.as_str()).collect();
+
+        assert_eq!(rules, vec!["seampact/lint/unclaimed-rule"]);
+        assert_eq!(
+            diagnostics.first().map(|d| d.severity),
+            Some(Severity::Warning)
+        );
+    }
+
+    #[test]
+    fn a_setting_at_a_core_origin_is_refused_only_when_it_is_reported() {
+        let core = origin(Layer::Core, "/lint/rules/x");
+        let known = lint_with(
+            vec![(
+                "seampact/credential-name",
+                LintSeverity::Error,
+                core.clone(),
+            )],
+            vec![],
+        );
+        let unknown = lint_with(vec![("house/rule", LintSeverity::Error, core)], vec![]);
+
+        assert_eq!(
+            lint_unknown_rule_diagnostics(&known, &Locations::new()),
+            Ok(Vec::new())
+        );
+        assert!(lint_unknown_rule_diagnostics(&unknown, &Locations::new()).is_err());
+    }
+
+    #[test]
+    fn the_plugin_prefix_is_the_text_before_the_first_slash() {
+        assert_eq!(plugin_prefix("seampact/a/b"), "seampact");
+        assert_eq!(plugin_prefix("noslash"), "");
+        assert_eq!(plugin_prefix("\u{1F600}/x"), "\u{1F600}");
+    }
+}

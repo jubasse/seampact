@@ -1102,15 +1102,20 @@ dependencies = [
 name = "seampact-lint"
 version = "2.0.0"
 dependencies = [
+ "camino",
  "indexmap",
  "seampact-authoring",
+ "seampact-compiler",
  "seampact-diagnostics",
  "seampact-ir",
  "seampact-json",
+ "seampact-load",
  "seampact-naming",
+ "seampact-oracle",
  "seampact-pipeline",
  "seampact-span",
  "seampact-validate",
+ "serde_json",
  "thiserror",
 ]
 
