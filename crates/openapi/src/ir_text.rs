@@ -1,15 +1,67 @@
-//! The IR's own text forms: origins and derivations as a document writes them.
+//! The IR's own text forms: origins, value sources and derivations as a document writes them.
 
-use seampact_ir::Origin;
+use seampact_ir::{DerivedFrom, Origin, ValueSource, ValueSourceIn};
+use seampact_json::{JsonObject, JsonValue};
+use seampact_target::IrLocation;
 
-use crate::OpenApiError;
-use crate::not_ported::not_ported_yet;
+use crate::emit_context::{EmitContext, refuse_inconsistent};
+use crate::json_value::text_value;
 
 /// An origin as the text `[<api>#]<layer>#<pointer>`.
 ///
-/// # Errors
-///
-/// [`OpenApiError::NotPortedYet`] until the function is ported.
-pub(crate) fn origin_key(_origin: &Origin) -> Result<String, OpenApiError> {
-    Err(not_ported_yet("originKey"))
+/// An origin copied from another api leads with it and `#`, which no layer holds, so `pack:<name>`
+/// layers stay unambiguous.
+pub(crate) fn origin_key(origin: &Origin) -> String {
+    let key = format!("{}#{}", origin.layer, origin.pointer);
+
+    match &origin.api {
+        Some(api) => format!("{api}#{key}"),
+        None => key,
+    }
+}
+
+/// A value source as the grammar writes it: `path.taskId`, `scope.channel`, `host`, `address/64`.
+pub(crate) fn value_source_text(
+    context: &mut EmitContext<'_>,
+    source: &ValueSource,
+    location: &IrLocation,
+) -> String {
+    let place = source.r#in.as_str();
+
+    match (&source.r#in, &source.name) {
+        (ValueSourceIn::Address, _) => source
+            .prefix_bits
+            .map_or_else(|| place.to_owned(), |bits| format!("{place}/{bits}")),
+        (ValueSourceIn::Host | ValueSourceIn::Subdomain | ValueSourceIn::Resolver, _) => {
+            place.to_owned()
+        }
+        (_, Some(name)) => format!("{place}.{name}"),
+        (_, None) => {
+            refuse_inconsistent(
+                context,
+                "value-source.name",
+                &format!("A value source in '{place}' without its name"),
+                &location.below(&["name"]),
+            );
+
+            place.to_owned()
+        }
+    }
+}
+
+/// `{ derivation, from }`, the value of `x-seampact-derived-from`.
+pub(crate) fn derived_from_value(derived_from: &DerivedFrom) -> JsonObject {
+    let from = derived_from
+        .from
+        .iter()
+        .map(|origin| text_value(&origin_key(origin)))
+        .collect();
+
+    JsonObject::from_iter([
+        (
+            "derivation".to_owned(),
+            text_value(derived_from.derivation.as_str()),
+        ),
+        ("from".to_owned(), JsonValue::Array(from)),
+    ])
 }

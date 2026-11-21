@@ -3,9 +3,8 @@
 use indexmap::IndexMap;
 use seampact_ir::{MemberName, Template};
 use seampact_json::{JsonObject, JsonValue};
-use seampact_target::IrLocation;
+use seampact_target::{IrLocation, NotGeneratedForm};
 
-use crate::OpenApiError;
 use crate::emit_context::{EmitContext, refuse_not_emitted};
 
 /// Whether a slot always has a value, may have none, or never has one here.
@@ -60,18 +59,14 @@ pub(crate) fn members_writing_slot<'template>(
 }
 
 /// The text a member name writes: its own, or the constant of the slot that names it.
-///
-/// # Errors
-///
-/// [`OpenApiError::NotPortedYet`] while the refusal of a name by slot is written by a stub.
 fn member_name_of(
     context: &mut EmitContext<'_>,
     name: &MemberName,
     slots: &SlotSchemas,
     location: &IrLocation,
-) -> Result<Option<String>, OpenApiError> {
+) -> Option<String> {
     let slot_name = match name {
-        MemberName::Text(plain) => return Ok(Some(plain.text.clone())),
+        MemberName::Text(plain) => return Some(plain.text.clone()),
         MemberName::Slot(slot) => Some(slot.slot.as_str()),
         MemberName::Unknown(_) => None,
     };
@@ -80,15 +75,15 @@ fn member_name_of(
         .and_then(|value| value.schema.get("const"));
 
     if let Some(JsonValue::String(text)) = constant {
-        return Ok(Some(text.clone()));
+        return Some(text.clone());
     }
 
     refuse_not_emitted(
         context,
-        "template.member-name",
+        NotGeneratedForm::OpenapiTemplateMemberName,
         "A member named by a slot",
         location,
-    )?;
+    );
 
-    Ok(None)
+    None
 }

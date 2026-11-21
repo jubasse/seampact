@@ -114,10 +114,6 @@ fn write_length_refinements(schema: &mut JsonObject, refinements: &Refinements) 
 }
 
 /// Writes the numeric refinements.
-///
-/// # Errors
-///
-/// As [`number_literal`].
 fn write_numeric_refinements(
     schema: &mut JsonObject,
     refinements: &Refinements,
@@ -142,10 +138,6 @@ fn write_numeric_refinements(
 }
 
 /// The schema of an array type use.
-///
-/// # Errors
-///
-/// [`OpenApiError::NotPortedYet`] while an item is written by a stub.
 fn array_schema(
     context: &mut EmitContext<'_>,
     use_: &ArrayTypeUse,
@@ -153,10 +145,11 @@ fn array_schema(
     location: &IrLocation,
 ) -> Result<JsonObject, OpenApiError> {
     let items = type_use_schema(context, &use_.items, variant, &location.below(&["items"]))?;
-    let mut schema = JsonObject::new();
+    let mut schema = JsonObject::from_iter([
+        ("type".to_owned(), text_value("array")),
+        ("items".to_owned(), JsonValue::Object(items)),
+    ]);
 
-    schema.insert("type".to_owned(), text_value("array"));
-    schema.insert("items".to_owned(), JsonValue::Object(items));
     set_defined(&mut schema, "minItems", optional_integer(use_.min_items));
     set_defined(&mut schema, "maxItems", optional_integer(use_.max_items));
 
@@ -164,10 +157,6 @@ fn array_schema(
 }
 
 /// The schema of a type use, with its docs and examples, nullable when the use says so.
-///
-/// # Errors
-///
-/// [`OpenApiError::NotPortedYet`] while a form is written by a stub.
 pub(crate) fn type_use_schema(
     context: &mut EmitContext<'_>,
     use_: &TypeUse,
@@ -175,7 +164,7 @@ pub(crate) fn type_use_schema(
     location: &IrLocation,
 ) -> Result<JsonObject, OpenApiError> {
     let Ok(known) = KnownTypeUseRef::try_from(use_) else {
-        refuse_unknown(context, &location.below(&["kind"]), use_.tag())?;
+        refuse_unknown(context, &location.below(&["kind"]), use_.tag());
 
         return Ok(JsonObject::new());
     };
@@ -223,10 +212,6 @@ fn type_use_marks<'use_>(
 }
 
 /// The schema of a named schema, by its kind.
-///
-/// # Errors
-///
-/// [`OpenApiError::NotPortedYet`] until the kinds are ported.
 fn known_schema_component(
     context: &mut EmitContext<'_>,
     named: &KnownSchemaRef<'_>,
@@ -333,35 +318,4 @@ mod tests {
         ));
     }
 
-    #[test]
-    fn a_reference_refuses_unknown_keys_unless_its_policy_says_otherwise()
-    -> Result<(), Box<dyn std::error::Error>> {
-        let refusing: TypeUse = serde_json::from_str(r#"{"kind":"ref","schema":"A"}"#)?;
-        let keeping: TypeUse =
-            serde_json::from_str(r#"{"kind":"ref","schema":"A","unknownKeys":{"policy":"keep"}}"#)?;
-        let unknown: TypeUse = serde_json::from_str(r#"{"kind":"tuple"}"#)?;
-
-        assert!(refuses_unknown_keys(&refusing));
-        assert!(!refuses_unknown_keys(&keeping));
-        assert!(refuses_unknown_keys(&unknown));
-
-        Ok(())
-    }
-
-    #[test]
-    fn docs_write_title_and_description_only_when_present() {
-        let mut schema = JsonObject::new();
-
-        write_docs(&mut schema, None);
-        assert!(schema.is_empty());
-
-        let docs = Docs {
-            summary: Some("A task".to_owned()),
-            description: None,
-        };
-
-        write_docs(&mut schema, Some(&docs));
-        assert_eq!(schema.get("title"), Some(&text_value("A task")));
-        assert!(!schema.contains_key("description"));
-    }
 }

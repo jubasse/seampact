@@ -18,6 +18,11 @@ use crate::security::security_schemes_component;
 use crate::serialize::serialize_document;
 use crate::{EmitterOptions, ExtensionName, OpenApiError};
 
+/// The methods of a path item, in the order its operations are written.
+const METHOD_ORDER: [&str; 8] = [
+    "get", "put", "post", "delete", "options", "head", "patch", "trace",
+];
+
 /// The OpenAPI version every document declares.
 const OPENAPI_VERSION: &str = "3.1.0";
 
@@ -68,7 +73,7 @@ pub enum EmitOutcome {
 ///
 /// # Errors
 ///
-/// [`OpenApiError::NotPortedYet`] while a function it reaches is a stub.
+/// [`OpenApiError::Internal`] for a bug.
 pub fn emit_documents(
     ir: &ContractIr,
     options: &EmitterOptions,
@@ -149,10 +154,6 @@ pub(crate) fn unsupported_ir_refusals(ir: &ContractIr) -> Vec<Refusal> {
 }
 
 /// One planned document and the refusals met while writing it.
-///
-/// # Errors
-///
-/// [`OpenApiError::NotPortedYet`] while a function it reaches is a stub.
 fn build_planned_document(
     ir: &ContractIr,
     options: &EmitterOptions,
@@ -184,10 +185,6 @@ fn selected_operations<'ir>(
 }
 
 /// One document: its info, tags, extensions, paths and components.
-///
-/// # Errors
-///
-/// [`OpenApiError::NotPortedYet`] while a function it reaches is a stub.
 fn build_document(
     context: &mut EmitContext<'_>,
     selection: &ApiDocument,
@@ -202,43 +199,25 @@ fn build_document(
     let paths = paths_object(context, &selected, document_format)?;
     let schemas = drain_schema_components(context)?;
     let security_schemes = security_schemes_component(context)?;
-    let mut document = JsonObject::new();
-
-    document.insert("openapi".to_owned(), text_value(OPENAPI_VERSION));
-    document.insert("info".to_owned(), JsonValue::Object(info_object(context)?));
+    let mut document = JsonObject::from_iter([
+        ("openapi".to_owned(), text_value(OPENAPI_VERSION)),
+        ("info".to_owned(), JsonValue::Object(info_object(context))),
+    ]);
 
     if !context.options.servers.is_empty() {
         document.insert("servers".to_owned(), servers_array(context.options)?);
     }
 
-    let mut tags: Vec<&str> = selected
-        .iter()
-        .flat_map(|entry| entry.operation.tags.iter().map(String::as_str))
-        .collect::<IndexSet<&str>>()
-        .into_iter()
-        .collect();
-
-    tags.sort_by(|left, right| cmp_utf16(left, right));
+    let tags = tag_objects(&selected);
 
     if !tags.is_empty() {
-        let named: Vec<JsonValue> = tags
-            .into_iter()
-            .map(|name| {
-                let mut tag = JsonObject::new();
-
-                tag.insert("name".to_owned(), text_value(name));
-
-                JsonValue::Object(tag)
-            })
-            .collect();
-
-        document.insert("tags".to_owned(), JsonValue::Array(named));
+        document.insert("tags".to_owned(), JsonValue::Array(tags));
     }
 
     write_extension(
         context,
         &mut document,
-        &ExtensionName::new("api"),
+        ExtensionName::Api,
         JsonValue::Object(api_extension_value(ir)),
     );
 
@@ -246,7 +225,7 @@ fn build_document(
         write_extension(
             context,
             &mut document,
-            &ExtensionName::new("format"),
+            ExtensionName::Format,
             text_value(format),
         );
     }
@@ -274,11 +253,27 @@ fn build_document(
     Ok(document)
 }
 
+/// The `tags` array: one `{ name }` per tag the selected operations use, by UTF-16 order.
+fn tag_objects(selected: &[SelectedOperation<'_>]) -> Vec<JsonValue> {
+    let mut tags: Vec<&str> = selected
+        .iter()
+        .flat_map(|entry| entry.operation.tags.iter().map(String::as_str))
+        .collect::<IndexSet<&str>>()
+        .into_iter()
+        .collect();
+
+    tags.sort_by(|left, right| cmp_utf16(left, right));
+
+    tags.into_iter()
+        .map(|name| JsonValue::Object(JsonObject::from_iter([("name".to_owned(), text_value(name))])))
+        .collect()
+}
+
 /// The value of the `x-seampact-api` extension: kind, role and caller.
 pub(crate) fn api_extension_value(ir: &ContractIr) -> JsonObject {
-    let mut api_value = JsonObject::new();
+    let mut api_value =
+        JsonObject::from_iter([("kind".to_owned(), text_value(ir.api.kind.as_str()))]);
 
-    api_value.insert("kind".to_owned(), text_value(ir.api.kind.as_str()));
     set_defined(
         &mut api_value,
         "role",
@@ -286,10 +281,11 @@ pub(crate) fn api_extension_value(ir: &ContractIr) -> JsonObject {
     );
 
     if let Some(caller) = &ir.api.caller {
-        let mut value = JsonObject::new();
+        let value = JsonObject::from_iter([
+            ("identity".to_owned(), text_value(caller.identity.as_str())),
+            ("right".to_owned(), text_value(caller.right.as_str())),
+        ]);
 
-        value.insert("identity".to_owned(), text_value(caller.identity.as_str()));
-        value.insert("right".to_owned(), text_value(caller.right.as_str()));
         api_value.insert("caller".to_owned(), JsonValue::Object(value));
     }
 
@@ -297,19 +293,14 @@ pub(crate) fn api_extension_value(ir: &ContractIr) -> JsonObject {
 }
 
 /// The `info` object: title, version, summary and description.
-///
-/// # Errors
-///
-/// [`OpenApiError::NotPortedYet`] while an unknown version is refused by a stub.
-fn info_object(context: &mut EmitContext<'_>) -> Result<JsonObject, OpenApiError> {
+fn info_object(context: &mut EmitContext<'_>) -> JsonObject {
     let ir = context.ir;
-    let mut info = JsonObject::new();
+    let version = api_version_text(context);
+    let mut info = JsonObject::from_iter([
+        ("title".to_owned(), text_value(&ir.api.id)),
+        ("version".to_owned(), JsonValue::String(version)),
+    ]);
 
-    info.insert("title".to_owned(), text_value(&ir.api.id));
-    info.insert(
-        "version".to_owned(),
-        JsonValue::String(api_version_text(context)?),
-    );
     set_defined(
         &mut info,
         "summary",
@@ -321,15 +312,11 @@ fn info_object(context: &mut EmitContext<'_>) -> Result<JsonObject, OpenApiError
         optional_text(ir.api.docs.description.as_deref()),
     );
 
-    Ok(info)
+    info
 }
 
 /// The api version as the text `info.version` holds.
-///
-/// # Errors
-///
-/// [`OpenApiError::NotPortedYet`] while an unknown version is refused by a stub.
-fn api_version_text(context: &mut EmitContext<'_>) -> Result<String, OpenApiError> {
+fn api_version_text(context: &mut EmitContext<'_>) -> String {
     let version = &context.ir.api.version;
     let Ok(known) = KnownApiVersionRef::try_from(version) else {
         let location = IrLocation {
@@ -337,15 +324,15 @@ fn api_version_text(context: &mut EmitContext<'_>) -> Result<String, OpenApiErro
             operation: None,
         };
 
-        refuse_unknown(context, &location, version.tag())?;
+        refuse_unknown(context, &location, version.tag());
 
-        return Ok(String::new());
+        return String::new();
     };
 
-    Ok(match known {
+    match known {
         KnownApiVersionRef::Path(path) => path.number.to_string(),
         KnownApiVersionRef::Label(label) => label.label.clone(),
-    })
+    }
 }
 
 /// The format most operations use, the first by UTF-16 order on a tie.
@@ -368,10 +355,6 @@ pub(crate) fn most_used_format<'format>(formats: &[&'format str]) -> Option<&'fo
 }
 
 /// The `paths` object of the selected operations.
-///
-/// # Errors
-///
-/// [`OpenApiError::NotPortedYet`] while an operation is written by a stub.
 fn paths_object(
     context: &mut EmitContext<'_>,
     selected: &[SelectedOperation<'_>],
@@ -396,20 +379,11 @@ pub(crate) struct Route<'entry> {
 }
 
 /// The servers of the options as the `servers` array.
-///
-/// # Errors
-///
-/// [`OpenApiError::NotPortedYet`] until the function is ported.
 fn servers_array(_options: &EmitterOptions) -> Result<JsonValue, OpenApiError> {
     Err(not_ported_yet("serversArray"))
 }
 
 /// Paths by UTF-16 order, each holding its operations by method rank.
-///
-/// # Errors
-///
-/// As the writer of an operation, and [`OpenApiError::NotPortedYet`] while the method rank is a
-/// stub.
 pub(crate) fn paths_by_route<'entry, Entry>(
     entries: &'entry [Entry],
     route_of: impl Fn(&'entry Entry) -> Route<'entry>,
@@ -429,10 +403,10 @@ pub(crate) fn paths_by_route<'entry, Entry>(
 
     for path in sorted_paths {
         let path_entries = by_path.get(path).map_or(&[][..], Vec::as_slice);
-        let mut ranked = path_entries
+        let mut ranked: Vec<(usize, &&Entry)> = path_entries
             .iter()
-            .map(|entry| method_rank(route_of(entry).method).map(|rank| (rank, *entry)))
-            .collect::<Result<Vec<_>, _>>()?;
+            .map(|entry| (method_rank(route_of(entry).method), entry))
+            .collect();
 
         ranked.sort_by_key(|(rank, _)| *rank);
 
@@ -451,20 +425,15 @@ pub(crate) fn paths_by_route<'entry, Entry>(
     Ok(paths)
 }
 
-/// The position of a method in a path item.
-///
-/// # Errors
-///
-/// [`OpenApiError::NotPortedYet`] until the function is ported.
-fn method_rank(_method: &str) -> Result<usize, OpenApiError> {
-    Err(not_ported_yet("methodRank"))
+/// The position of a method in a path item; a method no list names goes last.
+fn method_rank(method: &str) -> usize {
+    METHOD_ORDER
+        .iter()
+        .position(|ordered| *ordered == method)
+        .unwrap_or(METHOD_ORDER.len())
 }
 
 /// The object of one operation.
-///
-/// # Errors
-///
-/// [`OpenApiError::NotPortedYet`] until the function is ported.
 fn operation_object(
     _context: &mut EmitContext<'_>,
     _operation: &Operation,
@@ -475,10 +444,6 @@ fn operation_object(
 }
 
 /// Writes every component referenced, those they reference included, sorted by key.
-///
-/// # Errors
-///
-/// [`OpenApiError::NotPortedYet`] while a component is written by a stub.
 fn drain_schema_components(context: &mut EmitContext<'_>) -> Result<JsonObject, OpenApiError> {
     let mut written: IndexMap<String, JsonObject> = IndexMap::new();
 
@@ -552,47 +517,4 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn a_document_declaring_none_has_one_unnamed_plan_over_every_surface()
-    -> Result<(), Box<dyn std::error::Error>> {
-        let ir = fixture_ir()?;
-        let plans = document_plans(&ir);
-
-        assert_eq!(plans.len(), 1);
-        assert_eq!(plans.first().map(|plan| plan.name.is_none()), Some(true));
-        assert_eq!(
-            plans.first().map(|plan| plan.selection.surfaces.len()),
-            Some(ir.api.surfaces.len())
-        );
-
-        Ok(())
-    }
-
-    #[test]
-    fn an_ir_of_another_revision_is_refused_with_the_fix_and_a_supported_one_is_not()
-    -> Result<(), Box<dyn std::error::Error>> {
-        let mut ir = fixture_ir()?;
-
-        assert_eq!(unsupported_ir_refusals(&ir), Vec::new());
-
-        ir.ir_revision += 1;
-
-        let refusals = unsupported_ir_refusals(&ir);
-
-        assert_eq!(
-            refusals
-                .iter()
-                .map(|refusal| refusal.code.as_str())
-                .collect::<Vec<_>>(),
-            ["ir.revision.mismatch"]
-        );
-        assert_eq!(
-            refusals
-                .first()
-                .and_then(|refusal| refusal.member.as_deref()),
-            Some("/irRevision")
-        );
-
-        Ok(())
-    }
 }

@@ -9,18 +9,188 @@ use crate::OpenApiError;
 use crate::not_ported::not_ported_yet;
 
 /// The name of one `x-seampact-*` extension a document may keep.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ExtensionName(String);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ExtensionName {
+    /// `access`.
+    Access,
+    /// `api`.
+    Api,
+    /// `apis`.
+    Apis,
+    /// `bindings`.
+    Bindings,
+    /// `budget-ms`.
+    BudgetMs,
+    /// `cache-control`.
+    CacheControl,
+    /// `concurrency`.
+    Concurrency,
+    /// `csrf`.
+    Csrf,
+    /// `degradable`.
+    Degradable,
+    /// `deprecation`.
+    Deprecation,
+    /// `derived-from`.
+    DerivedFrom,
+    /// `discriminator`.
+    Discriminator,
+    /// `enum`.
+    Enum,
+    /// `enum-fallback`.
+    EnumFallback,
+    /// `errors`.
+    Errors,
+    /// `exclusiveMaximum`.
+    ExclusiveMaximum,
+    /// `exclusiveMinimum`.
+    ExclusiveMinimum,
+    /// `filtered-by`.
+    FilteredBy,
+    /// `format`.
+    Format,
+    /// `idempotency`.
+    Idempotency,
+    /// `internal`.
+    Internal,
+    /// `maturity`.
+    Maturity,
+    /// `max-size`.
+    MaxSize,
+    /// `maximum`.
+    Maximum,
+    /// `minimum`.
+    Minimum,
+    /// `multipleOf`.
+    MultipleOf,
+    /// `nature`.
+    Nature,
+    /// `opaque`.
+    Opaque,
+    /// `owner`.
+    Owner,
+    /// `paging`.
+    Paging,
+    /// `principal-requires`.
+    PrincipalRequires,
+    /// `raw-body`.
+    RawBody,
+    /// `relays`.
+    Relays,
+    /// `requires`.
+    Requires,
+    /// `restricted-to`.
+    RestrictedTo,
+    /// `scopes`.
+    Scopes,
+    /// `semantic`.
+    Semantic,
+    /// `signature`.
+    Signature,
+    /// `source-api`.
+    SourceApi,
+    /// `unknown-keys`.
+    UnknownKeys,
+    /// `unknown-query`.
+    UnknownQuery,
+    /// `upstream`.
+    Upstream,
+}
 
 impl ExtensionName {
-    /// The extension `text`, written after `x-seampact-`; nothing is checked.
-    pub(crate) fn new(text: &str) -> Self {
-        Self(text.to_owned())
-    }
+    /// Every extension the emitter writes, in the TypeScript's `EXTENSION_NAMES` order.
+    pub const ALL: [Self; 42] = [
+        Self::Access,
+        Self::Api,
+        Self::Apis,
+        Self::Bindings,
+        Self::BudgetMs,
+        Self::CacheControl,
+        Self::Concurrency,
+        Self::Csrf,
+        Self::Degradable,
+        Self::Deprecation,
+        Self::DerivedFrom,
+        Self::Discriminator,
+        Self::Enum,
+        Self::EnumFallback,
+        Self::Errors,
+        Self::ExclusiveMaximum,
+        Self::ExclusiveMinimum,
+        Self::FilteredBy,
+        Self::Format,
+        Self::Idempotency,
+        Self::Internal,
+        Self::Maturity,
+        Self::MaxSize,
+        Self::Maximum,
+        Self::Minimum,
+        Self::MultipleOf,
+        Self::Nature,
+        Self::Opaque,
+        Self::Owner,
+        Self::Paging,
+        Self::PrincipalRequires,
+        Self::RawBody,
+        Self::Relays,
+        Self::Requires,
+        Self::RestrictedTo,
+        Self::Scopes,
+        Self::Semantic,
+        Self::Signature,
+        Self::SourceApi,
+        Self::UnknownKeys,
+        Self::UnknownQuery,
+        Self::Upstream,
+    ];
 
-    /// The name without the prefix.
-    pub(crate) fn as_str(&self) -> &str {
-        &self.0
+    /// The name without the `x-seampact-` prefix.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Access => "access",
+            Self::Api => "api",
+            Self::Apis => "apis",
+            Self::Bindings => "bindings",
+            Self::BudgetMs => "budget-ms",
+            Self::CacheControl => "cache-control",
+            Self::Concurrency => "concurrency",
+            Self::Csrf => "csrf",
+            Self::Degradable => "degradable",
+            Self::Deprecation => "deprecation",
+            Self::DerivedFrom => "derived-from",
+            Self::Discriminator => "discriminator",
+            Self::Enum => "enum",
+            Self::EnumFallback => "enum-fallback",
+            Self::Errors => "errors",
+            Self::ExclusiveMaximum => "exclusiveMaximum",
+            Self::ExclusiveMinimum => "exclusiveMinimum",
+            Self::FilteredBy => "filtered-by",
+            Self::Format => "format",
+            Self::Idempotency => "idempotency",
+            Self::Internal => "internal",
+            Self::Maturity => "maturity",
+            Self::MaxSize => "max-size",
+            Self::Maximum => "maximum",
+            Self::Minimum => "minimum",
+            Self::MultipleOf => "multipleOf",
+            Self::Nature => "nature",
+            Self::Opaque => "opaque",
+            Self::Owner => "owner",
+            Self::Paging => "paging",
+            Self::PrincipalRequires => "principal-requires",
+            Self::RawBody => "raw-body",
+            Self::Relays => "relays",
+            Self::Requires => "requires",
+            Self::RestrictedTo => "restricted-to",
+            Self::Scopes => "scopes",
+            Self::Semantic => "semantic",
+            Self::Signature => "signature",
+            Self::SourceApi => "source-api",
+            Self::UnknownKeys => "unknown-keys",
+            Self::UnknownQuery => "unknown-query",
+            Self::Upstream => "upstream",
+        }
     }
 }
 
@@ -101,7 +271,7 @@ const INPUT_SCHEMAS_VALUES: [InputSchemasOption; 2] =
 ///
 /// # Errors
 ///
-/// [`OpenApiError::NotPortedYet`] while a function it reaches is a stub.
+/// [`OpenApiError::Internal`] for a bug.
 pub fn parse_emitter_options(
     raw: Option<&JsonValue>,
 ) -> Result<ParsedEmitterOptions, OpenApiError> {

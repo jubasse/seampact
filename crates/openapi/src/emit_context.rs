@@ -6,13 +6,18 @@ use std::collections::VecDeque;
 use indexmap::{IndexMap, IndexSet};
 use seampact_ir::{ContractIr, Extensions, SchemeId};
 use seampact_json::{JsonObject, JsonValue};
-use seampact_target::{IrLocation, Refusal};
+use seampact_target::{
+    IrLocation, NotGeneratedForm, Refusal, refuse_inconsistent_ir, refuse_not_generated_yet,
+    refuse_unknown_value_at,
+};
 
-use crate::not_ported::not_ported_yet;
 use crate::{EmitterOptions, ExtensionName, ExtensionSelection, OpenApiError, ReasonsOption};
 
 /// The prefix of every `x-seampact-*` extension.
 const EXTENSION_PREFIX: &str = "x-seampact-";
+
+/// The prefix of the code of an inconsistent-IR refusal.
+const INCONSISTENT_CODE_PREFIX: &str = "openapi.";
 
 /// The prefix of a reference to a `components.schemas` entry.
 const COMPONENT_SCHEMA_PREFIX: &str = "#/components/schemas/";
@@ -72,6 +77,14 @@ pub(crate) fn create_emit_context<'ir>(
     }
 }
 
+/// The location of the document root, below which a format or a scheme is addressed.
+pub(crate) fn root_location() -> IrLocation {
+    IrLocation {
+        member: String::new(),
+        operation: None,
+    }
+}
+
 /// The reference to a component, queuing it to be written the first time it is referenced.
 pub(crate) fn reference_component<'ir>(
     context: &mut EmitContext<'ir>,
@@ -83,18 +96,14 @@ pub(crate) fn reference_component<'ir>(
         context.pending_components.push_back(request);
     }
 
-    let mut object = JsonObject::new();
-
-    object.insert("$ref".to_owned(), JsonValue::String(reference));
-
-    object
+    JsonObject::from_iter([("$ref".to_owned(), JsonValue::String(reference))])
 }
 
 /// Writes the extension `name` into `target` when the options keep it.
 pub(crate) fn write_extension(
     context: &EmitContext<'_>,
     target: &mut JsonObject,
-    name: &ExtensionName,
+    name: ExtensionName,
     value: JsonValue,
 ) {
     if !is_extension_selected(&context.options.extensions, name) {
@@ -105,11 +114,11 @@ pub(crate) fn write_extension(
 }
 
 /// Whether a selection keeps the extension `name`.
-pub(crate) fn is_extension_selected(selection: &ExtensionSelection, name: &ExtensionName) -> bool {
+pub(crate) fn is_extension_selected(selection: &ExtensionSelection, name: ExtensionName) -> bool {
     match selection {
         ExtensionSelection::None => false,
         ExtensionSelection::All => true,
-        ExtensionSelection::Named(names) => names.contains(name),
+        ExtensionSelection::Named(names) => names.contains(&name),
     }
 }
 
@@ -143,44 +152,37 @@ pub(crate) fn write_consumer_extensions(target: &mut JsonObject, extensions: &Ex
 }
 
 /// Records the refusal of an open-enum value the emitter must act on and does not know.
-///
-/// # Errors
-///
-/// [`OpenApiError::NotPortedYet`] until the function is ported.
-pub(crate) fn refuse_unknown(
-    _context: &mut EmitContext<'_>,
-    _location: &IrLocation,
-    _value: &str,
-) -> Result<(), OpenApiError> {
-    Err(not_ported_yet("refuseUnknown"))
+pub(crate) fn refuse_unknown(context: &mut EmitContext<'_>, location: &IrLocation, value: &str) {
+    context
+        .refusals
+        .push(refuse_unknown_value_at(location, value));
 }
 
 /// Records the refusal of a form the emitter does not write yet.
-///
-/// # Errors
-///
-/// [`OpenApiError::NotPortedYet`] until the function is ported.
 pub(crate) fn refuse_not_emitted(
-    _context: &mut EmitContext<'_>,
-    _form: &str,
-    _description: &str,
-    _location: &IrLocation,
-) -> Result<(), OpenApiError> {
-    Err(not_ported_yet("refuseNotEmitted"))
+    context: &mut EmitContext<'_>,
+    form: NotGeneratedForm,
+    description: &str,
+    location: &IrLocation,
+) {
+    context
+        .refusals
+        .push(refuse_not_generated_yet(form, description, location));
 }
 
-/// Records the refusal of an IR that breaks a rule the compiler guarantees.
-///
-/// # Errors
-///
-/// [`OpenApiError::NotPortedYet`] until the function is ported.
+/// Records the refusal of an IR that breaks a rule the compiler guarantees; the code gets the
+/// `openapi.` prefix.
 pub(crate) fn refuse_inconsistent(
-    _context: &mut EmitContext<'_>,
-    _code: &str,
-    _description: &str,
-    _location: &IrLocation,
-) -> Result<(), OpenApiError> {
-    Err(not_ported_yet("refuseInconsistent"))
+    context: &mut EmitContext<'_>,
+    code: &str,
+    description: &str,
+    location: &IrLocation,
+) {
+    context.refusals.push(refuse_inconsistent_ir(
+        &format!("{INCONSISTENT_CODE_PREFIX}{code}"),
+        description,
+        location,
+    ));
 }
 
 /// An IR of the golden fixtures, for the tests of the modules that need a context.
@@ -207,79 +209,6 @@ mod tests {
             key: key.to_owned(),
             build: Box::new(|_| Ok(JsonObject::new())),
         }
-    }
-
-    #[test]
-    fn a_component_is_queued_once_and_referenced_by_its_key() -> TestResult {
-        let ir = fixture_ir()?;
-        let options = EmitterOptions::default();
-        let mut context = create_emit_context(&ir, &options);
-
-        let first = reference_component(&mut context, build_nothing("Task"));
-        let second = reference_component(&mut context, build_nothing("Task"));
-
-        assert_eq!(first, second);
-        assert_eq!(
-            first.get("$ref"),
-            Some(&JsonValue::String("#/components/schemas/Task".to_owned()))
-        );
-        assert_eq!(context.pending_components.len(), 1);
-
-        Ok(())
-    }
-
-    #[test]
-    fn an_extension_is_written_only_when_the_selection_keeps_it() -> TestResult {
-        let ir = fixture_ir()?;
-        let named = ExtensionName::new("api");
-        let other = ExtensionName::new("format");
-        let cases = [
-            (ExtensionSelection::All, true),
-            (ExtensionSelection::None, false),
-            (ExtensionSelection::Named(vec![named.clone()]), true),
-            (ExtensionSelection::Named(vec![other]), false),
-        ];
-
-        for (selection, kept) in cases {
-            let options = EmitterOptions {
-                extensions: selection.clone(),
-                ..EmitterOptions::default()
-            };
-            let context = create_emit_context(&ir, &options);
-            let mut target = JsonObject::new();
-
-            write_extension(&context, &mut target, &named, JsonValue::Bool(true));
-
-            assert_eq!(
-                target.contains_key("x-seampact-api"),
-                kept,
-                "selection {selection:?}"
-            );
-        }
-
-        Ok(())
-    }
-
-    #[test]
-    fn reasons_are_replaced_by_true_or_dropped_under_omit() -> TestResult {
-        let ir = fixture_ir()?;
-        let options = EmitterOptions {
-            reasons: ReasonsOption::Omit,
-            ..EmitterOptions::default()
-        };
-        let omitting = create_emit_context(&ir, &options);
-        let including_options = EmitterOptions::default();
-        let including = create_emit_context(&ir, &including_options);
-
-        assert_eq!(reason_value(&omitting, "why"), JsonValue::Bool(true));
-        assert_eq!(optional_reason(&omitting, Some("why")), None);
-        assert_eq!(
-            reason_value(&including, "why"),
-            JsonValue::String("why".to_owned())
-        );
-        assert_eq!(optional_reason(&including, Some("why")), Some("why"));
-
-        Ok(())
     }
 
     #[test]

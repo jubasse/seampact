@@ -52,12 +52,12 @@ src/operation_marks.rs#write_unknown_query	packages/core/openapi/src/operation-m
 src/bodies.rs#body_media	packages/core/openapi/src/bodies.ts#bodyMedia
 src/documents.rs#unsupported_ir_refusals	packages/core/openapi/src/documents.ts#unsupportedIrRefusals
 src/documents.rs#servers_array	packages/core/openapi/src/documents.ts#serversArray	pending: brief 4
-src/documents.rs#method_rank	packages/core/openapi/src/documents.ts#methodRank	pending: brief 3
+src/documents.rs#method_rank	packages/core/openapi/src/documents.ts#methodRank
 src/documents.rs#operation_object	packages/core/openapi/src/documents.ts#operationObject	pending: brief 2
 -	packages/core/openapi/src/documents.ts#responsesObject	pending: brief 2
-src/emit_context.rs#refuse_unknown	packages/core/openapi/src/emit-context.ts#refuseUnknown	pending: brief 3
-src/emit_context.rs#refuse_not_emitted	packages/core/openapi/src/emit-context.ts#refuseNotEmitted	pending: brief 3
-src/emit_context.rs#refuse_inconsistent	packages/core/openapi/src/emit-context.ts#refuseInconsistent	pending: brief 3
+src/emit_context.rs#refuse_unknown	packages/core/openapi/src/emit-context.ts#refuseUnknown
+src/emit_context.rs#refuse_not_emitted	packages/core/openapi/src/emit-context.ts#refuseNotEmitted
+src/emit_context.rs#refuse_inconsistent	packages/core/openapi/src/emit-context.ts#refuseInconsistent
 src/emitter_options.rs#parse_extensions	packages/core/openapi/src/emitter-options.ts#parseExtensions	pending: brief 4
 src/emitter_options.rs#parse_choice	packages/core/openapi/src/emitter-options.ts#parseChoice	pending: brief 4
 src/emitter_options.rs#parse_servers	packages/core/openapi/src/emitter-options.ts#parseServers	pending: brief 4
@@ -139,9 +139,9 @@ src/errors.rs#error_code_component	packages/core/openapi/src/errors.ts#errorCode
 -	packages/core/openapi/src/rights.ts#writeOperationRights	pending: brief 3
 -	packages/core/openapi/src/rights.ts#scopeItem	pending: brief 3
 -	packages/core/openapi/src/rights.ts#requirementItem	pending: brief 3
--	packages/core/openapi/src/ir-text.ts#valueSourceText	pending: brief 3
-src/ir_text.rs#origin_key	packages/core/openapi/src/ir-text.ts#originKey	pending: brief 3
--	packages/core/openapi/src/ir-text.ts#derivedFromValue	pending: brief 3
+src/ir_text.rs#value_source_text	packages/core/openapi/src/ir-text.ts#valueSourceText
+src/ir_text.rs#origin_key	packages/core/openapi/src/ir-text.ts#originKey
+src/ir_text.rs#derived_from_value	packages/core/openapi/src/ir-text.ts#derivedFromValue
 -	packages/core/openapi/src/extension-names.ts#isExtensionName	pending: brief 4
 -	packages/core/openapi/src/extension-names.ts#extensionSchemaPath	pending: brief 4
 -	packages/core/openapi/src/merge/prefix-document.ts#isValidPrefix	pending: brief 4

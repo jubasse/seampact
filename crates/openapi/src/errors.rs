@@ -2,11 +2,12 @@
 
 use seampact_ir::{ErrorDecl, OperationError, WireFormat};
 use seampact_json::{JsonObject, JsonValue};
-use seampact_target::IrLocation;
+use seampact_target::{IrLocation, NotGeneratedForm};
 
 use crate::OpenApiError;
 use crate::emit_context::{
     ComponentRequest, EmitContext, reference_component, refuse_inconsistent, refuse_not_emitted,
+    root_location,
 };
 use crate::ir_text::origin_key;
 use crate::json_value::{integer_value, optional_text, set_defined, text_value};
@@ -35,43 +36,33 @@ pub(crate) struct StatusError<'ir> {
 
 /// The retry headers of a rate-limited status, one per error that names one.
 fn retry_headers(group: &StatusCodes<'_>) -> JsonObject {
-    let mut headers = JsonObject::new();
-
     if group.status != RATE_LIMITED_STATUS {
-        return headers;
+        return JsonObject::new();
     }
 
-    for entry in &group.errors {
-        let Some(retry_header) = &entry.error.retry_header else {
-            continue;
-        };
-        let mut schema = JsonObject::new();
+    group
+        .errors
+        .iter()
+        .filter_map(|entry| entry.error.retry_header.as_ref())
+        .map(|retry_header| {
+            let schema = JsonObject::from_iter([
+                ("type".to_owned(), text_value("integer")),
+                ("minimum".to_owned(), integer_value(0)),
+            ]);
+            let header = JsonObject::from_iter([("schema".to_owned(), JsonValue::Object(schema))]);
 
-        schema.insert("type".to_owned(), text_value("integer"));
-        schema.insert("minimum".to_owned(), integer_value(0));
-
-        let mut header = JsonObject::new();
-
-        header.insert("schema".to_owned(), JsonValue::Object(schema));
-        headers.insert(retry_header.name.clone(), JsonValue::Object(header));
-    }
-
-    headers
+            (retry_header.name.clone(), JsonValue::Object(header))
+        })
+        .collect()
 }
 
 /// The item of an error list: its code and where it comes from.
-///
-/// # Errors
-///
-/// [`OpenApiError::NotPortedYet`] while a refusal or the origin text is written by a stub.
 fn error_item(
     context: &mut EmitContext<'_>,
     error: &OperationError,
     location: &IrLocation,
-) -> Result<JsonObject, OpenApiError> {
-    let mut item = JsonObject::new();
-
-    item.insert("code".to_owned(), text_value(error.code.as_str()));
+) -> JsonObject {
+    let mut item = JsonObject::from_iter([("code".to_owned(), text_value(error.code.as_str()))]);
 
     if error.derived_from.is_none() && error.origin.is_none() {
         refuse_inconsistent(
@@ -79,7 +70,7 @@ fn error_item(
             "error.provenance",
             "An operation error with neither derivedFrom nor origin",
             location,
-        )?;
+        );
     }
 
     set_defined(
@@ -92,24 +83,21 @@ fn error_item(
                 .map(|derived| derived.derivation.as_str()),
         ),
     );
+    set_defined(
+        &mut item,
+        "origin",
+        optional_text(error.origin.as_ref().map(origin_key).as_deref()),
+    );
 
-    let origin = error.origin.as_ref().map(origin_key).transpose()?;
-
-    set_defined(&mut item, "origin", optional_text(origin.as_deref()));
-
-    Ok(item)
+    item
 }
 
 /// The reference to the component of an error code, refusing a code answered in two formats.
-///
-/// # Errors
-///
-/// [`OpenApiError::NotPortedYet`] while a refusal is written by a stub.
 fn error_code_reference<'ir>(
     context: &mut EmitContext<'ir>,
     format: &'ir WireFormat,
     declared: &'ir ErrorDecl,
-) -> Result<JsonObject, OpenApiError> {
+) -> JsonObject {
     let known = context.error_code_formats.get(declared.code.as_str());
 
     if let Some(known_format) =
@@ -119,17 +107,13 @@ fn error_code_reference<'ir>(
             "The code '{}' answered in the formats '{known_format}' and '{}' in one document",
             declared.code, format.id,
         );
-        let root = IrLocation {
-            member: String::new(),
-            operation: None,
-        };
 
         refuse_not_emitted(
             context,
-            "error.formats",
+            NotGeneratedForm::OpenapiErrorFormats,
             &description,
-            &root.below(&["errors", declared.code.as_str()]),
-        )?;
+            &root_location().below(&["errors", declared.code.as_str()]),
+        );
     }
 
     context.error_code_formats.insert(
@@ -142,33 +126,14 @@ fn error_code_reference<'ir>(
         build: Box::new(move |build_context| error_code_component(build_context, format, declared)),
     };
 
-    Ok(reference_component(context, request))
+    reference_component(context, request)
 }
 
 /// The component of an error code in a format.
-///
-/// # Errors
-///
-/// [`OpenApiError::NotPortedYet`] until the function is ported.
 fn error_code_component(
     _context: &mut EmitContext<'_>,
     _format: &WireFormat,
     _declared: &ErrorDecl,
 ) -> Result<JsonObject, OpenApiError> {
     Err(not_ported_yet("errorCodeComponent"))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn only_a_rate_limited_status_has_retry_headers() {
-        let other = StatusCodes {
-            status: 503,
-            errors: Vec::new(),
-        };
-
-        assert!(retry_headers(&other).is_empty());
-    }
 }

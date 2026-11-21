@@ -46,7 +46,7 @@ pub enum MergeOutcome {
 ///
 /// # Errors
 ///
-/// [`OpenApiError::NotPortedYet`] while a function it reaches is a stub.
+/// [`OpenApiError::Internal`] for a bug.
 pub fn merge_documents(
     inputs: &[MergeInput],
     options: &MergeOptions,

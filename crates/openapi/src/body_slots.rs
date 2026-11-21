@@ -1,7 +1,7 @@
 //! What a body slot holds: the shape an operation answers, the resource, the url schema.
 
 use seampact_ir::{KnownSchemaRef, TypeUse, UrlForm};
-use seampact_json::{JsonObject, JsonValue};
+use seampact_json::JsonObject;
 
 use crate::emit_context::EmitContext;
 use crate::json_value::text_value;
@@ -37,12 +37,10 @@ pub(crate) fn url_schema(context: &EmitContext<'_>) -> JsonObject {
     } else {
         "uri-reference"
     };
-    let mut schema = JsonObject::new();
-
-    schema.insert("type".to_owned(), text_value("string"));
-    schema.insert("format".to_owned(), JsonValue::String(format.to_owned()));
-
-    schema
+    JsonObject::from_iter([
+        ("type".to_owned(), text_value("string")),
+        ("format".to_owned(), text_value(format)),
+    ])
 }
 
 /// The resource an item type names: its object schema's type name, else the schema id.

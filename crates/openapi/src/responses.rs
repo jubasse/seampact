@@ -50,31 +50,23 @@ fn response_description(response: &Response) -> &str {
 
 /// The schema of a response body of a shape, around the schema of its payload.
 fn payload_schema_of(shape: PayloadShape, payload: JsonObject) -> JsonObject {
-    let mut schema = JsonObject::new();
-
     match shape {
-        PayloadShape::Table => {
-            schema.insert("type".to_owned(), text_value("object"));
-            schema.insert(
+        PayloadShape::Table => JsonObject::from_iter([
+            ("type".to_owned(), text_value("object")),
+            (
                 "additionalProperties".to_owned(),
                 JsonValue::Object(payload),
-            );
-        }
-        PayloadShape::List => {
-            schema.insert("type".to_owned(), text_value("array"));
-            schema.insert("items".to_owned(), JsonValue::Object(payload));
-        }
-        PayloadShape::Item => return payload,
+            ),
+        ]),
+        PayloadShape::List => JsonObject::from_iter([
+            ("type".to_owned(), text_value("array")),
+            ("items".to_owned(), JsonValue::Object(payload)),
+        ]),
+        PayloadShape::Item => payload,
     }
-
-    schema
 }
 
 /// The response object of a success status.
-///
-/// # Errors
-///
-/// [`OpenApiError::NotPortedYet`] while the headers or the body are written by a stub.
 fn success_response(
     context: &mut EmitContext<'_>,
     operation: &Operation,
@@ -82,13 +74,10 @@ fn success_response(
     response: &Response,
     location: &IrLocation,
 ) -> Result<JsonObject, OpenApiError> {
-    let mut response_object = JsonObject::new();
-
-    response_object.insert(
+    let mut response_object = JsonObject::from_iter([(
         "description".to_owned(),
         text_value(response_description(response)),
-    );
-
+    )]);
     let headers = response_headers(context, operation, response, location)?;
 
     if !headers.is_empty() {
@@ -98,11 +87,10 @@ fn success_response(
     let body = response_body_schema(context, operation, format, response, location)?;
 
     if let (Some(schema), Some(media_type)) = (body, &response.media) {
-        let mut media_entry = JsonObject::new();
-        let mut body_content = JsonObject::new();
+        let media_entry = JsonObject::from_iter([("schema".to_owned(), JsonValue::Object(schema))]);
+        let body_content =
+            JsonObject::from_iter([(media_type.clone(), JsonValue::Object(media_entry))]);
 
-        media_entry.insert("schema".to_owned(), JsonValue::Object(schema));
-        body_content.insert(media_type.clone(), JsonValue::Object(media_entry));
         response_object.insert("content".to_owned(), JsonValue::Object(body_content));
     }
 
@@ -110,10 +98,6 @@ fn success_response(
 }
 
 /// The schema of a response body, or `None` for an empty or redirect response.
-///
-/// # Errors
-///
-/// [`OpenApiError::NotPortedYet`] until the function is ported.
 fn response_body_schema(
     _context: &mut EmitContext<'_>,
     _operation: &Operation,
@@ -125,10 +109,6 @@ fn response_body_schema(
 }
 
 /// The headers of a response.
-///
-/// # Errors
-///
-/// [`OpenApiError::NotPortedYet`] until the function is ported.
 fn response_headers(
     _context: &mut EmitContext<'_>,
     _operation: &Operation,
