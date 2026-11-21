@@ -53,6 +53,7 @@ fn value_yaml(value: &JsonValue) -> Yaml<'static> {
 
 #[cfg(test)]
 mod tests {
+    use proptest::prelude::*;
     use saphyr::LoadableYamlNode;
 
     use super::*;
@@ -124,5 +125,40 @@ mod tests {
         );
 
         Ok(())
+    }
+
+    fn json_values() -> impl Strategy<Value = serde_json::Value> {
+        let leaf = prop_oneof![
+            Just(serde_json::Value::Null),
+            any::<bool>().prop_map(serde_json::Value::Bool),
+            any::<i64>().prop_map(serde_json::Value::from),
+            any::<String>().prop_map(serde_json::Value::String),
+        ];
+
+        leaf.prop_recursive(3, 24, 4, |inner| {
+            prop_oneof![
+                prop::collection::vec(inner.clone(), 0..4).prop_map(serde_json::Value::Array),
+                prop::collection::hash_map(any::<String>(), inner, 0..4)
+                    .prop_map(|members| serde_json::Value::Object(members.into_iter().collect())),
+            ]
+        })
+    }
+
+    proptest! {
+        #[test]
+        fn any_document_is_written_and_read_back_as_the_same_value(
+            members in prop::collection::hash_map(any::<String>(), json_values(), 0..5),
+        ) {
+            let expected = serde_json::Value::Object(members.into_iter().collect());
+            let document = match JsonValue::try_from(expected.clone()) {
+                Ok(JsonValue::Object(object)) => object,
+                other => return Err(TestCaseError::fail(format!("not an object: {other:?}"))),
+            };
+            let text = serialize_document(&document)
+                .map_err(|error| TestCaseError::fail(error.to_string()))?;
+            let read = seampact_oracle::yaml_to_json(&text).map_err(TestCaseError::fail)?;
+
+            prop_assert_eq!(read, expected, "text {:?}", text);
+        }
     }
 }
