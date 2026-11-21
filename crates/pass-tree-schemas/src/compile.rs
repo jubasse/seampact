@@ -5,6 +5,7 @@
 
 use indexmap::{IndexMap, IndexSet};
 use std::collections::{HashMap, HashSet};
+use std::mem;
 
 use seampact_diagnostics::InternalError;
 use seampact_ir::Name as IrName;
@@ -742,6 +743,8 @@ pub(crate) struct TreeSchemasCompiler<'raw, 'half, 'run> {
     catalogue: Option<&'raw JsonValue>,
     enums: Option<&'raw JsonValue>,
     declared: IndexMap<String, DeclaredEntry>,
+    /// The target each alias outside a cycle reaches, found once.
+    declared_targets: HashMap<String, DeclaredTarget<'raw>>,
     /// The schema holding each id and each identifier (by its words): every declared schema, then
     /// each hoisted one. Both are checked: `AB` declared gives the words `ab`, the hoisted `A.b`
     /// gives `a b`, and both have the id `AB`.
@@ -796,6 +799,7 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
             catalogue,
             enums: merged.get("enums"),
             declared: IndexMap::new(),
+            declared_targets: HashMap::new(),
             claims,
             declared_claims,
             refused_reserved: HashSet::new(),
@@ -1511,7 +1515,7 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
         name: &str,
         position: &TreeSchemasPosition,
     ) -> Result<Option<TreeSchemasCompiled>, PassError> {
-        let Some(target) = self.declared_target(name, &mut HashSet::new())? else {
+        let Some(target) = self.declared_target(name)? else {
             self.reporter.error(TreeSchemasProblem {
                 rule: TreeSchemasRule::SchemaUnknown,
                 pointer: position.pointer.clone(),
@@ -1564,58 +1568,112 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
             .push(pointer.to_owned());
     }
 
-    fn declared_target(
-        &self,
-        name: &str,
-        seen: &mut HashSet<String>,
-    ) -> Result<Option<DeclaredTarget<'raw>>, PassError> {
-        let Some(value) = tree_schemas_member(self.catalogue, name) else {
-            return self.seeded_core_target(name);
-        };
-        let alias = match value {
+    /// A declared name followed through plain references, walked once with a list so a long chain
+    /// cannot overflow the stack; each name outside a cycle is remembered.
+    fn declared_target(&mut self, name: &str) -> Result<Option<DeclaredTarget<'raw>>, PassError> {
+        let mut chain: Vec<(String, &'raw JsonValue)> = Vec::new();
+        let mut index_on_chain: HashMap<String, usize> = HashMap::new();
+        let mut current = name.to_owned();
+        let mut cycle_start: Option<usize> = None;
+        let end: Option<DeclaredTarget<'raw>>;
+
+        loop {
+            if let Some(remembered) = self.declared_targets.get(&current) {
+                end = Some(remembered.clone());
+
+                break;
+            }
+
+            let Some(value) = tree_schemas_member(self.catalogue, &current) else {
+                end = self.seeded_core_target(&current)?;
+
+                break;
+            };
+            let Some(alias) = Self::alias_of(value) else {
+                end = Some(Self::plain_target(&current, value));
+
+                break;
+            };
+
+            if let Some(seen_at) = index_on_chain.get(&current) {
+                end = Some(Self::plain_target(&current, value));
+                cycle_start = Some(*seen_at);
+
+                break;
+            }
+
+            index_on_chain.insert(current.clone(), chain.len());
+            chain.push((mem::replace(&mut current, alias.to_owned()), value));
+        }
+
+        let remembered_until = cycle_start.unwrap_or(chain.len());
+        let mut target = end;
+
+        for (index, (alias, value)) in chain.into_iter().enumerate().rev() {
+            let resolved = Self::alias_target(&alias, value, target);
+
+            if index < remembered_until {
+                self.declared_targets.insert(alias, resolved.clone());
+            }
+
+            target = Some(resolved);
+        }
+
+        Ok(target)
+    }
+
+    /// The name a declaration only repeats: a bare string, or the `$ref` of an object.
+    fn alias_of(value: &'raw JsonValue) -> Option<&'raw str> {
+        match value {
             JsonValue::String(text) => Some(text.as_str()),
             _ => match tree_schemas_member(Some(value), "$ref") {
                 Some(JsonValue::String(text)) => Some(text.as_str()),
                 _ => None,
             },
-        };
-        let writes_unknown_keys = match value {
+        }
+    }
+
+    fn writes_unknown_keys(value: &JsonValue) -> bool {
+        match value {
             JsonValue::Object(object) => has(object, "unknownKeys"),
             _ => false,
+        }
+    }
+
+    /// An alias over the target it reaches; the alias alone when that target is not declared.
+    fn alias_target(
+        name: &str,
+        value: &'raw JsonValue,
+        target: Option<DeclaredTarget<'raw>>,
+    ) -> DeclaredTarget<'raw> {
+        let Some(target) = target else {
+            return DeclaredTarget {
+                id: name.to_owned(),
+                kind: None,
+                value: Some(value),
+                nullable: false,
+                keys_from: None,
+            };
+        };
+        let nullable = target.nullable
+            || matches!(
+                tree_schemas_member(Some(value), "nullable"),
+                Some(JsonValue::Bool(true))
+            );
+        let keys_from = if Self::writes_unknown_keys(value) {
+            Some(name.to_owned())
+        } else {
+            target.keys_from
         };
 
-        if let Some(alias) = alias
-            && !seen.contains(name)
-        {
-            seen.insert(name.to_owned());
-
-            let Some(target) = self.declared_target(alias, seen)? else {
-                return Ok(Some(DeclaredTarget {
-                    id: name.to_owned(),
-                    kind: None,
-                    value: Some(value),
-                    nullable: false,
-                    keys_from: None,
-                }));
-            };
-            let nullable = target.nullable
-                || matches!(
-                    tree_schemas_member(Some(value), "nullable"),
-                    Some(JsonValue::Bool(true))
-                );
-            let keys_from = if writes_unknown_keys {
-                Some(name.to_owned())
-            } else {
-                target.keys_from
-            };
-
-            return Ok(Some(DeclaredTarget {
-                nullable,
-                keys_from,
-                ..target
-            }));
+        DeclaredTarget {
+            nullable,
+            keys_from,
+            ..target
         }
+    }
 
+    fn plain_target(name: &str, value: &'raw JsonValue) -> DeclaredTarget<'raw> {
         let shape = match value {
             JsonValue::Object(object) => tree_schemas_shape_of(object),
             _ => None,
@@ -1627,13 +1685,13 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
             _ => None,
         };
 
-        Ok(Some(DeclaredTarget {
+        DeclaredTarget {
             id: name.to_owned(),
             kind,
             value: Some(value),
             nullable: false,
-            keys_from: writes_unknown_keys.then(|| name.to_owned()),
-        }))
+            keys_from: Self::writes_unknown_keys(value).then(|| name.to_owned()),
+        }
     }
 
     fn seeded_core_target(&self, name: &str) -> Result<Option<DeclaredTarget<'raw>>, PassError> {
@@ -1783,7 +1841,7 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
         Ok(false)
     }
 
-    fn kind_of(&self, id: &str) -> Result<Option<NamedKind>, PassError> {
+    fn kind_of(&mut self, id: &str) -> Result<Option<NamedKind>, PassError> {
         if let Some(schema) = self.schemas.get(id) {
             let kind = match KnownSchemaRef::try_from(schema)? {
                 KnownSchemaRef::Object(_) => NamedKind::Object,
@@ -1794,9 +1852,7 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
             return Ok(Some(kind));
         }
 
-        Ok(self
-            .declared_target(id, &mut HashSet::new())?
-            .and_then(|target| target.kind))
+        Ok(self.declared_target(id)?.and_then(|target| target.kind))
     }
 
     fn id_of(position: &TreeSchemasPosition) -> Result<String, PassError> {
@@ -3022,7 +3078,7 @@ impl<'raw, 'half, 'run> TreeSchemasCompiler<'raw, 'half, 'run> {
         pointer: &str,
         holder: PropertyHolder,
     ) -> Result<Option<Vec<Property>>, PassError> {
-        let Some(target) = self.declared_target(name, &mut HashSet::new())? else {
+        let Some(target) = self.declared_target(name)? else {
             self.reporter.error(TreeSchemasProblem {
                 rule: TreeSchemasRule::SchemaUnknown,
                 pointer: pointer.to_owned(),

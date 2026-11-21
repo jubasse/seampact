@@ -2,6 +2,9 @@
 //! escaping, the reporter over a fake context, and the text the pattern and extension key
 //! functions read by code point.
 
+use std::thread;
+use std::time::{Duration, Instant};
+
 use indexmap::IndexMap;
 use num_bigint::BigInt;
 use seampact_ir::{Direction, ExtensionKey, ExtensionPrefix, Schema, TypeUse};
@@ -10,7 +13,7 @@ use seampact_pipeline::testing::{HalfFixture, raw_api_from_json};
 
 use crate::compile::TreeSchemasCompiler;
 use crate::decimal::{TreeSchemasDecimal, TreeSchemasDecimalSource, tree_schemas_decimal_of};
-use crate::directions::{DirectionHolder, directions_at, within};
+use crate::directions::{DirectionHolder, directions_at, tree_schemas_write_directions, within};
 use crate::example_check::TreeSchemasExampleChecker;
 use crate::extensions::{
     extension_key_parts, tree_schemas_extension_slot, tree_schemas_has_extensions,
@@ -381,5 +384,90 @@ fn a_pattern_is_normalised_by_code_point_and_refused_with_its_fix() {
     assert_eq!(
         message,
         "the pattern is not portable: '*' has nothing to repeat"
+    );
+}
+
+const CHAIN_LINKS: usize = 100_000;
+const SMALL_STACK_BYTES: usize = 2 * 1024 * 1024;
+const CHAIN_BUDGET: Duration = Duration::from_secs(5);
+
+/// Runs `work` on a thread with a 2 MiB stack, as a host thread may have, and returns its answer.
+fn on_small_stack<T: Send + 'static>(work: impl FnOnce() -> T + Send + 'static) -> T {
+    thread::Builder::new()
+        .stack_size(SMALL_STACK_BYTES)
+        .spawn(work)
+        .expect("thread")
+        .join()
+        .expect("the walk ended without overflowing the stack")
+}
+
+#[test]
+fn a_long_alias_chain_reaches_its_object_without_overflowing_the_stack() {
+    let (schemas, messages, elapsed) = on_small_stack(|| {
+        let aliases: Vec<String> = (0..CHAIN_LINKS)
+            .map(|index| format!(r#""A{index}":"A{}""#, index + 1))
+            .collect();
+        let text = format!(
+            r#"{{"schemas":{{"A{CHAIN_LINKS}":{{"type":"object","properties":{{"last":{{"type":"string"}}}}}},{},"Holder":{{"type":"object","properties":{{"first":"A0"}}}}}}}}"#,
+            aliases.join(",")
+        );
+        let started = Instant::now();
+        let (schemas, _, messages) = compiled_catalogue(&text);
+
+        (schemas, messages, started.elapsed())
+    });
+
+    assert_eq!(messages, Vec::<String>::new());
+    assert!(schemas.contains_key("Holder"));
+    assert!(elapsed < CHAIN_BUDGET, "alias chain took {elapsed:?}");
+}
+
+#[test]
+fn a_long_object_chain_gives_its_directions_to_every_link() {
+    let (last_directions, elapsed) = on_small_stack(|| {
+        let links: Vec<String> = (0..CHAIN_LINKS)
+            .map(|index| {
+                format!(
+                    r#""N{index}":{{"type":"object","properties":{{"next":"N{}"}}}}"#,
+                    index + 1
+                )
+            })
+            .collect();
+        let text = format!(
+            r#"{{"schemas":{{{},"N{CHAIN_LINKS}":{{"type":"object","properties":{{"last":{{"type":"string"}}}}}}}}}}"#,
+            links.join(",")
+        );
+        let mut fixture = HalfFixture::from_json(&text).expect("fixture");
+        fixture
+            .with_context(|context| {
+                let merged = &context.raw.merged;
+                let mut compiler =
+                    TreeSchemasCompiler::new(merged, TreeSchemasReporter::new(context))
+                        .expect("compiler");
+
+                compiler.compile_catalogue().expect("catalogue");
+                compiler
+                    .position_directions
+                    .insert("/schemas/N0".to_owned(), vec![Direction::Input]);
+
+                let started = Instant::now();
+
+                tree_schemas_write_directions(&mut compiler, &mut [], &mut [], &[])
+                    .expect("directions");
+
+                let directions = match compiler.schemas.get(&format!("N{CHAIN_LINKS}")) {
+                    Some(Schema::Object(object)) => object.directions.clone(),
+                    other => panic!("the last link expected, got {other:?}"),
+                };
+
+                (directions, started.elapsed())
+            })
+            .expect("context")
+    });
+
+    assert_eq!(last_directions, [Direction::Input]);
+    assert!(
+        elapsed < CHAIN_BUDGET,
+        "the directions walk took {elapsed:?}"
     );
 }

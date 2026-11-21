@@ -58,14 +58,33 @@ fn add_direction(directions: &mut Vec<Direction>, direction: Direction) -> bool 
     true
 }
 
+/// Follows a use with an explicit worklist: a long reference chain must not grow the call stack.
 fn reach(
     use_: &TypeUse,
     direction: &Direction,
     targets: &mut DirectionTargets<'_>,
 ) -> Result<(), PassError> {
+    let mut pending = vec![Reached::Use(Box::new(use_.clone()))];
+
+    while let Some(item) = pending.pop() {
+        match item {
+            Reached::Use(schema_use) => reach_use(&schema_use, direction, targets, &mut pending)?,
+            Reached::Schema(id) => reach_schema(&id, direction, targets, &mut pending)?,
+        }
+    }
+
+    Ok(())
+}
+
+fn reach_use(
+    use_: &TypeUse,
+    direction: &Direction,
+    targets: &mut DirectionTargets<'_>,
+    pending: &mut Vec<Reached>,
+) -> Result<(), PassError> {
     match KnownTypeUseRef::try_from(use_)? {
         KnownTypeUseRef::Ref(reference) => {
-            reach_schema(reference.schema.as_str(), direction, targets)
+            pending.push(Reached::Schema(reference.schema.as_str().to_owned()));
         }
         KnownTypeUseRef::Enum(enum_use) => {
             let declared = targets
@@ -76,10 +95,10 @@ fn reach(
             if let Some(declared) = declared {
                 add_direction(&mut declared.directions, direction.clone());
             }
-
-            Ok(())
         }
-        KnownTypeUseRef::Array(array) => reach(&array.items, direction, targets),
+        KnownTypeUseRef::Array(array) => {
+            pending.push(Reached::Use(array.items.clone()));
+        }
         KnownTypeUseRef::Scalar(scalar) => {
             let named = scalar
                 .scalar
@@ -91,19 +110,21 @@ fn reach(
                 add_direction(&mut named.directions, direction.clone());
             }
 
-            match &scalar.content {
-                Some(content) => reach(&content.schema, direction, targets),
-                None => Ok(()),
+            if let Some(content) = &scalar.content {
+                pending.push(Reached::Use(content.schema.clone()));
             }
         }
-        KnownTypeUseRef::File(_) | KnownTypeUseRef::Opaque(_) => Ok(()),
+        KnownTypeUseRef::File(_) | KnownTypeUseRef::Opaque(_) => {}
     }
+
+    Ok(())
 }
 
 fn reach_schema(
     id: &str,
     direction: &Direction,
     targets: &mut DirectionTargets<'_>,
+    pending: &mut Vec<Reached>,
 ) -> Result<(), PassError> {
     let Some(schema) = targets.schemas.get_mut(id) else {
         return Ok(());
@@ -113,12 +134,7 @@ fn reach_schema(
         return Ok(());
     }
 
-    for reached in reached_by(schema)? {
-        match reached {
-            Reached::Use(schema_use) => reach(&schema_use, direction, targets)?,
-            Reached::Schema(variant) => reach_schema(&variant, direction, targets)?,
-        }
-    }
+    pending.extend(reached_by(schema)?);
 
     Ok(())
 }
