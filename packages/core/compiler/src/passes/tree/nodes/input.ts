@@ -248,32 +248,67 @@ function filesBelow(
 ): NestedFile[] {
   const found: NestedFile[] = [];
   const visited = new Set<string>();
+  // An explicit stack, so a long chain of schemas cannot overflow the call stack; children are pushed in reverse
+  // to come off in the order a recursive walk would meet them.
+  const pending: FileWalkStep[] = [{ use, path: "", origin: useOrigin }];
 
-  const visit = (at: IrWriter.TypeUse, atPath: string, origin: Origin | undefined): void => {
-    if (at.kind === "file") found.push({ path: atPath, origin });
-    else if (at.kind === "array") visit(at.items, atPath, origin);
-    else if (at.kind === "ref") visitSchema(at.schema, atPath);
-    else if (at.kind === "scalar" && at.content !== undefined)
-      visit(at.content.schema, atPath, origin);
-  };
+  for (let next = pending.pop(); next !== undefined; next = pending.pop()) {
+    if ("schemaId" in next) {
+      if (visited.has(next.schemaId)) continue;
+      visited.add(next.schemaId);
+      pending.push(...schemaSteps(next, draft).toReversed());
 
-  const visitSchema = (id: string, atPath: string): void => {
-    if (visited.has(id)) return;
-    visited.add(id);
-    const schema = treeNodesDraftSchema(draft, id);
+      continue;
+    }
 
-    if (schema.kind === "object")
-      for (const property of schema.properties)
-        visit(property.type, joinPath(atPath, property.name), property.origin);
-    else if (schema.kind === "map") visit(schema.values, atPath, schema.origin);
-    else
-      for (const variant of schema.variants)
-        visitSchema(variant.schema, joinPath(atPath, variant.tag));
-  };
-
-  visit(use, "", useOrigin);
+    if (next.use.kind === "file") found.push({ path: next.path, origin: next.origin });
+    else pending.push(...useSteps(next).toReversed());
+  }
 
   return found;
+}
+
+// A use to walk, or a schema to walk, each at its path below the use `filesBelow` started from.
+interface FileWalkUse {
+  readonly use: IrWriter.TypeUse;
+  readonly path: string;
+  readonly origin: Origin | undefined;
+}
+
+interface FileWalkSchema {
+  readonly schemaId: string;
+  readonly path: string;
+}
+
+type FileWalkStep = FileWalkUse | FileWalkSchema;
+
+function useSteps({ use, path, origin }: FileWalkUse): FileWalkStep[] {
+  if (use.kind === "array") return [{ use: use.items, path, origin }];
+
+  if (use.kind === "ref") return [{ schemaId: use.schema, path }];
+
+  if (use.kind === "scalar" && use.content !== undefined)
+    return [{ use: use.content.schema, path, origin }];
+
+  return [];
+}
+
+function schemaSteps({ schemaId, path }: FileWalkSchema, draft: DraftIR): FileWalkStep[] {
+  const schema = treeNodesDraftSchema(draft, schemaId);
+
+  if (schema.kind === "object")
+    return schema.properties.map((property) => ({
+      use: property.type,
+      path: joinPath(path, property.name),
+      origin: property.origin,
+    }));
+
+  if (schema.kind === "map") return [{ use: schema.values, path, origin: schema.origin }];
+
+  return schema.variants.map((variant) => ({
+    schemaId: variant.schema,
+    path: joinPath(path, variant.tag),
+  }));
 }
 
 const joinPath = (path: string, member: string): string =>
