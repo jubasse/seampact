@@ -128,6 +128,19 @@ describe("examples parsed", () => {
   });
 });
 
+describe("an example never runs a pattern that backtracks", () => {
+  test("a polynomial pattern is refused before its example is matched", () => {
+    const run = treeSchemasRunApi(`schemas:
+  Sample:
+    type: object
+    properties:
+      code: { type: string, pattern: '^a*a*a*a*a*a*a*a*a*a*a*a*a*a*b$', examples: [${"a".repeat(40)}] }
+`);
+
+    expect(located(run)).toEqual([["pattern", "/schemas/Sample/properties/code/pattern"]]);
+  });
+});
+
 describe("examples parsed, by shape", () => {
   const run = treeSchemasRunApi(`schemas:
   Push: { type: object, properties: { ref: { type: string } }, required: [ref] }
