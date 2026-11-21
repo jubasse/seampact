@@ -8,8 +8,8 @@ use seampact_ir::{
     QueryWire, QueryWireKind, TypeUse,
 };
 use seampact_json::JsonValue;
-use seampact_pipeline::PassError;
-use seampact_pipeline::testing::FakeSchemaService;
+use seampact_pipeline::testing::{FakeSchemaService, HalfFixture};
+use seampact_pipeline::{DraftIr, PassError};
 
 use crate::api::{
     is_literal_version_segment, leading_slash, literal_number, one_of, resolve_prefix, text_of,
@@ -192,4 +192,62 @@ fn a_header_placement_lowercases_the_sent_name_and_a_query_keeps_it() {
         sent_key(&PagingParamPlacement::Query, "Page"),
         r#"["query","Page"]"#
     );
+}
+
+const OUTPUT_TYPE_USE: &str = r#"{"kind":"ref","schema":"Note"}"#;
+
+fn internal_fault_message(
+    api: &str,
+    schemas: &FakeSchemaService,
+) -> Result<String, Box<dyn Error>> {
+    let mut fixture = HalfFixture::from_json(api)?;
+    let draft = DraftIr::new();
+    let outcome = fixture.with_context(|context| crate::run(&draft, context, schemas))?;
+
+    match outcome {
+        Err(PassError::Internal(error)) => Ok(error.what().to_owned()),
+        other => Err(format!("an internal fault expected, got {other:?}").into()),
+    }
+}
+
+#[test]
+fn a_meta_schema_the_service_does_not_answer_is_an_internal_fault() -> Result<(), Box<dyn Error>> {
+    let api = r#"{
+      "api": {"name": "a", "version": 1, "kind": "product"},
+      "formats": {"house": {"meta": {"region": {"fill": "handler", "schema": {"type": "string"}}}}},
+      "surfaces": {"app": {"prefix": "/v{version}", "routes": {
+        "health": {"method": "get", "output": "Note", "format": "house"}}}}
+    }"#;
+    let schemas = FakeSchemaService::new().with_type_use(
+        "/surfaces/app/routes/health/output",
+        type_use(OUTPUT_TYPE_USE)?,
+    );
+
+    assert_eq!(
+        internal_fault_message(api, &schemas)?,
+        "the schema service answers no output type at /formats/house/meta/region/schema"
+    );
+
+    Ok(())
+}
+
+#[test]
+fn an_input_referring_to_a_schema_the_draft_lacks_is_an_internal_fault()
+-> Result<(), Box<dyn Error>> {
+    let api = r#"{
+      "api": {"name": "a", "version": 1, "kind": "product"},
+      "surfaces": {"app": {"prefix": "/v{version}", "routes": {
+        "upload": {"method": "post", "input": {"title": {"type": "string"}}}}}}
+    }"#;
+    let schemas = FakeSchemaService::new().with_type_use(
+        "/surfaces/app/routes/upload/input",
+        type_use(r#"{"kind":"ref","schema":"Missing"}"#)?,
+    );
+
+    assert_eq!(
+        internal_fault_message(api, &schemas)?,
+        "the draft holds no schema Missing, which a use refers to"
+    );
+
+    Ok(())
 }

@@ -14,7 +14,7 @@ use camino::Utf8PathBuf;
 use indexmap::IndexMap;
 use seampact_authoring::RawWorkspace;
 use seampact_diagnostics::DiagnosticSink;
-use seampact_ir::{Direction, Layer, Origin, QueryWire, Schema, SchemaId, TypeUse};
+use seampact_ir::{Direction, Layer, Origin, Schema, SchemaId, TypeUse};
 use seampact_json::JsonValue;
 use seampact_pass_tree_shared::{
     TREE_NODES_MATURITIES, TREE_NODES_OPERATION_KIND, tree_nodes_answered_use,
@@ -22,9 +22,9 @@ use seampact_pass_tree_shared::{
     tree_nodes_relay_origin, tree_nodes_schema, tree_nodes_setting, tree_nodes_tag_header,
     tree_nodes_text, tree_nodes_written_convention,
 };
+use seampact_pipeline::testing::FakeSchemaService;
 use seampact_pipeline::{
-    DraftIr, HalfContext, Inherited, PassError, TreeSchemaExampleIssue, TreeSchemaService,
-    pipeline_conventions, pipeline_tree_nodes,
+    DraftIr, HalfContext, Inherited, pipeline_conventions, pipeline_tree_nodes,
 };
 use support::api_of;
 
@@ -268,46 +268,10 @@ surfaces:
     assert!(tree_nodes_origin_at(&context, "").is_err());
 }
 
-struct StubService {
-    answer: Option<TypeUse>,
-}
-
-impl TreeSchemaService for StubService {
-    fn type_use(
-        &self,
-        _pointer: &str,
-        _direction: Direction,
-    ) -> Result<Option<TypeUse>, PassError> {
-        Ok(self.answer.clone())
-    }
-
-    fn query_wire(&self, _pointer: &str) -> Result<Option<QueryWire>, PassError> {
-        Ok(None)
-    }
-
-    fn check_example(
-        &self,
-        _value: &JsonValue,
-        _schema_use: &TypeUse,
-    ) -> Result<Vec<TreeSchemaExampleIssue>, PassError> {
-        Ok(Vec::new())
-    }
-
-    fn check_text_example(
-        &self,
-        _text: &str,
-        _schema_use: &TypeUse,
-    ) -> Result<Vec<TreeSchemaExampleIssue>, PassError> {
-        Ok(Vec::new())
-    }
-}
-
 #[test]
 fn an_answered_use_is_the_services_or_an_internal_error() {
-    let answering = StubService {
-        answer: Some(reference("Task")),
-    };
-    let silent = StubService { answer: None };
+    let answering = FakeSchemaService::new().with_type_use("/p", reference("Task"));
+    let silent = FakeSchemaService::new();
 
     assert_eq!(
         tree_nodes_answered_use(&answering, "/p", &Direction::Input).expect("an answer"),

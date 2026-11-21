@@ -60,63 +60,6 @@ pub(crate) enum TreeSchemasRule {
 }
 
 impl TreeSchemasRule {
-    /// Every rule, in the order `RULE_IDS` lists them.
-    #[cfg(test)]
-    pub(crate) const ALL: &'static [Self] = &[
-        Self::AllOfMember,
-        Self::AllOfProperty,
-        Self::AnnotationPosition,
-        Self::BatchIds,
-        Self::ConcurrencyField,
-        Self::ConcurrencyVersion,
-        Self::DerivedField,
-        Self::DerivedOverlay,
-        Self::DerivedSource,
-        Self::EnumCodeName,
-        Self::EnumCycle,
-        Self::EnumFallback,
-        Self::EnumNarrowing,
-        Self::EnumReason,
-        Self::EnumUnknown,
-        Self::EnumValues,
-        Self::ExtensionPlace,
-        Self::ExtensionUnknown,
-        Self::FieldsSchema,
-        Self::FormatRefinement,
-        Self::FormatType,
-        Self::FormatUnknown,
-        Self::MapKeys,
-        Self::MarkPosition,
-        Self::NameCollision,
-        Self::NameSegments,
-        Self::ObjectEmpty,
-        Self::Pattern,
-        Self::QueryMap,
-        Self::RefinementPrecision,
-        Self::RefinementRange,
-        Self::RefinementType,
-        Self::RelayDeclaration,
-        Self::RelayUnknown,
-        Self::RequiredProperty,
-        Self::RequiredUnknown,
-        Self::ScalarName,
-        Self::SchemaContent,
-        Self::SchemaCycle,
-        Self::SchemaInline,
-        Self::SchemaKeyword,
-        Self::SchemaReserved,
-        Self::SchemaShape,
-        Self::SchemaUnknown,
-        Self::UnionDiscriminator,
-        Self::UnionHeader,
-        Self::UnionTag,
-        Self::UnionVariant,
-        Self::UnknownKeys,
-        Self::ExampleValue,
-        Self::DefaultValue,
-        Self::ExtensionValue,
-    ];
-
     /// The full rule id.
     pub(crate) const fn rule_id(self) -> RuleId {
         match self {
@@ -173,21 +116,5 @@ impl TreeSchemasRule {
             Self::DefaultValue => RuleId::from_static("seampact/tree/default-value"),
             Self::ExtensionValue => RuleId::from_static("seampact/tree/extension-value"),
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::RULE_IDS;
-
-    #[test]
-    fn rule_ids_list_every_rule_once_in_order() {
-        let listed: Vec<RuleId> = TreeSchemasRule::ALL
-            .iter()
-            .map(|rule| rule.rule_id())
-            .collect();
-
-        assert_eq!(listed, RULE_IDS);
     }
 }

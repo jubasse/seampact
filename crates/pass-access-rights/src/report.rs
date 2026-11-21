@@ -47,43 +47,6 @@ pub(crate) enum AccessRightsRule {
 }
 
 impl AccessRightsRule {
-    /// Every rule, in the order of `RULE_IDS`.
-    #[cfg(test)]
-    pub(crate) const ALL: &'static [Self] = &[
-        Self::RightName,
-        Self::RightPattern,
-        Self::RightSubject,
-        Self::ProofSchema,
-        Self::ProofName,
-        Self::ProofInput,
-        Self::SignedInput,
-        Self::ScopeWithin,
-        Self::BucketKey,
-        Self::BucketWindow,
-        Self::ScopeUnknown,
-        Self::ScopeTwice,
-        Self::ScopeNesting,
-        Self::RequirementEntry,
-        Self::RequirementTarget,
-        Self::RequirementParams,
-        Self::RequirementBucket,
-        Self::RequirementSubject,
-        Self::RequirementTwice,
-        Self::GuestRight,
-        Self::CallerRight,
-        Self::PackTemplate,
-        Self::PackRight,
-        Self::FieldRightTarget,
-        Self::FieldRightParams,
-        Self::FieldRightSubject,
-        Self::FieldRightRecursive,
-        Self::FieldRightConflict,
-        Self::FieldRightPosition,
-        Self::FieldRightLimit,
-        Self::SortKeyRight,
-        Self::FilteredBy,
-    ];
-
     /// The rule id as `diagnostics.json` writes it.
     pub(crate) const fn rule_id(self) -> RuleId {
         RuleId::from_static(match self {
@@ -227,21 +190,5 @@ pub(crate) fn access_rights_reporter() -> AccessRightsReporter {
         errors: 0,
         reported: HashSet::new(),
         queued: Vec::new(),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::RULE_IDS;
-
-    #[test]
-    fn rule_ids_list_every_rule_in_order() {
-        let from_rules: Vec<RuleId> = AccessRightsRule::ALL
-            .iter()
-            .map(|rule| rule.rule_id())
-            .collect();
-
-        assert_eq!(from_rules, RULE_IDS);
     }
 }

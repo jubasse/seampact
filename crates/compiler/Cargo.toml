@@ -35,6 +35,7 @@ thiserror.workspace = true
 
 [dev-dependencies]
 camino.workspace = true
+serde_json.workspace = true
 
 [lints]
 workspace = true

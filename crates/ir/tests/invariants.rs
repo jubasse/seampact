@@ -1070,6 +1070,33 @@ fn an_operation_whose_response_carries_a_sensitive_field_sets_no_store() {
 }
 
 #[test]
+fn a_union_variant_naming_a_missing_schema_does_not_hide_a_sensitive_field_beside_it() {
+    let found = after(|ir| {
+        with_schema(
+            ir,
+            "TaskUnion",
+            json!({"kind": "union", "variants": [
+                {"tag": "missing", "schema": "Missing"},
+                {"tag": "task", "schema": "Task"},
+            ]}),
+        );
+        with_body(ir, json!({"kind": "ref", "schema": "TaskUnion"}));
+    });
+
+    assert_eq!(
+        ids(&found),
+        vec![
+            IrInvariantId::RefResolves,
+            IrInvariantId::CacheSensitiveNoStore
+        ]
+    );
+    assert_eq!(
+        of(found, IrInvariantId::CacheSensitiveNoStore),
+        at(IrInvariantId::CacheSensitiveNoStore, UPDATE)
+    );
+}
+
+#[test]
 fn a_sensitive_field_is_reached_through_items_json_content_map_values_and_union_variants() {
     let bodies = [
         json!({"kind": "array", "items": task_use()}),

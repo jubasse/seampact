@@ -86,84 +86,6 @@ pub(crate) enum TreeNodesRule {
 }
 
 impl TreeNodesRule {
-    /// Every rule of the half, in declaration order.
-    #[cfg(test)]
-    pub(crate) const ALL: &[Self] = &[
-        Self::CollectionSingular,
-        Self::CollectionId,
-        Self::OperationIdUnique,
-        Self::OperationNameUnique,
-        Self::RouteUnique,
-        Self::OpInput,
-        Self::GetInput,
-        Self::OpItem,
-        Self::IdProperty,
-        Self::InputFile,
-        Self::InputFileSize,
-        Self::BodyLimit,
-        Self::FormInput,
-        Self::FormField,
-        Self::ApiVersion,
-        Self::PathVersion,
-        Self::PathParam,
-        Self::PathSegment,
-        Self::ParamUnique,
-        Self::QueryField,
-        Self::FieldsSchema,
-        Self::OpaquePosition,
-        Self::UnionHeader,
-        Self::RedirectBody,
-        Self::ResponsesOutput,
-        Self::NoContentBody,
-        Self::OwnerConcurrency,
-        Self::ConcurrencyInherit,
-        Self::ConcurrencyInput,
-        Self::PagingList,
-        Self::PagingStyle,
-        Self::PagingUnknown,
-        Self::PagingParam,
-        Self::PagingSort,
-        Self::PagingLimit,
-        Self::PagingToken,
-        Self::SortKey,
-        Self::SortKeySigned,
-        Self::DegradablePath,
-        Self::DegradableHeader,
-        Self::BudgetDuration,
-        Self::DeprecatedSince,
-        Self::DeprecatedSunset,
-        Self::DeprecatedSuccessor,
-        Self::DeprecatedSuccessorParams,
-        Self::UpstreamService,
-        Self::InternalProduct,
-        Self::FormatUnknown,
-        Self::FormatMeta,
-        Self::FormatErrorCode,
-        Self::FormatId,
-        Self::FormatMerge,
-        Self::FormatEach,
-        Self::FormatMember,
-        Self::TemplateSlot,
-        Self::TemplateSyntax,
-        Self::TemplateMerge,
-        Self::TemplateEach,
-        Self::TemplateName,
-        Self::PagingReserved,
-        Self::PagingPosition,
-        Self::PagingRequest,
-        Self::PagingItems,
-        Self::PagingRole,
-        Self::PagingLink,
-        Self::PagingMeta,
-        Self::PagingMetaClash,
-        Self::ExampleTarget,
-        Self::ExampleValue,
-        Self::RelayTarget,
-        Self::RelayName,
-        Self::RelayUnknown,
-        Self::RelayDeclaration,
-    ];
-
     /// The rule as a diagnostic's rule id.
     #[must_use]
     pub(crate) const fn rule_id(self) -> RuleId {
@@ -392,16 +314,6 @@ pub(crate) fn tree_nodes_report_once(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn rule_ids_are_every_rule_mapped_through_rule_id() {
-        let mapped: Vec<RuleId> = TreeNodesRule::ALL
-            .iter()
-            .map(|rule| rule.rule_id())
-            .collect();
-
-        assert_eq!(RULE_IDS, mapped.as_slice());
-    }
 
     #[test]
     fn a_core_origin_has_no_diagnostic_origin() {

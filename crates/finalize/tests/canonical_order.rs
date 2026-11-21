@@ -94,13 +94,28 @@ fn an_integer_like_key_does_not_change_the_order_of_an_array() -> TestResult {
     Ok(())
 }
 
+const ORDERING_DOC: &str = include_str!("../../../docs/ir/09-canonical-ids-and-ordering.md");
+
+// The `Definition.member` of a table row whose order cell starts with "Sorted".
+fn sorted_row_of(line: &str) -> Option<&str> {
+    let (row, order) = line.strip_prefix("| `")?.split_once("` | ")?;
+    let (definition, member) = row.split_once('.')?;
+    let is_name = |text: &str| !text.is_empty() && text.chars().all(|c| c.is_ascii_alphabetic());
+    let rest = order.strip_prefix("Sorted")?;
+    let ends_word = rest
+        .chars()
+        .next()
+        .is_none_or(|c| !c.is_alphanumeric() && c != '_');
+
+    (is_name(definition) && is_name(member) && ends_word).then_some(row)
+}
+
 #[test]
 fn the_sorted_rows_are_the_rows_of_adr_0004_section_9() {
-    let rows = finalize_sorted_array_rows();
+    let documented: Vec<&str> = ORDERING_DOC.lines().filter_map(sorted_row_of).collect();
 
-    assert_eq!(rows.len(), 38);
-    assert!(rows.contains(&"Operation.errors"));
-    assert!(rows.contains(&"UnionSchema.variants"));
+    assert!(!documented.is_empty(), "the doc table has Sorted rows");
+    assert_eq!(finalize_sorted_array_rows(), documented);
 }
 
 #[test]

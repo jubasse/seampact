@@ -7,7 +7,7 @@ use std::error::Error;
 use camino::Utf8PathBuf;
 use indexmap::IndexMap;
 use seampact_compiler::{
-    PipelineOptions, PipelineRun, RelayOrder, check_relay_order, compile_workspace,
+    PipelineOptions, PipelineResult, RelayOrder, check_relay_order, compile_workspace,
     relays_to_stopped,
 };
 use seampact_diagnostics::Severity;
@@ -19,7 +19,7 @@ fn fixture_directory(path: &str) -> Utf8PathBuf {
         .join(path)
 }
 
-fn compile_fixture(path: &str, entry: &str) -> Result<PipelineRun, Box<dyn Error>> {
+fn compile_fixture(path: &str, entry: &str) -> Result<PipelineResult, Box<dyn Error>> {
     let reader = FsReader::new(&fixture_directory(path))?;
     let no_imports = IndexMap::new();
     let options = PipelineOptions {
@@ -36,10 +36,7 @@ fn compile_fixture(path: &str, entry: &str) -> Result<PipelineRun, Box<dyn Error
 #[test]
 fn a_load_error_stops_the_run_with_the_sorted_workspace_diagnostics_and_no_api()
 -> Result<(), Box<dyn Error>> {
-    let run = compile_fixture("loader/composition/file-missing", "api.yaml")?;
-    let PipelineRun::Finished(result) = run else {
-        return Err(format!("a load error finishes the run, got {run:?}").into());
-    };
+    let result = compile_fixture("loader/composition/file-missing", "api.yaml")?;
 
     assert_eq!(result.apis, Vec::new());
     assert!(

@@ -6,8 +6,6 @@
 //!   that api runs; an api that relays to a stopped api (directly or not) is skipped with no
 //!   diagnostic of its own; independent apis continue;
 //! - link and finalize run only when no api has an error; warnings never stop anything.
-//!
-//! A stage that is not ported ends the run with [`PipelineRun::NotPorted`] naming it.
 
 use std::collections::HashSet;
 
@@ -25,8 +23,7 @@ use crate::half_run::{run_half, run_tree_schemas};
 use crate::relay::{check_relay_order, relays_to_stopped};
 use crate::result::{PipelineApiResult, PipelineResult};
 use crate::stages::{
-    RelayOrder, Stage, StageAnswer, Validated, finalize_api, link_workspace, validate_workspace,
-    workspace_relay_order,
+    RelayOrder, Validated, finalize_api, link_workspace, validate_workspace, workspace_relay_order,
 };
 
 /// What a run reads and where it starts.
@@ -38,46 +35,29 @@ pub struct PipelineOptions<'run> {
     pub imports: &'run IndexMap<String, ImportedIr>,
 }
 
-/// How a run ended.
-#[derive(Debug, Clone)]
-pub enum PipelineRun {
-    /// The run reached its end under the stop rule.
-    Finished(Box<PipelineResult>),
-    /// The run reached a stage that is not ported.
-    NotPorted(Stage),
-}
-
 /// Compiles a workspace; see the module documentation for the stop rule.
 ///
 /// # Errors
 ///
 /// An [`InternalError`] from a stage, a half or a merge, or when a stage breaks its contract (a
 /// relay order that misses an api, an api with no draft): a bug, never a contract fault.
-pub fn compile_workspace(options: &PipelineOptions<'_>) -> Result<PipelineRun, InternalError> {
+pub fn compile_workspace(options: &PipelineOptions<'_>) -> Result<PipelineResult, InternalError> {
     let loaded = load_workspace(&options.load)?;
     let mut run = Run::new(loaded);
 
     if has_error(&run.workspace_diagnostics) {
-        return run
-            .finish()
-            .map(|result| PipelineRun::Finished(Box::new(result)));
+        return run.finish();
     }
 
     run.register_apis();
 
-    let StageAnswer::Ported(validated) = validate_workspace(&run.workspace)? else {
-        return Ok(PipelineRun::NotPorted(Stage::Validate));
-    };
+    let validated = validate_workspace(&run.workspace)?;
 
     if run.apply_validation(validated)? {
-        return run
-            .finish()
-            .map(|result| PipelineRun::Finished(Box::new(result)));
+        return run.finish();
     }
 
-    let StageAnswer::Ported(relay) = workspace_relay_order(&run.workspace)? else {
-        return Ok(PipelineRun::NotPorted(Stage::RelayOrder));
-    };
+    let relay = workspace_relay_order(&run.workspace)?;
 
     run.complete(&relay, options.imports)
 }
@@ -94,13 +74,6 @@ struct ApiRun {
     raw_position: usize,
     diagnostics: Vec<Diagnostic>,
     finalized: Option<Finalized>,
-}
-
-/// How far a part of the run got.
-#[derive(Debug, PartialEq)]
-enum Progress {
-    Done,
-    NotPorted(Stage),
 }
 
 /// How the six halves of one api ended.
@@ -193,7 +166,7 @@ impl Run {
         mut self,
         relay: &RelayOrder,
         imports: &IndexMap<String, ImportedIr>,
-    ) -> Result<PipelineRun, InternalError> {
+    ) -> Result<PipelineResult, InternalError> {
         let workspace_apis: Vec<&str> = self.runs.keys().map(String::as_str).collect();
 
         check_relay_order(relay, &workspace_apis)?;
@@ -204,14 +177,10 @@ impl Run {
                 .extend(diagnostics.iter().cloned());
         }
 
-        if let Progress::NotPorted(stage) = self.run_apis(relay, imports)? {
-            return Ok(PipelineRun::NotPorted(stage));
-        }
+        self.run_apis(relay, imports)?;
 
-        if self.clean()
-            && let Progress::NotPorted(stage) = self.link(imports)?
-        {
-            return Ok(PipelineRun::NotPorted(stage));
+        if self.clean() {
+            self.link(imports)?;
         }
 
         if self.clean() {
@@ -219,7 +188,6 @@ impl Run {
         }
 
         self.finish()
-            .map(|result| PipelineRun::Finished(Box::new(result)))
     }
 
     fn clean(&self) -> bool {
@@ -232,7 +200,7 @@ impl Run {
         &mut self,
         relay: &RelayOrder,
         imports: &IndexMap<String, ImportedIr>,
-    ) -> Result<Progress, InternalError> {
+    ) -> Result<(), InternalError> {
         let mut stopped: HashSet<String> = HashSet::new();
 
         for api in &relay.order {
@@ -263,23 +231,20 @@ impl Run {
             }
         }
 
-        Ok(Progress::Done)
+        Ok(())
     }
 
     // The link pass over every api's derived draft, in workspace order.
-    fn link(&mut self, imports: &IndexMap<String, ImportedIr>) -> Result<Progress, InternalError> {
+    fn link(&mut self, imports: &IndexMap<String, ImportedIr>) -> Result<(), InternalError> {
         self.check_every_api_has_a_draft()?;
 
-        let StageAnswer::Ported(reported) = link_workspace(&self.drafts, &self.workspace, imports)?
-        else {
-            return Ok(Progress::NotPorted(Stage::Link));
-        };
+        let reported = link_workspace(&self.drafts, &self.workspace, imports)?;
 
         for (api, diagnostic) in reported {
             self.run_of(&api)?.diagnostics.push(diagnostic);
         }
 
-        Ok(Progress::Done)
+        Ok(())
     }
 
     // With no error anywhere, every api ran all its halves, so every api has its draft.
@@ -549,11 +514,9 @@ mod tests {
                 .push(error_of(name));
         }
 
-        let all_skipped = run
-            .run_apis(&relay, &IndexMap::new())
+        run.run_apis(&relay, &IndexMap::new())
             .expect("no internal error");
 
-        assert_eq!(all_skipped, Progress::Done);
         assert!(run.drafts.is_empty());
 
         run.run_of(&names[1])
@@ -561,14 +524,17 @@ mod tests {
             .diagnostics
             .clear();
 
-        let one_runs = run
-            .run_apis(&relay, &IndexMap::new())
+        run.run_apis(&relay, &IndexMap::new())
             .expect("no internal error");
 
-        assert!(
-            matches!(one_runs, Progress::Done | Progress::NotPorted(_)),
-            "the independent api did not run: {one_runs:?}"
-        );
+        let has_draft = run.drafts.contains_key(&names[1]);
+        let reported = !run
+            .run_of(&names[1])
+            .expect("registered")
+            .diagnostics
+            .is_empty();
+
+        assert!(has_draft || reported, "the independent api did not run");
     }
 
     #[test]

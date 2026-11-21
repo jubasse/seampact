@@ -4,7 +4,9 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use seampact_ir::{ContractIr, IR_SCHEMA_FILES, OPEN_ENUMS, SourceMap, UNIONS};
+use seampact_ir::{
+    ContractIr, IR_SCHEMA_FILES, KNOWN_VALUES_KEYWORD, OPEN_ENUMS, SourceMap, UNIONS,
+};
 use seampact_json::escape_pointer;
 use serde_json::Value;
 
@@ -25,9 +27,6 @@ const IR_ROOT_DEFINITION: &str = "ContractIR";
 
 /// The root definition of the source map.
 const SOURCE_MAP_ROOT_DEFINITION: &str = "SourceMap";
-
-/// The marker of an open enum definition.
-const KNOWN_VALUES_KEYWORD: &str = "x-seampact-known";
 
 /// The marker of a definition whose unknown values a reader must act on.
 const MUST_ACT_KEYWORD: &str = "x-seampact-must-act";
