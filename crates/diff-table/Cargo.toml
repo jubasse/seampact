@@ -9,6 +9,7 @@ publish.workspace = true
 
 [dependencies]
 seampact-diagnostics.workspace = true
+seampact-ir.workspace = true
 seampact-json.workspace = true
 thiserror.workspace = true
 

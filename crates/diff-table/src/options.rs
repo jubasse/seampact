@@ -1,5 +1,12 @@
 //! What a diff reads besides the two contracts: today's date and the gate settings.
 
+use std::collections::BTreeSet;
+
+use seampact_ir::is_ir_calendar_date;
+use seampact_json::{JsonValue, stringify_json};
+
+use crate::DiffTableError;
+
 /// Which broken sides fail `additive-only`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum DiffGateScope {
@@ -49,4 +56,49 @@ pub struct DiffOptions {
     pub gate: Option<DiffGateScope>,
     /// The breaking changes reported but not gated; both exemptions when absent.
     pub exempt: Option<Vec<DiffExemption>>,
+}
+
+/// The options with their defaults filled in.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ResolvedDiffOptions {
+    /// Today as a calendar date.
+    pub today: String,
+    /// Which broken sides fail `additive-only`.
+    pub gate: DiffGateScope,
+    /// The exemptions, sorted and without repeats.
+    pub exempt: Vec<DiffExemption>,
+}
+
+/// The exemptions applied when `exempt` is absent: both.
+const DEFAULT_DIFF_EXEMPTIONS: [DiffExemption; 2] =
+    [DiffExemption::Experimental, DiffExemption::SunsetPassed];
+
+/// The options with their defaults; a date that is not a calendar date is a caller error.
+///
+/// # Errors
+///
+/// [`DiffTableError::InvalidToday`] when `today` is not a `YYYY-MM-DD` calendar date. A gate or an
+/// exemption outside its known set cannot be built, so the TypeScript's two other refusals have
+/// no Rust case.
+pub fn resolve_diff_options(options: &DiffOptions) -> Result<ResolvedDiffOptions, DiffTableError> {
+    if !is_ir_calendar_date(&options.today) {
+        return Err(DiffTableError::InvalidToday {
+            today: stringify_json(&JsonValue::String(options.today.clone())),
+        });
+    }
+
+    let gate = options.gate.unwrap_or(DiffGateScope::Clients);
+    let exempt: BTreeSet<DiffExemption> = options
+        .exempt
+        .as_deref()
+        .unwrap_or(&DEFAULT_DIFF_EXEMPTIONS)
+        .iter()
+        .copied()
+        .collect();
+
+    Ok(ResolvedDiffOptions {
+        today: options.today.clone(),
+        gate,
+        exempt: exempt.into_iter().collect(),
+    })
 }
