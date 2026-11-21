@@ -9,9 +9,14 @@ publish.workspace = true
 
 [dependencies]
 seampact-authoring.workspace = true
+indexmap.workspace = true
 seampact-diagnostics.workspace = true
 seampact-ir.workspace = true
+seampact-json.workspace = true
+seampact-naming.workspace = true
 seampact-pipeline.workspace = true
+seampact-span.workspace = true
+seampact-validate.workspace = true
 thiserror.workspace = true
 
 [lints]
