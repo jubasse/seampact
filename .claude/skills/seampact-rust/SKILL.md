@@ -11,6 +11,7 @@ PORTING.md (sections 1-8 always, section 9 before you add a dependency) and AGEN
 
 - The workspace lints (root `Cargo.toml`, `clippy.toml`) run clippy `all` and `pedantic` under `-D warnings`, require `missing_docs` and a `reason` on every `allow` or `expect`, forbid `unsafe_code`, and deny `unwrap_used`, `expect_used`, `panic`, `unreachable`, `todo`, `unimplemented`, `dbg_macro`, `exit`, `indexing_slicing` (slices, arrays, `Vec`), `string_slice`, `print_stdout` and `print_stderr`; `clippy.toml` lets `#[test]` functions unwrap, expect, panic and index.
 - Fix what a lint reports, never silence it. Only when a lint is wrong for one item: `#[expect(clippy::<name>, reason = "...")]` on that item. Printing is allowed only in the CLI output module.
+- Avoid the pedantic lints ports hit most: `is_empty()` over `len() == 0`, no `Result` or `Option` return that never fails, `Box` the large variant of an enum.
 - `map[&key]` (map `Index`) also panics and no lint catches it: `.get`.
 - The fix for a denied panic, unwrap or index is PORTING.md section 3 (match the shape, or return the `InternalError`), lock poisoning included; never `.expect()` or a fallback value the TypeScript does not have (a TypeScript `?? x` ports as `unwrap_or(x)`).
 
@@ -52,6 +53,7 @@ PORTING.md (sections 1-8 always, section 9 before you add a dependency) and AGEN
 - Imports: one `use` per module path; types and traits unqualified, free functions qualified by their module (`mem::take`, `fs::read`).
 - A value another module or crate already names (a derivation id, a rule id) is imported, never retyped; a new magic value is a `const` whose doc line says where it comes from.
 - Paths are UTF-8 (`camino`); output paths go through the validated relative-path type (refuses `..`, absolute paths, names that differ only by case or Unicode normalisation). Written files use LF; input accepts CRLF.
+- A TypeScript `"\uXXXX"` is `"\u{XXXX}"`; a lone surrogate has no `str` form (PORTING section 2, the loader's design note).
 - Blank line after a group of `let`, before `return`, `if`, `match` and loops, after a block.
 
 ## Modules and docs
