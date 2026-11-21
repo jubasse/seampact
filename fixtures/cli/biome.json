@@ -1,0 +1,7 @@
+{
+  "root": false,
+  "extends": "//",
+  "files": {
+    "includes": ["**", "!**/node_modules", "!**/git-source", "!**/baseline"]
+  }
+}

@@ -13,7 +13,9 @@
     "maturity": "provisional",
     "name": {
       "role": "schema",
-      "segments": ["notes"]
+      "segments": [
+        "notes"
+      ]
     },
     "origin": {
       "layer": "api",
@@ -30,7 +32,9 @@
       "app": {
         "name": {
           "role": "schema",
-          "segments": ["app"]
+          "segments": [
+            "app"
+          ]
         },
         "origin": {
           "layer": "api",
@@ -248,7 +252,9 @@
   "identities": {},
   "irRevision": 6,
   "irVersion": 1,
-  "kinds": ["httpOperation"],
+  "kinds": [
+    "httpOperation"
+  ],
   "lint": {
     "allows": [],
     "rules": {}
@@ -265,7 +271,9 @@
         "reason": "Anyone may call this api: it has no accounts."
       },
       "bindings": [],
-      "callerKinds": ["anonymous"],
+      "callerKinds": [
+        "anonymous"
+      ],
       "docs": {},
       "errors": [
         {
@@ -355,7 +363,10 @@
       "method": "get",
       "name": {
         "role": "operation",
-        "segments": ["get", "note"]
+        "segments": [
+          "get",
+          "note"
+        ]
       },
       "op": "get",
       "origin": {
@@ -434,7 +445,9 @@
         "reason": "Anyone may call this api: it has no accounts."
       },
       "bindings": [],
-      "callerKinds": ["anonymous"],
+      "callerKinds": [
+        "anonymous"
+      ],
       "docs": {},
       "errors": [
         {
@@ -511,7 +524,10 @@
       "method": "get",
       "name": {
         "role": "operation",
-        "segments": ["list", "notes"]
+        "segments": [
+          "list",
+          "notes"
+        ]
       },
       "op": "list",
       "origin": {
@@ -663,7 +679,9 @@
   "pagings": {
     "cursor": {
       "absent": "omit",
-      "handlerResult": ["nextCursor"],
+      "handlerResult": [
+        "nextCursor"
+      ],
       "id": "cursor",
       "origin": {
         "layer": "api",
@@ -704,7 +722,9 @@
   "scalars": {},
   "schemas": {
     "ApiSchemaInvalidIssue": {
-      "directions": ["output"],
+      "directions": [
+        "output"
+      ],
       "docs": {},
       "examples": [],
       "extensions": {},
@@ -712,7 +732,12 @@
       "kind": "object",
       "name": {
         "role": "schema",
-        "segments": ["api", "schema", "invalid", "issue"]
+        "segments": [
+          "api",
+          "schema",
+          "invalid",
+          "issue"
+        ]
       },
       "origin": {
         "layer": "core",
@@ -781,7 +806,9 @@
       ]
     },
     "ApiSchemaInvalidParams": {
-      "directions": ["output"],
+      "directions": [
+        "output"
+      ],
       "docs": {},
       "examples": [],
       "extensions": {},
@@ -789,7 +816,11 @@
       "kind": "object",
       "name": {
         "role": "params",
-        "segments": ["api", "schema", "invalid"]
+        "segments": [
+          "api",
+          "schema",
+          "invalid"
+        ]
       },
       "origin": {
         "layer": "core",
@@ -819,7 +850,9 @@
       ]
     },
     "Note": {
-      "directions": ["output"],
+      "directions": [
+        "output"
+      ],
       "docs": {},
       "examples": [],
       "extensions": {},
@@ -827,7 +860,9 @@
       "kind": "object",
       "name": {
         "role": "schema",
-        "segments": ["note"]
+        "segments": [
+          "note"
+        ]
       },
       "origin": {
         "layer": "api",
