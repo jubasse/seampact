@@ -3,9 +3,11 @@
 
 use indexmap::IndexMap;
 use seampact_ir::{ContractIr, DocumentId};
-use seampact_target::Refusal;
+use seampact_json::JsonObject;
+use seampact_target::{Refusal, without_repeats};
 
 use crate::not_ported::not_ported_yet;
+use crate::serialize::serialize_document;
 use crate::{EmitterOptions, OpenApiError};
 
 /// One api a merged document holds, as an app serves or documents it.
@@ -44,10 +46,86 @@ pub enum MergeOutcome {
 ///
 /// # Errors
 ///
-/// [`OpenApiError::NotPortedYet`] until the function is ported.
+/// [`OpenApiError::NotPortedYet`] while a function it reaches is a stub.
 pub fn merge_documents(
+    inputs: &[MergeInput],
+    options: &MergeOptions,
+) -> Result<MergeOutcome, OpenApiError> {
+    if inputs.is_empty() {
+        return Ok(refused(vec![Refusal {
+            code: "openapi.merge.empty".to_owned(),
+            message: format!(
+                "The merged document '{}' holds no api: no app it covers serves or documents one.",
+                options.name
+            ),
+            fix: "List in its 'apps' an app with a server target or an OpenAPI-only app, or remove the document.".to_owned(),
+            operation: None,
+            member: None,
+            docs: None,
+        }]));
+    }
+
+    let mut refusals = prefix_refusals(inputs, options)?;
+    let mut sources = Vec::new();
+
+    for input in inputs {
+        match build_input_document(input, options)? {
+            BuiltInput::Built(source) => sources.push(source),
+            BuiltInput::Refused(input_refusals) => refusals.extend(input_refusals),
+        }
+    }
+
+    if !refusals.is_empty() {
+        return Ok(refused(without_repeats(refusals)));
+    }
+
+    let assembled = assemble_merged_document(&sources, options)?;
+
+    if !assembled.refusals.is_empty() {
+        return Ok(refused(without_repeats(assembled.refusals)));
+    }
+
+    Ok(MergeOutcome::Merged {
+        text: serialize_document(&assembled.document)?,
+    })
+}
+
+fn refused(refusals: Vec<Refusal>) -> MergeOutcome {
+    MergeOutcome::Refused(refusals)
+}
+
+/// An api's document, ready to be placed in the merged one.
+struct ApiSource;
+
+/// An input's document, or the refusals that stop it.
+enum BuiltInput {
+    Built(ApiSource),
+    Refused(Vec<Refusal>),
+}
+
+/// The merged document and the refusals met while assembling it.
+struct AssembledDocument {
+    document: JsonObject,
+    refusals: Vec<Refusal>,
+}
+
+fn prefix_refusals(
     _inputs: &[MergeInput],
     _options: &MergeOptions,
-) -> Result<MergeOutcome, OpenApiError> {
-    Err(not_ported_yet("mergeDocuments"))
+) -> Result<Vec<Refusal>, OpenApiError> {
+    Err(not_ported_yet("prefixRefusals"))
+}
+
+fn build_input_document(
+    _input: &MergeInput,
+    _options: &MergeOptions,
+) -> Result<BuiltInput, OpenApiError> {
+    Err(not_ported_yet("buildInputDocument"))
+}
+
+fn assemble_merged_document(
+    _sources: &[ApiSource],
+    _options: &MergeOptions,
+) -> Result<AssembledDocument, OpenApiError> {
+    Err(not_ported_yet("assembleMergedDocument"))
 }

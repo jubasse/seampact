@@ -1,0 +1,132 @@
+src/documents.rs#emit_documents	packages/core/openapi/src/documents.ts#emitDocuments
+src/documents.rs#document_plans	packages/core/openapi/src/documents.ts#documentPlans
+src/documents.rs#every_surface_selection	packages/core/openapi/src/documents.ts#everySurfaceSelection
+src/documents.rs#build_planned_document	packages/core/openapi/src/documents.ts#buildPlannedDocument
+src/documents.rs#selected_operations	packages/core/openapi/src/documents.ts#selectedOperations
+src/documents.rs#build_document	packages/core/openapi/src/documents.ts#buildDocument
+src/documents.rs#api_extension_value	packages/core/openapi/src/documents.ts#apiExtensionValue
+src/documents.rs#info_object	packages/core/openapi/src/documents.ts#infoObject
+src/documents.rs#api_version_text	packages/core/openapi/src/documents.ts#apiVersionText
+src/documents.rs#most_used_format	packages/core/openapi/src/documents.ts#mostUsedFormat
+src/documents.rs#paths_object	packages/core/openapi/src/documents.ts#pathsObject
+src/documents.rs#paths_by_route	packages/core/openapi/src/documents.ts#pathsByRoute
+src/documents.rs#drain_schema_components	packages/core/openapi/src/documents.ts#drainSchemaComponents
+src/emit_context.rs#create_emit_context	packages/core/openapi/src/emit-context.ts#createEmitContext
+src/emit_context.rs#write_extension	packages/core/openapi/src/emit-context.ts#writeExtension
+src/emit_context.rs#is_extension_selected	packages/core/openapi/src/emit-context.ts#isExtensionSelected
+src/emit_context.rs#write_consumer_extensions	packages/core/openapi/src/emit-context.ts#writeConsumerExtensions
+src/emit_context.rs#reason_value	packages/core/openapi/src/emit-context.ts#reasonValue
+src/emit_context.rs#optional_reason	packages/core/openapi/src/emit-context.ts#optionalReason
+src/emit_context.rs#reference_component	packages/core/openapi/src/emit-context.ts#referenceComponent
+src/emitter_options.rs#parse_emitter_options	packages/core/openapi/src/emitter-options.ts#parseEmitterOptions
+src/json_value.rs#set_defined	packages/core/openapi/src/json-value.ts#setDefined
+src/json_value.rs#copy_optional	packages/core/openapi/src/json-value.ts#copyOptional
+src/security.rs#security_schemes_component	packages/core/openapi/src/security.ts#securitySchemesComponent
+src/security.rs#write_csrf	packages/core/openapi/src/security.ts#writeCsrf
+src/security.rs#use_scheme	packages/core/openapi/src/security.ts#useScheme
+src/serialize.rs#serialize_document	packages/core/openapi/src/serialize.ts#serializeDocument
+src/merge_documents.rs#refused	packages/core/openapi/src/merge/merge-documents.ts#refused
+src/merge_documents.rs#merge_documents	packages/core/openapi/src/merge/merge-documents.ts#mergeDocuments
+src/schemas.rs#write_docs	packages/core/openapi/src/schemas.ts#writeDocs
+src/schemas.rs#write_length_refinements	packages/core/openapi/src/schemas.ts#writeLengthRefinements
+src/schemas.rs#write_numeric_refinements	packages/core/openapi/src/schemas.ts#writeNumericRefinements
+src/schemas.rs#number_literal	packages/core/openapi/src/schemas.ts#numberLiteral
+src/schemas.rs#known_schema_component	packages/core/openapi/src/schemas.ts#knownSchemaComponent
+src/schemas.rs#refuses_unknown_keys	packages/core/openapi/src/schemas.ts#refusesUnknownKeys
+src/schemas.rs#array_schema	packages/core/openapi/src/schemas.ts#arraySchema
+src/schemas.rs#type_use_schema	packages/core/openapi/src/schemas.ts#typeUseSchema
+src/body_slots.rs#emitted_shape_of	packages/core/openapi/src/body-slots.ts#emittedShapeOf
+src/body_slots.rs#url_schema	packages/core/openapi/src/body-slots.ts#urlSchema
+src/body_slots.rs#resource_name	packages/core/openapi/src/body-slots.ts#resourceName
+src/parameters.rs#written_by_security	packages/core/openapi/src/parameters.ts#writtenBySecurity
+src/responses.rs#response_description	packages/core/openapi/src/responses.ts#responseDescription
+src/responses.rs#payload_schema_of	packages/core/openapi/src/responses.ts#payloadSchemaOf
+src/responses.rs#success_response	packages/core/openapi/src/responses.ts#successResponse
+src/errors.rs#retry_headers	packages/core/openapi/src/errors.ts#retryHeaders
+src/errors.rs#error_item	packages/core/openapi/src/errors.ts#errorItem
+src/errors.rs#error_code_reference	packages/core/openapi/src/errors.ts#errorCodeReference
+src/templates.rs#members_writing_slot	packages/core/openapi/src/templates.ts#membersWritingSlot
+src/templates.rs#member_name_of	packages/core/openapi/src/templates.ts#memberNameOf
+src/operation_marks.rs#write_deprecation	packages/core/openapi/src/operation-marks.ts#writeDeprecation
+src/operation_marks.rs#write_unknown_query	packages/core/openapi/src/operation-marks.ts#writeUnknownQuery
+src/bodies.rs#body_media	packages/core/openapi/src/bodies.ts#bodyMedia
+src/documents.rs#unsupported_ir_refusals	packages/core/openapi/src/documents.ts#unsupportedIrRefusals
+-	packages/core/openapi/src/documents.ts#serversArray	skip: not ported yet, brief 4
+-	packages/core/openapi/src/documents.ts#methodRank	skip: not ported yet, brief 3
+-	packages/core/openapi/src/documents.ts#operationObject	skip: not ported yet, brief 2
+-	packages/core/openapi/src/documents.ts#responsesObject	skip: not ported yet, brief 2
+-	packages/core/openapi/src/emit-context.ts#refuseUnknown	skip: not ported yet, brief 3
+-	packages/core/openapi/src/emit-context.ts#refuseNotEmitted	skip: not ported yet, brief 3
+-	packages/core/openapi/src/emit-context.ts#refuseInconsistent	skip: not ported yet, brief 3
+-	packages/core/openapi/src/emitter-options.ts#parseExtensions	skip: not ported yet, brief 4
+-	packages/core/openapi/src/emitter-options.ts#parseChoice	skip: not ported yet, brief 4
+-	packages/core/openapi/src/emitter-options.ts#parseServers	skip: not ported yet, brief 4
+-	packages/core/openapi/src/emitter-options.ts#parseServer	skip: not ported yet, brief 4
+-	packages/core/openapi/src/emitter-options.ts#isRecord	skip: not ported yet, brief 4
+-	packages/core/openapi/src/emitter-options.ts#optionRefusal	skip: not ported yet, brief 4
+-	packages/core/openapi/src/emitter-options.ts#refusedWith	skip: not ported yet, brief 4
+-	packages/core/openapi/src/emitter-options.ts#optionValueText	skip: not ported yet, brief 4
+-	packages/core/openapi/src/json-value.ts#copyJsonValue	skip: not ported yet, brief 3
+-	packages/core/openapi/src/json-value.ts#isJsonObject	skip: not ported yet, brief 3
+-	packages/core/openapi/src/json-value.ts#objectMember	skip: not ported yet, brief 4
+-	packages/core/openapi/src/security.ts#writeOperationSecurity	skip: not ported yet, brief 2
+-	packages/core/openapi/src/security.ts#optionalReadSchemes	skip: not ported yet, brief 3
+-	packages/core/openapi/src/security.ts#requirementsOf	skip: not ported yet, brief 2
+-	packages/core/openapi/src/security.ts#securityScheme	skip: not ported yet, brief 2
+-	packages/core/openapi/src/security.ts#bearerScheme	skip: not ported yet, brief 3
+-	packages/core/openapi/src/security.ts#signatureScheme	skip: not ported yet, brief 3
+-	packages/core/openapi/src/security.ts#schemeKeyValue	skip: not ported yet, brief 3
+-	packages/core/openapi/src/merge/merge-documents.ts#prefixRefusals	skip: not ported yet, brief 4
+-	packages/core/openapi/src/merge/merge-documents.ts#buildInputDocument	skip: not ported yet, brief 4
+-	packages/core/openapi/src/merge/merge-documents.ts#inputSelection	skip: not ported yet, brief 4
+-	packages/core/openapi/src/schemas.ts#knownUseSchema	skip: not ported yet, brief 2
+-	packages/core/openapi/src/schemas.ts#fileSchema	skip: not ported yet, brief 4
+-	packages/core/openapi/src/schemas.ts#refSchema	skip: not ported yet, brief 2
+-	packages/core/openapi/src/schemas.ts#schemaReference	skip: not ported yet, brief 2
+-	packages/core/openapi/src/schemas.ts#enumUseSchema	skip: not ported yet, brief 3
+-	packages/core/openapi/src/schemas.ts#isOpenEnum	skip: not ported yet, brief 3
+-	packages/core/openapi/src/schemas.ts#enumComponent	skip: not ported yet, brief 3
+-	packages/core/openapi/src/schemas.ts#scalarSchema	skip: not ported yet, brief 2
+-	packages/core/openapi/src/schemas.ts#stringNumberSchema	skip: not ported yet, brief 4
+-	packages/core/openapi/src/schemas.ts#wireValue	skip: not ported yet, brief 4
+-	packages/core/openapi/src/schemas.ts#nullableSchema	skip: not ported yet, brief 3
+-	packages/core/openapi/src/schemas.ts#acceptsAnyValue	skip: not ported yet, brief 3
+-	packages/core/openapi/src/schemas.ts#namedSchemaComponent	skip: not ported yet, brief 2
+-	packages/core/openapi/src/schemas.ts#objectSchema	skip: not ported yet, brief 2
+-	packages/core/openapi/src/schemas.ts#propertySchema	skip: not ported yet, brief 2
+-	packages/core/openapi/src/schemas.ts#markSensitive	skip: not ported yet, brief 3
+-	packages/core/openapi/src/schemas.ts#mapSchema	skip: not ported yet, brief 4
+-	packages/core/openapi/src/schemas.ts#unionSchema	skip: not ported yet, brief 3
+-	packages/core/openapi/src/schemas.ts#bodyTaggedBranch	skip: not ported yet, brief 4
+-	packages/core/openapi/src/body-slots.ts#successSlots	skip: not ported yet, brief 2
+-	packages/core/openapi/src/body-slots.ts#addMetaSlot	skip: not ported yet, brief 3
+-	packages/core/openapi/src/parameters.ts#operationParameters	skip: not ported yet, brief 2
+-	packages/core/openapi/src/parameters.ts#parameterObject	skip: not ported yet, brief 3
+-	packages/core/openapi/src/parameters.ts#identityHeaderSemantic	skip: not ported yet, brief 3
+-	packages/core/openapi/src/responses.ts#successResponses	skip: not ported yet, brief 2
+-	packages/core/openapi/src/responses.ts#responseBodySchema	skip: not ported yet, brief 2
+-	packages/core/openapi/src/responses.ts#responseHeaders	skip: not ported yet, brief 2
+-	packages/core/openapi/src/responses.ts#headerObject	skip: not ported yet, brief 3
+-	packages/core/openapi/src/errors.ts#errorResponses	skip: not ported yet, brief 2
+-	packages/core/openapi/src/errors.ts#codesByStatus	skip: not ported yet, brief 2
+-	packages/core/openapi/src/errors.ts#errorResponse	skip: not ported yet, brief 2
+-	packages/core/openapi/src/errors.ts#errorCodeComponent	skip: not ported yet, brief 2
+-	packages/core/openapi/src/templates.ts#templateSchema	skip: not ported yet, brief 2
+-	packages/core/openapi/src/templates.ts#textTemplateSchema	skip: not ported yet, brief 3
+-	packages/core/openapi/src/templates.ts#constantText	skip: not ported yet, brief 3
+-	packages/core/openapi/src/templates.ts#eachSchema	skip: not ported yet, brief 4
+-	packages/core/openapi/src/templates.ts#slotSchema	skip: not ported yet, brief 2
+-	packages/core/openapi/src/templates.ts#objectTemplateSchema	skip: not ported yet, brief 3
+-	packages/core/openapi/src/templates.ts#renderTemplate	skip: not ported yet, brief 3
+-	packages/core/openapi/src/templates.ts#renderObjectTemplate	skip: not ported yet, brief 4
+-	packages/core/openapi/src/operation-marks.ts#writeOperationMarks	skip: not ported yet, brief 2
+-	packages/core/openapi/src/operation-marks.ts#writeIdempotency	skip: not ported yet, brief 2
+-	packages/core/openapi/src/bodies.ts#requestBody	skip: not ported yet, brief 2
+-	packages/core/openapi/src/bodies.ts#writeUnknownKeys	skip: not ported yet, brief 4
+-	packages/core/openapi/src/bodies.ts#bodySchema	skip: not ported yet, brief 3
+-	packages/core/openapi/src/bodies.ts#inputTopLevel	skip: not ported yet, brief 4
+-	packages/core/openapi/src/bodies.ts#proofsSchema	skip: not ported yet, brief 3
+-	packages/core/openapi/src/bodies.ts#bodyEncoding	skip: not ported yet, brief 3
+-	packages/core/openapi/src/bodies.ts#formFieldEncoding	skip: not ported yet, brief 4
+-	packages/core/openapi/src/bodies.ts#proofField	skip: not ported yet, brief 4
+-	packages/core/openapi/src/bodies.ts#fileFieldMedia	skip: not ported yet, brief 4

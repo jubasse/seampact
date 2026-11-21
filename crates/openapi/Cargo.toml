@@ -9,11 +9,16 @@ publish.workspace = true
 
 [dependencies]
 indexmap.workspace = true
+saphyr.workspace = true
 seampact-diagnostics.workspace = true
 seampact-ir.workspace = true
+seampact-js.workspace = true
 seampact-json.workspace = true
 seampact-target.workspace = true
 thiserror.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
 
 [lints]
 workspace = true
