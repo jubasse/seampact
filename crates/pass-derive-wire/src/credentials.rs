@@ -18,7 +18,8 @@ use crate::routes::{DeriveWireRoute, DeriveWireScope, derive_wire_access_of};
 
 const AUTHORIZATION: &str = "Authorization";
 
-const AUTHENTICATE: DerivationId = DerivationId::from_static("identity.authenticate");
+/// The derivation of the credential parameters of the accepted schemes.
+pub const AUTHENTICATE: DerivationId = DerivationId::from_static("identity.authenticate");
 
 /// The accesses that carry credentials.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
