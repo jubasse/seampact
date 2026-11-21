@@ -1,0 +1,46 @@
+# Every sorted output mixes ASCII, accented Latin, a high BMP letter and astral characters, so
+# UTF-16 code unit order differs from byte order and code point order.
+api: { name: ordering, version: 1, kind: product, maturity: provisional }
+
+schemas:
+  Mixed:
+    type: object
+    properties:
+      zebra: { type: string }
+      Zebra: { type: string, codeName: upperZebra }
+      élan: { type: string }
+      ｚ: { type: string, codeName: fullWidthZ }
+      𝒜: { type: string, codeName: scriptA }
+      😀: { type: string, codeName: grin }
+      ꙮ: { type: string, codeName: manyEyes }
+  Event:
+    discriminator: { from: header.X-Event }
+    oneOf:
+      zebra: Variant1
+      Zebra: Variant2
+      élan: Variant3
+      ｚ: Variant4
+      𝒜: Variant5
+      😀: Variant6
+  Variant1: { type: object, properties: { v1: { type: string } } }
+  Variant2: { type: object, properties: { v2: { type: string } } }
+  Variant3: { type: object, properties: { v3: { type: string } } }
+  Variant4: { type: object, properties: { v4: { type: string } } }
+  Variant5: { type: object, properties: { v5: { type: string } } }
+  Variant6: { type: object, properties: { v6: { type: string } } }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: user
+    tags: [zebra, Zebra, élan, ｚ, 𝒜, 😀, ꙮ]
+    routes:
+      mixed:
+        method: post
+        access: { public: "The ordering fixture has no identity." }
+        input: Mixed
+        output: Mixed
+      event:
+        method: post
+        access: { public: "The ordering fixture has no identity." }
+        input: Event

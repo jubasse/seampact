@@ -1,0 +1,23 @@
+{
+  "name": "reference",
+  "prefix": {
+    "tasks": "Tasks"
+  },
+  "emitter": {
+    "extensions": "none",
+    "reasons": "omit",
+    "servers": [
+      {
+        "url": "https://api.example.test",
+        "description": "Production"
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "fixture": "reference",
+      "api": "tasks",
+      "operations": ["createTask"]
+    }
+  ]
+}

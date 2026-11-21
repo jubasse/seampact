@@ -1,0 +1,8 @@
+[
+  {
+    "code": "bundle.imports-unsupported",
+    "message": "The workspace imports 'tasks' from pinned bundles (workspace.imports); a bundle cannot carry the bundles it imports.",
+    "fix": "Bundle a workspace that compiles every api it relays to, without workspace.imports.",
+    "file": "workspace.template.yaml"
+  }
+]

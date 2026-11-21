@@ -1,6 +1,5 @@
 import { resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { installCallRecording } from "./call-recording.ts";
 
 // The tools the oracle runs, loaded by dynamic import as `compiler.ts` loads the compiler: the root TypeScript
 // project forbids the parameter properties their sources use. Each adapter names the members it calls and checks
@@ -105,9 +104,6 @@ const importSource = (relative: string): Promise<unknown> =>
 let loaded: Promise<OracleTools> | undefined;
 
 async function loadTools(): Promise<OracleTools> {
-  // Before any module of the compiler loads: the hook wraps the functions the CLI calls.
-  installCallRecording();
-
   const compiler = await importSource("compiler/src/index.ts");
   const openapi = await importSource("openapi/src/index.ts");
   const lint = await importSource("lint/src/index.ts");

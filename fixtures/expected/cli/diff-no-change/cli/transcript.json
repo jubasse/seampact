@@ -1,0 +1,7 @@
+{
+  "exit": 0,
+  "stdout": "notes v1: compat.policy none (before none, after none), gate clients\nno change\ngate passed\n",
+  "stderr": "",
+  "written": {},
+  "removed": []
+}

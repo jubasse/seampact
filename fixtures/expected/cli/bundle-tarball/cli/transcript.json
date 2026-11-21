@@ -1,0 +1,11 @@
+{
+  "exit": 0,
+  "stdout": "Wrote the bundle of @seampact-fixtures/notes@1.0.0 (notes) to <root>/notes.tgz.\nintegrity: sha256-m1Dx5GL/JzlteMx5ojBeXbRHBV8Wx7YgA3+v5h4xLDs=\n",
+  "stderr": "",
+  "written": {
+    "notes.tgz": {
+      "sha256": "ec8cd60a73bd11efe08115c1bdf11548d23e43791447b609371e667f67cc1d6d"
+    }
+  },
+  "removed": []
+}

@@ -1,0 +1,1 @@
+{ "argv": ["compile"], "env": { "SEAMPACT_ALLOW_LOCAL": "false" } }

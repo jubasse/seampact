@@ -1,0 +1,13 @@
+{
+  "name": "reference",
+  "prefix": {
+    "tasks": "Tasks"
+  },
+  "inputs": [
+    {
+      "fixture": "reference",
+      "api": "tasks",
+      "operations": ["createTask", "archiveTask"]
+    }
+  ]
+}

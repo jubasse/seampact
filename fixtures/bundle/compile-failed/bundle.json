@@ -1,0 +1,5 @@
+{
+  "workspace": "../../rules/tree-sort-key-dash/api.yaml",
+  "name": "@seampact-fixtures/case",
+  "version": "1.0.0"
+}

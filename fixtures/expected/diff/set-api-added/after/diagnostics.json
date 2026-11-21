@@ -1,0 +1,13 @@
+{
+  "workspace": [],
+  "apis": [
+    {
+      "api": "ordering",
+      "diagnostics": []
+    },
+    {
+      "api": "bigints",
+      "diagnostics": []
+    }
+  ]
+}

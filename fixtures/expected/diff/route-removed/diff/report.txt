@@ -1,0 +1,3 @@
+ordering v1: compat.policy none (before none, after none), gate clients
+breaking clients event /operations/0: operation.removed removed (event)
+gate passed

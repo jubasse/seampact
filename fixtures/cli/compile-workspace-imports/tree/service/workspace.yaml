@@ -1,0 +1,5 @@
+workspace:
+  apis:
+    notesService: ./api.yaml
+  imports:
+    notes: { package: '@seampact-fixtures/notes', version: 1.0.0, api: notes, integrity: 'sha256-m1Dx5GL/JzlteMx5ojBeXbRHBV8Wx7YgA3+v5h4xLDs=' }

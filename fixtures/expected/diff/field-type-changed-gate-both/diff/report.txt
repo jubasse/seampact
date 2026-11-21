@@ -1,0 +1,4 @@
+ordering v1: compat.policy none (before none, after none), gate both
+breaking clients and servers mixed input /schemas/Mixed/properties/0/type/type: type.changed scalarType (string -> integer)
+breaking clients and servers mixed output /schemas/Mixed/properties/0/type/type: type.changed scalarType (string -> integer)
+gate passed

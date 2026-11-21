@@ -1,0 +1,22 @@
+{
+  "operations": {
+    "counter": {
+      "input": {
+        "rawBody": false
+      },
+      "access": {
+        "kind": "public",
+        "reason": "The big integer fixture has no identity.",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/counter/access"
+        }
+      },
+      "callerKinds": [
+        "anonymous"
+      ],
+      "principalRequires": [],
+      "bindings": []
+    }
+  }
+}

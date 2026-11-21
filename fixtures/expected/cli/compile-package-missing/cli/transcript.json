@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "bundle.package-missing: source 'notes': The bundle package '@seampact-fixtures/notes' is not installed in the project of <root>. Fix: Install it with your package manager, at version 1.0.0. The source is read because an api is named alone ('notes'); name each as `<source>/<api>` and only that source is read.\n",
+  "written": {},
+  "removed": []
+}

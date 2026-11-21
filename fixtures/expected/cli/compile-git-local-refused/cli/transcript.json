@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "bundle.source-local: source 'notes': The git repository '../git-source.git' is local, and local sources are refused here. Fix: Name the repository by its https: or ssh URL. The source is read because an api is named alone ('notes'); name each as `<source>/<api>` and only that source is read.\n",
+  "written": {},
+  "removed": []
+}

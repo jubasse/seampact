@@ -1,0 +1,7 @@
+{
+  "exit": 0,
+  "stdout": "notes v1: compat.policy none (before none, after none), gate clients\ninformative - /errors/api.not_found: declaration removed (api.not_found)\nbreaking clients getNote /operations/0: operation.removed removed (getNote)\ngate passed\n",
+  "stderr": "",
+  "written": {},
+  "removed": []
+}

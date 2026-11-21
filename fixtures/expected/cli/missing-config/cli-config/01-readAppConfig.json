@@ -1,0 +1,17 @@
+{
+  "function": "readAppConfig",
+  "args": [
+    "<root>/nowhere.yaml",
+    "nowhere.yaml"
+  ],
+  "result": {
+    "status": "refused",
+    "problems": [
+      {
+        "code": "config.file.missing",
+        "message": "No app config at nowhere.yaml.",
+        "fix": "Create `seampact.config.yaml` in the app's directory, or pass its path with `--config`."
+      }
+    ]
+  }
+}

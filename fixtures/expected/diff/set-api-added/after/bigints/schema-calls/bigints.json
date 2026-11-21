@@ -1,0 +1,48 @@
+[
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/counter/input",
+      "input"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Counter"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/surfaces/app/routes/counter/output",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "Counter"
+    }
+  },
+  {
+    "method": "typeUse",
+    "args": [
+      "/errors/api.limit_exceeded/params",
+      "output"
+    ],
+    "answer": {
+      "kind": "ref",
+      "schema": "ApiLimitExceededParams"
+    }
+  },
+  {
+    "method": "checkExample",
+    "args": [
+      {
+        "limit": 9007199254740992
+      },
+      {
+        "kind": "ref",
+        "schema": "ApiLimitExceededParams"
+      }
+    ],
+    "answer": []
+  }
+]

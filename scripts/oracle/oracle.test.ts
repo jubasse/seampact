@@ -1,11 +1,11 @@
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "vitest";
 import { ruleCoverage } from "./commands.ts";
-import { spawnSync } from "node:child_process";
 import { expectedFilesOf, loadOracleContext } from "./expected.ts";
 import { discoverFixtures, readExcluded } from "./fixtures.ts";
-import { discoverTargets } from "./targets.ts";
 import { declaredRuleIds } from "./rule-ids.ts";
+import { discoverTargets } from "./targets.ts";
 
 // 1.x CI keeps the expected outputs current while the TS compiler lives: `node scripts/oracle/cli.ts write` after
 // a change that moves them. The check runs as the CLI does: the recorded CLI calls need Node's own module loader.

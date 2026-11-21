@@ -61,18 +61,19 @@ function ustarEntries(archive: Uint8Array): object[] {
   return entries;
 }
 
+/** The bundle of the workspace `entry` in `root`; the name and version over its `package.json`. */
 export function bundleFiles(
   tools: OracleTools,
-  directory: string,
-  spec: BundleSpec,
+  root: string,
   entry: string,
+  spec: BundleSpec,
 ): ExpectedFiles {
   const contract = {
     ...(spec.name === undefined ? {} : { name: spec.name }),
     ...(spec.version === undefined ? {} : { version: spec.version }),
   };
   const outcome = tools.buildBundle({
-    reader: tools.loadFsReader(directory),
+    reader: tools.loadFsReader(root),
     entry,
     contract,
   });

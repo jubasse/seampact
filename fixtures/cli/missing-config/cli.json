@@ -1,0 +1,1 @@
+{ "argv": ["lint", "--config", "nowhere.yaml"] }

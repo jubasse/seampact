@@ -8,11 +8,18 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
-import { type OracleCompilation, type OracleCompiler, loadOracleCompiler } from "./compiler.ts";
+import { installCallRecording } from "./call-recording.ts";
+import { loadOracleCompiler, type OracleCompilation, type OracleCompiler } from "./compiler.ts";
 import { type ExpectedFiles, jsonText } from "./expected-text.ts";
 import { EXPECTED_ROOT, type ExcludedFixtures, OWN_EXPECTED_NAMES } from "./fixtures.ts";
 import type { OracleTarget } from "./targets.ts";
-import { type CompileCache, compileCacheOf, readCaseJson, toolCaseFiles } from "./tool-cases.ts";
+import {
+  type CompileCache,
+  compileCacheOf,
+  OPENAPI_OPTIONS_FILE,
+  readCaseJson,
+  toolCaseFiles,
+} from "./tool-cases.ts";
 import { lintFiles } from "./tool-lint.ts";
 import { loadOracleTools, type OracleTools } from "./tool-modules.ts";
 import { openApiFiles } from "./tool-openapi.ts";
@@ -31,12 +38,13 @@ export interface OracleContext {
 }
 
 export async function loadOracleContext(): Promise<OracleContext> {
+  // Before the compiler's modules load: the hook wraps the functions the CLI cases record.
+  installCallRecording();
+
   const compiler = await loadOracleCompiler();
 
   return { compiler, tools: await loadOracleTools(), cache: compileCacheOf(compiler) };
 }
-
-const OPENAPI_OPTIONS_FILE = "openapi.options.json";
 
 function diagnosticsText(compilation: OracleCompilation): string {
   return jsonText({

@@ -1,0 +1,75 @@
+{
+  "irRevision": 6,
+  "locations": {
+    "api#/api": {
+      "column": 1,
+      "endColumn": 73,
+      "endLine": 2,
+      "file": "api.yaml",
+      "line": 2
+    },
+    "api#/api/maturity": {
+      "column": 50,
+      "endColumn": 71,
+      "endLine": 2,
+      "file": "api.yaml",
+      "line": 2
+    },
+    "api#/api/version": {
+      "column": 23,
+      "endColumn": 33,
+      "endLine": 2,
+      "file": "api.yaml",
+      "line": 2
+    },
+    "api#/schemas/Counter": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 11,
+      "file": "api.yaml",
+      "line": 5
+    },
+    "api#/schemas/Counter/properties/total": {
+      "column": 7,
+      "endColumn": 1,
+      "endLine": 11,
+      "file": "api.yaml",
+      "line": 8
+    },
+    "api#/surfaces/app": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 29,
+      "file": "api.yaml",
+      "line": 20
+    },
+    "api#/surfaces/app/routes/counter": {
+      "column": 7,
+      "endColumn": 1,
+      "endLine": 29,
+      "file": "api.yaml",
+      "line": 24
+    },
+    "api#/surfaces/app/routes/counter/access": {
+      "column": 9,
+      "endColumn": 71,
+      "endLine": 26,
+      "file": "api.yaml",
+      "line": 26
+    },
+    "api#/surfaces/app/routes/counter/input": {
+      "column": 9,
+      "endColumn": 23,
+      "endLine": 27,
+      "file": "api.yaml",
+      "line": 27
+    },
+    "api#/surfaces/app/routes/counter/output": {
+      "column": 9,
+      "endColumn": 24,
+      "endLine": 28,
+      "file": "api.yaml",
+      "line": 28
+    }
+  }
+}

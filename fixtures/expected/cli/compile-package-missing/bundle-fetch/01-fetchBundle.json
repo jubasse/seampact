@@ -1,0 +1,24 @@
+{
+  "function": "fetchBundle",
+  "args": [
+    {
+      "package": "@seampact-fixtures/notes",
+      "version": "1.0.0",
+      "integrity": "sha256-m1Dx5GL/JzlteMx5ojBeXbRHBV8Wx7YgA3+v5h4xLDs="
+    },
+    {
+      "baseDirectory": "<root>",
+      "localSources": "allow"
+    }
+  ],
+  "result": {
+    "ok": false,
+    "failures": [
+      {
+        "code": "bundle.package-missing",
+        "message": "The bundle package '@seampact-fixtures/notes' is not installed in the project of <root>.",
+        "fix": "Install it with your package manager, at version 1.0.0."
+      }
+    ]
+  }
+}

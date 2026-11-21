@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "bundle.contract-missing: source 'notes': The contract has no name and version: the workspace root package.json gives none, and none was passed. Fix: Add \"name\" and \"version\" to the package.json at the workspace root, or pass --name and --version.\n",
+  "written": {},
+  "removed": []
+}

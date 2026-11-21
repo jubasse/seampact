@@ -1,0 +1,11 @@
+{
+  "argv": [
+    "bundle",
+    "--npm-package",
+    "pkg",
+    "--name",
+    "@seampact-fixtures/notes",
+    "--version",
+    "1.0.0"
+  ]
+}

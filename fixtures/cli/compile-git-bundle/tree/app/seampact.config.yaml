@@ -1,0 +1,7 @@
+outDir: src/__generated__
+sources:
+  notes: { git: { url: ../git-source.git, tag: v1 }, integrity: 'sha256-m1Dx5GL/JzlteMx5ojBeXbRHBV8Wx7YgA3+v5h4xLDs=' }
+targets:
+  - id: types
+    use: "@seampact/codegen-ts"
+    apis: [notes]

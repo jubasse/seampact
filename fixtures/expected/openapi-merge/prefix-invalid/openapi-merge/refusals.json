@@ -1,0 +1,7 @@
+[
+  {
+    "code": "openapi.merge.prefix-invalid",
+    "message": "The prefix 'not valid!' of 'tasks' is not an OpenAPI component key segment.",
+    "fix": "Write the prefix with letters, digits, '.', '-' and '_' only, such as 'billing'."
+  }
+]

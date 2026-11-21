@@ -1,0 +1,7 @@
+outDir: src/__generated__
+sources:
+  service: { path: ./service }
+targets:
+  - id: types
+    use: "@seampact/codegen-ts"
+    apis: [notesService]

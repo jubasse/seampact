@@ -1,0 +1,12 @@
+{
+  "ok": false,
+  "refusals": [
+    {
+      "code": "diff.api.version.differs",
+      "message": "The api ordering moves from version v1 to v2; a new path version is a new api.",
+      "fix": "Diff the new version against a baseline of the same version; the old version keeps its own.",
+      "before": "v1",
+      "after": "v2"
+    }
+  ]
+}

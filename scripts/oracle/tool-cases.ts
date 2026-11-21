@@ -1,18 +1,18 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
+import { basename, dirname, join, relative, resolve } from "node:path";
 import type { OracleApiResult, OracleCompilation, OracleCompiler } from "./compiler.ts";
 import type { ExpectedFiles } from "./expected-text.ts";
-import { entryFileOf, EXPECTED_ROOT, FIXTURES_ROOT } from "./fixtures.ts";
+import { EXPECTED_ROOT, entryFileOf, FIXTURES_ROOT } from "./fixtures.ts";
 import { type BundleSpec, bundleFiles } from "./tool-bundle.ts";
 import { type CliSpec, cliFiles, cliSpecProblems } from "./tool-cli.ts";
 import { DEFAULT_DIFF_OPTIONS, diffFiles, type SideIrs } from "./tool-diff.ts";
 import type { OracleTools } from "./tool-modules.ts";
-import { type MergeCase, mergeFiles } from "./tool-openapi.ts";
+import { type MergeCase, mergeFiles, openApiFiles } from "./tool-openapi.ts";
 
 // The cases of the tools that have a case file of their own (`merge.json`, `bundle.json`, `cli.json`, or a
 // `before/` and an `after/`), found below `fixtures/`, and the expected files of each (README, "Tool outputs").
 
-export type ToolKind = "merge" | "bundle" | "cli" | "diff";
+export type ToolKind = "openapi" | "merge" | "bundle" | "cli" | "diff";
 
 export interface ToolCase {
   /** The path under `fixtures/`, `/` separated; the expected files sit under `fixtures/expected/<path>/`. */
@@ -24,8 +24,12 @@ export interface ToolCase {
 export const MERGE_FILE = "merge.json";
 export const BUNDLE_FILE = "bundle.json";
 export const CLI_FILE = "cli.json";
+export const IR_FILE = "ir.json";
+export const OPENAPI_OPTIONS_FILE = "openapi.options.json";
 export const DIFF_OPTIONS_FILE = "diff.options.json";
 const BEFORE_DIRECTORY = "before";
+const BEFORE_IR_FILE = "before.ir.json";
+const AFTER_IR_FILE = "after.ir.json";
 const AFTER_DIRECTORY = "after";
 
 function kindOf(directory: string): ToolKind | undefined {
@@ -35,7 +39,12 @@ function kindOf(directory: string): ToolKind | undefined {
 
   if (existsSync(join(directory, BUNDLE_FILE))) return "bundle";
 
-  if (existsSync(join(directory, BEFORE_DIRECTORY)) && existsSync(join(directory, AFTER_DIRECTORY)))
+  if (existsSync(join(directory, IR_FILE))) return "openapi";
+
+  const hasSides = (before: string, after: string): boolean =>
+    existsSync(join(directory, before)) && existsSync(join(directory, after));
+
+  if (hasSides(BEFORE_DIRECTORY, AFTER_DIRECTORY) || hasSides(BEFORE_IR_FILE, AFTER_IR_FILE))
     return "diff";
 
   return undefined;
@@ -141,8 +150,17 @@ function keepOperations(ir: object, ids: readonly unknown[]): object {
   return { ...ir, operations: operations.filter((operation) => ids.includes(operation?.id)) };
 }
 
-function sideIrs(cache: CompileCache, directory: string, where: string): SideIrs {
-  const { apis } = cache.compile(directory);
+// A side is a fixture directory, or one IR file `before.ir.json` / `after.ir.json` (an api the tests built in memory).
+function sideIrs(cache: CompileCache, caseDirectory: string, name: string, where: string): SideIrs {
+  const irFile = join(caseDirectory, `${name}.ir.json`);
+
+  if (existsSync(irFile)) {
+    const ir = readCaseJson(caseDirectory, `${name}.ir.json`) as { api: { name: string } };
+
+    return new Map([[ir.api.name, ir]]);
+  }
+
+  const { apis } = cache.compile(join(caseDirectory, name));
 
   return new Map(apis.map(({ api }) => [api, irOf(apis, api, where)]));
 }
@@ -153,9 +171,20 @@ function diffFilesOf(tools: OracleTools, cache: CompileCache, toolCase: ToolCase
     ? readCaseJson(toolCase.directory, DIFF_OPTIONS_FILE)
     : DEFAULT_DIFF_OPTIONS;
   const side = (name: string) =>
-    sideIrs(cache, join(toolCase.directory, name), `${toolCase.path}/${name}`);
+    sideIrs(cache, toolCase.directory, name, `${toolCase.path}/${name}`);
 
   return diffFiles(tools, side(BEFORE_DIRECTORY), side(AFTER_DIRECTORY), options as object);
+}
+
+/** A converted OpenAPI case: an IR in `ir.json` and the emitter options as the config writes them. */
+function openApiCaseFiles(tools: OracleTools, toolCase: ToolCase): ExpectedFiles {
+  const irText = readFileSync(join(toolCase.directory, IR_FILE), "utf8");
+  const api = (JSON.parse(irText) as { api: { name: string } }).api.name;
+  const rawOptions = existsSync(join(toolCase.directory, OPENAPI_OPTIONS_FILE))
+    ? readCaseJson(toolCase.directory, OPENAPI_OPTIONS_FILE)
+    : undefined;
+
+  return openApiFiles(tools, api, irText, rawOptions);
 }
 
 /** The expected files of one tool case. */
@@ -170,15 +199,16 @@ export async function toolCaseFiles(
 
   if (kind === "diff") return diffFilesOf(tools, cache, toolCase);
 
+  if (kind === "openapi") return openApiCaseFiles(tools, toolCase);
+
   if (kind === "bundle") {
     const spec = readCaseJson(directory, BUNDLE_FILE) as BundleSpec;
-
-    return bundleFiles(
-      tools,
+    const workspace = resolve(
       directory,
-      spec,
       spec.workspace ?? entryFileOf(directory) ?? "workspace.yaml",
     );
+
+    return bundleFiles(tools, dirname(workspace), basename(workspace), spec);
   }
 
   const spec = readCaseJson(directory, CLI_FILE);

@@ -1,0 +1,4 @@
+workspace:
+  apis:
+    ordering: ./ordering/api.yaml
+    bigints: ./bigints/api.yaml

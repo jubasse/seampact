@@ -1,0 +1,28 @@
+# A default and an error example above 2^53 in number-typed values: an integer-valued double above 2^53 cannot hold the written digits.
+api: { name: bigints, version: 1, kind: product, maturity: provisional }
+
+schemas:
+  Counter:
+    type: object
+    properties:
+      total:
+        type: number
+        default: 9223372036854775807
+
+errors:
+  api.limit_exceeded:
+    status: 400
+    nature: refused
+    params: { limit: { type: number } }
+    example: { limit: 9007199254740993 }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: user
+    routes:
+      counter:
+        method: post
+        access: { public: "The big integer fixture has no identity." }
+        input: Counter
+        output: Counter

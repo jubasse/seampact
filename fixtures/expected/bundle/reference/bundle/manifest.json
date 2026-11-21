@@ -1,0 +1,191 @@
+{
+  "apis": [
+    {
+      "file": "ir/tasks.json",
+      "irRevision": 6,
+      "irVersion": 1,
+      "name": "tasks"
+    },
+    {
+      "file": "ir/tasksAbsoluteUrls.json",
+      "irRevision": 6,
+      "irVersion": 1,
+      "name": "tasksAbsoluteUrls"
+    },
+    {
+      "file": "ir/tasksDevices.json",
+      "irRevision": 6,
+      "irVersion": 1,
+      "name": "tasksDevices"
+    },
+    {
+      "file": "ir/tasksOptionalAuth.json",
+      "irRevision": 6,
+      "irVersion": 1,
+      "name": "tasksOptionalAuth"
+    },
+    {
+      "file": "ir/tasksPaging.json",
+      "irRevision": 6,
+      "irVersion": 1,
+      "name": "tasksPaging"
+    },
+    {
+      "file": "ir/tasksResponses.json",
+      "irRevision": 6,
+      "irVersion": 1,
+      "name": "tasksResponses"
+    },
+    {
+      "file": "ir/tasksService.json",
+      "irRevision": 6,
+      "irVersion": 1,
+      "name": "tasksService"
+    },
+    {
+      "file": "ir/tasksServiceWrites.json",
+      "irRevision": 6,
+      "irVersion": 1,
+      "name": "tasksServiceWrites"
+    },
+    {
+      "file": "ir/tasksSplitSort.json",
+      "irRevision": 6,
+      "irVersion": 1,
+      "name": "tasksSplitSort"
+    }
+  ],
+  "compiler": {
+    "name": "@seampact/compiler",
+    "version": "1.1.0"
+  },
+  "contract": {
+    "name": "@seampact-fixtures/reference",
+    "version": "1.0.0"
+  },
+  "files": [
+    {
+      "path": "ir/tasks.json",
+      "sha256": "40a5db2c23e0cd785ebe3e4c9f33ce5890b7a7a7eef295707274fb2268086434",
+      "size": 245734
+    },
+    {
+      "path": "ir/tasksAbsoluteUrls.json",
+      "sha256": "4cef3a9a0f24ed27c99de2c7547fc879e04b29b5af64e8bb296f71dadea24471",
+      "size": 37266
+    },
+    {
+      "path": "ir/tasksDevices.json",
+      "sha256": "91ead8b19ffaba524bb7b423a46781a91019af4b16af2d8ade90bcd4d7f5d683",
+      "size": 27736
+    },
+    {
+      "path": "ir/tasksOptionalAuth.json",
+      "sha256": "244dfa7409b6c6d81a978cb255273e549a34b789136bdd87142464489dcd0ec1",
+      "size": 31708
+    },
+    {
+      "path": "ir/tasksPaging.json",
+      "sha256": "41f1cd0fb88e9c67ea3291ca61629fcdc43d7c484c6bffe8267fa738324f956e",
+      "size": 59336
+    },
+    {
+      "path": "ir/tasksResponses.json",
+      "sha256": "51b8b7dc0f68bc6f6747b150a45d4ad5afea706b63ca3965fdf533b93b2dec16",
+      "size": 108820
+    },
+    {
+      "path": "ir/tasksService.json",
+      "sha256": "ca1a115644216f3f7ddf64be46809118f0d032e756a490782461553a392c2294",
+      "size": 37735
+    },
+    {
+      "path": "ir/tasksServiceWrites.json",
+      "sha256": "c75dd526ec94f6f7afca801f3fbf3ecab350b35887cf2df6f5aa7a48c7043515",
+      "size": 47942
+    },
+    {
+      "path": "ir/tasksSplitSort.json",
+      "sha256": "43e7fea3f4af5656a603119d4d4726eb80d65038d3d91f93db03a8d213a59465",
+      "size": 33248
+    },
+    {
+      "path": "sources/shared/base.yaml",
+      "sha256": "7bba702c71dfb75fc1ea46226b7b75898ddcbef2ab82de094cdee7904217ccd3",
+      "size": 3617
+    },
+    {
+      "path": "sources/shared/schemas.yaml",
+      "sha256": "0206815a5a703b207d49d33f5c3a0a9cb1502b3cc98c83c33ec6432949daff39",
+      "size": 1019
+    },
+    {
+      "path": "sources/tasks-absolute-urls/api.yaml",
+      "sha256": "a743d0fd12783d6fe653cb6383f60e0d19b7fe66f84b89f306a3161bead8d0de",
+      "size": 602
+    },
+    {
+      "path": "sources/tasks-devices/api.yaml",
+      "sha256": "b221e533a591d6c7d0de73db4bf37cff6f16b5a4929c88ca6e550db79fb4fb37",
+      "size": 732
+    },
+    {
+      "path": "sources/tasks-optional-auth/api.yaml",
+      "sha256": "36479905e8928131143237f17cec63dd9fd1910ccc5f6d71ae5bf17025781e7f",
+      "size": 694
+    },
+    {
+      "path": "sources/tasks-paging/api.yaml",
+      "sha256": "a64a0e9655f4ec5316aa62b13be0cb78e0196469a6db853ee5fe6b9116ebf0c8",
+      "size": 1767
+    },
+    {
+      "path": "sources/tasks-responses/api.yaml",
+      "sha256": "c76ede55b6332358aa8cb6ddf2a7fe1571e3098f3990d5df159f64277fdae0e6",
+      "size": 2483
+    },
+    {
+      "path": "sources/tasks-service-writes/api.yaml",
+      "sha256": "fe5936b9163ae9c51509d9d4987751040274edbbc479438b467e5017bfe4228a",
+      "size": 372
+    },
+    {
+      "path": "sources/tasks-service/api.yaml",
+      "sha256": "b8532fd4b2452637c8f95775fb1c697c2b738f458bfe96065f8e1d7577966088",
+      "size": 340
+    },
+    {
+      "path": "sources/tasks-split-sort/api.yaml",
+      "sha256": "2653c584084aae16ee07634bce921b9e3f93a3385202c33b5122ae5170f77dd7",
+      "size": 1050
+    },
+    {
+      "path": "sources/tasks/api.yaml",
+      "sha256": "6bde48a372a70a99598f0c47ed174b76f8497e71fb02c08c9d7215fb5dcba3aa",
+      "size": 3190
+    },
+    {
+      "path": "sources/tasks/examples/search-200.json",
+      "sha256": "50698b7512cf045ea4f3841711b098c17a6b789d3077d2b781bf7d0fe8cc647d",
+      "size": 222
+    },
+    {
+      "path": "sources/tasks/routes/tasks/search.yaml",
+      "sha256": "949b7c34834178d99f1435bfd522d73e28ab9b605901757cf5b4a376c886ba97",
+      "size": 359
+    },
+    {
+      "path": "sources/tasks/schemas.yaml",
+      "sha256": "1fc3176a0471cd9eeffb4d72999361d7e7a3f81caeaa47a92897deac8e04ba2c",
+      "size": 1692
+    },
+    {
+      "path": "sources/workspace.yaml",
+      "sha256": "72ea445d2cf012239504c374736b07b805225aaceb86cec432fb60dece087374",
+      "size": 479
+    }
+  ],
+  "formatVersion": 1,
+  "integrity": "sha256-mdsPgr3Ytn6fMHNEBJR05PB09Xci2L2l1AsbixNSuxY=",
+  "packs": []
+}

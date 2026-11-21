@@ -1,0 +1,7 @@
+[
+  {
+    "code": "openapi.merge.empty",
+    "message": "The merged document 'reference' holds no api: no app it covers serves or documents one.",
+    "fix": "List in its 'apps' an app with a server target or an OpenAPI-only app, or remove the document."
+  }
+]

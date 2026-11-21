@@ -1,0 +1,5 @@
+{
+  "workspace": "../../reference/workspace.yaml",
+  "name": "@seampact-fixtures/reference",
+  "version": "1.0.0"
+}

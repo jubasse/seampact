@@ -1,0 +1,7 @@
+outDir: src/__generated__
+sources:
+  notes: { package: '@seampact-fixtures/notes', version: 1.0.0, integrity: 'sha256-m1Dx5GL/JzlteMx5ojBeXbRHBV8Wx7YgA3+v5h4xLDs=' }
+targets:
+  - id: types
+    use: "@seampact/codegen-ts"
+    apis: [notes]
