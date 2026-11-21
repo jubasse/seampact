@@ -59,14 +59,13 @@ fn answer_of(case: &BundleCase) -> Result<BundleAnswer, CaseError> {
         }),
     })?;
 
-    let BundleBuildResult::Built { contents, .. } = built else {
-        let BundleBuildResult::Failed { failures, .. } = built else {
-            return Err(CaseError::Setup("the build answered neither way".to_owned()));
-        };
-
-        return Ok(BundleAnswer::Refused(JsonValue::Array(
-            failures.iter().map(failure_json).collect(),
-        )));
+    let contents = match built {
+        BundleBuildResult::Built { contents, .. } => contents,
+        BundleBuildResult::Failed { failures, .. } => {
+            return Ok(BundleAnswer::Refused(JsonValue::Array(
+                failures.iter().map(failure_json).collect(),
+            )));
+        }
     };
 
     let tarball = bundle_tarball(&contents)?;
