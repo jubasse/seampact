@@ -8,14 +8,6 @@ use seampact_json::{JsonNumber, JsonObject, JsonValue};
 use seampact_load::FsReader;
 use seampact_oracle::{BundleAnswer, BundleCase, SubjectAnswer, gunzipped_ustar_entries};
 
-use crate::oracle::stub_answer::{StubError, failed_answer};
-
-impl StubError for BundleError {
-    fn is_not_ported(&self) -> bool {
-        matches!(self, Self::NotPortedYet { .. })
-    }
-}
-
 /// Why a case gave no answer: the bundle crate failed, or the case could not be set up.
 enum CaseError {
     Bundle(BundleError),
@@ -32,7 +24,9 @@ impl From<BundleError> for CaseError {
 pub(crate) fn bundle_answer(case: &BundleCase) -> SubjectAnswer<BundleAnswer> {
     match answer_of(case) {
         Ok(answer) => SubjectAnswer::Ported(answer),
-        Err(CaseError::Bundle(error)) => failed_answer(&error),
+        Err(CaseError::Bundle(error)) => SubjectAnswer::InternalError {
+            message: error.to_string(),
+        },
         Err(CaseError::Setup(message)) => SubjectAnswer::InternalError { message },
     }
 }

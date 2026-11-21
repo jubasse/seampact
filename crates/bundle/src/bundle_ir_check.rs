@@ -1,16 +1,18 @@
 //! The third step of the bundle check, for one api: its IR file is readable JSON, declares the
 //! version the manifest lists, is of a version this reader reads, and is valid.
 
-use seampact_diagnostics::quote_text;
+use seampact_diagnostics::{InternalError, quote_text};
 use seampact_ir::{
     ContractIr, IR_REVISION, IR_VERSION, IrSupport, IrSupportCode, IrSupportValue, check_ir_support,
 };
+use seampact_ir_check::{IrCheckFailure, IrOpenReport, check_open_ir};
 use seampact_json::{JsonNumber, JsonValue, js_text_of, stringify_json};
 
-use crate::not_ported::not_ported_yet;
 use crate::untrusted_json::{UntrustedJson, parse_untrusted_json, utf8_text};
 use crate::{BundleApi, BundleError, BundleFailure, BundleFailureCode};
 
+/// A refusal lists at most this many problems, then how many more there are.
+const LISTED_PROBLEM_LIMIT: usize = 5;
 const FIX: &str = "Rebuild the bundle with a compiler of this IR revision, or use the seampact release that reads it.";
 
 /// This reader's version and exact revision; kinds and features are left to the target that
@@ -26,10 +28,6 @@ const READER_SUPPORT: IrSupport<'static> = IrSupport {
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum BundleIrRead {
     /// The document passed every check.
-    #[expect(
-        dead_code,
-        reason = "built once the open IR validator exists; until then the check answers not ported yet"
-    )]
     Ir(Box<ContractIr>),
     /// Why the document is refused.
     Refused(BundleFailure),
@@ -155,6 +153,67 @@ fn support_text(value: &IrSupportValue) -> String {
 }
 
 /// The document under the open IR JSON Schema, then as a typed IR.
-fn valid_ir(_api: &BundleApi, _document: &JsonValue) -> Result<BundleIrRead, BundleError> {
-    Err(not_ported_yet("createIrValidator"))
+fn valid_ir(api: &BundleApi, document: &JsonValue) -> Result<BundleIrRead, BundleError> {
+    let report = check_open_ir(document).map_err(|error| InternalError::new(error.to_string()))?;
+    let problems = reported_problems(&report);
+
+    if problems.is_empty() && report.valid {
+        let ir = ContractIr::from_json_text(&stringify_json(document))
+            .map_err(|error| InternalError::new(format!("bundle: {error}")))?;
+
+        return Ok(BundleIrRead::Ir(Box::new(ir)));
+    }
+
+    let listed: Vec<&str> = problems
+        .iter()
+        .take(LISTED_PROBLEM_LIMIT)
+        .map(String::as_str)
+        .collect();
+    let more = problems.len() - listed.len();
+    let tail = if more > 0 {
+        format!("; and {more} more")
+    } else {
+        String::new()
+    };
+
+    Ok(BundleIrRead::Refused(
+        BundleFailure::new(
+            BundleFailureCode::IrInvalid,
+            format!(
+                "'{}' is not valid under the IR JSON Schema: {}{tail}.",
+                api.file,
+                listed.join("; ")
+            ),
+            FIX,
+        )
+        .about(&api.file),
+    ))
+}
+
+/// The schema problems; then, for an invalid document, its unknown tags and unknown values.
+/// Unknown members are not listed, as the TypeScript does not list them.
+fn reported_problems(report: &IrOpenReport) -> Vec<String> {
+    let schema = report.failures.iter().filter_map(|failure| match failure {
+        IrCheckFailure::Schema {
+            pointer, message, ..
+        } => Some(format!(
+            "at {} {}",
+            quote_text(pointer),
+            quote_text(message)
+        )),
+        _ => None,
+    });
+    let unknown = report.failures.iter().filter_map(|failure| match failure {
+        IrCheckFailure::UnknownKind { pointer, tag, .. } if !report.valid => Some(format!(
+            "at {} an unknown {}",
+            quote_text(pointer),
+            quote_text(tag)
+        )),
+        IrCheckFailure::UnknownValue { pointer, .. } if !report.valid => {
+            Some(format!("at {} an unknown value", quote_text(pointer)))
+        }
+        _ => None,
+    });
+
+    schema.chain(unknown).collect()
 }

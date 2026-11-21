@@ -7,7 +7,7 @@ use seampact_json::{JsonObject, JsonValue, escape_pointer};
 
 use crate::IrCheckError;
 use crate::serde_value::serde_value_through_f64;
-use crate::strict_validators::StrictValidators;
+use crate::strict_validators::SchemaValidators;
 
 /// The reference the walk of an IR document starts from.
 const CONTRACT_IR_REFERENCE: &str = "#/$defs/ContractIR";
@@ -54,11 +54,52 @@ pub enum IrCheckFailure {
 ///
 /// [`IrCheckError`] when the schemas do not build or a number has no `f64`.
 pub fn check_strict_ir(ir: &JsonValue) -> Result<Vec<IrCheckFailure>, IrCheckError> {
-    let mut failures = schema_failures(StrictValidators::shared()?.ir(), ir)?;
+    let mut failures = schema_failures(SchemaValidators::shared()?.ir(), ir)?;
 
     failures.extend(unknown_failures(ir)?);
 
     Ok(failures)
+}
+
+/// What the open form finds in an IR document.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IrOpenReport {
+    /// No schema problem, no unknown member and no must-act unknown tag or value.
+    pub valid: bool,
+    /// The schema problems and unknown members, then every unknown union tag, then every unknown
+    /// open-enum value, must-act or not.
+    pub failures: Vec<IrCheckFailure>,
+}
+
+/// Holds an IR document to the schemas as published: an unknown union tag or open-enum value is
+/// listed and refuses the document only when it is must-act.
+///
+/// # Errors
+///
+/// [`IrCheckError`] when the schemas do not build or a number has no `f64`.
+pub fn check_open_ir(ir: &JsonValue) -> Result<IrOpenReport, IrCheckError> {
+    let found = unknowns(ir)?;
+    let mut failures = schema_failures(SchemaValidators::open()?.ir(), ir)?;
+
+    // A schema without the discriminator keyword also fails a union at an unknown tag: that is the
+    // unknown tag itself, listed below.
+    failures.retain(|failure| match failure {
+        IrCheckFailure::Schema {
+            keyword, pointer, ..
+        } => {
+            keyword != "oneOf"
+                || !found.iter().any(|unknown| {
+                    matches!(&unknown.failure, IrCheckFailure::UnknownKind { pointer: at, .. } if at == pointer)
+                })
+        }
+        _ => true,
+    });
+
+    let valid = failures.is_empty() && !found.iter().any(|unknown| unknown.must_act);
+
+    failures.extend(found.into_iter().map(|unknown| unknown.failure));
+
+    Ok(IrOpenReport { valid, failures })
 }
 
 /// Holds a source map to its schema.
@@ -67,7 +108,7 @@ pub fn check_strict_ir(ir: &JsonValue) -> Result<Vec<IrCheckFailure>, IrCheckErr
 ///
 /// [`IrCheckError`] when the schemas do not build or a number has no `f64`.
 pub fn check_source_map(source_map: &JsonValue) -> Result<Vec<IrCheckFailure>, IrCheckError> {
-    schema_failures(StrictValidators::shared()?.source_map(), source_map)
+    schema_failures(SchemaValidators::shared()?.source_map(), source_map)
 }
 
 fn schema_failures(
@@ -111,6 +152,30 @@ fn keyword_of(schema_path: &str) -> String {
 }
 
 fn unknown_failures(ir: &JsonValue) -> Result<Vec<IrCheckFailure>, IrCheckError> {
+    Ok(unknowns(ir)?
+        .into_iter()
+        .map(|unknown| unknown.failure)
+        .collect())
+}
+
+/// An unknown union tag or open-enum value, with whether it makes the IR invalid for every reader.
+struct FoundUnknown {
+    failure: IrCheckFailure,
+    must_act: bool,
+}
+
+/// Whether the walk's node is one whose unknown tag or value is must-act.
+fn must_act_of(node: &IrInstanceNode<'_>) -> bool {
+    match node {
+        IrInstanceNode::Union { must_act, .. } | IrInstanceNode::OpenEnum { must_act, .. } => {
+            *must_act
+        }
+        _ => false,
+    }
+}
+
+/// The unknown union tags, then the unknown open-enum values, in walk order.
+fn unknowns(ir: &JsonValue) -> Result<Vec<FoundUnknown>, IrCheckError> {
     let schema: JsonObject = [(
         "$ref".to_owned(),
         JsonValue::String(CONTRACT_IR_REFERENCE.to_owned()),
@@ -126,15 +191,21 @@ fn unknown_failures(ir: &JsonValue) -> Result<Vec<IrCheckFailure>, IrCheckError>
                 pointer,
                 tag,
                 value,
-            }) => kinds.push(IrCheckFailure::UnknownKind {
-                pointer: pointer.to_owned(),
-                tag: tag.to_owned(),
-                value: value.to_owned(),
+            }) => kinds.push(FoundUnknown {
+                failure: IrCheckFailure::UnknownKind {
+                    pointer: pointer.to_owned(),
+                    tag: tag.to_owned(),
+                    value: value.to_owned(),
+                },
+                must_act: must_act_of(node),
             }),
             Some(IrUnknown::Value { pointer, value }) => {
-                values.push(IrCheckFailure::UnknownValue {
-                    pointer: pointer.to_owned(),
-                    value: value.to_owned(),
+                values.push(FoundUnknown {
+                    failure: IrCheckFailure::UnknownValue {
+                        pointer: pointer.to_owned(),
+                        value: value.to_owned(),
+                    },
+                    must_act: must_act_of(node),
                 });
             }
             None => {}

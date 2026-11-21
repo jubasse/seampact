@@ -1,4 +1,4 @@
-//! The IR schemas in their strict form, compiled once.
+//! The IR schemas in their strict and open forms, each compiled once; the strict one is `shared`.
 
 use std::sync::OnceLock;
 
@@ -19,13 +19,21 @@ const SCHEMA_VALUES: [&str; 3] = ["items", "additionalProperties", "propertyName
 /// The keywords whose value is a list of subschemas.
 const SCHEMA_LISTS: [&str; 1] = ["oneOf"];
 
-/// The validators of the IR document and of the source map, both in the strict form.
-pub(crate) struct StrictValidators {
+/// How the schema documents are read: as published, or with every object shape closed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SchemaForm {
+    Open,
+    Strict,
+}
+
+/// The validators of the IR document and of the source map, in one form.
+pub(crate) struct SchemaValidators {
     ir: Validator,
     source_map: Validator,
 }
 
-static STRICT_VALIDATORS: OnceLock<Result<StrictValidators, IrCheckError>> = OnceLock::new();
+static OPEN_VALIDATORS: OnceLock<Result<SchemaValidators, IrCheckError>> = OnceLock::new();
+static STRICT_VALIDATORS: OnceLock<Result<SchemaValidators, IrCheckError>> = OnceLock::new();
 
 fn broken(what: String) -> IrCheckError {
     IrCheckError::BrokenSchemas { what }
@@ -97,15 +105,17 @@ fn compile(
         .map_err(|error| broken(format!("{name} does not compile: {error}")))
 }
 
-impl StrictValidators {
-    fn build() -> Result<Self, IrCheckError> {
+impl SchemaValidators {
+    fn build(form: SchemaForm) -> Result<Self, IrCheckError> {
         let mut documents = Vec::new();
         let mut builder = Registry::new().draft(Draft::Draft202012);
 
         for file in IR_SCHEMA_FILES {
             let mut document = schema_document(file)?;
 
-            close_objects(&mut document);
+            if form == SchemaForm::Strict {
+                close_objects(&mut document);
+            }
 
             let id = document_id(file, &document)?;
 
@@ -125,10 +135,18 @@ impl StrictValidators {
         })
     }
 
+    /// The compiled schemas as published, built on first use.
+    pub(crate) fn open() -> Result<&'static Self, IrCheckError> {
+        OPEN_VALIDATORS
+            .get_or_init(|| Self::build(SchemaForm::Open))
+            .as_ref()
+            .map_err(Clone::clone)
+    }
+
     /// The compiled strict schemas, built on first use.
     pub(crate) fn shared() -> Result<&'static Self, IrCheckError> {
         STRICT_VALIDATORS
-            .get_or_init(Self::build)
+            .get_or_init(|| Self::build(SchemaForm::Strict))
             .as_ref()
             .map_err(Clone::clone)
     }

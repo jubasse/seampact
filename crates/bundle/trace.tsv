@@ -75,13 +75,13 @@ src/tarball_read.rs#header_path	packages/core/compiler/src/bundle/tarball-read.t
 src/tarball_read.rs#text	packages/core/compiler/src/bundle/tarball-read.ts#text
 src/tarball_read.rs#octal	packages/core/compiler/src/bundle/tarball-read.ts#octal
 src/tarball_read.rs#pax_overrides	packages/core/compiler/src/bundle/tarball-read.ts#paxOverrides
--	packages/core/compiler/src/bundle/ir-check.ts#validator	pending: brief 3
+-	packages/core/compiler/src/bundle/ir-check.ts#validator	merged: ../ir-check/src/check.rs#check_open_ir
 src/bundle_ir_check.rs#check_bundle_ir	packages/core/compiler/src/bundle/ir-check.ts#checkBundleIr
 src/bundle_ir_check.rs#support_failure	packages/core/compiler/src/bundle/ir-check.ts#supportFailure
 src/bundle_ir_check.rs#declaration_failure	packages/core/compiler/src/bundle/ir-check.ts#declaredVersion
--	packages/core/compiler/src/bundle/ir-check.ts#validIr	pending: brief 3
--	packages/core/compiler/src/bundle/ir-check.ts#reportProblems	pending: brief 3
--	packages/core/compiler/src/bundle/ir-check.ts#isContractIr	pending: brief 3
+src/bundle_ir_check.rs#valid_ir	packages/core/compiler/src/bundle/ir-check.ts#validIr
+src/bundle_ir_check.rs#reported_problems	packages/core/compiler/src/bundle/ir-check.ts#reportProblems
+src/bundle_ir_check.rs#valid_ir	packages/core/compiler/src/bundle/ir-check.ts#isContractIr
 src/verify.rs#verify_bundle	packages/core/compiler/src/bundle/verify.ts#verifyBundle
 src/bundle_walk.rs#walk_bundle	packages/core/compiler/src/bundle/verify.ts#walkBundle
 src/bundle_walk.rs#over_cap	packages/core/compiler/src/bundle/verify.ts#overCap
