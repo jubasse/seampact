@@ -6,10 +6,25 @@
     reason = "functions reached only by stubs until the crate's last brief"
 )]
 
+mod change_sink;
+mod deprecation;
 mod diff_contracts;
 mod error;
+mod gate;
 mod not_ported;
 mod report;
+#[cfg(test)]
+mod sample_ir;
+mod walk_api;
+mod walk_catalogue;
+mod walk_context;
+mod walk_contracts;
+mod walk_declarations;
+mod walk_json;
+mod walk_maturity;
+mod walk_operations;
+mod walk_reach;
+mod walk_refusals;
 
 pub use diff_contracts::{diff_contract_sets, diff_contracts};
 pub use error::DiffError;

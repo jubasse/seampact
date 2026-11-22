@@ -53,7 +53,8 @@
       ],
       "breaks": [],
       "classification": "informative",
-      "before": "open data"
+      "before": "open data",
+      "after": "Recorded from a test that built a partial IR."
     }
   ],
   "gate": {

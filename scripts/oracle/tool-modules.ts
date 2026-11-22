@@ -65,7 +65,7 @@ export interface OracleTools {
     options: object,
   ): Map<string, object>;
   formatDiffReport(result: object): string;
-  diffTable: { codes: unknown; table: unknown };
+  diffTable: { codes: unknown; table: unknown; memberRows: unknown };
   buildBundle(options: {
     reader: LoadedReader;
     entry: string;
@@ -108,6 +108,8 @@ async function loadTools(): Promise<OracleTools> {
   const openapi = await importSource("openapi/src/index.ts");
   const lint = await importSource("lint/src/index.ts");
   const diff = await importSource("diff/src/index.ts");
+  // Not exported by the package: the oracle compares the expanded rows the Rust table is generated from.
+  const memberRows = await importSource("diff/src/table/member-rows.ts");
   const cli = await importSource("cli/src/index.ts");
   const from = (name: string) => `${PACKAGES}/${name}`;
 
@@ -122,6 +124,7 @@ async function loadTools(): Promise<OracleTools> {
     diffTable: {
       codes: member(diff, "DIFF_CODES", from("diff")),
       table: member(diff, "DIFF_TABLE", from("diff")),
+      memberRows: member(memberRows, "MEMBER_ROWS", from("diff/src/table/member-rows.ts")),
     },
     buildBundle: functionOf(compiler, "buildBundle", from("compiler")),
     bundleTarball: functionOf(compiler, "bundleTarball", from("compiler")),

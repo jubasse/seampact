@@ -846,5 +846,1313 @@
         "none": "CS"
       }
     }
+  },
+  "memberRows": {
+    "Name": {
+      "segments": "name",
+      "role": "name",
+      "status": "name"
+    },
+    "Docs": {
+      "summary": "annotation",
+      "description": "annotation"
+    },
+    "Origin": {
+      "api": "annotation",
+      "layer": "annotation",
+      "pointer": "annotation"
+    },
+    "DerivedFrom": {
+      "derivation": "annotation",
+      "from": "annotation"
+    },
+    "ValueSource": {
+      "in": {
+        "kind": "requirement",
+        "case": "changed"
+      },
+      "name": {
+        "kind": "requirement",
+        "case": "changed"
+      },
+      "prefixBits": {
+        "kind": "requirement",
+        "case": "changed"
+      }
+    },
+    "ErrorHttp": {
+      "status": {
+        "kind": "error",
+        "case": "status"
+      }
+    },
+    "ErrorDecl": {
+      "code": "declaration",
+      "family": {
+        "kind": "error",
+        "case": "family"
+      },
+      "nature": {
+        "kind": "error",
+        "case": "nature"
+      },
+      "natureName": {
+        "kind": "error",
+        "case": "nature"
+      },
+      "http": {
+        "kind": "error",
+        "case": "status"
+      },
+      "params": "type.changed",
+      "example": "annotation",
+      "default": "annotation",
+      "noStore": "annotation",
+      "title": "annotation",
+      "docs": "annotation",
+      "origin": "annotation"
+    },
+    "NatureDecl": {
+      "id": "declaration",
+      "base": {
+        "kind": "error",
+        "case": "nature"
+      },
+      "docs": "annotation",
+      "origin": "annotation"
+    },
+    "HeaderDecl": {
+      "id": "declaration",
+      "semantic": {
+        "kind": "header",
+        "case": "semantic"
+      },
+      "name": {
+        "kind": "header",
+        "case": "name"
+      },
+      "in": {
+        "kind": "header",
+        "case": "name"
+      },
+      "response": {
+        "kind": "header",
+        "case": "name"
+      },
+      "request": {
+        "kind": "header",
+        "case": "name"
+      },
+      "schema": "type.changed",
+      "origin": "annotation"
+    },
+    "ValueSchemeKey": {
+      "kind": {
+        "kind": "scheme",
+        "case": "signature"
+      },
+      "value": {
+        "kind": "scheme",
+        "case": "signature"
+      }
+    },
+    "SourceSchemeKey": {
+      "kind": {
+        "kind": "scheme",
+        "case": "signature"
+      },
+      "from": {
+        "kind": "scheme",
+        "case": "signature"
+      }
+    },
+    "OAuth2": {
+      "flows": "annotation"
+    },
+    "BearerFacts": {
+      "format": "annotation",
+      "oauth2": "annotation",
+      "openIdConnectUrl": "annotation"
+    },
+    "TemplateSignature": {
+      "verify": {
+        "kind": "scheme",
+        "case": "signature"
+      },
+      "format": {
+        "kind": "scheme",
+        "case": "signature"
+      },
+      "algorithm": {
+        "kind": "scheme",
+        "case": "signature"
+      },
+      "payload": {
+        "kind": "scheme",
+        "case": "signature"
+      },
+      "encoding": {
+        "kind": "scheme",
+        "case": "signature"
+      },
+      "toleranceMs": {
+        "kind": "scheme",
+        "case": "signature"
+      },
+      "key": {
+        "kind": "scheme",
+        "case": "signature"
+      }
+    },
+    "ApplicationSignature": {
+      "verify": {
+        "kind": "scheme",
+        "case": "signature"
+      },
+      "headers": {
+        "kind": "scheme",
+        "case": "signature"
+      },
+      "key": {
+        "kind": "scheme",
+        "case": "signature"
+      }
+    },
+    "CookieScheme": {
+      "id": "declaration",
+      "kind": {
+        "kind": "scheme",
+        "case": "kind"
+      },
+      "name": {
+        "kind": "scheme",
+        "case": "name"
+      },
+      "csrf": {
+        "kind": "scheme",
+        "case": "csrf"
+      },
+      "origin": "annotation"
+    },
+    "HeaderScheme": {
+      "id": "declaration",
+      "kind": {
+        "kind": "scheme",
+        "case": "kind"
+      },
+      "name": {
+        "kind": "scheme",
+        "case": "name"
+      },
+      "origin": "annotation"
+    },
+    "QueryScheme": {
+      "id": "declaration",
+      "kind": {
+        "kind": "scheme",
+        "case": "kind"
+      },
+      "name": {
+        "kind": "scheme",
+        "case": "name"
+      },
+      "origin": "annotation"
+    },
+    "BearerScheme": {
+      "id": "declaration",
+      "kind": {
+        "kind": "scheme",
+        "case": "kind"
+      },
+      "bearer": "annotation",
+      "origin": "annotation"
+    },
+    "BasicScheme": {
+      "id": "declaration",
+      "kind": {
+        "kind": "scheme",
+        "case": "kind"
+      },
+      "origin": "annotation"
+    },
+    "SignatureScheme": {
+      "id": "declaration",
+      "kind": {
+        "kind": "scheme",
+        "case": "kind"
+      },
+      "name": {
+        "kind": "scheme",
+        "case": "name"
+      },
+      "signature": {
+        "kind": "scheme",
+        "case": "signature"
+      },
+      "origin": "annotation"
+    },
+    "CredentialSchemes": {
+      "read": "identity",
+      "write": "identity",
+      "optionalRead": "identity"
+    },
+    "SchemaPrincipal": {
+      "kind": "identity",
+      "schema": "identity"
+    },
+    "VariantsPrincipal": {
+      "kind": "identity",
+      "variants": "identity"
+    },
+    "IgnoreKeysPolicy": {
+      "policy": {
+        "kind": "identity",
+        "case": "unknownKeys"
+      },
+      "reason": "annotation"
+    },
+    "KeepKeysPolicy": {
+      "policy": {
+        "kind": "identity",
+        "case": "unknownKeys"
+      },
+      "reason": "annotation"
+    },
+    "IdentityHeaderUse": {
+      "header": "identity",
+      "for": "identity",
+      "required": "identity",
+      "schema": "identity",
+      "from": "identity",
+      "stale": "identity",
+      "origin": "annotation"
+    },
+    "CredentialIdentity": {
+      "id": "declaration",
+      "kind": {
+        "kind": "identity",
+        "case": "kind"
+      },
+      "schemes": "identity",
+      "principal": "identity",
+      "errors": "annotation",
+      "headers": "identity",
+      "docs": "annotation",
+      "extensions": "annotation",
+      "origin": "annotation"
+    },
+    "SignedIdentity": {
+      "id": "declaration",
+      "kind": {
+        "kind": "identity",
+        "case": "kind"
+      },
+      "signed": {
+        "kind": "identity",
+        "case": "schemeRemoved"
+      },
+      "principal": "identity",
+      "unknownKeys": {
+        "kind": "identity",
+        "case": "unknownKeys"
+      },
+      "errors": "annotation",
+      "headers": "identity",
+      "docs": "annotation",
+      "extensions": "annotation",
+      "origin": "annotation"
+    },
+    "NoSubject": {
+      "kind": {
+        "kind": "right",
+        "case": "subject"
+      }
+    },
+    "ScopeSubject": {
+      "kind": {
+        "kind": "right",
+        "case": "subject"
+      },
+      "scope": {
+        "kind": "right",
+        "case": "subject"
+      }
+    },
+    "ResourceSubject": {
+      "kind": {
+        "kind": "right",
+        "case": "subject"
+      },
+      "type": {
+        "kind": "right",
+        "case": "subject"
+      },
+      "idSchema": {
+        "kind": "right",
+        "case": "subject"
+      }
+    },
+    "Right": {
+      "id": "declaration",
+      "params": "type.changed",
+      "subject": {
+        "kind": "right",
+        "case": "subject"
+      },
+      "guest": "right",
+      "errors": "annotation",
+      "docs": "annotation",
+      "extensions": "annotation",
+      "origin": "annotation",
+      "derivedFrom": "annotation",
+      "codeName": "name"
+    },
+    "RuleProof": {
+      "in": {
+        "kind": "rule",
+        "case": "proof"
+      },
+      "name": {
+        "kind": "rule",
+        "case": "proof"
+      },
+      "schema": {
+        "kind": "rule",
+        "case": "proof"
+      }
+    },
+    "Rule": {
+      "id": "declaration",
+      "params": "type.changed",
+      "takesBucket": {
+        "kind": "rule",
+        "case": "takesBucket"
+      },
+      "proof": {
+        "kind": "rule",
+        "case": "proof"
+      },
+      "errors": "annotation",
+      "docs": "annotation",
+      "extensions": "annotation",
+      "origin": "annotation"
+    },
+    "Scope": {
+      "id": "declaration",
+      "idSchema": "type.changed",
+      "within": {
+        "kind": "scope",
+        "case": "within"
+      },
+      "errors": "annotation",
+      "docs": "annotation",
+      "extensions": "annotation",
+      "origin": "annotation"
+    },
+    "Bucket": {
+      "id": "declaration",
+      "key": {
+        "kind": "bucket",
+        "case": "key"
+      },
+      "limit": "refinement",
+      "windowMs": "refinement",
+      "origin": "annotation"
+    },
+    "Service": {
+      "id": "declaration",
+      "maturity": "annotation",
+      "origin": "annotation"
+    },
+    "VocabularyEnumSource": {
+      "kind": "annotation",
+      "vocabulary": "annotation"
+    },
+    "CatalogueEnumSource": {
+      "kind": "annotation",
+      "enum": "annotation"
+    },
+    "Enum": {
+      "id": "type.changed",
+      "name": "name",
+      "values": "enum.value",
+      "codeNames": "name",
+      "source": "annotation",
+      "localReason": "annotation",
+      "fallback": "unclassified",
+      "directions": "annotation",
+      "docs": "annotation",
+      "origin": "annotation"
+    },
+    "ObjectSchema": {
+      "kind": "type.changed",
+      "properties": "property.added",
+      "id": "type.changed",
+      "name": "name",
+      "typeName": "name",
+      "directions": "annotation",
+      "examples": "annotation",
+      "docs": "annotation",
+      "extensions": "annotation",
+      "origin": "annotation",
+      "deprecated": "deprecation"
+    },
+    "MapSchema": {
+      "kind": "type.changed",
+      "keys": "type.changed",
+      "values": "type.changed",
+      "id": "type.changed",
+      "name": "name",
+      "typeName": "name",
+      "directions": "annotation",
+      "examples": "annotation",
+      "docs": "annotation",
+      "extensions": "annotation",
+      "origin": "annotation",
+      "deprecated": "deprecation"
+    },
+    "UnionSchema": {
+      "kind": "type.changed",
+      "tag": "union.tag",
+      "variants": "union.variant",
+      "id": "type.changed",
+      "name": "name",
+      "typeName": "name",
+      "directions": "annotation",
+      "examples": "annotation",
+      "docs": "annotation",
+      "extensions": "annotation",
+      "origin": "annotation",
+      "deprecated": "deprecation"
+    },
+    "BodyUnionTag": {
+      "in": "union.tag",
+      "property": "union.tag"
+    },
+    "HeaderUnionTag": {
+      "in": "union.tag",
+      "name": "union.tag"
+    },
+    "UnionVariant": {
+      "tag": "union.variant",
+      "schema": "type.changed",
+      "docs": "annotation"
+    },
+    "Property": {
+      "name": "property.added",
+      "type": "type.changed",
+      "optional": "property.required",
+      "nullable": "nullable",
+      "sensitive": "annotation",
+      "restrictedTo": "fieldRight",
+      "default": "default.changed",
+      "deprecated": "deprecation",
+      "codeName": "name",
+      "docs": "annotation",
+      "extensions": "annotation",
+      "origin": "annotation",
+      "derivedFrom": "annotation",
+      "examples": "annotation"
+    },
+    "FieldRestriction": {
+      "right": {
+        "kind": "fieldRight",
+        "case": "changed"
+      },
+      "params": {
+        "kind": "fieldRight",
+        "case": "changed"
+      },
+      "inputPolicy": {
+        "kind": "fieldRight",
+        "case": "changed"
+      },
+      "origin": "annotation"
+    },
+    "UnknownKeys": {
+      "policy": "unknownKeys",
+      "reason": "annotation",
+      "origin": "annotation",
+      "derivedFrom": "annotation"
+    },
+    "RefTypeUse": {
+      "kind": "type.changed",
+      "schema": "type.changed",
+      "unknownKeys": "unknownKeys",
+      "nullable": "nullable",
+      "docs": "annotation",
+      "examples": "annotation"
+    },
+    "OpaqueTypeUse": {
+      "kind": "type.changed",
+      "reason": "annotation",
+      "origin": "annotation",
+      "nullable": "nullable",
+      "docs": "annotation",
+      "examples": "annotation"
+    },
+    "FileTypeUse": {
+      "kind": "type.changed",
+      "media": "refinement",
+      "maxSizeBytes": "refinement",
+      "nullable": "nullable",
+      "docs": "annotation",
+      "examples": "annotation"
+    },
+    "EnumNarrowing": {
+      "values": "enum.value",
+      "reason": "annotation"
+    },
+    "EnumTypeUse": {
+      "kind": "type.changed",
+      "enum": "type.changed",
+      "narrowedTo": "enum.value",
+      "nullable": "nullable",
+      "docs": "annotation",
+      "examples": "annotation"
+    },
+    "JsonContent": {
+      "media": "type.changed",
+      "schema": "type.changed"
+    },
+    "ScalarTypeUse": {
+      "kind": "type.changed",
+      "type": "type.changed",
+      "format": "type.changed",
+      "scalar": "name",
+      "refinements": "refinement",
+      "content": "type.changed",
+      "sensitive": "annotation",
+      "nullable": "nullable",
+      "docs": "annotation",
+      "examples": "annotation"
+    },
+    "ArrayTypeUse": {
+      "kind": "type.changed",
+      "items": "type.changed",
+      "minItems": "refinement",
+      "maxItems": "refinement",
+      "nullable": "nullable",
+      "docs": "annotation",
+      "examples": "annotation"
+    },
+    "Pattern": {
+      "source": "annotation",
+      "normalized": "pattern.changed"
+    },
+    "Refinements": {
+      "minLength": "refinement",
+      "maxLength": "refinement",
+      "pattern": "pattern.changed",
+      "minimum": "refinement",
+      "maximum": "refinement",
+      "exclusiveMinimum": "refinement",
+      "exclusiveMaximum": "refinement",
+      "multipleOf": "refinement"
+    },
+    "Scalar": {
+      "id": "name",
+      "name": "name",
+      "type": "type.changed",
+      "directions": "annotation",
+      "docs": "annotation",
+      "origin": "annotation"
+    },
+    "OperationRef": {
+      "kind": "deprecation",
+      "api": "deprecation",
+      "id": "deprecation"
+    },
+    "QueryWire": {
+      "kind": {
+        "kind": "type.changed",
+        "case": "wire"
+      },
+      "style": {
+        "kind": "type.changed",
+        "case": "wire"
+      },
+      "explode": {
+        "kind": "type.changed",
+        "case": "wire"
+      },
+      "brackets": {
+        "kind": "type.changed",
+        "case": "wire"
+      }
+    },
+    "FieldWire": {
+      "kind": {
+        "kind": "type.changed",
+        "case": "wire"
+      },
+      "style": {
+        "kind": "type.changed",
+        "case": "wire"
+      },
+      "explode": {
+        "kind": "type.changed",
+        "case": "wire"
+      },
+      "brackets": {
+        "kind": "type.changed",
+        "case": "wire"
+      }
+    },
+    "Param": {
+      "name": "param.added",
+      "type": "type.changed",
+      "required": "param.required",
+      "wire": {
+        "kind": "type.changed",
+        "case": "wire"
+      },
+      "default": "default.changed",
+      "origin": "annotation",
+      "derivedFrom": "annotation"
+    },
+    "Params": {
+      "path": "param.added",
+      "query": "param.added",
+      "header": "param.added"
+    },
+    "RefuseUnknownQuery": {
+      "policy": "unknownQuery"
+    },
+    "IgnoreUnknownQuery": {
+      "policy": "unknownQuery",
+      "reason": "annotation",
+      "origin": "annotation"
+    },
+    "IdentityAccess": {
+      "kind": "access",
+      "identity": "access",
+      "schemes": "access",
+      "origin": "annotation"
+    },
+    "OptionalAccess": {
+      "kind": "access",
+      "identity": "access",
+      "schemes": "access",
+      "onRefused": "access",
+      "reason": "annotation",
+      "origin": "annotation"
+    },
+    "PublicAccess": {
+      "kind": "access",
+      "reason": "annotation",
+      "origin": "annotation"
+    },
+    "PrincipalRequirement": {
+      "field": "principalRequirement",
+      "origin": "annotation"
+    },
+    "OperationScope": {
+      "scope": "scope",
+      "source": {
+        "kind": "scope",
+        "case": "changed"
+      },
+      "origin": "annotation"
+    },
+    "RequirementSubject": {
+      "source": {
+        "kind": "requirement",
+        "case": "changed"
+      },
+      "defaulted": {
+        "kind": "requirement",
+        "case": "changed"
+      }
+    },
+    "RightRequirement": {
+      "kind": "requirement",
+      "right": "requirement",
+      "params": {
+        "kind": "requirement",
+        "case": "changed"
+      },
+      "subject": {
+        "kind": "requirement",
+        "case": "changed"
+      },
+      "entry": "annotation",
+      "origin": "annotation",
+      "derivedFrom": "annotation"
+    },
+    "RuleRequirement": {
+      "kind": "requirement",
+      "rule": "requirement",
+      "params": {
+        "kind": "requirement",
+        "case": "changed"
+      },
+      "bucket": {
+        "kind": "requirement",
+        "case": "changed"
+      },
+      "entry": "annotation",
+      "origin": "annotation",
+      "derivedFrom": "annotation"
+    },
+    "Binding": {
+      "from": "binding",
+      "to": "binding",
+      "origin": "annotation"
+    },
+    "InputField": {
+      "name": "annotation",
+      "wire": {
+        "kind": "type.changed",
+        "case": "wire"
+      }
+    },
+    "OperationInput": {
+      "media": "body",
+      "schema": "type.changed",
+      "bodyLimitBytes": "refinement",
+      "rawBody": {
+        "kind": "body",
+        "case": "rawBody"
+      },
+      "fields": "type.changed",
+      "proofs": "proof",
+      "origin": "annotation"
+    },
+    "InputProof": {
+      "name": "proof",
+      "schema": "type.changed",
+      "wire": {
+        "kind": "type.changed",
+        "case": "wire"
+      },
+      "derivedFrom": "annotation"
+    },
+    "ResponseHeader": {
+      "name": "responseHeader.added",
+      "type": "type.changed",
+      "required": "responseHeader.required",
+      "semantic": {
+        "kind": "responseHeader.semantic",
+        "case": "changed"
+      },
+      "origin": "annotation",
+      "derivedFrom": "annotation"
+    },
+    "Response": {
+      "status": "response",
+      "media": "response",
+      "body": "type.changed",
+      "shape": {
+        "kind": "response",
+        "case": "shape"
+      },
+      "headers": "responseHeader.added",
+      "origin": "annotation",
+      "derivedFrom": "annotation",
+      "docs": "annotation"
+    },
+    "OperationError": {
+      "code": "error",
+      "example": "annotation",
+      "roles": {
+        "kind": "error",
+        "case": "roles"
+      },
+      "retryHeader": "error",
+      "derivedFrom": "annotation",
+      "origin": "annotation"
+    },
+    "ErrorRoleBinding": {
+      "role": {
+        "kind": "error",
+        "case": "roles"
+      },
+      "params": {
+        "kind": "error",
+        "case": "roles"
+      }
+    },
+    "RetryHeader": {
+      "name": {
+        "kind": "error",
+        "case": "retryHeaderChanged"
+      },
+      "param": {
+        "kind": "error",
+        "case": "retryHeaderChanged"
+      },
+      "unit": {
+        "kind": "error",
+        "case": "retryHeaderChanged"
+      },
+      "derivedFrom": "annotation"
+    },
+    "FieldRightSubject": {
+      "source": {
+        "kind": "fieldRight",
+        "case": "changed"
+      }
+    },
+    "FieldRight": {
+      "schema": "fieldRight",
+      "pointer": "fieldRight",
+      "right": "fieldRight",
+      "direction": "fieldRight",
+      "params": {
+        "kind": "fieldRight",
+        "case": "changed"
+      },
+      "subject": {
+        "kind": "fieldRight",
+        "case": "changed"
+      },
+      "inputPolicy": {
+        "kind": "fieldRight",
+        "case": "changed"
+      },
+      "always": {
+        "kind": "fieldRight",
+        "case": "changed"
+      },
+      "derivedFrom": "annotation"
+    },
+    "DerivedIdempotency": {
+      "kind": "idempotency",
+      "header": {
+        "kind": "idempotency",
+        "case": "header"
+      },
+      "replayHeader": {
+        "kind": "idempotency",
+        "case": "replayHeader"
+      },
+      "lifetimeMs": "idempotency",
+      "required": "idempotency",
+      "enforce": "idempotency",
+      "derivedFrom": "annotation"
+    },
+    "ExemptIdempotency": {
+      "kind": "idempotency",
+      "reason": "annotation",
+      "origin": "annotation"
+    },
+    "Concurrency": {
+      "version": {
+        "kind": "concurrency",
+        "case": "changed"
+      },
+      "field": {
+        "kind": "concurrency",
+        "case": "changed"
+      },
+      "derivedFrom": "annotation"
+    },
+    "Owner": {
+      "kind": {
+        "kind": "owner",
+        "case": "changed"
+      },
+      "origin": "annotation"
+    },
+    "CacheDirectives": {
+      "maxAgeMs": "annotation",
+      "sharedMaxAgeMs": "annotation",
+      "staleWhileRevalidateMs": "annotation",
+      "staleIfErrorMs": "annotation",
+      "immutable": "annotation",
+      "noCache": "annotation",
+      "mustRevalidate": "annotation"
+    },
+    "CallerCacheControl": {
+      "caller": "annotation",
+      "cacheControl": "annotation"
+    },
+    "Cache": {
+      "family": "annotation",
+      "directives": "annotation",
+      "anonymous": "annotation",
+      "vary": "annotation",
+      "etag": "annotation",
+      "perCallerKind": "annotation",
+      "noStore": "annotation",
+      "origin": "annotation",
+      "derivedFrom": "annotation"
+    },
+    "SortKey": {
+      "key": "paging",
+      "right": {
+        "kind": "paging",
+        "case": "sortKeyChanged"
+      },
+      "params": {
+        "kind": "paging",
+        "case": "sortKeyChanged"
+      },
+      "subject": {
+        "kind": "paging",
+        "case": "sortKeyChanged"
+      },
+      "derivedFrom": "annotation",
+      "origin": "annotation"
+    },
+    "Paging": {
+      "style": {
+        "kind": "paging",
+        "case": "style"
+      },
+      "maxLimit": "refinement",
+      "defaultLimit": {
+        "kind": "paging",
+        "case": "defaultLimit"
+      },
+      "overLimit": "paging",
+      "token": {
+        "kind": "paging",
+        "case": "token"
+      },
+      "sortKeys": "paging",
+      "origin": "annotation"
+    },
+    "DerivedCsrf": {
+      "kind": "csrf",
+      "header": {
+        "kind": "csrf",
+        "case": "changed"
+      },
+      "derivedFrom": "annotation"
+    },
+    "ExemptCsrf": {
+      "kind": "csrf",
+      "reason": "annotation",
+      "origin": "annotation"
+    },
+    "Degradable": {
+      "paths": "annotation",
+      "header": "annotation",
+      "origin": "annotation"
+    },
+    "Deprecation": {
+      "since": "deprecation",
+      "sunset": "deprecation",
+      "successor": "deprecation",
+      "successorRel": "deprecation",
+      "origin": "annotation"
+    },
+    "OperationMaturity": {
+      "level": "maturity",
+      "source": "annotation",
+      "reason": "annotation",
+      "origin": "annotation"
+    },
+    "OperationResource": {
+      "type": "annotation",
+      "idParam": "annotation",
+      "idProperty": "annotation"
+    },
+    "OperationExample": {
+      "status": "annotation",
+      "request": "annotation",
+      "error": "annotation",
+      "value": "annotation"
+    },
+    "Operation": {
+      "kind": "unclassified",
+      "id": "operation.added",
+      "name": "name",
+      "surface": "operation.route",
+      "op": "annotation",
+      "resource": "annotation",
+      "features": "annotation",
+      "method": "operation.route",
+      "path": "operation.route",
+      "safe": {
+        "kind": "operation.route",
+        "case": "safe"
+      },
+      "params": "param.added",
+      "unknownQuery": "unknownQuery",
+      "access": "access",
+      "callerKinds": "callerKind",
+      "principalRequires": "principalRequirement",
+      "scopes": "scope",
+      "requires": "requirement",
+      "bindings": "binding",
+      "input": "body",
+      "responses": "response",
+      "errors": "error",
+      "fieldRights": "fieldRight",
+      "idempotency": "idempotency",
+      "concurrency": "concurrency",
+      "owner": "owner",
+      "cache": "annotation",
+      "paging": "paging",
+      "filteredBy": "filteredBy",
+      "degradable": "annotation",
+      "budgetMs": "annotation",
+      "deadlineHeader": "annotation",
+      "deprecated": "deprecation",
+      "relays": "unclassified",
+      "upstream": "annotation",
+      "maturity": "maturity",
+      "internal": "annotation",
+      "csrf": "csrf",
+      "format": "operation.format",
+      "tags": "annotation",
+      "examples": "annotation",
+      "docs": "annotation",
+      "extensions": "annotation",
+      "origin": "annotation"
+    },
+    "HeaderTemplate": {
+      "name": "format",
+      "value": "format"
+    },
+    "Shape": {
+      "body": "format",
+      "headers": "format"
+    },
+    "SuccessShapes": {
+      "item": "format",
+      "table": "format",
+      "list": "format",
+      "page": "format"
+    },
+    "MetaMember": {
+      "type": "format",
+      "fill": "format",
+      "source": "format"
+    },
+    "ErrorShape": {
+      "media": "format",
+      "body": "format",
+      "headers": "format"
+    },
+    "WireFormat": {
+      "id": "declaration",
+      "media": {
+        "kind": "format",
+        "case": "media"
+      },
+      "absent": {
+        "kind": "format",
+        "case": "absent"
+      },
+      "success": {
+        "kind": "format",
+        "case": "success"
+      },
+      "meta": {
+        "kind": "format",
+        "case": "meta"
+      },
+      "error": {
+        "kind": "format",
+        "case": "error"
+      },
+      "origin": "annotation"
+    },
+    "PagingRequestRole": {
+      "role": "pagingStyle",
+      "in": "pagingStyle",
+      "name": "pagingStyle",
+      "base": "pagingStyle",
+      "style": "pagingStyle",
+      "direction": "pagingStyle"
+    },
+    "NamedTemplate": {
+      "name": "format",
+      "value": "format"
+    },
+    "PagingLink": {
+      "rel": "pagingStyle",
+      "role": "pagingStyle"
+    },
+    "PagingResponse": {
+      "body": "pagingStyle",
+      "meta": "pagingStyle",
+      "headers": "pagingStyle",
+      "links": "pagingStyle"
+    },
+    "PagingStyle": {
+      "id": "declaration",
+      "position": {
+        "kind": "pagingStyle",
+        "case": "position"
+      },
+      "absent": {
+        "kind": "pagingStyle",
+        "case": "absent"
+      },
+      "request": {
+        "kind": "pagingStyle",
+        "case": "request"
+      },
+      "response": {
+        "kind": "pagingStyle",
+        "case": "response"
+      },
+      "handlerResult": {
+        "kind": "pagingStyle",
+        "case": "handlerResult"
+      },
+      "origin": "annotation"
+    },
+    "SlotTemplate": {
+      "kind": "format",
+      "slot": "format",
+      "path": "format"
+    },
+    "PlainTextPart": {
+      "kind": "format",
+      "text": "format"
+    },
+    "SlotTextPart": {
+      "kind": "format",
+      "slot": "format",
+      "path": "format"
+    },
+    "TextTemplate": {
+      "kind": "format",
+      "parts": "format"
+    },
+    "LiteralTemplate": {
+      "kind": "format",
+      "value": "format"
+    },
+    "PlainMemberName": {
+      "kind": "format",
+      "text": "format"
+    },
+    "SlotMemberName": {
+      "kind": "format",
+      "slot": "format"
+    },
+    "ObjectTemplateMember": {
+      "name": "format",
+      "value": "format"
+    },
+    "ObjectTemplate": {
+      "kind": "format",
+      "members": "format",
+      "merge": "format"
+    },
+    "ArrayTemplate": {
+      "kind": "format",
+      "items": "format"
+    },
+    "EachTemplate": {
+      "kind": "format",
+      "of": "format",
+      "as": "format"
+    },
+    "ContractIR": {
+      "irVersion": "unclassified",
+      "irRevision": "unclassified",
+      "kinds": "unclassified",
+      "features": "annotation",
+      "api": "unclassified",
+      "packs": "pack.upgraded",
+      "conventions": "annotation",
+      "formats": "declaration",
+      "pagings": "declaration",
+      "schemas": "type.changed",
+      "scalars": "type.changed",
+      "enums": "enum.value",
+      "errors": "declaration",
+      "natures": "declaration",
+      "schemes": "declaration",
+      "headers": "declaration",
+      "identities": "declaration",
+      "rights": "declaration",
+      "rules": "declaration",
+      "scopes": "declaration",
+      "buckets": "declaration",
+      "services": "declaration",
+      "extensionKeys": "annotation",
+      "lint": "annotation",
+      "operations": "operation.added"
+    },
+    "PackRef": {
+      "name": "pack.upgraded",
+      "version": "pack.upgraded"
+    },
+    "Surface": {
+      "name": "name",
+      "prefix": "operation.route",
+      "pathVersion": "operation.route",
+      "origin": "annotation"
+    },
+    "ApiDocument": {
+      "surfaces": "annotation",
+      "internal": "annotation"
+    },
+    "PathVersion": {
+      "value": "operation.route",
+      "origin": "annotation"
+    },
+    "ApiCaller": {
+      "identity": "unclassified",
+      "right": "unclassified"
+    },
+    "PathApiVersion": {
+      "kind": "unclassified",
+      "number": "unclassified"
+    },
+    "LabelApiVersion": {
+      "kind": "unclassified",
+      "label": "unclassified"
+    },
+    "Compat": {
+      "policy": "compat.policy"
+    },
+    "Api": {
+      "id": "unclassified",
+      "name": "name",
+      "version": "unclassified",
+      "kind": "unclassified",
+      "pathVersion": "operation.route",
+      "role": "unclassified",
+      "maturity": "maturity",
+      "caller": "unclassified",
+      "compat": "compat.policy",
+      "wire": "type.changed",
+      "surfaces": "operation.route",
+      "documents": "annotation",
+      "docs": "annotation",
+      "extensions": "annotation",
+      "origin": "annotation"
+    },
+    "ApiWire": {
+      "int64": "type.changed",
+      "outputEnums": "type.changed",
+      "urls": "type.changed"
+    },
+    "ConventionValue": {
+      "value": "annotation",
+      "origin": "annotation"
+    },
+    "ExtensionKeyDecl": {
+      "id": "annotation",
+      "prefix": "annotation",
+      "key": "annotation",
+      "schema": "annotation",
+      "places": "annotation",
+      "origin": "annotation"
+    },
+    "LintRule": {
+      "severity": "annotation",
+      "origin": "annotation"
+    },
+    "LintAllow": {
+      "rule": "annotation",
+      "at": "annotation",
+      "reason": "annotation",
+      "subtree": "annotation"
+    },
+    "Lint": {
+      "rules": "annotation",
+      "allows": "annotation"
+    }
   }
 }

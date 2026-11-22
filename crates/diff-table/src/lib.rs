@@ -10,6 +10,7 @@ mod diff_position;
 mod diff_table;
 mod diff_value;
 mod error;
+mod ir_definition;
 mod member_row;
 mod member_rows_data;
 mod options;
@@ -24,6 +25,7 @@ pub use diff_kind::DiffKind;
 pub use diff_position::DiffPosition;
 pub use diff_value::DiffValue;
 pub use error::DiffTableError;
+pub use ir_definition::IrDefinition;
 pub use member_row::{MemberRow, member_row};
 pub use options::{
     DiffExemption, DiffGateScope, DiffOptions, ResolvedDiffOptions, resolve_diff_options,

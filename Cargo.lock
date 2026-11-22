@@ -1005,6 +1005,7 @@ dependencies = [
  "seampact-cli-config",
  "seampact-compiler",
  "seampact-diagnostics",
+ "seampact-diff",
  "seampact-diff-table",
  "seampact-editor-schemas",
  "seampact-ir",
@@ -1014,6 +1015,8 @@ dependencies = [
  "seampact-openapi",
  "seampact-oracle",
  "seampact-target",
+ "serde",
+ "serde_json",
  "thiserror",
 ]
 
@@ -1087,6 +1090,8 @@ dependencies = [
  "seampact-diagnostics",
  "seampact-diff-table",
  "seampact-ir",
+ "seampact-js",
+ "seampact-json",
  "thiserror",
 ]
 

@@ -1,0 +1,177 @@
+src/diff_contracts.rs#diff_contracts	packages/core/diff/src/diff-contracts.ts#diffContracts
+src/diff_contracts.rs#side_of	packages/core/diff/src/diff-contracts.ts#sideOf
+src/walk_contracts.rs#walk_contracts	packages/core/diff/src/walk/walk.ts#walkContracts
+src/walk_context.rs#emit_at	packages/core/diff/src/walk/context.ts#emitAt
+src/walk_context.rs#compare_members	packages/core/diff/src/walk/context.ts#compareMembers
+src/change_sink.rs#new	packages/core/diff/src/walk/sink.ts#ChangeSink.constructor
+src/change_sink.rs#emit	packages/core/diff/src/walk/sink.ts#ChangeSink.emit
+src/change_sink.rs#refusals	packages/core/diff/src/walk/sink.ts#ChangeSink.refusals
+src/change_sink.rs#sorted_changes	packages/core/diff/src/walk/sink.ts#ChangeSink.sortedChanges
+src/change_sink.rs#emit_at	packages/core/diff/src/walk/sink.ts#ChangeSink.#emitAt
+src/change_sink.rs#cause_pack	packages/core/diff/src/walk/sink.ts#ChangeSink.#causePack
+src/walk_api.rs#changed_pack_names	packages/core/diff/src/walk/api.ts#changedPackNames
+src/walk_declarations.rs#from_name	packages/core/diff/src/walk/declarations.ts#isDeclarationCatalogue
+src/walk_reach.rs#schema_reach_key	packages/core/diff/src/walk/reach.ts#schemaReachKey
+src/walk_reach.rs#declaration_reach_key	packages/core/diff/src/walk/reach.ts#declarationReachKey
+src/walk_reach.rs#build_reach_index	packages/core/diff/src/walk/reach.ts#buildReachIndex
+src/walk_reach.rs#place_of	packages/core/diff/src/walk/reach.ts#placeOf
+src/walk_reach.rs#visit_operation	packages/core/diff/src/walk/reach.ts#visitOperation
+src/walk_reach.rs#visit_operation_declarations	packages/core/diff/src/walk/reach.ts#visitOperationDeclarations
+src/walk_reach.rs#visit_type_use	packages/core/diff/src/walk/reach.ts#visitTypeUse
+src/walk_reach.rs#visit_schema	packages/core/diff/src/walk/reach.ts#visitSchema
+src/walk_reach.rs#add_reach	packages/core/diff/src/walk/reach.ts#addReach
+src/walk_refusals.rs#whole_diff_refusals	packages/core/diff/src/walk/refusals.ts#wholeDiffRefusals
+src/walk_refusals.rs#api_version_text	packages/core/diff/src/walk/refusals.ts#apiVersionText
+src/walk_refusals.rs#gate_value_refusals	packages/core/diff/src/walk/refusals.ts#gateValueRefusals
+src/walk_maturity.rs#is_known_maturity	packages/core/diff/src/walk/maturity.ts#isKnownMaturity
+src/walk_json.rs#is_same_json	packages/core/diff/src/walk/json.ts#isSameJson
+src/walk_json.rs#pointer_join	packages/core/diff/src/walk/json.ts#pointerJoin
+src/walk_json.rs#scalar_value	packages/core/diff/src/walk/json.ts#scalarValue
+src/gate.rs#applied_policy	packages/core/diff/src/gate/gate.ts#appliedPolicy
+src/gate.rs#apply_gate	packages/core/diff/src/gate/gate.ts#applyGate
+src/deprecation.rs#deprecation_report	packages/core/diff/src/deprecation/deprecation.ts#deprecationReport
+src/deprecation.rs#operation_entries	packages/core/diff/src/deprecation/deprecation.ts#operationEntries
+src/deprecation.rs#schema_entries	packages/core/diff/src/deprecation/deprecation.ts#schemaEntries
+src/deprecation.rs#flag_of	packages/core/diff/src/deprecation/deprecation.ts#flagOf
+src/deprecation.rs#property_entries	packages/core/diff/src/deprecation/deprecation.ts#propertyEntries
+src/report.rs#format_diff_report	packages/core/diff/src/report/format.ts#formatDiffReport
+src/report.rs#lines	packages/core/diff/src/report/format.ts#lines
+src/report.rs#change_line	packages/core/diff/src/report/format.ts#changeLine
+src/report.rs#values_text	packages/core/diff/src/report/format.ts#valuesText
+src/report.rs#diagnostic_line	packages/core/diff/src/report/format.ts#diagnosticLine
+src/walk_reach.rs#enum_reach_key	packages/core/diff/src/walk/reach.ts#enumReachKey
+-	packages/core/diff/src/walk/operations.ts#indexById	pending: brief 2
+src/gate.rs#breaks_text	packages/core/diff/src/gate/gate.ts#breaksText
+-	packages/core/diff/src/walk/json.ts#compareText	merged: ../js/src/utf16_order.rs#cmp_utf16
+-	packages/core/diff/src/walk/operations.ts#operationSite	pending: brief 2
+-	packages/core/diff/src/diff-contracts.ts#withoutOperations	pending: brief 2
+-	packages/core/diff/src/gate/gate.ts#beforeOperation	pending: brief 2
+-	packages/core/diff/src/gate/gate.ts#changeText	pending: brief 2
+src/walk_reach.rs#visit_scheme	packages/core/diff/src/walk/reach.ts#visitScheme	pending: brief 2
+src/walk_reach.rs#visit_rule	packages/core/diff/src/walk/reach.ts#visitRule	pending: brief 2
+src/walk_reach.rs#visit_scope	packages/core/diff/src/walk/reach.ts#visitScope	pending: brief 2
+src/walk_reach.rs#visit_right	packages/core/diff/src/walk/reach.ts#visitRight	pending: brief 2
+-	packages/core/diff/src/walk/catalogue.ts#nameOf	pending: brief 2
+-	packages/core/diff/src/walk/json.ts#isRecord	pending: brief 2
+-	packages/core/diff/src/gate/gate.ts#isOnExperimental	pending: brief 2
+-	packages/core/diff/src/gate/gate.ts#isRemovalPastSunset	pending: brief 2
+-	packages/core/diff/src/walk/catalogue.ts#commonIds	pending: brief 2
+src/gate.rs#policy_failure	packages/core/diff/src/gate/gate.ts#policyFailure	pending: brief 2
+-	packages/core/diff/src/gate/gate.ts#failureBase	pending: brief 2
+src/walk_reach.rs#visit_identity	packages/core/diff/src/walk/reach.ts#visitIdentity	pending: brief 2
+-	packages/core/diff/src/walk/json.ts#memberNames	pending: brief 2
+-	packages/core/diff/src/walk/context.ts#compareKeptOrder	pending: brief 2
+-	packages/core/diff/src/walk/declarations.ts#originOf	pending: brief 2
+src/gate.rs#stable_failures	packages/core/diff/src/gate/gate.ts#stableFailures	pending: brief 2
+src/gate.rs#exemption_of	packages/core/diff/src/gate/gate.ts#exemptionOf	pending: brief 2
+-	packages/core/diff/src/walk/declarations.ts#definitionOf	pending: brief 2
+src/change_sink.rs#compare_changes	packages/core/diff/src/walk/sink.ts#compareChanges
+src/walk_operations.rs#compare_operations	packages/core/diff/src/walk/operations.ts#compareOperations	pending: brief 2
+src/diff_contracts.rs#diff_contract_sets	packages/core/diff/src/diff-contracts.ts#diffContractSets	pending: brief 2
+-	packages/core/diff/src/walk/reach.ts#commonReaches	pending: brief 2
+src/walk_catalogue.rs#compare_enum_catalogue	packages/core/diff/src/walk/catalogue.ts#compareEnumCatalogue	pending: brief 2
+-	packages/core/diff/src/walk/type-use.ts#enumValueFacts	pending: brief 2
+-	packages/core/diff/src/walk/catalogue.ts#compareObjectSchema	pending: brief 2
+-	packages/core/diff/src/walk/type-use.ts#compareEnumValues	pending: brief 2
+src/walk_catalogue.rs#compare_schema_catalogue	packages/core/diff/src/walk/catalogue.ts#compareSchemaCatalogue	pending: brief 2
+-	packages/core/diff/src/walk/catalogue.ts#compareSchema	pending: brief 2
+-	packages/core/diff/src/walk/catalogue.ts#compareProperties	pending: brief 2
+-	packages/core/diff/src/walk/catalogue.ts#compareProperty	pending: brief 2
+-	packages/core/diff/src/walk/catalogue.ts#emitDefaultChange	pending: brief 2
+-	packages/core/diff/src/walk/type-use.ts#compareNullable	pending: brief 2
+-	packages/core/diff/src/walk/type-use.ts#compareTypeUse	pending: brief 2
+-	packages/core/diff/src/walk/catalogue.ts#compareUnionSchema	pending: brief 2
+-	packages/core/diff/src/walk/access.ts#accessComparisons	pending: brief 2
+-	packages/core/diff/src/walk/operations.ts#compareOperation	pending: brief 2
+-	packages/core/diff/src/walk/behaviour.ts#behaviourComparisons	pending: brief 2
+-	packages/core/diff/src/walk/access.ts#emitPresence	pending: brief 2
+-	packages/core/diff/src/walk/behaviour.ts#derivedOf	pending: brief 2
+-	packages/core/diff/src/walk/context.ts#compareKeyedList	pending: brief 2
+-	packages/core/diff/src/walk/access.ts#compareUnknownQuery	pending: brief 2
+-	packages/core/diff/src/walk/behaviour.ts#comparePaging	pending: brief 2
+src/walk_declarations.rs#compare_declarations	packages/core/diff/src/walk/declarations.ts#compareDeclarations	pending: brief 3
+-	packages/core/diff/src/walk/declarations.ts#entryComparisons	pending: brief 3
+-	packages/core/diff/src/walk/declarations.ts#pagingStyleComparisons	pending: brief 3
+-	packages/core/diff/src/walk/access.ts#compareBindings	pending: brief 3
+-	packages/core/diff/src/walk/access.ts#compareFieldRights	pending: brief 3
+-	packages/core/diff/src/walk/sink.ts#ChangeSink.refuse	pending: brief 3
+-	packages/core/diff/src/walk/api.ts#surfaceFollowsPathVersion	pending: brief 3
+-	packages/core/diff/src/walk/operations.ts#compareParams	pending: brief 3
+-	packages/core/diff/src/walk/operations.ts#compareParamList	pending: brief 3
+-	packages/core/diff/src/walk/access.ts#compareScopes	pending: brief 3
+src/report.rs#deprecation_line	packages/core/diff/src/report/format.ts#deprecationLine
+src/deprecation.rs#operation_entry	packages/core/diff/src/deprecation/deprecation.ts#operationEntry	pending: brief 3
+-	packages/core/diff/src/walk/operations.ts#compareResponse	pending: brief 3
+-	packages/core/diff/src/walk/operations.ts#compareResponses	pending: brief 3
+-	packages/core/diff/src/walk/operations.ts#compareResponseHeaders	pending: brief 3
+-	packages/core/diff/src/walk/operations.ts#compareBody	pending: brief 3
+-	packages/core/diff/src/walk/operations.ts#compareProofs	pending: brief 3
+-	packages/core/diff/src/walk/access.ts#comparePrincipalRequirements	pending: brief 3
+-	packages/core/diff/src/walk/declarations.ts#credentialSchemes	pending: brief 3
+-	packages/core/diff/src/walk/declarations.ts#schemeRoles	pending: brief 3
+-	packages/core/diff/src/walk/declarations.ts#compareSchemeLists	pending: brief 3
+-	packages/core/diff/src/walk/declarations.ts#identityComparisons	pending: brief 3
+src/deprecation.rs#after_status	packages/core/diff/src/deprecation/deprecation.ts#afterStatus	pending: brief 3
+-	packages/core/diff/src/walk/operations.ts#compareDeprecation	pending: brief 3
+-	packages/core/diff/src/walk/context.ts#refuseUnknownValue	pending: brief 3
+src/walk_context.rs#unknown_value_refusal	packages/core/diff/src/walk/context.ts#unknownValueRefusal	pending: brief 3
+-	packages/core/diff/src/walk/api.ts#commonOperationIds	pending: brief 3
+-	packages/core/diff/src/walk/api.ts#operationsFollowingPathVersion	pending: brief 3
+src/walk_api.rs#compare_api	packages/core/diff/src/walk/api.ts#compareApi	pending: brief 3
+-	packages/core/diff/src/walk/maturity.ts#compareMaturityLevel	pending: brief 3
+-	packages/core/diff/src/walk/access.ts#rankChangeCase	pending: brief 3
+-	packages/core/diff/src/walk/access.ts#accessRank	pending: brief 3
+-	packages/core/diff/src/walk/access.ts#compareAccess	pending: brief 4
+src/walk_api.rs#compare_packs	packages/core/diff/src/walk/api.ts#comparePacks	pending: brief 4
+-	packages/core/diff/src/walk/access.ts#compareCsrf	pending: brief 4
+-	packages/core/diff/src/walk/type-use.ts#compareSameKind	pending: brief 4
+-	packages/core/diff/src/walk/type-use.ts#compareScalarUse	pending: brief 4
+-	packages/core/diff/src/walk/type-use.ts#compareRefUse	pending: brief 4
+-	packages/core/diff/src/walk/type-use.ts#compareUnknownKeys	pending: brief 4
+-	packages/core/diff/src/walk/operations.ts#compareOperationMaturity	pending: brief 4
+-	packages/core/diff/src/gate/gate.ts#stableFailure	pending: brief 4
+-	packages/core/diff/src/walk/access.ts#compareCallerKinds	pending: brief 4
+-	packages/core/diff/src/walk/access.ts#compareNames	pending: brief 4
+-	packages/core/diff/src/walk/behaviour.ts#compareIdempotency	pending: brief 4
+-	packages/core/diff/src/walk/behaviour.ts#compareErrors	pending: brief 4
+-	packages/core/diff/src/walk/access.ts#requirementName	pending: brief 4
+-	packages/core/diff/src/walk/access.ts#requirementKey	pending: brief 4
+-	packages/core/diff/src/walk/access.ts#compareRequirements	pending: brief 4
+-	packages/core/diff/src/walk/catalogue.ts#compareVariants	pending: brief 4
+-	packages/core/diff/src/walk/type-use.ts#numericText	pending: brief 4
+-	packages/core/diff/src/walk/type-use.ts#compareRefinements	pending: brief 4
+-	packages/core/diff/src/walk/type-use.ts#comparePattern	pending: brief 4
+-	packages/core/diff/src/walk/type-use.ts#emitRefinement	pending: brief 4
+-	packages/core/diff/src/walk/type-use.ts#compareBound	pending: brief 4
+-	packages/core/diff/src/walk/type-use.ts#boundChange	pending: brief 4
+-	packages/core/diff/src/walk/decimal.ts#atScale	pending: brief 4
+-	packages/core/diff/src/walk/decimal.ts#parseDecimal	pending: brief 4
+-	packages/core/diff/src/walk/decimal.ts#compareDecimals	pending: brief 4
+-	packages/core/diff/src/walk/context.ts#withoutPosition	pending: brief 4
+-	packages/core/diff/src/walk/api.ts#compareWire	pending: brief 4
+-	packages/core/diff/src/walk/api.ts#emitWireChange	pending: brief 4
+-	packages/core/diff/src/walk/api.ts#compareSurfaces	pending: brief 4
+-	packages/core/diff/src/walk/api.ts#compareSurface	pending: brief 4
+-	packages/core/diff/src/walk/operations.ts#compareInputFields	pending: brief 4
+-	packages/core/diff/src/walk/type-use.ts#compareSchemaRef	pending: brief 4
+-	packages/core/diff/src/walk/type-use.ts#compareFileUse	pending: brief 4
+-	packages/core/diff/src/walk/type-use.ts#compareEnumUse	pending: brief 5
+-	packages/core/diff/src/walk/type-use.ts#compareNarrowingReason	pending: brief 5
+-	packages/core/diff/src/walk/type-use.ts#compareContent	pending: brief 5
+-	packages/core/diff/src/walk/type-use.ts#compareArrayUse	pending: brief 5
+-	packages/core/diff/src/walk/type-use.ts#compareMultipleOf	pending: brief 5
+-	packages/core/diff/src/walk/declarations.ts#compareGuest	pending: brief 5
+-	packages/core/diff/src/walk/declarations.ts#comparePrincipal	pending: brief 5
+-	packages/core/diff/src/walk/declarations.ts#compareIdentityHeaders	pending: brief 5
+src/walk_catalogue.rs#compare_scalar_catalogue	packages/core/diff/src/walk/catalogue.ts#compareScalarCatalogue	pending: brief 5
+-	packages/core/diff/src/walk/catalogue.ts#compareMapSchema	pending: brief 5
+-	packages/core/diff/src/walk/behaviour.ts#lifetimeCase	pending: brief 5
+-	packages/core/diff/src/walk/behaviour.ts#compareSortKeys	pending: brief 5
+src/walk_reach.rs#scalar_reach_key	packages/core/diff/src/walk/reach.ts#scalarReachKey
+-	packages/core/diff/src/walk/same-wire.ts#isSameWireSchema	pending: brief 5
+-	packages/core/diff/src/walk/same-wire.ts#isSameWireEnum	pending: brief 5
+-	packages/core/diff/src/walk/same-wire.ts#sameSchemaIds	pending: brief 5
+-	packages/core/diff/src/walk/same-wire.ts#sameEnumIds	pending: brief 5
+-	packages/core/diff/src/walk/same-wire.ts#sameWire	pending: brief 5
+-	packages/core/diff/src/walk/same-wire.ts#sameArrays	pending: brief 5
+-	packages/core/diff/src/walk/decimal.ts#isDecimalMultiple	pending: brief 5
