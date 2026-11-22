@@ -75,6 +75,7 @@ The server HTTP suite is ported into the binary as `seampact test`, so a JVM, PH
 - The gzip bytes of the bundle tarball. The integrity hash covers the file list, not the gzip stream, so existing pins keep working. Reproducibility is stated per binary version (ADR 0011).
 - The bundle manifest's `compiler` member: `{ "name": "seampact", "version": <the binary's version> }` instead of the npm compiler package's name and version. The integrity does not cover the manifest, so existing pins keep working.
 - Diagnostic message text, now from the binary's own catalogue instead of ajv. Rule ids, pointers, severities and positions stay.
+- The syntax-error text of a YAML config and of a JSON baseline, from saphyr and serde_json instead of the yaml package and `JSON.parse`; for a tab used as indentation the column points after the leading blanks instead of at the first tab.
 - Refusal codes: one code per fault on every stack, from one list; the troubleshooting tables are generated from it. A few codes change name.
 - Integers above 2^53, as above.
 - A diagnostic origin writes its members in one order: api, layer, pointer.
