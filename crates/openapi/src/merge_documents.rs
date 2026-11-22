@@ -230,3 +230,196 @@ fn unknown_document_refusal(ir: &ContractIr, document: Option<&DocumentId>) -> R
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use seampact_json::{JsonObject, JsonValue};
+
+    use super::*;
+    use crate::emit_context::COMPONENT_SCHEMA_PREFIX;
+    use crate::json_value::object_member;
+
+    type TestResult = Result<(), Box<dyn std::error::Error>>;
+
+    fn golden_input(name: &str) -> Result<MergeInput, Box<dyn std::error::Error>> {
+        let path = format!(
+            "{}/../../fixtures/golden/{name}.ir.json",
+            env!("CARGO_MANIFEST_DIR")
+        );
+        let ir = ContractIr::from_json_text(&std::fs::read_to_string(path)?)?;
+
+        Ok(MergeInput { ir, document: None })
+    }
+
+    fn merged_document_of(
+        inputs: &[MergeInput],
+        prefix: &[(&str, &str)],
+    ) -> Result<JsonObject, Box<dyn std::error::Error>> {
+        let options = MergeOptions {
+            name: "platform".to_owned(),
+            prefix: prefix
+                .iter()
+                .map(|(api, text)| ((*api).to_owned(), (*text).to_owned()))
+                .collect(),
+            emitter: EmitterOptions::default(),
+        };
+        let mut sources = Vec::new();
+
+        for input in inputs {
+            match build_input_document(input, &options)? {
+                BuiltInput::Built(source) => sources.push(source),
+                BuiltInput::Refused(refusals) => {
+                    return Err(format!("refused: {refusals:?}").into());
+                }
+            }
+        }
+
+        let assembled = assemble_merged_document(&sources, &options)?;
+
+        if !assembled.refusals.is_empty() {
+            return Err(format!("refused: {:?}", assembled.refusals).into());
+        }
+
+        Ok(assembled.document)
+    }
+
+    fn schema_keys(document: &JsonObject) -> Vec<String> {
+        object_member(document, "components")
+            .and_then(|components| object_member(components, "schemas"))
+            .map(|schemas| schemas.keys().cloned().collect())
+            .unwrap_or_default()
+    }
+
+    /// Every object that holds `member`, at any depth.
+    fn objects_holding<'tree>(
+        value: &'tree JsonValue,
+        member: &str,
+        found: &mut Vec<&'tree JsonObject>,
+    ) {
+        match value {
+            JsonValue::Object(object) => {
+                if object.contains_key(member) {
+                    found.push(object);
+                }
+
+                for child in object.values() {
+                    objects_holding(child, member, found);
+                }
+            }
+            JsonValue::Array(items) => {
+                for item in items {
+                    objects_holding(item, member, found);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn holders<'tree>(document: &'tree JsonObject, member: &str) -> Vec<&'tree JsonObject> {
+        let mut found = Vec::new();
+
+        for value in document.values() {
+            objects_holding(value, member, &mut found);
+        }
+
+        found
+    }
+
+    #[test]
+    fn each_error_code_of_a_prefixed_api_maps_to_its_prefixed_component() -> TestResult {
+        let document = merged_document_of(&[golden_input("reference/tasks")?], &[("tasks", "p")])?;
+        let keys = schema_keys(&document);
+        let forbidden = object_member(&document, "paths")
+            .and_then(|paths| object_member(paths, "/v1/channels/{channelId}/tasks"))
+            .and_then(|path_item| object_member(path_item, "post"))
+            .and_then(|operation| object_member(operation, "responses"))
+            .and_then(|responses| object_member(responses, "403"))
+            .and_then(|response| object_member(response, "content"))
+            .map(|content| JsonValue::Object(content.clone()));
+        let forbidden_text = forbidden.map(|content| seampact_json::stringify_json(&content));
+
+        assert!(forbidden_text.is_some_and(|text| {
+            text.contains(r##""api.forbidden":"#/components/schemas/p.api.forbidden""##)
+        }),);
+
+        let discriminators = holders(&document, "discriminator");
+
+        assert_ne!(
+            discriminators.len(),
+            0,
+            "no discriminator in the merged document"
+        );
+
+        for schema in discriminators {
+            let mapping: Vec<&JsonValue> = schema
+                .get("discriminator")
+                .and_then(|discriminator| match discriminator {
+                    JsonValue::Object(object) => object_member(object, "mapping"),
+                    _ => None,
+                })
+                .map(|mapping| mapping.values().collect())
+                .unwrap_or_default();
+
+            for branch in crate::json_value::array_member(schema, "oneOf") {
+                if let JsonValue::Object(branch_object) = branch
+                    && let Some(reference @ JsonValue::String(_)) = branch_object.get("$ref")
+                {
+                    assert!(
+                        mapping.contains(&reference),
+                        "branch {reference:?} missing from the mapping"
+                    );
+                }
+            }
+
+            for reference in mapping {
+                let JsonValue::String(text) = reference else {
+                    return Err(format!("mapping value {reference:?} is no reference").into());
+                };
+                let key = text.strip_prefix(COMPONENT_SCHEMA_PREFIX).unwrap_or(text);
+
+                assert!(
+                    keys.iter().any(|schema_key| schema_key == key),
+                    "key {key:?}"
+                );
+            }
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn a_prefixed_schema_is_named_in_each_field_right() -> TestResult {
+        let document = merged_document_of(
+            &[
+                golden_input("reference/tasks")?,
+                golden_input("bodies/notes")?,
+            ],
+            &[("tasks", "p"), ("notes", "n")],
+        )?;
+        let keys = schema_keys(&document);
+        let member_name = "x-seampact-restricted-to";
+        let mut named = Vec::new();
+
+        for holder in holders(&document, member_name) {
+            for item in crate::json_value::array_member(holder, member_name) {
+                if let JsonValue::Object(item_object) = item
+                    && let Some(JsonValue::String(schema)) = item_object.get("schema")
+                {
+                    named.push(schema.clone());
+                }
+            }
+        }
+
+        assert_ne!(
+            named.len(),
+            0,
+            "no restricted-to schema in the merged document"
+        );
+
+        for schema in named {
+            assert!(keys.contains(&schema), "schema {schema:?}");
+        }
+
+        Ok(())
+    }
+}
