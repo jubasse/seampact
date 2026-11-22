@@ -3,7 +3,7 @@
 use std::ops::RangeInclusive;
 
 use seampact_diagnostics::InternalError;
-use seampact_json::{JsonNumber, JsonObject, JsonValue, js_integer_in_range};
+use seampact_json::{JsonNumber, JsonObject, JsonValue, js_integer_in_range, object_of};
 
 /// The format version this crate writes and reads; a reader refuses another.
 pub const BUNDLE_FORMAT_VERSION: i64 = 1;
@@ -68,29 +68,15 @@ pub struct BundleManifest {
     pub integrity: String,
 }
 
-fn text(value: &str) -> JsonValue {
-    JsonValue::String(value.to_owned())
-}
-
 fn integer(digits: &str) -> JsonValue {
     JsonNumber::from_json_text(digits).map_or(JsonValue::Null, JsonValue::Number)
 }
 
-fn members(entries: Vec<(&str, JsonValue)>) -> JsonValue {
-    let mut object = JsonObject::new();
-
-    for (key, value) in entries {
-        object.insert(key.to_owned(), value);
-    }
-
-    JsonValue::Object(object)
-}
-
 impl BundleNamedVersion {
     fn to_json_value(&self) -> JsonValue {
-        members(vec![
-            ("name", text(&self.name)),
-            ("version", text(&self.version)),
+        JsonValue::object(vec![
+            ("name", JsonValue::text(&self.name)),
+            ("version", JsonValue::text(&self.version)),
         ])
     }
 }
@@ -100,22 +86,22 @@ impl BundleManifest {
     #[must_use]
     pub fn to_json_value(&self) -> JsonValue {
         let apis = self.apis.iter().map(|api| {
-            members(vec![
-                ("name", text(&api.name)),
-                ("file", text(&api.file)),
+            JsonValue::object(vec![
+                ("name", JsonValue::text(&api.name)),
+                ("file", JsonValue::text(&api.file)),
                 ("irVersion", integer(&api.ir_version.to_string())),
                 ("irRevision", integer(&api.ir_revision.to_string())),
             ])
         });
         let files = self.files.iter().map(|file| {
-            members(vec![
-                ("path", text(&file.path)),
+            JsonValue::object(vec![
+                ("path", JsonValue::text(&file.path)),
                 ("size", integer(&file.size.to_string())),
-                ("sha256", text(&file.sha256)),
+                ("sha256", JsonValue::text(&file.sha256)),
             ])
         });
 
-        members(vec![
+        JsonValue::object(vec![
             ("formatVersion", integer(&BUNDLE_FORMAT_VERSION.to_string())),
             ("contract", self.contract.to_json_value()),
             ("apis", JsonValue::Array(apis.collect())),
@@ -130,7 +116,7 @@ impl BundleManifest {
                 ),
             ),
             ("files", JsonValue::Array(files.collect())),
-            ("integrity", text(&self.integrity)),
+            ("integrity", JsonValue::text(&self.integrity)),
         ])
     }
 
@@ -140,7 +126,7 @@ impl BundleManifest {
     ///
     /// An [`InternalError`] when the document lacks a member the schema requires.
     pub fn from_json_value(document: &JsonValue) -> Result<Self, InternalError> {
-        let root = object_of(document, "the manifest")?;
+        let root = expected_object(document, "the manifest")?;
 
         Ok(Self {
             contract: Box::new(named_version(member(root, "contract")?)?),
@@ -168,18 +154,11 @@ fn shape_error(what: &str) -> InternalError {
     ))
 }
 
-fn object_of<'tree>(
+fn expected_object<'tree>(
     value: &'tree JsonValue,
     what: &str,
 ) -> Result<&'tree JsonObject, InternalError> {
-    match value {
-        JsonValue::Object(object) => Ok(object),
-        JsonValue::Null
-        | JsonValue::Bool(_)
-        | JsonValue::Number(_)
-        | JsonValue::String(_)
-        | JsonValue::Array(_) => Err(shape_error(what)),
-    }
+    object_of(Some(value)).ok_or_else(|| shape_error(what))
 }
 
 fn member<'tree>(object: &'tree JsonObject, key: &str) -> Result<&'tree JsonValue, InternalError> {
@@ -227,7 +206,7 @@ fn integer_member(
 }
 
 fn named_version(value: &JsonValue) -> Result<BundleNamedVersion, InternalError> {
-    let object = object_of(value, "a name and version")?;
+    let object = expected_object(value, "a name and version")?;
 
     Ok(BundleNamedVersion {
         name: string(object, "name")?,
@@ -236,7 +215,7 @@ fn named_version(value: &JsonValue) -> Result<BundleNamedVersion, InternalError>
 }
 
 fn api_of(value: &JsonValue) -> Result<BundleApi, InternalError> {
-    let object = object_of(value, "an api")?;
+    let object = expected_object(value, "an api")?;
 
     Ok(BundleApi {
         name: string(object, "name")?,
@@ -247,7 +226,7 @@ fn api_of(value: &JsonValue) -> Result<BundleApi, InternalError> {
 }
 
 fn file_of(value: &JsonValue) -> Result<BundleFile, InternalError> {
-    let object = object_of(value, "a file")?;
+    let object = expected_object(value, "a file")?;
     let size = u64::try_from(integer_member(object, "size", 0..=i64::MAX)?)
         .map_err(|_| shape_error("the member 'size'"))?;
 

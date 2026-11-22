@@ -3,7 +3,7 @@
 use indexmap::IndexMap;
 use seampact_js::array_index_value;
 
-use crate::JsonValue;
+use crate::{JsonValue, items_of, object_of, text_of};
 
 /// A JSON object that keeps JavaScript's own-key order on every insert.
 ///
@@ -25,7 +25,7 @@ impl JsonObject {
     ///
     /// A repeated name keeps its first place and takes the last value, as assignment does.
     #[must_use]
-    pub fn from_members<const COUNT: usize>(members: [(&str, JsonValue); COUNT]) -> Self {
+    pub fn from_members<'name>(members: impl IntoIterator<Item = (&'name str, JsonValue)>) -> Self {
         members
             .into_iter()
             .map(|(name, value)| (name.to_owned(), value))
@@ -64,6 +64,24 @@ impl JsonObject {
     #[must_use]
     pub fn get(&self, key: &str) -> Option<&JsonValue> {
         self.0.get(key)
+    }
+
+    /// The object member `key`, `None` when it is absent or not an object.
+    #[must_use]
+    pub fn object_member(&self, key: &str) -> Option<&Self> {
+        object_of(self.get(key))
+    }
+
+    /// The items of the array member `key`, empty when it is absent or not an array.
+    #[must_use]
+    pub fn array_member(&self, key: &str) -> &[JsonValue] {
+        items_of(self.get(key))
+    }
+
+    /// The text of the string member `key`, `None` when it is absent or not a string.
+    #[must_use]
+    pub fn text_member(&self, key: &str) -> Option<&str> {
+        text_of(self.get(key))
     }
 
     /// The value of `key` to change in place, if present.

@@ -7,12 +7,12 @@ use seampact_diff_table::{
 };
 use seampact_ir::ContractIr;
 use seampact_js::cmp_utf16;
-use seampact_json::{JsonObject, JsonValue, stringify_json};
+use seampact_json::{JsonObject, JsonValue, pointer_below, stringify_json};
 use serde::Serialize;
 
 use crate::DiffError;
 use crate::change_sink::{ChangeReach, ChangeSink, ElementOrigin, RawChange};
-use crate::walk_json::{is_same_json, json_of, member_names, pointer_join};
+use crate::walk_json::{is_same_json, json_of, member_names};
 use crate::walk_reach::ReachIndex;
 
 /// The two IRs of one walk, their reach indexes and the sink that collects the changes.
@@ -98,7 +98,7 @@ pub(crate) fn compare_members(
             continue;
         }
 
-        let member_pointer = pointer_join(pointer, &[member]);
+        let member_pointer = pointer_below(pointer, &[member]);
 
         if let Some(comparison) = comparisons.get(member) {
             comparison(context, &member_pointer, before_value, after_value)?;
@@ -291,7 +291,7 @@ pub(crate) fn compare_keyed_list<Entry: Serialize>(
         if !before_keys.contains(key) {
             (comparison.added)(
                 context,
-                &pointer_join(pointer, &[&index.to_string()]),
+                &pointer_below(pointer, &[&index.to_string()]),
                 entry,
             )?;
         }
@@ -305,7 +305,7 @@ pub(crate) fn compare_keyed_list<Entry: Serialize>(
         else {
             (comparison.removed)(
                 context,
-                &pointer_join(pointer, &[&index.to_string()]),
+                &pointer_below(pointer, &[&index.to_string()]),
                 entry,
             )?;
 
@@ -315,7 +315,7 @@ pub(crate) fn compare_keyed_list<Entry: Serialize>(
         if !is_same_json(Some(&json_of(entry)?), Some(&json_of(after_entry)?)) {
             (comparison.kept)(
                 context,
-                &pointer_join(pointer, &[&kept.to_string()]),
+                &pointer_below(pointer, &[&kept.to_string()]),
                 entry,
                 after_entry,
             )?;

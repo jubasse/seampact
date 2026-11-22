@@ -4,10 +4,10 @@ use std::cmp::Ordering;
 use std::collections::HashSet;
 
 use seampact_ir::ContractIr;
-use seampact_json::JsonValue;
+use seampact_json::{JsonValue, object_of};
 
 use crate::DiffError;
-use crate::walk_json::{is_record, json_of, member_names};
+use crate::walk_json::{json_of, member_names};
 
 /// The members that name, document or derive a thing without changing what the wire carries.
 const WIRE_NEUTRAL_MEMBERS: [&str; 14] = [
@@ -144,7 +144,9 @@ fn same_wire(
         let after_value = after_members.get(member);
 
         // A canonical name object; a string `name` is a wire name (a property's, a param's).
-        if member == "name" && (is_record(before_value) || is_record(after_value)) {
+        if member == "name"
+            && (object_of(before_value).is_some() || object_of(after_value).is_some())
+        {
             continue;
         }
 

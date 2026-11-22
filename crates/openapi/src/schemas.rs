@@ -992,6 +992,7 @@ fn text_array(texts: &[String]) -> JsonValue {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::json_value::object_from_text;
 
     fn written(literal: &str) -> Result<Option<String>, OpenApiError> {
         Ok(number_literal(Some(literal))?.map(|value| match value {
@@ -1026,13 +1027,6 @@ mod tests {
         Ok(())
     }
 
-    fn object_of(json: &str) -> Result<JsonObject, Box<dyn std::error::Error>> {
-        match serde_json::from_str::<serde_json::Value>(json).map(JsonValue::try_from)?? {
-            JsonValue::Object(object) => Ok(object),
-            other => Err(format!("not an object: {other:?}").into()),
-        }
-    }
-
     #[test]
     fn nullable_schema_widens_a_type_keeps_annotations_and_wraps_the_rest()
     -> Result<(), Box<dyn std::error::Error>> {
@@ -1057,8 +1051,8 @@ mod tests {
 
         for (input, expected) in cases {
             assert_eq!(
-                nullable_schema(object_of(input)?),
-                object_of(expected)?,
+                nullable_schema(object_from_text(input)?),
+                object_from_text(expected)?,
                 "schema {input}"
             );
         }

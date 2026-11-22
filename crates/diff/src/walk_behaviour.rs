@@ -5,6 +5,7 @@ use seampact_ir::{
     DerivedIdempotency, Idempotency, IdempotencyEnforcement, KnownIdempotencyRef, Operation,
     OperationError, Paging, RetryHeader, SortKey,
 };
+use seampact_json::pointer_below;
 
 use crate::DiffError;
 use crate::change_sink::RawChange;
@@ -13,7 +14,7 @@ use crate::walk_context::{
     ChangeSite, KeyedListComparison, MemberComparisons, WalkContext, compare_kept_order,
     compare_keyed_list, compare_members, emit_at, refuse_unknown_value,
 };
-use crate::walk_json::{object_members, pointer_join, text_value};
+use crate::walk_json::{object_members, text_value};
 use crate::walk_operations::OperationSite;
 use crate::walk_type_use::{BoundSide, compare_bound};
 
@@ -352,7 +353,7 @@ fn compare_idempotency(
         refuse_unknown_value(
             context,
             input,
-            &pointer_join(pointer, &["kind"]),
+            &pointer_below(pointer, &["kind"]),
             unknown.tag(),
         );
 

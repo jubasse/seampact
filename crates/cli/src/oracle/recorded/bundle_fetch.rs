@@ -90,10 +90,10 @@ fn compile_result(
     let [JsonValue::Object(options)] = call.args.as_slice() else {
         return Err("compileWorkspaceWithImports is recorded with one options object".to_owned());
     };
-    let reader_root = member_text(object_member(options, "reader")?, "root")?;
+    let reader_root = member_text(required_object(options, "reader")?, "root")?;
     let entry = member_text(options, "entry")?;
     let fetch = fetch_options_of(
-        &JsonValue::Object(object_member(options, "fetch")?.clone()),
+        &JsonValue::Object(required_object(options, "fetch")?.clone()),
         root,
         cache,
         &NoNetwork,
@@ -114,11 +114,11 @@ fn compile_result(
     .map_err(|error| error.to_string())?;
 
     match compiled {
-        WorkspaceImportsResult::Compiled(result) => Ok(members(vec![
+        WorkspaceImportsResult::Compiled(result) => Ok(JsonValue::object(vec![
             ("ok", JsonValue::Bool(true)),
             ("compiled", compiled_json(&result)?),
         ])),
-        WorkspaceImportsResult::Failed(failures) => Ok(members(vec![
+        WorkspaceImportsResult::Failed(failures) => Ok(JsonValue::object(vec![
             ("ok", JsonValue::Bool(false)),
             (
                 "failures",
@@ -128,42 +128,23 @@ fn compile_result(
     }
 }
 
-fn members(entries: Vec<(&str, JsonValue)>) -> JsonValue {
-    JsonValue::Object(
-        entries
-            .into_iter()
-            .map(|(key, value)| (key.to_owned(), value))
-            .collect(),
-    )
-}
-
-fn text(value: &str) -> JsonValue {
-    JsonValue::String(value.to_owned())
-}
-
 fn under_root(path: &str, root: &Utf8Path) -> String {
     path.replace(ROOT_TOKEN, root.as_str())
 }
 
-fn object_member<'object>(
+fn required_object<'object>(
     object: &'object JsonObject,
     key: &str,
 ) -> Result<&'object JsonObject, String> {
-    match object.get(key) {
-        Some(JsonValue::Object(member)) => Ok(member),
-        _ => Err(format!("the recorded call holds an object '{key}'")),
-    }
+    object
+        .object_member(key)
+        .ok_or_else(|| format!("the recorded call holds an object '{key}'"))
 }
 
 fn member_text<'object>(object: &'object JsonObject, key: &str) -> Result<&'object str, String> {
-    optional_text(object, key).ok_or_else(|| format!("the recorded call holds a text '{key}'"))
-}
-
-fn optional_text<'object>(object: &'object JsonObject, key: &str) -> Option<&'object str> {
-    match object.get(key) {
-        Some(JsonValue::String(value)) => Some(value),
-        _ => None,
-    }
+    object
+        .text_member(key)
+        .ok_or_else(|| format!("the recorded call holds a text '{key}'"))
 }
 
 fn source_of(value: &JsonValue) -> Result<BundleSource, String> {
@@ -188,7 +169,7 @@ fn fetch_options_of<'run>(
     Ok(BundleFetchOptions {
         base_directory: Utf8PathBuf::from(under_root(member_text(options, "baseDirectory")?, root)),
         local_sources,
-        cache_directory: Some(optional_text(options, "cacheDirectory").map_or_else(
+        cache_directory: Some(options.text_member("cacheDirectory").map_or_else(
             || cache.to_path_buf(),
             |path| Utf8PathBuf::from(under_root(path, root)),
         )),
@@ -255,10 +236,10 @@ fn fetch_result_json(result: &BundleFetchResult) -> Result<JsonValue, String> {
                 documents.insert(name.clone(), in_document_order(&document)?);
             }
 
-            Ok(members(vec![
+            Ok(JsonValue::object(vec![
                 ("ok", JsonValue::Bool(true)),
                 ("manifest", in_document_order(&manifest.to_json_value())?),
-                ("integrity", text(integrity)),
+                ("integrity", JsonValue::text(integrity)),
                 ("irs", JsonValue::Object(documents)),
             ]))
         }
@@ -272,10 +253,10 @@ fn fetch_result_json(result: &BundleFetchResult) -> Result<JsonValue, String> {
             ];
 
             if let Some(integrity) = integrity {
-                entries.push(("integrity", text(integrity)));
+                entries.push(("integrity", JsonValue::text(integrity)));
             }
 
-            Ok(members(entries))
+            Ok(JsonValue::object(entries))
         }
     }
 }
@@ -292,9 +273,9 @@ fn failures_json(failures: &[BundleSourceFailure]) -> JsonValue {
 
 fn failure_json(failure: &BundleSourceFailure) -> JsonValue {
     let mut entries = vec![
-        ("code", text(failure.code.as_str())),
-        ("message", text(&failure.message)),
-        ("fix", text(&failure.fix)),
+        ("code", JsonValue::text(failure.code.as_str())),
+        ("message", JsonValue::text(&failure.message)),
+        ("fix", JsonValue::text(&failure.fix)),
     ];
 
     for (name, value) in [
@@ -303,16 +284,16 @@ fn failure_json(failure: &BundleSourceFailure) -> JsonValue {
         ("actual", &failure.actual),
     ] {
         if let Some(value) = value {
-            entries.push((name, text(value)));
+            entries.push((name, JsonValue::text(value)));
         }
     }
 
-    members(entries)
+    JsonValue::object(entries)
 }
 
 fn import_failure_json(failure: &WorkspaceImportFailure) -> JsonValue {
-    members(vec![
-        ("name", text(&failure.name)),
+    JsonValue::object(vec![
+        ("name", JsonValue::text(&failure.name)),
         ("failures", failures_json(&failure.failures)),
     ])
 }
@@ -324,10 +305,16 @@ fn compiled_json(result: &PipelineResult) -> Result<JsonValue, String> {
         .map(|api| api_json(api, &result.source_files))
         .collect::<Result<Vec<_>, _>>()?;
 
-    Ok(members(vec![
+    Ok(JsonValue::object(vec![
         (
             "files",
-            JsonValue::Array(result.read_files.iter().map(|file| text(file)).collect()),
+            JsonValue::Array(
+                result
+                    .read_files
+                    .iter()
+                    .map(|file| JsonValue::text(file))
+                    .collect(),
+            ),
         ),
         ("diagnostics", diagnostic_list_json(&result.diagnostics)),
         (
@@ -340,7 +327,7 @@ fn compiled_json(result: &PipelineResult) -> Result<JsonValue, String> {
 
 fn api_json(api: &PipelineApiResult, files: &SourceFiles) -> Result<JsonValue, String> {
     let mut entries = vec![
-        ("api", text(&api.api)),
+        ("api", JsonValue::text(&api.api)),
         ("diagnostics", diagnostic_list_json(&api.diagnostics)),
         ("locations", locations_json(files, &api.locations)?),
     ];
@@ -365,7 +352,7 @@ fn api_json(api: &PipelineApiResult, files: &SourceFiles) -> Result<JsonValue, S
         ));
     }
 
-    Ok(members(entries))
+    Ok(JsonValue::object(entries))
 }
 
 fn locations_json(
@@ -383,8 +370,8 @@ fn locations_json(
 }
 
 fn location_json(location: &Location) -> JsonValue {
-    members(vec![
-        ("file", text(&location.file)),
+    JsonValue::object(vec![
+        ("file", JsonValue::text(&location.file)),
         ("line", number(i64::from(location.line))),
         ("column", number(i64::from(location.column))),
         ("endLine", number(i64::from(location.end_line))),
@@ -397,7 +384,7 @@ fn number(value: i64) -> JsonValue {
 }
 
 fn source_map_json(map: &SourceMap) -> JsonValue {
-    members(vec![
+    JsonValue::object(vec![
         ("irRevision", number(map.ir_revision)),
         (
             "locations",
@@ -407,8 +394,8 @@ fn source_map_json(map: &SourceMap) -> JsonValue {
                     .map(|(key, location)| {
                         (
                             key.clone(),
-                            members(vec![
-                                ("file", text(&location.file)),
+                            JsonValue::object(vec![
+                                ("file", JsonValue::text(&location.file)),
                                 ("line", number(location.line)),
                                 ("column", number(location.column)),
                                 ("endLine", number(location.end_line)),
@@ -426,16 +413,16 @@ fn declared_json(declared: &PipelineDeclared) -> JsonValue {
     let mut origin = Vec::new();
 
     if let Some(api) = &declared.origin.api {
-        origin.push(("api", text(api)));
+        origin.push(("api", JsonValue::text(api)));
     }
 
-    origin.push(("layer", text(&declared.origin.layer.to_string())));
-    origin.push(("pointer", text(&declared.origin.pointer)));
+    origin.push(("layer", JsonValue::text(&declared.origin.layer.to_string())));
+    origin.push(("pointer", JsonValue::text(&declared.origin.pointer)));
 
-    members(vec![
-        ("catalogue", text(declared.catalogue)),
-        ("id", text(&declared.id)),
-        ("origin", members(origin)),
+    JsonValue::object(vec![
+        ("catalogue", JsonValue::text(declared.catalogue)),
+        ("id", JsonValue::text(&declared.id)),
+        ("origin", JsonValue::object(origin)),
         ("reached", JsonValue::Bool(declared.reached)),
     ])
 }

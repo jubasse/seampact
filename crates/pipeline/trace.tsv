@@ -93,8 +93,8 @@ src/readers/declared.rs#newly_reached_entries	packages/core/compiler/src/pipelin
 src/readers/declared.rs#strings_of	packages/core/compiler/src/pipeline/declared.ts#stringsOf
 src/readers/pointer.rs#is_json_object	packages/core/compiler/src/pipeline/pointer.ts#isJsonObject
 src/readers/pointer.rs#is_json_list	packages/core/compiler/src/pipeline/pointer.ts#isJsonList
--	packages/core/compiler/src/pipeline/pointer.ts#escapeSegment	merged: src/readers/pointer.rs#pointer_below
-src/readers/pointer.rs#pointer_below	packages/core/compiler/src/pipeline/pointer.ts#pointerBelow
+-	packages/core/compiler/src/pipeline/pointer.ts#escapeSegment	merged: ../json/src/pointer.rs#pointer_below
+-	packages/core/compiler/src/pipeline/pointer.ts#pointerBelow	merged: ../json/src/pointer.rs#pointer_below
 -	packages/core/compiler/src/pipeline/pointer.ts#segmentsOf	merged: ../json/src/pointer.rs#pointer_segments
 -	packages/core/compiler/src/pipeline/pointer.ts#jsonAt	merged: ../json/src/pointer.rs#json_at
 -	packages/core/compiler/src/pipeline/pointer.ts#jsonAtPointer	merged: ../json/src/pointer.rs#json_at_pointer

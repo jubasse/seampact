@@ -9,9 +9,9 @@ use std::collections::HashSet;
 use seampact_authoring::RawApi;
 use seampact_diagnostics::InternalError;
 use seampact_ir::{ContractIr, Origin};
-use seampact_json::JsonValue;
+use seampact_json::{JsonValue, pointer_below};
 
-use super::pointer::{pipeline_origin, pointer_below};
+use super::pointer::pipeline_origin;
 
 /// The catalogues of grammar 01 (the `requirements` entries expand into each route's `requires`)
 /// and `formats`.

@@ -12,10 +12,10 @@ use regress::Regex;
 use seampact_authoring::{JsonObjectExt, RawApi};
 use seampact_diagnostics::InternalError;
 use seampact_ir::Origin;
-use seampact_json::{JsonNumber, JsonObject, JsonValue, json_at_object};
+use seampact_json::{JsonNumber, JsonObject, JsonValue, json_at_object, pointer_below};
 
 use super::authoring_schema::authoring_schema;
-use super::pointer::{pipeline_origin, pointer_below};
+use super::pointer::pipeline_origin;
 use crate::derivations::derivation_roles;
 
 /// The `cache.sensitiveElsewhere` value that refuses a sensitive value outside a body field; the

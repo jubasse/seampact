@@ -10,7 +10,7 @@ use seampact_cli_config::{
     ReadWorkspaceOutcome, ResolvedSource, RunConfig, WorkspaceApp, read_app_config,
     read_root_config, read_run_config, read_workspace_configs,
 };
-use seampact_json::{JsonObject, JsonValue};
+use seampact_json::JsonValue;
 use seampact_oracle::{ROOT_TOKEN, RecordedAnswer, RecordedToolCall, SubjectAnswer};
 
 use crate::oracle::stub_answer::{StubError, failed_answer};
@@ -102,12 +102,12 @@ fn answer(result: JsonValue) -> SubjectAnswer<RecordedAnswer> {
 }
 
 fn read_json(member: &'static str, value: JsonValue) -> JsonValue {
-    object([("status", text("read")), (member, value)])
+    JsonValue::object([("status", JsonValue::text("read")), (member, value)])
 }
 
 fn refused_json(problems: &[CliProblem]) -> JsonValue {
-    object([
-        ("status", text("refused")),
+    JsonValue::object([
+        ("status", JsonValue::text("refused")),
         (
             "problems",
             JsonValue::Array(problems.iter().map(problem_json).collect()),
@@ -117,19 +117,19 @@ fn refused_json(problems: &[CliProblem]) -> JsonValue {
 
 fn run_config_json(run: &RunConfig) -> JsonValue {
     match run {
-        RunConfig::App(config) => object([
-            ("kind", text("app")),
+        RunConfig::App(config) => JsonValue::object([
+            ("kind", JsonValue::text("app")),
             ("config", loaded_app_config_json(config)),
         ]),
-        RunConfig::Root(workspace) => object([
-            ("kind", text("root")),
+        RunConfig::Root(workspace) => JsonValue::object([
+            ("kind", JsonValue::text("root")),
             ("workspace", loaded_workspace_json(workspace)),
         ]),
     }
 }
 
 fn loaded_workspace_json(workspace: &LoadedWorkspace) -> JsonValue {
-    object([
+    JsonValue::object([
         ("root", loaded_root_config_json(&workspace.root)),
         (
             "apps",
@@ -138,7 +138,7 @@ fn loaded_workspace_json(workspace: &LoadedWorkspace) -> JsonValue {
                     .apps
                     .iter()
                     .map(|each| {
-                        object([
+                        JsonValue::object([
                             ("app", workspace_app_json(&each.app)),
                             ("config", loaded_app_config_json(&each.config)),
                         ])
@@ -150,17 +150,17 @@ fn loaded_workspace_json(workspace: &LoadedWorkspace) -> JsonValue {
 }
 
 fn workspace_app_json(app: &WorkspaceApp) -> JsonValue {
-    object([
-        ("name", text(&app.name)),
-        ("directory", text(app.directory.as_str())),
-        ("file", text(app.file.as_str())),
+    JsonValue::object([
+        ("name", JsonValue::text(&app.name)),
+        ("directory", JsonValue::text(app.directory.as_str())),
+        ("file", JsonValue::text(app.file.as_str())),
     ])
 }
 
 fn loaded_root_config_json(config: &LoadedRootConfig) -> JsonValue {
     let mut members = vec![
-        ("file", text(config.file.as_str())),
-        ("displayName", text(&config.display_name)),
+        ("file", JsonValue::text(config.file.as_str())),
+        ("displayName", JsonValue::text(&config.display_name)),
         (
             "apps",
             JsonValue::Array(config.apps.iter().map(workspace_app_json).collect()),
@@ -178,16 +178,22 @@ fn loaded_root_config_json(config: &LoadedRootConfig) -> JsonValue {
     ));
     members.push(("checks", config.checks.clone()));
 
-    object(members)
+    JsonValue::object(members)
 }
 
 fn merged_document_json(document: &LoadedMergedDocument) -> JsonValue {
-    object([
-        ("name", text(&document.name)),
-        ("file", text(document.file.as_str())),
+    JsonValue::object([
+        ("name", JsonValue::text(&document.name)),
+        ("file", JsonValue::text(document.file.as_str())),
         (
             "apps",
-            JsonValue::Array(document.apps.iter().map(|name| text(name)).collect()),
+            JsonValue::Array(
+                document
+                    .apps
+                    .iter()
+                    .map(|name| JsonValue::text(name))
+                    .collect(),
+            ),
         ),
         ("prefix", document.prefix.clone()),
         ("options", document.options.clone()),
@@ -237,12 +243,12 @@ fn path_argument(call: &RecordedToolCall, position: usize, root: &Utf8Path) -> O
 
 fn app_outcome_json(outcome: &ReadAppConfigOutcome) -> JsonValue {
     match outcome {
-        ReadAppConfigOutcome::Read(config) => object([
-            ("status", text("read")),
+        ReadAppConfigOutcome::Read(config) => JsonValue::object([
+            ("status", JsonValue::text("read")),
             ("config", loaded_app_config_json(config)),
         ]),
-        ReadAppConfigOutcome::Refused(problems) => object([
-            ("status", text("refused")),
+        ReadAppConfigOutcome::Refused(problems) => JsonValue::object([
+            ("status", JsonValue::text("refused")),
             (
                 "problems",
                 JsonValue::Array(problems.iter().map(problem_json).collect()),
@@ -253,8 +259,8 @@ fn app_outcome_json(outcome: &ReadAppConfigOutcome) -> JsonValue {
 
 fn loaded_app_config_json(config: &LoadedAppConfig) -> JsonValue {
     let mut members = vec![
-        ("file", text(config.file.as_str())),
-        ("outDir", text(config.out_dir.as_str())),
+        ("file", JsonValue::text(config.file.as_str())),
+        ("outDir", JsonValue::text(config.out_dir.as_str())),
     ];
 
     if let Some(allow_local) = config.allow_local {
@@ -269,9 +275,9 @@ fn loaded_app_config_json(config: &LoadedAppConfig) -> JsonValue {
                 .entries
                 .iter()
                 .map(|each| {
-                    object([
+                    JsonValue::object([
                         ("entry", each.entry.clone()),
-                        ("root", text(each.root.as_str())),
+                        ("root", JsonValue::text(each.root.as_str())),
                     ])
                 })
                 .collect(),
@@ -290,10 +296,10 @@ fn loaded_app_config_json(config: &LoadedAppConfig) -> JsonValue {
     }
 
     if let Some(root_file) = &config.root_file {
-        members.push(("rootFile", text(root_file.as_str())));
+        members.push(("rootFile", JsonValue::text(root_file.as_str())));
     }
 
-    object(members)
+    JsonValue::object(members)
 }
 
 fn sources_json(sources: &IndexMap<String, ResolvedSource>) -> JsonValue {
@@ -302,13 +308,14 @@ fn sources_json(sources: &IndexMap<String, ResolvedSource>) -> JsonValue {
             .iter()
             .map(|(name, source)| {
                 let json = match source {
-                    ResolvedSource::Path { directory } => object([
-                        ("kind", text("path")),
-                        ("directory", text(directory.as_str())),
+                    ResolvedSource::Path { directory } => JsonValue::object([
+                        ("kind", JsonValue::text("path")),
+                        ("directory", JsonValue::text(directory.as_str())),
                     ]),
-                    ResolvedSource::Bundle(bundle) => {
-                        object([("kind", text("bundle")), ("bundle", bundle_json(bundle))])
-                    }
+                    ResolvedSource::Bundle(bundle) => JsonValue::object([
+                        ("kind", JsonValue::text("bundle")),
+                        ("bundle", bundle_json(bundle)),
+                    ]),
                 };
 
                 (name.clone(), json)
@@ -321,54 +328,47 @@ fn sources_json(sources: &IndexMap<String, ResolvedSource>) -> JsonValue {
 fn bundle_json(bundle: &BundleSource) -> JsonValue {
     let mut members = match &bundle.form {
         BundleSourceForm::Package(package) => vec![
-            ("package", text(&package.package)),
-            ("version", text(&package.version)),
+            ("package", JsonValue::text(&package.package)),
+            ("version", JsonValue::text(&package.version)),
         ],
         BundleSourceForm::Release(release) => {
-            vec![("release", object([("url", text(&release.url))]))]
+            vec![(
+                "release",
+                JsonValue::object([("url", JsonValue::text(&release.url))]),
+            )]
         }
         BundleSourceForm::Git(git) => {
-            let mut git_members = vec![("url", text(&git.url)), ("tag", text(&git.tag))];
+            let mut git_members = vec![
+                ("url", JsonValue::text(&git.url)),
+                ("tag", JsonValue::text(&git.tag)),
+            ];
 
             if let Some(directory) = &git.directory {
-                git_members.push(("directory", text(directory)));
+                git_members.push(("directory", JsonValue::text(directory)));
             }
 
-            vec![("git", object(git_members))]
+            vec![("git", JsonValue::object(git_members))]
         }
-        BundleSourceForm::Maven(coordinate) => vec![("maven", text(coordinate))],
+        BundleSourceForm::Maven(coordinate) => vec![("maven", JsonValue::text(coordinate))],
     };
 
     if let Some(integrity) = &bundle.integrity {
-        members.push(("integrity", text(integrity)));
+        members.push(("integrity", JsonValue::text(integrity)));
     }
 
-    object(members)
+    JsonValue::object(members)
 }
 
 fn problem_json(problem: &CliProblem) -> JsonValue {
     let mut members = vec![
-        ("code", text(&problem.code)),
-        ("message", text(&problem.message)),
-        ("fix", text(&problem.fix)),
+        ("code", JsonValue::text(&problem.code)),
+        ("message", JsonValue::text(&problem.message)),
+        ("fix", JsonValue::text(&problem.fix)),
     ];
 
     if let Some(location) = &problem.location {
-        members.push(("where", text(location)));
+        members.push(("where", JsonValue::text(location)));
     }
 
-    object(members)
-}
-
-fn text(value: &str) -> JsonValue {
-    JsonValue::String(value.to_owned())
-}
-
-fn object(members: impl IntoIterator<Item = (&'static str, JsonValue)>) -> JsonValue {
-    JsonValue::Object(
-        members
-            .into_iter()
-            .map(|(name, value)| (name.to_owned(), value))
-            .collect::<JsonObject>(),
-    )
+    JsonValue::object(members)
 }

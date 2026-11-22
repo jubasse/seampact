@@ -2,6 +2,7 @@
 
 use seampact_diff_table::{DiffFact, DiffKind, DiffPosition, IrDefinition};
 use seampact_ir::{Operation, Param, Params};
+use seampact_json::pointer_below;
 
 use crate::DiffError;
 use crate::change_sink::{ElementOrigin, RawChange};
@@ -9,7 +10,7 @@ use crate::walk_catalogue::emit_default_change;
 use crate::walk_context::{
     ChangeSite, MemberComparisons, WalkContext, compare_kept_order, compare_members, emit_at,
 };
-use crate::walk_json::{flag_value, object_members, pointer_join, text_value};
+use crate::walk_json::{flag_value, object_members, text_value};
 use crate::walk_operations::operation_site;
 use crate::walk_type_use::compare_type_use;
 
@@ -130,7 +131,7 @@ fn compare_param_list(
             RawChange::new(
                 DiffKind::ParamAdded,
                 param_case(param),
-                pointer_join(pointer, &[&index.to_string()]),
+                pointer_below(pointer, &[&index.to_string()]),
             )
             .between(None, Some(text_value(&param.name))),
         );
@@ -148,7 +149,7 @@ fn compare_param_list(
                 RawChange::new(
                     DiffKind::ParamRemoved,
                     param_case(param),
-                    pointer_join(pointer, &[&index.to_string()]),
+                    pointer_below(pointer, &[&index.to_string()]),
                 )
                 .between(Some(text_value(&param.name)), None)
                 .with_facts(removal_facts.to_vec()),
@@ -160,7 +161,7 @@ fn compare_param_list(
         compare_kept_param(
             context,
             &param_site(&site, after_param),
-            &pointer_join(pointer, &[&kept.to_string()]),
+            &pointer_below(pointer, &[&kept.to_string()]),
             param,
             after_param,
         )?;

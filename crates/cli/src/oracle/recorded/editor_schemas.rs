@@ -36,11 +36,11 @@ fn editor_declarations_answer(call: &RecordedToolCall) -> Result<RecordedAnswer,
     let api = call
         .args
         .first()
-        .and_then(object_of)
+        .and_then(JsonValue::as_object)
         .ok_or_else(|| malformed(call))?;
     let name = api
         .get("api")
-        .and_then(text_of)
+        .and_then(JsonValue::as_text)
         .ok_or_else(|| malformed(call))?;
     let declared = declared_entries(api.get("declared"))?;
     let locations = location_table(api.get("locations")).ok_or_else(|| malformed(call))?;
@@ -60,7 +60,7 @@ fn write_editor_schemas_answer(
     let plan = call
         .args
         .first()
-        .and_then(object_of)
+        .and_then(JsonValue::as_object)
         .and_then(|members| plan_of(members, root))
         .ok_or_else(|| malformed(call))?;
     let count = write_editor_schemas(&plan).map_err(|error| error.to_string())?;
@@ -83,20 +83,6 @@ fn write_editor_schemas_answer(
     })
 }
 
-fn object_of(value: &JsonValue) -> Option<&JsonObject> {
-    match value {
-        JsonValue::Object(members) => Some(members),
-        _ => None,
-    }
-}
-
-fn text_of(value: &JsonValue) -> Option<&str> {
-    match value {
-        JsonValue::String(text) => Some(text),
-        _ => None,
-    }
-}
-
 fn malformed(call: &RecordedToolCall) -> String {
     format!(
         "a recorded {} call with unexpected arguments",
@@ -105,7 +91,7 @@ fn malformed(call: &RecordedToolCall) -> String {
 }
 
 fn plan_of(members: &JsonObject, root: &Utf8Path) -> Option<EditorSchemasPlan> {
-    let directory = text_of(members.get("directory")?)?;
+    let directory = members.text_member("directory")?;
     let JsonValue::Array(files) = members.get("files")? else {
         return None;
     };
@@ -120,11 +106,11 @@ fn plan_of(members: &JsonObject, root: &Utf8Path) -> Option<EditorSchemasPlan> {
 }
 
 fn schema_file_of(value: &JsonValue) -> Option<EditorSchemaFile> {
-    let members = object_of(value)?;
+    let members = value.as_object()?;
 
     Some(EditorSchemaFile {
-        file_name: text_of(members.get("fileName")?)?.to_owned(),
-        text: text_of(members.get("text")?)?.to_owned(),
+        file_name: members.text_member("fileName")?.to_owned(),
+        text: members.text_member("text")?.to_owned(),
     })
 }
 
@@ -142,29 +128,31 @@ fn declared_entries(value: Option<&JsonValue>) -> Result<Option<Vec<PipelineDecl
 }
 
 fn declared_entry(value: &JsonValue) -> Result<PipelineDeclared, String> {
-    let entry = object_of(value).ok_or("a declared entry is not an object")?;
+    let entry = value
+        .as_object()
+        .ok_or("a declared entry is not an object")?;
     let catalogue = entry
         .get("catalogue")
-        .and_then(text_of)
+        .and_then(JsonValue::as_text)
         .and_then(EditorCatalogue::from_name)
         .ok_or("a recorded declared entry names a catalogue the editor schemas do not list")?;
     let id = entry
         .get("id")
-        .and_then(text_of)
+        .and_then(JsonValue::as_text)
         .ok_or("a declared entry has no id")?;
     let origin = entry
         .get("origin")
-        .and_then(object_of)
+        .and_then(JsonValue::as_object)
         .ok_or("a declared entry has no origin")?;
     let layer = origin
         .get("layer")
-        .and_then(text_of)
+        .and_then(JsonValue::as_text)
         .ok_or("a declared origin has no layer")?
         .parse::<Layer>()
         .map_err(|error| error.to_string())?;
     let pointer = origin
         .get("pointer")
-        .and_then(text_of)
+        .and_then(JsonValue::as_text)
         .ok_or("a declared origin has no pointer")?;
 
     Ok(PipelineDeclared {
@@ -186,13 +174,13 @@ fn location_table(value: Option<&JsonValue>) -> Option<IndexMap<String, Location
 
     table
         .iter()
-        .map(|(key, location)| Some((key.clone(), location_of(object_of(location)?)?)))
+        .map(|(key, location)| Some((key.clone(), location_of(location.as_object()?)?)))
         .collect()
 }
 
 fn location_of(members: &JsonObject) -> Option<Location> {
     Some(Location {
-        file: text_of(members.get("file")?)?.to_owned(),
+        file: members.text_member("file")?.to_owned(),
         line: count_member(members, "line")?,
         column: count_member(members, "column")?,
         end_line: count_member(members, "endLine")?,

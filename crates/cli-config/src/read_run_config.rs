@@ -1,11 +1,11 @@
 //! The config of one run: an app config or a root config.
 
 use camino::Utf8Path;
+use seampact_json::object_of;
 
 use crate::config_file::{ParseConfigOutcome, parse_config_file};
 use crate::config_kind::ConfigKind;
 use crate::config_names::ROOT_CONFIG_MARKER_KEY;
-use crate::json_access::record;
 use crate::read_app_config::{LoadedAppConfig, ReadAppConfigOutcome, read_app_config};
 use crate::read_workspace_configs::{
     LoadedWorkspace, ReadWorkspaceOutcome, read_workspace_configs,
@@ -54,7 +54,7 @@ pub fn read_run_config(
         ParseConfigOutcome::Parsed { value, .. } => value,
     };
     let is_root =
-        record(Some(&value)).is_some_and(|object| object.contains_key(ROOT_CONFIG_MARKER_KEY));
+        object_of(Some(&value)).is_some_and(|object| object.contains_key(ROOT_CONFIG_MARKER_KEY));
 
     if is_root && text_file.is_some() {
         return Ok(ReadRunConfigOutcome::Refused(vec![CliProblem::unlocated(

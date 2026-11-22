@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use seampact_diff_table::{DiffKind, DiffPosition, IrDefinition};
 use seampact_ir::{DeclarationKind, Operation, OperationMaturity, Origin};
-use seampact_json::JsonValue;
+use seampact_json::{JsonValue, pointer_below};
 
 use crate::DiffError;
 use crate::change_sink::{ChangeReach, ElementOrigin, RawChange};
@@ -15,7 +15,7 @@ use crate::walk_context::{
     ChangeSite, MemberComparisons, WalkContext, compare_members, emit_at, refuse_unknown_value,
 };
 use crate::walk_deprecation::compare_deprecation;
-use crate::walk_json::{object_members, pointer_join, text_value};
+use crate::walk_json::{object_members, text_value};
 use crate::walk_maturity::compare_maturity_level;
 use crate::walk_params::compare_params;
 use crate::walk_responses::compare_responses;
@@ -56,7 +56,7 @@ pub(crate) fn compare_operations(context: &mut WalkContext<'_>) -> Result<(), Di
             RawChange::new(
                 DiffKind::OperationAdded,
                 "added",
-                pointer_join("", &["operations", &index.to_string()]),
+                pointer_below("", &["operations", &index.to_string()]),
             )
             .between(None, Some(text_value(operation.id.as_str()))),
         );
@@ -75,7 +75,7 @@ pub(crate) fn compare_operations(context: &mut WalkContext<'_>) -> Result<(), Di
                 RawChange::new(
                     DiffKind::OperationRemoved,
                     "removed",
-                    pointer_join("", &["operations", &index.to_string()]),
+                    pointer_below("", &["operations", &index.to_string()]),
                 )
                 .between(Some(text_value(operation.id.as_str())), None),
             );
@@ -85,7 +85,7 @@ pub(crate) fn compare_operations(context: &mut WalkContext<'_>) -> Result<(), Di
 
         compare_operation(
             context,
-            &pointer_join("", &["operations", &after_index.to_string()]),
+            &pointer_below("", &["operations", &after_index.to_string()]),
             operation,
             after_operation,
         )?;
@@ -142,7 +142,7 @@ fn compare_operation(
             refuse_unknown_value(
                 context,
                 &site,
-                &pointer_join(pointer, &["kind"]),
+                &pointer_below(pointer, &["kind"]),
                 operation.kind.as_str(),
             );
 

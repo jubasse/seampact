@@ -8,16 +8,14 @@ use seampact_ir::{
     ContractIr, Identity, IdentityHeaderUse, KnownIdentityRef, KnownPrincipalRef, Principal,
     Reason, SchemaRef, TypeUse,
 };
-use seampact_json::{JsonObject, JsonValue};
+use seampact_json::{JsonObject, JsonValue, object_of, pointer_below};
 
 use crate::DiffError;
 use crate::change_sink::{ChangeReach, ElementOrigin, NO_POSITION, RawChange};
 use crate::walk_context::{
     ChangeSite, MemberComparisons, MemberDefinition, WalkContext, compare_members, emit_at,
 };
-use crate::walk_json::{
-    is_same_json, json_of, member_names, object_members, pointer_join, text_value,
-};
+use crate::walk_json::{is_same_json, json_of, member_names, object_members, text_value};
 use crate::walk_reach::{common_reaches, declaration_reach_key};
 use crate::walk_type_use::{BoundSide, compare_bound, compare_schema_ref, compare_type_use};
 
@@ -99,18 +97,6 @@ fn catalogue_entries(
     }
 }
 
-/// The members of an entry that is an object.
-fn record_of(entry: Option<&JsonValue>) -> Option<&JsonObject> {
-    match entry? {
-        JsonValue::Object(members) => Some(members),
-        JsonValue::Null
-        | JsonValue::Bool(_)
-        | JsonValue::Number(_)
-        | JsonValue::String(_)
-        | JsonValue::Array(_) => None,
-    }
-}
-
 /// Whether the entries of the catalogue have a definition each, by their kind.
 const fn is_tagged_catalogue(catalogue: DeclarationCatalogue) -> bool {
     matches!(
@@ -132,11 +118,11 @@ pub(crate) fn compare_declarations(
     for id in member_names(Some(&before_entries), Some(&after_entries)) {
         let before_entry = before_entries.get(id);
         let after_entry = after_entries.get(id);
-        let pointer = pointer_join("", &[catalogue.as_str(), id]);
+        let pointer = pointer_below("", &[catalogue.as_str(), id]);
         let (Some(before_members), Some(after_members)) =
-            (record_of(before_entry), record_of(after_entry))
+            (object_of(before_entry), object_of(after_entry))
         else {
-            let after_present = record_of(after_entry).is_some();
+            let after_present = object_of(after_entry).is_some();
             let site = ChangeSite {
                 reaches: &NO_POSITION,
                 origin: origin_of(after_entry.or(before_entry)),
@@ -151,7 +137,7 @@ pub(crate) fn compare_declarations(
                     pointer,
                 )
                 .between(
-                    record_of(before_entry).map(|_| text_value(id)),
+                    object_of(before_entry).map(|_| text_value(id)),
                     after_present.then(|| text_value(id)),
                 ),
             );
@@ -634,7 +620,7 @@ fn compare_principal(
         return compare_schema_ref(
             context,
             site,
-            &pointer_join(pointer, &["schema"]),
+            &pointer_below(pointer, &["schema"]),
             Some(&before_schema.schema),
             Some(&after_schema.schema),
         );
@@ -677,7 +663,7 @@ fn compare_identity_headers(
             RawChange::new(
                 DiffKind::Identity,
                 case_name,
-                pointer_join(pointer, &[&index.to_string()]),
+                pointer_below(pointer, &[&index.to_string()]),
             )
             .between(None, Some(text_value(header.header.as_str()))),
         );
@@ -695,7 +681,7 @@ fn compare_identity_headers(
                 RawChange::new(
                     DiffKind::Identity,
                     "headerRemoved",
-                    pointer_join(pointer, &[&index.to_string()]),
+                    pointer_below(pointer, &[&index.to_string()]),
                 )
                 .between(Some(text_value(header.header.as_str())), None),
             );
@@ -721,8 +707,12 @@ fn compare_identity_headers(
         emit_at(
             context,
             site,
-            RawChange::new(kind, case_name, pointer_join(pointer, &[&kept.to_string()]))
-                .between(None, Some(text_value(after_header.header.as_str()))),
+            RawChange::new(
+                kind,
+                case_name,
+                pointer_below(pointer, &[&kept.to_string()]),
+            )
+            .between(None, Some(text_value(after_header.header.as_str()))),
         );
     }
 

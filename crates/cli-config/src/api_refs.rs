@@ -1,8 +1,6 @@
 //! The apis a target entry names: `api` or `apis`, each as `<source>/<api>` or the api alone.
 
-use seampact_json::JsonValue;
-
-use crate::json_access::{items, record, text};
+use seampact_json::{JsonValue, items_of, object_of, text_of};
 
 const SOURCE_SEPARATOR: char = '/';
 
@@ -33,16 +31,16 @@ pub fn parse_api_ref(text: &str) -> ApiRef<'_> {
 /// The `apis` of `entry`, else its `api` as a one-item list, else none.
 #[must_use]
 pub fn api_refs_of(entry: &JsonValue) -> Vec<&str> {
-    let object = record(Some(entry));
+    let object = object_of(Some(entry));
 
     if let Some(apis) = object.and_then(|object| object.get("apis")) {
-        return items(Some(apis))
+        return items_of(Some(apis))
             .iter()
-            .filter_map(|api| text(Some(api)))
+            .filter_map(|api| text_of(Some(api)))
             .collect();
     }
 
-    text(object.and_then(|object| object.get("api")))
+    text_of(object.and_then(|object| object.get("api")))
         .into_iter()
         .collect()
 }

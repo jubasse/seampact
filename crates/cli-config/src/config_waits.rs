@@ -1,9 +1,8 @@
 //! The keys and values of an app config that wait for a later feature.
 
-use seampact_json::{JsonObject, JsonValue};
+use seampact_json::{JsonObject, JsonValue, object_of};
 
 use crate::config_position::ParsedConfig;
-use crate::json_access::record;
 use crate::key_path::{KeyPath, KeyPathSegment};
 use crate::key_problem::KeyProblem;
 use crate::{CliConfigError, CliProblem};
@@ -31,7 +30,7 @@ pub(crate) struct ConfigWait {
 /// Every waiting key or value form of `config`, the parsed YAML not yet checked by the schema.
 pub(crate) fn find_config_waits(config: &JsonValue) -> Vec<ConfigWait> {
     let Some(JsonValue::Array(targets)) =
-        record(Some(config)).and_then(|object| object.get("targets"))
+        object_of(Some(config)).and_then(|object| object.get("targets"))
     else {
         return Vec::new();
     };
@@ -44,7 +43,7 @@ pub(crate) fn find_config_waits(config: &JsonValue) -> Vec<ConfigWait> {
 }
 
 fn target_entry_waits(entry: &JsonValue, index: usize) -> Vec<ConfigWait> {
-    let Some(object) = record(Some(entry)) else {
+    let Some(object) = object_of(Some(entry)) else {
         return Vec::new();
     };
     let path = vec![
@@ -60,7 +59,7 @@ fn target_entry_waits(entry: &JsonValue, index: usize) -> Vec<ConfigWait> {
         ));
     }
 
-    if let Some(link) = record(object.get("link")) {
+    if let Some(link) = object_of(object.get("link")) {
         waits.extend(module_link_waits(link, &extended(&path, "link")));
     }
 
@@ -86,7 +85,7 @@ fn waiting_keys_of(
 
 fn artefact_switch_waits(artefacts: &JsonValue, path: &[KeyPathSegment]) -> Vec<ConfigWait> {
     let Some(boot_check) =
-        record(record(Some(artefacts)).and_then(|object| object.get(BOOT_CHECK_ARTEFACT)))
+        object_of(object_of(Some(artefacts)).and_then(|object| object.get(BOOT_CHECK_ARTEFACT)))
     else {
         return Vec::new();
     };
@@ -106,7 +105,7 @@ fn artefact_switch_waits(artefacts: &JsonValue, path: &[KeyPathSegment]) -> Vec<
 
 fn module_link_waits(link: &JsonObject, path: &[KeyPathSegment]) -> Vec<ConfigWait> {
     link.iter()
-        .filter(|(_, value)| record(Some(value)).is_some())
+        .filter(|(_, value)| object_of(Some(value)).is_some())
         .map(|(kind, _)| ConfigWait {
             path: extended(path, kind),
             what: "a link with an explicit module specifier".to_owned(),

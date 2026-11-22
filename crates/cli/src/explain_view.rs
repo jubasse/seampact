@@ -4,11 +4,11 @@
 use indexmap::IndexMap;
 use seampact_diagnostics::InternalError;
 use seampact_ir::{ContractIr, Operation, to_json_value};
-use seampact_json::{JsonNumber, JsonObject, JsonValue, js_text_of};
+use seampact_json::{JsonNumber, JsonObject, JsonValue, items_of, js_text_of, object_of};
 use seampact_span::Location;
 
 use crate::CliError;
-use crate::explain_flow::{flow, flow_of, items_of, object_of, object_of_present, type_text};
+use crate::explain_flow::{flow, flow_of, object_of_present, type_text};
 use crate::explain_not_shown::not_shown_line;
 use crate::explain_origin::provenance;
 use crate::explain_values::{

@@ -7,7 +7,7 @@ use seampact_ir::{
     KnownRequirementRef, Operation, OperationScope, PrincipalRequirement, RefusedCredential,
     Requirement, SchemeId,
 };
-use seampact_json::{JsonValue, stringify_json};
+use seampact_json::{JsonValue, pointer_below, stringify_json};
 use serde::Serialize;
 
 use crate::DiffError;
@@ -16,7 +16,7 @@ use crate::walk_context::{
     ChangeSite, KeyedListComparison, MemberComparisons, WalkContext, compare_kept_order,
     compare_keyed_list, compare_members, emit_at, refuse_unknown_value,
 };
-use crate::walk_json::{json_of, object_members, pointer_join, text_value};
+use crate::walk_json::{json_of, object_members, text_value};
 use crate::walk_operations::OperationSite;
 
 /// The case of an `unknownQuery` change by the policy the operation moves to.
@@ -259,7 +259,7 @@ fn compare_unknown_query(
             before_policy
         };
 
-        refuse_unknown_value(context, site, &pointer_join(pointer, &["policy"]), unknown);
+        refuse_unknown_value(context, site, &pointer_below(pointer, &["policy"]), unknown);
 
         return Ok(());
     };
@@ -315,7 +315,7 @@ fn compare_access(
         refuse_unknown_value(
             context,
             site,
-            &pointer_join(pointer, &["kind"]),
+            &pointer_below(pointer, &["kind"]),
             unknown.tag(),
         );
 
@@ -687,7 +687,7 @@ fn compare_requirements(
         refuse_unknown_value(
             context,
             site,
-            &pointer_join(pointer, &["kind"]),
+            &pointer_below(pointer, &["kind"]),
             unknown.tag(),
         );
 
@@ -854,7 +854,7 @@ fn field_right_reaches(
             refuse_unknown_value(
                 context,
                 input,
-                &pointer_join(list_pointer, &["direction"]),
+                &pointer_below(list_pointer, &["direction"]),
                 field_right.direction.as_str(),
             );
 
@@ -1030,7 +1030,7 @@ fn access_rank(
                 refuse_unknown_value(
                     context,
                     site,
-                    &pointer_join(pointer, &["onRefused"]),
+                    &pointer_below(pointer, &["onRefused"]),
                     unknown.as_str(),
                 );
 
@@ -1056,7 +1056,7 @@ fn compare_csrf(
         refuse_unknown_value(
             context,
             site,
-            &pointer_join(pointer, &["kind"]),
+            &pointer_below(pointer, &["kind"]),
             unknown.tag(),
         );
 

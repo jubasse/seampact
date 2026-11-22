@@ -19,28 +19,6 @@ pub(crate) fn optional_text(text: Option<&str>) -> Option<JsonValue> {
     text.map(JsonValue::text)
 }
 
-/// The object member `member` of `object`, or `None` when it is absent or not an object.
-pub(crate) fn object_member<'object>(
-    object: &'object JsonObject,
-    member: &str,
-) -> Option<&'object JsonObject> {
-    match object.get(member) {
-        Some(JsonValue::Object(found)) => Some(found),
-        _ => None,
-    }
-}
-
-/// The items of the array member `member` of `object`, none when it is absent or not an array.
-pub(crate) fn array_member<'object>(
-    object: &'object JsonObject,
-    member: &str,
-) -> &'object [JsonValue] {
-    match object.get(member) {
-        Some(JsonValue::Array(items)) => items,
-        _ => &[],
-    }
-}
-
 /// The JSON number of an IR integer.
 pub(crate) fn integer_value(value: i64) -> JsonValue {
     JsonValue::Number(JsonNumber::from_i64(value))
@@ -61,7 +39,7 @@ pub(crate) fn json_of(text: &str) -> Result<JsonValue, Box<dyn std::error::Error
 
 /// A JSON object read from text, for the tests.
 #[cfg(test)]
-pub(crate) fn object_of(text: &str) -> Result<JsonObject, Box<dyn std::error::Error>> {
+pub(crate) fn object_from_text(text: &str) -> Result<JsonObject, Box<dyn std::error::Error>> {
     match json_of(text)? {
         JsonValue::Object(object) => Ok(object),
         other => Err(format!("not an object: {other:?}").into()),

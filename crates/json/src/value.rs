@@ -46,6 +46,12 @@ impl JsonValue {
     pub fn text(text: &str) -> Self {
         Self::String(text.to_owned())
     }
+
+    /// The object of the listed members, as [`JsonObject::from_members`].
+    #[must_use]
+    pub fn object<'name>(members: impl IntoIterator<Item = (&'name str, JsonValue)>) -> Self {
+        Self::Object(JsonObject::from_members(members))
+    }
 }
 
 impl TryFrom<serde_json::Value> for JsonValue {

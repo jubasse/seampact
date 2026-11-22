@@ -1,11 +1,10 @@
 //! Where a member of an operation comes from, as `seampact explain` comments it.
 
 use indexmap::IndexMap;
-use seampact_json::{JsonValue, js_text_of};
+use seampact_json::{JsonValue, is_text, items_of, js_text_of, object_of};
 use seampact_span::Location;
 
 use crate::contract_position::origin_position;
-use crate::explain_flow::{is_text, items_of, object_of};
 
 /// The text of an origin: a core declaration is `built in`, a located one its `file:line`, else
 /// its api, layer and pointer.

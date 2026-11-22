@@ -1,27 +1,6 @@
 //! The YAML flow text `seampact explain` writes a value as, and the type names it shows.
 
-use seampact_json::{JsonObject, JsonValue, js_text_of, write_json_string};
-
-/// The members of `value` when it is a mapping, else none.
-pub(crate) fn object_of(value: Option<&JsonValue>) -> Option<&JsonObject> {
-    match value {
-        Some(JsonValue::Object(object)) => Some(object),
-        _ => None,
-    }
-}
-
-/// The items of `value` when it is an array, else none.
-pub(crate) fn items_of(value: Option<&JsonValue>) -> &[JsonValue] {
-    match value {
-        Some(JsonValue::Array(items)) => items,
-        _ => &[],
-    }
-}
-
-/// Whether `text` is the string `expected`.
-pub(crate) fn is_text(value: Option<&JsonValue>, expected: &str) -> bool {
-    matches!(value, Some(JsonValue::String(text)) if text == expected)
-}
+use seampact_json::{JsonValue, js_text_of, write_json_string};
 
 /// An object of the members whose value is present, in the order given; a member the TypeScript
 /// leaves `undefined` is `None` and left out, as the flow text leaves it out.

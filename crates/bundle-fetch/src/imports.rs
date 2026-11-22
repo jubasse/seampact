@@ -197,13 +197,6 @@ fn declared_imports(imports: Option<&JsonValue>) -> Vec<DeclaredImport> {
         .collect()
 }
 
-fn text_member<'entry>(entry: &'entry JsonObject, key: &str) -> Option<&'entry str> {
-    match entry.get(key) {
-        Some(JsonValue::String(text)) => Some(text),
-        _ => None,
-    }
-}
-
 fn bundle_source_of(entry: &JsonObject) -> Option<BundleSource> {
     let forms = SOURCE_FORM_KEYS
         .iter()
@@ -214,27 +207,27 @@ fn bundle_source_of(entry: &JsonObject) -> Option<BundleSource> {
         return None;
     }
 
-    let integrity = text_member(entry, "integrity").map(str::to_owned);
+    let integrity = entry.text_member("integrity").map(str::to_owned);
     let form = if let (Some(package), Some(version)) =
-        (text_member(entry, "package"), text_member(entry, "version"))
+        (entry.text_member("package"), entry.text_member("version"))
     {
         BundleSourceForm::Package(PackageBundleSource {
             package: package.to_owned(),
             version: version.to_owned(),
         })
     } else if let Some(JsonValue::Object(release)) = entry.get("release")
-        && let Some(url) = text_member(release, "url")
+        && let Some(url) = release.text_member("url")
     {
         BundleSourceForm::Release(ReleaseBundleSource {
             url: url.to_owned(),
         })
     } else if let Some(JsonValue::Object(git)) = entry.get("git")
-        && let (Some(url), Some(tag)) = (text_member(git, "url"), text_member(git, "tag"))
+        && let (Some(url), Some(tag)) = (git.text_member("url"), git.text_member("tag"))
     {
         BundleSourceForm::Git(GitBundleSource {
             url: url.to_owned(),
             tag: tag.to_owned(),
-            directory: text_member(git, "directory").map(str::to_owned),
+            directory: git.text_member("directory").map(str::to_owned),
         })
     } else {
         return None;

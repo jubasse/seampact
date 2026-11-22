@@ -25,7 +25,7 @@ src/walk_refusals.rs#api_version_text	packages/core/diff/src/walk/refusals.ts#ap
 src/walk_refusals.rs#gate_value_refusals	packages/core/diff/src/walk/refusals.ts#gateValueRefusals
 src/walk_maturity.rs#is_known_maturity	packages/core/diff/src/walk/maturity.ts#isKnownMaturity
 src/walk_json.rs#is_same_json	packages/core/diff/src/walk/json.ts#isSameJson
-src/walk_json.rs#pointer_join	packages/core/diff/src/walk/json.ts#pointerJoin
+-	packages/core/diff/src/walk/json.ts#pointerJoin	merged: ../json/src/pointer.rs#pointer_below
 src/walk_json.rs#scalar_value	packages/core/diff/src/walk/json.ts#scalarValue
 src/gate.rs#applied_policy	packages/core/diff/src/gate/gate.ts#appliedPolicy
 src/gate.rs#apply_gate	packages/core/diff/src/gate/gate.ts#applyGate
@@ -52,7 +52,7 @@ src/walk_reach.rs#visit_rule	packages/core/diff/src/walk/reach.ts#visitRule
 src/walk_reach.rs#visit_scope	packages/core/diff/src/walk/reach.ts#visitScope
 src/walk_reach.rs#visit_right	packages/core/diff/src/walk/reach.ts#visitRight
 src/walk_catalogue.rs#name_of	packages/core/diff/src/walk/catalogue.ts#nameOf
-src/walk_json.rs#is_record	packages/core/diff/src/walk/json.ts#isRecord
+-	packages/core/diff/src/walk/json.ts#isRecord	merged: ../json/src/access.rs#object_of
 src/gate.rs#is_on_experimental	packages/core/diff/src/gate/gate.ts#isOnExperimental
 src/gate.rs#is_removal_past_sunset	packages/core/diff/src/gate/gate.ts#isRemovalPastSunset
 src/walk_catalogue.rs#common_ids	packages/core/diff/src/walk/catalogue.ts#commonIds

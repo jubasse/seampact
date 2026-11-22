@@ -1,11 +1,11 @@
 //! The root config that lists an app: the nearest `seampact.config.yaml` above it that holds `apps`.
 
 use camino::Utf8Path;
+use seampact_json::object_of;
 
 use crate::config_file::{ParseConfigOutcome, file_size, parse_config_file};
 use crate::config_kind::ConfigKind;
 use crate::config_names::{APP_CONFIG_FILE_NAME, ROOT_CONFIG_MARKER_KEY};
-use crate::json_access::record;
 use crate::node_path::{directory_of, joined_path, relative_path};
 use crate::read_root_config::{LoadedRootConfig, ReadRootConfigOutcome, read_root_config};
 use crate::{CliConfigError, CliProblem};
@@ -93,7 +93,7 @@ fn root_config_at(
         ParseConfigOutcome::Parsed { value, .. } => value,
     };
 
-    if !record(Some(&value)).is_some_and(|object| object.contains_key(ROOT_CONFIG_MARKER_KEY)) {
+    if !object_of(Some(&value)).is_some_and(|object| object.contains_key(ROOT_CONFIG_MARKER_KEY)) {
         return Ok(None);
     }
 

@@ -2,7 +2,7 @@
 
 use seampact_authoring::RawApi;
 use seampact_ir::Origin;
-use seampact_json::{JsonObject, JsonValue, escape_pointer, json_at_object, pointer_segments};
+use seampact_json::{JsonObject, JsonValue, json_at_object, pointer_segments};
 
 /// Whether `value` is an object (`null` and arrays are not).
 #[must_use]
@@ -14,19 +14,6 @@ pub const fn is_json_object(value: &JsonValue) -> bool {
 #[must_use]
 pub const fn is_json_list(value: &JsonValue) -> bool {
     matches!(value, JsonValue::Array(_))
-}
-
-/// The pointer below `base` through `segments`, each escaped.
-#[must_use]
-pub fn pointer_below(base: &str, segments: &[&str]) -> String {
-    let mut pointer = String::from(base);
-
-    for segment in segments {
-        pointer.push('/');
-        pointer.push_str(&escape_pointer(segment));
-    }
-
-    pointer
 }
 
 // Whether `pointer` names a node of `object`, the root included.

@@ -119,11 +119,10 @@ fn refusals_json(refusals: &[Refusal]) -> JsonValue {
 }
 
 fn refusal_json(refusal: &Refusal) -> JsonValue {
-    let text = |value: &str| JsonValue::String(value.to_owned());
     let mut entry = JsonObject::from_iter([
-        ("code".to_owned(), text(&refusal.code)),
-        ("message".to_owned(), text(&refusal.message)),
-        ("fix".to_owned(), text(&refusal.fix)),
+        ("code".to_owned(), JsonValue::text(&refusal.code)),
+        ("message".to_owned(), JsonValue::text(&refusal.message)),
+        ("fix".to_owned(), JsonValue::text(&refusal.fix)),
     ]);
     let optional_members = [
         ("docs", refusal.docs.as_deref()),
@@ -136,7 +135,7 @@ fn refusal_json(refusal: &Refusal) -> JsonValue {
 
     for (name, value) in optional_members {
         if let Some(present) = value {
-            entry.insert(name.to_owned(), text(present));
+            entry.insert(name.to_owned(), JsonValue::text(present));
         }
     }
 

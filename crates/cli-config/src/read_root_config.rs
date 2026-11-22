@@ -3,14 +3,13 @@
 use camino::{Utf8Path, Utf8PathBuf};
 use indexmap::IndexMap;
 use seampact_diagnostics::InternalError;
-use seampact_json::{JsonObject, JsonValue};
+use seampact_json::{JsonObject, JsonValue, items_of, object_of, text_of};
 
 use crate::config_file::{ParseConfigOutcome, parse_config_file};
 use crate::config_kind::ConfigKind;
 use crate::config_names::APP_CONFIG_FILE_NAME;
 use crate::config_position::ParsedConfig;
 use crate::config_schema::{ConfigSchema, ValidateConfigOutcome, validate_config};
-use crate::json_access::{items, record, text};
 use crate::key_path::KeyPathSegment;
 use crate::key_problem::KeyProblem;
 use crate::maven_source::unpinned_maven_problems;
@@ -117,10 +116,10 @@ fn app_only_key_problems(
     parsed: &ParsedConfig,
     value: &JsonValue,
 ) -> Result<Vec<KeyProblem>, CliConfigError> {
-    let Some(object) = record(Some(value)) else {
+    let Some(object) = object_of(Some(value)) else {
         return Ok(Vec::new());
     };
-    let checks = record(object.get("checks"));
+    let checks = object_of(object.get("checks"));
     let mut paths: Vec<Vec<&str>> = APP_ONLY_KEYS
         .iter()
         .filter(|key| object.contains_key(key))
@@ -161,7 +160,7 @@ fn resolve_root_config(
     config: &JsonValue,
 ) -> Result<ReadRootConfigOutcome, CliConfigError> {
     let directory = directory_of(file);
-    let object = record(Some(config)).ok_or_else(|| {
+    let object = object_of(Some(config)).ok_or_else(|| {
         InternalError::new("a root config that is not a mapping passed the schema")
     })?;
     let apps = workspace_apps(&directory, object.get("apps"))?;
@@ -177,7 +176,7 @@ fn resolve_root_config(
         return Ok(ReadRootConfigOutcome::Refused(problems));
     }
 
-    let openapi = record(object.get("openapi"))
+    let openapi = object_of(object.get("openapi"))
         .into_iter()
         .flat_map(|documents| documents.iter())
         .map(|(name, entry)| loaded_merged_document(&directory, name, entry, &apps))
@@ -205,10 +204,10 @@ fn workspace_apps(
     directory: &Utf8Path,
     apps: Option<&JsonValue>,
 ) -> Result<Vec<WorkspaceApp>, InternalError> {
-    items(apps)
+    items_of(apps)
         .iter()
         .map(|name| {
-            let name = text(Some(name))
+            let name = text_of(Some(name))
                 .ok_or_else(|| InternalError::new("an app that is not text passed the schema"))?;
             let app_directory = resolved_path(directory, name);
 
@@ -227,14 +226,14 @@ fn loaded_merged_document(
     entry: &JsonValue,
     root_apps: &[WorkspaceApp],
 ) -> Result<LoadedMergedDocument, InternalError> {
-    let entry_object = record(Some(entry)).ok_or_else(|| {
+    let entry_object = object_of(Some(entry)).ok_or_else(|| {
         InternalError::new("a merged document that is not a mapping passed the schema")
     })?;
-    let path = text(entry_object.get("path"))
+    let path = text_of(entry_object.get("path"))
         .ok_or_else(|| InternalError::new("a merged document without a path passed the schema"))?;
     let apps = match entry_object.get("apps") {
         None => root_apps.iter().map(|app| app.name.clone()).collect(),
-        Some(listed) => items(Some(listed))
+        Some(listed) => items_of(Some(listed))
             .iter()
             .map(|item| listed_app(directory, item, root_apps).map(|app| app.name.clone()))
             .collect::<Result<Vec<_>, _>>()?,
@@ -346,14 +345,14 @@ fn unknown_merged_app_problems(
     let mut problems = Vec::new();
     let listed_names: Vec<&str> = apps.iter().map(|app| app.name.as_str()).collect();
 
-    for (name, entry) in record(config.get("openapi"))
+    for (name, entry) in object_of(config.get("openapi"))
         .into_iter()
         .flat_map(|object| object.iter())
     {
-        let merged_apps = record(Some(entry)).and_then(|object| object.get("apps"));
+        let merged_apps = object_of(Some(entry)).and_then(|object| object.get("apps"));
 
-        for (index, app) in items(merged_apps).iter().enumerate() {
-            let app = text(Some(app)).ok_or_else(|| {
+        for (index, app) in items_of(merged_apps).iter().enumerate() {
+            let app = text_of(Some(app)).ok_or_else(|| {
                 InternalError::new("a merged document app that is not text passed the schema")
             })?;
 
@@ -398,7 +397,7 @@ fn listed_app<'apps>(
     item: &JsonValue,
     apps: &'apps [WorkspaceApp],
 ) -> Result<&'apps WorkspaceApp, InternalError> {
-    let item = text(Some(item)).ok_or_else(|| {
+    let item = text_of(Some(item)).ok_or_else(|| {
         InternalError::new("a merged document app that is not text passed the schema")
     })?;
 
