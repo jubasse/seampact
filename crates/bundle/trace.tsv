@@ -55,7 +55,7 @@ src/manifest_read.rs#manifest_too_large	packages/core/compiler/src/bundle/manife
 src/manifest_read.rs#invalid_manifest	packages/core/compiler/src/bundle/manifest-read.ts#invalidManifest
 src/tarball_read.rs#extract_bundle_tarball	packages/core/compiler/src/bundle/tarball-read.ts#extractBundleTarball
 src/tarball_read.rs#read_bundle_tarball	packages/core/compiler/src/bundle/tarball-read.ts#readBundleTarball
-src/tarball_read.rs#refuse	packages/core/compiler/src/bundle/tarball-read.ts#refused
+-	packages/core/compiler/src/bundle/tarball-read.ts#refused	skip: the Rust reader returns its failure list directly
 src/tarball_read.rs#gunzipped	packages/core/compiler/src/bundle/tarball-read.ts#gunzipped
 src/tarball_read.rs#invalid	packages/core/compiler/src/bundle/tarball-read.ts#invalid
 src/tarball_read.rs#new	packages/core/compiler/src/bundle/tarball-read.ts#UstarParser.constructor
@@ -93,4 +93,3 @@ src/local_packages.rs#dependency_specs	packages/core/compiler/src/bundle/local-p
 -	packages/core/compiler/src/bundle/fetch-package.ts#installedBundlePackage	skip: ported in seampact-bundle-fetch
 src/installed_package.rs#installed_package_directory	packages/core/compiler/src/bundle/fetch-package.ts#installedPackageDirectory
 -	packages/core/compiler/src/bundle/fetch-package.ts#installedVersion	skip: ported in seampact-bundle-fetch
-src/source.rs#written_bundle_source	packages/core/compiler/src/bundle/imports.ts#bundleSourceOf
