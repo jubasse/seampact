@@ -5,20 +5,12 @@ use seampact_diff_table::{DiffCode, DiffRefusal, DiffValue};
 use seampact_ir::{ApiVersion, CompatPolicy, ContractIr};
 use seampact_json::{JsonNumber, stringify_json};
 
-use crate::DiffError;
 use crate::walk_context::unknown_value_refusal;
 use crate::walk_json::is_same_json;
 use crate::walk_maturity::is_known_maturity;
 
 /// The refusals that stop a diff before the walk, in the order the report prints them.
-///
-/// # Errors
-///
-/// [`DiffError::NotPortedYet`] until the unknown-value refusal is ported.
-pub(crate) fn whole_diff_refusals(
-    before: &ContractIr,
-    after: &ContractIr,
-) -> Result<Vec<DiffRefusal>, DiffError> {
+pub(crate) fn whole_diff_refusals(before: &ContractIr, after: &ContractIr) -> Vec<DiffRefusal> {
     let mut refusals = Vec::new();
 
     if before.ir_version != after.ir_version {
@@ -72,10 +64,10 @@ pub(crate) fn whole_diff_refusals(
         ));
     }
 
-    refusals.extend(gate_value_refusals(before)?);
-    refusals.extend(gate_value_refusals(after)?);
+    refusals.extend(gate_value_refusals(before));
+    refusals.extend(gate_value_refusals(after));
 
-    Ok(refusals)
+    refusals
 }
 
 fn refusal(
@@ -115,7 +107,7 @@ pub(crate) fn api_version_text(version: &ApiVersion) -> String {
     }
 }
 
-fn gate_value_refusals(ir: &ContractIr) -> Result<Vec<DiffRefusal>, DiffError> {
+fn gate_value_refusals(ir: &ContractIr) -> Vec<DiffRefusal> {
     let mut refusals = Vec::new();
 
     if let CompatPolicy::Unknown(policy) = &ir.api.compat.policy {
@@ -123,7 +115,7 @@ fn gate_value_refusals(ir: &ContractIr) -> Result<Vec<DiffRefusal>, DiffError> {
             "/api/compat/policy",
             policy.as_str(),
             &[],
-        )?);
+        ));
     }
 
     if !is_known_maturity(&ir.api.maturity) {
@@ -131,7 +123,7 @@ fn gate_value_refusals(ir: &ContractIr) -> Result<Vec<DiffRefusal>, DiffError> {
             "/api/maturity",
             ir.api.maturity.as_str(),
             &[],
-        )?);
+        ));
     }
 
     for (position, operation) in ir.operations.iter().enumerate() {
@@ -140,11 +132,11 @@ fn gate_value_refusals(ir: &ContractIr) -> Result<Vec<DiffRefusal>, DiffError> {
                 &format!("/operations/{position}/maturity/level"),
                 operation.maturity.level.as_str(),
                 &[operation.id.as_str().to_owned()],
-            )?);
+            ));
         }
     }
 
-    Ok(refusals)
+    refusals
 }
 
 #[cfg(test)]
@@ -158,7 +150,7 @@ mod tests {
     fn two_contracts_of_one_api_and_version_have_no_whole_diff_refusal() {
         let ir = sample_ir();
 
-        assert_eq!(whole_diff_refusals(&ir, &ir), Ok(Vec::new()));
+        assert_eq!(whole_diff_refusals(&ir, &ir), Vec::new());
     }
 
     #[test]
@@ -169,7 +161,7 @@ mod tests {
         after.ir_version += 1;
         after.ir_revision += 1;
 
-        let refusals = whole_diff_refusals(&before, &after).unwrap_or_default();
+        let refusals = whole_diff_refusals(&before, &after);
         let codes: Vec<DiffCode> = refusals.iter().map(|refusal| refusal.code).collect();
 
         assert_eq!(codes, vec![DiffCode::IrVersionDiffers]);
@@ -190,7 +182,7 @@ mod tests {
             label: "beta".to_owned(),
         });
 
-        let refusals = whole_diff_refusals(&before, &after).unwrap_or_default();
+        let refusals = whole_diff_refusals(&before, &after);
 
         assert_eq!(
             refusals

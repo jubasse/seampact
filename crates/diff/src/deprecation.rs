@@ -1,22 +1,23 @@
 //! The deprecation report: each operation deprecated in `after`, each operation deprecated in
 //! `before` and gone from `after`, and each schema or property whose `deprecated` flag changed.
 
+use std::cmp::Ordering;
 use std::collections::HashSet;
 
+use seampact_diagnostics::InternalError;
 use seampact_diff_table::{DeprecationEntry, OperationDeprecationStatus, SchemaDeprecationStatus};
 use seampact_ir::{ContractIr, Deprecation, KnownSchemaRef, Operation, Schema};
 use seampact_js::cmp_utf16;
 use seampact_json::JsonValue;
 
 use crate::DiffError;
-use crate::not_ported::not_ported_yet;
 use crate::walk_json::pointer_join;
 
 /// The deprecation entries of the two contracts, sorted by operation then pointer.
 ///
 /// # Errors
 ///
-/// [`DiffError::NotPortedYet`] until the operation entries are ported.
+/// [`DiffError::Internal`] when a date is no calendar date.
 pub(crate) fn deprecation_report(
     before: &ContractIr,
     after: &ContractIr,
@@ -69,7 +70,7 @@ fn operation_entries(
             .iter()
             .find(|candidate| candidate.id == operation.id)
             .and_then(|candidate| candidate.deprecated.as_ref());
-        let status = after_status(previous, deprecation)?;
+        let status = after_status(previous, deprecation);
 
         entries.push(operation_entry(
             operation,
@@ -112,30 +113,85 @@ fn deprecated_pointer(position: usize) -> String {
 }
 
 /// What became of an operation deprecated in `after`.
-///
-/// # Errors
-///
-/// Not ported yet.
 fn after_status(
-    _previous: Option<&Deprecation>,
-    _current: &Deprecation,
-) -> Result<OperationDeprecationStatus, DiffError> {
-    Err(not_ported_yet("afterStatus"))
+    previous: Option<&Deprecation>,
+    current: &Deprecation,
+) -> OperationDeprecationStatus {
+    let Some(previous) = previous else {
+        return OperationDeprecationStatus::New;
+    };
+
+    // Calendar dates order as text.
+    match cmp_utf16(&current.sunset, &previous.sunset) {
+        Ordering::Less => return OperationDeprecationStatus::SunsetEarlier,
+        Ordering::Greater => return OperationDeprecationStatus::SunsetLater,
+        Ordering::Equal => {}
+    }
+
+    let successor_id = |deprecation: &Deprecation| {
+        deprecation
+            .successor
+            .as_ref()
+            .map(|successor| successor.id.clone())
+    };
+
+    if successor_id(previous) != successor_id(current)
+        || previous.successor_rel != current.successor_rel
+    {
+        return OperationDeprecationStatus::SuccessorChanged;
+    }
+
+    OperationDeprecationStatus::Kept
 }
 
 /// The entry of one deprecated operation.
 ///
 /// # Errors
 ///
-/// Not ported yet.
+/// [`DiffError::Internal`] when a date is no `YYYY-MM-DD` calendar date: the IR invariants
+/// refuse such a date, so this is a bug.
 fn operation_entry(
-    _operation: &Operation,
-    _deprecation: &Deprecation,
-    _pointer: &str,
-    _status: OperationDeprecationStatus,
-    _today: &str,
+    operation: &Operation,
+    deprecation: &Deprecation,
+    pointer: &str,
+    status: OperationDeprecationStatus,
+    today: &str,
 ) -> Result<DeprecationEntry, DiffError> {
-    Err(not_ported_yet("operationEntry"))
+    let days_to_sunset = epoch_day(&deprecation.sunset)? - epoch_day(today)?;
+
+    Ok(DeprecationEntry::Operation {
+        operation: operation.id.as_str().to_owned(),
+        pointer: pointer.to_owned(),
+        status,
+        since: deprecation.since.clone(),
+        sunset: deprecation.sunset.clone(),
+        successor: deprecation
+            .successor
+            .as_ref()
+            .map(|successor| successor.id.as_str().to_owned()),
+        days_to_sunset,
+        past_sunset: cmp_utf16(&deprecation.sunset, today).is_le(),
+    })
+}
+
+/// The days between 1970-01-01 and the calendar date `text` (`YYYY-MM-DD`), as `Date.parse` reads
+/// it in UTC; the days-from-civil algorithm of the proleptic Gregorian calendar.
+fn epoch_day(text: &str) -> Result<i64, DiffError> {
+    let invalid = || InternalError::new(format!("{text:?} is not a calendar date"));
+    let mut fields = text.split('-').map(|field| field.parse::<i64>().ok());
+    let (Some(Some(year)), Some(Some(month)), Some(Some(day)), None) =
+        (fields.next(), fields.next(), fields.next(), fields.next())
+    else {
+        return Err(invalid().into());
+    };
+    let shifted_year = if month <= 2 { year - 1 } else { year };
+    let era = shifted_year.div_euclid(400);
+    let year_of_era = shifted_year.rem_euclid(400);
+    let month_index = (month + 9) % 12;
+    let day_of_year = (153 * month_index + 2) / 5 + day - 1;
+    let day_of_era = year_of_era * 365 + year_of_era / 4 - year_of_era / 100 + day_of_year;
+
+    Ok(era * 146_097 + day_of_era - 719_468)
 }
 
 fn schema_entries(before: &ContractIr, after: &ContractIr) -> Vec<DeprecationEntry> {
@@ -279,5 +335,66 @@ mod tests {
                 _ => None,
             })
             .unwrap_or_default()
+    }
+
+    fn deprecation(sunset: &str, successor: Option<&str>) -> Deprecation {
+        let successor_member = successor.map_or(String::new(), |id| {
+            format!(r#","successor":{{"kind":"httpOperation","api":"a","id":"{id}"}},"successorRel":"r""#)
+        });
+        let text = format!(
+            r#"{{"since":"2026-01-01","sunset":"{sunset}"{successor_member},"origin":{{"layer":"api","pointer":"/x"}}}}"#
+        );
+
+        serde_json::from_str(&text).unwrap_or_else(|error| panic!("{text}: {error}"))
+    }
+
+    #[test]
+    fn calendar_days_count_from_the_unix_epoch_at_the_ends_of_the_ir_years() {
+        let cases = [
+            ("1970-01-01", 0),
+            ("1969-12-31", -1),
+            ("2000-02-29", 11_016),
+            ("2000-03-01", 11_017),
+            ("1900-03-01", -25_508),
+            ("0001-01-01", -719_162),
+            ("9999-12-31", 2_932_896),
+        ];
+
+        for (text, days) in cases {
+            assert_eq!(epoch_day(text), Ok(days), "date {text}");
+        }
+
+        assert!(epoch_day("2026-1").is_err());
+        assert!(epoch_day("soon").is_err());
+    }
+
+    #[test]
+    fn an_after_status_reads_the_sunset_as_text_then_the_successor() {
+        let current = deprecation("2027-01-01", Some("next"));
+
+        assert_eq!(
+            after_status(None, &current),
+            OperationDeprecationStatus::New
+        );
+        assert_eq!(
+            after_status(Some(&deprecation("2027-06-01", Some("next"))), &current),
+            OperationDeprecationStatus::SunsetEarlier
+        );
+        assert_eq!(
+            after_status(Some(&deprecation("2026-06-01", Some("next"))), &current),
+            OperationDeprecationStatus::SunsetLater
+        );
+        assert_eq!(
+            after_status(Some(&deprecation("2027-01-01", Some("other"))), &current),
+            OperationDeprecationStatus::SuccessorChanged
+        );
+        assert_eq!(
+            after_status(Some(&deprecation("2027-01-01", None)), &current),
+            OperationDeprecationStatus::SuccessorChanged
+        );
+        assert_eq!(
+            after_status(Some(&current.clone()), &current),
+            OperationDeprecationStatus::Kept
+        );
     }
 }

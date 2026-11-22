@@ -117,6 +117,11 @@ impl ChangeSink {
         }
     }
 
+    /// Records a refusal.
+    pub(crate) fn refuse(&mut self, refusal: DiffRefusal) {
+        self.refusals.push(refusal);
+    }
+
     /// The refusals recorded so far.
     pub(crate) fn refusals(&self) -> &[DiffRefusal] {
         &self.refusals

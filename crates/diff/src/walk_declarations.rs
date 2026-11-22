@@ -1,13 +1,24 @@
 //! The declaration catalogues (errors, natures, schemes, headers, identities, rights, rules, scopes,
 //! buckets, services, extension keys, formats and paging styles) the walk compares entry by entry.
 
-use seampact_diff_table::IrDefinition;
+use std::collections::HashMap;
+
+use seampact_diff_table::{DiffKind, DiffPosition, IrDefinition};
+use seampact_ir::{
+    ContractIr, Identity, IdentityHeaderUse, KnownIdentityRef, Principal, Reason, SchemaRef,
+    TypeUse,
+};
 use seampact_json::{JsonObject, JsonValue};
 
 use crate::DiffError;
-use crate::change_sink::ElementOrigin;
+use crate::change_sink::{ChangeReach, ElementOrigin, NO_POSITION, RawChange};
 use crate::not_ported::not_ported_yet;
-use crate::walk_context::WalkContext;
+use crate::walk_context::{
+    ChangeSite, MemberComparisons, MemberDefinition, WalkContext, compare_members, emit_at,
+};
+use crate::walk_json::{member_names, object_members, pointer_join, text_value};
+use crate::walk_reach::{common_reaches, declaration_reach_key};
+use crate::walk_type_use::{BoundSide, compare_bound, compare_type_use};
 
 /// A declaration catalogue of the IR.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -72,16 +83,580 @@ impl DeclarationCatalogue {
     }
 }
 
-/// Compares the entries of one catalogue.
+/// The entries of one catalogue of an IR, as the JSON the TypeScript walk reads.
+fn catalogue_entries(
+    ir: &ContractIr,
+    catalogue: DeclarationCatalogue,
+) -> Result<JsonObject, DiffError> {
+    match catalogue {
+        DeclarationCatalogue::Errors => object_members(&ir.errors),
+        DeclarationCatalogue::Natures => object_members(&ir.natures),
+        DeclarationCatalogue::Schemes => object_members(&ir.schemes),
+        DeclarationCatalogue::Headers => object_members(&ir.headers),
+        DeclarationCatalogue::Identities => object_members(&ir.identities),
+        DeclarationCatalogue::Rights => object_members(&ir.rights),
+        DeclarationCatalogue::Rules => object_members(&ir.rules),
+        DeclarationCatalogue::Scopes => object_members(&ir.scopes),
+        DeclarationCatalogue::Buckets => object_members(&ir.buckets),
+        DeclarationCatalogue::Services => object_members(&ir.services),
+        DeclarationCatalogue::ExtensionKeys => object_members(&ir.extension_keys),
+        DeclarationCatalogue::Formats => object_members(&ir.formats),
+        DeclarationCatalogue::Pagings => object_members(&ir.pagings),
+    }
+}
+
+/// The members of an entry that is an object.
+fn record_of(entry: Option<&JsonValue>) -> Option<&JsonObject> {
+    match entry? {
+        JsonValue::Object(members) => Some(members),
+        JsonValue::Null
+        | JsonValue::Bool(_)
+        | JsonValue::Number(_)
+        | JsonValue::String(_)
+        | JsonValue::Array(_) => None,
+    }
+}
+
+/// Whether the entries of the catalogue have a definition each, by their kind.
+const fn is_tagged_catalogue(catalogue: DeclarationCatalogue) -> bool {
+    matches!(
+        catalogue,
+        DeclarationCatalogue::Schemes | DeclarationCatalogue::Identities
+    )
+}
+
+/// Compares the entries of one catalogue: an entry both IRs hold member by member, at the
+/// operations reaching it in both; an entry added or removed as a `declaration` at no position.
+pub(crate) fn compare_declarations(
+    context: &mut WalkContext<'_>,
+    catalogue: DeclarationCatalogue,
+) -> Result<(), DiffError> {
+    let (before_ir, after_ir) = (context.before, context.after);
+    let before_entries = catalogue_entries(before_ir, catalogue)?;
+    let after_entries = catalogue_entries(after_ir, catalogue)?;
+
+    for id in member_names(Some(&before_entries), Some(&after_entries)) {
+        let before_entry = before_entries.get(id);
+        let after_entry = after_entries.get(id);
+        let pointer = pointer_join("", &[catalogue.as_str(), id]);
+        let (Some(before_members), Some(after_members)) =
+            (record_of(before_entry), record_of(after_entry))
+        else {
+            let after_present = record_of(after_entry).is_some();
+            let site = ChangeSite {
+                reaches: &NO_POSITION,
+                origin: origin_of(after_entry.or(before_entry)),
+            };
+
+            emit_at(
+                context,
+                &site,
+                RawChange::new(
+                    DiffKind::Declaration,
+                    if after_present { "added" } else { "removed" },
+                    pointer,
+                )
+                .between(
+                    record_of(before_entry).map(|_| text_value(id)),
+                    after_present.then(|| text_value(id)),
+                ),
+            );
+
+            continue;
+        };
+        let reaches = common_reaches(
+            &context.before_reach,
+            &context.after_reach,
+            &declaration_reach_key(catalogue.as_str(), id),
+        );
+        let site = ChangeSite {
+            reaches: &reaches,
+            origin: origin_of(after_entry),
+        };
+        let definition = definition_of(catalogue, after_members);
+
+        // A tagged entry of another kind holds other members: the kind change says it all.
+        if is_tagged_catalogue(catalogue) && before_members.get("kind") != after_members.get("kind")
+        {
+            compare_members(
+                context,
+                &site,
+                definition,
+                &pointer,
+                Some(&kind_only(before_members)),
+                Some(&kind_only(after_members)),
+                &MemberComparisons::new(),
+            )?;
+
+            continue;
+        }
+
+        let comparisons = entry_comparisons(before_ir, after_ir, &site, catalogue, id);
+
+        compare_members(
+            context,
+            &site,
+            definition,
+            &pointer,
+            Some(before_members),
+            Some(after_members),
+            &comparisons,
+        )?;
+    }
+
+    Ok(())
+}
+
+/// An object holding only the `kind` of `members`, when it has one.
+fn kind_only(members: &JsonObject) -> JsonObject {
+    let mut kind_members = JsonObject::new();
+
+    if let Some(kind) = members.get("kind") {
+        kind_members.insert("kind".to_owned(), kind.clone());
+    }
+
+    kind_members
+}
+
+/// The comparisons of the members of one catalogue entry that have one of their own.
+fn entry_comparisons<'comparison>(
+    before: &'comparison ContractIr,
+    after: &'comparison ContractIr,
+    site: &'comparison ChangeSite<'_>,
+    catalogue: DeclarationCatalogue,
+    id: &str,
+) -> MemberComparisons<'comparison> {
+    let mut comparisons = MemberComparisons::new();
+
+    match catalogue {
+        DeclarationCatalogue::Errors => insert_schema_ref_comparison(
+            &mut comparisons,
+            site,
+            before
+                .errors
+                .get(id)
+                .and_then(|entry| entry.params.as_ref()),
+            after.errors.get(id).and_then(|entry| entry.params.as_ref()),
+        ),
+        DeclarationCatalogue::Rights => {
+            let (before_right, after_right) = (before.rights.get(id), after.rights.get(id));
+
+            insert_schema_ref_comparison(
+                &mut comparisons,
+                site,
+                before_right.and_then(|entry| entry.params.as_ref()),
+                after_right.and_then(|entry| entry.params.as_ref()),
+            );
+            comparisons.insert(
+                "guest",
+                Box::new(move |context, pointer, _before_value, _after_value| {
+                    compare_guest(
+                        context,
+                        site,
+                        pointer,
+                        before_right.and_then(|entry| entry.guest.as_ref()),
+                        after_right.and_then(|entry| entry.guest.as_ref()),
+                    )
+                }),
+            );
+        }
+        DeclarationCatalogue::Rules => insert_schema_ref_comparison(
+            &mut comparisons,
+            site,
+            before.rules.get(id).and_then(|entry| entry.params.as_ref()),
+            after.rules.get(id).and_then(|entry| entry.params.as_ref()),
+        ),
+        DeclarationCatalogue::Headers => insert_header_schema_comparison(
+            &mut comparisons,
+            site,
+            before
+                .headers
+                .get(id)
+                .and_then(|entry| entry.schema.as_ref()),
+            after
+                .headers
+                .get(id)
+                .and_then(|entry| entry.schema.as_ref()),
+        ),
+        DeclarationCatalogue::Scopes => {
+            if let (Some(before_scope), Some(after_scope)) =
+                (before.scopes.get(id), after.scopes.get(id))
+            {
+                comparisons.insert(
+                    "idSchema",
+                    Box::new(move |context, pointer, _before_value, _after_value| {
+                        compare_type_use(
+                            context,
+                            site,
+                            pointer,
+                            &before_scope.id_schema,
+                            &after_scope.id_schema,
+                        )
+                    }),
+                );
+            }
+        }
+        DeclarationCatalogue::Buckets => insert_bucket_comparisons(&mut comparisons, site),
+        DeclarationCatalogue::Identities => {
+            comparisons.extend(identity_comparisons(
+                site,
+                before.identities.get(id),
+                after.identities.get(id),
+            ));
+        }
+        DeclarationCatalogue::Pagings => comparisons.extend(paging_style_comparisons(site)),
+        DeclarationCatalogue::Natures
+        | DeclarationCatalogue::Schemes
+        | DeclarationCatalogue::Services
+        | DeclarationCatalogue::ExtensionKeys
+        | DeclarationCatalogue::Formats => {}
+    }
+
+    comparisons
+}
+
+fn insert_schema_ref_comparison<'comparison>(
+    comparisons: &mut MemberComparisons<'comparison>,
+    site: &'comparison ChangeSite<'_>,
+    before: Option<&'comparison SchemaRef>,
+    after: Option<&'comparison SchemaRef>,
+) {
+    comparisons.insert(
+        "params",
+        Box::new(move |context, pointer, _before_value, _after_value| {
+            compare_schema_ref(context, site, pointer, before, after)
+        }),
+    );
+}
+
+fn insert_header_schema_comparison<'comparison>(
+    comparisons: &mut MemberComparisons<'comparison>,
+    site: &'comparison ChangeSite<'_>,
+    before: Option<&'comparison TypeUse>,
+    after: Option<&'comparison TypeUse>,
+) {
+    comparisons.insert(
+        "schema",
+        Box::new(move |context, pointer, _before_value, _after_value| {
+            let (Some(before_schema), Some(after_schema)) = (before, after) else {
+                emit_at(
+                    context,
+                    site,
+                    RawChange::new(DiffKind::TypeChanged, "kind", pointer.to_owned()),
+                );
+
+                return Ok(());
+            };
+
+            compare_type_use(context, site, pointer, before_schema, after_schema)
+        }),
+    );
+}
+
+fn insert_bucket_comparisons<'comparison>(
+    comparisons: &mut MemberComparisons<'comparison>,
+    site: &'comparison ChangeSite<'_>,
+) {
+    comparisons.insert(
+        "limit",
+        Box::new(|context, pointer, before_value, after_value| {
+            compare_bound(
+                context,
+                site,
+                pointer,
+                BoundSide::Upper,
+                before_value,
+                after_value,
+            )
+        }),
+    );
+    // A longer window under the same limit admits fewer requests.
+    comparisons.insert(
+        "windowMs",
+        Box::new(|context, pointer, before_value, after_value| {
+            compare_bound(
+                context,
+                site,
+                pointer,
+                BoundSide::Lower,
+                before_value,
+                after_value,
+            )
+        }),
+    );
+}
+
+/// The positions a paging style member is read at, besides `none`.
+const REQUEST_POSITIONS: [DiffPosition; 2] = [DiffPosition::Input, DiffPosition::None];
+const RESPONSE_POSITIONS: [DiffPosition; 2] = [DiffPosition::Output, DiffPosition::None];
+
+fn paging_style_comparisons<'comparison>(
+    site: &'comparison ChangeSite<'_>,
+) -> MemberComparisons<'comparison> {
+    let mut comparisons = MemberComparisons::new();
+    let members = [
+        ("request", REQUEST_POSITIONS),
+        ("response", RESPONSE_POSITIONS),
+        ("absent", RESPONSE_POSITIONS),
+        ("handlerResult", RESPONSE_POSITIONS),
+    ];
+
+    for (member, positions) in members {
+        comparisons.insert(
+            member,
+            Box::new(move |context, pointer, before_value, after_value| {
+                let reaches: Vec<ChangeReach> = site
+                    .reaches
+                    .iter()
+                    .filter(|reach| positions.contains(&reach.position))
+                    .cloned()
+                    .collect();
+                let position_site = ChangeSite {
+                    reaches: &reaches,
+                    origin: site.origin.clone(),
+                };
+
+                emit_at(
+                    context,
+                    &position_site,
+                    RawChange::new(DiffKind::PagingStyle, member, pointer.to_owned())
+                        .between(before_value.cloned(), after_value.cloned()),
+                );
+
+                Ok(())
+            }),
+        );
+    }
+
+    comparisons
+}
+
+/// The comparisons of an identity's schemes, principal and headers; none when an identity is
+/// missing on a side or is of a kind this revision does not know.
+fn identity_comparisons<'comparison>(
+    site: &'comparison ChangeSite<'_>,
+    before: Option<&'comparison Identity>,
+    after: Option<&'comparison Identity>,
+) -> MemberComparisons<'comparison> {
+    let mut comparisons = MemberComparisons::new();
+    let (Some(before), Some(after)) = (before, after) else {
+        return comparisons;
+    };
+    let (Ok(before_known), Ok(after_known)) = (
+        KnownIdentityRef::try_from(before),
+        KnownIdentityRef::try_from(after),
+    ) else {
+        return comparisons;
+    };
+
+    comparisons.insert(
+        "schemes",
+        Box::new(move |context, pointer, _before_value, _after_value| {
+            compare_scheme_lists(
+                context,
+                site,
+                pointer,
+                &credential_schemes(before_known),
+                &credential_schemes(after_known),
+                &scheme_roles(before_known),
+                &scheme_roles(after_known),
+            );
+
+            Ok(())
+        }),
+    );
+    comparisons.insert(
+        "principal",
+        Box::new(move |context, pointer, _before_value, _after_value| {
+            compare_principal(
+                context,
+                site,
+                pointer,
+                principal_of(before_known),
+                principal_of(after_known),
+            )
+        }),
+    );
+    comparisons.insert(
+        "headers",
+        Box::new(move |context, pointer, _before_value, _after_value| {
+            compare_identity_headers(
+                context,
+                site,
+                pointer,
+                headers_of(before_known),
+                headers_of(after_known),
+            )
+        }),
+    );
+
+    comparisons
+}
+
+fn principal_of(identity: KnownIdentityRef<'_>) -> &Principal {
+    match identity {
+        KnownIdentityRef::Credential(credential) => &credential.principal,
+        KnownIdentityRef::Signed(signed) => &signed.principal,
+    }
+}
+
+fn headers_of(identity: KnownIdentityRef<'_>) -> &[IdentityHeaderUse] {
+    match identity {
+        KnownIdentityRef::Credential(credential) => &credential.headers,
+        KnownIdentityRef::Signed(signed) => &signed.headers,
+    }
+}
+
+/// The schemes a credential identity reads, writes or optionally reads, each once; none for
+/// another kind of identity.
+fn credential_schemes(identity: KnownIdentityRef<'_>) -> Vec<String> {
+    let KnownIdentityRef::Credential(credential) = identity else {
+        return Vec::new();
+    };
+    let schemes = &credential.schemes;
+    let mut distinct: Vec<String> = Vec::new();
+
+    for scheme in schemes
+        .read
+        .iter()
+        .chain(&schemes.write)
+        .chain(&schemes.optional_read)
+    {
+        if !distinct.iter().any(|seen| seen == scheme.as_str()) {
+            distinct.push(scheme.as_str().to_owned());
+        }
+    }
+
+    distinct
+}
+
+/// The roles each scheme of a credential identity holds, as a comma-joined list.
+fn scheme_roles(identity: KnownIdentityRef<'_>) -> HashMap<String, String> {
+    let KnownIdentityRef::Credential(credential) = identity else {
+        return HashMap::new();
+    };
+    let schemes = &credential.schemes;
+    let mut roles: HashMap<String, Vec<&str>> = HashMap::new();
+
+    for (role, role_schemes) in [
+        ("read", &schemes.read),
+        ("write", &schemes.write),
+        ("optionalRead", &schemes.optional_read),
+    ] {
+        for scheme in role_schemes {
+            roles
+                .entry(scheme.as_str().to_owned())
+                .or_default()
+                .push(role);
+        }
+    }
+
+    roles
+        .into_iter()
+        .map(|(scheme, held)| (scheme, held.join(",")))
+        .collect()
+}
+
+/// Reports the schemes an identity gained or lost, and a kept scheme that changed roles.
+fn compare_scheme_lists(
+    context: &mut WalkContext<'_>,
+    site: &ChangeSite<'_>,
+    pointer: &str,
+    before: &[String],
+    after: &[String],
+    before_roles: &HashMap<String, String>,
+    after_roles: &HashMap<String, String>,
+) {
+    for scheme in after.iter().filter(|scheme| !before.contains(scheme)) {
+        emit_at(
+            context,
+            site,
+            RawChange::new(DiffKind::Identity, "schemeAdded", pointer.to_owned())
+                .between(None, Some(text_value(scheme))),
+        );
+    }
+
+    for scheme in before.iter().filter(|scheme| !after.contains(scheme)) {
+        emit_at(
+            context,
+            site,
+            RawChange::new(DiffKind::Identity, "schemeRemoved", pointer.to_owned())
+                .between(Some(text_value(scheme)), None),
+        );
+    }
+
+    // A scheme kept but moved between read, write and optional read: which requests it admits changed.
+    let moved = after.iter().any(|scheme| {
+        before_roles.contains_key(scheme) && before_roles.get(scheme) != after_roles.get(scheme)
+    });
+
+    if moved {
+        emit_at(
+            context,
+            site,
+            RawChange::new(DiffKind::Identity, "schemeRoles", pointer.to_owned()),
+        );
+    }
+}
+
+/// Compares the reference of a declaration to a schema.
 ///
 /// # Errors
 ///
 /// Not ported yet.
-pub(crate) fn compare_declarations(
+fn compare_schema_ref(
     _context: &mut WalkContext<'_>,
-    _catalogue: DeclarationCatalogue,
+    _site: &ChangeSite<'_>,
+    _pointer: &str,
+    _before: Option<&SchemaRef>,
+    _after: Option<&SchemaRef>,
 ) -> Result<(), DiffError> {
-    Err(not_ported_yet("compareDeclarations"))
+    Err(not_ported_yet("compareSchemaRef"))
+}
+
+/// Compares the guest reason of two rights.
+///
+/// # Errors
+///
+/// Not ported yet.
+fn compare_guest(
+    _context: &mut WalkContext<'_>,
+    _site: &ChangeSite<'_>,
+    _pointer: &str,
+    _before: Option<&Reason>,
+    _after: Option<&Reason>,
+) -> Result<(), DiffError> {
+    Err(not_ported_yet("compareGuest"))
+}
+
+/// Compares the principals of two identities.
+///
+/// # Errors
+///
+/// Not ported yet.
+fn compare_principal(
+    _context: &mut WalkContext<'_>,
+    _site: &ChangeSite<'_>,
+    _pointer: &str,
+    _before: &Principal,
+    _after: &Principal,
+) -> Result<(), DiffError> {
+    Err(not_ported_yet("comparePrincipal"))
+}
+
+/// Compares the headers two identities use.
+///
+/// # Errors
+///
+/// Not ported yet.
+fn compare_identity_headers(
+    _context: &mut WalkContext<'_>,
+    _site: &ChangeSite<'_>,
+    _pointer: &str,
+    _before: &[IdentityHeaderUse],
+    _after: &[IdentityHeaderUse],
+) -> Result<(), DiffError> {
+    Err(not_ported_yet("compareIdentityHeaders"))
 }
 
 /// The `layer` of the origin of an entry, when the entry and its origin are objects.
@@ -101,18 +676,17 @@ pub(crate) fn origin_of(entry: Option<&JsonValue>) -> Option<ElementOrigin> {
     }
 }
 
-/// The IR definition of an entry of `catalogue`: by its `kind` for schemes and identities. `None`
-/// when the kind is none the catalogue lists: the member rows then name the catalogue itself.
+/// The definition of an entry of `catalogue`: by its `kind` for schemes and identities. A kind of
+/// another revision lists none: the catalogue then names its members.
 pub(crate) fn definition_of(
     catalogue: DeclarationCatalogue,
     entry: &JsonObject,
-) -> Option<IrDefinition> {
+) -> MemberDefinition {
     let kind = match entry.get("kind") {
         Some(JsonValue::String(kind)) => Some(kind.as_str()),
         _ => None,
     };
-
-    match catalogue {
+    let listed = match catalogue {
         DeclarationCatalogue::Errors => Some(IrDefinition::ErrorDecl),
         DeclarationCatalogue::Natures => Some(IrDefinition::NatureDecl),
         DeclarationCatalogue::Headers => Some(IrDefinition::HeaderDecl),
@@ -124,21 +698,26 @@ pub(crate) fn definition_of(
         DeclarationCatalogue::ExtensionKeys => Some(IrDefinition::ExtensionKeyDecl),
         DeclarationCatalogue::Formats => Some(IrDefinition::WireFormat),
         DeclarationCatalogue::Pagings => Some(IrDefinition::PagingStyle),
-        DeclarationCatalogue::Schemes => match kind? {
-            "cookie" => Some(IrDefinition::CookieScheme),
-            "header" => Some(IrDefinition::HeaderScheme),
-            "query" => Some(IrDefinition::QueryScheme),
-            "bearer" => Some(IrDefinition::BearerScheme),
-            "basic" => Some(IrDefinition::BasicScheme),
-            "signature" => Some(IrDefinition::SignatureScheme),
+        DeclarationCatalogue::Schemes => match kind {
+            Some("cookie") => Some(IrDefinition::CookieScheme),
+            Some("header") => Some(IrDefinition::HeaderScheme),
+            Some("query") => Some(IrDefinition::QueryScheme),
+            Some("bearer") => Some(IrDefinition::BearerScheme),
+            Some("basic") => Some(IrDefinition::BasicScheme),
+            Some("signature") => Some(IrDefinition::SignatureScheme),
             _ => None,
         },
-        DeclarationCatalogue::Identities => match kind? {
-            "credential" => Some(IrDefinition::CredentialIdentity),
-            "signed" => Some(IrDefinition::SignedIdentity),
+        DeclarationCatalogue::Identities => match kind {
+            Some("credential") => Some(IrDefinition::CredentialIdentity),
+            Some("signed") => Some(IrDefinition::SignedIdentity),
             _ => None,
         },
-    }
+    };
+
+    listed.map_or(
+        MemberDefinition::Catalogue(catalogue.as_str()),
+        MemberDefinition::Table,
+    )
 }
 
 #[cfg(test)]
@@ -179,32 +758,32 @@ mod tests {
                 DeclarationCatalogue::Schemes,
                 &entry(r#"{"kind":"cookie"}"#)
             ),
-            Some(IrDefinition::CookieScheme)
+            MemberDefinition::Table(IrDefinition::CookieScheme)
         );
         assert_eq!(
             definition_of(
                 DeclarationCatalogue::Identities,
                 &entry(r#"{"kind":"signed"}"#)
             ),
-            Some(IrDefinition::SignedIdentity)
+            MemberDefinition::Table(IrDefinition::SignedIdentity)
         );
         assert_eq!(
             definition_of(
                 DeclarationCatalogue::Schemes,
                 &entry(r#"{"kind":"unheard"}"#)
             ),
-            None
+            MemberDefinition::Catalogue("schemes")
         );
         assert_eq!(
             definition_of(DeclarationCatalogue::Schemes, &entry(r#"{"kind":7}"#)),
-            None
+            MemberDefinition::Catalogue("schemes")
         );
         assert_eq!(
             definition_of(
                 DeclarationCatalogue::Errors,
                 &entry(r#"{"kind":"unheard"}"#)
             ),
-            Some(IrDefinition::ErrorDecl)
+            MemberDefinition::Table(IrDefinition::ErrorDecl)
         );
     }
 }

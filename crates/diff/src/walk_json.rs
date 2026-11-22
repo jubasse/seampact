@@ -2,6 +2,7 @@
 
 use seampact_diagnostics::InternalError;
 use seampact_diff_table::DiffValue;
+use seampact_ir::to_json_value;
 use seampact_js::cmp_utf16;
 use seampact_json::{JsonObject, JsonValue, canonical_json, escape_pointer};
 use serde::Serialize;
@@ -50,10 +51,7 @@ pub(crate) fn is_record(value: Option<&JsonValue>) -> bool {
 
 /// The JSON of an IR value, as the TypeScript walk reads it.
 pub(crate) fn json_of<T: Serialize>(value: &T) -> Result<JsonValue, DiffError> {
-    let encoded =
-        serde_json::to_value(value).map_err(|error| InternalError::new(error.to_string()))?;
-
-    Ok(JsonValue::try_from(encoded).map_err(|error| InternalError::new(error.to_string()))?)
+    Ok(to_json_value(value).map_err(|error| InternalError::new(error.to_string()))?)
 }
 
 /// The members of an IR object as JSON.

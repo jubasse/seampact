@@ -70,7 +70,7 @@ pub(crate) fn compare_schema_catalogue(context: &mut WalkContext<'_>) -> Result<
                 origin: None,
             };
 
-            refuse_unknown_value(context, &site, &kind_pointer, before.tag())?;
+            refuse_unknown_value(context, &site, &kind_pointer, before.tag());
 
             continue;
         };
@@ -80,7 +80,7 @@ pub(crate) fn compare_schema_catalogue(context: &mut WalkContext<'_>) -> Result<
                 origin: None,
             };
 
-            refuse_unknown_value(context, &site, &kind_pointer, after.tag())?;
+            refuse_unknown_value(context, &site, &kind_pointer, after.tag());
 
             continue;
         };
@@ -519,11 +519,15 @@ fn compare_union_schema(
             let place = pointer_join(member_pointer, &["in"]);
 
             if KnownUnionTagRef::try_from(&before.tag).is_err() {
-                return refuse_unknown_value(context, site, &place, before.tag.tag());
+                refuse_unknown_value(context, site, &place, before.tag.tag());
+
+                return Ok(());
             }
 
             if KnownUnionTagRef::try_from(&after.tag).is_err() {
-                return refuse_unknown_value(context, site, &place, after.tag.tag());
+                refuse_unknown_value(context, site, &place, after.tag.tag());
+
+                return Ok(());
             }
 
             emit_at(

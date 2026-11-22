@@ -45,20 +45,24 @@ pub(crate) fn compare_type_use(
     after: &TypeUse,
 ) -> Result<(), DiffError> {
     let Ok(known_before) = KnownTypeUseRef::try_from(before) else {
-        return refuse_unknown_value(
+        refuse_unknown_value(
             context,
             site,
             &pointer_join(pointer, &["kind"]),
             before.tag(),
         );
+
+        return Ok(());
     };
     let Ok(known_after) = KnownTypeUseRef::try_from(after) else {
-        return refuse_unknown_value(
+        refuse_unknown_value(
             context,
             site,
             &pointer_join(pointer, &["kind"]),
             after.tag(),
         );
+
+        return Ok(());
     };
 
     if before.tag() != after.tag() {

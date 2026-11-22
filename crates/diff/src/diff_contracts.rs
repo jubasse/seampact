@@ -25,7 +25,7 @@ pub fn diff_contracts(
     options: &DiffOptions,
 ) -> Result<DiffResult, DiffError> {
     let resolved = resolve_diff_options(options)?;
-    let refusals = whole_diff_refusals(before, after)?;
+    let refusals = whole_diff_refusals(before, after);
 
     if !refusals.is_empty() {
         return Ok(DiffResult::Refused(refusals));

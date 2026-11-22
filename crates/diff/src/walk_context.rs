@@ -3,15 +3,15 @@
 
 use indexmap::IndexMap;
 use seampact_diff_table::{
-    DiffKind, DiffPosition, DiffRefusal, IrDefinition, MemberRow, member_row,
+    DiffCode, DiffKind, DiffPosition, DiffRefusal, IrDefinition, MemberRow, member_row,
 };
 use seampact_ir::ContractIr;
-use seampact_json::{JsonObject, JsonValue};
+use seampact_js::cmp_utf16;
+use seampact_json::{JsonObject, JsonValue, stringify_json};
 use serde::Serialize;
 
 use crate::DiffError;
 use crate::change_sink::{ChangeReach, ChangeSink, ElementOrigin, RawChange};
-use crate::not_ported::not_ported_yet;
 use crate::walk_json::{is_same_json, json_of, member_names, pointer_join};
 use crate::walk_reach::ReachIndex;
 
@@ -47,6 +47,20 @@ pub(crate) type MemberComparison<'comparison> = Box<
 pub(crate) type MemberComparisons<'comparison> =
     IndexMap<&'static str, MemberComparison<'comparison>>;
 
+/// What names the rows of a member: a table definition, or a catalogue whose entry has a kind no
+/// definition lists, so its members have no row.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum MemberDefinition {
+    Table(IrDefinition),
+    Catalogue(&'static str),
+}
+
+impl From<IrDefinition> for MemberDefinition {
+    fn from(definition: IrDefinition) -> Self {
+        Self::Table(definition)
+    }
+}
+
 /// Joins the names a kept-order comparison compares.
 const NAME_SEPARATOR: &str = "\u{0}";
 
@@ -68,12 +82,14 @@ pub(crate) fn emit_at(context: &mut WalkContext<'_>, site: &ChangeSite<'_>, chan
 pub(crate) fn compare_members(
     context: &mut WalkContext<'_>,
     site: &ChangeSite<'_>,
-    definition: IrDefinition,
+    definition: impl Into<MemberDefinition>,
     pointer: &str,
     before: Option<&JsonObject>,
     after: Option<&JsonObject>,
     comparisons: &MemberComparisons<'_>,
 ) -> Result<(), DiffError> {
+    let definition = definition.into();
+
     for member in member_names(before, after) {
         let before_value = before.and_then(|members| members.get(member));
         let after_value = after.and_then(|members| members.get(member));
@@ -111,7 +127,16 @@ pub(crate) fn compare_members(
 }
 
 /// The kind and case a member without a comparison is reported as.
-fn row_change(definition: IrDefinition, member: &str) -> (DiffKind, String) {
+fn row_change(definition: MemberDefinition, member: &str) -> (DiffKind, String) {
+    match definition {
+        MemberDefinition::Catalogue(catalogue) => {
+            (DiffKind::Unclassified, format!("{catalogue}.{member}"))
+        }
+        MemberDefinition::Table(table_definition) => table_row_change(table_definition, member),
+    }
+}
+
+fn table_row_change(definition: IrDefinition, member: &str) -> (DiffKind, String) {
     match member_row(definition, member) {
         MemberRow::Fixed { kind, case_name } => (kind, case_name.to_owned()),
         MemberRow::Kind(kind) if INFORMATIVE_MEMBER_ROWS.contains(&kind) => {
@@ -124,31 +149,52 @@ fn row_change(definition: IrDefinition, member: &str) -> (DiffKind, String) {
     }
 }
 
+/// The fix every unknown-value refusal gives.
+const UNKNOWN_VALUE_FIX: &str = "Run a @seampact/diff that reads this IR revision.";
+
 /// The refusal for an open enum value the diff does not know, naming the member and the operations.
-///
-/// # Errors
-///
-/// Not ported yet.
 pub(crate) fn unknown_value_refusal(
-    _member: &str,
-    _value: &str,
-    _operations: &[String],
-) -> Result<DiffRefusal, DiffError> {
-    Err(not_ported_yet("unknownValueRefusal"))
+    member: &str,
+    value: &str,
+    operations: &[String],
+) -> DiffRefusal {
+    let where_text = if operations.is_empty() {
+        String::new()
+    } else {
+        format!(" on {}", operations.join(", "))
+    };
+    let shown = stringify_json(&JsonValue::String(value.to_owned()));
+
+    DiffRefusal {
+        code: DiffCode::UnknownValue,
+        message: format!("{member} holds {shown}{where_text}, a value this diff does not know."),
+        fix: UNKNOWN_VALUE_FIX.to_owned(),
+        before: None,
+        after: None,
+        member: Some(member.to_owned()),
+        operations: Some(operations.to_vec()),
+    }
 }
 
 /// Refuses the diff on an open enum value the walk must act on, naming the member and the operations.
-///
-/// # Errors
-///
-/// Not ported yet.
 pub(crate) fn refuse_unknown_value(
-    _context: &mut WalkContext<'_>,
-    _site: &ChangeSite<'_>,
-    _member: &str,
-    _value: &str,
-) -> Result<(), DiffError> {
-    Err(not_ported_yet("refuseUnknownValue"))
+    context: &mut WalkContext<'_>,
+    site: &ChangeSite<'_>,
+    member: &str,
+    value: &str,
+) {
+    let mut operations: Vec<String> = site
+        .reaches
+        .iter()
+        .flat_map(|reach| reach.operations.iter().cloned())
+        .collect();
+
+    operations.sort_by(|left, right| cmp_utf16(left, right));
+    operations.dedup();
+
+    context
+        .sink
+        .refuse(unknown_value_refusal(member, value, &operations));
 }
 
 /// The reaches moved to position `none`, their operations kept: for rows that hold no position.
@@ -212,9 +258,13 @@ pub(crate) type EntryCallback<'comparison, Entry> =
 pub(crate) type KeptEntryCallback<'comparison, Entry> =
     Box<dyn Fn(&mut WalkContext<'_>, &str, &Entry, &Entry) -> Result<(), DiffError> + 'comparison>;
 
+/// The key of an entry in a keyed list; encoding it can fail.
+pub(crate) type KeyOf<'comparison, Entry> =
+    Box<dyn Fn(&Entry) -> Result<String, DiffError> + 'comparison>;
+
 /// How the entries of a list keyed by `key_of` are compared: added, removed, or kept and changed.
 pub(crate) struct KeyedListComparison<'comparison, Entry> {
-    pub(crate) key_of: Box<dyn Fn(&Entry) -> String + 'comparison>,
+    pub(crate) key_of: KeyOf<'comparison, Entry>,
     pub(crate) added: EntryCallback<'comparison, Entry>,
     pub(crate) removed: EntryCallback<'comparison, Entry>,
     pub(crate) kept: KeptEntryCallback<'comparison, Entry>,
@@ -228,8 +278,14 @@ pub(crate) fn compare_keyed_list<Entry: Serialize>(
     after: &[Entry],
     comparison: &KeyedListComparison<'_, Entry>,
 ) -> Result<(), DiffError> {
-    let before_keys: Vec<String> = before.iter().map(&comparison.key_of).collect();
-    let after_keys: Vec<String> = after.iter().map(&comparison.key_of).collect();
+    let before_keys: Vec<String> = before
+        .iter()
+        .map(&comparison.key_of)
+        .collect::<Result<_, _>>()?;
+    let after_keys: Vec<String> = after
+        .iter()
+        .map(&comparison.key_of)
+        .collect::<Result<_, _>>()?;
 
     for (index, (entry, key)) in after.iter().zip(&after_keys).enumerate() {
         if !before_keys.contains(key) {
@@ -446,7 +502,7 @@ mod tests {
         let mut walk = context(&ir);
         let seen = RefCell::new(Vec::new());
         let comparison: KeyedListComparison<'_, (String, i64)> = KeyedListComparison {
-            key_of: Box::new(|entry| entry.0.clone()),
+            key_of: Box::new(|entry| Ok(entry.0.clone())),
             added: Box::new(|_context, pointer, entry| {
                 seen.borrow_mut()
                     .push(format!("added {pointer} {}", entry.0));
@@ -500,5 +556,58 @@ mod tests {
 
         assert_eq!(moved, vec![reach(DiffPosition::None, &["b", "a", "c"])]);
         assert_eq!(without_position(&[]), Vec::new());
+    }
+
+    #[test]
+    fn a_refusal_names_the_operations_once_in_utf16_order_and_quotes_the_value() {
+        let ir = sample_ir();
+        let mut walk = context(&ir);
+        let reaches = [
+            ChangeReach {
+                position: DiffPosition::Input,
+                operations: vec!["\u{FF5E}".to_owned(), "b".to_owned()],
+                facts: Vec::new(),
+            },
+            ChangeReach {
+                position: DiffPosition::Output,
+                operations: vec!["\u{10000}".to_owned(), "b".to_owned()],
+                facts: Vec::new(),
+            },
+        ];
+        let site = ChangeSite {
+            reaches: &reaches,
+            origin: None,
+        };
+
+        refuse_unknown_value(&mut walk, &site, "/m", "a\"b\n\u{7f}\u{10000}");
+
+        let refusal = walk.sink.refusals().first().cloned();
+
+        assert_eq!(
+            refusal.as_ref().and_then(|found| found.operations.clone()),
+            Some(vec![
+                "b".to_owned(),
+                "\u{10000}".to_owned(),
+                "\u{FF5E}".to_owned()
+            ])
+        );
+        assert_eq!(
+            refusal.map(|found| found.message),
+            Some(
+                "/m holds \"a\\\"b\\n\u{7f}\u{10000}\" on b, \u{10000}, \u{FF5E}, a value this diff does not know."
+                    .to_owned()
+            )
+        );
+    }
+
+    #[test]
+    fn a_refusal_without_operations_has_no_place_text() {
+        let refusal = unknown_value_refusal("/m", "x", &[]);
+
+        assert_eq!(
+            refusal.message,
+            "/m holds \"x\", a value this diff does not know."
+        );
+        assert_eq!(refusal.operations, Some(Vec::new()));
     }
 }
