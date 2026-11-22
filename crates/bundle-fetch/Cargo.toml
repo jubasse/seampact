@@ -18,7 +18,6 @@ seampact-js.workspace = true
 seampact-json.workspace = true
 seampact-load.workspace = true
 rustls.workspace = true
-sha2.workspace = true
 tempfile.workspace = true
 thiserror.workspace = true
 ureq.workspace = true

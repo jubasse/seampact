@@ -1285,7 +1285,6 @@ dependencies = [
  "seampact-js",
  "seampact-json",
  "seampact-load",
- "sha2",
  "tempfile",
  "thiserror",
  "ureq",
