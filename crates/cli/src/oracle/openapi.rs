@@ -82,12 +82,12 @@ fn refusal_json(refusal: &Refusal) -> JsonValue {
         ("fix".to_owned(), text(&refusal.fix)),
     ]);
     let optional_members = [
+        ("docs", refusal.docs.as_deref()),
+        ("member", refusal.member.as_deref()),
         (
             "operation",
             refusal.operation.as_ref().map(OperationId::as_str),
         ),
-        ("member", refusal.member.as_deref()),
-        ("docs", refusal.docs.as_deref()),
     ];
 
     for (name, value) in optional_members {

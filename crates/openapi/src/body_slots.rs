@@ -1,21 +1,27 @@
 //! What a body slot holds: the shape an operation answers, the resource, the url schema.
 
 use seampact_ir::{
-    Absent, KnownSchemaRef, NamedTemplate, Operation, ResponseShape, Shape, SuccessShapes, TypeUse,
-    UrlForm, WireFormat,
+    Absent, KnownSchemaRef, MetaFill, NamedTemplate, Operation, ResponseShape, Shape,
+    SuccessShapes, TypeUse, UrlForm, WireFormat,
 };
-use seampact_json::JsonObject;
+use seampact_json::{JsonObject, JsonValue};
 use seampact_target::IrLocation;
 
 use crate::OpenApiError;
-use crate::emit_context::EmitContext;
+use crate::emit_context::{EmitContext, SchemaVariant};
 use crate::json_value::{integer_value, text_value};
-use crate::not_ported::not_ported_yet;
 use crate::responses::PayloadShape;
-use crate::templates::{SlotSchemas, SlotValue};
+use crate::schemas::type_use_schema;
+use crate::templates::{SlotPresence, SlotSchemas, SlotValue, template_schema};
 
 /// The slot of a body template that holds the payload.
 pub(crate) const PAYLOAD_SLOT: &str = "payload";
+
+/// The slot that holds the meta members of the body.
+const META_SLOT: &str = "meta";
+
+/// The meta fills that always write a value.
+const ALWAYS_FILLED_META: [MetaFill; 2] = [MetaFill::Now, MetaFill::Handler];
 
 /// The slot that holds the resource type of the operation.
 const COLLECTION_SLOT: &str = "collection";
@@ -154,14 +160,70 @@ pub(crate) fn constant_slot(value: &str) -> SlotValue {
     )]))
 }
 
+/// Sets the `$meta` slot: the format's meta members and the style's own, always present.
+///
+/// # Errors
+///
+/// As the writer of a type use schema and of a template schema.
 pub(crate) fn add_meta_slot(
-    _context: &mut EmitContext<'_>,
-    _slots: &mut SlotSchemas,
-    _format: &WireFormat,
-    _style_meta: &[NamedTemplate],
-    _style_absent: &Absent,
-    _role_slots: &SlotSchemas,
-    _location: &IrLocation,
+    context: &mut EmitContext<'_>,
+    slots: &mut SlotSchemas,
+    format: &WireFormat,
+    style_meta: &[NamedTemplate],
+    style_absent: &Absent,
+    role_slots: &SlotSchemas,
+    location: &IrLocation,
 ) -> Result<(), OpenApiError> {
-    Err(not_ported_yet("addMetaSlot"))
+    let mut properties = JsonObject::new();
+    let mut required: Vec<JsonValue> = Vec::new();
+
+    for (name, member) in &format.meta {
+        let member_location =
+            IrLocation::root().below(&["formats", format.id.as_str(), "meta", name, "type"]);
+        let schema = type_use_schema(
+            context,
+            &member.r#type,
+            SchemaVariant::Shared,
+            &member_location,
+        )?;
+
+        properties.insert(name.clone(), JsonValue::Object(schema));
+
+        if ALWAYS_FILLED_META.contains(&member.fill) {
+            required.push(JsonValue::text(name));
+        }
+    }
+
+    for (index, member) in style_meta.iter().enumerate() {
+        let member_location = location.below(&["meta", &index.to_string()]);
+        let Some(value) = template_schema(
+            context,
+            &member.value,
+            role_slots,
+            style_absent,
+            &member_location,
+        )?
+        else {
+            continue;
+        };
+
+        properties.insert(member.name.clone(), JsonValue::Object(value.schema));
+
+        if value.presence == SlotPresence::Always {
+            required.push(JsonValue::text(&member.name));
+        }
+    }
+
+    let mut schema = JsonObject::from_members([
+        ("type", JsonValue::text("object")),
+        ("properties", JsonValue::Object(properties)),
+    ]);
+
+    if !required.is_empty() {
+        schema.insert("required".to_owned(), JsonValue::Array(required));
+    }
+
+    slots.insert(META_SLOT.to_owned(), SlotValue::always(schema));
+
+    Ok(())
 }

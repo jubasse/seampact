@@ -77,14 +77,6 @@ pub(crate) fn create_emit_context<'ir>(
     }
 }
 
-/// The location of the document root, below which a format or a scheme is addressed.
-pub(crate) fn root_location() -> IrLocation {
-    IrLocation {
-        member: String::new(),
-        operation: None,
-    }
-}
-
 /// The reference to a component, queuing it to be written the first time it is referenced.
 pub(crate) fn reference_component<'ir>(
     context: &mut EmitContext<'ir>,

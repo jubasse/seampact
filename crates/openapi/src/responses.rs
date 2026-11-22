@@ -1,18 +1,19 @@
 //! The responses of an operation.
 
 use indexmap::{IndexMap, IndexSet};
-use seampact_ir::{Operation, Response, ResponseHeader, ResponseShape, WireFormat};
+use seampact_ir::{
+    Operation, Response, ResponseHeader, ResponseHeaderSemantic, ResponseShape, WireFormat,
+};
 use seampact_json::{JsonObject, JsonValue};
 use seampact_target::{IrLocation, NotGeneratedForm};
 
 use crate::body_slots::{EmittedShape, PAYLOAD_SLOT, add_meta_slot, success_slots};
 use crate::emit_context::{
     EmitContext, SchemaVariant, refuse_inconsistent, refuse_not_emitted, refuse_unknown,
-    root_location, write_extension,
+    write_extension,
 };
 use crate::examples::{ExampleSet, response_examples};
 use crate::json_value::text_value;
-use crate::not_ported::not_ported_yet;
 use crate::paging::page_body_schema;
 use crate::schemas::type_use_schema;
 use crate::templates::{SlotSchemas, SlotValue, template_schema};
@@ -159,7 +160,7 @@ fn response_body_schema(
     };
     let success_shape = shape.success_of(&format.success);
     let format_location =
-        root_location().below(&["formats", format.id.as_str(), "success", shape.as_str()]);
+        IrLocation::root().below(&["formats", format.id.as_str(), "success", shape.as_str()]);
 
     if !success_shape.headers.is_empty() {
         refuse_not_emitted(
@@ -290,13 +291,55 @@ fn response_headers(
     Ok(headers)
 }
 
+/// The header object of a response header: its description, schema and semantic.
+///
+/// # Errors
+///
+/// As the writer of the type use schema.
 fn header_object(
-    _context: &mut EmitContext<'_>,
-    _operation: &Operation,
-    _header: &ResponseHeader,
-    _location: &IrLocation,
+    context: &mut EmitContext<'_>,
+    operation: &Operation,
+    header: &ResponseHeader,
+    location: &IrLocation,
 ) -> Result<JsonObject, OpenApiError> {
-    Err(not_ported_yet("headerObject"))
+    let mut object = JsonObject::new();
+    let successor_rel = operation
+        .deprecated
+        .as_ref()
+        .and_then(|deprecated| deprecated.successor_rel.as_deref());
+
+    if header.semantic == Some(ResponseHeaderSemantic::SuccessorLink)
+        && let Some(rel) = successor_rel
+    {
+        object.insert(
+            "description".to_owned(),
+            JsonValue::text(&format!("The successor operation, with rel \"{rel}\".")),
+        );
+    }
+
+    if header.required {
+        object.insert("required".to_owned(), JsonValue::Bool(true));
+    }
+
+    let schema = type_use_schema(
+        context,
+        &header.r#type,
+        SchemaVariant::Shared,
+        &location.below(&["type"]),
+    )?;
+
+    object.insert("schema".to_owned(), JsonValue::Object(schema));
+
+    if let Some(semantic) = &header.semantic {
+        write_extension(
+            context,
+            &mut object,
+            ExtensionName::Semantic,
+            JsonValue::text(semantic.as_str()),
+        );
+    }
+
+    Ok(object)
 }
 
 /// The success responses of an operation by status, their examples attached.

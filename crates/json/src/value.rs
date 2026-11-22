@@ -40,6 +40,14 @@ pub enum JsonValue {
     Object(JsonObject),
 }
 
+impl JsonValue {
+    /// The string value of `text`.
+    #[must_use]
+    pub fn text(text: &str) -> Self {
+        Self::String(text.to_owned())
+    }
+}
+
 impl TryFrom<serde_json::Value> for JsonValue {
     type Error = JsonError;
 
@@ -240,6 +248,17 @@ mod tests {
         example: Option<JsonValue>,
         #[serde(default)]
         example_without_present: Option<JsonValue>,
+    }
+
+    #[test]
+    fn text_is_the_string_value_even_when_empty_or_astral() {
+        for text in ["", "a\u{1F600}b", "\u{E000}"] {
+            assert_eq!(
+                JsonValue::text(text),
+                JsonValue::String(text.to_owned()),
+                "text {text:?}"
+            );
+        }
     }
 
     #[test]

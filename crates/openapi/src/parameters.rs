@@ -1,22 +1,25 @@
 //! The parameters of an operation.
 
-use seampact_ir::{DerivationId, Operation, Param};
-use seampact_json::JsonObject;
+use seampact_ir::{DerivationId, HeaderSemantic, HeaderSide, Operation, Param};
+use seampact_json::{JsonObject, JsonValue};
+use seampact_pass_access_identity::CSRF_DERIVATION;
+use seampact_pass_derive_wire::AUTHENTICATE;
 use seampact_target::IrLocation;
 
-use crate::OpenApiError;
-use crate::emit_context::EmitContext;
-use crate::not_ported::not_ported_yet;
+use crate::emit_context::{EmitContext, SchemaVariant, write_extension};
+use crate::json_value::set_defined;
+use crate::paging::paging_limit_default;
+use crate::schemas::{type_use_schema, wire_value};
+use crate::{ExtensionName, OpenApiError};
 
-/// The derivation of the credential parameters of the accepted schemes.
-const AUTHENTICATE_DERIVATION: DerivationId = DerivationId::from_static("identity.authenticate");
+/// The suffix of the name of a bracketed list parameter.
+const BRACKETS_SUFFIX: &str = "[]";
 
 /// The derivation of the CSRF header parameter.
-const CSRF_COOKIE_WRITE_DERIVATION: DerivationId = DerivationId::from_static("csrf.cookieWrite");
+const CSRF_COOKIE_WRITE_DERIVATION: DerivationId = DerivationId::from_static(CSRF_DERIVATION);
 
 /// The derivations that write a credential parameter, which the security schemes carry instead.
-const SCHEME_DERIVATIONS: [DerivationId; 2] =
-    [AUTHENTICATE_DERIVATION, CSRF_COOKIE_WRITE_DERIVATION];
+const SCHEME_DERIVATIONS: [DerivationId; 2] = [AUTHENTICATE, CSRF_COOKIE_WRITE_DERIVATION];
 
 /// Whether a parameter is a credential a security scheme writes.
 fn written_by_security(param: &Param) -> bool {
@@ -82,12 +85,83 @@ pub(crate) fn operation_parameters(
     Ok(parameters)
 }
 
+/// The parameter object of one parameter: its place, schema, default and identity semantic.
+///
+/// # Errors
+///
+/// As the writers of the type use schema and of the wire value of a default.
 fn parameter_object(
-    _context: &mut EmitContext<'_>,
-    _operation: &Operation,
-    _place: ParameterPlace,
-    _param: &Param,
-    _location: &IrLocation,
+    context: &mut EmitContext<'_>,
+    operation: &Operation,
+    place: ParameterPlace,
+    param: &Param,
+    location: &IrLocation,
 ) -> Result<JsonObject, OpenApiError> {
-    Err(not_ported_yet("parameterObject"))
+    let brackets = param.wire.as_ref().is_some_and(|wire| wire.brackets);
+    let name = if brackets {
+        format!("{}{BRACKETS_SUFFIX}", param.name)
+    } else {
+        param.name.clone()
+    };
+    let mut parameter = JsonObject::from_members([
+        ("name", JsonValue::text(&name)),
+        ("in", JsonValue::text(place.as_str())),
+        ("required", JsonValue::Bool(param.required)),
+    ]);
+
+    if let Some(wire) = &param.wire {
+        parameter.insert("style".to_owned(), JsonValue::text(wire.style.as_str()));
+        parameter.insert("explode".to_owned(), JsonValue::Bool(wire.explode));
+    }
+
+    let mut schema = type_use_schema(
+        context,
+        &param.r#type,
+        SchemaVariant::Shared,
+        &location.below(&["type"]),
+    )?;
+    let default_value = match &param.default {
+        None => paging_limit_default(context, operation, place, &param.name),
+        Some(default) => Some(wire_value(context, &param.r#type, default)?),
+    };
+
+    set_defined(&mut schema, "default", default_value);
+    parameter.insert("schema".to_owned(), JsonValue::Object(schema));
+
+    if place == ParameterPlace::Header
+        && let Some(semantic) = identity_header_semantic(context, &param.name)
+    {
+        write_extension(
+            context,
+            &mut parameter,
+            ExtensionName::Semantic,
+            JsonValue::text(semantic),
+        );
+    }
+
+    Ok(parameter)
+}
+
+/// The semantic of the identity header named `header_name`, compared without case.
+fn identity_header_semantic<'ir>(
+    context: &EmitContext<'ir>,
+    header_name: &str,
+) -> Option<&'ir str> {
+    let lower_name = header_name.to_lowercase();
+
+    context
+        .ir
+        .headers
+        .values()
+        .find(|header| {
+            let request_name = if header.semantic == HeaderSemantic::VersionToken {
+                header.request.as_deref()
+            } else {
+                header.name.as_deref()
+            };
+
+            request_name.is_some_and(|name| name.to_lowercase() == lower_name)
+                && header.r#in != Some(HeaderSide::Response)
+        })
+        .map(|header| header.semantic.as_str())
 }

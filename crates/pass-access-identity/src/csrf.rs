@@ -21,7 +21,7 @@ use crate::read::{access_identity_is_object, access_identity_string};
 use crate::report::{AccessIdentityProblem, AccessIdentityRule};
 
 /// The derivation of a derived `csrf`.
-pub(crate) const CSRF_DERIVATION: &str = "csrf.cookieWrite";
+pub const CSRF_DERIVATION: &str = "csrf.cookieWrite";
 
 /// The `csrf` member of an operation; `None` when it has none, or when refused with the error
 /// reported.

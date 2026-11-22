@@ -70,12 +70,12 @@ src/emitter_options.rs#option_value_text	packages/core/openapi/src/emitter-optio
 -	packages/core/openapi/src/json-value.ts#isJsonObject	merged: src/responses.rs#has_body
 -	packages/core/openapi/src/json-value.ts#objectMember	pending: brief 4
 src/security.rs#write_operation_security	packages/core/openapi/src/security.ts#writeOperationSecurity
-src/security.rs#optional_read_schemes	packages/core/openapi/src/security.ts#optionalReadSchemes	pending: brief 3
+src/security.rs#optional_read_schemes	packages/core/openapi/src/security.ts#optionalReadSchemes
 src/security.rs#requirements_of	packages/core/openapi/src/security.ts#requirementsOf
 src/security.rs#security_scheme	packages/core/openapi/src/security.ts#securityScheme
-src/security.rs#bearer_scheme	packages/core/openapi/src/security.ts#bearerScheme	pending: brief 3
-src/security.rs#signature_scheme	packages/core/openapi/src/security.ts#signatureScheme	pending: brief 3
--	packages/core/openapi/src/security.ts#schemeKeyValue	pending: brief 3
+src/security.rs#bearer_scheme	packages/core/openapi/src/security.ts#bearerScheme
+src/security.rs#signature_scheme	packages/core/openapi/src/security.ts#signatureScheme
+src/security.rs#scheme_key_value	packages/core/openapi/src/security.ts#schemeKeyValue
 src/merge_documents.rs#prefix_refusals	packages/core/openapi/src/merge/merge-documents.ts#prefixRefusals	pending: brief 4
 src/merge_documents.rs#build_input_document	packages/core/openapi/src/merge/merge-documents.ts#buildInputDocument	pending: brief 4
 -	packages/core/openapi/src/merge/merge-documents.ts#inputSelection	pending: brief 4
@@ -83,62 +83,62 @@ src/schemas.rs#known_use_schema	packages/core/openapi/src/schemas.ts#knownUseSch
 src/schemas.rs#file_schema	packages/core/openapi/src/schemas.ts#fileSchema	pending: brief 4
 src/schemas.rs#ref_schema	packages/core/openapi/src/schemas.ts#refSchema
 src/schemas.rs#schema_reference	packages/core/openapi/src/schemas.ts#schemaReference
-src/schemas.rs#enum_use_schema	packages/core/openapi/src/schemas.ts#enumUseSchema	pending: brief 3
--	packages/core/openapi/src/schemas.ts#isOpenEnum	pending: brief 3
--	packages/core/openapi/src/schemas.ts#enumComponent	pending: brief 3
+src/schemas.rs#enum_use_schema	packages/core/openapi/src/schemas.ts#enumUseSchema
+src/schemas.rs#is_open_enum	packages/core/openapi/src/schemas.ts#isOpenEnum
+src/schemas.rs#enum_component	packages/core/openapi/src/schemas.ts#enumComponent
 src/schemas.rs#scalar_schema	packages/core/openapi/src/schemas.ts#scalarSchema
 src/schemas.rs#string_number_schema	packages/core/openapi/src/schemas.ts#stringNumberSchema	pending: brief 4
 src/schemas.rs#wire_value	packages/core/openapi/src/schemas.ts#wireValue	pending: brief 4
-src/schemas.rs#nullable_schema	packages/core/openapi/src/schemas.ts#nullableSchema	pending: brief 3
--	packages/core/openapi/src/schemas.ts#acceptsAnyValue	pending: brief 3
+src/schemas.rs#nullable_schema	packages/core/openapi/src/schemas.ts#nullableSchema
+src/schemas.rs#accepts_any_value	packages/core/openapi/src/schemas.ts#acceptsAnyValue
 src/schemas.rs#named_schema_component	packages/core/openapi/src/schemas.ts#namedSchemaComponent
 src/schemas.rs#object_schema	packages/core/openapi/src/schemas.ts#objectSchema
 src/schemas.rs#property_schema	packages/core/openapi/src/schemas.ts#propertySchema
-src/schemas.rs#mark_sensitive	packages/core/openapi/src/schemas.ts#markSensitive	pending: brief 3
+src/schemas.rs#mark_sensitive	packages/core/openapi/src/schemas.ts#markSensitive
 src/schemas.rs#map_schema	packages/core/openapi/src/schemas.ts#mapSchema	pending: brief 4
-src/schemas.rs#union_schema	packages/core/openapi/src/schemas.ts#unionSchema	pending: brief 3
--	packages/core/openapi/src/schemas.ts#bodyTaggedBranch	pending: brief 4
+src/schemas.rs#union_schema	packages/core/openapi/src/schemas.ts#unionSchema
+src/schemas.rs#body_tagged_branch	packages/core/openapi/src/schemas.ts#bodyTaggedBranch	pending: brief 4
 src/body_slots.rs#success_slots	packages/core/openapi/src/body-slots.ts#successSlots
-src/body_slots.rs#add_meta_slot	packages/core/openapi/src/body-slots.ts#addMetaSlot	pending: brief 3
+src/body_slots.rs#add_meta_slot	packages/core/openapi/src/body-slots.ts#addMetaSlot
 src/parameters.rs#operation_parameters	packages/core/openapi/src/parameters.ts#operationParameters
-src/parameters.rs#parameter_object	packages/core/openapi/src/parameters.ts#parameterObject	pending: brief 3
--	packages/core/openapi/src/parameters.ts#identityHeaderSemantic	pending: brief 3
+src/parameters.rs#parameter_object	packages/core/openapi/src/parameters.ts#parameterObject
+src/parameters.rs#identity_header_semantic	packages/core/openapi/src/parameters.ts#identityHeaderSemantic
 src/responses.rs#success_responses	packages/core/openapi/src/responses.ts#successResponses
 src/responses.rs#response_body_schema	packages/core/openapi/src/responses.ts#responseBodySchema
 src/responses.rs#response_headers	packages/core/openapi/src/responses.ts#responseHeaders
-src/responses.rs#header_object	packages/core/openapi/src/responses.ts#headerObject	pending: brief 3
+src/responses.rs#header_object	packages/core/openapi/src/responses.ts#headerObject
 src/errors.rs#error_responses	packages/core/openapi/src/errors.ts#errorResponses
 src/errors.rs#codes_by_status	packages/core/openapi/src/errors.ts#codesByStatus
 src/errors.rs#error_response	packages/core/openapi/src/errors.ts#errorResponse
 src/errors.rs#error_code_component	packages/core/openapi/src/errors.ts#errorCodeComponent
 src/templates.rs#template_schema	packages/core/openapi/src/templates.ts#templateSchema
-src/templates.rs#text_template_schema	packages/core/openapi/src/templates.ts#textTemplateSchema	pending: brief 3
--	packages/core/openapi/src/templates.ts#constantText	pending: brief 3
+src/templates.rs#text_template_schema	packages/core/openapi/src/templates.ts#textTemplateSchema
+src/templates.rs#constant_text	packages/core/openapi/src/templates.ts#constantText
 src/templates.rs#each_schema	packages/core/openapi/src/templates.ts#eachSchema	pending: brief 4
 src/templates.rs#slot_schema	packages/core/openapi/src/templates.ts#slotSchema
-src/templates.rs#object_template_schema	packages/core/openapi/src/templates.ts#objectTemplateSchema	pending: brief 3
-src/templates.rs#render_template	packages/core/openapi/src/templates.ts#renderTemplate	pending: brief 3
--	packages/core/openapi/src/templates.ts#renderObjectTemplate	pending: brief 4
+src/templates.rs#object_template_schema	packages/core/openapi/src/templates.ts#objectTemplateSchema
+src/templates.rs#render_template	packages/core/openapi/src/templates.ts#renderTemplate
+src/templates.rs#render_object_template	packages/core/openapi/src/templates.ts#renderObjectTemplate	pending: brief 4
 src/operation_marks.rs#write_operation_marks	packages/core/openapi/src/operation-marks.ts#writeOperationMarks
 src/operation_marks.rs#write_idempotency	packages/core/openapi/src/operation-marks.ts#writeIdempotency
 src/bodies.rs#request_body	packages/core/openapi/src/bodies.ts#requestBody
 src/bodies.rs#write_unknown_keys	packages/core/openapi/src/bodies.ts#writeUnknownKeys	pending: brief 4
-src/bodies.rs#body_schema	packages/core/openapi/src/bodies.ts#bodySchema	pending: brief 3
--	packages/core/openapi/src/bodies.ts#inputTopLevel	pending: brief 4
--	packages/core/openapi/src/bodies.ts#proofsSchema	pending: brief 3
-src/bodies.rs#body_encoding	packages/core/openapi/src/bodies.ts#bodyEncoding	pending: brief 3
--	packages/core/openapi/src/bodies.ts#formFieldEncoding	pending: brief 4
--	packages/core/openapi/src/bodies.ts#proofField	pending: brief 4
--	packages/core/openapi/src/bodies.ts#fileFieldMedia	pending: brief 4
-src/paging.rs#write_paging	packages/core/openapi/src/paging.ts#writePaging	pending: brief 3
+src/bodies.rs#body_schema	packages/core/openapi/src/bodies.ts#bodySchema
+src/bodies.rs#input_top_level	packages/core/openapi/src/bodies.ts#inputTopLevel	pending: brief 4
+src/bodies.rs#proofs_schema	packages/core/openapi/src/bodies.ts#proofsSchema
+src/bodies.rs#body_encoding	packages/core/openapi/src/bodies.ts#bodyEncoding
+src/bodies.rs#form_field_encoding	packages/core/openapi/src/bodies.ts#formFieldEncoding	pending: brief 4
+src/bodies.rs#proof_field	packages/core/openapi/src/bodies.ts#proofField	pending: brief 4
+src/bodies.rs#file_field_media	packages/core/openapi/src/bodies.ts#fileFieldMedia	pending: brief 4
+src/paging.rs#write_paging	packages/core/openapi/src/paging.ts#writePaging
 src/paging.rs#paging_limit_default	packages/core/openapi/src/paging.ts#pagingLimitDefault
-src/paging.rs#page_body_schema	packages/core/openapi/src/paging.ts#pageBodySchema	pending: brief 3
--	packages/core/openapi/src/paging.ts#pagingRoleSlots	pending: brief 3
+src/paging.rs#page_body_schema	packages/core/openapi/src/paging.ts#pageBodySchema
+src/paging.rs#paging_role_slots	packages/core/openapi/src/paging.ts#pagingRoleSlots
 src/examples.rs#collect_examples	packages/core/openapi/src/examples.ts#collectExamples
 src/examples.rs#response_examples	packages/core/openapi/src/examples.ts#responseExamples
-src/rights.rs#write_operation_rights	packages/core/openapi/src/rights.ts#writeOperationRights	pending: brief 3
--	packages/core/openapi/src/rights.ts#scopeItem	pending: brief 3
--	packages/core/openapi/src/rights.ts#requirementItem	pending: brief 3
+src/rights.rs#write_operation_rights	packages/core/openapi/src/rights.ts#writeOperationRights
+src/rights.rs#scope_item	packages/core/openapi/src/rights.ts#scopeItem
+src/rights.rs#requirement_item	packages/core/openapi/src/rights.ts#requirementItem
 src/ir_text.rs#value_source_text	packages/core/openapi/src/ir-text.ts#valueSourceText
 src/ir_text.rs#origin_key	packages/core/openapi/src/ir-text.ts#originKey
 src/ir_text.rs#derived_from_value	packages/core/openapi/src/ir-text.ts#derivedFromValue

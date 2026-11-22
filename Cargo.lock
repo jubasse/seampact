@@ -1234,6 +1234,8 @@ dependencies = [
  "seampact-js",
  "seampact-json",
  "seampact-oracle",
+ "seampact-pass-access-identity",
+ "seampact-pass-derive-wire",
  "seampact-target",
  "serde_json",
  "thiserror",

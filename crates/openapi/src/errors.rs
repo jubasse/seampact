@@ -8,7 +8,7 @@ use seampact_target::{IrLocation, NotGeneratedForm};
 
 use crate::emit_context::{
     ComponentRequest, EmitContext, SchemaVariant, reference_component, refuse_inconsistent,
-    refuse_not_emitted, root_location, write_extension,
+    refuse_not_emitted, write_extension,
 };
 use crate::ir_text::origin_key;
 use crate::json_value::{integer_value, optional_text, set_defined, text_value};
@@ -121,7 +121,7 @@ fn error_code_reference<'ir>(
             context,
             NotGeneratedForm::OpenapiErrorFormats,
             &description,
-            &root_location().below(&["errors", declared.code.as_str()]),
+            &IrLocation::root().below(&["errors", declared.code.as_str()]),
         );
     }
 
@@ -179,7 +179,7 @@ fn error_code_component(
         ("traceId".to_owned(), SlotValue::maybe(string_schema())),
         (PARAMS_SLOT.to_owned(), params),
     ]);
-    let location = root_location().below(&["formats", format.id.as_str(), "error", "body"]);
+    let location = IrLocation::root().below(&["formats", format.id.as_str(), "error", "body"]);
     let mut schema = template_schema(
         context,
         &format.error.body,
@@ -234,7 +234,7 @@ pub(crate) fn error_responses<'ir>(
             context,
             NotGeneratedForm::OpenapiFormatErrorHeaders,
             "An error header written by the format",
-            &root_location().below(&["formats", format.id.as_str(), "error", "headers"]),
+            &IrLocation::root().below(&["formats", format.id.as_str(), "error", "headers"]),
         );
     }
 
