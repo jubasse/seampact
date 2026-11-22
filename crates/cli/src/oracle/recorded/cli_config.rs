@@ -4,8 +4,10 @@
 use camino::{Utf8Path, Utf8PathBuf};
 use indexmap::IndexMap;
 use seampact_cli_config::{
-    CliConfigError, CliProblem, LoadedAppConfig, ReadAppConfigOutcome, ResolvedSource,
-    read_app_config,
+    CliConfigError, CliProblem, LoadedAppConfig, LoadedMergedDocument, LoadedRootConfig,
+    LoadedWorkspace, ReadAppConfigOutcome, ReadRootConfigOutcome, ReadRunConfigOutcome,
+    ReadWorkspaceOutcome, ResolvedSource, RunConfig, WorkspaceApp, read_app_config,
+    read_root_config, read_run_config, read_workspace_configs,
 };
 use seampact_json::{JsonObject, JsonValue};
 use seampact_oracle::{ROOT_TOKEN, RecordedAnswer, RecordedToolCall, SubjectAnswer};
@@ -14,7 +16,9 @@ use crate::oracle::stub_answer::{StubError, failed_answer};
 
 impl StubError for CliConfigError {
     fn is_not_ported(&self) -> bool {
-        matches!(self, Self::NotPortedYet { .. })
+        match self {
+            Self::Internal(_) | Self::Io { .. } => false,
+        }
     }
 }
 
@@ -25,8 +29,168 @@ pub(super) fn cli_config_answer(
 ) -> SubjectAnswer<RecordedAnswer> {
     match call.function.as_str() {
         "readAppConfig" => read_app_config_answer(call, root),
+        "readRootConfig" => read_root_config_answer(call, root),
+        "readWorkspaceConfigs" => read_workspace_configs_answer(call, root),
+        "readRunConfig" => read_run_config_answer(call, root),
         _ => SubjectAnswer::NotPorted,
     }
+}
+
+fn read_root_config_answer(
+    call: &RecordedToolCall,
+    root: &Utf8Path,
+) -> SubjectAnswer<RecordedAnswer> {
+    let Some((file, display_name)) = file_and_display_name(call, root) else {
+        return malformed_call(call);
+    };
+
+    match read_root_config(&file, &display_name) {
+        Ok(ReadRootConfigOutcome::Read(config)) => {
+            answer(read_json("config", loaded_root_config_json(&config)))
+        }
+        Ok(ReadRootConfigOutcome::Refused(problems)) => answer(refused_json(&problems)),
+        Err(error) => failed_answer(&error),
+    }
+}
+
+fn read_workspace_configs_answer(
+    call: &RecordedToolCall,
+    root: &Utf8Path,
+) -> SubjectAnswer<RecordedAnswer> {
+    let Some((file, display_name)) = file_and_display_name(call, root) else {
+        return malformed_call(call);
+    };
+
+    match read_workspace_configs(&file, &display_name) {
+        Ok(ReadWorkspaceOutcome::Read(workspace)) => {
+            answer(read_json("workspace", loaded_workspace_json(&workspace)))
+        }
+        Ok(ReadWorkspaceOutcome::Refused(problems)) => answer(refused_json(&problems)),
+        Err(error) => failed_answer(&error),
+    }
+}
+
+fn read_run_config_answer(
+    call: &RecordedToolCall,
+    root: &Utf8Path,
+) -> SubjectAnswer<RecordedAnswer> {
+    let Some((file, display_name)) = file_and_display_name(call, root) else {
+        return malformed_call(call);
+    };
+    let text_file = path_argument(call, 2, root);
+
+    match read_run_config(&file, &display_name, text_file.as_deref()) {
+        Ok(ReadRunConfigOutcome::Read(run)) => answer(read_json("run", run_config_json(&run))),
+        Ok(ReadRunConfigOutcome::Refused(problems)) => answer(refused_json(&problems)),
+        Err(error) => failed_answer(&error),
+    }
+}
+
+fn file_and_display_name(
+    call: &RecordedToolCall,
+    root: &Utf8Path,
+) -> Option<(Utf8PathBuf, String)> {
+    Some((path_argument(call, 0, root)?, text_argument(call, 1, root)?))
+}
+
+fn answer(result: JsonValue) -> SubjectAnswer<RecordedAnswer> {
+    SubjectAnswer::Ported(RecordedAnswer {
+        result,
+        written: IndexMap::new(),
+    })
+}
+
+fn read_json(member: &'static str, value: JsonValue) -> JsonValue {
+    object([("status", text("read")), (member, value)])
+}
+
+fn refused_json(problems: &[CliProblem]) -> JsonValue {
+    object([
+        ("status", text("refused")),
+        (
+            "problems",
+            JsonValue::Array(problems.iter().map(problem_json).collect()),
+        ),
+    ])
+}
+
+fn run_config_json(run: &RunConfig) -> JsonValue {
+    match run {
+        RunConfig::App(config) => object([
+            ("kind", text("app")),
+            ("config", loaded_app_config_json(config)),
+        ]),
+        RunConfig::Root(workspace) => object([
+            ("kind", text("root")),
+            ("workspace", loaded_workspace_json(workspace)),
+        ]),
+    }
+}
+
+fn loaded_workspace_json(workspace: &LoadedWorkspace) -> JsonValue {
+    object([
+        ("root", loaded_root_config_json(&workspace.root)),
+        (
+            "apps",
+            JsonValue::Array(
+                workspace
+                    .apps
+                    .iter()
+                    .map(|each| {
+                        object([
+                            ("app", workspace_app_json(&each.app)),
+                            ("config", loaded_app_config_json(&each.config)),
+                        ])
+                    })
+                    .collect(),
+            ),
+        ),
+    ])
+}
+
+fn workspace_app_json(app: &WorkspaceApp) -> JsonValue {
+    object([
+        ("name", text(&app.name)),
+        ("directory", text(app.directory.as_str())),
+        ("file", text(app.file.as_str())),
+    ])
+}
+
+fn loaded_root_config_json(config: &LoadedRootConfig) -> JsonValue {
+    let mut members = vec![
+        ("file", text(config.file.as_str())),
+        ("displayName", text(&config.display_name)),
+        (
+            "apps",
+            JsonValue::Array(config.apps.iter().map(workspace_app_json).collect()),
+        ),
+        ("sources", sources_json(&config.sources)),
+    ];
+
+    if let Some(allow_local) = config.allow_local {
+        members.push(("allowLocal", JsonValue::Bool(allow_local)));
+    }
+
+    members.push((
+        "openapi",
+        JsonValue::Array(config.openapi.iter().map(merged_document_json).collect()),
+    ));
+    members.push(("checks", config.checks.clone()));
+
+    object(members)
+}
+
+fn merged_document_json(document: &LoadedMergedDocument) -> JsonValue {
+    object([
+        ("name", text(&document.name)),
+        ("file", text(document.file.as_str())),
+        (
+            "apps",
+            JsonValue::Array(document.apps.iter().map(|name| text(name)).collect()),
+        ),
+        ("prefix", document.prefix.clone()),
+        ("options", document.options.clone()),
+    ])
 }
 
 fn read_app_config_answer(

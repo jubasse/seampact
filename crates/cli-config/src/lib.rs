@@ -1,11 +1,6 @@
 //! The CLI's config reading, ported from `packages/core/cli/src/config`: the app, root, workspace
 //! and run configs, each read or refused with [`CliProblem`]s.
 
-#![allow(
-    dead_code,
-    reason = "functions reached only by stubs until the crate's last brief"
-)]
-
 mod api_refs;
 mod artefact_switches;
 mod cli_problem;
@@ -24,7 +19,6 @@ mod key_path;
 mod key_problem;
 mod maven_source;
 mod node_path;
-mod not_ported;
 mod path_containment;
 mod read_app_config;
 mod read_root_config;
@@ -49,7 +43,9 @@ pub use read_root_config::{
     LoadedMergedDocument, LoadedRootConfig, ReadRootConfigOutcome, WorkspaceApp, read_root_config,
 };
 pub use read_run_config::{ReadRunConfigOutcome, RunConfig, read_run_config};
-pub use read_workspace_configs::{LoadedWorkspace, ReadWorkspaceOutcome, read_workspace_configs};
+pub use read_workspace_configs::{
+    LoadedWorkspace, LoadedWorkspaceApp, ReadWorkspaceOutcome, read_workspace_configs,
+};
 pub use resolved_source::ResolvedSource;
 pub use symbolic_link::{is_path_taken, is_symbolic_link};
 
