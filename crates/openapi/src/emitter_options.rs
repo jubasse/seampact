@@ -2,11 +2,11 @@
 //! whether it keeps their reasons, whether request bodies point at strict input schemas, and the
 //! `servers` it lists.
 
-use seampact_json::JsonValue;
+use seampact_ir::bounded_unknown_text;
+use seampact_json::{JsonObject, JsonValue, js_text_of};
 use seampact_target::Refusal;
 
 use crate::OpenApiError;
-use crate::not_ported::not_ported_yet;
 
 /// The name of one `x-seampact-*` extension a document may keep.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -144,6 +144,21 @@ impl ExtensionName {
         Self::Upstream,
     ];
 
+    /// The extension a name designates, if it is one the emitter writes.
+    #[must_use]
+    pub fn from_text(name: &str) -> Option<Self> {
+        Self::ALL
+            .iter()
+            .copied()
+            .find(|known| known.as_str() == name)
+    }
+
+    /// The path of the extension's JSON Schema, relative to the package.
+    #[must_use]
+    pub fn schema_path(self) -> String {
+        format!("schemas/extensions/{}.schema.json", self.as_str())
+    }
+
     /// The name without the `x-seampact-` prefix.
     #[must_use]
     pub const fn as_str(self) -> &'static str {
@@ -260,12 +275,26 @@ pub enum ParsedEmitterOptions {
 /// The members the options may hold.
 const OPTION_KEYS: [&str; 4] = ["extensions", "reasons", "inputSchemas", "servers"];
 
-/// The values of the `reasons` option.
-const REASONS_VALUES: [ReasonsOption; 2] = [ReasonsOption::Include, ReasonsOption::Omit];
+/// The values of the `reasons` option, each with its text.
+const REASONS_VALUES: [(&str, ReasonsOption); 2] = [
+    ("include", ReasonsOption::Include),
+    ("omit", ReasonsOption::Omit),
+];
 
-/// The values of the `inputSchemas` option.
-const INPUT_SCHEMAS_VALUES: [InputSchemasOption; 2] =
-    [InputSchemasOption::Shared, InputSchemasOption::Strict];
+/// The values of the `inputSchemas` option, each with its text.
+const INPUT_SCHEMAS_VALUES: [(&str, InputSchemasOption); 2] = [
+    ("shared", InputSchemasOption::Shared),
+    ("strict", InputSchemasOption::Strict),
+];
+
+/// The code of every refusal of the options.
+const OPTIONS_INVALID_CODE: &str = "openapi.options.invalid";
+
+/// The `extensions` value that keeps every extension.
+const ALL_EXTENSIONS: &str = "all";
+
+/// The `extensions` value that keeps none.
+const NO_EXTENSIONS: &str = "none";
 
 /// Reads the raw `openapi` options of a config; absent options are the defaults.
 ///
@@ -279,11 +308,11 @@ pub fn parse_emitter_options(
         return Ok(ParsedEmitterOptions::Parsed(EmitterOptions::default()));
     };
     let JsonValue::Object(record) = raw_options else {
-        return refused_with(vec![option_refusal(
+        return Ok(refused_with(vec![option_refusal(
             "",
             "The OpenAPI options must be a mapping.",
             "Write the options as a mapping.",
-        )?]);
+        )]));
     };
     let mut refusals = Vec::new();
 
@@ -291,32 +320,35 @@ pub fn parse_emitter_options(
         if !OPTION_KEYS.contains(&key.as_str()) {
             refusals.push(option_refusal(
                 &format!("/{key}"),
-                &format!("{} is not an OpenAPI option.", option_value_text(key)?),
+                &format!(
+                    "{} is not an OpenAPI option.",
+                    option_value_text(&JsonValue::text(key))
+                ),
                 &format!("Use one of {}.", OPTION_KEYS.join(", ")),
-            )?);
+            ));
         }
     }
 
     let defaults = EmitterOptions::default();
-    let extensions = parse_extensions(record.get("extensions"), &mut refusals)?;
+    let extensions = parse_extensions(record.get("extensions"), &mut refusals);
     let reasons = parse_choice(
         record.get("reasons"),
         "reasons",
         &REASONS_VALUES,
         defaults.reasons,
         &mut refusals,
-    )?;
+    );
     let input_schemas = parse_choice(
         record.get("inputSchemas"),
         "inputSchemas",
         &INPUT_SCHEMAS_VALUES,
         defaults.input_schemas,
         &mut refusals,
-    )?;
-    let servers = parse_servers(record.get("servers"), &mut refusals)?;
+    );
+    let servers = parse_servers(record.get("servers"), &mut refusals);
 
     if !refusals.is_empty() {
-        return refused_with(refusals);
+        return Ok(refused_with(refusals));
     }
 
     Ok(ParsedEmitterOptions::Parsed(EmitterOptions {
@@ -327,38 +359,179 @@ pub fn parse_emitter_options(
     }))
 }
 
-fn option_refusal(_member: &str, _message: &str, _fix: &str) -> Result<Refusal, OpenApiError> {
-    Err(not_ported_yet("optionRefusal"))
+fn option_refusal(member: &str, message: &str, fix: &str) -> Refusal {
+    Refusal {
+        code: OPTIONS_INVALID_CODE.to_owned(),
+        message: message.to_owned(),
+        fix: fix.to_owned(),
+        operation: None,
+        member: Some(member.to_owned()),
+        docs: None,
+    }
 }
 
-fn refused_with(_refusals: Vec<Refusal>) -> Result<ParsedEmitterOptions, OpenApiError> {
-    Err(not_ported_yet("refusedWith"))
+fn refused_with(refusals: Vec<Refusal>) -> ParsedEmitterOptions {
+    ParsedEmitterOptions::Refused(refusals)
 }
 
-fn option_value_text(_key: &str) -> Result<String, OpenApiError> {
-    Err(not_ported_yet("optionValueText"))
+/// How a message names a refused value: a string quoted and bounded, any other value by its kind.
+fn option_value_text(value: &JsonValue) -> String {
+    match value {
+        JsonValue::String(text) => format!("'{}'", bounded_unknown_text(text)),
+        JsonValue::Null => "Null".to_owned(),
+        JsonValue::Array(_) => "An array".to_owned(),
+        JsonValue::Object(_) => "An object".to_owned(),
+        JsonValue::Bool(_) => format!("The boolean {}", js_text_of(Some(value))),
+        JsonValue::Number(_) => format!("The number {}", js_text_of(Some(value))),
+    }
 }
 
-fn parse_extensions(
-    _raw: Option<&JsonValue>,
-    _refusals: &mut Vec<Refusal>,
-) -> Result<ExtensionSelection, OpenApiError> {
-    Err(not_ported_yet("parseExtensions"))
+fn parse_extensions(raw: Option<&JsonValue>, refusals: &mut Vec<Refusal>) -> ExtensionSelection {
+    let Some(raw_value) = raw else {
+        return ExtensionSelection::All;
+    };
+
+    if matches!(raw_value, JsonValue::String(text) if text == ALL_EXTENSIONS) {
+        return ExtensionSelection::All;
+    }
+
+    if matches!(raw_value, JsonValue::String(text) if text == NO_EXTENSIONS) {
+        return ExtensionSelection::None;
+    }
+
+    let JsonValue::Array(items) = raw_value else {
+        refusals.push(option_refusal(
+            "/extensions",
+            "'extensions' must be 'all', 'none' or a list of extension names.",
+            "Write 'all', 'none' or a list such as [access, paging].",
+        ));
+
+        return ExtensionSelection::All;
+    };
+    let mut names = Vec::new();
+
+    for (index, item) in items.iter().enumerate() {
+        let known = match item {
+            JsonValue::String(text) => ExtensionName::from_text(text),
+            _ => None,
+        };
+
+        if let Some(name) = known {
+            if !names.contains(&name) {
+                names.push(name);
+            }
+
+            continue;
+        }
+
+        let known_names: Vec<&str> = ExtensionName::ALL
+            .iter()
+            .map(|name| name.as_str())
+            .collect();
+
+        refusals.push(option_refusal(
+            &format!("/extensions/{index}"),
+            &format!(
+                "{} is not an x-seampact extension name.",
+                option_value_text(item)
+            ),
+            &format!(
+                "Use a name after 'x-seampact-', one of {}.",
+                known_names.join(", ")
+            ),
+        ));
+    }
+
+    ExtensionSelection::Named(names)
 }
 
 fn parse_choice<Choice: Copy>(
-    _raw: Option<&JsonValue>,
-    _option: &str,
-    _values: &[Choice],
-    _default_value: Choice,
-    _refusals: &mut Vec<Refusal>,
-) -> Result<Choice, OpenApiError> {
-    Err(not_ported_yet("parseChoice"))
+    raw: Option<&JsonValue>,
+    option: &str,
+    values: &[(&str, Choice)],
+    default_value: Choice,
+    refusals: &mut Vec<Refusal>,
+) -> Choice {
+    let Some(raw_value) = raw else {
+        return default_value;
+    };
+
+    if let JsonValue::String(text) = raw_value
+        && let Some((_, choice)) = values.iter().find(|(name, _)| name == text)
+    {
+        return *choice;
+    }
+
+    let names: Vec<&str> = values.iter().map(|(name, _)| *name).collect();
+
+    refusals.push(option_refusal(
+        &format!("/{option}"),
+        &format!(
+            "{} is not a value of '{option}'.",
+            option_value_text(raw_value)
+        ),
+        &format!("Use one of {}.", names.join(", ")),
+    ));
+
+    default_value
 }
 
-fn parse_servers(
-    _raw: Option<&JsonValue>,
-    _refusals: &mut Vec<Refusal>,
-) -> Result<Vec<ServerOption>, OpenApiError> {
-    Err(not_ported_yet("parseServers"))
+fn parse_servers(raw: Option<&JsonValue>, refusals: &mut Vec<Refusal>) -> Vec<ServerOption> {
+    let Some(raw_value) = raw else {
+        return Vec::new();
+    };
+    let JsonValue::Array(items) = raw_value else {
+        refusals.push(option_refusal(
+            "/servers",
+            "'servers' must be a list.",
+            "Write a list of { url, description }.",
+        ));
+
+        return Vec::new();
+    };
+    let mut servers = Vec::new();
+
+    for (index, item) in items.iter().enumerate() {
+        match parse_server(item) {
+            Some(server) => servers.push(server),
+            None => refusals.push(option_refusal(
+                &format!("/servers/{index}"),
+                "A server must be { url, description? } with string values.",
+                "Write the server as { url: https://api.example.com }.",
+            )),
+        }
+    }
+
+    servers
+}
+
+fn parse_server(raw: &JsonValue) -> Option<ServerOption> {
+    let JsonValue::Object(record) = raw else {
+        return None;
+    };
+    let Some(JsonValue::String(url)) = record.get("url") else {
+        return None;
+    };
+
+    if url.is_empty() || has_other_member(record) {
+        return None;
+    }
+
+    match record.get("description") {
+        None => Some(ServerOption {
+            url: url.clone(),
+            description: None,
+        }),
+        Some(JsonValue::String(description)) => Some(ServerOption {
+            url: url.clone(),
+            description: Some(description.clone()),
+        }),
+        Some(_) => None,
+    }
+}
+
+fn has_other_member(record: &JsonObject) -> bool {
+    record
+        .keys()
+        .any(|key| key != "url" && key != "description")
 }

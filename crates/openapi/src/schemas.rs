@@ -3,8 +3,8 @@
 use seampact_diagnostics::InternalError;
 use seampact_ir::{
     ArrayTypeUse, Direction, Docs, Enum, EnumTypeUse, Extensions, Int64Wire, KnownSchemaRef,
-    KnownTypeUseRef, KnownUnionTagRef, ObjectSchema, OutputEnumForm, Property, RefTypeUse,
-    Refinements, ScalarTypeUse, TypeUse, UnionSchema, UnknownKeysPolicy,
+    KnownTypeUseRef, KnownUnionTagRef, MapSchema, ObjectSchema, OutputEnumForm, Property,
+    RefTypeUse, Refinements, ScalarTypeUse, TypeUse, UnionSchema, UnknownKeysPolicy,
 };
 use seampact_js::js_number_of_text;
 use seampact_json::{JsonNumber, JsonObject, JsonValue};
@@ -15,8 +15,7 @@ use crate::emit_context::{
     refuse_inconsistent, refuse_not_emitted, refuse_unknown, write_consumer_extensions,
     write_extension,
 };
-use crate::json_value::{optional_integer, optional_text, set_defined, text_value};
-use crate::not_ported::not_ported_yet;
+use crate::json_value::{integer_value, optional_integer, optional_text, set_defined};
 use crate::{ExtensionName, InputSchemasOption, OpenApiError};
 
 /// The suffix of the key of the strict input twin of a component.
@@ -181,7 +180,7 @@ fn array_schema(
 ) -> Result<JsonObject, OpenApiError> {
     let items = type_use_schema(context, &use_.items, variant, &location.below(&["items"]))?;
     let mut schema = JsonObject::from_iter([
-        ("type".to_owned(), text_value("array")),
+        ("type".to_owned(), JsonValue::text("array")),
         ("items".to_owned(), JsonValue::Object(items)),
     ]);
 
@@ -348,7 +347,7 @@ fn known_use_schema(
 
             Ok(schema)
         }
-        KnownTypeUseRef::File(file) => file_schema(context, &file.media, file.max_size_bytes),
+        KnownTypeUseRef::File(file) => Ok(file_schema(context, &file.media, file.max_size_bytes)),
         KnownTypeUseRef::Enum(enum_use) => {
             Ok(enum_use_schema(context, enum_use, variant, location))
         }
@@ -367,14 +366,25 @@ fn scalar_schema(
     let format = use_.format.as_deref();
 
     if format == Some(INT64_FORMAT) && context.ir.api.wire.int64 == Int64Wire::String {
-        return string_number_schema(context, INT64_FORMAT, INT64_PATTERN, &use_.refinements);
+        return Ok(string_number_schema(
+            context,
+            INT64_FORMAT,
+            INT64_PATTERN,
+            &use_.refinements,
+        ));
     }
 
     if format == Some(DECIMAL_FORMAT) {
-        return string_number_schema(context, DECIMAL_FORMAT, DECIMAL_PATTERN, &use_.refinements);
+        return Ok(string_number_schema(
+            context,
+            DECIMAL_FORMAT,
+            DECIMAL_PATTERN,
+            &use_.refinements,
+        ));
     }
 
-    let mut schema = JsonObject::from_iter([("type".to_owned(), text_value(use_.r#type.as_str()))]);
+    let mut schema =
+        JsonObject::from_iter([("type".to_owned(), JsonValue::text(use_.r#type.as_str()))]);
     let written_format = if use_.sensitive == Some(true) {
         Some(PASSWORD_FORMAT)
     } else {
@@ -395,7 +405,7 @@ fn scalar_schema(
 
         schema.insert(
             "contentMediaType".to_owned(),
-            text_value(content.media.as_str()),
+            JsonValue::text(content.media.as_str()),
         );
         schema.insert(
             "contentSchema".to_owned(),
@@ -458,13 +468,13 @@ pub(crate) fn property_schema(
 }
 
 /// The schema of an object: its properties, the required ones, and a closed shape for input.
-fn object_schema(
+pub(crate) fn object_schema(
     context: &mut EmitContext<'_>,
     named: &ObjectSchema,
     variant: SchemaVariant,
     location: &IrLocation,
 ) -> Result<JsonObject, OpenApiError> {
-    let mut schema = JsonObject::from_iter([("type".to_owned(), text_value("object"))]);
+    let mut schema = JsonObject::from_iter([("type".to_owned(), JsonValue::text("object"))]);
 
     write_docs(&mut schema, Some(&named.docs));
 
@@ -483,7 +493,7 @@ fn object_schema(
         .properties
         .iter()
         .filter(|property| !property.optional)
-        .map(|property| text_value(&property.name))
+        .map(|property| JsonValue::text(&property.name))
         .collect();
 
     if !required.is_empty() {
@@ -570,12 +580,28 @@ fn schema_marks<'schema>(known: &KnownSchemaRef<'schema>) -> SchemaMarks<'schema
     }
 }
 
-fn file_schema(
-    _context: &mut EmitContext<'_>,
-    _media: &[String],
-    _max_size_bytes: Option<i64>,
-) -> Result<JsonObject, OpenApiError> {
-    Err(not_ported_yet("fileSchema"))
+/// The schema of a file: a string, with its media type when only one is allowed.
+pub(crate) fn file_schema(
+    context: &EmitContext<'_>,
+    media: &[String],
+    max_size_bytes: Option<i64>,
+) -> JsonObject {
+    let mut schema = JsonObject::from_members([("type", JsonValue::text("string"))]);
+
+    if let [only_media] = media {
+        schema.insert("contentMediaType".to_owned(), JsonValue::text(only_media));
+    }
+
+    if let Some(max_size) = max_size_bytes {
+        write_extension(
+            context,
+            &mut schema,
+            ExtensionName::MaxSize,
+            integer_value(max_size),
+        );
+    }
+
+    schema
 }
 
 /// Whether an output enum is open and `declared` is used as an output.
@@ -653,13 +679,39 @@ fn enum_use_schema(
     reference
 }
 
+/// The schema of a number written as a string: its pattern, its bounds as extensions.
 fn string_number_schema(
-    _context: &mut EmitContext<'_>,
-    _format: &str,
-    _pattern: &str,
-    _refinements: &Refinements,
-) -> Result<JsonObject, OpenApiError> {
-    Err(not_ported_yet("stringNumberSchema"))
+    context: &EmitContext<'_>,
+    format: &str,
+    pattern: &str,
+    refinements: &Refinements,
+) -> JsonObject {
+    let mut schema = JsonObject::from_members([
+        ("type", JsonValue::text("string")),
+        ("format", JsonValue::text(format)),
+        ("pattern", JsonValue::text(pattern)),
+    ]);
+    let numeric = [
+        (ExtensionName::Minimum, &refinements.minimum),
+        (ExtensionName::Maximum, &refinements.maximum),
+        (
+            ExtensionName::ExclusiveMinimum,
+            &refinements.exclusive_minimum,
+        ),
+        (
+            ExtensionName::ExclusiveMaximum,
+            &refinements.exclusive_maximum,
+        ),
+        (ExtensionName::MultipleOf, &refinements.multiple_of),
+    ];
+
+    for (name, literal) in numeric {
+        if let Some(bound) = literal {
+            write_extension(context, &mut schema, name, JsonValue::text(bound.as_str()));
+        }
+    }
+
+    schema
 }
 
 /// Marks a scalar schema `password`; refuses any other shape.
@@ -682,12 +734,26 @@ pub(crate) fn mark_sensitive(
     );
 }
 
+/// A value as the wire writes it: an int64 text is a number under the `number` wire.
+///
+/// # Errors
+///
+/// [`OpenApiError::Internal`] for an integer text that is no finite number.
 pub(crate) fn wire_value(
-    _context: &EmitContext<'_>,
-    _use: &TypeUse,
-    _value: &JsonValue,
+    context: &EmitContext<'_>,
+    use_: &TypeUse,
+    value: &JsonValue,
 ) -> Result<JsonValue, OpenApiError> {
-    Err(not_ported_yet("wireValue"))
+    if let TypeUse::Scalar(scalar) = use_
+        && scalar.format.as_deref() == Some(INT64_FORMAT)
+        && context.ir.api.wire.int64 == Int64Wire::Number
+        && let JsonValue::String(text) = value
+        && is_integer_literal(text)
+    {
+        return Ok(number_literal(Some(text))?.unwrap_or(JsonValue::Null));
+    }
+
+    Ok(value.clone())
 }
 
 /// Whether a schema holds annotations and extensions only, so it already accepts any value.
@@ -733,13 +799,36 @@ pub(crate) fn nullable_schema(schema: JsonObject) -> JsonObject {
     )])
 }
 
+/// The schema of a map: an object whose keys and values are typed.
 fn map_schema(
-    _context: &mut EmitContext<'_>,
-    _named: &seampact_ir::MapSchema,
-    _variant: SchemaVariant,
-    _location: &IrLocation,
+    context: &mut EmitContext<'_>,
+    named: &MapSchema,
+    variant: SchemaVariant,
+    location: &IrLocation,
 ) -> Result<JsonObject, OpenApiError> {
-    Err(not_ported_yet("mapSchema"))
+    let mut schema = JsonObject::from_members([("type", JsonValue::text("object"))]);
+
+    write_docs(&mut schema, Some(&named.docs));
+
+    if let Some(keys) = &named.keys {
+        let key_schema = type_use_schema(context, keys, variant, &location.below(&["keys"]))?;
+
+        schema.insert("propertyNames".to_owned(), JsonValue::Object(key_schema));
+    }
+
+    let value_schema = type_use_schema(
+        context,
+        &named.values,
+        variant,
+        &location.below(&["values"]),
+    )?;
+
+    schema.insert(
+        "additionalProperties".to_owned(),
+        JsonValue::Object(value_schema),
+    );
+
+    Ok(schema)
 }
 
 /// The `oneOf` of a union, with its discriminator: the tag's property and mapping, or its header.
@@ -831,13 +920,68 @@ fn union_schema(
 
 /// A branch of a body-tagged union: the variant and its tag.
 fn body_tagged_branch(
-    _context: &mut EmitContext<'_>,
-    _schema_id: &str,
-    _tag_property: &str,
-    _tag_value: &str,
-    _variant: SchemaVariant,
+    context: &mut EmitContext<'_>,
+    schema_id: &str,
+    tag_property: &str,
+    tag_value: &str,
+    variant: SchemaVariant,
 ) -> Result<JsonObject, OpenApiError> {
-    Err(not_ported_yet("bodyTaggedBranch"))
+    let tag_schema = JsonObject::from_members([("const", JsonValue::text(tag_value))]);
+    let ir = context.ir;
+    let strict = variant == SchemaVariant::Input
+        && context.options.input_schemas == InputSchemasOption::Strict;
+    let strict_object = match ir.schemas.get(schema_id).map(KnownSchemaRef::try_from) {
+        Some(Ok(KnownSchemaRef::Object(object))) if strict => Some(object),
+        _ => None,
+    };
+    let Some(object) = strict_object else {
+        let tag_object = JsonObject::from_members([
+            ("type", JsonValue::text("object")),
+            (
+                "properties",
+                JsonValue::Object(JsonObject::from_members([(
+                    tag_property,
+                    JsonValue::Object(tag_schema),
+                )])),
+            ),
+            (
+                "required",
+                JsonValue::Array(vec![JsonValue::text(tag_property)]),
+            ),
+        ]);
+
+        return Ok(JsonObject::from_members([(
+            "allOf",
+            JsonValue::Array(vec![
+                JsonValue::Object(schema_reference(context, schema_id, variant)),
+                JsonValue::Object(tag_object),
+            ]),
+        )]));
+    };
+    let mut inline = object_schema(
+        context,
+        object,
+        SchemaVariant::Input,
+        &IrLocation::schema_location(schema_id),
+    )?;
+    let mut properties = JsonObject::from_members([(tag_property, JsonValue::Object(tag_schema))]);
+
+    if let Some(JsonValue::Object(inline_properties)) = inline.get("properties") {
+        for (name, property) in inline_properties {
+            properties.insert(name.clone(), property.clone());
+        }
+    }
+
+    let mut required = vec![JsonValue::text(tag_property)];
+
+    if let Some(JsonValue::Array(inline_required)) = inline.get("required") {
+        required.extend(inline_required.iter().cloned());
+    }
+
+    inline.insert("properties".to_owned(), JsonValue::Object(properties));
+    inline.insert("required".to_owned(), JsonValue::Array(required));
+
+    Ok(inline)
 }
 
 /// The JSON strings of a list of texts.

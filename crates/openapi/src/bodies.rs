@@ -1,15 +1,20 @@
 //! The request and response bodies of an operation.
 
 use seampact_ir::{
-    FieldWire, FieldWireKind, InputProof, Operation, OperationInput, TypeUse, UnknownKeys,
+    FieldWire, FieldWireKind, InputProof, KnownSchemaRef, Operation, OperationInput, TypeUse,
+    UnknownKeys, UnknownKeysPolicy,
 };
 use seampact_json::{JsonObject, JsonValue};
 use seampact_target::{IrLocation, NotGeneratedForm};
 
-use crate::emit_context::{EmitContext, SchemaVariant, refuse_not_emitted, write_extension};
+use crate::emit_context::{
+    EmitContext, SchemaVariant, reason_value, refuse_inconsistent, refuse_not_emitted,
+    refuse_unknown, write_extension,
+};
 use crate::ir_text::derived_from_value;
-use crate::not_ported::not_ported_yet;
-use crate::schemas::{mark_sensitive, refuses_unknown_keys, type_use_schema};
+use crate::schemas::{
+    mark_sensitive, object_schema, refuses_unknown_keys, schema_reference, type_use_schema,
+};
 use crate::{ExtensionName, InputSchemasOption, OpenApiError};
 
 /// The media type of the JSON bodies an input declares.
@@ -68,7 +73,7 @@ pub(crate) fn request_body(
     let schema = body_schema(context, input, &input_location)?;
     let mut media_object =
         JsonObject::from_iter([("schema".to_owned(), JsonValue::Object(schema))]);
-    let encoding = body_encoding(context, input, &input_location)?;
+    let encoding = body_encoding(context, input, &input_location);
 
     if !encoding.is_empty() {
         media_object.insert("encoding".to_owned(), JsonValue::Object(encoding));
@@ -95,7 +100,7 @@ pub(crate) fn request_body(
             &mut body,
             unknown_keys,
             &input_location.below(&["schema"]),
-        )?;
+        );
     }
 
     if input.raw_body {
@@ -222,26 +227,67 @@ fn proofs_schema(
     ]))
 }
 
-fn input_top_level(
-    _context: &mut EmitContext<'_>,
-    _input: &OperationInput,
-    _input_schema_id: Option<&str>,
-    _top_level: InputTopLevel,
-    _location: &IrLocation,
-) -> Result<JsonObject, OpenApiError> {
-    Err(not_ported_yet("inputTopLevel"))
-}
-
-/// The `encoding` of a form or multipart body: styles of form lists and objects, media of files.
+/// The top level of an input with proofs: the shared schema, or the object written in place.
 ///
 /// # Errors
 ///
-/// As the writers of a form field encoding and of a file field media.
+/// As the writers of the type use schema and of the object schema.
+fn input_top_level(
+    context: &mut EmitContext<'_>,
+    input: &OperationInput,
+    input_schema_id: Option<&str>,
+    top_level: InputTopLevel,
+    location: &IrLocation,
+) -> Result<JsonObject, OpenApiError> {
+    let ir = context.ir;
+    let object = match input_schema_id
+        .and_then(|id| ir.schemas.get(id))
+        .map(KnownSchemaRef::try_from)
+    {
+        Some(Ok(KnownSchemaRef::Object(object))) => Some(object),
+        _ => None,
+    };
+    let (Some(schema_id), Some(named)) = (input_schema_id, object) else {
+        refuse_inconsistent(
+            context,
+            "input.proofs",
+            "A body proof on an input that is not an object schema",
+            location,
+        );
+
+        return Ok(JsonObject::new());
+    };
+
+    if top_level == InputTopLevel::Shared {
+        return type_use_schema(
+            context,
+            &input.schema,
+            SchemaVariant::Input,
+            &location.below(&["schema"]),
+        );
+    }
+
+    // The shared component stays in the document, as without the option.
+    schema_reference(context, schema_id, SchemaVariant::Shared);
+
+    let mut in_place = object_schema(
+        context,
+        named,
+        SchemaVariant::Input,
+        &IrLocation::schema_location(schema_id),
+    )?;
+
+    in_place.remove("additionalProperties");
+
+    Ok(in_place)
+}
+
+/// The `encoding` of a form or multipart body: styles of form lists and objects, media of files.
 fn body_encoding(
     context: &mut EmitContext<'_>,
     input: &OperationInput,
     location: &IrLocation,
-) -> Result<JsonObject, OpenApiError> {
+) -> JsonObject {
     let mut encoding = JsonObject::new();
 
     if input.media.as_str() == FORM_MEDIA {
@@ -268,13 +314,13 @@ fn body_encoding(
             .iter()
             .enumerate()
         {
-            for (name, wire) in proof_field(proof)? {
+            if let Some((name, wire)) = proof_field(proof) {
                 fields.push((name, wire, location.below(&["proofs", &index.to_string()])));
             }
         }
 
         for (name, wire, field_location) in fields {
-            if let Some(field_encoding) = form_field_encoding(context, name, wire, &field_location)?
+            if let Some(field_encoding) = form_field_encoding(context, name, wire, &field_location)
             {
                 encoding.insert(name.to_owned(), JsonValue::Object(field_encoding));
             }
@@ -287,7 +333,7 @@ fn body_encoding(
                 continue;
             }
 
-            let media = file_field_media(context, input, &field.name, location)?;
+            let media = file_field_media(context, input, &field.name, location);
 
             if let Some(media) = media.filter(|media| !media.is_empty()) {
                 let content_type =
@@ -298,36 +344,132 @@ fn body_encoding(
         }
     }
 
-    Ok(encoding)
+    encoding
 }
 
-fn proof_field(_proof: &InputProof) -> Result<Vec<(&str, &FieldWire)>, OpenApiError> {
-    Err(not_ported_yet("proofField"))
+/// The field a proof writes in a form body, if it has a wire.
+fn proof_field(proof: &InputProof) -> Option<(&str, &FieldWire)> {
+    proof.wire.as_ref().map(|wire| (proof.name.as_str(), wire))
 }
 
+/// The field kinds a form body writes with a style and explode.
+const ENCODED_FIELD_KINDS: [FieldWireKind; 2] = [FieldWireKind::List, FieldWireKind::Object];
+
+/// The `encoding` entry of a form field: its style and explode, for a list or an object.
 fn form_field_encoding(
-    _context: &mut EmitContext<'_>,
-    _name: &str,
-    _wire: &FieldWire,
-    _location: &IrLocation,
-) -> Result<Option<JsonObject>, OpenApiError> {
-    Err(not_ported_yet("formFieldEncoding"))
+    context: &mut EmitContext<'_>,
+    name: &str,
+    wire: &FieldWire,
+    location: &IrLocation,
+) -> Option<JsonObject> {
+    if !ENCODED_FIELD_KINDS.contains(&wire.kind) {
+        return None;
+    }
+
+    let wire_location = location.below(&["wire"]);
+
+    if wire.brackets == Some(true) {
+        refuse_not_emitted(
+            context,
+            NotGeneratedForm::OpenapiInputBrackets,
+            "A form field named with brackets",
+            &wire_location,
+        );
+
+        return None;
+    }
+
+    let (Some(style), Some(explode)) = (&wire.style, wire.explode) else {
+        refuse_inconsistent(
+            context,
+            "input.field-wire",
+            &format!("The form field '{name}' has no style or explode"),
+            &wire_location,
+        );
+
+        return None;
+    };
+
+    Some(JsonObject::from_members([
+        ("style", JsonValue::text(style.as_str())),
+        ("explode", JsonValue::Bool(explode)),
+    ]))
 }
 
-fn file_field_media(
-    _context: &mut EmitContext<'_>,
-    _input: &OperationInput,
-    _field_name: &str,
-    _location: &IrLocation,
-) -> Result<Option<Vec<String>>, OpenApiError> {
-    Err(not_ported_yet("fileFieldMedia"))
+/// The media types the file property `field_name` of the input's schema accepts.
+fn file_field_media<'ir>(
+    context: &mut EmitContext<'ir>,
+    input: &OperationInput,
+    field_name: &str,
+    location: &IrLocation,
+) -> Option<&'ir [String]> {
+    let property_type = input_object_property_type(context, input, field_name);
+
+    if let Some(TypeUse::File(file)) = property_type {
+        return Some(&file.media);
+    }
+
+    refuse_inconsistent(
+        context,
+        "input.file",
+        &format!("The file field '{field_name}' has no file property"),
+        location,
+    );
+
+    None
 }
 
+fn input_object_property_type<'ir>(
+    context: &EmitContext<'ir>,
+    input: &OperationInput,
+    field_name: &str,
+) -> Option<&'ir TypeUse> {
+    let TypeUse::Ref(reference) = &input.schema else {
+        return None;
+    };
+    let named = context.ir.schemas.get(reference.schema.as_str())?;
+    let Ok(KnownSchemaRef::Object(object)) = KnownSchemaRef::try_from(named) else {
+        return None;
+    };
+
+    object
+        .properties
+        .iter()
+        .find(|candidate| candidate.name == field_name)
+        .map(|property| &property.r#type)
+}
+
+/// The `x-seampact-unknown-keys` of a body whose input ignores or keeps unknown keys.
 fn write_unknown_keys(
-    _context: &mut EmitContext<'_>,
-    _body: &mut JsonObject,
-    _unknown_keys: &UnknownKeys,
-    _location: &IrLocation,
-) -> Result<(), OpenApiError> {
-    Err(not_ported_yet("writeUnknownKeys"))
+    context: &mut EmitContext<'_>,
+    body: &mut JsonObject,
+    unknown_keys: &UnknownKeys,
+    location: &IrLocation,
+) {
+    let policy = match &unknown_keys.policy {
+        UnknownKeysPolicy::Unknown(unknown) => {
+            refuse_unknown(
+                context,
+                &location.below(&["unknownKeys", "policy"]),
+                unknown.as_str(),
+            );
+
+            return;
+        }
+        UnknownKeysPolicy::Refuse => return,
+        UnknownKeysPolicy::Ignore => "ignore",
+        UnknownKeysPolicy::Keep => "keep",
+    };
+    let reason = match &unknown_keys.reason {
+        Some(text) => reason_value(context, text.as_str()),
+        None => JsonValue::Bool(true),
+    };
+    let written = JsonObject::from_members([(policy, reason)]);
+
+    write_extension(
+        context,
+        body,
+        ExtensionName::UnknownKeys,
+        JsonValue::Object(written),
+    );
 }

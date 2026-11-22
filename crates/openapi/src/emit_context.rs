@@ -14,13 +14,13 @@ use seampact_target::{
 use crate::{EmitterOptions, ExtensionName, ExtensionSelection, OpenApiError, ReasonsOption};
 
 /// The prefix of every `x-seampact-*` extension.
-const EXTENSION_PREFIX: &str = "x-seampact-";
+pub(crate) const EXTENSION_PREFIX: &str = "x-seampact-";
 
 /// The prefix of the code of an inconsistent-IR refusal.
 const INCONSISTENT_CODE_PREFIX: &str = "openapi.";
 
 /// The prefix of a reference to a `components.schemas` entry.
-const COMPONENT_SCHEMA_PREFIX: &str = "#/components/schemas/";
+pub(crate) const COMPONENT_SCHEMA_PREFIX: &str = "#/components/schemas/";
 
 /// A named schema as a document writes it: the shared component, or its strict `.input` twin.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -102,7 +102,12 @@ pub(crate) fn write_extension(
         return;
     }
 
-    target.insert(format!("{EXTENSION_PREFIX}{}", name.as_str()), value);
+    target.insert(extension_member(name), value);
+}
+
+/// The document member of an extension: `x-seampact-` and its name.
+pub(crate) fn extension_member(name: ExtensionName) -> String {
+    format!("{EXTENSION_PREFIX}{}", name.as_str())
 }
 
 /// Whether a selection keeps the extension `name`.
@@ -193,15 +198,6 @@ mod tests {
     use seampact_ir::{ExtensionKey, ExtensionPrefix, IrMap};
 
     use super::*;
-
-    type TestResult = Result<(), Box<dyn std::error::Error>>;
-
-    fn build_nothing<'ir>(key: &str) -> ComponentRequest<'ir> {
-        ComponentRequest {
-            key: key.to_owned(),
-            build: Box::new(|_| Ok(JsonObject::new())),
-        }
-    }
 
     #[test]
     fn consumer_extensions_follow_the_ir_key_order() {

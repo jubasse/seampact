@@ -5,7 +5,6 @@ use seampact_json::{JsonObject, JsonValue};
 use seampact_target::IrLocation;
 
 use crate::emit_context::{EmitContext, refuse_inconsistent};
-use crate::json_value::text_value;
 
 /// An origin as the text `[<api>#]<layer>#<pointer>`.
 ///
@@ -54,13 +53,13 @@ pub(crate) fn derived_from_value(derived_from: &DerivedFrom) -> JsonObject {
     let from = derived_from
         .from
         .iter()
-        .map(|origin| text_value(&origin_key(origin)))
+        .map(|origin| JsonValue::text(&origin_key(origin)))
         .collect();
 
     JsonObject::from_iter([
         (
             "derivation".to_owned(),
-            text_value(derived_from.derivation.as_str()),
+            JsonValue::text(derived_from.derivation.as_str()),
         ),
         ("from".to_owned(), JsonValue::Array(from)),
     ])

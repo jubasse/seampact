@@ -18,8 +18,7 @@ use crate::emit_context::{
 };
 use crate::errors::error_responses;
 use crate::examples::{ExampleSet, collect_examples};
-use crate::json_value::{optional_text, set_defined, text_value};
-use crate::not_ported::not_ported_yet;
+use crate::json_value::{optional_text, set_defined};
 use crate::operation_marks::write_operation_marks;
 use crate::paging::write_paging;
 use crate::parameters::operation_parameters;
@@ -36,7 +35,7 @@ const METHOD_ORDER: [&str; 8] = [
 ];
 
 /// The OpenAPI version every document declares.
-const OPENAPI_VERSION: &str = "3.1.0";
+pub(crate) const OPENAPI_VERSION: &str = "3.1.0";
 
 /// The declaration kind of an HTTP operation.
 const HTTP_OPERATION_KIND: &str = "httpOperation";
@@ -58,9 +57,11 @@ struct SelectedOperation<'ir> {
 }
 
 /// A planned document with the refusals met while writing it.
-struct PlannedDocument {
-    document: JsonObject,
-    refusals: Vec<Refusal>,
+pub(crate) struct PlannedDocument {
+    /// The document.
+    pub(crate) document: JsonObject,
+    /// The refusals met while writing it.
+    pub(crate) refusals: Vec<Refusal>,
 }
 
 /// One document of an api.
@@ -166,7 +167,7 @@ pub(crate) fn unsupported_ir_refusals(ir: &ContractIr) -> Vec<Refusal> {
 }
 
 /// One planned document and the refusals met while writing it.
-fn build_planned_document(
+pub(crate) fn build_planned_document(
     ir: &ContractIr,
     options: &EmitterOptions,
     selection: &ApiDocument,
@@ -212,12 +213,12 @@ fn build_document(
     let schemas = drain_schema_components(context)?;
     let security_schemes = security_schemes_component(context);
     let mut document = JsonObject::from_iter([
-        ("openapi".to_owned(), text_value(OPENAPI_VERSION)),
+        ("openapi".to_owned(), JsonValue::text(OPENAPI_VERSION)),
         ("info".to_owned(), JsonValue::Object(info_object(context))),
     ]);
 
     if !context.options.servers.is_empty() {
-        document.insert("servers".to_owned(), servers_array(context.options)?);
+        document.insert("servers".to_owned(), servers_array(context.options));
     }
 
     let tags = tag_objects(&selected);
@@ -238,7 +239,7 @@ fn build_document(
             context,
             &mut document,
             ExtensionName::Format,
-            text_value(format),
+            JsonValue::text(format),
         );
     }
 
@@ -280,7 +281,7 @@ fn tag_objects(selected: &[SelectedOperation<'_>]) -> Vec<JsonValue> {
         .map(|name| {
             JsonValue::Object(JsonObject::from_iter([(
                 "name".to_owned(),
-                text_value(name),
+                JsonValue::text(name),
             )]))
         })
         .collect()
@@ -289,7 +290,7 @@ fn tag_objects(selected: &[SelectedOperation<'_>]) -> Vec<JsonValue> {
 /// The value of the `x-seampact-api` extension: kind, role and caller.
 pub(crate) fn api_extension_value(ir: &ContractIr) -> JsonObject {
     let mut api_value =
-        JsonObject::from_iter([("kind".to_owned(), text_value(ir.api.kind.as_str()))]);
+        JsonObject::from_iter([("kind".to_owned(), JsonValue::text(ir.api.kind.as_str()))]);
 
     set_defined(
         &mut api_value,
@@ -299,8 +300,11 @@ pub(crate) fn api_extension_value(ir: &ContractIr) -> JsonObject {
 
     if let Some(caller) = &ir.api.caller {
         let value = JsonObject::from_iter([
-            ("identity".to_owned(), text_value(caller.identity.as_str())),
-            ("right".to_owned(), text_value(caller.right.as_str())),
+            (
+                "identity".to_owned(),
+                JsonValue::text(caller.identity.as_str()),
+            ),
+            ("right".to_owned(), JsonValue::text(caller.right.as_str())),
         ]);
 
         api_value.insert("caller".to_owned(), JsonValue::Object(value));
@@ -314,7 +318,7 @@ fn info_object(context: &mut EmitContext<'_>) -> JsonObject {
     let ir = context.ir;
     let version = api_version_text(context);
     let mut info = JsonObject::from_iter([
-        ("title".to_owned(), text_value(&ir.api.id)),
+        ("title".to_owned(), JsonValue::text(&ir.api.id)),
         ("version".to_owned(), JsonValue::String(version)),
     ]);
 
@@ -396,8 +400,25 @@ pub(crate) struct Route<'entry> {
 }
 
 /// The servers of the options as the `servers` array.
-fn servers_array(_options: &EmitterOptions) -> Result<JsonValue, OpenApiError> {
-    Err(not_ported_yet("serversArray"))
+pub(crate) fn servers_array(options: &EmitterOptions) -> JsonValue {
+    let servers = options
+        .servers
+        .iter()
+        .map(|server| {
+            let mut server_object = JsonObject::new();
+
+            server_object.insert("url".to_owned(), JsonValue::text(&server.url));
+            set_defined(
+                &mut server_object,
+                "description",
+                optional_text(server.description.as_deref()),
+            );
+
+            JsonValue::Object(server_object)
+        })
+        .collect();
+
+    JsonValue::Array(servers)
 }
 
 /// Paths by UTF-16 order, each holding its operations by method rank.
@@ -465,7 +486,11 @@ fn operation_object<'ir>(
     let mut object = JsonObject::new();
 
     if !operation.tags.is_empty() {
-        let tags = operation.tags.iter().map(|tag| text_value(tag)).collect();
+        let tags = operation
+            .tags
+            .iter()
+            .map(|tag| JsonValue::text(tag))
+            .collect();
 
         object.insert("tags".to_owned(), JsonValue::Array(tags));
     }
@@ -480,7 +505,10 @@ fn operation_object<'ir>(
         "description",
         optional_text(operation.docs.description.as_deref()),
     );
-    object.insert("operationId".to_owned(), text_value(operation.id.as_str()));
+    object.insert(
+        "operationId".to_owned(),
+        JsonValue::text(operation.id.as_str()),
+    );
 
     if operation.deprecated.is_some() {
         object.insert("deprecated".to_owned(), JsonValue::Bool(true));
