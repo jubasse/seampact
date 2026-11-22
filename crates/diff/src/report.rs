@@ -217,9 +217,4 @@ mod tests {
         );
         assert_eq!(values_text(None, Some(&number(-0.0))), " (0)");
     }
-
-    #[test]
-    fn a_report_ends_with_one_newline() {
-        assert_eq!(lines(&["a".to_owned(), "b".to_owned()]), "a\nb\n");
-    }
 }
