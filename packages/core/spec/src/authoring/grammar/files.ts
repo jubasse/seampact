@@ -129,7 +129,13 @@ export function workspaceDefs(): Record<string, JsonSchema> {
     // ADR 0002 section 1, ADR 0011: one source form, the api's name and the required integrity.
     import: object({
       props: {
-        package: kw(A2(1), str({ minLength: 1 })),
+        package: kw(
+          A2(1),
+          str({
+            minLength: 1,
+            pattern: "^(?:@[a-z0-9~-][a-z0-9._~-]*/)?[a-z0-9~-][a-z0-9._~-]*$",
+          }),
+        ),
         version: kw(A2(1), str({ minLength: 1 })),
         release: kw(
           A2(1),
