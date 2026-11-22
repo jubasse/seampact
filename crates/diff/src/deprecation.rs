@@ -336,4 +336,65 @@ mod tests {
             })
             .unwrap_or_default()
     }
+
+    fn deprecation(sunset: &str, successor: Option<&str>) -> Deprecation {
+        let successor_member = successor.map_or(String::new(), |id| {
+            format!(r#","successor":{{"kind":"httpOperation","api":"a","id":"{id}"}},"successorRel":"r""#)
+        });
+        let text = format!(
+            r#"{{"since":"2026-01-01","sunset":"{sunset}"{successor_member},"origin":{{"layer":"api","pointer":"/x"}}}}"#
+        );
+
+        serde_json::from_str(&text).unwrap_or_else(|error| panic!("{text}: {error}"))
+    }
+
+    #[test]
+    fn calendar_days_count_from_the_unix_epoch_at_the_ends_of_the_ir_years() {
+        let cases = [
+            ("1970-01-01", 0),
+            ("1969-12-31", -1),
+            ("2000-02-29", 11_016),
+            ("2000-03-01", 11_017),
+            ("1900-03-01", -25_508),
+            ("0001-01-01", -719_162),
+            ("9999-12-31", 2_932_896),
+        ];
+
+        for (text, days) in cases {
+            assert_eq!(epoch_day(text), Ok(days), "date {text}");
+        }
+
+        assert!(epoch_day("2026-1").is_err());
+        assert!(epoch_day("soon").is_err());
+    }
+
+    #[test]
+    fn an_after_status_reads_the_sunset_as_text_then_the_successor() {
+        let current = deprecation("2027-01-01", Some("next"));
+
+        assert_eq!(
+            after_status(None, &current),
+            OperationDeprecationStatus::New
+        );
+        assert_eq!(
+            after_status(Some(&deprecation("2027-06-01", Some("next"))), &current),
+            OperationDeprecationStatus::SunsetEarlier
+        );
+        assert_eq!(
+            after_status(Some(&deprecation("2026-06-01", Some("next"))), &current),
+            OperationDeprecationStatus::SunsetLater
+        );
+        assert_eq!(
+            after_status(Some(&deprecation("2027-01-01", Some("other"))), &current),
+            OperationDeprecationStatus::SuccessorChanged
+        );
+        assert_eq!(
+            after_status(Some(&deprecation("2027-01-01", None)), &current),
+            OperationDeprecationStatus::SuccessorChanged
+        );
+        assert_eq!(
+            after_status(Some(&current.clone()), &current),
+            OperationDeprecationStatus::Kept
+        );
+    }
 }

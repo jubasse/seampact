@@ -557,4 +557,57 @@ mod tests {
         assert_eq!(moved, vec![reach(DiffPosition::None, &["b", "a", "c"])]);
         assert_eq!(without_position(&[]), Vec::new());
     }
+
+    #[test]
+    fn a_refusal_names_the_operations_once_in_utf16_order_and_quotes_the_value() {
+        let ir = sample_ir();
+        let mut walk = context(&ir);
+        let reaches = [
+            ChangeReach {
+                position: DiffPosition::Input,
+                operations: vec!["\u{FF5E}".to_owned(), "b".to_owned()],
+                facts: Vec::new(),
+            },
+            ChangeReach {
+                position: DiffPosition::Output,
+                operations: vec!["\u{10000}".to_owned(), "b".to_owned()],
+                facts: Vec::new(),
+            },
+        ];
+        let site = ChangeSite {
+            reaches: &reaches,
+            origin: None,
+        };
+
+        refuse_unknown_value(&mut walk, &site, "/m", "a\"b\n\u{7f}\u{10000}");
+
+        let refusal = walk.sink.refusals().first().cloned();
+
+        assert_eq!(
+            refusal.as_ref().and_then(|found| found.operations.clone()),
+            Some(vec![
+                "b".to_owned(),
+                "\u{10000}".to_owned(),
+                "\u{FF5E}".to_owned()
+            ])
+        );
+        assert_eq!(
+            refusal.map(|found| found.message),
+            Some(
+                "/m holds \"a\\\"b\\n\u{7f}\u{10000}\" on b, \u{10000}, \u{FF5E}, a value this diff does not know."
+                    .to_owned()
+            )
+        );
+    }
+
+    #[test]
+    fn a_refusal_without_operations_has_no_place_text() {
+        let refusal = unknown_value_refusal("/m", "x", &[]);
+
+        assert_eq!(
+            refusal.message,
+            "/m holds \"x\", a value this diff does not know."
+        );
+        assert_eq!(refusal.operations, Some(Vec::new()));
+    }
 }

@@ -335,3 +335,63 @@ fn compare_kept_header(
         &comparisons,
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashSet;
+
+    use super::*;
+    use crate::change_sink::{ChangeSink, NO_POSITION};
+    use crate::sample_ir::sample_ir;
+    use crate::walk_reach::ReachIndex;
+
+    fn header(name: &str, required: bool) -> ResponseHeader {
+        let text = format!(
+            r#"{{"name":"{name}","type":{{"kind":"scalar","type":"string","refinements":[]}},"required":{required}}}"#
+        );
+
+        serde_json::from_str(&text).unwrap_or_else(|error| panic!("{text}: {error}"))
+    }
+
+    #[test]
+    fn headers_match_by_lowercase_name_including_the_final_sigma() {
+        let ir = sample_ir();
+        let mut context = WalkContext {
+            before: &ir,
+            after: &ir,
+            before_reach: ReachIndex::new(),
+            after_reach: ReachIndex::new(),
+            sink: ChangeSink::new(HashSet::new()),
+        };
+        let site = ChangeSite {
+            reaches: &NO_POSITION,
+            origin: None,
+        };
+
+        compare_response_headers(
+            &mut context,
+            &site,
+            "/h",
+            &[header("X-Id", true), header("\u{391}\u{3a3}", true)],
+            &[header("x-id", true), header("\u{3b1}\u{3c2}", false)],
+        )
+        .unwrap_or_else(|error| panic!("{error}"));
+
+        let cases: Vec<String> = context
+            .sink
+            .sorted_changes()
+            .into_iter()
+            .map(|change| change.case_name)
+            .collect();
+
+        // Both pairs are kept (a rename and a required change), none is added or removed.
+        assert_eq!(
+            cases,
+            vec![
+                "name".to_owned(),
+                "name".to_owned(),
+                "responseHeader.required.requiredToOptional".to_owned()
+            ]
+        );
+    }
+}

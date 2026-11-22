@@ -685,7 +685,10 @@ const OPTIONAL_REJECT_RANK: u8 = 2;
 const IDENTITY_RANK: u8 = 3;
 
 /// The case of an access that moves from one rank to another.
-#[expect(dead_code, reason = "called by compareAccess, ported in brief 4")]
+#[cfg_attr(
+    not(test),
+    expect(dead_code, reason = "called by compareAccess, ported in brief 4")
+)]
 fn rank_change_case(before_rank: u8, after_rank: u8) -> &'static str {
     if before_rank == PUBLIC_RANK && after_rank == OPTIONAL_ANONYMOUS_RANK {
         return "principalOptionalAdded";
@@ -703,7 +706,10 @@ fn rank_change_case(before_rank: u8, after_rank: u8) -> &'static str {
 }
 
 /// The rank of an access; an optional access refused with an unknown value refuses the diff.
-#[expect(dead_code, reason = "called by compareAccess, ported in brief 4")]
+#[cfg_attr(
+    not(test),
+    expect(dead_code, reason = "called by compareAccess, ported in brief 4")
+)]
 fn access_rank(
     context: &mut WalkContext<'_>,
     site: &ChangeSite<'_>,
@@ -743,4 +749,76 @@ fn compare_csrf(
     _after: Option<&Csrf>,
 ) -> Result<(), DiffError> {
     Err(not_ported_yet("compareCsrf"))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashSet;
+
+    use super::*;
+    use crate::change_sink::{ChangeSink, NO_POSITION};
+    use crate::sample_ir::sample_ir;
+    use crate::walk_reach::ReachIndex;
+
+    #[test]
+    fn a_rank_change_names_the_optional_anonymous_cases_before_direction() {
+        assert_eq!(
+            rank_change_case(PUBLIC_RANK, OPTIONAL_ANONYMOUS_RANK),
+            "principalOptionalAdded"
+        );
+        assert_eq!(
+            rank_change_case(OPTIONAL_ANONYMOUS_RANK, PUBLIC_RANK),
+            "principalOptionalRemoved"
+        );
+        assert_eq!(rank_change_case(PUBLIC_RANK, IDENTITY_RANK), "tightened");
+        assert_eq!(
+            rank_change_case(OPTIONAL_REJECT_RANK, OPTIONAL_ANONYMOUS_RANK),
+            "loosened"
+        );
+    }
+
+    fn field_right(direction: &str, right: &str) -> FieldRight {
+        let text = format!(
+            r#"{{"schema":"S","pointer":"/p","right":"{right}","direction":"{direction}","derivedFrom":{{"derivation":"x","from":[]}}}}"#
+        );
+
+        serde_json::from_str(&text).unwrap_or_else(|error| panic!("{text}: {error}"))
+    }
+
+    #[test]
+    fn a_field_right_changes_at_its_direction_and_an_unknown_direction_refuses() {
+        let ir = sample_ir();
+        let mut context = WalkContext {
+            before: &ir,
+            after: &ir,
+            before_reach: ReachIndex::new(),
+            after_reach: ReachIndex::new(),
+            sink: ChangeSink::new(HashSet::new()),
+        };
+        let site = ChangeSite {
+            reaches: &NO_POSITION,
+            origin: None,
+        };
+
+        compare_field_rights(
+            &mut context,
+            &site,
+            "/operations/0/fieldRights",
+            &[field_right("input", "r1"), field_right("sideways", "r1")],
+            &[field_right("input", "r2"), field_right("sideways", "r2")],
+        )
+        .unwrap_or_else(|error| panic!("{error}"));
+
+        let changes = context.sink.sorted_changes();
+
+        assert_eq!(changes.len(), 1, "changes {changes:?}");
+        assert_eq!(
+            context
+                .sink
+                .refusals()
+                .first()
+                .and_then(|refusal| refusal.member.clone()),
+            Some("/operations/0/fieldRights/direction".to_owned())
+        );
+    }
 }
