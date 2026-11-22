@@ -12,10 +12,11 @@ mod support;
 use std::fs;
 
 use seampact_bundle::{
-    BundleArchiveRead, BundleFile, bundle_integrity, bundle_sha256_hex, read_bundle_tarball,
+    BundleArchiveRead, BundleChannel, BundleFile, BundleVerifyResult, bundle_integrity,
+    bundle_sha256_hex, read_bundle_tarball, verify_bundle,
 };
 use serde_json::Value;
-use support::repository_root;
+use support::{repository_root, scratch_directory};
 
 fn vectors() -> Value {
     let path = repository_root().join("packages/core/spec/vectors/bundle/vectors.json");
@@ -127,5 +128,91 @@ fn the_integrity_of_every_valid_directory_vector_is_the_expected_one() {
             "vector {}",
             vector["id"]
         );
+    }
+}
+
+fn optional_text(member: &Value) -> Option<String> {
+    member.as_str().map(str::to_owned)
+}
+
+/// The failures of a vector as `(code, file, expected, actual)`, `None` for an absent member.
+type FailureTexts = Vec<(String, Option<String>, Option<String>, Option<String>)>;
+
+fn expected_failures(expected: &Value) -> FailureTexts {
+    expected["failures"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|failure| {
+            (
+                failure["code"].as_str().unwrap().to_owned(),
+                optional_text(&failure["file"]),
+                optional_text(&failure["expected"]),
+                optional_text(&failure["actual"]),
+            )
+        })
+        .collect()
+}
+
+#[test]
+fn every_directory_vector_verifies_as_expected() {
+    let vectors = vectors();
+    let directories = vectors["directories"].as_array().unwrap();
+
+    assert_eq!(directories.len(), 33, "the directory vectors are 33");
+
+    for vector in directories {
+        let id = vector["id"].as_str().unwrap();
+        let directory = scratch_directory(&format!("vector-{id}"));
+
+        for file in vector["files"].as_array().unwrap() {
+            let target = directory.join(file["path"].as_str().unwrap());
+
+            fs::create_dir_all(target.parent().unwrap()).unwrap();
+            fs::write(&target, base64_decoded(file["base64"].as_str().unwrap())).unwrap();
+        }
+
+        let channel = match vector["channel"].as_str() {
+            Some("package") => Some(BundleChannel::Package),
+            Some("release") => Some(BundleChannel::Release),
+            other => panic!("vector {id}: channel {other:?}"),
+        };
+        let result = verify_bundle(&directory, vector["pin"].as_str(), channel).unwrap();
+        let (ok, integrity, failures): (bool, Option<String>, FailureTexts) = match result {
+            BundleVerifyResult::Verified { integrity, .. } => (true, Some(integrity), vec![]),
+            BundleVerifyResult::Failed {
+                failures,
+                integrity,
+            } => (
+                false,
+                integrity,
+                failures
+                    .into_iter()
+                    .map(|failure| {
+                        (
+                            failure.code.as_str().to_owned(),
+                            failure.file,
+                            failure.expected,
+                            failure.actual,
+                        )
+                    })
+                    .collect(),
+            ),
+        };
+        let expected = &vector["expected"];
+
+        assert_eq!(ok, expected["ok"].as_bool().unwrap(), "vector {id}: ok");
+        assert_eq!(
+            integrity,
+            optional_text(&expected["integrity"]),
+            "vector {id}: integrity"
+        );
+        assert_eq!(
+            failures,
+            expected_failures(expected),
+            "vector {id}: failures"
+        );
+
+        fs::remove_dir_all(&directory).unwrap();
     }
 }
