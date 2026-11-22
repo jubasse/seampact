@@ -59,7 +59,7 @@ pub(crate) fn init_modelines(
         .collect();
 
     if sources.is_empty() {
-        return Ok(refuse(io, &[no_path_source_problem(location)?]));
+        return Ok(refuse(io, &[no_path_source_problem(location)]));
     }
 
     let names: Vec<String> = sources.iter().map(|(name, _)| (*name).clone()).collect();
@@ -114,7 +114,7 @@ pub(crate) fn init_modelines(
     let ignore = planned_ignore(&app_root, editor_schemas, ignore_files, &entries)?;
 
     if let Some(GitIgnoreChange::Link { file }) = &ignore {
-        let problem = ignore_file_link_problem(io, file)?;
+        let problem = ignore_file_link_problem(io, file);
 
         return Ok(refuse(io, &[problem]));
     }

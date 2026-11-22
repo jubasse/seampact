@@ -90,17 +90,17 @@ fn block(key: &str, items: Vec<ViewLine>) -> Vec<ViewLine> {
 fn member_line(
     key: &str,
     value: Option<&JsonValue>,
-    render: impl FnOnce(&JsonValue) -> Result<JsonValue, CliError>,
+    render: impl FnOnce(&JsonValue) -> JsonValue,
     provenance_of: &Where<'_>,
-) -> Result<Vec<ViewLine>, CliError> {
+) -> Vec<ViewLine> {
     let Some(value) = value else {
-        return Ok(Vec::new());
+        return Vec::new();
     };
 
-    Ok(vec![ViewLine::commented(
-        format!("{key}: {}", flow(&render(value)?)),
+    vec![ViewLine::commented(
+        format!("{key}: {}", flow(&render(value))),
         provenance_of.of(value),
-    )])
+    )]
 }
 
 fn identity_lines(access: &JsonObject, comment: String) -> Vec<ViewLine> {
@@ -257,36 +257,29 @@ fn error_lines(
         .collect()
 }
 
-fn scope_lines(
-    operation: &JsonObject,
-    provenance_of: &Where<'_>,
-) -> Result<Vec<ViewLine>, CliError> {
+fn scope_lines(operation: &JsonObject, provenance_of: &Where<'_>) -> Vec<ViewLine> {
     items_of(operation.get("scopes"))
         .iter()
         .map(|scope| {
             let member = |name: &str| object_of(Some(scope)).and_then(|object| object.get(name));
-            let source =
-                member("source").map_or_else(|| Ok("undefined".to_owned()), source_text)?;
+            let source = source_text(member("source"));
 
-            Ok(ViewLine::commented(
+            ViewLine::commented(
                 format!("  {}: {source}", js_text_of(member("scope"))),
                 provenance_of.of(scope),
-            ))
+            )
         })
         .collect()
 }
 
-fn requirement_lines(
-    operation: &JsonObject,
-    provenance_of: &Where<'_>,
-) -> Result<Vec<ViewLine>, CliError> {
+fn requirement_lines(operation: &JsonObject, provenance_of: &Where<'_>) -> Vec<ViewLine> {
     items_of(operation.get("requires"))
         .iter()
         .map(|requirement| {
-            let value = requirement_value(requirement)?;
+            let value = requirement_value(requirement);
             let mut comment = provenance_of.of(requirement);
 
-            if subject_defaulted(requirement)? {
+            if subject_defaulted(requirement) {
                 if !comment.is_empty() {
                     comment.push_str("; ");
                 }
@@ -294,10 +287,7 @@ fn requirement_lines(
                 comment.push_str(DEFAULTED_SUBJECT);
             }
 
-            Ok(ViewLine::commented(
-                format!("  - {}", flow(&value)),
-                comment,
-            ))
+            ViewLine::commented(format!("  - {}", flow(&value)), comment)
         })
         .collect()
 }
@@ -351,71 +341,52 @@ fn operation_id_comment(operation: &JsonValue, provenance_of: &Where<'_>) -> Str
     parts.join(", ")
 }
 
-#[expect(
-    clippy::unnecessary_wraps,
-    reason = "member_line takes a renderer that may reach a stub"
-)]
-fn identity_member(value: &JsonValue) -> Result<JsonValue, CliError> {
-    Ok(value.clone())
+fn identity_member(value: &JsonValue) -> JsonValue {
+    value.clone()
 }
 
-#[expect(
-    clippy::unnecessary_wraps,
-    reason = "member_line takes a renderer that may reach a stub"
-)]
-fn plain_member(value: &JsonValue) -> Result<JsonValue, CliError> {
-    Ok(without_provenance(value))
+fn plain_member(value: &JsonValue) -> JsonValue {
+    without_provenance(value)
 }
 
-#[expect(
-    clippy::unnecessary_wraps,
-    reason = "member_line takes a renderer that may reach a stub"
-)]
-fn relay_member(relay: &JsonValue) -> Result<JsonValue, CliError> {
+fn relay_member(relay: &JsonValue) -> JsonValue {
     let member = |name: &str| object_of(Some(relay)).and_then(|object| object.get(name));
 
-    Ok(JsonValue::text(&format!(
+    JsonValue::text(&format!(
         "{}.{}",
         js_text_of(member("api")),
         js_text_of(member("id"))
-    )))
+    ))
 }
 
 /// The lines from `csrf` to `relays`: the members that carry rules and their provenance.
-fn member_lines(
-    ir: &ContractIr,
-    members: &JsonObject,
-    provenance_of: &Where<'_>,
-) -> Result<Vec<ViewLine>, CliError> {
+fn member_lines(ir: &ContractIr, members: &JsonObject, provenance_of: &Where<'_>) -> Vec<ViewLine> {
     let get = |name: &str| members.get(name);
     let mut lines = Vec::new();
 
-    lines.extend(member_line("csrf", get("csrf"), csrf_value, provenance_of)?);
-    lines.extend(block("scopes", scope_lines(members, provenance_of)?));
-    lines.extend(block(
-        "requires",
-        requirement_lines(members, provenance_of)?,
-    ));
+    lines.extend(member_line("csrf", get("csrf"), csrf_value, provenance_of));
+    lines.extend(block("scopes", scope_lines(members, provenance_of)));
+    lines.extend(block("requires", requirement_lines(members, provenance_of)));
     lines.extend(block("params", param_lines(members, provenance_of)));
     lines.extend(member_line(
         "unknownQuery",
         get("unknownQuery"),
-        |value| Ok(unknown_query_value(value)),
+        unknown_query_value,
         provenance_of,
-    )?);
+    ));
     lines.extend(input_lines(members, provenance_of));
     lines.extend(member_line(
         "idempotency",
         get("idempotency"),
         idempotency_value,
         provenance_of,
-    )?);
+    ));
     lines.extend(member_line(
         "concurrency",
         get("concurrency"),
         concurrency_value,
         provenance_of,
-    )?);
+    ));
     lines.extend(block("responses", response_lines(members, provenance_of)));
     lines.extend(block("errors", error_lines(ir, members, provenance_of)));
     lines.extend(block(
@@ -427,57 +398,57 @@ fn member_lines(
         get("cache"),
         plain_member,
         provenance_of,
-    )?);
+    ));
     lines.extend(member_line(
         "paging",
         get("paging"),
         paging_value,
         provenance_of,
-    )?);
+    ));
     lines.extend(member_line(
         "filteredBy",
         get("filteredBy"),
         identity_member,
         provenance_of,
-    )?);
+    ));
     lines.extend(member_line(
         "owner",
         get("owner"),
         plain_member,
         provenance_of,
-    )?);
+    ));
     lines.extend(member_line(
         "degradable",
         get("degradable"),
         plain_member,
         provenance_of,
-    )?);
+    ));
     lines.extend(member_line(
         "budgetMs",
         get("budgetMs"),
         identity_member,
         provenance_of,
-    )?);
+    ));
     lines.extend(member_line(
         "deadlineHeader",
         get("deadlineHeader"),
         identity_member,
         provenance_of,
-    )?);
+    ));
     lines.extend(member_line(
         "deprecated",
         get("deprecated"),
         deprecated_value,
         provenance_of,
-    )?);
+    ));
     lines.extend(member_line(
         "relays",
         get("relays"),
         relay_member,
         provenance_of,
-    )?);
+    ));
 
-    Ok(lines)
+    lines
 }
 
 /// The lines from `upstream` to the members the view leaves out.
@@ -529,9 +500,6 @@ fn tail_lines(members: &JsonObject, provenance_of: &Where<'_>) -> Vec<ViewLine> 
 /// # Errors
 ///
 /// [`CliError::Internal`] when the operation does not encode.
-///
-/// A member another brief renders (`csrf`, `scopes`, `requires`, `idempotency`, `concurrency`,
-/// `paging`, `deprecated`) reaches that function's stub.
 pub(crate) fn explain_operation_text(
     ir: &ContractIr,
     operation: &Operation,
@@ -564,7 +532,7 @@ pub(crate) fn explain_operation_text(
         lines.extend(access_lines(access, provenance_of));
     }
 
-    lines.extend(member_lines(ir, members, provenance_of)?);
+    lines.extend(member_lines(ir, members, provenance_of));
 
     lines.extend(tail_lines(members, provenance_of));
 
