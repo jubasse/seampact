@@ -9,9 +9,21 @@ publish.workspace = true
 
 [dependencies]
 camino.workspace = true
-seampact-compiler.workspace = true
+indexmap.workspace = true
+seampact-authoring.workspace = true
+seampact-cli-config.workspace = true
 seampact-diagnostics.workspace = true
+seampact-ir.workspace = true
+seampact-js.workspace = true
+seampact-load.workspace = true
+seampact-json.workspace = true
+seampact-pipeline.workspace = true
+seampact-span.workspace = true
+serde_json.workspace = true
 thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
 
 [lints]
 workspace = true

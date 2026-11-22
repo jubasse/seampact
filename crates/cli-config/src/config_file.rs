@@ -152,7 +152,7 @@ pub(crate) fn file_size(file: &Utf8Path) -> Result<Option<u64>, CliConfigError> 
     }
 }
 
-fn io_error(file: &Utf8Path, error: &std::io::Error) -> CliConfigError {
+pub(crate) fn io_error(file: &Utf8Path, error: &std::io::Error) -> CliConfigError {
     CliConfigError::Io {
         path: file.to_string(),
         message: error.to_string(),

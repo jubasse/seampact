@@ -33,6 +33,8 @@ seampact-load.workspace = true
 seampact-lint.workspace = true
 seampact-openapi.workspace = true
 seampact-oracle = { workspace = true, optional = true }
+seampact-pipeline.workspace = true
+seampact-span.workspace = true
 seampact-target.workspace = true
 serde.workspace = true
 serde_json.workspace = true

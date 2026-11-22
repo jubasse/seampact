@@ -3,7 +3,8 @@
 use camino::Utf8Path;
 
 /// Whether `child` lies below `parent`, and is not `parent` itself.
-pub(crate) fn is_strictly_inside(parent: &Utf8Path, child: &Utf8Path) -> bool {
+#[must_use]
+pub fn is_strictly_inside(parent: &Utf8Path, child: &Utf8Path) -> bool {
     child != parent && is_inside_or_equal(parent, child)
 }
 

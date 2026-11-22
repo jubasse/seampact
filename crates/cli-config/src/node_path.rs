@@ -5,7 +5,8 @@ use camino::{Utf8Component, Utf8Path, Utf8PathBuf};
 const CURRENT_DIRECTORY: &str = ".";
 
 /// `path.resolve(base, segment)` for an absolute `base`: `segment` joined and normalised.
-pub(crate) fn resolved_path(base: &Utf8Path, segment: &str) -> Utf8PathBuf {
+#[must_use]
+pub fn resolved_path(base: &Utf8Path, segment: &str) -> Utf8PathBuf {
     normalized_path(&base.join(segment))
 }
 
