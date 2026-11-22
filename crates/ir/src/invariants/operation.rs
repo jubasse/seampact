@@ -1,11 +1,11 @@
 //! The rules that read an operation as a whole.
 
-use seampact_json::{JsonObject, JsonValue};
+use seampact_json::{JsonObject, JsonValue, is_text, items_of, js_text_of, object_of};
 
 use super::decode::decode_member;
 use super::deprecation::check_deprecation_headers;
 use super::error_declarations::bindings_in;
-use super::json_members::{entry, is_string, items, record, text_of};
+use super::json_members::entry;
 use super::violation::{IrInvariantId, Violations};
 use crate::{
     IrError, IrMap, Response, Schema, SchemaId, find_ir_sensitive_reaches_skipping_missing,
@@ -24,13 +24,13 @@ pub(super) struct OperationScope<'doc> {
 // Whether the format fills a meta member with the degraded parts; `None` for a format the
 // document does not hold.
 fn has_degraded_meta(formats: &JsonObject, format: Option<&JsonValue>) -> Option<bool> {
-    let declaration = record(entry(formats, format))?;
-    let meta = record(declaration.get("meta"));
+    let declaration = object_of(entry(formats, format))?;
+    let meta = object_of(declaration.get("meta"));
 
     Some(meta.is_some_and(|meta| {
         meta.values().any(|member| {
-            is_string(
-                record(Some(member)).and_then(|member| member.get("fill")),
+            is_text(
+                object_of(Some(member)).and_then(|member| member.get("fill")),
                 "degraded",
             )
         })
@@ -41,8 +41,8 @@ fn has_degraded_meta(formats: &JsonObject, format: Option<&JsonValue>) -> Option
 fn check_roles_once(operation: &JsonObject, pointer: &str, out: &mut Violations) {
     let mut seen: Vec<Option<&JsonValue>> = Vec::new();
 
-    for (index, error) in items(operation.get("errors")).iter().enumerate() {
-        let roles = record(Some(error)).and_then(|error| error.get("roles"));
+    for (index, error) in items_of(operation.get("errors")).iter().enumerate() {
+        let roles = object_of(Some(error)).and_then(|error| error.get("roles"));
 
         for (position, binding) in bindings_in(roles).iter().enumerate() {
             let role = binding.get("role");
@@ -53,7 +53,7 @@ fn check_roles_once(operation: &JsonObject, pointer: &str, out: &mut Violations)
                     &format!("{pointer}/errors/{index}/roles/{position}"),
                     format!(
                         "The role '{}' is bound twice on the operation.",
-                        text_of(role)
+                        js_text_of(role)
                     ),
                 );
             }
@@ -71,7 +71,7 @@ fn check_sensitive_no_store(
     schemas: &IrMap<SchemaId, Schema>,
     out: &mut Violations,
 ) -> Result<(), IrError> {
-    let cache = record(operation.get("cache"));
+    let cache = object_of(operation.get("cache"));
 
     if matches!(
         cache.and_then(|cache| cache.get("noStore")),
@@ -115,7 +115,7 @@ pub(super) fn check_operation_members(
     scope: &OperationScope<'_>,
     out: &mut Violations,
 ) -> Result<(), IrError> {
-    let degradable = record(operation.get("degradable"));
+    let degradable = object_of(operation.get("degradable"));
 
     if degradable.is_some_and(|degradable| !degradable.contains_key("header"))
         && has_degraded_meta(scope.formats, operation.get("format")) == Some(false)
@@ -125,7 +125,7 @@ pub(super) fn check_operation_members(
             &format!("{pointer}/degradable"),
             format!(
                 "A degradable operation whose format '{}' has no 'degraded' meta member has 'header'.",
-                text_of(operation.get("format"))
+                js_text_of(operation.get("format"))
             ),
         );
     }
@@ -147,18 +147,18 @@ pub(super) fn check_cookie_csrf(
         return;
     }
 
-    let Some(access) = record(operation.get("access")) else {
+    let Some(access) = object_of(operation.get("access")) else {
         return;
     };
 
-    if !is_string(access.get("kind"), "identity") && !is_string(access.get("kind"), "optional") {
+    if !is_text(access.get("kind"), "identity") && !is_text(access.get("kind"), "optional") {
         return;
     }
 
-    let cookie = items(access.get("schemes")).iter().any(|id| {
-        let scheme = record(entry(schemes, Some(id)));
+    let cookie = items_of(access.get("schemes")).iter().any(|id| {
+        let scheme = object_of(entry(schemes, Some(id)));
 
-        is_string(scheme.and_then(|scheme| scheme.get("kind")), "cookie")
+        is_text(scheme.and_then(|scheme| scheme.get("kind")), "cookie")
     });
 
     if cookie && !operation.contains_key("csrf") {

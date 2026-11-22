@@ -2,9 +2,8 @@
 
 use std::collections::HashMap;
 
-use seampact_json::{JsonObject, JsonValue};
+use seampact_json::{JsonObject, JsonValue, object_of, text_of};
 
-use super::json_members::{record, string};
 use super::open_values::{Catalogue, CatalogueOwner};
 use super::partitions::CORE_CATALOGUES;
 use super::violation::{IrInvariantId, Violations};
@@ -28,9 +27,9 @@ pub(super) fn check_catalogue_id(
     };
     let owner = match catalogue.owner {
         CatalogueOwner::Document => Some(document),
-        CatalogueOwner::Api => record(document.get("api")),
+        CatalogueOwner::Api => object_of(document.get("api")),
     };
-    let entries = record(owner.and_then(|owner| owner.get(&catalogue.member)));
+    let entries = object_of(owner.and_then(|owner| owner.get(&catalogue.member)));
 
     if entries.is_some_and(|entries| !entries.contains_key(id)) {
         out.fail(
@@ -51,7 +50,7 @@ pub(super) fn check_core_origin(
     document: &JsonObject,
     out: &mut Violations,
 ) {
-    let Some(origin_pointer) = string(origin.get("pointer")) else {
+    let Some(origin_pointer) = text_of(origin.get("pointer")) else {
         return;
     };
 
@@ -76,7 +75,7 @@ pub(super) fn check_core_origin(
 
         return;
     };
-    let entries = record(document.get(&catalogue));
+    let entries = object_of(document.get(&catalogue));
 
     if !origin.contains_key("api") && entries.is_some_and(|entries| !entries.contains_key(&id)) {
         out.fail(

@@ -6,7 +6,7 @@ use seampact_ir::{
     KnownRightSubject, KnownSchemaRef, KnownTypeUseRef, Name, NoSubject, OpShorthand,
     OperationScope, PackRef, ResourceSubject, Right, RightId, RightSubject, ScopeSubject,
 };
-use seampact_json::{JsonObject, JsonValue};
+use seampact_json::{JsonObject, JsonValue, object_of};
 use seampact_pipeline::{PassError, TreeNodeId, UnionSetting, pointer_below};
 
 use crate::catalogues::{
@@ -14,8 +14,8 @@ use crate::catalogues::{
     access_rights_right_errors, schema_name_of,
 };
 use crate::read::{
-    access_rights_member, access_rights_object, access_rights_origin_of, access_rights_schema_name,
-    access_rights_string, access_rights_strings,
+    access_rights_member, access_rights_origin_of, access_rights_schema_name, access_rights_string,
+    access_rights_strings,
 };
 use crate::report::{
     AccessRightsProblem, AccessRightsRelated, AccessRightsReporter, AccessRightsRule,
@@ -110,7 +110,7 @@ pub(crate) fn access_rights_derive_entries<'run>(
     let mut entries = Vec::new();
 
     for (index, settings) in written.iter().enumerate() {
-        let Some(settings) = access_rights_object(Some(settings)) else {
+        let Some(settings) = object_of(Some(settings)) else {
             continue;
         };
         let pointer = pointer_below("/derive", &[&index.to_string()]);
@@ -157,7 +157,7 @@ pub(crate) fn access_rights_selects(
     route: &AccessRightsRoute,
     api: &AccessRightsApi,
 ) -> Result<bool, InternalError> {
-    let select = access_rights_object(access_rights_member(Some(entry.settings), "select"));
+    let select = object_of(access_rights_member(Some(entry.settings), "select"));
     let accepts = |criterion: &str, value: Option<&str>| -> bool {
         if access_rights_member(select, criterion).is_none() {
             return true;
@@ -260,7 +260,7 @@ pub(crate) fn access_rights_declare_right(
     let DerivedRightInput { entry, route, .. } = input;
     let declare_right = access_rights_member(Some(entry.settings), "declareRight");
     let pointer = pointer_below(&entry.pointer, &["declareRight"]);
-    let Some(text) = access_rights_string(access_rights_object(declare_right), "name") else {
+    let Some(text) = access_rights_string(object_of(declare_right), "name") else {
         return Err(InternalError::new(format!(
             "the declareRight at {pointer} has no 'name' template"
         ))
@@ -371,10 +371,7 @@ fn derived_right_of(
     subject: RightSubject,
 ) -> Result<Right, PassError> {
     let right_origin = access_rights_origin_of(context, pointer)?;
-    let errors = access_rights_right_errors(
-        access_rights_object(declare_right),
-        &catalogues.forbidden_code,
-    );
+    let errors = access_rights_right_errors(object_of(declare_right), &catalogues.forbidden_code);
 
     Ok(Right {
         id: RightId::new(id.to_owned()),
@@ -457,10 +454,7 @@ pub(crate) fn derived_subject(
         declare_right,
         pointer,
     } = input;
-    let subject = access_rights_object(access_rights_member(
-        access_rights_object(*declare_right),
-        "subject",
-    ));
+    let subject = object_of(access_rights_member(object_of(*declare_right), "subject"));
     let none = || {
         Some(AccessRightsDerivedSubject {
             subject: KnownRightSubject::NoSubject(NoSubject {}).into(),
@@ -519,7 +513,7 @@ pub(crate) fn resource_subject(
         route,
     } = options;
     let collection = context.nodes.get(*at)?;
-    let ids = access_rights_object(access_rights_member(Some(collection.settings), "id"));
+    let ids = object_of(access_rights_member(Some(collection.settings), "id"));
     let id_keys: Vec<&String> = ids
         .map(|written| written.keys().collect())
         .unwrap_or_default();

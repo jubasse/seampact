@@ -7,14 +7,12 @@ use seampact_ir::{
     Property, RequirementSubject, ResourceSubject, Right, Schema, SchemaId, TypeUse, ValueSource,
     ValueSourceIn,
 };
-use seampact_json::JsonValue;
+use seampact_json::{JsonValue, object_of};
 use seampact_pipeline::{
     OrderedSetting, PassError, TreeNodeId, TreeNodeKind, TreeNodes, pointer_below,
 };
 
-use crate::read::{
-    access_rights_member, access_rights_merged_at, access_rights_object, access_rights_schema_name,
-};
+use crate::read::{access_rights_member, access_rights_merged_at, access_rights_schema_name};
 use crate::report::{
     AccessRightsProblem, AccessRightsRelated, AccessRightsReporter, AccessRightsRule,
 };
@@ -562,8 +560,7 @@ pub(crate) fn path_schema(
         }
 
         let at_node = context.nodes.get(current)?;
-        let declared =
-            access_rights_object(access_rights_member(Some(at_node.settings), "pathParams"));
+        let declared = object_of(access_rights_member(Some(at_node.settings), "pathParams"));
 
         if access_rights_member(declared, name).is_some() {
             let pointer = pointer_below(&at_node.pointer, &["pathParams", name]);
@@ -630,8 +627,8 @@ pub(crate) fn principal_schema(
         return Ok(None);
     };
     let merged = Some(&context.context.raw.merged);
-    let identities = access_rights_object(access_rights_member(merged, "identities"));
-    let identity = access_rights_object(access_rights_member(identities, route_identity.as_str()));
+    let identities = object_of(access_rights_member(merged, "identities"));
+    let identity = object_of(access_rights_member(identities, route_identity.as_str()));
     let mut schema_id = access_rights_schema_name(access_rights_member(identity, "principal"));
     let mut found: Option<AccessRightsSourceSchema> = None;
     let mut optional = false;

@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use seampact_json::{JsonObject, JsonValue};
+use seampact_json::{JsonObject, JsonValue, is_text, js_text_of, object_of, text_of};
 
 use super::catalogue_refs::check_core_origin;
 use super::deprecation::check_deprecation_dates;
@@ -11,7 +11,7 @@ use super::error_declarations::{
 };
 use super::exact_numbers::check_exact_numbers;
 use super::input_proofs::{check_proof_input, check_proof_names, check_proof_wires};
-use super::json_members::{is_listed, is_string, record, string, text_of};
+use super::json_members::is_listed;
 use super::open_values::is_known;
 use super::operation::{OperationScope, check_cookie_csrf, check_operation_members};
 use super::partitions::{
@@ -76,7 +76,7 @@ pub(super) fn check_object(
         }
         Some("Param") => {
             check_exact_numbers(
-                record(value.get("type")),
+                object_of(value.get("type")),
                 value.get("default"),
                 value.get("examples"),
                 pointer,
@@ -101,7 +101,7 @@ fn check_name(value: &JsonObject, pointer: &str, out: &mut Violations) -> Result
         return Ok(());
     }
 
-    if is_string(value.get("role"), "response") != value.contains_key("status") {
+    if is_text(value.get("role"), "response") != value.contains_key("status") {
         out.fail(
             IrInvariantId::NameStatus,
             pointer,
@@ -121,7 +121,7 @@ fn check_meta_member(
         return Ok(());
     }
 
-    if is_string(value.get("fill"), "source") != value.contains_key("source") {
+    if is_text(value.get("fill"), "source") != value.contains_key("source") {
         out.fail(
             IrInvariantId::MetaSource,
             pointer,
@@ -138,7 +138,7 @@ fn check_value_source(
     objects: &ObjectDefinitions,
     out: &mut Violations,
 ) -> Result<(), IrError> {
-    let Some(source) = string(value.get("in")) else {
+    let Some(source) = text_of(value.get("in")) else {
         return Ok(());
     };
 
@@ -207,7 +207,7 @@ fn check_header_declaration(
     }
 
     let has = |member: &str| value.contains_key(member);
-    let token = is_string(value.get("semantic"), "versionToken");
+    let token = is_text(value.get("semantic"), "versionToken");
     let token_members = has("response") && has("request");
     let plain_members = has("name") && has("in");
     let valid = if token {
@@ -230,7 +230,7 @@ fn check_header_declaration(
 }
 
 fn check_cache(value: &JsonObject, pointer: &str, out: &mut Violations) {
-    let never = is_string(value.get("family"), "never");
+    let never = is_text(value.get("family"), "never");
 
     if never == value.contains_key("directives") {
         out.fail(
@@ -266,7 +266,7 @@ fn check_field_wire(
                 pointer,
                 format!(
                     "A '{}' field has no style, explode or brackets.",
-                    text_of(kind)
+                    js_text_of(kind)
                 ),
             );
         }
@@ -281,7 +281,7 @@ fn check_field_wire(
             pointer,
             format!(
                 "A '{}' field has style, explode and brackets.",
-                text_of(kind)
+                js_text_of(kind)
             ),
         );
     }
@@ -290,7 +290,7 @@ fn check_field_wire(
 }
 
 fn check_property(value: &JsonObject, pointer: &str, out: &mut Violations) {
-    let type_use = record(value.get("type"));
+    let type_use = object_of(value.get("type"));
 
     check_exact_numbers(
         type_use,
@@ -322,7 +322,7 @@ fn check_property(value: &JsonObject, pointer: &str, out: &mut Violations) {
 }
 
 fn check_id_type_use(value: &JsonObject, pointer: &str, out: &mut Violations) {
-    let Some(type_use) = record(value.get("idSchema")) else {
+    let Some(type_use) = object_of(value.get("idSchema")) else {
         return;
     };
 
@@ -342,7 +342,7 @@ fn check_id_type_use(value: &JsonObject, pointer: &str, out: &mut Violations) {
 // A rule's proof and the body field it adds to an operation's input (`InputProof`) are typed
 // alike.
 fn check_proof_type_use(value: &JsonObject, pointer: &str, out: &mut Violations) {
-    let Some(type_use) = record(value.get("schema")) else {
+    let Some(type_use) = object_of(value.get("schema")) else {
         return;
     };
 
@@ -356,7 +356,7 @@ fn check_proof_type_use(value: &JsonObject, pointer: &str, out: &mut Violations)
 }
 
 fn check_scalar(value: &JsonObject, pointer: &str, out: &mut Violations) {
-    if record(value.get("type")).is_some_and(|own_type| own_type.contains_key("scalar")) {
+    if object_of(value.get("type")).is_some_and(|own_type| own_type.contains_key("scalar")) {
         out.fail(
             IrInvariantId::ScalarType,
             pointer,

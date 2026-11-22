@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use seampact_diagnostics::InternalError;
 use seampact_ir::{Direction, QueryWire, TypeUse};
-use seampact_json::{JsonValue, canonical_json};
+use seampact_json::{JsonValue, canonical_json, object_of};
 use seampact_oracle::RecordedCall;
 use seampact_pipeline::{PassError, TreeSchemaExampleIssue, TreeSchemaService};
 use serde::Serialize;
@@ -194,10 +194,7 @@ fn issues_of(answer: &JsonValue, key: &str) -> Result<Vec<TreeSchemaExampleIssue
 }
 
 fn member_of<'value>(value: &'value JsonValue, name: &str) -> Option<&'value JsonValue> {
-    match value {
-        JsonValue::Object(members) => members.get(name),
-        _ => None,
-    }
+    object_of(Some(value))?.get(name)
 }
 
 #[cfg(test)]

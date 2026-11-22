@@ -7,13 +7,12 @@ use seampact_ir::{
     Service, ServiceId,
 };
 use seampact_js::js_key_order;
-use seampact_json::{JsonObject, JsonValue};
+use seampact_json::{JsonObject, JsonValue, object_of, text_of};
 use seampact_pass_tree_shared::{
     TREE_NODES_MATURITIES, tree_nodes_member, tree_nodes_written_convention,
 };
 use seampact_pipeline::{convention_schema_leaves, pipeline_tree_nodes, pointer_below};
 
-use crate::api::text_of;
 use crate::pass::TreeNodesScope;
 
 const LINT_SEVERITIES: &[LintSeverity] = &[
@@ -50,14 +49,6 @@ enum AllowOwner {
 
 /// Adds the allows an owner writes at a pointer.
 type AddAllows<'add> = &'add mut dyn FnMut(Option<&JsonObject>, &str, AllowOwner);
-
-/// A mapping, `None` for any other value.
-fn object_of(value: Option<&JsonValue>) -> Option<&JsonObject> {
-    match value {
-        Some(JsonValue::Object(object)) => Some(object),
-        _ => None,
-    }
-}
 
 /// Writes `conventions`, `lint`, `packs` and `services` to the output.
 pub(crate) fn tree_nodes_api_settings(

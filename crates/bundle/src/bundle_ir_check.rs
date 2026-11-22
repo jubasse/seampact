@@ -6,7 +6,7 @@ use seampact_ir::{
     ContractIr, IR_REVISION, IR_VERSION, IrSupport, IrSupportCode, IrSupportValue, check_ir_support,
 };
 use seampact_ir_check::{IrCheckFailure, IrOpenReport, check_open_ir};
-use seampact_json::{JsonNumber, JsonValue, js_text_of, stringify_json};
+use seampact_json::{JsonNumber, JsonValue, js_text_of, object_of, stringify_json, text_of};
 
 use crate::untrusted_json::{UntrustedJson, parse_untrusted_json, utf8_text};
 use crate::{BundleApi, BundleError, BundleFailure, BundleFailureCode};
@@ -67,10 +67,9 @@ pub(crate) fn check_bundle_ir(api: &BundleApi, bytes: &[u8]) -> Result<BundleIrR
 }
 
 fn declaration_failure(api: &BundleApi, document: &JsonValue) -> Option<BundleFailure> {
-    let (ir_version, ir_revision) = match document {
-        JsonValue::Object(object) => (object.get("irVersion"), object.get("irRevision")),
-        _ => (None, None),
-    };
+    let declaration = object_of(Some(document));
+    let ir_version = declaration.and_then(|object| object.get("irVersion"));
+    let ir_revision = declaration.and_then(|object| object.get("irRevision"));
 
     if is_integer(ir_version, api.ir_version) && is_integer(ir_revision, api.ir_revision) {
         return None;
@@ -111,11 +110,11 @@ fn is_integer(declared: Option<&JsonValue>, expected: i64) -> bool {
 
 /// `quote`'s text of a value: a string as it is, any other value as `JSON.stringify` writes it.
 fn declared_text(declared: Option<&JsonValue>) -> String {
-    match declared {
-        Some(JsonValue::String(text)) => text.clone(),
-        Some(other) => stringify_json(other),
-        None => "undefined".to_owned(),
+    if let Some(text) = text_of(declared) {
+        return text.to_owned();
     }
+
+    declared.map_or_else(|| "undefined".to_owned(), stringify_json)
 }
 
 fn support_failure(api: &BundleApi, document: &JsonValue) -> Option<BundleFailure> {

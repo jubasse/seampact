@@ -1,8 +1,7 @@
 //! The rule that an opaque value of a scalar use is exact: `int64` and `decimal` are strings.
 
-use seampact_json::{JsonObject, JsonValue, stringify_json};
+use seampact_json::{JsonObject, JsonValue, is_text, items_of, js_text_of, stringify_json};
 
-use super::json_members::{is_string, items, text_of};
 use super::violation::{IrInvariantId, Violations};
 
 /// The largest integer a JavaScript number holds exactly, 2^53 - 1.
@@ -40,24 +39,24 @@ fn is_safe_integer(number: f64) -> bool {
 // Why an opaque value breaks the rule for its scalar use, if it does. A value of another JSON
 // type is the example check's to refuse, and nested values are not checked.
 fn inexact_number(type_use: &JsonObject, value: &JsonValue) -> Option<String> {
-    if !is_string(type_use.get("kind"), "scalar") || matches!(value, JsonValue::Null) {
+    if !is_text(type_use.get("kind"), "scalar") || matches!(value, JsonValue::Null) {
         return None;
     }
 
     let format = type_use.get("format");
 
-    if is_string(format, "int64") || is_string(format, "decimal") {
-        return inexact_text_number(&text_of(format), value);
+    if is_text(format, "int64") || is_text(format, "decimal") {
+        return inexact_text_number(&js_text_of(format), value);
     }
 
     let JsonValue::Number(number) = value else {
         return None;
     };
 
-    if is_string(type_use.get("type"), "integer") && !is_safe_integer(number.to_f64()) {
+    if is_text(type_use.get("type"), "integer") && !is_safe_integer(number.to_f64()) {
         return Some(format!(
             "The integer value {} is no safe integer: write a larger one as an int64.",
-            text_of(Some(value))
+            js_text_of(Some(value))
         ));
     }
 
@@ -113,7 +112,7 @@ pub(super) fn check_exact_numbers(
         values.push((format!("{pointer}/default"), default));
     }
 
-    for (index, example) in items(examples).iter().enumerate() {
+    for (index, example) in items_of(examples).iter().enumerate() {
         values.push((format!("{pointer}/examples/{index}"), example));
     }
 

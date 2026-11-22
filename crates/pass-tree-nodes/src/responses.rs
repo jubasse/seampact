@@ -8,14 +8,14 @@ use seampact_ir::{
     ResponseShape, TypeUse,
 };
 use seampact_js::js_key_order;
-use seampact_json::{JsonValue, js_integer_in_range};
+use seampact_json::{JsonValue, js_integer_in_range, text_of};
 use seampact_pass_tree_shared::{
     TREE_NODES_BATCH_OP, TREE_NODES_DELETE_OP, TREE_NODES_LIST_OP, tree_nodes_answered_use,
     tree_nodes_member, tree_nodes_op_owner, tree_nodes_op_shorthand, tree_nodes_text,
 };
 use seampact_pipeline::{NearestSetting, PassError, TreeNode, pointer_below};
 
-use crate::api::{text_of, tree_nodes_docs};
+use crate::api::tree_nodes_docs;
 use crate::diagnostics::{
     TreeNodesDiagnosticOptions, TreeNodesRule, tree_nodes_error, tree_nodes_node_origin,
     tree_nodes_report_once,

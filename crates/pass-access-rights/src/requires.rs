@@ -9,7 +9,7 @@ use seampact_ir::{
     KnownRightSubjectRef, OperationScope, Origin, Requirement, Right, RightRequirement, Rule,
     RuleId, RuleRequirement, ValueSource,
 };
-use seampact_json::{JsonNumber, JsonObject, JsonValue, canonical_json};
+use seampact_json::{JsonNumber, JsonObject, JsonValue, canonical_json, object_of};
 use seampact_pipeline::{OrderedSetting, PassError, TreeNodeId, pointer_below};
 
 use crate::catalogues::AccessRightsCatalogues;
@@ -20,9 +20,7 @@ use crate::params::{
     AccessRightsCheckedParams, AccessRightsParamsKind, AccessRightsParamsUse,
     access_rights_check_params,
 };
-use crate::read::{
-    access_rights_member, access_rights_object, access_rights_origin_of, access_rights_string,
-};
+use crate::read::{access_rights_member, access_rights_origin_of, access_rights_string};
 use crate::report::{
     AccessRightsProblem, AccessRightsRelated, AccessRightsReporter, AccessRightsRule,
 };
@@ -174,14 +172,12 @@ pub(crate) fn access_rights_check_requirement_entries(
     checks: &mut AccessRightsItemChecks,
 ) -> Result<(), PassError> {
     let raw = context.context.raw;
-    let Some(entries) =
-        access_rights_object(access_rights_member(Some(&raw.merged), "requirements"))
-    else {
+    let Some(entries) = object_of(access_rights_member(Some(&raw.merged), "requirements")) else {
         return Ok(());
     };
 
     for (name, item) in entries {
-        if access_rights_object(Some(item)).is_none() {
+        if object_of(Some(item)).is_none() {
             continue;
         }
 
@@ -260,7 +256,7 @@ fn derived_target(
     pointer: &str,
     route: &AccessRightsRoute,
 ) -> Result<Option<(RequirementKind, String)>, PassError> {
-    let require = access_rights_object(Some(require));
+    let require = object_of(Some(require));
 
     if let Some(rule) = access_rights_string(require, "rule") {
         return Ok(Some((RequirementKind::Rule, rule.to_owned())));
@@ -292,8 +288,7 @@ pub(crate) fn written_uses<'run>(
 ) -> Result<Vec<RequirementUse<'run>>, PassError> {
     let raw = context.context.raw;
     let inherited = context.context.inherited;
-    let requirements_catalogue =
-        access_rights_object(access_rights_member(Some(&raw.merged), "requirements"));
+    let requirements_catalogue = object_of(access_rights_member(Some(&raw.merged), "requirements"));
     let mut uses = Vec::new();
 
     // The inherited entries flatten each node's list in order, so an item's index counts within
@@ -314,7 +309,7 @@ pub(crate) fn written_uses<'run>(
 
         if let JsonValue::String(entry_name) = written.value {
             let item = access_rights_member(requirements_catalogue, entry_name)
-                .filter(|item| access_rights_object(Some(item)).is_some());
+                .filter(|item| object_of(Some(item)).is_some());
             let Some(item) = item else {
                 reporter.error(AccessRightsProblem {
                     rule: AccessRightsRule::RequirementEntry,
@@ -373,7 +368,7 @@ pub(crate) fn target_of(
     item: &JsonValue,
     pointer: &str,
 ) -> Result<RequirementTarget, InternalError> {
-    let item = access_rights_object(Some(item));
+    let item = object_of(Some(item));
 
     if let Some(right) = access_rights_string(item, "right") {
         return Ok(RequirementTarget {
@@ -482,8 +477,7 @@ pub(crate) fn check_target_and_params(
             name: use_of.target.clone(),
             holder: "the requirement".to_owned(),
             schema: params_schema.map(|schema| schema.as_str().to_owned()),
-            params: access_rights_member(access_rights_object(Some(use_of.item)), "params")
-                .cloned(),
+            params: access_rights_member(object_of(Some(use_of.item)), "params").cloned(),
             params_pointer: pointer_below(&use_of.item_pointer, &["params"]),
             use_pointer: use_of.item_pointer.clone(),
         },
@@ -498,7 +492,7 @@ pub(crate) fn check_bucket(
     use_of: &RequirementUse<'_>,
     rule: Option<&Rule>,
 ) -> bool {
-    let bucket = access_rights_string(access_rights_object(Some(use_of.item)), "bucket");
+    let bucket = access_rights_string(object_of(Some(use_of.item)), "bucket");
     let pointer = pointer_below(&use_of.item_pointer, &["bucket"]);
     let target = &use_of.target;
 
@@ -569,7 +563,7 @@ pub(crate) fn requirement_of(
     let entry = use_of.entry.clone();
     let origin = use_of.origin.clone();
     let derived_from = use_of.derived_from.clone();
-    let item = access_rights_object(Some(use_of.item));
+    let item = object_of(Some(use_of.item));
 
     if use_of.kind == RequirementKind::Rule {
         return Ok(Some(

@@ -30,7 +30,7 @@ src/calendar_date.rs#is_ir_calendar_date	packages/core/spec/src/ir/calendar-date
 src/calendar_date.rs#days_in_month	packages/core/spec/src/ir/calendar-date.ts#daysInMonth
 src/calendar_date.rs#is_leap_year	packages/core/spec/src/ir/calendar-date.ts#isLeapYear
 -	packages/core/spec/src/ir/invariants.ts#has	skip: JsonObject::contains_key
-src/invariants/json_members.rs#record	packages/core/spec/src/ir/invariants.ts#isRecord
+-	packages/core/spec/src/ir/invariants.ts#isRecord	skip: ported in seampact-json (crates/json/src/access.rs#object_of)
 -	packages/core/spec/src/ir/invariants.ts#parentOf	skip: one rsplit_once in object_rules.rs#check_value_source
 src/invariants/catalogue_refs.rs#unescape_segment	packages/core/spec/src/ir/invariants.ts#unescapeSegment
 src/invariants/open_values.rs#known_values	packages/core/spec/src/ir/invariants.ts#knownValues

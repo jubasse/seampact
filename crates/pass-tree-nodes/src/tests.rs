@@ -7,12 +7,12 @@ use seampact_ir::{
     FieldWireKind, KnownApiVersion, LabelApiVersion, PathApiVersion, PathVersionMode, QueryStyle,
     QueryWire, QueryWireKind, TypeUse,
 };
-use seampact_json::JsonValue;
+use seampact_json::{JsonValue, text_of};
 use seampact_pipeline::testing::{FakeSchemaService, HalfFixture};
 use seampact_pipeline::{DraftIr, PassError};
 
 use crate::api::{
-    is_literal_version_segment, leading_slash, literal_number, one_of, resolve_prefix, text_of,
+    is_literal_version_segment, leading_slash, literal_number, one_of, resolve_prefix,
     trim_trailing_slash,
 };
 use crate::field_wire::{tree_nodes_field_wire, tree_nodes_is_file_field};

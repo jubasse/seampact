@@ -1,8 +1,8 @@
 //! The rules of an error code: its role bindings, its retry header and its no-store.
 
-use seampact_json::{JsonObject, JsonValue};
+use seampact_json::{JsonObject, JsonValue, is_text, items_of, js_text_of, object_of, text_of};
 
-use super::json_members::{entry, is_string, items, js_number_of, record, string, text_of};
+use super::json_members::{entry, js_number_of};
 use super::violation::{IrInvariantId, Violations};
 use crate::instance_walk::{IrInstanceNode, walk_ir_instance};
 use crate::{
@@ -24,9 +24,9 @@ const TEMPLATE_REFERENCE: &str = "#/$defs/Template";
 
 /// The role bindings an error's `roles` member holds.
 pub(super) fn bindings_in(roles: Option<&JsonValue>) -> Vec<&JsonObject> {
-    items(roles)
+    items_of(roles)
         .iter()
-        .filter_map(|binding| record(Some(binding)))
+        .filter_map(|binding| object_of(Some(binding)))
         .collect()
 }
 
@@ -51,7 +51,7 @@ fn each_pointers(template: Option<&JsonValue>) -> Result<Vec<String>, IrError> {
             ..
         } = node
             && *tag == "kind"
-            && is_string(value.get("kind"), "each")
+            && is_text(value.get("kind"), "each")
         {
             found.push((*pointer).to_owned());
         }
@@ -66,7 +66,7 @@ fn declaration_of<'errors>(
     errors: &'errors JsonObject,
     code: Option<&JsonValue>,
 ) -> Option<&'errors JsonObject> {
-    record(entry(errors, code))
+    object_of(entry(errors, code))
 }
 
 /// A role binding has `params` if and only if its code declares params, and no `each` of its
@@ -94,7 +94,7 @@ pub(super) fn check_role_params(
                 &at,
                 format!(
                     "A role binding has 'params' if and only if the code '{}' declares params.",
-                    text_of(value.get("code"))
+                    js_text_of(value.get("code"))
                 ),
             );
         }
@@ -124,11 +124,11 @@ fn retry_param_of<'entries>(
     schema_entries: &'entries JsonObject,
     param: Option<&JsonValue>,
 ) -> Option<&'entries JsonObject> {
-    let schema = record(entry(schema_entries, declaration.get("params")));
+    let schema = object_of(entry(schema_entries, declaration.get("params")));
 
-    items(schema.and_then(|schema| schema.get("properties")))
+    items_of(schema.and_then(|schema| schema.get("properties")))
         .iter()
-        .filter_map(|property| record(Some(property)))
+        .filter_map(|property| object_of(Some(property)))
         .find(|property| property.get("name") == param)
 }
 
@@ -145,11 +145,11 @@ fn retry_param_problem(property: Option<&JsonObject>) -> Option<String> {
     }
 
     let empty = JsonObject::new();
-    let type_use = record(property.get("type")).unwrap_or(&empty);
-    let refinements = record(type_use.get("refinements")).unwrap_or(&empty);
+    let type_use = object_of(property.get("type")).unwrap_or(&empty);
+    let refinements = object_of(type_use.get("refinements")).unwrap_or(&empty);
 
-    if !is_string(type_use.get("kind"), "scalar")
-        || !is_string(type_use.get("type"), "integer")
+    if !is_text(type_use.get("kind"), "scalar")
+        || !is_text(type_use.get("type"), "integer")
         || type_use.contains_key("format")
     {
         return Some("an integer scalar".to_owned());
@@ -177,12 +177,12 @@ pub(super) fn check_retry_header(
     schema_entries: &JsonObject,
     out: &mut Violations,
 ) {
-    let Some(header) = record(value.get("retryHeader")) else {
+    let Some(header) = object_of(value.get("retryHeader")) else {
         return;
     };
     let at = format!("{pointer}/retryHeader");
     let declaration = declaration_of(errors, value.get("code"));
-    let http = record(declaration.and_then(|declaration| declaration.get("http")));
+    let http = object_of(declaration.and_then(|declaration| declaration.get("http")));
     let status_is_retry = matches!(
         http.and_then(|http| http.get("status")),
         Some(JsonValue::Number(status)) if status.to_f64() == RETRY_STATUS
@@ -194,14 +194,14 @@ pub(super) fn check_retry_header(
             &at,
             format!(
                 "A retry header sits on a {RETRY_STATUS} code only, not on '{}'.",
-                text_of(value.get("code"))
+                js_text_of(value.get("code"))
             ),
         );
     }
 
-    let derived_from = record(header.get("derivedFrom"));
+    let derived_from = object_of(header.get("derivedFrom"));
 
-    if !is_string(
+    if !is_text(
         derived_from.and_then(|derived| derived.get("derivation")),
         RETRY_DERIVATION,
     ) {
@@ -223,7 +223,7 @@ pub(super) fn check_retry_header(
             &at,
             format!(
                 "The retry header's param '{}' is {problem}.",
-                text_of(header.get("param"))
+                js_text_of(header.get("param"))
             ),
         );
     }
@@ -238,7 +238,7 @@ pub(super) fn check_error_sensitive_no_store(
     out: &mut Violations,
 ) {
     let no_store = matches!(declaration.get("noStore"), Some(JsonValue::Bool(true)));
-    let Some(params) = string(declaration.get("params")) else {
+    let Some(params) = text_of(declaration.get("params")) else {
         return;
     };
 

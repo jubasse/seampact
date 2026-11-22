@@ -27,7 +27,7 @@
 -	packages/core/compiler/src/passes/tree/nodes/raw.ts#treeNodesTagHeader	skip: ported in seampact-pass-tree-shared (crates/pass-tree-shared/src/raw.rs#tree_nodes_tag_header)
 -	packages/core/compiler/src/passes/tree/nodes/relays.ts#treeNodesRelayOrigin	skip: ported in seampact-pass-tree-shared (crates/pass-tree-shared/src/relays.rs#tree_nodes_relay_origin)
 src/api.rs#one_of	packages/core/compiler/src/passes/tree/nodes/api.ts#oneOf
-src/api.rs#text_of	packages/core/compiler/src/passes/tree/nodes/api.ts#textOf
+-	packages/core/compiler/src/passes/tree/nodes/api.ts#textOf	skip: ported in seampact-json (crates/json/src/access.rs#text_of)
 src/api.rs#tree_nodes_api	packages/core/compiler/src/passes/tree/nodes/api.ts#treeNodesApi
 src/api.rs#required_origin	packages/core/compiler/src/passes/tree/nodes/api.ts#requiredOrigin
 src/api.rs#version_of	packages/core/compiler/src/passes/tree/nodes/api.ts#versionOf
@@ -75,7 +75,7 @@ src/formats.rs#declared_format	packages/core/compiler/src/passes/tree/nodes/form
 src/formats.rs#core_bare	packages/core/compiler/src/passes/tree/nodes/formats.ts#coreBare
 src/formats.rs#format_of	packages/core/compiler/src/passes/tree/nodes/formats.ts#formatOf
 src/formats.rs#tree_nodes_absent	packages/core/compiler/src/passes/tree/nodes/formats.ts#treeNodesAbsent
--	packages/core/compiler/src/passes/tree/nodes/formats.ts#textOf	merged: src/api.rs#text_of
+-	packages/core/compiler/src/passes/tree/nodes/formats.ts#textOf	skip: ported in seampact-json (crates/json/src/access.rs#text_of)
 src/formats.rs#tree_nodes_named_templates	packages/core/compiler/src/passes/tree/nodes/formats.ts#treeNodesNamedTemplates
 src/formats.rs#new	packages/core/compiler/src/passes/tree/nodes/formats.ts#FormatReader.constructor
 src/formats.rs#success	packages/core/compiler/src/passes/tree/nodes/formats.ts#FormatReader.success

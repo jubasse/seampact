@@ -168,25 +168,16 @@ fn member<'tree>(object: &'tree JsonObject, key: &str) -> Result<&'tree JsonValu
 }
 
 fn list<'tree>(object: &'tree JsonObject, key: &str) -> Result<&'tree [JsonValue], InternalError> {
-    match member(object, key)? {
-        JsonValue::Array(items) => Ok(items),
-        JsonValue::Null
-        | JsonValue::Bool(_)
-        | JsonValue::Number(_)
-        | JsonValue::String(_)
-        | JsonValue::Object(_) => Err(shape_error(&format!("the member '{key}'"))),
-    }
+    member(object, key)?
+        .as_items()
+        .ok_or_else(|| shape_error(&format!("the member '{key}'")))
 }
 
 fn string(object: &JsonObject, key: &str) -> Result<String, InternalError> {
-    match member(object, key)? {
-        JsonValue::String(text) => Ok(text.clone()),
-        JsonValue::Null
-        | JsonValue::Bool(_)
-        | JsonValue::Number(_)
-        | JsonValue::Array(_)
-        | JsonValue::Object(_) => Err(shape_error(&format!("the member '{key}'"))),
-    }
+    member(object, key)?
+        .as_text()
+        .map(str::to_owned)
+        .ok_or_else(|| shape_error(&format!("the member '{key}'")))
 }
 
 fn integer_member(
