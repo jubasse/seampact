@@ -13,14 +13,16 @@ use seampact_ir::{
     RuleProof, Scope, ScopeId, ScopeSubject, TypeUse,
 };
 use seampact_js::{cmp_utf16, regexp_source};
-use seampact_json::{JsonObject, JsonValue, js_integer_in_range, stringify_json};
+use seampact_json::{
+    JsonObject, JsonValue, js_integer_in_range, object_of, stringify_json, text_of,
+};
 use seampact_naming::{NameSource, SegmentsOptions, SegmentsResult, segments_of, split_name};
 use seampact_pass_tree_schemas::{TreeSchemasPatternResult, tree_schemas_normalize_pattern};
 use seampact_pipeline::{ConventionReading, PassError, parse_duration, pointer_below};
 
 use crate::read::{
     access_rights_docs, access_rights_entries, access_rights_extensions, access_rights_member,
-    access_rights_object, access_rights_origin_of, access_rights_schema_name, access_rights_string,
+    access_rights_origin_of, access_rights_schema_name, access_rights_string,
     access_rights_strings,
 };
 use crate::report::{
@@ -147,7 +149,7 @@ pub(crate) fn access_rights_catalogues(
 
         rights.insert(RightId::new(id.to_owned()), right);
 
-        let subject = access_rights_object(access_rights_member(Some(declaration), "subject"));
+        let subject = object_of(access_rights_member(Some(declaration), "subject"));
 
         if let Some(id_name) = access_rights_schema_name(access_rights_member(subject, "id")) {
             right_id_names.insert(id.to_owned(), id_name);
@@ -204,7 +206,7 @@ pub(crate) fn access_rights_catalogues(
 
 // The keys of a catalogue member, refused entries included.
 fn names_of(merged: Option<&JsonObject>, catalogue: &str) -> HashSet<String> {
-    access_rights_object(access_rights_member(merged, catalogue))
+    object_of(access_rights_member(merged, catalogue))
         .map(|entries| entries.keys().cloned().collect())
         .unwrap_or_default()
 }
@@ -217,10 +219,7 @@ pub(crate) fn forbidden_code_of(context: &AccessRightsContext) -> Result<String,
         .conventions
         .get("errors.derived.forbidden")?
         .map(|reading| reading.value);
-    let code = match binding {
-        Some(JsonValue::String(code)) => Some(code.as_str()),
-        other => access_rights_string(access_rights_object(other), "code"),
-    };
+    let code = text_of(binding).or_else(|| access_rights_string(object_of(binding), "code"));
 
     code.map(str::to_owned).ok_or_else(|| {
         let written = binding.map_or_else(|| "undefined".to_owned(), stringify_json);
@@ -376,7 +375,7 @@ pub(crate) fn right_subject_of(
         scope_names,
     } = options;
     let pointer = pointer_below("/rights", &[id]);
-    let subject = access_rights_object(access_rights_member(Some(declaration), "subject"));
+    let subject = object_of(access_rights_member(Some(declaration), "subject"));
     let scope = access_rights_string(subject, "scope");
     let resource = access_rights_string(subject, "resource");
 
@@ -654,7 +653,7 @@ pub(crate) fn rule_of(
     declaration: &JsonObject,
 ) -> Result<Option<Rule>, PassError> {
     let pointer = pointer_below("/rules", &[id]);
-    let proof = access_rights_object(access_rights_member(Some(declaration), "proof"));
+    let proof = object_of(access_rights_member(Some(declaration), "proof"));
     let proof_written = access_rights_member(Some(declaration), "proof").is_some();
     let placement = access_rights_string(proof, "in");
     let proof_name = access_rights_string(proof, "name");
@@ -759,12 +758,9 @@ pub(crate) fn within_of<'run>(
     scope: &str,
 ) -> Option<&'run str> {
     let raw = context.context.raw;
-    let scopes = access_rights_object(access_rights_member(Some(&raw.merged), "scopes"));
+    let scopes = object_of(access_rights_member(Some(&raw.merged), "scopes"));
 
-    access_rights_string(
-        access_rights_object(access_rights_member(scopes, scope)),
-        "within",
-    )
+    access_rights_string(object_of(access_rights_member(scopes, scope)), "within")
 }
 
 /// Follows `within` from a scope up to a root scope: each parent must be declared, and the chain

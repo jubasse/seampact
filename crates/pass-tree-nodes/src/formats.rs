@@ -13,14 +13,13 @@ use seampact_ir::{
     SuccessShapes, Template, TypeUse, ValueSource, ValueSourceIn, WireFormat,
 };
 use seampact_js::js_key_order;
-use seampact_json::{JsonValue, stringify_json};
+use seampact_json::{JsonValue, stringify_json, text_of};
 use seampact_pass_tree_shared::{
     tree_nodes_answered_use, tree_nodes_member, tree_nodes_origin_at, tree_nodes_schema,
 };
 use seampact_pipeline::{DraftOperation, PassError, pointer_below};
 use seampact_templates::{template_slots, template_uses};
 
-use crate::api::text_of;
 use crate::diagnostics::{
     TreeNodesDiagnosticOptions, TreeNodesRule, tree_nodes_error, tree_nodes_node_origin,
     tree_nodes_report_once,

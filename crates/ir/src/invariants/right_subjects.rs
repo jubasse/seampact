@@ -1,8 +1,8 @@
 //! The rules of the subject of a field right and of a sort key.
 
-use seampact_json::JsonObject;
+use seampact_json::{JsonObject, is_text, js_text_of, object_of, text_of};
 
-use super::json_members::{entry, is_string, record, string, text_of};
+use super::json_members::entry;
 use super::open_values::is_known;
 use super::violation::{IrInvariantId, Violations};
 use crate::{IrError, union_tags};
@@ -22,9 +22,9 @@ fn subject_needed(
     rights: &JsonObject,
     right: Option<&seampact_json::JsonValue>,
 ) -> Result<Option<bool>, IrError> {
-    let declaration = record(entry(rights, right));
-    let subject = record(declaration.and_then(|declaration| declaration.get("subject")));
-    let Some(kind) = string(subject.and_then(|subject| subject.get("kind"))) else {
+    let declaration = object_of(entry(rights, right));
+    let subject = object_of(declaration.and_then(|declaration| declaration.get("subject")));
+    let Some(kind) = text_of(subject.and_then(|subject| subject.get("kind"))) else {
         return Ok(None);
     };
     let Some(union) = union_tags(RIGHT_SUBJECT_UNION) else {
@@ -55,7 +55,7 @@ fn check_subject_presence(
         return Ok(());
     }
 
-    let right = text_of(value.get("right"));
+    let right = js_text_of(value.get("right"));
     let consequence = if needed {
         "reads a subject: 'subject' is required"
     } else {
@@ -97,7 +97,7 @@ pub(super) fn check_field_right(
         .iter()
         .any(|member| value.contains_key(member));
 
-    if !is_string(value.get("direction"), "output") || excluded {
+    if !is_text(value.get("direction"), "output") || excluded {
         out.fail(
             IrInvariantId::FieldRightAlways,
             pointer,
@@ -134,10 +134,10 @@ pub(super) fn check_sort_key(
 
     check_subject_presence(value, pointer, rights, IrInvariantId::SortKeyRight, out)?;
 
-    let subject = record(value.get("subject"));
-    let source = record(subject.and_then(|subject| subject.get("source")));
+    let subject = object_of(value.get("subject"));
+    let source = object_of(subject.and_then(|subject| subject.get("source")));
 
-    if is_string(source.and_then(|source| source.get("in")), "holderField") {
+    if is_text(source.and_then(|source| source.get("in")), "holderField") {
         out.fail(
             IrInvariantId::SortKeyRight,
             &format!("{pointer}/subject/source"),

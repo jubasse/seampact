@@ -1,10 +1,9 @@
 //! The entry point: every invariant violation of an IR document.
 
-use seampact_json::{JsonObject, JsonValue};
+use seampact_json::{JsonObject, JsonValue, items_of, object_of};
 
 use super::catalogue_refs::check_catalogue_id;
 use super::decode::decode_member;
-use super::json_members::{items, record};
 use super::object_rules::{DocumentView, ObjectDefinitions, check_object};
 use super::open_values::catalogues;
 use super::operation::OperationScope;
@@ -28,8 +27,8 @@ const ROOT_REFERENCE: &str = "#/$defs/ContractIR";
 /// embedded schema files are broken.
 pub fn check_ir_invariants(ir: &JsonValue) -> Result<Vec<IrInvariantViolation>, IrError> {
     let empty = JsonObject::new();
-    let document = record(Some(ir)).unwrap_or(&empty);
-    let schema_entries = record(document.get("schemas")).unwrap_or(&empty);
+    let document = object_of(Some(ir)).unwrap_or(&empty);
+    let schema_entries = object_of(document.get("schemas")).unwrap_or(&empty);
     let schemas: IrMap<SchemaId, Schema> = match document.get("schemas") {
         Some(value @ JsonValue::Object(_)) => decode_member(Some(value))?,
         _ => IrMap::new(),
@@ -37,13 +36,13 @@ pub fn check_ir_invariants(ir: &JsonValue) -> Result<Vec<IrInvariantViolation>, 
     let view = DocumentView {
         document,
         schema_entries,
-        rights: record(document.get("rights")).unwrap_or(&empty),
-        errors: record(document.get("errors")).unwrap_or(&empty),
+        rights: object_of(document.get("rights")).unwrap_or(&empty),
+        errors: object_of(document.get("errors")).unwrap_or(&empty),
         operation: OperationScope {
-            formats: record(document.get("formats")).unwrap_or(&empty),
-            operations: items(document.get("operations")),
-            api_id: record(document.get("api")).and_then(|api| api.get("id")),
-            schemes: record(document.get("schemes")).unwrap_or(&empty),
+            formats: object_of(document.get("formats")).unwrap_or(&empty),
+            operations: items_of(document.get("operations")),
+            api_id: object_of(document.get("api")).and_then(|api| api.get("id")),
+            schemes: object_of(document.get("schemes")).unwrap_or(&empty),
             schemas: &schemas,
         },
     };

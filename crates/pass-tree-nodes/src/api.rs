@@ -8,7 +8,7 @@ use seampact_ir::{
     PathApiVersion, PathVersion, PathVersionMode, RightId, Surface, SurfaceId,
 };
 use seampact_js::{FiniteNumber, js_key_order};
-use seampact_json::{JsonObject, JsonValue, stringify_json};
+use seampact_json::{JsonObject, JsonValue, stringify_json, text_of};
 use seampact_naming::split_name;
 use seampact_pass_tree_shared::{TREE_NODES_MATURITIES, tree_nodes_member};
 use seampact_pipeline::{ApiDeclaration, pointer_below};
@@ -80,14 +80,6 @@ pub(crate) fn one_of<T: Clone>(
         .iter()
         .find(|candidate| text_of_candidate(candidate) == text)
         .cloned()
-}
-
-/// A written string, `None` for any other value.
-pub(crate) fn text_of(value: Option<&JsonValue>) -> Option<&str> {
-    match value {
-        Some(JsonValue::String(text)) => Some(text),
-        _ => None,
-    }
 }
 
 pub(crate) fn tree_nodes_api(

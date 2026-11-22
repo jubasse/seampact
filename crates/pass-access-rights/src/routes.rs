@@ -1,5 +1,6 @@
 //! The routes of the draft with their tree nodes, and the api facts the access checks read.
 
+use seampact_json::object_of;
 use std::collections::HashMap;
 
 use seampact_diagnostics::InternalError;
@@ -8,7 +9,7 @@ use seampact_pipeline::{
     DraftIr, DraftOperation, OperationIndex, TreeNode, TreeNodeId, TreeNodeKind, TreeNodes,
 };
 
-use crate::read::{access_rights_member, access_rights_object, access_rights_string};
+use crate::read::{access_rights_member, access_rights_string};
 use crate::schema_use::AccessRightsContext;
 
 /// How a route is reached (ADR 0002 section 9): an identity is required, optional, or none.
@@ -87,11 +88,11 @@ pub(crate) fn access_rights_operation_of<'draft>(
 
 /// The api's kind and caller, from the merged raw tree.
 pub(crate) fn access_rights_api(context: &AccessRightsContext) -> AccessRightsApi {
-    let api = access_rights_object(access_rights_member(
+    let api = object_of(access_rights_member(
         Some(&context.context.raw.merged),
         "api",
     ));
-    let caller = access_rights_object(access_rights_member(api, "caller"));
+    let caller = object_of(access_rights_member(api, "caller"));
     let identity = access_rights_string(caller, "identity");
     let right = access_rights_string(caller, "right");
 

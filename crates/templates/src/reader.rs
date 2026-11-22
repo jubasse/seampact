@@ -7,7 +7,7 @@ use seampact_ir::{
     TextPart, TextTemplate,
 };
 use seampact_js::js_key_order;
-use seampact_json::{JsonObject, JsonValue};
+use seampact_json::{JsonObject, JsonValue, pointer_below};
 
 use crate::{
     checks::{Reading, SlotStand, check_slot, check_stand, refuse_syntax},
@@ -190,7 +190,7 @@ fn object_template(
     let mut merge: Option<String> = None;
 
     for (key, member) in js_key_order(value.iter()) {
-        let member_pointer = pointer_below(pointer, key);
+        let member_pointer = pointer_below(pointer, &[key]);
 
         if key == MERGE_KEY {
             merge = slot_name(reading, Some(member), &member_pointer, SlotKey::Merge);
@@ -213,10 +213,6 @@ fn object_template(
         members,
         merge: merge.map(Slot::new),
     }))
-}
-
-fn pointer_below(pointer: &str, key: &str) -> String {
-    format!("{pointer}/{}", key.replace('~', "~0").replace('/', "~1"))
 }
 
 fn member_name(reading: &mut Reading<'_, '_>, key: &str, pointer: &str) -> Option<MemberName> {
@@ -270,7 +266,7 @@ fn each_template(
     let of = slot_name(
         reading,
         Some(each_value),
-        &pointer_below(pointer, EACH_KEY),
+        &pointer_below(pointer, &[EACH_KEY]),
         SlotKey::Each,
     );
     let mut inner = Reading {
@@ -278,7 +274,7 @@ fn each_template(
         in_each: true,
         faults: 0,
     };
-    let each_as = template_of(&mut inner, as_value, &pointer_below(pointer, AS_KEY));
+    let each_as = template_of(&mut inner, as_value, &pointer_below(pointer, &[AS_KEY]));
     let inner_faults = inner.faults;
 
     reading.faults += inner_faults;

@@ -7,12 +7,12 @@ use seampact_ir::{
     KnownSchemaRef, KnownTypeUseRef, ObjectSchema, OperationScope, SortKey, ValueSource,
     ValueSourceIn,
 };
-use seampact_json::{JsonValue, canonical_json};
+use seampact_json::{JsonValue, canonical_json, object_of};
 use seampact_pipeline::{DraftOperation, PassError, TreeNodeKind, json_at_pointer, pointer_below};
 
 use crate::catalogues::AccessRightsCatalogues;
 use crate::field_subjects::access_rights_id_schema_of;
-use crate::read::{access_rights_object, access_rights_string};
+use crate::read::access_rights_string;
 use crate::report::{
     AccessRightsProblem, AccessRightsRelated, AccessRightsReporter, AccessRightsRule,
 };
@@ -354,7 +354,7 @@ pub(crate) fn written_right(
     };
     let merged = JsonValue::Object(context.context.raw.merged.clone());
     let entry = json_at_pointer(&merged, &origin.pointer);
-    let Some(right) = access_rights_string(access_rights_object(entry), "right") else {
+    let Some(right) = access_rights_string(object_of(entry), "right") else {
         return WrittenRight::Absent;
     };
     let pointer = pointer_below(&origin.pointer, &["right"]);

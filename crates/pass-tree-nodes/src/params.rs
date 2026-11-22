@@ -7,11 +7,10 @@ use seampact_ir::{
     Direction, IgnoreUnknownQuery, KnownUnknownQuery, Origin, Param, Params, Reason,
     RefuseUnknownQuery, TypeUse, UnknownQuery,
 };
-use seampact_json::{JsonValue, stringify_json};
+use seampact_json::{JsonValue, stringify_json, text_of};
 use seampact_pass_tree_shared::{tree_nodes_member, tree_nodes_tag_header};
 use seampact_pipeline::{NearestSetting, OrderedSetting, PassError, TreeNodeId, TreeNodeKind};
 
-use crate::api::text_of;
 use crate::diagnostics::{
     TreeNodesDiagnosticOptions, TreeNodesRule, tree_nodes_error, tree_nodes_locate,
     tree_nodes_node_origin, tree_nodes_report_once,

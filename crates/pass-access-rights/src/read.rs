@@ -4,7 +4,9 @@ use indexmap::IndexMap;
 use seampact_diagnostics::InternalError;
 use seampact_ir::{Docs, ExtensionKey, ExtensionPrefix, Extensions, IrMap, Origin};
 use seampact_js::js_key_order;
-use seampact_json::{JsonObject, JsonValue, json_at_object, pointer_segments};
+use seampact_json::{
+    JsonObject, JsonValue, items_of, json_at_object, object_of, pointer_segments, text_of,
+};
 use seampact_pass_tree_shared::extension_key_parts;
 
 use crate::schema_use::AccessRightsContext;
@@ -22,14 +24,6 @@ impl From<AccessRightsDocs> for Docs {
             summary: docs.summary,
             description: docs.description,
         }
-    }
-}
-
-/// The value as a mapping; `None` for another type or an absent value.
-pub(crate) fn access_rights_object(value: Option<&JsonValue>) -> Option<&JsonObject> {
-    match value {
-        Some(JsonValue::Object(object)) => Some(object),
-        _ => None,
     }
 }
 
@@ -57,24 +51,14 @@ pub(crate) fn access_rights_string<'raw>(
     object: Option<&'raw JsonObject>,
     key: &str,
 ) -> Option<&'raw str> {
-    match access_rights_member(object, key) {
-        Some(JsonValue::String(text)) => Some(text.as_str()),
-        _ => None,
-    }
+    text_of(access_rights_member(object, key))
 }
 
 /// The strings of a list member, in written order; an empty list when absent.
 pub(crate) fn access_rights_strings(object: Option<&JsonObject>, key: &str) -> Vec<String> {
-    let Some(JsonValue::Array(items)) = access_rights_member(object, key) else {
-        return Vec::new();
-    };
-
-    items
+    items_of(access_rights_member(object, key))
         .iter()
-        .filter_map(|item| match item {
-            JsonValue::String(text) => Some(text.clone()),
-            _ => None,
-        })
+        .filter_map(|item| text_of(Some(item)).map(str::to_owned))
         .collect()
 }
 
@@ -83,15 +67,13 @@ pub(crate) fn access_rights_entries<'raw>(
     object: Option<&'raw JsonObject>,
     key: &str,
 ) -> Vec<(&'raw str, &'raw JsonObject)> {
-    let Some(catalogue) = access_rights_object(access_rights_member(object, key)) else {
+    let Some(catalogue) = object_of(access_rights_member(object, key)) else {
         return Vec::new();
     };
 
     catalogue
         .iter()
-        .filter_map(|(name, value)| {
-            access_rights_object(Some(value)).map(|entry| (name.as_str(), entry))
-        })
+        .filter_map(|(name, value)| object_of(Some(value)).map(|entry| (name.as_str(), entry)))
         .collect()
 }
 
@@ -156,7 +138,7 @@ pub(crate) fn access_rights_schema_name(value: Option<&JsonValue>) -> Option<Str
         return Some(name.clone());
     }
 
-    let object = access_rights_object(value)?;
+    let object = object_of(value)?;
     let reference = access_rights_string(Some(object), "$ref")?;
 
     (object.len() == 1).then(|| reference.to_owned())
@@ -183,7 +165,7 @@ mod tests {
     #[test]
     fn member_reads_own_keys_and_nothing_from_a_non_mapping() {
         let value = mapping_of(vec![("__proto__", text("own")), ("name", text("x"))]);
-        let object = access_rights_object(Some(&value));
+        let object = object_of(Some(&value));
 
         assert_eq!(access_rights_string(object, "__proto__"), Some("own"));
         assert_eq!(access_rights_string(object, "missing"), None);
@@ -199,7 +181,7 @@ mod tests {
             ("alpha", mapping_of(vec![])),
         ]);
         let value = mapping_of(vec![("rights", catalogue)]);
-        let entries = access_rights_entries(access_rights_object(Some(&value)), "rights");
+        let entries = access_rights_entries(object_of(Some(&value)), "rights");
         let names: Vec<&str> = entries.iter().map(|(name, _)| *name).collect();
 
         assert_eq!(names, ["zeta", "alpha"]);
@@ -251,7 +233,7 @@ mod tests {
             "errors",
             JsonValue::Array(vec![text("a"), JsonValue::Null, text("b")]),
         )]);
-        let object = access_rights_object(Some(&value));
+        let object = object_of(Some(&value));
 
         assert_eq!(access_rights_strings(object, "errors"), ["a", "b"]);
         assert_eq!(

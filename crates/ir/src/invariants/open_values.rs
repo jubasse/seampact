@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use seampact_json::JsonValue;
+use seampact_json::{JsonValue, object_of, text_of};
 
 use crate::IrError;
 use crate::instance_walk::{KNOWN_VALUES_KEYWORD, ir_definition};
@@ -42,16 +42,10 @@ pub(super) fn known_values(
     definition: &str,
     member: &str,
 ) -> Result<&'static [JsonValue], IrError> {
-    let properties = match ir_definition(definition)?.and_then(|node| node.get("properties")) {
-        Some(JsonValue::Object(properties)) => Some(properties),
-        _ => None,
-    };
-    let mut node = match properties.and_then(|properties| properties.get(member)) {
-        Some(JsonValue::Object(node)) => Some(node),
-        _ => None,
-    };
+    let properties = object_of(ir_definition(definition)?.and_then(|node| node.get("properties")));
+    let mut node = object_of(properties.and_then(|properties| properties.get(member)));
 
-    while let Some(JsonValue::String(reference)) = node.and_then(|node| node.get("$ref")) {
+    while let Some(reference) = text_of(node.and_then(|node| node.get("$ref"))) {
         node = ir_definition(last_segment(reference))?;
     }
 
@@ -67,7 +61,7 @@ pub(super) fn is_known(
     member: &str,
     value: Option<&JsonValue>,
 ) -> Result<bool, IrError> {
-    let Some(JsonValue::String(text)) = value else {
+    let Some(text) = text_of(value) else {
         return Ok(false);
     };
     let known = known_values(definition, member)?;
