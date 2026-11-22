@@ -10,7 +10,7 @@ src/change_sink.rs#sorted_changes	packages/core/diff/src/walk/sink.ts#ChangeSink
 src/change_sink.rs#emit_at	packages/core/diff/src/walk/sink.ts#ChangeSink.#emitAt
 src/change_sink.rs#cause_pack	packages/core/diff/src/walk/sink.ts#ChangeSink.#causePack
 src/walk_api.rs#changed_pack_names	packages/core/diff/src/walk/api.ts#changedPackNames
-src/walk_declarations.rs#from_name	packages/core/diff/src/walk/declarations.ts#isDeclarationCatalogue
+-	packages/core/diff/src/walk/declarations.ts#isDeclarationCatalogue	skip: always true over the own catalogue table; the Rust walk iterates every catalogue
 src/walk_reach.rs#schema_reach_key	packages/core/diff/src/walk/reach.ts#schemaReachKey
 src/walk_reach.rs#declaration_reach_key	packages/core/diff/src/walk/reach.ts#declarationReachKey
 src/walk_reach.rs#build_reach_index	packages/core/diff/src/walk/reach.ts#buildReachIndex
@@ -155,23 +155,23 @@ src/walk_api.rs#compare_surface	packages/core/diff/src/walk/api.ts#compareSurfac
 src/walk_body.rs#compare_input_fields	packages/core/diff/src/walk/operations.ts#compareInputFields
 src/walk_type_use.rs#compare_schema_ref	packages/core/diff/src/walk/type-use.ts#compareSchemaRef
 src/walk_type_use.rs#compare_file_use	packages/core/diff/src/walk/type-use.ts#compareFileUse
-src/walk_type_use.rs#compare_enum_use	packages/core/diff/src/walk/type-use.ts#compareEnumUse	pending: brief 5
--	packages/core/diff/src/walk/type-use.ts#compareNarrowingReason	pending: brief 5
-src/walk_type_use.rs#compare_content	packages/core/diff/src/walk/type-use.ts#compareContent	pending: brief 5
-src/walk_type_use.rs#compare_array_use	packages/core/diff/src/walk/type-use.ts#compareArrayUse	pending: brief 5
-src/walk_type_use.rs#compare_multiple_of	packages/core/diff/src/walk/type-use.ts#compareMultipleOf	pending: brief 5
-src/walk_declarations.rs#compare_guest	packages/core/diff/src/walk/declarations.ts#compareGuest	pending: brief 5
-src/walk_declarations.rs#compare_principal	packages/core/diff/src/walk/declarations.ts#comparePrincipal	pending: brief 5
-src/walk_declarations.rs#compare_identity_headers	packages/core/diff/src/walk/declarations.ts#compareIdentityHeaders	pending: brief 5
-src/walk_catalogue.rs#compare_scalar_catalogue	packages/core/diff/src/walk/catalogue.ts#compareScalarCatalogue	pending: brief 5
-src/walk_catalogue.rs#compare_map_schema	packages/core/diff/src/walk/catalogue.ts#compareMapSchema	pending: brief 5
+src/walk_type_use.rs#compare_enum_use	packages/core/diff/src/walk/type-use.ts#compareEnumUse
+src/walk_type_use.rs#compare_narrowing_reason	packages/core/diff/src/walk/type-use.ts#compareNarrowingReason
+src/walk_type_use.rs#compare_content	packages/core/diff/src/walk/type-use.ts#compareContent
+src/walk_type_use.rs#compare_array_use	packages/core/diff/src/walk/type-use.ts#compareArrayUse
+src/walk_type_use.rs#compare_multiple_of	packages/core/diff/src/walk/type-use.ts#compareMultipleOf
+src/walk_declarations.rs#compare_guest	packages/core/diff/src/walk/declarations.ts#compareGuest
+src/walk_declarations.rs#compare_principal	packages/core/diff/src/walk/declarations.ts#comparePrincipal
+src/walk_declarations.rs#compare_identity_headers	packages/core/diff/src/walk/declarations.ts#compareIdentityHeaders
+src/walk_catalogue.rs#compare_scalar_catalogue	packages/core/diff/src/walk/catalogue.ts#compareScalarCatalogue
+src/walk_catalogue.rs#compare_map_schema	packages/core/diff/src/walk/catalogue.ts#compareMapSchema
 src/walk_behaviour.rs#lifetime_case	packages/core/diff/src/walk/behaviour.ts#lifetimeCase
-src/walk_behaviour.rs#compare_sort_keys	packages/core/diff/src/walk/behaviour.ts#compareSortKeys	pending: brief 5
+src/walk_behaviour.rs#compare_sort_keys	packages/core/diff/src/walk/behaviour.ts#compareSortKeys
 src/walk_reach.rs#scalar_reach_key	packages/core/diff/src/walk/reach.ts#scalarReachKey
-src/walk_same_wire.rs#is_same_wire_schema	packages/core/diff/src/walk/same-wire.ts#isSameWireSchema	pending: brief 5
--	packages/core/diff/src/walk/same-wire.ts#isSameWireEnum	pending: brief 5
--	packages/core/diff/src/walk/same-wire.ts#sameSchemaIds	pending: brief 5
--	packages/core/diff/src/walk/same-wire.ts#sameEnumIds	pending: brief 5
--	packages/core/diff/src/walk/same-wire.ts#sameWire	pending: brief 5
--	packages/core/diff/src/walk/same-wire.ts#sameArrays	pending: brief 5
--	packages/core/diff/src/walk/decimal.ts#isDecimalMultiple	pending: brief 5
+src/walk_same_wire.rs#is_same_wire_schema	packages/core/diff/src/walk/same-wire.ts#isSameWireSchema
+src/walk_same_wire.rs#is_same_wire_enum	packages/core/diff/src/walk/same-wire.ts#isSameWireEnum
+src/walk_same_wire.rs#same_schema_ids	packages/core/diff/src/walk/same-wire.ts#sameSchemaIds
+src/walk_same_wire.rs#same_enum_ids	packages/core/diff/src/walk/same-wire.ts#sameEnumIds
+src/walk_same_wire.rs#same_wire	packages/core/diff/src/walk/same-wire.ts#sameWire
+src/walk_same_wire.rs#same_arrays	packages/core/diff/src/walk/same-wire.ts#sameArrays
+src/walk_decimal.rs#is_decimal_multiple	packages/core/diff/src/walk/decimal.ts#isDecimalMultiple

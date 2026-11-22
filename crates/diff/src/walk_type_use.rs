@@ -4,22 +4,21 @@ use std::cmp::Ordering;
 
 use seampact_diff_table::{DiffFact, DiffKind, DiffPosition, IrDefinition};
 use seampact_ir::{
-    ArrayTypeUse, DecimalLiteral, EnumTypeUse, FileTypeUse, JsonContent, KnownTypeUseRef,
-    OutputEnumForm, Pattern, RefTypeUse, Refinements, ScalarTypeUse, SchemaId, TypeUse,
-    UnknownKeys,
+    ArrayTypeUse, ContractIr, DecimalLiteral, EnumId, EnumNarrowing, EnumTypeUse, FileTypeUse,
+    JsonContent, KnownTypeUseRef, OutputEnumForm, Pattern, RefTypeUse, Refinements, ScalarTypeUse,
+    SchemaId, TypeUse, UnknownKeys,
 };
 use seampact_json::{JsonValue, js_text_of};
 
 use crate::DiffError;
 use crate::change_sink::RawChange;
-use crate::not_ported::not_ported_yet;
 use crate::walk_context::{
     ChangeSite, MemberComparison, MemberComparisons, WalkContext, compare_kept_order,
     compare_members, emit_at, refuse_unknown_value,
 };
-use crate::walk_decimal::compare_decimals;
+use crate::walk_decimal::{compare_decimals, is_decimal_multiple};
 use crate::walk_json::{object_members, pointer_join, text_value};
-use crate::walk_same_wire::is_same_wire_schema;
+use crate::walk_same_wire::{is_same_wire_enum, is_same_wire_schema};
 
 /// Which end of a range a bound limits.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -668,64 +667,296 @@ fn compare_pattern(
     )
 }
 
-/// Compares the enum values a use is narrowed to.
-///
-/// # Errors
-///
-/// Not ported yet.
+/// Compares two enum uses: another enum is a rename on one wire, else a change of type. A narrowing
+/// pins the values of the use, so they are compared here and not through the catalogue enum.
 fn compare_enum_use(
-    _context: &mut WalkContext<'_>,
-    _site: &ChangeSite<'_>,
-    _pointer: &str,
-    _before: &EnumTypeUse,
-    _after: &EnumTypeUse,
+    context: &mut WalkContext<'_>,
+    site: &ChangeSite<'_>,
+    pointer: &str,
+    before: &EnumTypeUse,
+    after: &EnumTypeUse,
 ) -> Result<(), DiffError> {
-    Err(not_ported_yet("compareEnumUse"))
+    // Two enums of one wire carry the values of the use, so a narrowing still compares across the move.
+    let same_wire_values = before.r#enum == after.r#enum
+        || is_same_wire_enum(
+            context.before,
+            before.r#enum.as_str(),
+            context.after,
+            after.r#enum.as_str(),
+        )?;
+    let mut comparisons = nullable_comparisons(site);
+
+    comparisons.insert(
+        "enum",
+        Box::new(|context, member_pointer, _before_value, _after_value| {
+            let (kind, case_name) = if same_wire_values {
+                (DiffKind::Name, "enum")
+            } else {
+                (DiffKind::TypeChanged, "enum")
+            };
+
+            emit_at(
+                context,
+                site,
+                RawChange::new(kind, case_name, member_pointer.to_owned()).between(
+                    Some(text_value(before.r#enum.as_str())),
+                    Some(text_value(after.r#enum.as_str())),
+                ),
+            );
+
+            Ok(())
+        }),
+    );
+    comparisons.insert(
+        "narrowedTo",
+        Box::new(|context, member_pointer, _before_value, _after_value| {
+            if !same_wire_values {
+                return Ok(());
+            }
+
+            let (before_ir, after_ir) = (context.before, context.after);
+            let before_values =
+                narrowed_values(before.narrowed_to.as_ref(), before_ir, &before.r#enum);
+            let after_values = narrowed_values(after.narrowed_to.as_ref(), after_ir, &after.r#enum);
+
+            compare_enum_values(
+                context,
+                site,
+                &pointer_join(member_pointer, &["values"]),
+                before_values,
+                after_values,
+            );
+
+            compare_narrowing_reason(
+                context,
+                site,
+                member_pointer,
+                before.narrowed_to.as_ref(),
+                after.narrowed_to.as_ref(),
+            )
+        }),
+    );
+
+    compare_members(
+        context,
+        site,
+        IrDefinition::EnumTypeUse,
+        pointer,
+        Some(&object_members(before)?),
+        Some(&object_members(after)?),
+        &comparisons,
+    )
+}
+
+/// The values of an enum use: its narrowing's, else those of the catalogue enum, else none.
+fn narrowed_values<'ir>(
+    narrowing: Option<&'ir EnumNarrowing>,
+    ir: &'ir ContractIr,
+    enum_id: &EnumId,
+) -> &'ir [String] {
+    match narrowing {
+        Some(narrowed) => &narrowed.values,
+        None => ir
+            .enums
+            .get(enum_id.as_str())
+            .map_or(&[], |catalogue_enum| &catalogue_enum.values),
+    }
+}
+
+/// Compares the reason of two narrowings, when both have one; the values are compared apart.
+fn compare_narrowing_reason(
+    context: &mut WalkContext<'_>,
+    site: &ChangeSite<'_>,
+    pointer: &str,
+    before: Option<&EnumNarrowing>,
+    after: Option<&EnumNarrowing>,
+) -> Result<(), DiffError> {
+    let (Some(before_narrowing), Some(after_narrowing)) = (before, after) else {
+        return Ok(());
+    };
+    let mut comparisons = MemberComparisons::new();
+
+    comparisons.insert(
+        "values",
+        Box::new(|_context, _member_pointer, _before_value, _after_value| Ok(())),
+    );
+
+    compare_members(
+        context,
+        site,
+        IrDefinition::EnumNarrowing,
+        pointer,
+        Some(&object_members(before_narrowing)?),
+        Some(&object_members(after_narrowing)?),
+        &comparisons,
+    )
 }
 
 /// Compares the item type and the length bounds of two array uses.
-///
-/// # Errors
-///
-/// Not ported yet.
 fn compare_array_use(
-    _context: &mut WalkContext<'_>,
-    _site: &ChangeSite<'_>,
-    _pointer: &str,
-    _before: &ArrayTypeUse,
-    _after: &ArrayTypeUse,
+    context: &mut WalkContext<'_>,
+    site: &ChangeSite<'_>,
+    pointer: &str,
+    before: &ArrayTypeUse,
+    after: &ArrayTypeUse,
 ) -> Result<(), DiffError> {
-    Err(not_ported_yet("compareArrayUse"))
+    let mut comparisons = nullable_comparisons(site);
+
+    comparisons.insert(
+        "items",
+        Box::new(|context, member_pointer, _before_value, _after_value| {
+            compare_type_use(context, site, member_pointer, &before.items, &after.items)
+        }),
+    );
+    comparisons.insert(
+        "minItems",
+        Box::new(|context, member_pointer, before_value, after_value| {
+            compare_bound(
+                context,
+                site,
+                member_pointer,
+                BoundSide::Lower,
+                before_value,
+                after_value,
+            )
+        }),
+    );
+    comparisons.insert(
+        "maxItems",
+        Box::new(|context, member_pointer, before_value, after_value| {
+            compare_bound(
+                context,
+                site,
+                member_pointer,
+                BoundSide::Upper,
+                before_value,
+                after_value,
+            )
+        }),
+    );
+
+    compare_members(
+        context,
+        site,
+        IrDefinition::ArrayTypeUse,
+        pointer,
+        Some(&object_members(before)?),
+        Some(&object_members(after)?),
+        &comparisons,
+    )
 }
 
-/// Compares the JSON content of two scalar uses.
-///
-/// # Errors
-///
-/// Not ported yet.
+/// Compares the JSON content of two scalar uses: content on one side only is a change of type.
 fn compare_content(
-    _context: &mut WalkContext<'_>,
-    _site: &ChangeSite<'_>,
-    _pointer: &str,
-    _before: Option<&JsonContent>,
-    _after: Option<&JsonContent>,
+    context: &mut WalkContext<'_>,
+    site: &ChangeSite<'_>,
+    pointer: &str,
+    before: Option<&JsonContent>,
+    after: Option<&JsonContent>,
 ) -> Result<(), DiffError> {
-    Err(not_ported_yet("compareContent"))
+    let (Some(before_content), Some(after_content)) = (before, after) else {
+        emit_at(
+            context,
+            site,
+            RawChange::new(DiffKind::TypeChanged, "content", pointer.to_owned()).between(
+                before.map(|content| text_value(content.media.as_str())),
+                after.map(|content| text_value(content.media.as_str())),
+            ),
+        );
+
+        return Ok(());
+    };
+    let mut comparisons = MemberComparisons::new();
+
+    comparisons.insert(
+        "media",
+        Box::new(|context, member_pointer, _before_value, _after_value| {
+            emit_at(
+                context,
+                site,
+                RawChange::new(DiffKind::TypeChanged, "content", member_pointer.to_owned())
+                    .between(
+                        Some(text_value(before_content.media.as_str())),
+                        Some(text_value(after_content.media.as_str())),
+                    ),
+            );
+
+            Ok(())
+        }),
+    );
+    comparisons.insert(
+        "schema",
+        Box::new(|context, member_pointer, _before_value, _after_value| {
+            compare_type_use(
+                context,
+                site,
+                member_pointer,
+                &before_content.schema,
+                &after_content.schema,
+            )
+        }),
+    );
+
+    compare_members(
+        context,
+        site,
+        IrDefinition::JsonContent,
+        pointer,
+        Some(&object_members(before_content)?),
+        Some(&object_members(after_content)?),
+        &comparisons,
+    )
 }
 
-/// Compares the `multipleOf` of two refinements.
-///
-/// # Errors
-///
-/// Not ported yet.
+/// Compares the `multipleOf` of two refinements: a new one tightens, a dropped one loosens, a moved
+/// one tightens when it divides the old one and loosens when the old one divides it.
 fn compare_multiple_of(
-    _context: &mut WalkContext<'_>,
-    _site: &ChangeSite<'_>,
-    _pointer: &str,
-    _before: Option<&DecimalLiteral>,
-    _after: Option<&DecimalLiteral>,
+    context: &mut WalkContext<'_>,
+    site: &ChangeSite<'_>,
+    pointer: &str,
+    before: Option<&DecimalLiteral>,
+    after: Option<&DecimalLiteral>,
 ) -> Result<(), DiffError> {
-    Err(not_ported_yet("compareMultipleOf"))
+    let (Some(before_multiple), Some(after_multiple)) = (before, after) else {
+        emit_refinement(
+            context,
+            site,
+            pointer,
+            if before.is_none() {
+                RefinementCase::Tightened
+            } else {
+                RefinementCase::Loosened
+            },
+            before.map(|multiple| text_value(multiple.as_str())),
+            after.map(|multiple| text_value(multiple.as_str())),
+        );
+
+        return Ok(());
+    };
+
+    if compare_decimals(before_multiple.as_str(), after_multiple.as_str())? == Ordering::Equal {
+        return Ok(());
+    }
+
+    let refinement_case = if is_decimal_multiple(after_multiple.as_str(), before_multiple.as_str())?
+    {
+        "tightened"
+    } else if is_decimal_multiple(before_multiple.as_str(), after_multiple.as_str())? {
+        "loosened"
+    } else {
+        "changed"
+    };
+
+    emit_at(
+        context,
+        site,
+        RawChange::new(DiffKind::Refinement, refinement_case, pointer.to_owned()).between(
+            Some(text_value(before_multiple.as_str())),
+            Some(text_value(after_multiple.as_str())),
+        ),
+    );
+
+    Ok(())
 }
 
 /// A `nullable` change when the flag flipped; an absent flag means false.
@@ -828,14 +1059,11 @@ pub(crate) fn compare_enum_values(
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
-
     use seampact_json::JsonNumber;
 
     use super::*;
-    use crate::change_sink::{ChangeSink, NO_POSITION};
     use crate::sample_ir::sample_ir;
-    use crate::walk_reach::ReachIndex;
+    use crate::test_walk::{changes_of, ir_value};
 
     fn number(value: f64) -> JsonValue {
         JsonValue::Number(
@@ -849,26 +1077,20 @@ mod tests {
         after: Option<&JsonValue>,
     ) -> Result<Vec<String>, DiffError> {
         let ir = sample_ir();
-        let mut context = WalkContext {
-            before: &ir,
-            after: &ir,
-            before_reach: ReachIndex::new(),
-            after_reach: ReachIndex::new(),
-            sink: ChangeSink::new(HashSet::new()),
-        };
-        let site = ChangeSite {
-            reaches: &NO_POSITION,
-            origin: None,
-        };
 
-        compare_bound(&mut context, &site, "/bound", bound_side, before, after)?;
+        changes_of(&ir, &ir, |context, site| {
+            compare_bound(context, site, "/bound", bound_side, before, after)
+        })
+        .map(|changes| {
+            changes
+                .into_iter()
+                .filter_map(|change| {
+                    let (_, case) = change.split_once(':')?;
 
-        Ok(context
-            .sink
-            .sorted_changes()
-            .into_iter()
-            .map(|change| change.case_name)
-            .collect())
+                    Some(case.split_once('@')?.0.to_owned())
+                })
+                .collect()
+        })
     }
 
     #[test]
@@ -908,6 +1130,234 @@ mod tests {
         assert!(
             bound_cases(BoundSide::Upper, Some(&number(1e21)), Some(&number(1.0))).is_err(),
             "1e+21 is not a BigInt literal, which the TypeScript throws on"
+        );
+    }
+
+    fn enum_ir(enums: &[(&str, &[&str])]) -> ContractIr {
+        let mut ir = sample_ir();
+
+        for (id, values) in enums {
+            ir.enums.insert(
+                EnumId::new((*id).to_owned()),
+                ir_value(serde_json::json!({
+                    "directions": ["output"],
+                    "docs": {},
+                    "id": id,
+                    "localReason": "Local to this workspace.",
+                    "name": {"role": "schema", "segments": [id.to_lowercase()]},
+                    "origin": {"layer": "shared", "pointer": format!("/enums/{id}")},
+                    "values": values,
+                })),
+            );
+        }
+
+        ir
+    }
+
+    fn enum_use(id: &str, narrowed_to: Option<&[&str]>) -> EnumTypeUse {
+        match narrowed_to {
+            Some(values) => {
+                ir_value(serde_json::json!({"enum": id, "narrowedTo": {"values": values}}))
+            }
+            None => ir_value(serde_json::json!({"enum": id})),
+        }
+    }
+
+    fn enum_use_changes(
+        before_ir: &ContractIr,
+        before: &EnumTypeUse,
+        after_ir: &ContractIr,
+        after: &EnumTypeUse,
+    ) -> Vec<String> {
+        changes_of(before_ir, after_ir, |context, site| {
+            compare_enum_use(context, site, "/use", before, after)
+        })
+        .unwrap_or_else(|error| panic!("{error}"))
+    }
+
+    #[test]
+    fn a_narrowing_of_one_enum_compares_its_values_and_a_missing_one_reads_the_catalogue() {
+        let ir = enum_ir(&[("Color", &["red", "green"])]);
+
+        assert_eq!(
+            enum_use_changes(
+                &ir,
+                &enum_use("Color", Some(&["red"])),
+                &ir,
+                &enum_use("Color", Some(&["red", "green"])),
+            ),
+            vec!["EnumValue:added@/use/narrowedTo/values/1".to_owned()],
+        );
+        assert_eq!(
+            enum_use_changes(
+                &ir,
+                &enum_use("Color", None),
+                &ir,
+                &enum_use("Color", Some(&["red"])),
+            ),
+            vec!["EnumValue:removed@/use/narrowedTo/values/1".to_owned()],
+            "no narrowing reads the values of the catalogue enum"
+        );
+    }
+
+    #[test]
+    fn a_move_to_an_enum_of_one_wire_is_a_name_and_any_other_a_type_change() {
+        let ir = enum_ir(&[
+            ("Color", &["red", "green"]),
+            ("Hue", &["red", "green"]),
+            ("Size", &["small", "large"]),
+        ]);
+
+        assert_eq!(
+            enum_use_changes(&ir, &enum_use("Color", None), &ir, &enum_use("Hue", None)),
+            vec!["Name:enum@/use/enum".to_owned()],
+        );
+        assert_eq!(
+            enum_use_changes(
+                &ir,
+                &enum_use("Color", Some(&["red"])),
+                &ir,
+                &enum_use("Hue", Some(&["green"])),
+            ),
+            vec![
+                "Name:enum@/use/enum".to_owned(),
+                "EnumValue:added@/use/narrowedTo/values/0".to_owned(),
+                "EnumValue:removed@/use/narrowedTo/values/0".to_owned()
+            ],
+            "the narrowing compares across the move"
+        );
+        assert_eq!(
+            enum_use_changes(&ir, &enum_use("Color", None), &ir, &enum_use("Size", None)),
+            vec!["TypeChanged:enum@/use/enum".to_owned()],
+        );
+        assert_eq!(
+            enum_use_changes(
+                &ir,
+                &enum_use("Color", Some(&["red"])),
+                &ir,
+                &enum_use("Size", Some(&["small"])),
+            ),
+            vec!["TypeChanged:enum@/use/enum".to_owned()],
+            "another wire leaves the narrowing alone"
+        );
+    }
+
+    fn multiple_of_changes(before: Option<&str>, after: Option<&str>) -> Vec<String> {
+        let ir = sample_ir();
+        let (before, after) = (
+            before.map(|text| DecimalLiteral::new(text.to_owned())),
+            after.map(|text| DecimalLiteral::new(text.to_owned())),
+        );
+
+        changes_of(&ir, &ir, |context, site| {
+            compare_multiple_of(
+                context,
+                site,
+                "/multipleOf",
+                before.as_ref(),
+                after.as_ref(),
+            )
+        })
+        .unwrap_or_else(|error| panic!("{error}"))
+    }
+
+    #[test]
+    fn a_multiple_tightens_when_it_divides_the_old_one_and_loosens_when_the_old_one_divides_it() {
+        for (before, after, expected) in [
+            (None, Some("2"), Some("tightened")),
+            (Some("2"), None, Some("loosened")),
+            (Some("1"), Some("2"), Some("tightened")),
+            (Some("0.5"), Some("1.5"), Some("tightened")),
+            (Some("2"), Some("1"), Some("loosened")),
+            (Some("0.3"), Some("0.2"), Some("changed")),
+            (Some("1.50"), Some("1.5"), None),
+            (Some("0"), Some("3"), Some("loosened")),
+            (Some("3"), Some("0"), Some("tightened")),
+        ] {
+            assert_eq!(
+                multiple_of_changes(before, after),
+                expected
+                    .map(|case| format!("Refinement:{case}@/multipleOf"))
+                    .into_iter()
+                    .collect::<Vec<_>>(),
+                "{before:?} -> {after:?}"
+            );
+        }
+    }
+
+    fn string_use() -> serde_json::Value {
+        serde_json::json!({"kind": "scalar", "type": "string", "refinements": {}})
+    }
+
+    fn array_use(items: &serde_json::Value, min: Option<i64>, max: Option<i64>) -> ArrayTypeUse {
+        let mut json = serde_json::json!({"kind": "array", "items": items});
+
+        if let Some(members) = json.as_object_mut() {
+            for (name, bound) in [("minItems", min), ("maxItems", max)] {
+                if let Some(bound) = bound {
+                    members.insert(name.to_owned(), serde_json::json!(bound));
+                }
+            }
+        }
+
+        ir_value(json)
+    }
+
+    #[test]
+    fn an_array_compares_its_item_type_and_its_length_bounds() {
+        let ir = sample_ir();
+        let integer = serde_json::json!({"kind": "scalar", "type": "int32", "refinements": {}});
+        let (before, after) = (
+            array_use(&string_use(), Some(1), Some(5)),
+            array_use(&integer, Some(2), Some(9)),
+        );
+
+        assert_eq!(
+            changes_of(&ir, &ir, |context, site| {
+                compare_array_use(context, site, "/array", &before, &after)
+            })
+            .unwrap_or_else(|error| panic!("{error}")),
+            vec![
+                "TypeChanged:scalarType@/array/items/type".to_owned(),
+                "Refinement:loosened@/array/maxItems".to_owned(),
+                "Refinement:tightened@/array/minItems".to_owned(),
+            ],
+        );
+    }
+
+    fn json_content(media: &str, schema: &serde_json::Value) -> JsonContent {
+        ir_value(serde_json::json!({"media": media, "schema": schema}))
+    }
+
+    fn content_changes(before: Option<&JsonContent>, after: Option<&JsonContent>) -> Vec<String> {
+        let ir = sample_ir();
+
+        changes_of(&ir, &ir, |context, site| {
+            compare_content(context, site, "/content", before, after)
+        })
+        .unwrap_or_else(|error| panic!("{error}"))
+    }
+
+    #[test]
+    fn content_on_one_side_only_or_with_another_media_is_a_type_change() {
+        let json = json_content("application/json", &string_use());
+        let problem = json_content("application/problem+json", &string_use());
+        let integer = serde_json::json!({"kind": "scalar", "type": "int32", "refinements": {}});
+
+        assert_eq!(
+            content_changes(None, Some(&json)),
+            vec!["TypeChanged:content@/content".to_owned()],
+        );
+        assert_eq!(
+            content_changes(Some(&json), Some(&problem)),
+            vec!["TypeChanged:content@/content/media".to_owned()],
+        );
+        assert_eq!(
+            content_changes(
+                Some(&json),
+                Some(&json_content("application/json", &integer))
+            ),
+            vec!["TypeChanged:scalarType@/content/schema/type".to_owned()],
         );
     }
 }

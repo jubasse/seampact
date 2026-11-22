@@ -8,11 +8,10 @@ use seampact_ir::{
 
 use crate::DiffError;
 use crate::change_sink::RawChange;
-use crate::not_ported::not_ported_yet;
 use crate::walk_access::emit_presence;
 use crate::walk_context::{
-    ChangeSite, KeyedListComparison, MemberComparisons, WalkContext, compare_keyed_list,
-    compare_members, emit_at, refuse_unknown_value,
+    ChangeSite, KeyedListComparison, MemberComparisons, WalkContext, compare_kept_order,
+    compare_keyed_list, compare_members, emit_at, refuse_unknown_value,
 };
 use crate::walk_json::{object_members, pointer_join, text_value};
 use crate::walk_operations::OperationSite;
@@ -506,17 +505,115 @@ fn compare_derived_idempotency(
     )
 }
 
-/// Compares the sort keys of two pagings.
-///
-/// # Errors
-///
-/// Not ported yet.
+/// Compares the sort keys of two pagings by key, then the order of the keys both keep.
 fn compare_sort_keys(
-    _context: &mut WalkContext<'_>,
-    _site: &ChangeSite<'_>,
-    _pointer: &str,
-    _before: &[SortKey],
-    _after: &[SortKey],
+    context: &mut WalkContext<'_>,
+    site: &ChangeSite<'_>,
+    pointer: &str,
+    before: &[SortKey],
+    after: &[SortKey],
 ) -> Result<(), DiffError> {
-    Err(not_ported_yet("compareSortKeys"))
+    let comparison = KeyedListComparison {
+        key_of: Box::new(|sort_key: &SortKey| Ok(sort_key.key.clone())),
+        added: Box::new(|context, entry_pointer, sort_key| {
+            emit_at(
+                context,
+                site,
+                RawChange::new(DiffKind::Paging, "sortKeyAdded", entry_pointer.to_owned())
+                    .between(None, Some(text_value(&sort_key.key))),
+            );
+
+            Ok(())
+        }),
+        removed: Box::new(|context, entry_pointer, sort_key| {
+            emit_at(
+                context,
+                site,
+                RawChange::new(DiffKind::Paging, "sortKeyRemoved", entry_pointer.to_owned())
+                    .between(Some(text_value(&sort_key.key)), None),
+            );
+
+            Ok(())
+        }),
+        kept: Box::new(|context, entry_pointer, before_key, after_key| {
+            compare_members(
+                context,
+                site,
+                IrDefinition::SortKey,
+                entry_pointer,
+                Some(&object_members(before_key)?),
+                Some(&object_members(after_key)?),
+                &MemberComparisons::new(),
+            )
+        }),
+    };
+
+    compare_keyed_list(context, pointer, before, after, &comparison)?;
+
+    let before_names: Vec<&str> = before
+        .iter()
+        .map(|sort_key| sort_key.key.as_str())
+        .collect();
+    let after_names: Vec<&str> = after.iter().map(|sort_key| sort_key.key.as_str()).collect();
+
+    compare_kept_order(
+        context,
+        site,
+        pointer,
+        "values",
+        &before_names,
+        &after_names,
+    );
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::sample_ir::sample_ir;
+    use crate::test_walk::{changes_of, ir_value};
+
+    fn sort_key(key: &str) -> SortKey {
+        ir_value(serde_json::json!({"key": key}))
+    }
+
+    fn sort_key_changes(before: &[SortKey], after: &[SortKey]) -> Vec<String> {
+        let ir = sample_ir();
+
+        changes_of(&ir, &ir, |context, site| {
+            compare_sort_keys(context, site, "/sortKeys", before, after)
+        })
+        .unwrap_or_else(|error| panic!("{error}"))
+    }
+
+    #[test]
+    fn a_sort_key_is_added_or_removed_by_its_key() {
+        assert_eq!(
+            sort_key_changes(
+                &[sort_key("created"), sort_key("gone")],
+                &[sort_key("created"), sort_key("name")]
+            ),
+            vec![
+                "Paging:sortKeyAdded@/sortKeys/1".to_owned(),
+                "Paging:sortKeyRemoved@/sortKeys/1".to_owned()
+            ],
+        );
+    }
+
+    #[test]
+    fn the_keys_both_lists_keep_changing_order_is_one_order_change() {
+        assert_eq!(
+            sort_key_changes(
+                &[sort_key("a"), sort_key("b")],
+                &[sort_key("b"), sort_key("a")]
+            ),
+            vec!["Order:values@/sortKeys".to_owned()],
+        );
+        assert_eq!(
+            sort_key_changes(&[sort_key("a")], &[sort_key("b"), sort_key("a")]),
+            vec!["Paging:sortKeyAdded@/sortKeys/0".to_owned()],
+            "a key added in front moves no kept key"
+        );
+    }
 }

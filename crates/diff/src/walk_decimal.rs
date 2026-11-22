@@ -58,6 +58,20 @@ pub(crate) fn compare_decimals(left: &str, right: &str) -> Result<Ordering, Diff
     Ok(at_scale(&left_decimal, scale)?.cmp(&at_scale(&right_decimal, scale)?))
 }
 
+/// Whether `multiple` is a whole multiple of `divisor`; a zero divisor divides nothing.
+pub(crate) fn is_decimal_multiple(multiple: &str, divisor: &str) -> Result<bool, DiffError> {
+    let multiple_decimal = parse_decimal(multiple)?;
+    let divisor_decimal = parse_decimal(divisor)?;
+    let scale = multiple_decimal.scale.max(divisor_decimal.scale);
+    let divisor_units = at_scale(&divisor_decimal, scale)?;
+
+    if divisor_units == BigInt::from(0) {
+        return Ok(false);
+    }
+
+    Ok((at_scale(&multiple_decimal, scale)? % divisor_units) == BigInt::from(0))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -82,5 +96,22 @@ mod tests {
     fn an_empty_digit_run_is_zero_and_a_non_digit_is_an_error() {
         assert_eq!(order("", "0"), Ordering::Equal);
         assert!(compare_decimals("1e+21", "0").is_err());
+    }
+
+    #[test]
+    fn a_multiple_is_exact_across_scales_and_a_zero_divisor_divides_nothing() {
+        let multiple = |multiple: &str, divisor: &str| {
+            is_decimal_multiple(multiple, divisor).unwrap_or_else(|error| panic!("{error}"))
+        };
+
+        assert!(multiple("0.5", "0.25"));
+        assert!(multiple("10", "2.5"));
+        assert!(multiple("-1.5", "0.5"));
+        assert!(multiple("0", "3"));
+        assert!(!multiple("0.3", "0.2"));
+        assert!(!multiple("1", "0"));
+        assert!(!multiple("0", "0.00"));
+        assert!(multiple("9007199254740993", "1"));
+        assert!(is_decimal_multiple("1e+21", "1").is_err());
     }
 }
