@@ -9,6 +9,7 @@ use seampact_diff_table::{
     DiffBreak, DiffCause, DiffChange, DiffClassification, DiffFact, DiffKind, DiffPosition,
     DiffRefusal, classify_cell,
 };
+use seampact_ir::Origin;
 use seampact_js::cmp_utf16;
 use seampact_json::JsonValue;
 
@@ -28,6 +29,14 @@ pub(crate) struct ElementOrigin {
     pub(crate) layer: String,
 }
 
+impl From<&Origin> for ElementOrigin {
+    fn from(origin: &Origin) -> Self {
+        Self {
+            layer: origin.layer.to_string(),
+        }
+    }
+}
+
 /// A change before it is classified.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct RawChange {
@@ -39,6 +48,35 @@ pub(crate) struct RawChange {
     /// The changed element's origin (in `after`, in `before` for a removal), read for the pack cause.
     pub(crate) origin: Option<ElementOrigin>,
     pub(crate) facts: Vec<DiffFact>,
+}
+
+impl RawChange {
+    /// A change with no values, facts or origin; the site's origin is set when it is emitted.
+    pub(crate) fn new(kind: DiffKind, case_name: &str, pointer: String) -> Self {
+        Self {
+            kind,
+            case_name: case_name.to_owned(),
+            pointer,
+            before: None,
+            after: None,
+            origin: None,
+            facts: Vec::new(),
+        }
+    }
+
+    /// The change with the value on each side.
+    pub(crate) fn between(self, before: Option<JsonValue>, after: Option<JsonValue>) -> Self {
+        Self {
+            before,
+            after,
+            ..self
+        }
+    }
+
+    /// The change with the facts that hold for it.
+    pub(crate) fn with_facts(self, facts: Vec<DiffFact>) -> Self {
+        Self { facts, ..self }
+    }
 }
 
 /// The prefix of an `Origin.layer` that names a pack.

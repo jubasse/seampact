@@ -6,11 +6,11 @@ use seampact_diff_table::{
     resolve_diff_options,
 };
 use seampact_ir::{ContractIr, PackRef};
+use seampact_js::cmp_utf16;
 
 use crate::DiffError;
 use crate::deprecation::deprecation_report;
 use crate::gate::{applied_policy, apply_gate};
-use crate::not_ported::not_ported_yet;
 use crate::walk_contracts::walk_contracts;
 use crate::walk_refusals::whole_diff_refusals;
 
@@ -37,7 +37,7 @@ pub fn diff_contracts(
         return Ok(DiffResult::Refused(walk.refusals));
     }
 
-    let failures = apply_gate(&mut walk.changes, before, after, &resolved)?;
+    let failures = apply_gate(&mut walk.changes, before, after, &resolved);
     let deprecations = deprecation_report(before, after, &resolved.today)?;
     let before_policy = before.api.compat.policy.clone();
     let after_policy = after.api.compat.policy.clone();
@@ -70,13 +70,43 @@ pub fn diff_contracts(
 ///
 /// # Errors
 ///
-/// [`DiffError::NotPortedYet`] until the function is ported.
+/// What [`diff_contracts`] answers for one of the apis.
 pub fn diff_contract_sets(
-    _before: &IndexMap<String, ContractIr>,
-    _after: &IndexMap<String, ContractIr>,
-    _options: &DiffOptions,
+    before: &IndexMap<String, ContractIr>,
+    after: &IndexMap<String, ContractIr>,
+    options: &DiffOptions,
 ) -> Result<IndexMap<String, DiffResult>, DiffError> {
-    Err(not_ported_yet("diffContractSets"))
+    let mut names: Vec<&String> = before.keys().chain(after.keys()).collect();
+
+    names.sort_by(|left, right| cmp_utf16(left, right));
+    names.dedup();
+
+    let mut results = IndexMap::new();
+
+    for name in names {
+        let result = match (before.get(name), after.get(name)) {
+            (Some(before_ir), Some(after_ir)) => diff_contracts(before_ir, after_ir, options)?,
+            (Some(before_ir), None) => {
+                diff_contracts(before_ir, &without_operations(before_ir), options)?
+            }
+            (None, Some(after_ir)) => {
+                diff_contracts(&without_operations(after_ir), after_ir, options)?
+            }
+            (None, None) => continue,
+        };
+
+        results.insert(name.clone(), result);
+    }
+
+    Ok(results)
+}
+
+/// The contract with no operation: the baseline of an api that only one side has.
+fn without_operations(ir: &ContractIr) -> ContractIr {
+    ContractIr {
+        operations: Vec::new(),
+        ..ir.clone()
+    }
 }
 
 fn side_of(ir: &ContractIr) -> DiffSide {
@@ -96,7 +126,8 @@ fn side_of(ir: &ContractIr) -> DiffSide {
 
 #[cfg(test)]
 mod tests {
-    use seampact_diff_table::DiffCode;
+    use seampact_diff_table::{DiffBreak, DiffClassification, DiffCode, DiffKind};
+    use seampact_ir::{CompatPolicy, Schema};
 
     use super::*;
     use crate::sample_ir::sample_ir;
@@ -136,5 +167,110 @@ mod tests {
         };
 
         assert_eq!(codes, Some(vec![DiffCode::IrVersionDiffers]));
+    }
+
+    fn remove_last_mixed_property(ir: &mut ContractIr) {
+        if let Some(Schema::Object(object)) = ir.schemas.get_mut("Mixed") {
+            object.properties.pop();
+        }
+    }
+
+    fn compared(result: DiffResult) -> DiffComparison {
+        match result {
+            DiffResult::Compared(comparison) => *comparison,
+            DiffResult::Refused(refusals) => panic!("refused: {refusals:?}"),
+        }
+    }
+
+    #[test]
+    fn additive_only_fails_a_removed_property_naming_clients_and_the_operation() {
+        let mut before = sample_ir();
+
+        before.api.compat.policy = CompatPolicy::AdditiveOnly;
+
+        let mut after = before.clone();
+
+        remove_last_mixed_property(&mut after);
+
+        let comparison = compared(diff_contracts(&before, &after, &options("2026-01-01")).unwrap());
+        let failure = comparison.gate.failures.first();
+
+        assert!(!comparison.gate.passed);
+        assert_eq!(
+            failure.map(|found| (found.code, found.kind, found.breaks.clone())),
+            Some((
+                DiffCode::PolicyBreaking,
+                DiffKind::PropertyRemoved,
+                vec![DiffBreak::Clients]
+            ))
+        );
+        assert!(failure.is_some_and(|found| found.operations.iter().any(|id| id == "mixed")));
+    }
+
+    #[test]
+    fn policy_none_reports_and_passes() {
+        let before = sample_ir();
+        let mut after = before.clone();
+
+        remove_last_mixed_property(&mut after);
+
+        let comparison = compared(diff_contracts(&before, &after, &options("2026-01-01")).unwrap());
+
+        assert!(comparison.gate.passed);
+        assert_eq!(comparison.gate.failures, Vec::new());
+        assert!(
+            comparison
+                .changes
+                .iter()
+                .all(|change| change.kind == DiffKind::PropertyRemoved)
+        );
+        assert_ne!(comparison.changes.len(), 0);
+    }
+
+    #[test]
+    fn reordering_properties_is_only_informative() {
+        let before = sample_ir();
+        let mut after = before.clone();
+
+        if let Some(Schema::Object(object)) = after.schemas.get_mut("Mixed") {
+            object.properties.reverse();
+        }
+
+        let comparison = compared(diff_contracts(&before, &after, &options("2026-01-01")).unwrap());
+
+        assert_ne!(comparison.changes.len(), 0);
+        assert!(comparison.changes.iter().all(|change| {
+            change.kind == DiffKind::Order
+                && change.classification == DiffClassification::Informative
+        }));
+    }
+
+    #[test]
+    fn a_set_is_diffed_by_api_name_in_utf16_order_and_a_lone_api_against_no_operations() {
+        let ir = sample_ir();
+        let before: IndexMap<String, ContractIr> = IndexMap::from([("b".to_owned(), ir.clone())]);
+        let after: IndexMap<String, ContractIr> = IndexMap::from([
+            ("\u{FF5E}".to_owned(), ir.clone()),
+            ("\u{10000}".to_owned(), ir.clone()),
+            ("b".to_owned(), ir),
+        ]);
+        let results = diff_contract_sets(&before, &after, &options("2026-01-01")).unwrap();
+        let names: Vec<&str> = results.keys().map(String::as_str).collect();
+
+        assert_eq!(names, vec!["b", "\u{10000}", "\u{FF5E}"]);
+
+        let added: Vec<DiffKind> = match results.get("\u{FF5E}") {
+            Some(DiffResult::Compared(comparison)) => comparison
+                .changes
+                .iter()
+                .map(|change| change.kind)
+                .collect(),
+            other => panic!("{other:?}"),
+        };
+
+        assert_eq!(
+            added,
+            vec![DiffKind::OperationAdded, DiffKind::OperationAdded]
+        );
     }
 }
