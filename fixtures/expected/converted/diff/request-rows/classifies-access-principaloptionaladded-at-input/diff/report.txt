@@ -1,4 +1,4 @@
 tasks v1: compat.policy additive-only (before additive-only, after additive-only), gate clients
 additive getTask input /operations/7/access: access principalOptionalAdded (public -> optional)
-informative getTask input /operations/7/access/reason: annotation reason (open data)
+informative getTask input /operations/7/access/reason: annotation reason (open data -> Recorded from a test that built a partial IR.)
 gate passed

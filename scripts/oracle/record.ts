@@ -86,10 +86,31 @@ function writeOpenApiCase(directory: string, note: Note): void {
     writeFileSync(join(directory, "openapi.options.json"), jsonText(note.options));
 }
 
+const NEUTRAL_REASON = "Recorded from a test that built a partial IR.";
+
+// A test builds its IR by hand and may leave out a member the IR schema requires; the Rust decode refuses such an IR,
+// so the recorded copy carries the member with a neutral value, placed where the schema lists it.
+function withRequiredMembers(ir: unknown): unknown {
+  const operations =
+    (ir as { operations?: { access?: Record<string, unknown> }[] }).operations ?? [];
+
+  for (const operation of operations) {
+    const access = operation.access;
+
+    if (access?.kind !== "optional" || "reason" in access) continue;
+
+    const { onRefused, origin, ...leading } = access;
+
+    operation.access = { ...leading, reason: NEUTRAL_REASON, onRefused, origin };
+  }
+
+  return ir;
+}
+
 function writeDiffCase(directory: string, note: Note): void {
   mkdirSync(directory, { recursive: true });
-  writeFileSync(join(directory, "before.ir.json"), compactJson(note.before));
-  writeFileSync(join(directory, "after.ir.json"), compactJson(note.after));
+  writeFileSync(join(directory, "before.ir.json"), compactJson(withRequiredMembers(note.before)));
+  writeFileSync(join(directory, "after.ir.json"), compactJson(withRequiredMembers(note.after)));
 
   if (note.options !== undefined)
     writeFileSync(join(directory, "diff.options.json"), jsonText(note.options));
