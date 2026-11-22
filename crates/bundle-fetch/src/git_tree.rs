@@ -7,6 +7,7 @@
 use std::collections::HashSet;
 use std::fs::{self, OpenOptions};
 use std::io::Write;
+use std::time::Instant;
 
 use camino::Utf8Path;
 use seampact_bundle::{
@@ -15,7 +16,7 @@ use seampact_bundle::{
 };
 use seampact_diagnostics::quote_text;
 
-use crate::git_run::{GitFailure, GitRunner};
+use crate::git_run::{FETCH_TIMEOUT, GitFailure, GitRunner};
 use crate::{BundleSourceFailure, BundleSourceFailureCode};
 
 /// The ref `git fetch` leaves the fetched commit under.
@@ -63,9 +64,16 @@ pub(crate) fn write_tree(
     fs::create_dir(target).map_err(|error| write_failure(&error))?;
 
     let mut total: usize = 0;
+    let deadline = Instant::now() + FETCH_TIMEOUT;
 
     for file in &files {
-        let bytes = git.run(&["cat-file", "blob", &file.object], None)?;
+        let remaining = deadline.saturating_duration_since(Instant::now());
+
+        if remaining.is_zero() {
+            return Err(GitFailure::TimedOut);
+        }
+
+        let bytes = git.run(&["cat-file", "blob", &file.object], Some(remaining))?;
 
         total = total.saturating_add(bytes.len());
 

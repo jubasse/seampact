@@ -72,7 +72,7 @@ fn fetch_tree(
     directory: &Utf8Path,
 ) -> Result<Option<BundleSourceFailure>, GitFailure> {
     git.run(&["init", "--quiet", "--bare"], None)?;
-    git.run(
+    git.fetch(
         &[
             "fetch",
             "--quiet",
@@ -83,7 +83,7 @@ fn fetch_tree(
             url,
             &format!("refs/tags/{tag}"),
         ],
-        Some(FETCH_TIMEOUT),
+        FETCH_TIMEOUT,
     )?;
 
     write_tree(git, prefix, directory)
