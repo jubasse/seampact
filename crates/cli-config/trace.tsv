@@ -61,8 +61,8 @@ src/read_root_config.rs#duplicate_app_problems	packages/core/cli/src/config/read
 src/read_root_config.rs#find_listed_app	packages/core/cli/src/config/read-root-config.ts#findListedApp
 src/read_root_config.rs#listed_app	packages/core/cli/src/config/read-root-config.ts#listedApp
 src/read_root_config.rs#unknown_merged_app_problems	packages/core/cli/src/config/read-root-config.ts#unknownMergedAppProblems
--	packages/core/cli/src/config/read-workspace-configs.ts#readWorkspaceConfigs	pending: brief 2
--	packages/core/cli/src/config/read-run-config.ts#readRunConfig	pending: brief 2
+src/read_workspace_configs.rs#read_workspace_configs	packages/core/cli/src/config/read-workspace-configs.ts#readWorkspaceConfigs
+src/read_run_config.rs#read_run_config	packages/core/cli/src/config/read-run-config.ts#readRunConfig
 src/artefact_switches.rs#is_framework_route_check_off	packages/core/cli/src/config/artefact-switches.ts#isFrameworkRouteCheckOff
 src/artefact_switches.rs#framework_routes_switch_of	packages/core/cli/src/config/artefact-switches.ts#frameworkRoutesSwitchOf
 -	packages/core/cli/src/config/document-plan.ts#planAppDocuments	skip: reached only by generate and check, ported with the generator layer

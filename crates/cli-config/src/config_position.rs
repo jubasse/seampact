@@ -1,6 +1,5 @@
 //! A parsed config file and where its keys sit: the `file:line:col key.path` of a problem.
 
-use camino::Utf8Path;
 use seampact_diagnostics::InternalError;
 use seampact_js::FiniteNumber;
 use seampact_load::ResolvedScalar;
@@ -8,7 +7,7 @@ use seampact_load::yaml::{YamlDocument, YamlKind, YamlNode, YamlPair};
 use seampact_span::{FileId, SourceFiles, Span, TextSize};
 
 use crate::config_kind::ConfigKind;
-use crate::key_path::{KeyPath, KeyPathSegment, format_key_path};
+use crate::key_path::{KeyPathSegment, format_key_path};
 
 /// One config file, parsed: its YAML tree and the table that turns offsets into lines.
 #[derive(Debug, Clone)]
@@ -122,20 +121,4 @@ fn key_is_text(pair: &YamlPair, name: &str) -> bool {
 #[expect(clippy::float_cmp, reason = "JavaScript === on two numbers")]
 fn key_is_number(pair: &YamlPair, number: FiniteNumber) -> bool {
     matches!(pair.key.resolved_scalar(), Some(ResolvedScalar::Number(key)) if key.to_f64() == number.get())
-}
-
-/// The key path of a sub-path used by the problems of one entry: `["targets", index, name]`.
-pub(crate) fn entry_path(index: usize, name: &str) -> KeyPath {
-    vec![
-        KeyPathSegment::key("targets"),
-        KeyPathSegment::position(index),
-        KeyPathSegment::key(name),
-    ]
-}
-
-impl ParsedConfig {
-    /// The directory-less file name problems name the config by.
-    pub(crate) fn display_path(&self) -> &Utf8Path {
-        Utf8Path::new(&self.display_name)
-    }
 }
