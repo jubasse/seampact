@@ -1265,6 +1265,7 @@ dependencies = [
  "seampact-json",
  "seampact-load",
  "seampact-oracle",
+ "serde",
  "serde_json",
  "sha2",
  "tempfile",
