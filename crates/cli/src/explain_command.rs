@@ -1,7 +1,9 @@
 //! `seampact explain`: prints one operation of a compiled api as commented YAML.
 
 use indexmap::IndexMap;
-use seampact_cli_config::{ApiRef, CliProblem, ReadAppConfigOutcome, parse_api_ref, read_app_config};
+use seampact_cli_config::{
+    ApiRef, CliProblem, ReadAppConfigOutcome, parse_api_ref, read_app_config,
+};
 use seampact_js::cmp_utf16;
 use seampact_span::Location;
 
@@ -154,11 +156,17 @@ fn chosen_api<'compiled>(
             format!(
                 "The sources hold several apis ({held}), so the operation id alone does not name one."
             ),
-            &format!("Name the api: `seampact explain <api>.{}`.", target.operation_id),
+            &format!(
+                "Name the api: `seampact explain <api>.{}`.",
+                target.operation_id
+            ),
         ),
         (Some(reference), false) => unlocated_problem(
             "explain.api.ambiguous",
-            format!("The api '{}' exists in several sources ({held}).", reference.api),
+            format!(
+                "The api '{}' exists in several sources ({held}).",
+                reference.api
+            ),
             &format!(
                 "Name it as `<source>/{}.{}`.",
                 reference.api, target.operation_id

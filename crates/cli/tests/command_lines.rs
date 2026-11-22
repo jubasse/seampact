@@ -1,58 +1,12 @@
 //! Command lines no oracle case runs: no command, the waiting flags, and a compile error under
 //! `lint` and `diff`.
 
-use std::ffi::OsString;
-
 use camino::{Utf8Path, Utf8PathBuf};
-use seampact_cli::{CliError, CliIo, EXIT_REFUSED, EXIT_USAGE, run_command};
+use seampact_cli::{EXIT_REFUSED, EXIT_USAGE};
 
-type TestResult = Result<(), Box<dyn std::error::Error>>;
+mod common;
 
-struct RecordingIo {
-    cwd: Utf8PathBuf,
-    stdout: String,
-    stderr: String,
-}
-
-impl RecordingIo {
-    fn in_directory(cwd: &Utf8Path) -> Self {
-        Self {
-            cwd: cwd.to_path_buf(),
-            stdout: String::new(),
-            stderr: String::new(),
-        }
-    }
-}
-
-impl CliIo for RecordingIo {
-    fn cwd(&self) -> &Utf8Path {
-        &self.cwd
-    }
-
-    fn stdout(&mut self, text: &str) {
-        self.stdout.push_str(text);
-    }
-
-    fn stderr(&mut self, text: &str) {
-        self.stderr.push_str(text);
-    }
-
-    fn environment_variable(&self, _name: &str) -> Option<String> {
-        None
-    }
-
-    fn today(&self) -> String {
-        "2026-01-01".to_owned()
-    }
-}
-
-fn run(cwd: &Utf8Path, words: &[&str]) -> Result<(i32, RecordingIo), CliError> {
-    let command_line: Vec<OsString> = words.iter().map(OsString::from).collect();
-    let mut streams = RecordingIo::in_directory(cwd);
-    let exit = run_command(&command_line, &mut streams)?;
-
-    Ok((exit, streams))
-}
+use common::{TestResult, empty_directory, run};
 
 fn broken_contract_app() -> Utf8PathBuf {
     Utf8PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/cli/compile-error/tree")
@@ -96,9 +50,7 @@ fn lint_exits_non_zero_when_a_contract_has_a_compile_error() -> TestResult {
 
 #[test]
 fn diff_exits_non_zero_against_a_directory_with_no_ir_file() -> TestResult {
-    let baseline = tempfile::tempdir()?;
-    let baseline_path =
-        Utf8PathBuf::from_path_buf(baseline.path().to_path_buf()).expect("a UTF-8 path");
+    let (_guard, baseline_path) = empty_directory()?;
     let (exit, io) = run(
         &broken_contract_app(),
         &["diff", "--against", baseline_path.as_str()],

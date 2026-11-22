@@ -7,12 +7,12 @@ src/cli_problem.rs#in_app	packages/core/cli/src/cli-problem.ts#inApp
 src/cli_problem.rs#app_entry_where	packages/core/cli/src/cli-problem.ts#appEntryWhere
 src/cli_problem.rs#problem_from_refusal	packages/core/cli/src/cli-problem.ts#problemFromRefusal
 src/run_cli.rs#run_command	packages/core/cli/src/run-cli.ts#runCli
--	packages/core/cli/src/run-cli.ts#runInit	pending: brief 2
+src/run_cli.rs#run_init	packages/core/cli/src/run-cli.ts#runInit
 src/run_cli.rs#run_compile	packages/core/cli/src/run-cli.ts#runCompile
 -	packages/core/cli/src/run-cli.ts#runGenerate	skip: generate and check are layer 3.3 commands
 -	packages/core/cli/src/run-cli.ts#runCheck	skip: generate and check are layer 3.3 commands
--	packages/core/cli/src/run-cli.ts#pluginRunOf	pending: brief 2
--	packages/core/cli/src/run-cli.ts#nativeEntryPolicy	pending: brief 2
+-	packages/core/cli/src/run-cli.ts#pluginRunOf	pending: brief 3
+-	packages/core/cli/src/run-cli.ts#nativeEntryPolicy	pending: brief 3
 src/run_cli.rs#run_lint	packages/core/cli/src/run-cli.ts#runLint
 src/run_cli.rs#run_diff	packages/core/cli/src/run-cli.ts#runDiff
 src/run_cli.rs#run_explain	packages/core/cli/src/run-cli.ts#runExplain
@@ -69,19 +69,19 @@ src/bundle_command.rs#named_source	packages/core/cli/src/commands/bundle-command
 src/bundle_command.rs#resolved_output	packages/core/cli/src/commands/bundle-command.ts#resolvedOutput
 src/bundle_command.rs#output_path	packages/core/cli/src/commands/bundle-command.ts#outputPath
 src/cli_io.rs#refuse	packages/core/cli/src/commands/bundle-command.ts#refuse
--	packages/core/cli/src/commands/init-command.ts#initCommand	pending: brief 2
--	packages/core/cli/src/commands/init-command.ts#initNewProject	pending: brief 2
--	packages/core/cli/src/commands/init-command.ts#writeStarter	pending: brief 2
--	packages/core/cli/src/commands/init-command.ts#localSourcesRefusal	pending: brief 2
--	packages/core/cli/src/commands/init-command.ts#initModelines	pending: brief 2
--	packages/core/cli/src/commands/init-command.ts#modelineEdits	pending: brief 2
--	packages/core/cli/src/commands/init-command.ts#ignoreEntry	pending: brief 2
--	packages/core/cli/src/commands/init-command.ts#posixRelative	pending: brief 2
--	packages/core/cli/src/commands/init-command.ts#plannedIgnore	pending: brief 2
--	packages/core/cli/src/commands/init-command.ts#writeIgnore	pending: brief 2
+src/init_command.rs#init_command	packages/core/cli/src/commands/init-command.ts#initCommand
+src/init_command.rs#init_new_project	packages/core/cli/src/commands/init-command.ts#initNewProject
+src/init_command.rs#write_starter	packages/core/cli/src/commands/init-command.ts#writeStarter
+src/init_command.rs#local_sources_refusal	packages/core/cli/src/commands/init-command.ts#localSourcesRefusal
+src/init_modelines.rs#init_modelines	packages/core/cli/src/commands/init-command.ts#initModelines
+src/init_modelines.rs#modeline_edits	packages/core/cli/src/commands/init-command.ts#modelineEdits
+src/init_modelines.rs#ignore_entry	packages/core/cli/src/commands/init-command.ts#ignoreEntry
+src/init_modelines.rs#posix_relative	packages/core/cli/src/commands/init-command.ts#posixRelative
+src/init_command.rs#planned_ignore	packages/core/cli/src/commands/init-command.ts#plannedIgnore
+src/init_command.rs#write_ignore	packages/core/cli/src/commands/init-command.ts#writeIgnore
 src/init_command.rs#file_exists_problem	packages/core/cli/src/commands/init-command.ts#fileExistsProblem
--	packages/core/cli/src/commands/init-command.ts#ignoreFileLinkProblem	pending: brief 3
--	packages/core/cli/src/commands/init-command.ts#noPathSourceProblem	pending: brief 3
+src/init_command.rs#ignore_file_link_problem	packages/core/cli/src/commands/init-command.ts#ignoreFileLinkProblem	pending: brief 3
+src/init_command.rs#no_path_source_problem	packages/core/cli/src/commands/init-command.ts#noPathSourceProblem	pending: brief 3
 src/cli_io.rs#refuse	packages/core/cli/src/commands/init-command.ts#refuse
 -	packages/core/cli/src/commands/diff-baseline.ts#validator	skip: check_open_ir builds its validators once
 src/diff_baseline.rs#read_baseline	packages/core/cli/src/commands/diff-baseline.ts#readBaseline
@@ -96,15 +96,15 @@ src/explain_command.rs#explain_command	packages/core/cli/src/commands/explain-co
 src/explain_command.rs#explain_target	packages/core/cli/src/commands/explain-command.ts#explainTarget
 src/explain_command.rs#chosen_api	packages/core/cli/src/commands/explain-command.ts#chosenApi
 src/cli_io.rs#refuse	packages/core/cli/src/commands/explain-command.ts#refuse
--	packages/core/cli/src/commands/git-ignore.ts#gitIgnoreWithEntries	pending: brief 2
--	packages/core/cli/src/commands/git-ignore.ts#withoutTrailingSlash	pending: brief 2
--	packages/core/cli/src/commands/init-starter.ts#starterConfig	pending: brief 2
--	packages/core/cli/src/commands/init-starter.ts#starterContract	pending: brief 2
--	packages/core/cli/src/commands/modelines.ts#modelineOf	pending: brief 2
--	packages/core/cli/src/commands/modelines.ts#withModeline	pending: brief 2
--	packages/core/cli/src/commands/modelines.ts#workspaceFileKinds	pending: brief 2
--	packages/core/cli/src/commands/modelines.ts#layerFileKind	pending: brief 2
--	packages/core/cli/src/commands/modelines.ts#singleKind	pending: brief 2
+src/git_ignore.rs#git_ignore_with_entries	packages/core/cli/src/commands/git-ignore.ts#gitIgnoreWithEntries
+src/git_ignore.rs#without_trailing_slash	packages/core/cli/src/commands/git-ignore.ts#withoutTrailingSlash
+src/init_starter.rs#starter_config	packages/core/cli/src/commands/init-starter.ts#starterConfig
+src/init_starter.rs#starter_contract	packages/core/cli/src/commands/init-starter.ts#starterContract
+src/modelines.rs#modeline_of	packages/core/cli/src/commands/modelines.ts#modelineOf
+src/modelines.rs#with_modeline	packages/core/cli/src/commands/modelines.ts#withModeline
+src/modelines.rs#workspace_file_kinds	packages/core/cli/src/commands/modelines.ts#workspaceFileKinds
+src/modelines.rs#layer_file_kind	packages/core/cli/src/commands/modelines.ts#layerFileKind
+src/modelines.rs#single_kind	packages/core/cli/src/commands/modelines.ts#singleKind
 src/explain_view.rs#explain_operation_text	packages/core/cli/src/commands/explain-view.ts#explainOperationText
 src/explain_view.rs#written	packages/core/cli/src/commands/explain-view.ts#lineText
 src/explain_view.rs#block	packages/core/cli/src/commands/explain-view.ts#block

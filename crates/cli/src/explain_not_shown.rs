@@ -55,7 +55,10 @@ pub(crate) const RENDERED: [&str; 29] = [
 /// The nested members of the params, the errors and the response headers the view renders or only
 /// comments, by the list they sit in.
 const NESTED_RENDERED: [(&str, &[&str]); 3] = [
-    ("params", &["name", "type", "required", "origin", "derivedFrom"]),
+    (
+        "params",
+        &["name", "type", "required", "origin", "derivedFrom"],
+    ),
     ("errors", &["code", "origin", "derivedFrom"]),
     ("responses.headers", &["name"]),
 ];
@@ -100,7 +103,9 @@ fn nested_not_shown(operation: &JsonObject) -> Vec<String> {
         .flat_map(|place| items_of(params.and_then(|params| params.get(place))));
     let header_items = items_of(operation.get("responses"))
         .iter()
-        .flat_map(|response| items_of(object_of(Some(response)).and_then(|each| each.get("headers"))));
+        .flat_map(|response| {
+            items_of(object_of(Some(response)).and_then(|each| each.get("headers")))
+        });
     let lists: [(&str, Vec<&JsonValue>); 3] = [
         ("params", param_items.collect()),
         ("errors", items_of(operation.get("errors")).iter().collect()),

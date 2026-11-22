@@ -2,8 +2,8 @@
 //! and run configs, each read or refused with [`CliProblem`]s.
 
 mod api_refs;
-mod bundle_source;
 mod artefact_switches;
+mod bundle_source;
 mod cli_problem;
 mod config_file;
 mod config_kind;
@@ -37,7 +37,8 @@ pub use bundle_source::bundle_source_of;
 pub use cli_problem::CliProblem;
 pub use document_plan::open_api_api_names;
 pub use error::CliConfigError;
-pub use node_path::resolved_path;
+pub use find_root_config::{RootDiscovery, find_root_config};
+pub use node_path::{directory_of, relative_path, resolved_path};
 pub use path_containment::is_strictly_inside;
 pub use read_app_config::{
     AppConfigEntry, LoadedAppConfig, ReadAppConfigOutcome, read_app_config, read_listed_app_config,

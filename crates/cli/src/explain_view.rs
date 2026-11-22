@@ -48,7 +48,11 @@ impl ViewLine {
     }
 
     fn written(&self) -> String {
-        let Some(comment) = self.comment.as_deref().filter(|comment| !comment.is_empty()) else {
+        let Some(comment) = self
+            .comment
+            .as_deref()
+            .filter(|comment| !comment.is_empty())
+        else {
             return self.text.clone();
         };
         let width = self.text.encode_utf16().count();
@@ -101,7 +105,10 @@ fn member_line(
 
 fn identity_lines(access: &JsonObject, comment: String) -> Vec<ViewLine> {
     vec![
-        ViewLine::commented(format!("identity: {}", js_text_of(access.get("identity"))), comment),
+        ViewLine::commented(
+            format!("identity: {}", js_text_of(access.get("identity"))),
+            comment,
+        ),
         ViewLine::plain(format!("schemes: {}", flow_of(access.get("schemes")))),
     ]
 }
@@ -131,7 +138,10 @@ fn access_lines(access: &JsonValue, provenance_of: &Where<'_>) -> Vec<ViewLine> 
         Some((object, "public")) if object.contains_key("reason") => {
             let public = object_of_present([("public", object.get("reason"))]);
 
-            vec![ViewLine::commented(format!("access: {}", flow(&public)), comment)]
+            vec![ViewLine::commented(
+                format!("access: {}", flow(&public)),
+                comment,
+            )]
         }
         _ => vec![ViewLine::commented(
             format!("access: {}", flow(&without_provenance(access))),
@@ -152,7 +162,10 @@ fn input_lines(operation: &JsonObject, provenance_of: &Where<'_>) -> Vec<ViewLin
     )];
 
     if !is_json_media(member("media")) {
-        lines.push(ViewLine::plain(format!("inputMedia: {}", flow_of(member("media")))));
+        lines.push(ViewLine::plain(format!(
+            "inputMedia: {}",
+            flow_of(member("media"))
+        )));
     }
 
     lines.push(ViewLine::plain(format!(
@@ -172,7 +185,10 @@ fn param_lines(operation: &JsonObject, provenance_of: &Where<'_>) -> Vec<ViewLin
             let member = |name: &str| object_of(Some(param)).and_then(|object| object.get(name));
             let mut typed = JsonObject::new();
 
-            typed.insert("type".to_owned(), JsonValue::text(&type_text(member("type"))));
+            typed.insert(
+                "type".to_owned(),
+                JsonValue::text(&type_text(member("type"))),
+            );
 
             if let Some(required) = member("required") {
                 typed.insert("required".to_owned(), required.clone());
@@ -192,7 +208,11 @@ fn param_lines(operation: &JsonObject, provenance_of: &Where<'_>) -> Vec<ViewLin
     lines
 }
 
-fn error_lines(ir: &ContractIr, operation: &JsonObject, provenance_of: &Where<'_>) -> Vec<ViewLine> {
+fn error_lines(
+    ir: &ContractIr,
+    operation: &JsonObject,
+    provenance_of: &Where<'_>,
+) -> Vec<ViewLine> {
     let mut errors: Vec<(usize, Option<i64>, &JsonValue)> = items_of(operation.get("errors"))
         .iter()
         .enumerate()
@@ -237,12 +257,16 @@ fn error_lines(ir: &ContractIr, operation: &JsonObject, provenance_of: &Where<'_
         .collect()
 }
 
-fn scope_lines(operation: &JsonObject, provenance_of: &Where<'_>) -> Result<Vec<ViewLine>, CliError> {
+fn scope_lines(
+    operation: &JsonObject,
+    provenance_of: &Where<'_>,
+) -> Result<Vec<ViewLine>, CliError> {
     items_of(operation.get("scopes"))
         .iter()
         .map(|scope| {
             let member = |name: &str| object_of(Some(scope)).and_then(|object| object.get(name));
-            let source = member("source").map_or_else(|| Ok("undefined".to_owned()), source_text)?;
+            let source =
+                member("source").map_or_else(|| Ok("undefined".to_owned()), source_text)?;
 
             Ok(ViewLine::commented(
                 format!("  {}: {source}", js_text_of(member("scope"))),
@@ -270,7 +294,10 @@ fn requirement_lines(
                 comment.push_str(DEFAULTED_SUBJECT);
             }
 
-            Ok(ViewLine::commented(format!("  - {}", flow(&value)), comment))
+            Ok(ViewLine::commented(
+                format!("  - {}", flow(&value)),
+                comment,
+            ))
         })
         .collect()
 }
@@ -279,7 +306,8 @@ fn field_right_lines(operation: &JsonObject, provenance_of: &Where<'_>) -> Vec<V
     items_of(operation.get("fieldRights"))
         .iter()
         .map(|field_right| {
-            let member = |name: &str| object_of(Some(field_right)).and_then(|object| object.get(name));
+            let member =
+                |name: &str| object_of(Some(field_right)).and_then(|object| object.get(name));
             let described = object_of_present([
                 ("schema", member("schema")),
                 ("pointer", member("pointer")),
@@ -289,7 +317,10 @@ fn field_right_lines(operation: &JsonObject, provenance_of: &Where<'_>) -> Vec<V
                 ("always", member("always")),
             ]);
 
-            ViewLine::commented(format!("  - {}", flow(&described)), provenance_of.of(field_right))
+            ViewLine::commented(
+                format!("  - {}", flow(&described)),
+                provenance_of.of(field_right),
+            )
         })
         .collect()
 }
@@ -360,7 +391,11 @@ pub(crate) fn explain_operation_text(
     let get = |name: &str| members.get(name);
     let text_of = |name: &str| js_text_of(get(name));
     let mut lines = vec![
-        ViewLine::plain(format!("# seampact explain {}.{}", ir.api.id, text_of("id"))),
+        ViewLine::plain(format!(
+            "# seampact explain {}.{}",
+            ir.api.id,
+            text_of("id")
+        )),
         ViewLine::commented(
             format!("operationId: {}", text_of("id")),
             operation_id_comment(&operation_value, provenance_of),
@@ -376,7 +411,10 @@ pub(crate) fn explain_operation_text(
 
     lines.extend(member_line("csrf", get("csrf"), csrf_value, provenance_of)?);
     lines.extend(block("scopes", scope_lines(members, provenance_of)?));
-    lines.extend(block("requires", requirement_lines(members, provenance_of)?));
+    lines.extend(block(
+        "requires",
+        requirement_lines(members, provenance_of)?,
+    ));
     lines.extend(block("params", param_lines(members, provenance_of)));
     lines.extend(member_line(
         "unknownQuery",
@@ -385,20 +423,78 @@ pub(crate) fn explain_operation_text(
         provenance_of,
     )?);
     lines.extend(input_lines(members, provenance_of));
-    lines.extend(member_line("idempotency", get("idempotency"), idempotency_value, provenance_of)?);
-    lines.extend(member_line("concurrency", get("concurrency"), concurrency_value, provenance_of)?);
+    lines.extend(member_line(
+        "idempotency",
+        get("idempotency"),
+        idempotency_value,
+        provenance_of,
+    )?);
+    lines.extend(member_line(
+        "concurrency",
+        get("concurrency"),
+        concurrency_value,
+        provenance_of,
+    )?);
     lines.extend(block("responses", response_lines(members, provenance_of)));
     lines.extend(block("errors", error_lines(ir, members, provenance_of)));
-    lines.extend(block("fieldRights", field_right_lines(members, provenance_of)));
-    lines.extend(member_line("cache", get("cache"), plain_member, provenance_of)?);
-    lines.extend(member_line("paging", get("paging"), paging_value, provenance_of)?);
-    lines.extend(member_line("filteredBy", get("filteredBy"), identity_member, provenance_of)?);
-    lines.extend(member_line("owner", get("owner"), plain_member, provenance_of)?);
-    lines.extend(member_line("degradable", get("degradable"), plain_member, provenance_of)?);
-    lines.extend(member_line("budgetMs", get("budgetMs"), identity_member, provenance_of)?);
-    lines.extend(member_line("deadlineHeader", get("deadlineHeader"), identity_member, provenance_of)?);
-    lines.extend(member_line("deprecated", get("deprecated"), deprecated_value, provenance_of)?);
-    lines.extend(member_line("relays", get("relays"), relay_member, provenance_of)?);
+    lines.extend(block(
+        "fieldRights",
+        field_right_lines(members, provenance_of),
+    ));
+    lines.extend(member_line(
+        "cache",
+        get("cache"),
+        plain_member,
+        provenance_of,
+    )?);
+    lines.extend(member_line(
+        "paging",
+        get("paging"),
+        paging_value,
+        provenance_of,
+    )?);
+    lines.extend(member_line(
+        "filteredBy",
+        get("filteredBy"),
+        identity_member,
+        provenance_of,
+    )?);
+    lines.extend(member_line(
+        "owner",
+        get("owner"),
+        plain_member,
+        provenance_of,
+    )?);
+    lines.extend(member_line(
+        "degradable",
+        get("degradable"),
+        plain_member,
+        provenance_of,
+    )?);
+    lines.extend(member_line(
+        "budgetMs",
+        get("budgetMs"),
+        identity_member,
+        provenance_of,
+    )?);
+    lines.extend(member_line(
+        "deadlineHeader",
+        get("deadlineHeader"),
+        identity_member,
+        provenance_of,
+    )?);
+    lines.extend(member_line(
+        "deprecated",
+        get("deprecated"),
+        deprecated_value,
+        provenance_of,
+    )?);
+    lines.extend(member_line(
+        "relays",
+        get("relays"),
+        relay_member,
+        provenance_of,
+    )?);
 
     let upstream = items_of(get("upstream"));
 

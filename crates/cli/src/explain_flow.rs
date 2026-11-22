@@ -87,9 +87,8 @@ fn is_plain_text(text: &str) -> bool {
         .is_some_and(|first| first.is_ascii_alphabetic() || first == '_' || first == '/');
 
     starts_plain
-        && characters.all(|each| {
-            each.is_ascii_alphanumeric() || matches!(each, '_' | '.' | '/' | '-')
-        })
+        && characters
+            .all(|each| each.is_ascii_alphanumeric() || matches!(each, '_' | '.' | '/' | '-'))
 }
 
 /// Words a YAML reader takes for a boolean or null when written plain.
@@ -160,19 +159,32 @@ mod tests {
 
     #[test]
     fn containers_flow_in_member_order_and_an_empty_mapping_is_braces() {
-        assert_eq!(flow(&json(r#"{"b":[1,"x y"],"a":{}}"#)), "{ b: [1, \"x y\"], a: {} }");
+        assert_eq!(
+            flow(&json(r#"{"b":[1,"x y"],"a":{}}"#)),
+            "{ b: [1, \"x y\"], a: {} }"
+        );
         assert_eq!(flow(&json("[]")), "[]");
         assert_eq!(flow(&json("null")), "null");
     }
 
     #[test]
     fn a_type_use_shows_the_first_name_it_has() {
-        assert_eq!(type_text(Some(&json(r#"{"kind":"scalar","scalar":"int"}"#))), "int");
         assert_eq!(
-            type_text(Some(&json(r#"{"kind":"scalar","format":"uuid","scalar":"string"}"#))),
+            type_text(Some(&json(r#"{"kind":"scalar","scalar":"int"}"#))),
+            "int"
+        );
+        assert_eq!(
+            type_text(Some(&json(
+                r#"{"kind":"scalar","format":"uuid","scalar":"string"}"#
+            ))),
             "uuid"
         );
-        assert_eq!(type_text(Some(&json(r#"{"kind":"array","items":{"kind":"ref","schema":"Order"}}"#))), "[Order]");
+        assert_eq!(
+            type_text(Some(&json(
+                r#"{"kind":"array","items":{"kind":"ref","schema":"Order"}}"#
+            ))),
+            "[Order]"
+        );
         assert_eq!(type_text(Some(&json(r#"{"kind":"array"}"#))), "[undefined]");
         assert_eq!(type_text(Some(&json(r#"{"kind":"map"}"#))), "map");
         assert_eq!(type_text(None), "undefined");

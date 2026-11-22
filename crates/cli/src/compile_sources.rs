@@ -119,7 +119,7 @@ pub(crate) fn compile_sources(
 }
 
 /// The variable the fetch reads from the process, as the command's streams see it.
-fn run_environment(io: &dyn CliIo) -> Environment {
+pub(crate) fn run_environment(io: &dyn CliIo) -> Environment {
     [ALLOW_LOCAL_VARIABLE]
         .into_iter()
         .filter_map(|name| {

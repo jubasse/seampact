@@ -20,7 +20,8 @@ pub(crate) fn joined_path(base: &Utf8Path, segment: &Utf8Path) -> Utf8PathBuf {
 }
 
 /// `path.dirname(path)`: the parent, the root for the root, `.` for a bare name.
-pub(crate) fn directory_of(path: &Utf8Path) -> Utf8PathBuf {
+#[must_use]
+pub fn directory_of(path: &Utf8Path) -> Utf8PathBuf {
     match path.parent() {
         None => path.to_path_buf(),
         Some(parent) if parent.as_str().is_empty() => Utf8PathBuf::from(CURRENT_DIRECTORY),
@@ -29,7 +30,8 @@ pub(crate) fn directory_of(path: &Utf8Path) -> Utf8PathBuf {
 }
 
 /// `path.relative(from, to)` for two normalised paths of one kind.
-pub(crate) fn relative_path(from: &Utf8Path, to: &Utf8Path) -> Utf8PathBuf {
+#[must_use]
+pub fn relative_path(from: &Utf8Path, to: &Utf8Path) -> Utf8PathBuf {
     let from_components: Vec<Utf8Component<'_>> = from.components().collect();
     let to_components: Vec<Utf8Component<'_>> = to.components().collect();
     let shared = from_components

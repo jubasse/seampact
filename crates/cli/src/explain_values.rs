@@ -29,7 +29,8 @@ pub(crate) fn unknown_query_value(unknown_query: &JsonValue) -> JsonValue {
     let Some(object) = object_of(Some(unknown_query)) else {
         return unknown_query.clone();
     };
-    let ignored = matches!(object.get("policy"), Some(JsonValue::String(policy)) if policy == "ignore");
+    let ignored =
+        matches!(object.get("policy"), Some(JsonValue::String(policy)) if policy == "ignore");
 
     match object.get("reason") {
         Some(reason) if ignored => {

@@ -168,7 +168,11 @@ mod tests {
         ];
 
         for (message, pointer, named) in cases {
-            assert_eq!(names_pointer(message, pointer), named, "message {message:?}");
+            assert_eq!(
+                names_pointer(message, pointer),
+                named,
+                "message {message:?}"
+            );
         }
     }
 

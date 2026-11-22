@@ -74,9 +74,7 @@ pub(crate) fn resolve_entry_apis<'compiled>(
             .iter()
             .filter(|each| {
                 each.api == reference.api
-                    && reference
-                        .source
-                        .is_none_or(|source| each.source == source)
+                    && reference.source.is_none_or(|source| each.source == source)
             })
             .collect();
 

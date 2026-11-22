@@ -25,9 +25,14 @@ mod explain_not_shown;
 mod explain_origin;
 mod explain_values;
 mod explain_view;
+mod git_ignore;
 mod init_command;
+mod init_modelines;
+mod init_starter;
+mod line_end;
 mod lint_command;
 mod local_bundle;
+mod modelines;
 mod not_ported;
 #[cfg(feature = "oracle")]
 pub mod oracle;
