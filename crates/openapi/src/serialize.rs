@@ -1,5 +1,7 @@
 //! A document as the YAML text a file holds.
 
+use std::fmt::Write as _;
+
 use saphyr::{Mapping, Scalar, ScalarStyle, Yaml, YamlEmitter};
 use seampact_diagnostics::InternalError;
 use seampact_json::{JsonObject, JsonValue};
@@ -35,7 +37,41 @@ fn object_yaml(object: &JsonObject) -> Yaml<'static> {
 }
 
 fn string_yaml(text: &str) -> Yaml<'static> {
+    if text.chars().any(is_double_quoted_control) {
+        return Yaml::Representation(
+            escaped_for_double_quotes(text).into(),
+            ScalarStyle::DoubleQuoted,
+            None,
+        );
+    }
+
     Yaml::Value(Scalar::String(text.to_owned().into()))
+}
+
+/// DEL and the C1 controls: the TypeScript `yaml` double-quotes a string holding one, where the
+/// Rust emitter writes it plain.
+fn is_double_quoted_control(character: char) -> bool {
+    ('\u{7F}'..='\u{9F}').contains(&character)
+}
+
+/// The body of a double-quoted scalar: the controls below U+0020 escaped, the rest written as is.
+fn escaped_for_double_quotes(text: &str) -> String {
+    let mut quoted = String::with_capacity(text.len());
+
+    for character in text.chars() {
+        match character {
+            '"' => quoted.push_str("\\\""),
+            '\\' => quoted.push_str("\\\\"),
+            '\n' => quoted.push_str("\\n"),
+            '\t' => quoted.push_str("\\t"),
+            control if control < ' ' => {
+                let _ = write!(quoted, "\\x{:02X}", u32::from(control));
+            }
+            other => quoted.push(other),
+        }
+    }
+
+    quoted
 }
 
 fn value_yaml(value: &JsonValue) -> Yaml<'static> {
@@ -160,5 +196,17 @@ mod tests {
 
             prop_assert_eq!(read, expected, "text {:?}", text);
         }
+    }
+
+    #[test]
+    fn a_c1_control_character_is_double_quoted() -> Result<(), OpenApiError> {
+        let text = text_of(vec![
+            ("k", JsonValue::text("\u{80}")),
+            ("nel", JsonValue::text("\u{85}")),
+        ])?;
+
+        assert_eq!(text, "k: \"\u{80}\"\nnel: \"\u{85}\"\n");
+
+        Ok(())
     }
 }
