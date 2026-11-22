@@ -2,15 +2,17 @@
 //! generic member comparison driven by the member table.
 
 use indexmap::IndexMap;
-use seampact_diff_table::{DiffKind, DiffRefusal, IrDefinition, MemberRow, member_row};
+use seampact_diff_table::{
+    DiffKind, DiffPosition, DiffRefusal, IrDefinition, MemberRow, member_row,
+};
 use seampact_ir::ContractIr;
-use seampact_js::cmp_utf16;
 use seampact_json::{JsonObject, JsonValue};
+use serde::Serialize;
 
 use crate::DiffError;
 use crate::change_sink::{ChangeReach, ChangeSink, ElementOrigin, RawChange};
 use crate::not_ported::not_ported_yet;
-use crate::walk_json::{is_same_json, pointer_join};
+use crate::walk_json::{is_same_json, json_of, member_names, pointer_join};
 use crate::walk_reach::ReachIndex;
 
 /// The two IRs of one walk, their reach indexes and the sink that collects the changes.
@@ -45,6 +47,9 @@ pub(crate) type MemberComparison<'comparison> = Box<
 pub(crate) type MemberComparisons<'comparison> =
     IndexMap<&'static str, MemberComparison<'comparison>>;
 
+/// Joins the names a kept-order comparison compares.
+const NAME_SEPARATOR: &str = "\u{0}";
+
 /// The rows whose change is only informative.
 const INFORMATIVE_MEMBER_ROWS: [DiffKind; 2] = [DiffKind::Name, DiffKind::Annotation];
 
@@ -69,16 +74,7 @@ pub(crate) fn compare_members(
     after: Option<&JsonObject>,
     comparisons: &MemberComparisons<'_>,
 ) -> Result<(), DiffError> {
-    let mut names: Vec<&str> = before
-        .into_iter()
-        .chain(after)
-        .flat_map(|members| members.keys().map(String::as_str))
-        .collect();
-
-    names.sort_by(|left, right| cmp_utf16(left, right));
-    names.dedup();
-
-    for member in names {
+    for member in member_names(before, after) {
         let before_value = before.and_then(|members| members.get(member));
         let after_value = after.and_then(|members| members.get(member));
 
@@ -139,6 +135,138 @@ pub(crate) fn unknown_value_refusal(
     _operations: &[String],
 ) -> Result<DiffRefusal, DiffError> {
     Err(not_ported_yet("unknownValueRefusal"))
+}
+
+/// Refuses the diff on an open enum value the walk must act on, naming the member and the operations.
+///
+/// # Errors
+///
+/// Not ported yet.
+pub(crate) fn refuse_unknown_value(
+    _context: &mut WalkContext<'_>,
+    _site: &ChangeSite<'_>,
+    _member: &str,
+    _value: &str,
+) -> Result<(), DiffError> {
+    Err(not_ported_yet("refuseUnknownValue"))
+}
+
+/// The reaches moved to position `none`, their operations kept: for rows that hold no position.
+pub(crate) fn without_position(reaches: &[ChangeReach]) -> Vec<ChangeReach> {
+    if reaches.is_empty() {
+        return Vec::new();
+    }
+
+    let mut operations: Vec<String> = Vec::new();
+
+    for operation in reaches.iter().flat_map(|reach| &reach.operations) {
+        if !operations.contains(operation) {
+            operations.push(operation.clone());
+        }
+    }
+
+    vec![ChangeReach {
+        position: DiffPosition::None,
+        operations,
+        facts: Vec::new(),
+    }]
+}
+
+/// An `order` change when the names both lists keep are in another order.
+pub(crate) fn compare_kept_order(
+    context: &mut WalkContext<'_>,
+    site: &ChangeSite<'_>,
+    pointer: &str,
+    order_case: &str,
+    before: &[&str],
+    after: &[&str],
+) {
+    let kept_before: Vec<&str> = before
+        .iter()
+        .copied()
+        .filter(|name| after.contains(name))
+        .collect();
+    let kept_after: Vec<&str> = after
+        .iter()
+        .copied()
+        .filter(|name| before.contains(name))
+        .collect();
+
+    // Joined as the TypeScript does, so names holding a NUL compare as it does.
+    if kept_before.join(NAME_SEPARATOR) == kept_after.join(NAME_SEPARATOR) {
+        return;
+    }
+
+    emit_at(
+        context,
+        site,
+        RawChange::new(DiffKind::Order, order_case, pointer.to_owned()),
+    );
+}
+
+/// The callback of a keyed list for one entry.
+pub(crate) type EntryCallback<'comparison, Entry> =
+    Box<dyn Fn(&mut WalkContext<'_>, &str, &Entry) -> Result<(), DiffError> + 'comparison>;
+
+/// The callback of a keyed list for an entry kept in both lists with other content.
+pub(crate) type KeptEntryCallback<'comparison, Entry> =
+    Box<dyn Fn(&mut WalkContext<'_>, &str, &Entry, &Entry) -> Result<(), DiffError> + 'comparison>;
+
+/// How the entries of a list keyed by `key_of` are compared: added, removed, or kept and changed.
+pub(crate) struct KeyedListComparison<'comparison, Entry> {
+    pub(crate) key_of: Box<dyn Fn(&Entry) -> String + 'comparison>,
+    pub(crate) added: EntryCallback<'comparison, Entry>,
+    pub(crate) removed: EntryCallback<'comparison, Entry>,
+    pub(crate) kept: KeptEntryCallback<'comparison, Entry>,
+}
+
+/// Compares two lists entry by entry on their keys; a kept entry with other content goes to `kept`.
+pub(crate) fn compare_keyed_list<Entry: Serialize>(
+    context: &mut WalkContext<'_>,
+    pointer: &str,
+    before: &[Entry],
+    after: &[Entry],
+    comparison: &KeyedListComparison<'_, Entry>,
+) -> Result<(), DiffError> {
+    let before_keys: Vec<String> = before.iter().map(&comparison.key_of).collect();
+    let after_keys: Vec<String> = after.iter().map(&comparison.key_of).collect();
+
+    for (index, (entry, key)) in after.iter().zip(&after_keys).enumerate() {
+        if !before_keys.contains(key) {
+            (comparison.added)(
+                context,
+                &pointer_join(pointer, &[&index.to_string()]),
+                entry,
+            )?;
+        }
+    }
+
+    for (index, (entry, key)) in before.iter().zip(&before_keys).enumerate() {
+        let Some((kept, after_entry)) = after_keys
+            .iter()
+            .position(|candidate| candidate == key)
+            .and_then(|kept| after.get(kept).map(|found| (kept, found)))
+        else {
+            (comparison.removed)(
+                context,
+                &pointer_join(pointer, &[&index.to_string()]),
+                entry,
+            )?;
+
+            continue;
+        };
+
+        if !is_same_json(Some(&json_of(entry)?), Some(&json_of(after_entry)?)) {
+            (comparison.kept)(
+                context,
+                &pointer_join(pointer, &[&kept.to_string()]),
+                entry,
+                after_entry,
+            )?;
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -278,5 +406,99 @@ mod tests {
                 .map(|change| (change.kind, change.case_name.as_str())),
             Some((DiffKind::Unclassified, "Name.nothing"))
         );
+    }
+
+    fn site() -> ChangeSite<'static> {
+        ChangeSite {
+            reaches: &NO_POSITION,
+            origin: None,
+        }
+    }
+
+    #[test]
+    fn kept_names_in_another_order_are_an_order_change() {
+        let ir = sample_ir();
+        let mut walk = context(&ir);
+
+        compare_kept_order(
+            &mut walk,
+            &site(),
+            "/p",
+            "values",
+            &["a", "b", "x"],
+            &["y", "a", "b"],
+        );
+        compare_kept_order(&mut walk, &site(), "/p", "values", &["a", "b"], &["b", "a"]);
+
+        let kinds: Vec<(DiffKind, String)> = walk
+            .sink
+            .sorted_changes()
+            .into_iter()
+            .map(|change| (change.kind, change.case_name))
+            .collect();
+
+        assert_eq!(kinds, vec![(DiffKind::Order, "values".to_owned())]);
+    }
+
+    #[test]
+    fn a_keyed_list_reports_added_removed_and_changed_entries_at_their_indexes() {
+        let ir = sample_ir();
+        let mut walk = context(&ir);
+        let seen = RefCell::new(Vec::new());
+        let comparison: KeyedListComparison<'_, (String, i64)> = KeyedListComparison {
+            key_of: Box::new(|entry| entry.0.clone()),
+            added: Box::new(|_context, pointer, entry| {
+                seen.borrow_mut()
+                    .push(format!("added {pointer} {}", entry.0));
+
+                Ok(())
+            }),
+            removed: Box::new(|_context, pointer, entry| {
+                seen.borrow_mut()
+                    .push(format!("removed {pointer} {}", entry.0));
+
+                Ok(())
+            }),
+            kept: Box::new(|_context, pointer, entry, _after| {
+                seen.borrow_mut()
+                    .push(format!("kept {pointer} {}", entry.0));
+
+                Ok(())
+            }),
+        };
+        let before = [
+            ("a".to_owned(), 1),
+            ("b".to_owned(), 1),
+            ("c".to_owned(), 1),
+        ];
+        let after = [
+            ("c".to_owned(), 1),
+            ("new".to_owned(), 1),
+            ("b".to_owned(), 2),
+        ];
+
+        compare_keyed_list(&mut walk, "/list", &before, &after, &comparison)
+            .unwrap_or_else(|error| panic!("{error}"));
+
+        assert_eq!(
+            seen.borrow().clone(),
+            vec!["added /list/1 new", "removed /list/0 a", "kept /list/2 b"]
+        );
+    }
+
+    #[test]
+    fn reaches_without_position_keep_each_operation_once() {
+        let reach = |position, operations: &[&str]| ChangeReach {
+            position,
+            operations: operations.iter().map(|id| (*id).to_owned()).collect(),
+            facts: Vec::new(),
+        };
+        let moved = without_position(&[
+            reach(DiffPosition::Input, &["b", "a"]),
+            reach(DiffPosition::Output, &["a", "c"]),
+        ]);
+
+        assert_eq!(moved, vec![reach(DiffPosition::None, &["b", "a", "c"])]);
+        assert_eq!(without_position(&[]), Vec::new());
     }
 }

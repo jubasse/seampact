@@ -417,15 +417,15 @@ impl Serialize for FailureForm<'_> {
 
         #[derive(Serialize)]
         struct Form<'form> {
-            code: &'static str,
-            message: &'form str,
-            fix: &'form str,
             kind: &'static str,
             case: &'form str,
             pointer: &'form str,
             position: &'static str,
             breaks: Vec<&'static str>,
             operations: &'form [String],
+            code: &'static str,
+            message: &'form str,
+            fix: &'form str,
             #[serde(skip_serializing_if = "Option::is_none")]
             maturity: Option<MaturityForm<'form>>,
         }

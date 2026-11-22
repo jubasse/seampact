@@ -1,7 +1,12 @@
 //! JSON comparison and JSON Pointer helpers of the walk.
 
+use seampact_diagnostics::InternalError;
 use seampact_diff_table::DiffValue;
-use seampact_json::{JsonValue, canonical_json, escape_pointer};
+use seampact_js::cmp_utf16;
+use seampact_json::{JsonObject, JsonValue, canonical_json, escape_pointer};
+use serde::Serialize;
+
+use crate::DiffError;
 
 /// Whether two values are the same JSON, object member order aside; two absent values are.
 pub(crate) fn is_same_json(left: Option<&JsonValue>, right: Option<&JsonValue>) -> bool {
@@ -19,6 +24,54 @@ pub(crate) fn pointer_join(base: &str, segments: &[&str]) -> String {
     segments.iter().fold(base.to_owned(), |pointer, segment| {
         format!("{pointer}/{}", escape_pointer(segment))
     })
+}
+
+/// The sorted union of the member names of two objects, in UTF-16 code unit order.
+pub(crate) fn member_names<'members>(
+    before: Option<&'members JsonObject>,
+    after: Option<&'members JsonObject>,
+) -> Vec<&'members str> {
+    let mut names: Vec<&str> = before
+        .into_iter()
+        .chain(after)
+        .flat_map(|members| members.keys().map(String::as_str))
+        .collect();
+
+    names.sort_by(|left, right| cmp_utf16(left, right));
+    names.dedup();
+
+    names
+}
+
+/// Whether the value is a JSON object (an array is not).
+pub(crate) fn is_record(value: Option<&JsonValue>) -> bool {
+    matches!(value, Some(JsonValue::Object(_)))
+}
+
+/// The JSON of an IR value, as the TypeScript walk reads it.
+pub(crate) fn json_of<T: Serialize>(value: &T) -> Result<JsonValue, DiffError> {
+    let encoded =
+        serde_json::to_value(value).map_err(|error| InternalError::new(error.to_string()))?;
+
+    Ok(JsonValue::try_from(encoded).map_err(|error| InternalError::new(error.to_string()))?)
+}
+
+/// The members of an IR object as JSON.
+pub(crate) fn object_members<T: Serialize>(value: &T) -> Result<JsonObject, DiffError> {
+    match json_of(value)? {
+        JsonValue::Object(members) => Ok(members),
+        other => Err(InternalError::new(format!("{other:?} encodes as no object")).into()),
+    }
+}
+
+/// A text as a change value.
+pub(crate) fn text_value(text: &str) -> JsonValue {
+    JsonValue::String(text.to_owned())
+}
+
+/// A flag as a change value.
+pub(crate) fn flag_value(flag: bool) -> JsonValue {
+    JsonValue::Bool(flag)
 }
 
 /// The value as a report value when it is a scalar, else `None`.
@@ -77,5 +130,30 @@ mod tests {
         assert_eq!(scalar_value(Some(&object(&[]))), None);
         assert_eq!(scalar_value(Some(&JsonValue::Array(Vec::new()))), None);
         assert_eq!(scalar_value(None), None);
+    }
+
+    #[test]
+    fn member_names_are_the_utf16_sorted_union() {
+        let before = object(&[("\u{FF5E}", 1), ("b", 1)]);
+        let after = object(&[("\u{10000}", 1), ("b", 1)]);
+        let (JsonValue::Object(before_members), JsonValue::Object(after_members)) =
+            (&before, &after)
+        else {
+            panic!("not objects");
+        };
+
+        assert_eq!(
+            member_names(Some(before_members), Some(after_members)),
+            vec!["b", "\u{10000}", "\u{FF5E}"]
+        );
+        assert_eq!(member_names(None, None), Vec::<&str>::new());
+    }
+
+    #[test]
+    fn an_array_is_no_record() {
+        assert!(is_record(Some(&object(&[]))));
+        assert!(!is_record(Some(&JsonValue::Array(Vec::new()))));
+        assert!(!is_record(Some(&JsonValue::Null)));
+        assert!(!is_record(None));
     }
 }
