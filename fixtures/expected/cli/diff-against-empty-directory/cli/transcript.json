@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "diff.against.invalid: The directory '<root>/baseline' holds no `*.ir.json` file. Fix: Pass `--against` an IR file, or a directory of `<api>.ir.json` files as `seampact compile --out` writes them.\n",
+  "written": {},
+  "removed": []
+}

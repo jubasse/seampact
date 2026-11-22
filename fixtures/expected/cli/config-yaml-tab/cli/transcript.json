@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "config.yaml.syntax: broken.config.txt:2:1: Tabs are not allowed as indentation. Fix: Correct the YAML at that position.\n",
+  "written": {},
+  "removed": []
+}

@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "diff.against.invalid: '<root>/baseline/notes.ir.json' is not valid under the IR JSON Schema: at '' must have required property 'irVersion'; at '' must have required property 'irRevision'; at '' must have required property 'kinds'; at '' must have required property 'features'; at '' must have required property 'api'; and 20 more. Fix: Pass `--against` an IR file, or a directory of `<api>.ir.json` files as `seampact compile --out` writes them.\n",
+  "written": {},
+  "removed": []
+}

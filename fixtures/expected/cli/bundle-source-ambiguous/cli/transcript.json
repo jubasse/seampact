@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "bundle.source.ambiguous: The app config has several `path` sources ('notes', 'other'). Fix: Name the one to bundle with `--source <name>`.\n",
+  "written": {},
+  "removed": []
+}

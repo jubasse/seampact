@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "config.yaml.syntax: broken.config.txt:2:1: Flow map in block collection must be sufficiently indented and end with a }. Fix: Correct the YAML at that position.\n",
+  "written": {},
+  "removed": []
+}

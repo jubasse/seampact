@@ -1,0 +1,4 @@
+sources:
+	notes:
+    path: ./contract
+targets: []

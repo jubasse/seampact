@@ -1,0 +1,18 @@
+{
+  "function": "readAppConfig",
+  "args": [
+    "<root>/broken.config.txt",
+    "broken.config.txt"
+  ],
+  "result": {
+    "status": "refused",
+    "problems": [
+      {
+        "code": "config.yaml.syntax",
+        "message": "Flow map in block collection must be sufficiently indented and end with a }.",
+        "fix": "Correct the YAML at that position.",
+        "where": "broken.config.txt:2:1"
+      }
+    ]
+  }
+}

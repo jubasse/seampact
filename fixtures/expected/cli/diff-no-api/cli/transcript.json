@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "diff.no-api: The app config names no api, so there is nothing to compare. Fix: Name an api in a target entry's `api` or `apis`, or in `openapi`.\n",
+  "written": {},
+  "removed": []
+}

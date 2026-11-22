@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "bundle.source.unknown: The app config has no source 'nope' (notes). Fix: Name one of the app config's `path` sources with `--source`.\n",
+  "written": {},
+  "removed": []
+}

@@ -52,3 +52,27 @@ differences:
       output: diagnostics
       pointer: /apis/*/diagnostics/0/related/0/origin
     change: member-order
+  - id: cli-config-yaml-syntax-text
+    reason: The Rust CLI parses a config with saphyr-parser, so the YAML syntax error of `seampact.config.yaml` has its wording and its column, where the TS CLI prints the yaml package's.
+    decision: docs/adr/0031-rust-core.md#bytes-that-change-once
+    applies:
+      fixtures: ["cli/config-yaml-tab", "cli/config-yaml-flow"]
+      output: cli-stderr
+      pointer: /stderr/0
+    change: value
+  - id: cli-diff-baseline-not-json-text
+    reason: The Rust CLI reads a baseline IR with serde_json, whose parse error wording replaces V8's `JSON.parse` message.
+    decision: docs/adr/0031-rust-core.md#bytes-that-change-once
+    applies:
+      fixtures: ["cli/diff-against-not-json"]
+      output: cli-stderr
+      pointer: /stderr/0
+    change: value
+  - id: cli-diff-baseline-schema-text
+    reason: The Rust CLI lists the IR schema problems of a baseline with the schema engine's wording, where the TS CLI lists ajv's.
+    decision: docs/adr/0031-rust-core.md#bytes-that-change-once
+    applies:
+      fixtures: ["cli/diff-against-invalid-ir"]
+      output: cli-stderr
+      pointer: /stderr/0
+    change: value

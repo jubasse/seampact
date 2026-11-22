@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "notes v1: compat.policy additive-only (before additive-only, after additive-only), gate clients\nbreaking clients legacy /operations/1: operation.removed removed (legacy)\ndeprecation legacy: sunsetPassed, since 2024-01-01, sunset 2025-01-01 (past sunset)\ndiff.policy.breaking: operation.removed (removed) at /operations/1 breaks clients on legacy, and compat.policy is additive-only. Fix: Make the change additive (keep the old member beside the new one), or publish it as a new api version; a release that breaks on purpose sets compat: { policy: none } in both versions.\ngate failed: 1 failure(s)\n",
+  "stderr": "",
+  "written": {},
+  "removed": []
+}
