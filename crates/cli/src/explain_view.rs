@@ -8,6 +8,7 @@ use seampact_json::{JsonNumber, JsonObject, JsonValue, items_of, js_text_of, obj
 use seampact_span::Location;
 
 use crate::CliError;
+use crate::document_order::in_document_order;
 use crate::explain_flow::{flow, flow_of, object_of_present, type_text};
 use crate::explain_not_shown::not_shown_line;
 use crate::explain_origin::provenance;
@@ -505,8 +506,10 @@ pub(crate) fn explain_operation_text(
     operation: &Operation,
     locations: &IndexMap<String, Location>,
 ) -> Result<String, CliError> {
-    let operation_value =
-        to_json_value(operation).map_err(|error| InternalError::new(error.to_string()))?;
+    let operation_value = to_json_value(operation)
+        .map_err(|error| error.to_string())
+        .and_then(|value| in_document_order(&value))
+        .map_err(InternalError::new)?;
     let JsonValue::Object(members) = &operation_value else {
         return Err(InternalError::new("an operation that is not a mapping").into());
     };

@@ -15,6 +15,7 @@ mod config_location;
 mod contract_position;
 mod diff_baseline;
 mod diff_command;
+mod document_order;
 mod error;
 mod explain_command;
 mod explain_flow;

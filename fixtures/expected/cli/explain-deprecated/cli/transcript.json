@@ -1,0 +1,7 @@
+{
+  "exit": 0,
+  "stdout": "# seampact explain lifecycle.legacyTask\noperationId: legacyTask                          # api.yaml:12\nsurface: app\nmethod: get\npath: /v1/legacy/tasks/{id}\naccess: { public: \"Tasks are public.\" }          # api.yaml:9\nparams:\n  path.id: { type: string, required: true }      # api.yaml:15\nunknownQuery: refuse\nresponses:\n  - { status: 200, shape: item, body: Task, headers: [Deprecation, Sunset, Link] }  # response.format, built in, api.yaml:16\nerrors:\n  - { status: 400, code: api.schema_invalid }    # input.invalid, api.yaml:12\n  - { status: 500, code: api.internal }          # response.undeclared, api.yaml:12\ndeprecated: { since: \"2026-06-01\", successorRel: successor-version, sunset: \"2027-01-31\", successor: lifecycle.getTask }  # api.yaml:17\nmaturity: { level: experimental, source: api }   # api.yaml:1\nformat: bare\n# not shown yet: errors.roles, responses.headers.derivedFrom, responses.headers.required, responses.headers.semantic, responses.headers.type\n",
+  "stderr": "",
+  "written": {},
+  "removed": []
+}

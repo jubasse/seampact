@@ -16,11 +16,13 @@ use seampact_cli_config::bundle_source_of;
 use seampact_compiler::{PipelineApiResult, PipelineOptions, PipelineResult};
 use seampact_diagnostics::diagnostic_list_json;
 use seampact_ir::SourceMap;
-use seampact_json::{JsonNumber, JsonObject, JsonValue, canonical_document};
+use seampact_json::{JsonNumber, JsonObject, JsonValue};
 use seampact_load::{FsReader, LoadOptions};
 use seampact_oracle::{ROOT_TOKEN, RecordedAnswer, RecordedToolCall, SubjectAnswer};
 use seampact_pipeline::PipelineDeclared;
 use seampact_span::{Location, SourceFiles};
+
+use crate::document_order::in_document_order;
 
 const FETCH_BUNDLE: &str = "fetchBundle";
 const COMPILE_WORKSPACE_WITH_IMPORTS: &str = "compileWorkspaceWithImports";
@@ -259,12 +261,6 @@ fn fetch_result_json(result: &BundleFetchResult) -> Result<JsonValue, String> {
             Ok(JsonValue::object(entries))
         }
     }
-}
-
-/// The value as a bundle file holds it once read: every object's members in the canonical
-/// document order, which the verifier's `JSON.parse` of the file keeps.
-fn in_document_order(value: &JsonValue) -> Result<JsonValue, String> {
-    serde_json::from_str(&canonical_document(value)).map_err(|error| error.to_string())
 }
 
 fn failures_json(failures: &[BundleSourceFailure]) -> JsonValue {

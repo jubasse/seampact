@@ -1,0 +1,3373 @@
+{
+  "function": "compileWorkspaceWithImports",
+  "args": [
+    {
+      "reader": {
+        "root": "<root>/contract"
+      },
+      "entry": "api.yaml",
+      "fetch": {
+        "baseDirectory": "<root>/contract",
+        "localSources": "allow"
+      }
+    }
+  ],
+  "result": {
+    "ok": true,
+    "compiled": {
+      "files": [
+        "api.yaml"
+      ],
+      "diagnostics": [],
+      "locations": {},
+      "apis": [
+        {
+          "api": "shop",
+          "diagnostics": [],
+          "locations": {
+            "api#": {
+              "file": "api.yaml",
+              "line": 1,
+              "column": 1,
+              "endLine": 87,
+              "endColumn": 1
+            },
+            "api#/api/name": {
+              "file": "api.yaml",
+              "line": 1,
+              "column": 8,
+              "endLine": 1,
+              "endColumn": 18
+            },
+            "api#/api/version": {
+              "file": "api.yaml",
+              "line": 1,
+              "column": 20,
+              "endLine": 1,
+              "endColumn": 30
+            },
+            "api#/api": {
+              "file": "api.yaml",
+              "line": 1,
+              "column": 1,
+              "endLine": 1,
+              "endColumn": 32
+            },
+            "api#/schemes/bearer/kind": {
+              "file": "api.yaml",
+              "line": 3,
+              "column": 13,
+              "endLine": 3,
+              "endColumn": 25
+            },
+            "api#/schemes/bearer": {
+              "file": "api.yaml",
+              "line": 3,
+              "column": 3,
+              "endLine": 3,
+              "endColumn": 27
+            },
+            "api#/schemes": {
+              "file": "api.yaml",
+              "line": 2,
+              "column": 1,
+              "endLine": 4,
+              "endColumn": 1
+            },
+            "api#/identities/clerk/schemes/read/0": {
+              "file": "api.yaml",
+              "line": 5,
+              "column": 30,
+              "endLine": 5,
+              "endColumn": 36
+            },
+            "api#/identities/clerk/schemes/read": {
+              "file": "api.yaml",
+              "line": 5,
+              "column": 23,
+              "endLine": 5,
+              "endColumn": 37
+            },
+            "api#/identities/clerk/schemes/write/0": {
+              "file": "api.yaml",
+              "line": 5,
+              "column": 47,
+              "endLine": 5,
+              "endColumn": 53
+            },
+            "api#/identities/clerk/schemes/write": {
+              "file": "api.yaml",
+              "line": 5,
+              "column": 39,
+              "endLine": 5,
+              "endColumn": 54
+            },
+            "api#/identities/clerk/schemes": {
+              "file": "api.yaml",
+              "line": 5,
+              "column": 12,
+              "endLine": 5,
+              "endColumn": 56
+            },
+            "api#/identities/clerk/principal": {
+              "file": "api.yaml",
+              "line": 5,
+              "column": 58,
+              "endLine": 5,
+              "endColumn": 74
+            },
+            "api#/identities/clerk": {
+              "file": "api.yaml",
+              "line": 5,
+              "column": 3,
+              "endLine": 5,
+              "endColumn": 76
+            },
+            "api#/identities": {
+              "file": "api.yaml",
+              "line": 4,
+              "column": 1,
+              "endLine": 6,
+              "endColumn": 1
+            },
+            "api#/schemas/ItemId/type": {
+              "file": "api.yaml",
+              "line": 7,
+              "column": 13,
+              "endLine": 7,
+              "endColumn": 25
+            },
+            "api#/schemas/ItemId/format": {
+              "file": "api.yaml",
+              "line": 7,
+              "column": 27,
+              "endLine": 7,
+              "endColumn": 39
+            },
+            "api#/schemas/ItemId": {
+              "file": "api.yaml",
+              "line": 7,
+              "column": 3,
+              "endLine": 7,
+              "endColumn": 41
+            },
+            "api#/schemas/ChildId/type": {
+              "file": "api.yaml",
+              "line": 8,
+              "column": 14,
+              "endLine": 8,
+              "endColumn": 26
+            },
+            "api#/schemas/ChildId/format": {
+              "file": "api.yaml",
+              "line": 8,
+              "column": 28,
+              "endLine": 8,
+              "endColumn": 40
+            },
+            "api#/schemas/ChildId": {
+              "file": "api.yaml",
+              "line": 8,
+              "column": 3,
+              "endLine": 8,
+              "endColumn": 42
+            },
+            "api#/schemas/Clerk/type": {
+              "file": "api.yaml",
+              "line": 9,
+              "column": 12,
+              "endLine": 9,
+              "endColumn": 24
+            },
+            "api#/schemas/Clerk/required/0": {
+              "file": "api.yaml",
+              "line": 9,
+              "column": 37,
+              "endLine": 9,
+              "endColumn": 44
+            },
+            "api#/schemas/Clerk/required": {
+              "file": "api.yaml",
+              "line": 9,
+              "column": 26,
+              "endLine": 9,
+              "endColumn": 45
+            },
+            "api#/schemas/Clerk/properties/clerkId/type": {
+              "file": "api.yaml",
+              "line": 9,
+              "column": 72,
+              "endLine": 9,
+              "endColumn": 84
+            },
+            "api#/schemas/Clerk/properties/clerkId": {
+              "file": "api.yaml",
+              "line": 9,
+              "column": 61,
+              "endLine": 9,
+              "endColumn": 86
+            },
+            "api#/schemas/Clerk/properties": {
+              "file": "api.yaml",
+              "line": 9,
+              "column": 47,
+              "endLine": 9,
+              "endColumn": 88
+            },
+            "api#/schemas/Clerk": {
+              "file": "api.yaml",
+              "line": 9,
+              "column": 3,
+              "endLine": 9,
+              "endColumn": 90
+            },
+            "api#/schemas/Item/type": {
+              "file": "api.yaml",
+              "line": 11,
+              "column": 5,
+              "endLine": 11,
+              "endColumn": 17
+            },
+            "api#/schemas/Item/required/0": {
+              "file": "api.yaml",
+              "line": 12,
+              "column": 16,
+              "endLine": 12,
+              "endColumn": 22
+            },
+            "api#/schemas/Item/required/1": {
+              "file": "api.yaml",
+              "line": 12,
+              "column": 24,
+              "endLine": 12,
+              "endColumn": 28
+            },
+            "api#/schemas/Item/required": {
+              "file": "api.yaml",
+              "line": 12,
+              "column": 5,
+              "endLine": 12,
+              "endColumn": 29
+            },
+            "api#/schemas/Item/properties/itemId": {
+              "file": "api.yaml",
+              "line": 14,
+              "column": 7,
+              "endLine": 14,
+              "endColumn": 21
+            },
+            "api#/schemas/Item/properties/name/type": {
+              "file": "api.yaml",
+              "line": 15,
+              "column": 15,
+              "endLine": 15,
+              "endColumn": 27
+            },
+            "api#/schemas/Item/properties/name": {
+              "file": "api.yaml",
+              "line": 15,
+              "column": 7,
+              "endLine": 15,
+              "endColumn": 29
+            },
+            "api#/schemas/Item/properties/cost/type": {
+              "file": "api.yaml",
+              "line": 16,
+              "column": 15,
+              "endLine": 16,
+              "endColumn": 28
+            },
+            "api#/schemas/Item/properties/cost/restrictedTo": {
+              "file": "api.yaml",
+              "line": 16,
+              "column": 30,
+              "endLine": 16,
+              "endColumn": 54
+            },
+            "api#/schemas/Item/properties/cost": {
+              "file": "api.yaml",
+              "line": 16,
+              "column": 7,
+              "endLine": 16,
+              "endColumn": 56
+            },
+            "api#/schemas/Item/properties/grade/type": {
+              "file": "api.yaml",
+              "line": 17,
+              "column": 16,
+              "endLine": 17,
+              "endColumn": 29
+            },
+            "api#/schemas/Item/properties/grade/restrictedTo/right": {
+              "file": "api.yaml",
+              "line": 17,
+              "column": 47,
+              "endLine": 17,
+              "endColumn": 65
+            },
+            "api#/schemas/Item/properties/grade/restrictedTo/params/level": {
+              "file": "api.yaml",
+              "line": 17,
+              "column": 77,
+              "endLine": 17,
+              "endColumn": 88
+            },
+            "api#/schemas/Item/properties/grade/restrictedTo/params": {
+              "file": "api.yaml",
+              "line": 17,
+              "column": 67,
+              "endLine": 17,
+              "endColumn": 90
+            },
+            "api#/schemas/Item/properties/grade/restrictedTo": {
+              "file": "api.yaml",
+              "line": 17,
+              "column": 31,
+              "endLine": 17,
+              "endColumn": 92
+            },
+            "api#/schemas/Item/properties/grade": {
+              "file": "api.yaml",
+              "line": 17,
+              "column": 7,
+              "endLine": 17,
+              "endColumn": 94
+            },
+            "api#/schemas/Item/properties/margin/type": {
+              "file": "api.yaml",
+              "line": 18,
+              "column": 17,
+              "endLine": 18,
+              "endColumn": 30
+            },
+            "api#/schemas/Item/properties/margin/restrictedTo": {
+              "file": "api.yaml",
+              "line": 18,
+              "column": 32,
+              "endLine": 18,
+              "endColumn": 58
+            },
+            "api#/schemas/Item/properties/margin": {
+              "file": "api.yaml",
+              "line": 18,
+              "column": 7,
+              "endLine": 18,
+              "endColumn": 60
+            },
+            "api#/schemas/Item/properties": {
+              "file": "api.yaml",
+              "line": 13,
+              "column": 5,
+              "endLine": 19,
+              "endColumn": 1
+            },
+            "api#/schemas/Item": {
+              "file": "api.yaml",
+              "line": 10,
+              "column": 3,
+              "endLine": 19,
+              "endColumn": 1
+            },
+            "api#/schemas/EvA/type": {
+              "file": "api.yaml",
+              "line": 20,
+              "column": 5,
+              "endLine": 20,
+              "endColumn": 17
+            },
+            "api#/schemas/EvA/properties/cost/type": {
+              "file": "api.yaml",
+              "line": 21,
+              "column": 27,
+              "endLine": 21,
+              "endColumn": 40
+            },
+            "api#/schemas/EvA/properties/cost/restrictedTo": {
+              "file": "api.yaml",
+              "line": 21,
+              "column": 42,
+              "endLine": 21,
+              "endColumn": 66
+            },
+            "api#/schemas/EvA/properties/cost": {
+              "file": "api.yaml",
+              "line": 21,
+              "column": 19,
+              "endLine": 21,
+              "endColumn": 68
+            },
+            "api#/schemas/EvA/properties/name/type": {
+              "file": "api.yaml",
+              "line": 21,
+              "column": 78,
+              "endLine": 21,
+              "endColumn": 90
+            },
+            "api#/schemas/EvA/properties/name": {
+              "file": "api.yaml",
+              "line": 21,
+              "column": 70,
+              "endLine": 21,
+              "endColumn": 92
+            },
+            "api#/schemas/EvA/properties": {
+              "file": "api.yaml",
+              "line": 21,
+              "column": 5,
+              "endLine": 21,
+              "endColumn": 94
+            },
+            "api#/schemas/EvA": {
+              "file": "api.yaml",
+              "line": 19,
+              "column": 3,
+              "endLine": 22,
+              "endColumn": 1
+            },
+            "api#/schemas/EvB/type": {
+              "file": "api.yaml",
+              "line": 23,
+              "column": 5,
+              "endLine": 23,
+              "endColumn": 17
+            },
+            "api#/schemas/EvB/properties/cost/type": {
+              "file": "api.yaml",
+              "line": 24,
+              "column": 27,
+              "endLine": 24,
+              "endColumn": 40
+            },
+            "api#/schemas/EvB/properties/cost/restrictedTo": {
+              "file": "api.yaml",
+              "line": 24,
+              "column": 42,
+              "endLine": 24,
+              "endColumn": 67
+            },
+            "api#/schemas/EvB/properties/cost": {
+              "file": "api.yaml",
+              "line": 24,
+              "column": 19,
+              "endLine": 24,
+              "endColumn": 69
+            },
+            "api#/schemas/EvB/properties/name/type": {
+              "file": "api.yaml",
+              "line": 24,
+              "column": 79,
+              "endLine": 24,
+              "endColumn": 91
+            },
+            "api#/schemas/EvB/properties/name": {
+              "file": "api.yaml",
+              "line": 24,
+              "column": 71,
+              "endLine": 24,
+              "endColumn": 93
+            },
+            "api#/schemas/EvB/properties": {
+              "file": "api.yaml",
+              "line": 24,
+              "column": 5,
+              "endLine": 24,
+              "endColumn": 95
+            },
+            "api#/schemas/EvB": {
+              "file": "api.yaml",
+              "line": 22,
+              "column": 3,
+              "endLine": 25,
+              "endColumn": 1
+            },
+            "api#/schemas/EvC/type": {
+              "file": "api.yaml",
+              "line": 26,
+              "column": 5,
+              "endLine": 26,
+              "endColumn": 17
+            },
+            "api#/schemas/EvC/properties/cost/type": {
+              "file": "api.yaml",
+              "line": 27,
+              "column": 27,
+              "endLine": 27,
+              "endColumn": 40
+            },
+            "api#/schemas/EvC/properties/cost": {
+              "file": "api.yaml",
+              "line": 27,
+              "column": 19,
+              "endLine": 27,
+              "endColumn": 42
+            },
+            "api#/schemas/EvC/properties/name/type": {
+              "file": "api.yaml",
+              "line": 27,
+              "column": 52,
+              "endLine": 27,
+              "endColumn": 64
+            },
+            "api#/schemas/EvC/properties/name": {
+              "file": "api.yaml",
+              "line": 27,
+              "column": 44,
+              "endLine": 27,
+              "endColumn": 66
+            },
+            "api#/schemas/EvC/properties": {
+              "file": "api.yaml",
+              "line": 27,
+              "column": 5,
+              "endLine": 27,
+              "endColumn": 68
+            },
+            "api#/schemas/EvC": {
+              "file": "api.yaml",
+              "line": 25,
+              "column": 3,
+              "endLine": 28,
+              "endColumn": 1
+            },
+            "api#/schemas/Mixed/discriminator": {
+              "file": "api.yaml",
+              "line": 29,
+              "column": 5,
+              "endLine": 29,
+              "endColumn": 24
+            },
+            "api#/schemas/Mixed/oneOf/a": {
+              "file": "api.yaml",
+              "line": 30,
+              "column": 14,
+              "endLine": 30,
+              "endColumn": 20
+            },
+            "api#/schemas/Mixed/oneOf/b": {
+              "file": "api.yaml",
+              "line": 30,
+              "column": 22,
+              "endLine": 30,
+              "endColumn": 28
+            },
+            "api#/schemas/Mixed/oneOf": {
+              "file": "api.yaml",
+              "line": 30,
+              "column": 5,
+              "endLine": 30,
+              "endColumn": 30
+            },
+            "api#/schemas/Mixed": {
+              "file": "api.yaml",
+              "line": 28,
+              "column": 3,
+              "endLine": 31,
+              "endColumn": 1
+            },
+            "api#/schemas/Shared/discriminator": {
+              "file": "api.yaml",
+              "line": 32,
+              "column": 5,
+              "endLine": 32,
+              "endColumn": 24
+            },
+            "api#/schemas/Shared/oneOf/a": {
+              "file": "api.yaml",
+              "line": 33,
+              "column": 14,
+              "endLine": 33,
+              "endColumn": 20
+            },
+            "api#/schemas/Shared/oneOf/c": {
+              "file": "api.yaml",
+              "line": 33,
+              "column": 22,
+              "endLine": 33,
+              "endColumn": 28
+            },
+            "api#/schemas/Shared/oneOf": {
+              "file": "api.yaml",
+              "line": 33,
+              "column": 5,
+              "endLine": 33,
+              "endColumn": 30
+            },
+            "api#/schemas/Shared": {
+              "file": "api.yaml",
+              "line": 31,
+              "column": 3,
+              "endLine": 34,
+              "endColumn": 1
+            },
+            "api#/schemas/Child/type": {
+              "file": "api.yaml",
+              "line": 35,
+              "column": 5,
+              "endLine": 35,
+              "endColumn": 17
+            },
+            "api#/schemas/Child/required/0": {
+              "file": "api.yaml",
+              "line": 36,
+              "column": 16,
+              "endLine": 36,
+              "endColumn": 23
+            },
+            "api#/schemas/Child/required/1": {
+              "file": "api.yaml",
+              "line": 36,
+              "column": 25,
+              "endLine": 36,
+              "endColumn": 31
+            },
+            "api#/schemas/Child/required": {
+              "file": "api.yaml",
+              "line": 36,
+              "column": 5,
+              "endLine": 36,
+              "endColumn": 32
+            },
+            "api#/schemas/Child/properties/childId": {
+              "file": "api.yaml",
+              "line": 38,
+              "column": 7,
+              "endLine": 38,
+              "endColumn": 23
+            },
+            "api#/schemas/Child/properties/itemId": {
+              "file": "api.yaml",
+              "line": 39,
+              "column": 7,
+              "endLine": 39,
+              "endColumn": 21
+            },
+            "api#/schemas/Child/properties/margin/type": {
+              "file": "api.yaml",
+              "line": 40,
+              "column": 17,
+              "endLine": 40,
+              "endColumn": 30
+            },
+            "api#/schemas/Child/properties/margin/restrictedTo": {
+              "file": "api.yaml",
+              "line": 40,
+              "column": 32,
+              "endLine": 40,
+              "endColumn": 58
+            },
+            "api#/schemas/Child/properties/margin": {
+              "file": "api.yaml",
+              "line": 40,
+              "column": 7,
+              "endLine": 40,
+              "endColumn": 60
+            },
+            "api#/schemas/Child/properties": {
+              "file": "api.yaml",
+              "line": 37,
+              "column": 5,
+              "endLine": 41,
+              "endColumn": 1
+            },
+            "api#/schemas/Child": {
+              "file": "api.yaml",
+              "line": 34,
+              "column": 3,
+              "endLine": 41,
+              "endColumn": 1
+            },
+            "api#/schemas/Remark/type": {
+              "file": "api.yaml",
+              "line": 42,
+              "column": 5,
+              "endLine": 42,
+              "endColumn": 17
+            },
+            "api#/schemas/Remark/required/0": {
+              "file": "api.yaml",
+              "line": 43,
+              "column": 16,
+              "endLine": 43,
+              "endColumn": 24
+            },
+            "api#/schemas/Remark/required/1": {
+              "file": "api.yaml",
+              "line": 43,
+              "column": 26,
+              "endLine": 43,
+              "endColumn": 30
+            },
+            "api#/schemas/Remark/required": {
+              "file": "api.yaml",
+              "line": 43,
+              "column": 5,
+              "endLine": 43,
+              "endColumn": 31
+            },
+            "api#/schemas/Remark/properties/remarkId": {
+              "file": "api.yaml",
+              "line": 44,
+              "column": 19,
+              "endLine": 44,
+              "endColumn": 36
+            },
+            "api#/schemas/Remark/properties/name/type": {
+              "file": "api.yaml",
+              "line": 44,
+              "column": 46,
+              "endLine": 44,
+              "endColumn": 58
+            },
+            "api#/schemas/Remark/properties/name": {
+              "file": "api.yaml",
+              "line": 44,
+              "column": 38,
+              "endLine": 44,
+              "endColumn": 60
+            },
+            "api#/schemas/Remark/properties": {
+              "file": "api.yaml",
+              "line": 44,
+              "column": 5,
+              "endLine": 44,
+              "endColumn": 62
+            },
+            "api#/schemas/Remark": {
+              "file": "api.yaml",
+              "line": 41,
+              "column": 3,
+              "endLine": 45,
+              "endColumn": 1
+            },
+            "api#/schemas/Tally/type": {
+              "file": "api.yaml",
+              "line": 46,
+              "column": 5,
+              "endLine": 46,
+              "endColumn": 17
+            },
+            "api#/schemas/Tally/additionalProperties/type": {
+              "file": "api.yaml",
+              "line": 47,
+              "column": 29,
+              "endLine": 47,
+              "endColumn": 42
+            },
+            "api#/schemas/Tally/additionalProperties": {
+              "file": "api.yaml",
+              "line": 47,
+              "column": 5,
+              "endLine": 47,
+              "endColumn": 44
+            },
+            "api#/schemas/Tally": {
+              "file": "api.yaml",
+              "line": 45,
+              "column": 3,
+              "endLine": 48,
+              "endColumn": 1
+            },
+            "api#/schemas": {
+              "file": "api.yaml",
+              "line": 6,
+              "column": 1,
+              "endLine": 48,
+              "endColumn": 1
+            },
+            "api#/pagings/offset/request/offset/query": {
+              "file": "api.yaml",
+              "line": 51,
+              "column": 17,
+              "endLine": 51,
+              "endColumn": 30
+            },
+            "api#/pagings/offset/request/offset": {
+              "file": "api.yaml",
+              "line": 51,
+              "column": 7,
+              "endLine": 51,
+              "endColumn": 32
+            },
+            "api#/pagings/offset/request/limit/query": {
+              "file": "api.yaml",
+              "line": 52,
+              "column": 16,
+              "endLine": 52,
+              "endColumn": 28
+            },
+            "api#/pagings/offset/request/limit": {
+              "file": "api.yaml",
+              "line": 52,
+              "column": 7,
+              "endLine": 52,
+              "endColumn": 30
+            },
+            "api#/pagings/offset/request/sort/query": {
+              "file": "api.yaml",
+              "line": 53,
+              "column": 15,
+              "endLine": 53,
+              "endColumn": 26
+            },
+            "api#/pagings/offset/request/sort/style": {
+              "file": "api.yaml",
+              "line": 53,
+              "column": 28,
+              "endLine": 53,
+              "endColumn": 41
+            },
+            "api#/pagings/offset/request/sort": {
+              "file": "api.yaml",
+              "line": 53,
+              "column": 7,
+              "endLine": 53,
+              "endColumn": 43
+            },
+            "api#/pagings/offset/request": {
+              "file": "api.yaml",
+              "line": 50,
+              "column": 5,
+              "endLine": 54,
+              "endColumn": 1
+            },
+            "api#/pagings/offset/response/body": {
+              "file": "api.yaml",
+              "line": 55,
+              "column": 7,
+              "endLine": 55,
+              "endColumn": 19
+            },
+            "api#/pagings/offset/response": {
+              "file": "api.yaml",
+              "line": 54,
+              "column": 5,
+              "endLine": 56,
+              "endColumn": 1
+            },
+            "api#/pagings/offset": {
+              "file": "api.yaml",
+              "line": 49,
+              "column": 3,
+              "endLine": 56,
+              "endColumn": 1
+            },
+            "api#/pagings": {
+              "file": "api.yaml",
+              "line": 48,
+              "column": 1,
+              "endLine": 56,
+              "endColumn": 1
+            },
+            "api#/conventions/paging/maxLimit": {
+              "file": "api.yaml",
+              "line": 57,
+              "column": 13,
+              "endLine": 57,
+              "endColumn": 25
+            },
+            "api#/conventions/paging": {
+              "file": "api.yaml",
+              "line": 57,
+              "column": 3,
+              "endLine": 57,
+              "endColumn": 27
+            },
+            "api#/conventions": {
+              "file": "api.yaml",
+              "line": 56,
+              "column": 1,
+              "endLine": 58,
+              "endColumn": 1
+            },
+            "api#/rights/items.cost": {
+              "file": "api.yaml",
+              "line": 59,
+              "column": 3,
+              "endLine": 59,
+              "endColumn": 17
+            },
+            "api#/rights/items.grade/params/level/type": {
+              "file": "api.yaml",
+              "line": 60,
+              "column": 37,
+              "endLine": 60,
+              "endColumn": 49
+            },
+            "api#/rights/items.grade/params/level": {
+              "file": "api.yaml",
+              "line": 60,
+              "column": 28,
+              "endLine": 60,
+              "endColumn": 51
+            },
+            "api#/rights/items.grade/params": {
+              "file": "api.yaml",
+              "line": 60,
+              "column": 18,
+              "endLine": 60,
+              "endColumn": 53
+            },
+            "api#/rights/items.grade": {
+              "file": "api.yaml",
+              "line": 60,
+              "column": 3,
+              "endLine": 60,
+              "endColumn": 55
+            },
+            "api#/rights/items.read": {
+              "file": "api.yaml",
+              "line": 61,
+              "column": 3,
+              "endLine": 61,
+              "endColumn": 17
+            },
+            "api#/rights/items.audit": {
+              "file": "api.yaml",
+              "line": 62,
+              "column": 3,
+              "endLine": 62,
+              "endColumn": 18
+            },
+            "api#/rights/items.margin/subject/resource": {
+              "file": "api.yaml",
+              "line": 63,
+              "column": 30,
+              "endLine": 63,
+              "endColumn": 44
+            },
+            "api#/rights/items.margin/subject/id": {
+              "file": "api.yaml",
+              "line": 63,
+              "column": 46,
+              "endLine": 63,
+              "endColumn": 56
+            },
+            "api#/rights/items.margin/subject": {
+              "file": "api.yaml",
+              "line": 63,
+              "column": 19,
+              "endLine": 63,
+              "endColumn": 58
+            },
+            "api#/rights/items.margin": {
+              "file": "api.yaml",
+              "line": 63,
+              "column": 3,
+              "endLine": 63,
+              "endColumn": 60
+            },
+            "api#/rights/shop.staff/subject/scope": {
+              "file": "api.yaml",
+              "line": 64,
+              "column": 28,
+              "endLine": 64,
+              "endColumn": 39
+            },
+            "api#/rights/shop.staff/subject": {
+              "file": "api.yaml",
+              "line": 64,
+              "column": 17,
+              "endLine": 64,
+              "endColumn": 41
+            },
+            "api#/rights/shop.staff": {
+              "file": "api.yaml",
+              "line": 64,
+              "column": 3,
+              "endLine": 64,
+              "endColumn": 43
+            },
+            "api#/rights": {
+              "file": "api.yaml",
+              "line": 58,
+              "column": 1,
+              "endLine": 65,
+              "endColumn": 1
+            },
+            "api#/scopes/shop/id/type": {
+              "file": "api.yaml",
+              "line": 66,
+              "column": 17,
+              "endLine": 66,
+              "endColumn": 29
+            },
+            "api#/scopes/shop/id/format": {
+              "file": "api.yaml",
+              "line": 66,
+              "column": 31,
+              "endLine": 66,
+              "endColumn": 43
+            },
+            "api#/scopes/shop/id": {
+              "file": "api.yaml",
+              "line": 66,
+              "column": 11,
+              "endLine": 66,
+              "endColumn": 45
+            },
+            "api#/scopes/shop": {
+              "file": "api.yaml",
+              "line": 66,
+              "column": 3,
+              "endLine": 66,
+              "endColumn": 47
+            },
+            "api#/scopes": {
+              "file": "api.yaml",
+              "line": 65,
+              "column": 1,
+              "endLine": 67,
+              "endColumn": 1
+            },
+            "api#/surfaces/app/prefix": {
+              "file": "api.yaml",
+              "line": 69,
+              "column": 5,
+              "endLine": 69,
+              "endColumn": 24
+            },
+            "api#/surfaces/app/identity": {
+              "file": "api.yaml",
+              "line": 70,
+              "column": 5,
+              "endLine": 70,
+              "endColumn": 20
+            },
+            "api#/surfaces/app/routes/items/kind": {
+              "file": "api.yaml",
+              "line": 73,
+              "column": 9,
+              "endLine": 73,
+              "endColumn": 25
+            },
+            "api#/surfaces/app/routes/items/id/itemId": {
+              "file": "api.yaml",
+              "line": 74,
+              "column": 15,
+              "endLine": 74,
+              "endColumn": 29
+            },
+            "api#/surfaces/app/routes/items/id": {
+              "file": "api.yaml",
+              "line": 74,
+              "column": 9,
+              "endLine": 74,
+              "endColumn": 31
+            },
+            "api#/surfaces/app/routes/items/item": {
+              "file": "api.yaml",
+              "line": 75,
+              "column": 9,
+              "endLine": 75,
+              "endColumn": 19
+            },
+            "api#/surfaces/app/routes/items/ops/list/paging": {
+              "file": "api.yaml",
+              "line": 78,
+              "column": 13,
+              "endLine": 78,
+              "endColumn": 27
+            },
+            "api#/surfaces/app/routes/items/ops/list/sortable/0": {
+              "file": "api.yaml",
+              "line": 79,
+              "column": 24,
+              "endLine": 79,
+              "endColumn": 28
+            },
+            "api#/surfaces/app/routes/items/ops/list/sortable": {
+              "file": "api.yaml",
+              "line": 79,
+              "column": 13,
+              "endLine": 79,
+              "endColumn": 29
+            },
+            "api#/surfaces/app/routes/items/ops/list": {
+              "file": "api.yaml",
+              "line": 77,
+              "column": 11,
+              "endLine": 80,
+              "endColumn": 1
+            },
+            "api#/surfaces/app/routes/items/ops": {
+              "file": "api.yaml",
+              "line": 76,
+              "column": 9,
+              "endLine": 80,
+              "endColumn": 1
+            },
+            "api#/surfaces/app/routes/items/member/routes/remarks/kind": {
+              "file": "api.yaml",
+              "line": 83,
+              "column": 15,
+              "endLine": 83,
+              "endColumn": 31
+            },
+            "api#/surfaces/app/routes/items/member/routes/remarks/id/remarkId": {
+              "file": "api.yaml",
+              "line": 84,
+              "column": 21,
+              "endLine": 84,
+              "endColumn": 38
+            },
+            "api#/surfaces/app/routes/items/member/routes/remarks/id": {
+              "file": "api.yaml",
+              "line": 84,
+              "column": 15,
+              "endLine": 84,
+              "endColumn": 40
+            },
+            "api#/surfaces/app/routes/items/member/routes/remarks/item": {
+              "file": "api.yaml",
+              "line": 85,
+              "column": 15,
+              "endLine": 85,
+              "endColumn": 27
+            },
+            "api#/surfaces/app/routes/items/member/routes/remarks/ops/list/paging": {
+              "file": "api.yaml",
+              "line": 86,
+              "column": 30,
+              "endLine": 86,
+              "endColumn": 44
+            },
+            "api#/surfaces/app/routes/items/member/routes/remarks/ops/list/sortable/0/key": {
+              "file": "api.yaml",
+              "line": 86,
+              "column": 59,
+              "endLine": 86,
+              "endColumn": 68
+            },
+            "api#/surfaces/app/routes/items/member/routes/remarks/ops/list/sortable/0/right": {
+              "file": "api.yaml",
+              "line": 86,
+              "column": 70,
+              "endLine": 86,
+              "endColumn": 89
+            },
+            "api#/surfaces/app/routes/items/member/routes/remarks/ops/list/sortable/0": {
+              "file": "api.yaml",
+              "line": 86,
+              "column": 57,
+              "endLine": 86,
+              "endColumn": 91
+            },
+            "api#/surfaces/app/routes/items/member/routes/remarks/ops/list/sortable": {
+              "file": "api.yaml",
+              "line": 86,
+              "column": 46,
+              "endLine": 86,
+              "endColumn": 92
+            },
+            "api#/surfaces/app/routes/items/member/routes/remarks/ops/list": {
+              "file": "api.yaml",
+              "line": 86,
+              "column": 22,
+              "endLine": 86,
+              "endColumn": 94
+            },
+            "api#/surfaces/app/routes/items/member/routes/remarks/ops": {
+              "file": "api.yaml",
+              "line": 86,
+              "column": 15,
+              "endLine": 86,
+              "endColumn": 96
+            },
+            "api#/surfaces/app/routes/items/member/routes/remarks": {
+              "file": "api.yaml",
+              "line": 82,
+              "column": 13,
+              "endLine": 87,
+              "endColumn": 1
+            },
+            "api#/surfaces/app/routes/items/member/routes": {
+              "file": "api.yaml",
+              "line": 81,
+              "column": 11,
+              "endLine": 87,
+              "endColumn": 1
+            },
+            "api#/surfaces/app/routes/items/member": {
+              "file": "api.yaml",
+              "line": 80,
+              "column": 9,
+              "endLine": 87,
+              "endColumn": 1
+            },
+            "api#/surfaces/app/routes/items": {
+              "file": "api.yaml",
+              "line": 72,
+              "column": 7,
+              "endLine": 87,
+              "endColumn": 1
+            },
+            "api#/surfaces/app/routes": {
+              "file": "api.yaml",
+              "line": 71,
+              "column": 5,
+              "endLine": 87,
+              "endColumn": 1
+            },
+            "api#/surfaces/app": {
+              "file": "api.yaml",
+              "line": 68,
+              "column": 3,
+              "endLine": 87,
+              "endColumn": 1
+            },
+            "api#/surfaces": {
+              "file": "api.yaml",
+              "line": 67,
+              "column": 1,
+              "endLine": 87,
+              "endColumn": 1
+            }
+          },
+          "ir": {
+            "api": {
+              "compat": {
+                "policy": "none"
+              },
+              "docs": {},
+              "documents": {},
+              "extensions": {},
+              "id": "shop",
+              "kind": "product",
+              "maturity": "experimental",
+              "name": {
+                "role": "schema",
+                "segments": [
+                  "shop"
+                ]
+              },
+              "origin": {
+                "layer": "api",
+                "pointer": "/api"
+              },
+              "pathVersion": {
+                "origin": {
+                  "layer": "api",
+                  "pointer": "/api/version"
+                },
+                "value": "prefix"
+              },
+              "surfaces": {
+                "app": {
+                  "name": {
+                    "role": "schema",
+                    "segments": [
+                      "app"
+                    ]
+                  },
+                  "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/app"
+                  },
+                  "pathVersion": "prefix",
+                  "prefix": "/v1"
+                }
+              },
+              "version": {
+                "kind": "path",
+                "number": 1
+              },
+              "wire": {
+                "int64": "string",
+                "outputEnums": "enum",
+                "urls": "relative"
+              }
+            },
+            "buckets": {},
+            "conventions": {
+              "paging.maxLimit": {
+                "origin": {
+                  "layer": "api",
+                  "pointer": "/conventions/paging/maxLimit"
+                },
+                "value": 50
+              }
+            },
+            "enums": {},
+            "errors": {
+              "api.forbidden": {
+                "code": "api.forbidden",
+                "default": "forbidden",
+                "docs": {},
+                "family": "api",
+                "http": {
+                  "status": 403
+                },
+                "nature": "refused",
+                "origin": {
+                  "layer": "core",
+                  "pointer": "/errors/api.forbidden"
+                },
+                "params": "ApiForbiddenParams"
+              },
+              "api.internal": {
+                "code": "api.internal",
+                "default": "undeclaredStatus",
+                "docs": {},
+                "family": "api",
+                "http": {
+                  "status": 500
+                },
+                "nature": "failed",
+                "origin": {
+                  "layer": "core",
+                  "pointer": "/errors/api.internal"
+                }
+              },
+              "api.not_found": {
+                "code": "api.not_found",
+                "default": "notFound",
+                "docs": {},
+                "family": "api",
+                "http": {
+                  "status": 404
+                },
+                "nature": "refused",
+                "origin": {
+                  "layer": "core",
+                  "pointer": "/errors/api.not_found"
+                }
+              },
+              "api.schema_invalid": {
+                "code": "api.schema_invalid",
+                "default": "schemaInvalid",
+                "docs": {},
+                "family": "api",
+                "http": {
+                  "status": 400
+                },
+                "nature": "refused",
+                "origin": {
+                  "layer": "core",
+                  "pointer": "/errors/api.schema_invalid"
+                },
+                "params": "ApiSchemaInvalidParams"
+              },
+              "api.sort_key_forbidden": {
+                "code": "api.sort_key_forbidden",
+                "default": "sortKeyForbidden",
+                "docs": {},
+                "family": "api",
+                "http": {
+                  "status": 403
+                },
+                "nature": "refused",
+                "origin": {
+                  "layer": "core",
+                  "pointer": "/errors/api.sort_key_forbidden"
+                },
+                "params": "ApiSortKeyForbiddenParams"
+              },
+              "api.unauthenticated": {
+                "code": "api.unauthenticated",
+                "default": "unauthenticated",
+                "docs": {},
+                "family": "api",
+                "http": {
+                  "status": 401
+                },
+                "nature": "refused",
+                "origin": {
+                  "layer": "core",
+                  "pointer": "/errors/api.unauthenticated"
+                }
+              }
+            },
+            "extensionKeys": {},
+            "features": [],
+            "formats": {
+              "bare": {
+                "absent": "omit",
+                "error": {
+                  "body": {
+                    "kind": "object",
+                    "members": [
+                      {
+                        "name": {
+                          "kind": "text",
+                          "text": "type"
+                        },
+                        "value": {
+                          "kind": "slot",
+                          "path": [],
+                          "slot": "code"
+                        }
+                      },
+                      {
+                        "name": {
+                          "kind": "text",
+                          "text": "title"
+                        },
+                        "value": {
+                          "kind": "slot",
+                          "path": [],
+                          "slot": "title"
+                        }
+                      },
+                      {
+                        "name": {
+                          "kind": "text",
+                          "text": "status"
+                        },
+                        "value": {
+                          "kind": "slot",
+                          "path": [],
+                          "slot": "status"
+                        }
+                      },
+                      {
+                        "name": {
+                          "kind": "text",
+                          "text": "detail"
+                        },
+                        "value": {
+                          "kind": "slot",
+                          "path": [],
+                          "slot": "detail"
+                        }
+                      },
+                      {
+                        "name": {
+                          "kind": "text",
+                          "text": "instance"
+                        },
+                        "value": {
+                          "kind": "slot",
+                          "path": [],
+                          "slot": "instance"
+                        }
+                      },
+                      {
+                        "name": {
+                          "kind": "text",
+                          "text": "code"
+                        },
+                        "value": {
+                          "kind": "slot",
+                          "path": [],
+                          "slot": "code"
+                        }
+                      },
+                      {
+                        "name": {
+                          "kind": "text",
+                          "text": "nature"
+                        },
+                        "value": {
+                          "kind": "slot",
+                          "path": [],
+                          "slot": "nature"
+                        }
+                      },
+                      {
+                        "name": {
+                          "kind": "text",
+                          "text": "traceId"
+                        },
+                        "value": {
+                          "kind": "slot",
+                          "path": [],
+                          "slot": "traceId"
+                        }
+                      }
+                    ],
+                    "merge": "params"
+                  },
+                  "headers": [],
+                  "media": "application/problem+json"
+                },
+                "id": "bare",
+                "media": "application/json",
+                "meta": {},
+                "origin": {
+                  "layer": "core",
+                  "pointer": "/formats/bare"
+                },
+                "success": {
+                  "item": {
+                    "body": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "payload"
+                    },
+                    "headers": []
+                  },
+                  "list": {
+                    "body": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "payload"
+                    },
+                    "headers": []
+                  },
+                  "page": {
+                    "body": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "items"
+                    },
+                    "headers": []
+                  },
+                  "table": {
+                    "body": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "payload"
+                    },
+                    "headers": []
+                  }
+                }
+              }
+            },
+            "headers": {},
+            "identities": {
+              "clerk": {
+                "docs": {},
+                "errors": [],
+                "extensions": {},
+                "headers": [],
+                "id": "clerk",
+                "kind": "credential",
+                "origin": {
+                  "layer": "api",
+                  "pointer": "/identities/clerk"
+                },
+                "principal": {
+                  "kind": "schema",
+                  "schema": "Clerk"
+                },
+                "schemes": {
+                  "optionalRead": [],
+                  "read": [
+                    "bearer"
+                  ],
+                  "write": [
+                    "bearer"
+                  ]
+                }
+              }
+            },
+            "irRevision": 6,
+            "irVersion": 1,
+            "kinds": [
+              "httpOperation"
+            ],
+            "lint": {
+              "allows": [],
+              "rules": {}
+            },
+            "natures": {},
+            "operations": [
+              {
+                "access": {
+                  "identity": "clerk",
+                  "kind": "identity",
+                  "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/identity"
+                  },
+                  "schemes": [
+                    "bearer"
+                  ]
+                },
+                "bindings": [],
+                "callerKinds": [
+                  "identified"
+                ],
+                "docs": {},
+                "errors": [
+                  {
+                    "code": "api.schema_invalid",
+                    "derivedFrom": {
+                      "derivation": "input.invalid",
+                      "from": [
+                        {
+                          "layer": "api",
+                          "pointer": "/surfaces/app/routes/items/ops/list"
+                        },
+                        {
+                          "layer": "api",
+                          "pointer": "/surfaces/app/routes/items/ops/list/paging"
+                        }
+                      ]
+                    },
+                    "roles": [
+                      {
+                        "params": {
+                          "kind": "object",
+                          "members": [
+                            {
+                              "name": {
+                                "kind": "text",
+                                "text": "issues"
+                              },
+                              "value": {
+                                "kind": "slot",
+                                "path": [],
+                                "slot": "issues"
+                              }
+                            }
+                          ]
+                        },
+                        "role": "schemaInvalid"
+                      }
+                    ]
+                  },
+                  {
+                    "code": "api.unauthenticated",
+                    "derivedFrom": {
+                      "derivation": "identity.authenticate",
+                      "from": [
+                        {
+                          "layer": "api",
+                          "pointer": "/surfaces/app/identity"
+                        }
+                      ]
+                    },
+                    "roles": [
+                      {
+                        "role": "unauthenticated"
+                      }
+                    ]
+                  },
+                  {
+                    "code": "api.internal",
+                    "derivedFrom": {
+                      "derivation": "response.undeclared",
+                      "from": [
+                        {
+                          "layer": "api",
+                          "pointer": "/surfaces/app/routes/items/ops/list"
+                        }
+                      ]
+                    },
+                    "roles": [
+                      {
+                        "role": "undeclaredStatus"
+                      }
+                    ]
+                  }
+                ],
+                "examples": {},
+                "extensions": {},
+                "features": [],
+                "fieldRights": [
+                  {
+                    "derivedFrom": {
+                      "derivation": "fieldRight.restricted",
+                      "from": [
+                        {
+                          "layer": "api",
+                          "pointer": "/schemas/Item/properties/cost/restrictedTo"
+                        }
+                      ]
+                    },
+                    "direction": "output",
+                    "pointer": "/cost",
+                    "right": "items.cost",
+                    "schema": "Item"
+                  },
+                  {
+                    "derivedFrom": {
+                      "derivation": "fieldRight.restricted",
+                      "from": [
+                        {
+                          "layer": "api",
+                          "pointer": "/schemas/Item/properties/grade/restrictedTo"
+                        }
+                      ]
+                    },
+                    "direction": "output",
+                    "params": {
+                      "level": "high"
+                    },
+                    "pointer": "/grade",
+                    "right": "items.grade",
+                    "schema": "Item"
+                  },
+                  {
+                    "derivedFrom": {
+                      "derivation": "fieldRight.restricted",
+                      "from": [
+                        {
+                          "layer": "api",
+                          "pointer": "/schemas/Item/properties/margin/restrictedTo"
+                        }
+                      ]
+                    },
+                    "direction": "output",
+                    "pointer": "/margin",
+                    "right": "items.margin",
+                    "schema": "Item",
+                    "subject": {
+                      "source": {
+                        "in": "holderField",
+                        "name": "itemId"
+                      }
+                    }
+                  }
+                ],
+                "format": "bare",
+                "id": "listItems",
+                "internal": false,
+                "kind": "httpOperation",
+                "maturity": {
+                  "level": "experimental",
+                  "origin": {
+                    "layer": "api",
+                    "pointer": "/api"
+                  },
+                  "source": "api"
+                },
+                "method": "get",
+                "name": {
+                  "role": "operation",
+                  "segments": [
+                    "list",
+                    "items"
+                  ]
+                },
+                "op": "list",
+                "origin": {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/items/ops/list"
+                },
+                "paging": {
+                  "defaultLimit": 50,
+                  "maxLimit": 50,
+                  "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/items/ops/list/paging"
+                  },
+                  "overLimit": "reject",
+                  "sortKeys": [
+                    {
+                      "key": "name",
+                      "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/app/routes/items/ops/list/sortable/0"
+                      }
+                    }
+                  ],
+                  "style": "offset"
+                },
+                "params": {
+                  "header": [
+                    {
+                      "derivedFrom": {
+                        "derivation": "identity.authenticate",
+                        "from": [
+                          {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/identity"
+                          },
+                          {
+                            "layer": "api",
+                            "pointer": "/schemes/bearer"
+                          }
+                        ]
+                      },
+                      "name": "Authorization",
+                      "required": true,
+                      "type": {
+                        "kind": "scalar",
+                        "refinements": {},
+                        "type": "string"
+                      }
+                    }
+                  ],
+                  "path": [],
+                  "query": [
+                    {
+                      "derivedFrom": {
+                        "derivation": "paging.params",
+                        "from": [
+                          {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/items/ops/list/paging"
+                          },
+                          {
+                            "layer": "api",
+                            "pointer": "/pagings/offset"
+                          }
+                        ]
+                      },
+                      "name": "offset",
+                      "required": false,
+                      "type": {
+                        "kind": "scalar",
+                        "refinements": {
+                          "minimum": "0"
+                        },
+                        "type": "integer"
+                      },
+                      "wire": {
+                        "brackets": false,
+                        "explode": true,
+                        "kind": "number",
+                        "style": "form"
+                      }
+                    },
+                    {
+                      "derivedFrom": {
+                        "derivation": "paging.params",
+                        "from": [
+                          {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/items/ops/list/paging"
+                          },
+                          {
+                            "layer": "api",
+                            "pointer": "/pagings/offset"
+                          }
+                        ]
+                      },
+                      "name": "limit",
+                      "required": false,
+                      "type": {
+                        "kind": "scalar",
+                        "refinements": {
+                          "maximum": "50",
+                          "minimum": "1"
+                        },
+                        "type": "integer"
+                      },
+                      "wire": {
+                        "brackets": false,
+                        "explode": true,
+                        "kind": "number",
+                        "style": "form"
+                      }
+                    },
+                    {
+                      "derivedFrom": {
+                        "derivation": "paging.params",
+                        "from": [
+                          {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/items/ops/list/paging"
+                          },
+                          {
+                            "layer": "api",
+                            "pointer": "/pagings/offset"
+                          }
+                        ]
+                      },
+                      "name": "sort",
+                      "required": false,
+                      "type": {
+                        "items": {
+                          "kind": "scalar",
+                          "refinements": {
+                            "pattern": {
+                              "normalized": "^(?:name|-name)$",
+                              "source": "^(?:name|-name)$"
+                            }
+                          },
+                          "type": "string"
+                        },
+                        "kind": "array"
+                      },
+                      "wire": {
+                        "brackets": false,
+                        "explode": false,
+                        "kind": "list",
+                        "style": "form"
+                      }
+                    }
+                  ]
+                },
+                "path": "/v1/items",
+                "principalRequires": [],
+                "requires": [],
+                "resource": {
+                  "idProperty": "itemId",
+                  "type": "items"
+                },
+                "responses": [
+                  {
+                    "body": {
+                      "kind": "ref",
+                      "schema": "Item"
+                    },
+                    "derivedFrom": {
+                      "derivation": "response.format",
+                      "from": [
+                        {
+                          "layer": "core",
+                          "pointer": "/formats/bare"
+                        }
+                      ]
+                    },
+                    "headers": [],
+                    "media": "application/json",
+                    "origin": {
+                      "layer": "api",
+                      "pointer": "/surfaces/app/routes/items/item"
+                    },
+                    "shape": "page",
+                    "status": 200
+                  }
+                ],
+                "safe": true,
+                "scopes": [],
+                "surface": "app",
+                "tags": [],
+                "unknownQuery": {
+                  "policy": "refuse"
+                },
+                "upstream": []
+              },
+              {
+                "access": {
+                  "identity": "clerk",
+                  "kind": "identity",
+                  "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/identity"
+                  },
+                  "schemes": [
+                    "bearer"
+                  ]
+                },
+                "bindings": [],
+                "callerKinds": [
+                  "identified"
+                ],
+                "docs": {},
+                "errors": [
+                  {
+                    "code": "api.schema_invalid",
+                    "derivedFrom": {
+                      "derivation": "input.invalid",
+                      "from": [
+                        {
+                          "layer": "api",
+                          "pointer": "/surfaces/app/routes/items/member/routes/remarks/ops/list"
+                        },
+                        {
+                          "layer": "api",
+                          "pointer": "/surfaces/app/routes/items/member/routes/remarks/ops/list/paging"
+                        }
+                      ]
+                    },
+                    "roles": [
+                      {
+                        "params": {
+                          "kind": "object",
+                          "members": [
+                            {
+                              "name": {
+                                "kind": "text",
+                                "text": "issues"
+                              },
+                              "value": {
+                                "kind": "slot",
+                                "path": [],
+                                "slot": "issues"
+                              }
+                            }
+                          ]
+                        },
+                        "role": "schemaInvalid"
+                      }
+                    ]
+                  },
+                  {
+                    "code": "api.unauthenticated",
+                    "derivedFrom": {
+                      "derivation": "identity.authenticate",
+                      "from": [
+                        {
+                          "layer": "api",
+                          "pointer": "/surfaces/app/identity"
+                        }
+                      ]
+                    },
+                    "roles": [
+                      {
+                        "role": "unauthenticated"
+                      }
+                    ]
+                  },
+                  {
+                    "code": "api.sort_key_forbidden",
+                    "derivedFrom": {
+                      "derivation": "sortKey.restricted",
+                      "from": [
+                        {
+                          "layer": "api",
+                          "pointer": "/surfaces/app/routes/items/member/routes/remarks/ops/list/paging"
+                        }
+                      ]
+                    },
+                    "roles": [
+                      {
+                        "params": {
+                          "kind": "object",
+                          "members": [
+                            {
+                              "name": {
+                                "kind": "text",
+                                "text": "key"
+                              },
+                              "value": {
+                                "kind": "slot",
+                                "path": [],
+                                "slot": "key"
+                              }
+                            }
+                          ]
+                        },
+                        "role": "sortKeyForbidden"
+                      }
+                    ]
+                  },
+                  {
+                    "code": "api.not_found",
+                    "derivedFrom": {
+                      "derivation": "member.notFound",
+                      "from": [
+                        {
+                          "layer": "api",
+                          "pointer": "/surfaces/app/routes/items/member/routes/remarks/ops/list"
+                        }
+                      ]
+                    },
+                    "roles": [
+                      {
+                        "role": "notFound"
+                      }
+                    ]
+                  },
+                  {
+                    "code": "api.internal",
+                    "derivedFrom": {
+                      "derivation": "response.undeclared",
+                      "from": [
+                        {
+                          "layer": "api",
+                          "pointer": "/surfaces/app/routes/items/member/routes/remarks/ops/list"
+                        }
+                      ]
+                    },
+                    "roles": [
+                      {
+                        "role": "undeclaredStatus"
+                      }
+                    ]
+                  }
+                ],
+                "examples": {},
+                "extensions": {},
+                "features": [],
+                "fieldRights": [],
+                "format": "bare",
+                "id": "listRemarks",
+                "internal": false,
+                "kind": "httpOperation",
+                "maturity": {
+                  "level": "experimental",
+                  "origin": {
+                    "layer": "api",
+                    "pointer": "/api"
+                  },
+                  "source": "api"
+                },
+                "method": "get",
+                "name": {
+                  "role": "operation",
+                  "segments": [
+                    "list",
+                    "remarks"
+                  ]
+                },
+                "op": "list",
+                "origin": {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/items/member/routes/remarks/ops/list"
+                },
+                "paging": {
+                  "defaultLimit": 50,
+                  "maxLimit": 50,
+                  "origin": {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/items/member/routes/remarks/ops/list/paging"
+                  },
+                  "overLimit": "reject",
+                  "sortKeys": [
+                    {
+                      "key": "name",
+                      "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/app/routes/items/member/routes/remarks/ops/list/sortable/0"
+                      },
+                      "right": "items.margin",
+                      "subject": {
+                        "source": {
+                          "in": "path",
+                          "name": "itemId"
+                        }
+                      }
+                    }
+                  ],
+                  "style": "offset"
+                },
+                "params": {
+                  "header": [
+                    {
+                      "derivedFrom": {
+                        "derivation": "identity.authenticate",
+                        "from": [
+                          {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/identity"
+                          },
+                          {
+                            "layer": "api",
+                            "pointer": "/schemes/bearer"
+                          }
+                        ]
+                      },
+                      "name": "Authorization",
+                      "required": true,
+                      "type": {
+                        "kind": "scalar",
+                        "refinements": {},
+                        "type": "string"
+                      }
+                    }
+                  ],
+                  "path": [
+                    {
+                      "name": "itemId",
+                      "origin": {
+                        "layer": "api",
+                        "pointer": "/surfaces/app/routes/items/id/itemId"
+                      },
+                      "required": true,
+                      "type": {
+                        "format": "uuid",
+                        "kind": "scalar",
+                        "refinements": {},
+                        "type": "string"
+                      }
+                    }
+                  ],
+                  "query": [
+                    {
+                      "derivedFrom": {
+                        "derivation": "paging.params",
+                        "from": [
+                          {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/items/member/routes/remarks/ops/list/paging"
+                          },
+                          {
+                            "layer": "api",
+                            "pointer": "/pagings/offset"
+                          }
+                        ]
+                      },
+                      "name": "offset",
+                      "required": false,
+                      "type": {
+                        "kind": "scalar",
+                        "refinements": {
+                          "minimum": "0"
+                        },
+                        "type": "integer"
+                      },
+                      "wire": {
+                        "brackets": false,
+                        "explode": true,
+                        "kind": "number",
+                        "style": "form"
+                      }
+                    },
+                    {
+                      "derivedFrom": {
+                        "derivation": "paging.params",
+                        "from": [
+                          {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/items/member/routes/remarks/ops/list/paging"
+                          },
+                          {
+                            "layer": "api",
+                            "pointer": "/pagings/offset"
+                          }
+                        ]
+                      },
+                      "name": "limit",
+                      "required": false,
+                      "type": {
+                        "kind": "scalar",
+                        "refinements": {
+                          "maximum": "50",
+                          "minimum": "1"
+                        },
+                        "type": "integer"
+                      },
+                      "wire": {
+                        "brackets": false,
+                        "explode": true,
+                        "kind": "number",
+                        "style": "form"
+                      }
+                    },
+                    {
+                      "derivedFrom": {
+                        "derivation": "paging.params",
+                        "from": [
+                          {
+                            "layer": "api",
+                            "pointer": "/surfaces/app/routes/items/member/routes/remarks/ops/list/paging"
+                          },
+                          {
+                            "layer": "api",
+                            "pointer": "/pagings/offset"
+                          }
+                        ]
+                      },
+                      "name": "sort",
+                      "required": false,
+                      "type": {
+                        "items": {
+                          "kind": "scalar",
+                          "refinements": {
+                            "pattern": {
+                              "normalized": "^(?:name|-name)$",
+                              "source": "^(?:name|-name)$"
+                            }
+                          },
+                          "type": "string"
+                        },
+                        "kind": "array"
+                      },
+                      "wire": {
+                        "brackets": false,
+                        "explode": false,
+                        "kind": "list",
+                        "style": "form"
+                      }
+                    }
+                  ]
+                },
+                "path": "/v1/items/{itemId}/remarks",
+                "principalRequires": [],
+                "requires": [],
+                "resource": {
+                  "idProperty": "remarkId",
+                  "type": "remarks"
+                },
+                "responses": [
+                  {
+                    "body": {
+                      "kind": "ref",
+                      "schema": "Remark"
+                    },
+                    "derivedFrom": {
+                      "derivation": "response.format",
+                      "from": [
+                        {
+                          "layer": "core",
+                          "pointer": "/formats/bare"
+                        }
+                      ]
+                    },
+                    "headers": [],
+                    "media": "application/json",
+                    "origin": {
+                      "layer": "api",
+                      "pointer": "/surfaces/app/routes/items/member/routes/remarks/item"
+                    },
+                    "shape": "page",
+                    "status": 200
+                  }
+                ],
+                "safe": true,
+                "scopes": [],
+                "surface": "app",
+                "tags": [],
+                "unknownQuery": {
+                  "policy": "refuse"
+                },
+                "upstream": []
+              }
+            ],
+            "packs": [],
+            "pagings": {
+              "offset": {
+                "absent": "omit",
+                "handlerResult": [
+                  "more"
+                ],
+                "id": "offset",
+                "origin": {
+                  "layer": "api",
+                  "pointer": "/pagings/offset"
+                },
+                "position": "offset",
+                "request": [
+                  {
+                    "in": "query",
+                    "name": "offset",
+                    "role": "offset"
+                  },
+                  {
+                    "in": "query",
+                    "name": "limit",
+                    "role": "limit"
+                  },
+                  {
+                    "in": "query",
+                    "name": "sort",
+                    "role": "sort",
+                    "style": "signed"
+                  }
+                ],
+                "response": {
+                  "body": {
+                    "kind": "slot",
+                    "path": [],
+                    "slot": "items"
+                  },
+                  "headers": [],
+                  "links": [],
+                  "meta": []
+                }
+              }
+            },
+            "rights": {
+              "items.cost": {
+                "docs": {},
+                "errors": [
+                  "api.forbidden"
+                ],
+                "extensions": {},
+                "id": "items.cost",
+                "origin": {
+                  "layer": "api",
+                  "pointer": "/rights/items.cost"
+                },
+                "subject": {
+                  "kind": "none"
+                }
+              },
+              "items.grade": {
+                "docs": {},
+                "errors": [
+                  "api.forbidden"
+                ],
+                "extensions": {},
+                "id": "items.grade",
+                "origin": {
+                  "layer": "api",
+                  "pointer": "/rights/items.grade"
+                },
+                "params": "ItemsGradeParams",
+                "subject": {
+                  "kind": "none"
+                }
+              },
+              "items.margin": {
+                "docs": {},
+                "errors": [
+                  "api.forbidden"
+                ],
+                "extensions": {},
+                "id": "items.margin",
+                "origin": {
+                  "layer": "api",
+                  "pointer": "/rights/items.margin"
+                },
+                "subject": {
+                  "idSchema": {
+                    "format": "uuid",
+                    "kind": "scalar",
+                    "refinements": {},
+                    "type": "string"
+                  },
+                  "kind": "resource",
+                  "type": {
+                    "role": "schema",
+                    "segments": [
+                      "item"
+                    ]
+                  }
+                }
+              }
+            },
+            "rules": {},
+            "scalars": {},
+            "schemas": {
+              "ApiForbiddenParams": {
+                "directions": [
+                  "output"
+                ],
+                "docs": {},
+                "examples": [],
+                "extensions": {},
+                "id": "ApiForbiddenParams",
+                "kind": "object",
+                "name": {
+                  "role": "params",
+                  "segments": [
+                    "api",
+                    "forbidden"
+                  ]
+                },
+                "origin": {
+                  "layer": "core",
+                  "pointer": "/errors/api.forbidden/params"
+                },
+                "properties": [
+                  {
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {},
+                    "name": "pointer",
+                    "nullable": false,
+                    "optional": true,
+                    "origin": {
+                      "layer": "core",
+                      "pointer": "/errors/api.forbidden/params/pointer"
+                    },
+                    "sensitive": false,
+                    "type": {
+                      "kind": "scalar",
+                      "refinements": {},
+                      "type": "string"
+                    }
+                  }
+                ]
+              },
+              "ApiSchemaInvalidIssue": {
+                "directions": [
+                  "output"
+                ],
+                "docs": {},
+                "examples": [],
+                "extensions": {},
+                "id": "ApiSchemaInvalidIssue",
+                "kind": "object",
+                "name": {
+                  "role": "schema",
+                  "segments": [
+                    "api",
+                    "schema",
+                    "invalid",
+                    "issue"
+                  ]
+                },
+                "origin": {
+                  "layer": "core",
+                  "pointer": "/errors/api.schema_invalid/params/issues/items"
+                },
+                "properties": [
+                  {
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {},
+                    "name": "in",
+                    "nullable": false,
+                    "optional": false,
+                    "origin": {
+                      "layer": "core",
+                      "pointer": "/errors/api.schema_invalid/params/issues/items/properties/in"
+                    },
+                    "sensitive": false,
+                    "type": {
+                      "kind": "scalar",
+                      "refinements": {
+                        "pattern": {
+                          "normalized": "^(?:path|query|header|body)$",
+                          "source": "^(?:path|query|header|body)$"
+                        }
+                      },
+                      "type": "string"
+                    }
+                  },
+                  {
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {},
+                    "name": "pointer",
+                    "nullable": false,
+                    "optional": false,
+                    "origin": {
+                      "layer": "core",
+                      "pointer": "/errors/api.schema_invalid/params/issues/items/properties/pointer"
+                    },
+                    "sensitive": false,
+                    "type": {
+                      "kind": "scalar",
+                      "refinements": {},
+                      "type": "string"
+                    }
+                  },
+                  {
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {},
+                    "name": "rule",
+                    "nullable": false,
+                    "optional": false,
+                    "origin": {
+                      "layer": "core",
+                      "pointer": "/errors/api.schema_invalid/params/issues/items/properties/rule"
+                    },
+                    "sensitive": false,
+                    "type": {
+                      "kind": "scalar",
+                      "refinements": {},
+                      "type": "string"
+                    }
+                  }
+                ]
+              },
+              "ApiSchemaInvalidParams": {
+                "directions": [
+                  "output"
+                ],
+                "docs": {},
+                "examples": [],
+                "extensions": {},
+                "id": "ApiSchemaInvalidParams",
+                "kind": "object",
+                "name": {
+                  "role": "params",
+                  "segments": [
+                    "api",
+                    "schema",
+                    "invalid"
+                  ]
+                },
+                "origin": {
+                  "layer": "core",
+                  "pointer": "/errors/api.schema_invalid/params"
+                },
+                "properties": [
+                  {
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {},
+                    "name": "issues",
+                    "nullable": false,
+                    "optional": false,
+                    "origin": {
+                      "layer": "core",
+                      "pointer": "/errors/api.schema_invalid/params/issues"
+                    },
+                    "sensitive": false,
+                    "type": {
+                      "items": {
+                        "kind": "ref",
+                        "schema": "ApiSchemaInvalidIssue"
+                      },
+                      "kind": "array"
+                    }
+                  }
+                ]
+              },
+              "ApiSortKeyForbiddenParams": {
+                "directions": [
+                  "output"
+                ],
+                "docs": {},
+                "examples": [],
+                "extensions": {},
+                "id": "ApiSortKeyForbiddenParams",
+                "kind": "object",
+                "name": {
+                  "role": "params",
+                  "segments": [
+                    "api",
+                    "sort",
+                    "key",
+                    "forbidden"
+                  ]
+                },
+                "origin": {
+                  "layer": "core",
+                  "pointer": "/errors/api.sort_key_forbidden/params"
+                },
+                "properties": [
+                  {
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {},
+                    "name": "key",
+                    "nullable": false,
+                    "optional": false,
+                    "origin": {
+                      "layer": "core",
+                      "pointer": "/errors/api.sort_key_forbidden/params/key"
+                    },
+                    "sensitive": false,
+                    "type": {
+                      "kind": "scalar",
+                      "refinements": {},
+                      "type": "string"
+                    }
+                  }
+                ]
+              },
+              "Clerk": {
+                "directions": [
+                  "output"
+                ],
+                "docs": {},
+                "examples": [],
+                "extensions": {},
+                "id": "Clerk",
+                "kind": "object",
+                "name": {
+                  "role": "schema",
+                  "segments": [
+                    "clerk"
+                  ]
+                },
+                "origin": {
+                  "layer": "api",
+                  "pointer": "/schemas/Clerk"
+                },
+                "properties": [
+                  {
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {},
+                    "name": "clerkId",
+                    "nullable": false,
+                    "optional": false,
+                    "origin": {
+                      "layer": "api",
+                      "pointer": "/schemas/Clerk/properties/clerkId"
+                    },
+                    "sensitive": false,
+                    "type": {
+                      "kind": "scalar",
+                      "refinements": {},
+                      "type": "string"
+                    }
+                  }
+                ]
+              },
+              "Item": {
+                "directions": [
+                  "output"
+                ],
+                "docs": {},
+                "examples": [],
+                "extensions": {},
+                "id": "Item",
+                "kind": "object",
+                "name": {
+                  "role": "schema",
+                  "segments": [
+                    "item"
+                  ]
+                },
+                "origin": {
+                  "layer": "api",
+                  "pointer": "/schemas/Item"
+                },
+                "properties": [
+                  {
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {},
+                    "name": "itemId",
+                    "nullable": false,
+                    "optional": false,
+                    "origin": {
+                      "layer": "api",
+                      "pointer": "/schemas/Item/properties/itemId"
+                    },
+                    "sensitive": false,
+                    "type": {
+                      "format": "uuid",
+                      "kind": "scalar",
+                      "refinements": {},
+                      "type": "string"
+                    }
+                  },
+                  {
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {},
+                    "name": "name",
+                    "nullable": false,
+                    "optional": false,
+                    "origin": {
+                      "layer": "api",
+                      "pointer": "/schemas/Item/properties/name"
+                    },
+                    "sensitive": false,
+                    "type": {
+                      "kind": "scalar",
+                      "refinements": {},
+                      "type": "string"
+                    }
+                  },
+                  {
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {},
+                    "name": "cost",
+                    "nullable": false,
+                    "optional": true,
+                    "origin": {
+                      "layer": "api",
+                      "pointer": "/schemas/Item/properties/cost"
+                    },
+                    "restrictedTo": {
+                      "origin": {
+                        "layer": "api",
+                        "pointer": "/schemas/Item/properties/cost/restrictedTo"
+                      },
+                      "right": "items.cost"
+                    },
+                    "sensitive": false,
+                    "type": {
+                      "kind": "scalar",
+                      "refinements": {},
+                      "type": "integer"
+                    }
+                  },
+                  {
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {},
+                    "name": "grade",
+                    "nullable": false,
+                    "optional": true,
+                    "origin": {
+                      "layer": "api",
+                      "pointer": "/schemas/Item/properties/grade"
+                    },
+                    "restrictedTo": {
+                      "origin": {
+                        "layer": "api",
+                        "pointer": "/schemas/Item/properties/grade/restrictedTo"
+                      },
+                      "params": {
+                        "level": "high"
+                      },
+                      "right": "items.grade"
+                    },
+                    "sensitive": false,
+                    "type": {
+                      "kind": "scalar",
+                      "refinements": {},
+                      "type": "integer"
+                    }
+                  },
+                  {
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {},
+                    "name": "margin",
+                    "nullable": false,
+                    "optional": true,
+                    "origin": {
+                      "layer": "api",
+                      "pointer": "/schemas/Item/properties/margin"
+                    },
+                    "restrictedTo": {
+                      "origin": {
+                        "layer": "api",
+                        "pointer": "/schemas/Item/properties/margin/restrictedTo"
+                      },
+                      "right": "items.margin"
+                    },
+                    "sensitive": false,
+                    "type": {
+                      "kind": "scalar",
+                      "refinements": {},
+                      "type": "integer"
+                    }
+                  }
+                ]
+              },
+              "ItemsGradeParams": {
+                "directions": [
+                  "input"
+                ],
+                "docs": {},
+                "examples": [],
+                "extensions": {},
+                "id": "ItemsGradeParams",
+                "kind": "object",
+                "name": {
+                  "role": "params",
+                  "segments": [
+                    "items",
+                    "grade"
+                  ]
+                },
+                "origin": {
+                  "layer": "api",
+                  "pointer": "/rights/items.grade/params"
+                },
+                "properties": [
+                  {
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {},
+                    "name": "level",
+                    "nullable": false,
+                    "optional": false,
+                    "origin": {
+                      "layer": "api",
+                      "pointer": "/rights/items.grade/params/level"
+                    },
+                    "sensitive": false,
+                    "type": {
+                      "kind": "scalar",
+                      "refinements": {},
+                      "type": "string"
+                    }
+                  }
+                ]
+              },
+              "Remark": {
+                "directions": [
+                  "output"
+                ],
+                "docs": {},
+                "examples": [],
+                "extensions": {},
+                "id": "Remark",
+                "kind": "object",
+                "name": {
+                  "role": "schema",
+                  "segments": [
+                    "remark"
+                  ]
+                },
+                "origin": {
+                  "layer": "api",
+                  "pointer": "/schemas/Remark"
+                },
+                "properties": [
+                  {
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {},
+                    "name": "remarkId",
+                    "nullable": false,
+                    "optional": false,
+                    "origin": {
+                      "layer": "api",
+                      "pointer": "/schemas/Remark/properties/remarkId"
+                    },
+                    "sensitive": false,
+                    "type": {
+                      "format": "uuid",
+                      "kind": "scalar",
+                      "refinements": {},
+                      "type": "string"
+                    }
+                  },
+                  {
+                    "deprecated": false,
+                    "docs": {},
+                    "extensions": {},
+                    "name": "name",
+                    "nullable": false,
+                    "optional": false,
+                    "origin": {
+                      "layer": "api",
+                      "pointer": "/schemas/Remark/properties/name"
+                    },
+                    "sensitive": false,
+                    "type": {
+                      "kind": "scalar",
+                      "refinements": {},
+                      "type": "string"
+                    }
+                  }
+                ]
+              }
+            },
+            "schemes": {
+              "bearer": {
+                "id": "bearer",
+                "kind": "bearer",
+                "origin": {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              }
+            },
+            "scopes": {},
+            "services": {}
+          },
+          "sourceMap": {
+            "irRevision": 6,
+            "locations": {
+              "api#/api": {
+                "column": 1,
+                "endColumn": 32,
+                "endLine": 1,
+                "file": "api.yaml",
+                "line": 1
+              },
+              "api#/api/version": {
+                "column": 20,
+                "endColumn": 30,
+                "endLine": 1,
+                "file": "api.yaml",
+                "line": 1
+              },
+              "api#/conventions/paging/maxLimit": {
+                "column": 13,
+                "endColumn": 25,
+                "endLine": 57,
+                "file": "api.yaml",
+                "line": 57
+              },
+              "api#/identities/clerk": {
+                "column": 3,
+                "endColumn": 76,
+                "endLine": 5,
+                "file": "api.yaml",
+                "line": 5
+              },
+              "api#/pagings/offset": {
+                "column": 3,
+                "endColumn": 1,
+                "endLine": 56,
+                "file": "api.yaml",
+                "line": 49
+              },
+              "api#/rights/items.cost": {
+                "column": 3,
+                "endColumn": 17,
+                "endLine": 59,
+                "file": "api.yaml",
+                "line": 59
+              },
+              "api#/rights/items.grade": {
+                "column": 3,
+                "endColumn": 55,
+                "endLine": 60,
+                "file": "api.yaml",
+                "line": 60
+              },
+              "api#/rights/items.grade/params": {
+                "column": 18,
+                "endColumn": 53,
+                "endLine": 60,
+                "file": "api.yaml",
+                "line": 60
+              },
+              "api#/rights/items.grade/params/level": {
+                "column": 28,
+                "endColumn": 51,
+                "endLine": 60,
+                "file": "api.yaml",
+                "line": 60
+              },
+              "api#/rights/items.margin": {
+                "column": 3,
+                "endColumn": 60,
+                "endLine": 63,
+                "file": "api.yaml",
+                "line": 63
+              },
+              "api#/schemas/Clerk": {
+                "column": 3,
+                "endColumn": 90,
+                "endLine": 9,
+                "file": "api.yaml",
+                "line": 9
+              },
+              "api#/schemas/Clerk/properties/clerkId": {
+                "column": 61,
+                "endColumn": 86,
+                "endLine": 9,
+                "file": "api.yaml",
+                "line": 9
+              },
+              "api#/schemas/Item": {
+                "column": 3,
+                "endColumn": 1,
+                "endLine": 19,
+                "file": "api.yaml",
+                "line": 10
+              },
+              "api#/schemas/Item/properties/cost": {
+                "column": 7,
+                "endColumn": 56,
+                "endLine": 16,
+                "file": "api.yaml",
+                "line": 16
+              },
+              "api#/schemas/Item/properties/cost/restrictedTo": {
+                "column": 30,
+                "endColumn": 54,
+                "endLine": 16,
+                "file": "api.yaml",
+                "line": 16
+              },
+              "api#/schemas/Item/properties/grade": {
+                "column": 7,
+                "endColumn": 94,
+                "endLine": 17,
+                "file": "api.yaml",
+                "line": 17
+              },
+              "api#/schemas/Item/properties/grade/restrictedTo": {
+                "column": 31,
+                "endColumn": 92,
+                "endLine": 17,
+                "file": "api.yaml",
+                "line": 17
+              },
+              "api#/schemas/Item/properties/itemId": {
+                "column": 7,
+                "endColumn": 21,
+                "endLine": 14,
+                "file": "api.yaml",
+                "line": 14
+              },
+              "api#/schemas/Item/properties/margin": {
+                "column": 7,
+                "endColumn": 60,
+                "endLine": 18,
+                "file": "api.yaml",
+                "line": 18
+              },
+              "api#/schemas/Item/properties/margin/restrictedTo": {
+                "column": 32,
+                "endColumn": 58,
+                "endLine": 18,
+                "file": "api.yaml",
+                "line": 18
+              },
+              "api#/schemas/Item/properties/name": {
+                "column": 7,
+                "endColumn": 29,
+                "endLine": 15,
+                "file": "api.yaml",
+                "line": 15
+              },
+              "api#/schemas/Remark": {
+                "column": 3,
+                "endColumn": 1,
+                "endLine": 45,
+                "file": "api.yaml",
+                "line": 41
+              },
+              "api#/schemas/Remark/properties/name": {
+                "column": 38,
+                "endColumn": 60,
+                "endLine": 44,
+                "file": "api.yaml",
+                "line": 44
+              },
+              "api#/schemas/Remark/properties/remarkId": {
+                "column": 19,
+                "endColumn": 36,
+                "endLine": 44,
+                "file": "api.yaml",
+                "line": 44
+              },
+              "api#/schemes/bearer": {
+                "column": 3,
+                "endColumn": 27,
+                "endLine": 3,
+                "file": "api.yaml",
+                "line": 3
+              },
+              "api#/surfaces/app": {
+                "column": 3,
+                "endColumn": 1,
+                "endLine": 87,
+                "file": "api.yaml",
+                "line": 68
+              },
+              "api#/surfaces/app/identity": {
+                "column": 5,
+                "endColumn": 20,
+                "endLine": 70,
+                "file": "api.yaml",
+                "line": 70
+              },
+              "api#/surfaces/app/routes/items/id/itemId": {
+                "column": 15,
+                "endColumn": 29,
+                "endLine": 74,
+                "file": "api.yaml",
+                "line": 74
+              },
+              "api#/surfaces/app/routes/items/item": {
+                "column": 9,
+                "endColumn": 19,
+                "endLine": 75,
+                "file": "api.yaml",
+                "line": 75
+              },
+              "api#/surfaces/app/routes/items/member/routes/remarks/item": {
+                "column": 15,
+                "endColumn": 27,
+                "endLine": 85,
+                "file": "api.yaml",
+                "line": 85
+              },
+              "api#/surfaces/app/routes/items/member/routes/remarks/ops/list": {
+                "column": 22,
+                "endColumn": 94,
+                "endLine": 86,
+                "file": "api.yaml",
+                "line": 86
+              },
+              "api#/surfaces/app/routes/items/member/routes/remarks/ops/list/paging": {
+                "column": 30,
+                "endColumn": 44,
+                "endLine": 86,
+                "file": "api.yaml",
+                "line": 86
+              },
+              "api#/surfaces/app/routes/items/member/routes/remarks/ops/list/sortable/0": {
+                "column": 57,
+                "endColumn": 91,
+                "endLine": 86,
+                "file": "api.yaml",
+                "line": 86
+              },
+              "api#/surfaces/app/routes/items/ops/list": {
+                "column": 11,
+                "endColumn": 1,
+                "endLine": 80,
+                "file": "api.yaml",
+                "line": 77
+              },
+              "api#/surfaces/app/routes/items/ops/list/paging": {
+                "column": 13,
+                "endColumn": 27,
+                "endLine": 78,
+                "file": "api.yaml",
+                "line": 78
+              },
+              "api#/surfaces/app/routes/items/ops/list/sortable/0": {
+                "column": 24,
+                "endColumn": 28,
+                "endLine": 79,
+                "file": "api.yaml",
+                "line": 79
+              }
+            }
+          },
+          "declared": [
+            {
+              "catalogue": "schemas",
+              "id": "ItemId",
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/ItemId"
+              },
+              "reached": true
+            },
+            {
+              "catalogue": "schemas",
+              "id": "ChildId",
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/ChildId"
+              },
+              "reached": true
+            },
+            {
+              "catalogue": "schemas",
+              "id": "Clerk",
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/Clerk"
+              },
+              "reached": true
+            },
+            {
+              "catalogue": "schemas",
+              "id": "Item",
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/Item"
+              },
+              "reached": true
+            },
+            {
+              "catalogue": "schemas",
+              "id": "EvA",
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/EvA"
+              },
+              "reached": false
+            },
+            {
+              "catalogue": "schemas",
+              "id": "EvB",
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/EvB"
+              },
+              "reached": false
+            },
+            {
+              "catalogue": "schemas",
+              "id": "EvC",
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/EvC"
+              },
+              "reached": false
+            },
+            {
+              "catalogue": "schemas",
+              "id": "Mixed",
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/Mixed"
+              },
+              "reached": false
+            },
+            {
+              "catalogue": "schemas",
+              "id": "Shared",
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/Shared"
+              },
+              "reached": false
+            },
+            {
+              "catalogue": "schemas",
+              "id": "Child",
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/Child"
+              },
+              "reached": false
+            },
+            {
+              "catalogue": "schemas",
+              "id": "Remark",
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/Remark"
+              },
+              "reached": true
+            },
+            {
+              "catalogue": "schemas",
+              "id": "Tally",
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/Tally"
+              },
+              "reached": false
+            },
+            {
+              "catalogue": "schemes",
+              "id": "bearer",
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemes/bearer"
+              },
+              "reached": true
+            },
+            {
+              "catalogue": "identities",
+              "id": "clerk",
+              "origin": {
+                "layer": "api",
+                "pointer": "/identities/clerk"
+              },
+              "reached": true
+            },
+            {
+              "catalogue": "rights",
+              "id": "items.cost",
+              "origin": {
+                "layer": "api",
+                "pointer": "/rights/items.cost"
+              },
+              "reached": true
+            },
+            {
+              "catalogue": "rights",
+              "id": "items.grade",
+              "origin": {
+                "layer": "api",
+                "pointer": "/rights/items.grade"
+              },
+              "reached": true
+            },
+            {
+              "catalogue": "rights",
+              "id": "items.read",
+              "origin": {
+                "layer": "api",
+                "pointer": "/rights/items.read"
+              },
+              "reached": false
+            },
+            {
+              "catalogue": "rights",
+              "id": "items.audit",
+              "origin": {
+                "layer": "api",
+                "pointer": "/rights/items.audit"
+              },
+              "reached": false
+            },
+            {
+              "catalogue": "rights",
+              "id": "items.margin",
+              "origin": {
+                "layer": "api",
+                "pointer": "/rights/items.margin"
+              },
+              "reached": true
+            },
+            {
+              "catalogue": "rights",
+              "id": "shop.staff",
+              "origin": {
+                "layer": "api",
+                "pointer": "/rights/shop.staff"
+              },
+              "reached": false
+            },
+            {
+              "catalogue": "scopes",
+              "id": "shop",
+              "origin": {
+                "layer": "api",
+                "pointer": "/scopes/shop"
+              },
+              "reached": false
+            },
+            {
+              "catalogue": "pagings",
+              "id": "offset",
+              "origin": {
+                "layer": "api",
+                "pointer": "/pagings/offset"
+              },
+              "reached": true
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
