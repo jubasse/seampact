@@ -1014,6 +1014,8 @@ dependencies = [
  "seampact-load",
  "seampact-openapi",
  "seampact-oracle",
+ "seampact-pipeline",
+ "seampact-span",
  "seampact-target",
  "serde",
  "serde_json",
@@ -1110,8 +1112,15 @@ name = "seampact-editor-schemas"
 version = "2.0.0"
 dependencies = [
  "camino",
- "seampact-compiler",
+ "indexmap",
+ "seampact-authoring",
  "seampact-diagnostics",
+ "seampact-ir",
+ "seampact-js",
+ "seampact-json",
+ "seampact-pipeline",
+ "seampact-span",
+ "serde_json",
  "thiserror",
 ]
 
