@@ -67,6 +67,8 @@ sha2 = "0.11.1"
 # The release channel of seampact-bundle-fetch only: HTTPS through rustls with the ring provider and the OS store.
 ureq = { version = "3.5.2", default-features = false, features = ["rustls-no-provider", "platform-verifier"] }
 rustls = { version = "0.23.46", default-features = false, features = ["ring", "std", "tls12"] }
+# WHATWG URL parsing for printable URLs and the release channel, as the TypeScript's `URL`.
+url = "2.5.8"
 num-bigint = "0.4.8"
 # Tests and benchmarks.
 insta = "1.49.0"
