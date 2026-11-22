@@ -51,7 +51,7 @@ pub use read_root_config::{
 pub use read_run_config::{ReadRunConfigOutcome, RunConfig, read_run_config};
 pub use read_workspace_configs::{LoadedWorkspace, ReadWorkspaceOutcome, read_workspace_configs};
 pub use resolved_source::ResolvedSource;
-pub use symbolic_link::is_symbolic_link;
+pub use symbolic_link::{is_path_taken, is_symbolic_link};
 
 /// Every rule id the crate reports, read by the oracle's rule id registry.
 pub const RULE_IDS: &[RuleId] = &[];
