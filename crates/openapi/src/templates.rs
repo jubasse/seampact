@@ -479,3 +479,81 @@ fn member_name_of(
 
     None
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::EmitterOptions;
+    use crate::emit_context::{create_emit_context, fixture_ir};
+
+    use super::*;
+
+    fn object_template(names: &[&str]) -> Result<ObjectTemplate, serde_json::Error> {
+        let members: Vec<serde_json::Value> = names
+            .iter()
+            .map(|name| {
+                serde_json::json!({
+                    "name": {"kind": "text", "text": name},
+                    "value": {"kind": "literal", "value": 1},
+                })
+            })
+            .collect();
+
+        serde_json::from_value(serde_json::json!({"kind": "object", "members": members}))
+    }
+
+    #[test]
+    fn object_members_follow_javascript_key_order() -> Result<(), Box<dyn std::error::Error>> {
+        let ir = fixture_ir()?;
+        let options = EmitterOptions::default();
+        let mut context = create_emit_context(&ir, &options);
+        let template = object_template(&["b", "10", "2", "a"])?;
+        let location = IrLocation::root();
+        let value = object_template_schema(
+            &mut context,
+            &template,
+            &SlotSchemas::new(),
+            &Absent::Omit,
+            &location,
+        )?
+        .ok_or("refused")?;
+        let Some(JsonValue::Object(properties)) = value.schema.get("properties") else {
+            return Err("no properties".into());
+        };
+        let names: Vec<&str> = properties.keys().map(String::as_str).collect();
+
+        assert_eq!(names, ["2", "10", "b", "a"]);
+
+        Ok(())
+    }
+
+    #[test]
+    fn a_member_named_like_an_object_prototype_key_is_refused_as_repeated()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let ir = fixture_ir()?;
+        let options = EmitterOptions::default();
+        let mut context = create_emit_context(&ir, &options);
+        let location = IrLocation::root();
+
+        for name in ["constructor", "toString", "__proto__"] {
+            let template = object_template(&[name])?;
+            let value = object_template_schema(
+                &mut context,
+                &template,
+                &SlotSchemas::new(),
+                &Absent::Omit,
+                &location,
+            )?
+            .ok_or("refused")?;
+
+            assert_eq!(
+                value.schema.get("properties"),
+                Some(&JsonValue::Object(JsonObject::new())),
+                "member {name:?}"
+            );
+        }
+
+        assert_eq!(context.refusals.len(), 3);
+
+        Ok(())
+    }
+}

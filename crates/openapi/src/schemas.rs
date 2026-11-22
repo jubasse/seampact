@@ -882,6 +882,46 @@ mod tests {
         Ok(())
     }
 
+    fn object_of(json: &str) -> Result<JsonObject, Box<dyn std::error::Error>> {
+        match serde_json::from_str::<serde_json::Value>(json).map(JsonValue::try_from)?? {
+            JsonValue::Object(object) => Ok(object),
+            other => Err(format!("not an object: {other:?}").into()),
+        }
+    }
+
+    #[test]
+    fn nullable_schema_widens_a_type_keeps_annotations_and_wraps_the_rest()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let cases = [
+            (
+                r#"{"type":"string","enum":["a"]}"#,
+                r#"{"type":["string","null"],"enum":["a",null]}"#,
+            ),
+            (
+                r#"{"description":"d","x-seampact-opaque":true}"#,
+                r#"{"description":"d","x-seampact-opaque":true}"#,
+            ),
+            (
+                r#"{"type":"string","const":"a"}"#,
+                r#"{"oneOf":[{"type":"string","const":"a"},{"type":"null"}]}"#,
+            ),
+            (
+                r##"{"$ref":"#/components/schemas/A"}"##,
+                r##"{"oneOf":[{"$ref":"#/components/schemas/A"},{"type":"null"}]}"##,
+            ),
+        ];
+
+        for (input, expected) in cases {
+            assert_eq!(
+                nullable_schema(object_of(input)?),
+                object_of(expected)?,
+                "schema {input}"
+            );
+        }
+
+        Ok(())
+    }
+
     #[test]
     fn a_decimal_literal_that_is_no_finite_number_is_an_internal_error() {
         assert!(matches!(
