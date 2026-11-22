@@ -15,7 +15,7 @@ use crate::emit_context::{
     write_extension,
 };
 use crate::ir_text::value_source_text;
-use crate::json_value::{optional_integer, optional_text, set_defined, text_value};
+use crate::json_value::{optional_integer, optional_text, set_defined};
 use seampact_js::cmp_utf16;
 
 /// Records that an operation uses the scheme `scheme_id`, refusing one the IR does not declare.
@@ -110,8 +110,8 @@ fn security_scheme(
         KnownSchemeRef::Header(header) => api_key_scheme("header", &header.name),
         KnownSchemeRef::Query(query) => api_key_scheme("query", &query.name),
         KnownSchemeRef::Basic(_) => JsonObject::from_iter([
-            ("type".to_owned(), text_value("http")),
-            ("scheme".to_owned(), text_value("basic")),
+            ("type".to_owned(), JsonValue::text("http")),
+            ("scheme".to_owned(), JsonValue::text("basic")),
         ]),
         KnownSchemeRef::Bearer(bearer) => bearer_scheme(context, bearer.bearer.as_ref(), location),
         KnownSchemeRef::Signature(signature) => signature_scheme(
@@ -126,9 +126,9 @@ fn security_scheme(
 /// An `apiKey` scheme read from `place`.
 fn api_key_scheme(place: &str, name: &str) -> JsonObject {
     JsonObject::from_iter([
-        ("type".to_owned(), text_value("apiKey")),
-        ("in".to_owned(), text_value(place)),
-        ("name".to_owned(), text_value(name)),
+        ("type".to_owned(), JsonValue::text("apiKey")),
+        ("in".to_owned(), JsonValue::text(place)),
+        ("name".to_owned(), JsonValue::text(name)),
     ])
 }
 
@@ -388,7 +388,7 @@ pub(crate) fn write_operation_security(
             let requirements = requirements_of(context, operation, &schemes, location);
             let mark = JsonObject::from_iter([(
                 "identity".to_owned(),
-                text_value(identity.identity.as_str()),
+                JsonValue::text(identity.identity.as_str()),
             )]);
 
             target.insert("security".to_owned(), JsonValue::Array(requirements));
@@ -412,7 +412,7 @@ pub(crate) fn write_operation_security(
             let mark = JsonObject::from_iter([
                 (
                     "identity".to_owned(),
-                    text_value(optional.identity.as_str()),
+                    JsonValue::text(optional.identity.as_str()),
                 ),
                 (
                     "optionalAuth".to_owned(),
@@ -420,7 +420,7 @@ pub(crate) fn write_operation_security(
                 ),
                 (
                     "onRefused".to_owned(),
-                    text_value(optional.on_refused.as_str()),
+                    JsonValue::text(optional.on_refused.as_str()),
                 ),
             ]);
 

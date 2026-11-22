@@ -11,7 +11,7 @@ use crate::emit_context::{
     refuse_not_emitted, write_extension,
 };
 use crate::ir_text::origin_key;
-use crate::json_value::{integer_value, optional_text, set_defined, text_value};
+use crate::json_value::{integer_value, optional_text, set_defined};
 use crate::schemas::{schema_reference, write_docs};
 use crate::templates::{SlotSchemas, SlotValue, members_writing_slot, template_schema};
 use crate::{ExtensionName, OpenApiError};
@@ -55,7 +55,7 @@ fn retry_headers(group: &StatusCodes<'_>) -> JsonObject {
         .filter_map(|entry| entry.error.retry_header.as_ref())
         .map(|retry_header| {
             let schema = JsonObject::from_iter([
-                ("type".to_owned(), text_value("integer")),
+                ("type".to_owned(), JsonValue::text("integer")),
                 ("minimum".to_owned(), integer_value(0)),
             ]);
             let header = JsonObject::from_iter([("schema".to_owned(), JsonValue::Object(schema))]);
@@ -71,7 +71,8 @@ fn error_item(
     error: &OperationError,
     location: &IrLocation,
 ) -> JsonObject {
-    let mut item = JsonObject::from_iter([("code".to_owned(), text_value(error.code.as_str()))]);
+    let mut item =
+        JsonObject::from_iter([("code".to_owned(), JsonValue::text(error.code.as_str()))]);
 
     if error.derived_from.is_none() && error.origin.is_none() {
         refuse_inconsistent(
@@ -162,11 +163,11 @@ fn error_code_component(
         None => SlotValue::never_sent(),
     };
     let code_schema = JsonObject::from_iter([
-        ("type".to_owned(), text_value("string")),
-        ("const".to_owned(), text_value(declared.code.as_str())),
+        ("type".to_owned(), JsonValue::text("string")),
+        ("const".to_owned(), JsonValue::text(declared.code.as_str())),
     ]);
     let status_schema = JsonObject::from_iter([
-        ("type".to_owned(), text_value("integer")),
+        ("type".to_owned(), JsonValue::text("integer")),
         ("const".to_owned(), integer_value(declared.http.status)),
     ]);
     let slots = SlotSchemas::from_iter([
@@ -193,7 +194,7 @@ fn error_code_component(
     write_docs(&mut schema, Some(&declared.docs));
 
     let mut nature =
-        JsonObject::from_iter([("base".to_owned(), text_value(declared.nature.as_str()))]);
+        JsonObject::from_iter([("base".to_owned(), JsonValue::text(declared.nature.as_str()))]);
 
     set_defined(
         &mut nature,
@@ -212,7 +213,7 @@ fn error_code_component(
 
 /// The `{ "type": "string" }` schema.
 fn string_schema() -> JsonObject {
-    JsonObject::from_iter([("type".to_owned(), text_value("string"))])
+    JsonObject::from_iter([("type".to_owned(), JsonValue::text("string"))])
 }
 
 /// The error responses of an operation by status.
@@ -320,7 +321,7 @@ fn error_response<'ir>(
 
     if let (true, Some(member)) = (references.len() > 1, discriminator_member) {
         let discriminator =
-            JsonObject::from_iter([("propertyName".to_owned(), text_value(member))]);
+            JsonObject::from_iter([("propertyName".to_owned(), JsonValue::text(member))]);
 
         schema.insert("discriminator".to_owned(), JsonValue::Object(discriminator));
     }
@@ -331,7 +332,7 @@ fn error_response<'ir>(
         .map(|entry| entry.error.code.as_str())
         .collect();
     let mut response =
-        JsonObject::from_iter([("description".to_owned(), text_value(&codes.join(", ")))]);
+        JsonObject::from_iter([("description".to_owned(), JsonValue::text(&codes.join(", ")))]);
     let headers = retry_headers(group);
 
     if !headers.is_empty() {

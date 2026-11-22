@@ -9,7 +9,7 @@ use crate::emit_context::{
     EmitContext, optional_reason, reason_value, refuse_unknown, write_extension,
 };
 use crate::ir_text::value_source_text;
-use crate::json_value::{integer_value, optional_text, set_defined, text_value};
+use crate::json_value::{integer_value, optional_text, set_defined};
 
 /// Writes the deprecation of an operation: the dates, the successor and its link relation.
 fn write_deprecation(context: &EmitContext<'_>, operation: &Operation, target: &mut JsonObject) {
@@ -17,14 +17,17 @@ fn write_deprecation(context: &EmitContext<'_>, operation: &Operation, target: &
         return;
     };
     let mut value = JsonObject::from_iter([
-        ("since".to_owned(), text_value(&deprecation.since)),
-        ("sunset".to_owned(), text_value(&deprecation.sunset)),
+        ("since".to_owned(), JsonValue::text(&deprecation.since)),
+        ("sunset".to_owned(), JsonValue::text(&deprecation.sunset)),
     ]);
 
     if let Some(successor) = &deprecation.successor {
         let reference = JsonObject::from_iter([
-            ("api".to_owned(), text_value(&successor.api)),
-            ("operationId".to_owned(), text_value(successor.id.as_str())),
+            ("api".to_owned(), JsonValue::text(&successor.api)),
+            (
+                "operationId".to_owned(),
+                JsonValue::text(successor.id.as_str()),
+            ),
         ]);
 
         value.insert("successor".to_owned(), JsonValue::Object(reference));
@@ -87,8 +90,8 @@ pub(crate) fn write_operation_marks(
             &location.below(&["concurrency", "version"]),
         );
         let mark = JsonObject::from_iter([
-            ("version".to_owned(), text_value(&version)),
-            ("field".to_owned(), text_value(&concurrency.field)),
+            ("version".to_owned(), JsonValue::text(&version)),
+            ("field".to_owned(), JsonValue::text(&concurrency.field)),
         ]);
 
         write_extension(
@@ -106,7 +109,7 @@ pub(crate) fn write_operation_marks(
             context,
             target,
             ExtensionName::Owner,
-            text_value(owner.kind.as_str()),
+            JsonValue::text(owner.kind.as_str()),
         );
     }
 
@@ -125,7 +128,7 @@ pub(crate) fn write_operation_marks(
         let services = operation
             .upstream
             .iter()
-            .map(|service| text_value(service.as_str()))
+            .map(|service| JsonValue::text(service.as_str()))
             .collect();
 
         write_extension(
@@ -151,8 +154,11 @@ pub(crate) fn write_operation_marks(
 
     if let Some(relays) = &operation.relays {
         let mark = JsonObject::from_iter([
-            ("api".to_owned(), text_value(&relays.api)),
-            ("operationId".to_owned(), text_value(relays.id.as_str())),
+            ("api".to_owned(), JsonValue::text(&relays.api)),
+            (
+                "operationId".to_owned(),
+                JsonValue::text(relays.id.as_str()),
+            ),
         ]);
 
         write_extension(
@@ -168,7 +174,7 @@ pub(crate) fn write_operation_marks(
             context,
             target,
             ExtensionName::Format,
-            text_value(operation.format.as_str()),
+            JsonValue::text(operation.format.as_str()),
         );
     }
 }
@@ -177,8 +183,11 @@ pub(crate) fn write_operation_marks(
 fn write_maturity(context: &EmitContext<'_>, operation: &Operation, target: &mut JsonObject) {
     let maturity = &operation.maturity;
     let mut mark = JsonObject::from_iter([
-        ("level".to_owned(), text_value(maturity.level.as_str())),
-        ("source".to_owned(), text_value(maturity.source.as_str())),
+        ("level".to_owned(), JsonValue::text(maturity.level.as_str())),
+        (
+            "source".to_owned(),
+            JsonValue::text(maturity.source.as_str()),
+        ),
     ]);
 
     set_defined(
@@ -205,7 +214,7 @@ fn write_degradable(context: &EmitContext<'_>, operation: &Operation, target: &m
     let paths = degradable
         .paths
         .iter()
-        .map(|path| text_value(path))
+        .map(|path| JsonValue::text(path))
         .collect();
     let mut mark = JsonObject::from_iter([("paths".to_owned(), JsonValue::Array(paths))]);
 
@@ -243,14 +252,17 @@ fn write_idempotency(
             reason_value(context, exempt.reason.as_str()),
         )]),
         KnownIdempotencyRef::Derived(derived) => JsonObject::from_iter([
-            ("header".to_owned(), text_value(&derived.header)),
+            ("header".to_owned(), JsonValue::text(&derived.header)),
             (
                 "replayHeader".to_owned(),
-                text_value(&derived.replay_header),
+                JsonValue::text(&derived.replay_header),
             ),
             ("lifetimeMs".to_owned(), integer_value(derived.lifetime_ms)),
             ("required".to_owned(), JsonValue::Bool(derived.required)),
-            ("enforce".to_owned(), text_value(derived.enforce.as_str())),
+            (
+                "enforce".to_owned(),
+                JsonValue::text(derived.enforce.as_str()),
+            ),
         ]),
     };
 

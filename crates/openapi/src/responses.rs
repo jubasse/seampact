@@ -13,7 +13,6 @@ use crate::emit_context::{
     write_extension,
 };
 use crate::examples::{ExampleSet, response_examples};
-use crate::json_value::text_value;
 use crate::paging::page_body_schema;
 use crate::schemas::type_use_schema;
 use crate::templates::{SlotSchemas, SlotValue, template_schema};
@@ -68,14 +67,14 @@ fn response_description(response: &Response) -> &str {
 fn payload_schema_of(shape: PayloadShape, payload: JsonObject) -> JsonObject {
     match shape {
         PayloadShape::Table => JsonObject::from_iter([
-            ("type".to_owned(), text_value("object")),
+            ("type".to_owned(), JsonValue::text("object")),
             (
                 "additionalProperties".to_owned(),
                 JsonValue::Object(payload),
             ),
         ]),
         PayloadShape::List => JsonObject::from_iter([
-            ("type".to_owned(), text_value("array")),
+            ("type".to_owned(), JsonValue::text("array")),
             ("items".to_owned(), JsonValue::Object(payload)),
         ]),
         PayloadShape::Item => payload,
@@ -92,7 +91,7 @@ fn success_response(
 ) -> Result<JsonObject, OpenApiError> {
     let mut response_object = JsonObject::from_iter([(
         "description".to_owned(),
-        text_value(response_description(response)),
+        JsonValue::text(response_description(response)),
     )]);
     let headers = response_headers(context, operation, response, location)?;
 
@@ -254,15 +253,15 @@ fn response_headers(
             .map(|entry| {
                 (
                     entry.caller.as_str().to_owned(),
-                    text_value(&entry.cache_control),
+                    JsonValue::text(&entry.cache_control),
                 )
             })
             .collect();
         let schema = JsonObject::from_iter([
-            ("type".to_owned(), text_value("string")),
+            ("type".to_owned(), JsonValue::text("string")),
             (
                 "enum".to_owned(),
-                JsonValue::Array(values.into_iter().map(text_value).collect()),
+                JsonValue::Array(values.into_iter().map(JsonValue::text).collect()),
             ),
         ]);
         let mut header = JsonObject::from_iter([("schema".to_owned(), JsonValue::Object(schema))]);
@@ -282,7 +281,7 @@ fn response_headers(
         .and_then(|degradable| degradable.header.as_deref());
 
     if let (Some(name), true) = (degraded_header, response.status < SUCCESS_STATUS_LIMIT) {
-        let schema = JsonObject::from_iter([("type".to_owned(), text_value("string"))]);
+        let schema = JsonObject::from_iter([("type".to_owned(), JsonValue::text("string"))]);
         let header = JsonObject::from_iter([("schema".to_owned(), JsonValue::Object(schema))]);
 
         headers.insert(name.to_owned(), JsonValue::Object(header));

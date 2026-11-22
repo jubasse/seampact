@@ -9,7 +9,7 @@ use seampact_target::IrLocation;
 
 use crate::OpenApiError;
 use crate::emit_context::{EmitContext, SchemaVariant};
-use crate::json_value::{integer_value, text_value};
+use crate::json_value::integer_value;
 use crate::responses::PayloadShape;
 use crate::schemas::type_use_schema;
 use crate::templates::{SlotPresence, SlotSchemas, SlotValue, template_schema};
@@ -96,8 +96,8 @@ pub(crate) fn url_schema(context: &EmitContext<'_>) -> JsonObject {
         "uri-reference"
     };
     JsonObject::from_iter([
-        ("type".to_owned(), text_value("string")),
-        ("format".to_owned(), text_value(format)),
+        ("type".to_owned(), JsonValue::text("string")),
+        ("format".to_owned(), JsonValue::text(format)),
     ])
 }
 
@@ -130,10 +130,10 @@ pub(crate) fn success_slots(
     item: &TypeUse,
 ) -> SlotSchemas {
     let status_schema = JsonObject::from_iter([
-        ("type".to_owned(), text_value("integer")),
+        ("type".to_owned(), JsonValue::text("integer")),
         ("const".to_owned(), integer_value(status)),
     ]);
-    let string_schema = JsonObject::from_iter([("type".to_owned(), text_value("string"))]);
+    let string_schema = JsonObject::from_iter([("type".to_owned(), JsonValue::text("string"))]);
     let mut slots = SlotSchemas::from_iter([
         ("status".to_owned(), SlotValue::always(status_schema)),
         ("path".to_owned(), SlotValue::always(string_schema)),
@@ -156,7 +156,7 @@ pub(crate) fn success_slots(
 pub(crate) fn constant_slot(value: &str) -> SlotValue {
     SlotValue::always(JsonObject::from_iter([(
         "const".to_owned(),
-        text_value(value),
+        JsonValue::text(value),
     )]))
 }
 

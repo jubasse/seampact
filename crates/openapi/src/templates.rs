@@ -10,7 +10,6 @@ use seampact_target::{IrLocation, NotGeneratedForm};
 
 use crate::OpenApiError;
 use crate::emit_context::{EmitContext, refuse_not_emitted, refuse_unknown};
-use crate::not_ported::not_ported_yet;
 use crate::schemas::nullable_schema;
 
 /// The names `Object.prototype` carries, which the `in` operator finds on any plain object.
@@ -182,13 +181,46 @@ pub(crate) fn render_template(
     }
 }
 
+/// The object an object template writes; a merging template and a slot-named member are refused.
 fn render_object_template(
-    _context: &mut EmitContext<'_>,
-    _template: &ObjectTemplate,
-    _values: &IndexMap<String, JsonValue>,
-    _location: &IrLocation,
+    context: &mut EmitContext<'_>,
+    template: &ObjectTemplate,
+    values: &IndexMap<String, JsonValue>,
+    location: &IrLocation,
 ) -> Result<Option<JsonValue>, OpenApiError> {
-    Err(not_ported_yet("renderObjectTemplate"))
+    if template.merge.is_some() {
+        refuse_not_emitted(
+            context,
+            NotGeneratedForm::OpenapiExampleMerge,
+            "An example through a merging template",
+            location,
+        );
+
+        return Ok(None);
+    }
+
+    let mut rendered = JsonObject::new();
+
+    for (index, member) in template.members.iter().enumerate() {
+        let MemberName::Text(name) = &member.name else {
+            refuse_not_emitted(
+                context,
+                NotGeneratedForm::OpenapiExampleMemberName,
+                "An example through a member named by a slot",
+                location,
+            );
+
+            continue;
+        };
+        let value_location = location.below(&["members", &index.to_string(), "value"]);
+        let value = render_template(context, &member.value, values, &value_location)?;
+
+        if let Some(written) = value {
+            rendered.insert(name.text.clone(), written);
+        }
+    }
+
+    Ok(Some(JsonValue::Object(rendered)))
 }
 
 /// The value a slot holds, refusing a member path and a slot the place does not offer.
@@ -414,14 +446,54 @@ fn merge_object_schema(
     }
 }
 
+/// The array schema of `$each`: the schema of `$as` over the elements of the array slot.
 fn each_schema(
-    _context: &mut EmitContext<'_>,
-    _template: &EachTemplate,
-    _slots: &SlotSchemas,
-    _absent: &Absent,
-    _location: &IrLocation,
+    context: &mut EmitContext<'_>,
+    template: &EachTemplate,
+    slots: &SlotSchemas,
+    absent: &Absent,
+    location: &IrLocation,
 ) -> Result<Option<SlotValue>, OpenApiError> {
-    Err(not_ported_yet("eachSchema"))
+    let of_location = location.below(&["of"]);
+    let Some(array) = slot_schema(context, template.of.as_str(), &[], slots, &of_location) else {
+        return Ok(None);
+    };
+    let Some(element) = &array.element else {
+        refuse_not_emitted(
+            context,
+            NotGeneratedForm::OpenapiTemplateEach,
+            &format!(
+                "The slot '${}' read by '$each' in this place",
+                template.of.as_str()
+            ),
+            &of_location,
+        );
+
+        return Ok(None);
+    };
+    let as_location = location.below(&["as"]);
+    let rendered = template_schema(context, &template.r#as, element, absent, &as_location)?;
+    let Some(item) = rendered else {
+        return Ok(None);
+    };
+
+    if item.presence == SlotPresence::Never {
+        refuse_not_emitted(
+            context,
+            NotGeneratedForm::OpenapiTemplateEach,
+            "A '$each' whose '$as' is never written",
+            &as_location,
+        );
+
+        return Ok(None);
+    }
+
+    let array_schema = JsonObject::from_members([
+        ("type", JsonValue::text("array")),
+        ("items", JsonValue::Object(item.schema)),
+    ]);
+
+    Ok(Some(SlotValue::always(array_schema)))
 }
 
 /// The names of the members of an object template that write `slot` whole.
