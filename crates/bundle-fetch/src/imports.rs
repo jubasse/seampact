@@ -6,13 +6,11 @@
 //! refuses (no source form, or more than one) is not fetched: the compilation reports it.
 
 use indexmap::IndexMap;
-use seampact_bundle::{
-    BundleSource, BundleSourceForm, GitBundleSource, PackageBundleSource, ReleaseBundleSource,
-};
+use seampact_bundle::{BundleSource, written_bundle_source};
 use seampact_compiler::{PipelineOptions, PipelineResult, compile_workspace};
 use seampact_diagnostics::{InternalError, quote_text};
 use seampact_ir::ImportedIr;
-use seampact_json::{JsonObject, JsonValue};
+use seampact_json::JsonValue;
 use seampact_load::{LoadOptions, load_workspace};
 
 use crate::fetch_failure::bundle_source_text;
@@ -20,9 +18,6 @@ use crate::{
     BundleFetchError, BundleFetchOptions, BundleFetchResult, BundleSourceFailure,
     BundleSourceFailureCode, fetch_bundle,
 };
-
-/// The key that names each source form; an entry holds exactly one.
-const SOURCE_FORM_KEYS: [&str; 4] = ["path", "package", "release", "git"];
 
 /// Why a workspace import cannot be fetched.
 #[derive(Debug, Clone, PartialEq)]
@@ -181,57 +176,18 @@ fn declared_imports(imports: Option<&JsonValue>) -> Vec<DeclaredImport> {
     imports
         .iter()
         .filter_map(|(name, entry)| {
-            let JsonValue::Object(entry) = entry else {
+            let JsonValue::Object(members) = entry else {
                 return None;
             };
-            let Some(JsonValue::String(api)) = entry.get("api") else {
+            let Some(JsonValue::String(api)) = members.get("api") else {
                 return None;
             };
 
             Some(DeclaredImport {
                 name: name.clone(),
                 api: api.clone(),
-                source: bundle_source_of(entry)?,
+                source: written_bundle_source(entry)?,
             })
         })
         .collect()
-}
-
-fn bundle_source_of(entry: &JsonObject) -> Option<BundleSource> {
-    let forms = SOURCE_FORM_KEYS
-        .iter()
-        .filter(|key| entry.contains_key(key))
-        .count();
-
-    if forms != 1 {
-        return None;
-    }
-
-    let integrity = entry.text_member("integrity").map(str::to_owned);
-    let form = if let (Some(package), Some(version)) =
-        (entry.text_member("package"), entry.text_member("version"))
-    {
-        BundleSourceForm::Package(PackageBundleSource {
-            package: package.to_owned(),
-            version: version.to_owned(),
-        })
-    } else if let Some(JsonValue::Object(release)) = entry.get("release")
-        && let Some(url) = release.text_member("url")
-    {
-        BundleSourceForm::Release(ReleaseBundleSource {
-            url: url.to_owned(),
-        })
-    } else if let Some(JsonValue::Object(git)) = entry.get("git")
-        && let (Some(url), Some(tag)) = (git.text_member("url"), git.text_member("tag"))
-    {
-        BundleSourceForm::Git(GitBundleSource {
-            url: url.to_owned(),
-            tag: tag.to_owned(),
-            directory: git.text_member("directory").map(str::to_owned),
-        })
-    } else {
-        return None;
-    };
-
-    Some(BundleSource { form, integrity })
 }

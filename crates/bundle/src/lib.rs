@@ -56,6 +56,7 @@ pub use manifest_rules::{BundleManifestProblem, bundle_manifest_rule_problems};
 pub use path::{BUNDLE_PATH_MAX_LENGTH, bundle_path_fold, bundle_path_problem};
 pub use source::{
     BundleSource, BundleSourceForm, GitBundleSource, PackageBundleSource, ReleaseBundleSource,
+    written_bundle_source,
 };
 pub use tarball_read::{
     BundleArchiveExtraction, BundleArchiveRead, ExtractedBundle, extract_bundle_tarball,

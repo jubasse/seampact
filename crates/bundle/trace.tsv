@@ -93,3 +93,4 @@ src/local_packages.rs#dependency_specs	packages/core/compiler/src/bundle/local-p
 -	packages/core/compiler/src/bundle/fetch-package.ts#installedBundlePackage	skip: ported in seampact-bundle-fetch
 src/installed_package.rs#installed_package_directory	packages/core/compiler/src/bundle/fetch-package.ts#installedPackageDirectory
 -	packages/core/compiler/src/bundle/fetch-package.ts#installedVersion	skip: ported in seampact-bundle-fetch
+src/source.rs#written_bundle_source	packages/core/compiler/src/bundle/imports.ts#bundleSourceOf

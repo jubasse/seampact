@@ -3,7 +3,6 @@ src/local_sources.rs#local_source_refusal_reason	packages/core/compiler/src/bund
 src/imports.rs#compile_workspace_with_imports	packages/core/compiler/src/bundle/imports.ts#compileWorkspaceWithImports
 src/imports.rs#imported_ir	packages/core/compiler/src/bundle/imports.ts#importedIr
 src/imports.rs#declared_imports	packages/core/compiler/src/bundle/imports.ts#declaredImports
-src/imports.rs#bundle_source_of	packages/core/compiler/src/bundle/imports.ts#bundleSourceOf
 src/fetch_package.rs#installed_bundle_package	packages/core/compiler/src/bundle/fetch-package.ts#installedBundlePackage
 src/fetch_package.rs#installed_version	packages/core/compiler/src/bundle/fetch-package.ts#installedVersion
 src/fetch.rs#fetch_bundle	packages/core/compiler/src/bundle/fetch.ts#fetchBundle
