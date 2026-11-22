@@ -155,7 +155,7 @@ src/prefix_document.rs#prefixed_discriminator	packages/core/openapi/src/merge/pr
 src/prefix_document.rs#prefixed_components	packages/core/openapi/src/merge/prefix-document.ts#prefixedComponents
 src/prefix_document.rs#prefixed_keys	packages/core/openapi/src/merge/prefix-document.ts#prefixedKeys
 src/prefix_document.rs#prefix_operation	packages/core/openapi/src/merge/prefix-document.ts#prefixOperation
-src/merge_documents.rs#assemble_merged_document	packages/core/openapi/src/merge/merged-document.ts#assembleMergedDocument
+src/merged_document.rs#assemble_merged_document	packages/core/openapi/src/merge/merged-document.ts#assembleMergedDocument
 src/merged_document.rs#place_source	packages/core/openapi/src/merge/merged-document.ts#placeSource
 src/merged_document.rs#place_components	packages/core/openapi/src/merge/merged-document.ts#placeComponents
 src/merged_document.rs#place_operations	packages/core/openapi/src/merge/merged-document.ts#placeOperations
