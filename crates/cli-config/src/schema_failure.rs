@@ -5,6 +5,8 @@ use jsonschema::{ValidationError, Validator};
 use seampact_validate::ajv_message;
 use serde_json::Value;
 
+use crate::schema_order::in_ajv_order;
+
 /// The keyword of a failure, with the params the problems read.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum SchemaKeyword {
@@ -34,11 +36,13 @@ pub(crate) struct SchemaFailure {
     pub(crate) instance_path: String,
     /// Whether the failing keyword sits in a branch of a `oneOf`.
     pub(crate) in_one_of_branch: bool,
+    /// The JSON Pointer of the failing keyword in the schema, `$ref` followed.
+    pub(crate) schema_path: String,
     /// Ajv's message, which follows `The value `.
     pub(crate) message: String,
 }
 
-/// Every failure of `instance` against `validator`: a branch's failures, then the `oneOf` that holds them.
+/// Every failure of `instance` against `validator`, in the order Ajv reports them: a branch's failures, then the `oneOf` that holds them.
 pub(crate) fn schema_failures(validator: &Validator, instance: &Value) -> Vec<SchemaFailure> {
     let mut failures = Vec::new();
 
@@ -46,7 +50,7 @@ pub(crate) fn schema_failures(validator: &Validator, instance: &Value) -> Vec<Sc
         push_failures(&error, false, &mut failures);
     }
 
-    failures
+    in_ajv_order(failures)
 }
 
 fn push_failures(
@@ -55,10 +59,12 @@ fn push_failures(
     failures: &mut Vec<SchemaFailure>,
 ) {
     let instance_path = error.instance_path().as_str().to_owned();
+    let schema_path = error.schema_path().as_str().to_owned();
     let make = |keyword: SchemaKeyword, message: String| SchemaFailure {
         keyword,
         instance_path: instance_path.clone(),
         in_one_of_branch,
+        schema_path: schema_path.clone(),
         message,
     };
 
@@ -97,18 +103,13 @@ fn push_failures(
             }
         }
         ValidationErrorKind::PropertyNames { error: inner } => {
-            let name = match inner.instance().as_ref() {
-                Value::String(name) => name.clone(),
-                other => other.to_string(),
-            };
-
             if let ValidationErrorKind::Pattern { pattern } = inner.kind() {
                 failures.push(make(SchemaKeyword::Pattern, pattern_message(pattern)));
             }
 
             failures.push(make(
                 SchemaKeyword::Other("propertyNames".to_owned()),
-                format!("property name '{name}' is invalid"),
+                "property name must be valid".to_owned(),
             ));
         }
         ValidationErrorKind::Required { property } => {

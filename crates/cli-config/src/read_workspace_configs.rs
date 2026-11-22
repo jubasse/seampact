@@ -30,13 +30,9 @@ pub struct LoadedWorkspace {
 
 /// The workspace read, or the problems that stop it.
 #[derive(Debug, Clone, PartialEq)]
-#[expect(
-    clippy::large_enum_variant,
-    reason = "the outcome is returned once and read at once; the design note fixes its shape"
-)]
 pub enum ReadWorkspaceOutcome {
     /// The `workspace` member.
-    Read(LoadedWorkspace),
+    Read(Box<LoadedWorkspace>),
     /// The `problems` member.
     Refused(Vec<CliProblem>),
 }
@@ -72,7 +68,7 @@ pub fn read_workspace_configs(
             ReadAppConfigOutcome::Refused(refused) => problems.extend(refused),
             ReadAppConfigOutcome::Read(config) => apps.push(LoadedWorkspaceApp {
                 app: app.clone(),
-                config,
+                config: *config,
             }),
         }
     }
@@ -81,5 +77,8 @@ pub fn read_workspace_configs(
         return Ok(ReadWorkspaceOutcome::Refused(problems));
     }
 
-    Ok(ReadWorkspaceOutcome::Read(LoadedWorkspace { root, apps }))
+    Ok(ReadWorkspaceOutcome::Read(Box::new(LoadedWorkspace {
+        root: *root,
+        apps,
+    })))
 }

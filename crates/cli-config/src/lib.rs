@@ -26,6 +26,7 @@ mod read_run_config;
 mod read_workspace_configs;
 mod resolved_source;
 mod schema_failure;
+mod schema_order;
 mod schema_problems;
 mod symbolic_link;
 

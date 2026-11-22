@@ -70,15 +70,13 @@ pub fn read_run_config(
         return Ok(match read_workspace_configs(file, display_name)? {
             ReadWorkspaceOutcome::Refused(problems) => ReadRunConfigOutcome::Refused(problems),
             ReadWorkspaceOutcome::Read(workspace) => {
-                ReadRunConfigOutcome::Read(RunConfig::Root(Box::new(workspace)))
+                ReadRunConfigOutcome::Read(RunConfig::Root(workspace))
             }
         });
     }
 
     Ok(match read_app_config(file, display_name, text_file)? {
         ReadAppConfigOutcome::Refused(problems) => ReadRunConfigOutcome::Refused(problems),
-        ReadAppConfigOutcome::Read(config) => {
-            ReadRunConfigOutcome::Read(RunConfig::App(Box::new(config)))
-        }
+        ReadAppConfigOutcome::Read(config) => ReadRunConfigOutcome::Read(RunConfig::App(config)),
     })
 }

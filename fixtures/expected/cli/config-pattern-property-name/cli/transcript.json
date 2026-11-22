@@ -1,0 +1,7 @@
+{
+  "exit": 1,
+  "stdout": "",
+  "stderr": "config.schema: seampact.config.yaml:1:1 sources: The value must match pattern \"^[A-Za-z][A-Za-z0-9_-]*$\". Fix: Correct the value as the config schema states (ADR 0011 'The app config').\nconfig.schema: seampact.config.yaml:1:1 sources: The value property name must be valid. Fix: Correct the value as the config schema states (ADR 0011 'The app config').\n",
+  "written": {},
+  "removed": []
+}

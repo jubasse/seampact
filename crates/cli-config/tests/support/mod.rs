@@ -48,7 +48,7 @@ pub fn read_tree_app(root: &Utf8PathBuf, app: &str) -> ReadAppConfigOutcome {
 
 pub fn read_config(outcome: ReadAppConfigOutcome) -> LoadedAppConfig {
     match outcome {
-        ReadAppConfigOutcome::Read(config) => config,
+        ReadAppConfigOutcome::Read(config) => *config,
         ReadAppConfigOutcome::Refused(problems) => panic!("refused: {problems:?}"),
     }
 }

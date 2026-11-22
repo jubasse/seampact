@@ -102,10 +102,7 @@ fn root_config_at(
         ReadRootConfigOutcome::Read(root) => {
             let listed = root.apps.iter().any(|app| app.directory == app_directory);
 
-            Ok(Some(RootDiscovery::Found {
-                root: Box::new(root),
-                listed,
-            }))
+            Ok(Some(RootDiscovery::Found { root, listed }))
         }
     }
 }
