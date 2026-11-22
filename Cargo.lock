@@ -1299,6 +1299,7 @@ dependencies = [
  "anyhow",
  "camino",
  "indexmap",
+ "seampact-authoring",
  "seampact-bundle",
  "seampact-bundle-fetch",
  "seampact-cli-config",
