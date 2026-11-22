@@ -5,18 +5,19 @@ use std::collections::HashMap;
 
 use seampact_diff_table::{DiffKind, DiffPosition, IrDefinition};
 use seampact_ir::{
-    ContractIr, Identity, IdentityHeaderUse, KnownIdentityRef, Principal, Reason, SchemaRef,
-    TypeUse,
+    ContractIr, Identity, IdentityHeaderUse, KnownIdentityRef, KnownPrincipalRef, Principal,
+    Reason, SchemaRef, TypeUse,
 };
 use seampact_json::{JsonObject, JsonValue};
 
 use crate::DiffError;
 use crate::change_sink::{ChangeReach, ElementOrigin, NO_POSITION, RawChange};
-use crate::not_ported::not_ported_yet;
 use crate::walk_context::{
     ChangeSite, MemberComparisons, MemberDefinition, WalkContext, compare_members, emit_at,
 };
-use crate::walk_json::{member_names, object_members, pointer_join, text_value};
+use crate::walk_json::{
+    is_same_json, json_of, member_names, object_members, pointer_join, text_value,
+};
 use crate::walk_reach::{common_reaches, declaration_reach_key};
 use crate::walk_type_use::{BoundSide, compare_bound, compare_schema_ref, compare_type_use};
 
@@ -73,13 +74,6 @@ impl DeclarationCatalogue {
             Self::Formats => "formats",
             Self::Pagings => "pagings",
         }
-    }
-
-    /// The catalogue named `name`, if it is one.
-    pub(crate) fn from_name(name: &str) -> Option<Self> {
-        Self::ALL
-            .into_iter()
-            .find(|catalogue| catalogue.as_str() == name)
     }
 }
 
@@ -256,7 +250,9 @@ fn entry_comparisons<'comparison>(
                         pointer,
                         before_right.and_then(|entry| entry.guest.as_ref()),
                         after_right.and_then(|entry| entry.guest.as_ref()),
-                    )
+                    );
+
+                    Ok(())
                 }),
             );
         }
@@ -599,49 +595,147 @@ fn compare_scheme_lists(
     }
 }
 
-/// Compares the guest reason of two rights.
-///
-/// # Errors
-///
-/// Not ported yet.
+/// Compares the guest reason of two rights: a guest added or removed moves the right, any other
+/// change of the reason is an annotation.
 fn compare_guest(
-    _context: &mut WalkContext<'_>,
-    _site: &ChangeSite<'_>,
-    _pointer: &str,
-    _before: Option<&Reason>,
-    _after: Option<&Reason>,
-) -> Result<(), DiffError> {
-    Err(not_ported_yet("compareGuest"))
+    context: &mut WalkContext<'_>,
+    site: &ChangeSite<'_>,
+    pointer: &str,
+    before: Option<&Reason>,
+    after: Option<&Reason>,
+) {
+    let change = match (before, after) {
+        (Some(_), None) => RawChange::new(DiffKind::Right, "guestRemoved", pointer.to_owned()),
+        (None, Some(_)) => RawChange::new(DiffKind::Right, "guestAdded", pointer.to_owned()),
+        (Some(_), Some(_)) | (None, None) => {
+            RawChange::new(DiffKind::Annotation, "guest", pointer.to_owned())
+        }
+    };
+
+    emit_at(context, site, change);
 }
 
-/// Compares the principals of two identities.
-///
-/// # Errors
-///
-/// Not ported yet.
+/// Compares the principals of two identities: two schema principals by their schema, any other
+/// pair is an identity change.
 fn compare_principal(
-    _context: &mut WalkContext<'_>,
-    _site: &ChangeSite<'_>,
-    _pointer: &str,
-    _before: &Principal,
-    _after: &Principal,
+    context: &mut WalkContext<'_>,
+    site: &ChangeSite<'_>,
+    pointer: &str,
+    before: &Principal,
+    after: &Principal,
 ) -> Result<(), DiffError> {
-    Err(not_ported_yet("comparePrincipal"))
+    if let (
+        Ok(KnownPrincipalRef::Schema(before_schema)),
+        Ok(KnownPrincipalRef::Schema(after_schema)),
+    ) = (
+        KnownPrincipalRef::try_from(before),
+        KnownPrincipalRef::try_from(after),
+    ) {
+        return compare_schema_ref(
+            context,
+            site,
+            &pointer_join(pointer, &["schema"]),
+            Some(&before_schema.schema),
+            Some(&after_schema.schema),
+        );
+    }
+
+    emit_at(
+        context,
+        site,
+        RawChange::new(DiffKind::Identity, "principal", pointer.to_owned()),
+    );
+
+    Ok(())
 }
 
-/// Compares the headers two identities use.
-///
-/// # Errors
-///
-/// Not ported yet.
+/// Compares the headers two identities use: a header added or removed, or one whose use changed.
 fn compare_identity_headers(
-    _context: &mut WalkContext<'_>,
-    _site: &ChangeSite<'_>,
-    _pointer: &str,
-    _before: &[IdentityHeaderUse],
-    _after: &[IdentityHeaderUse],
+    context: &mut WalkContext<'_>,
+    site: &ChangeSite<'_>,
+    pointer: &str,
+    before: &[IdentityHeaderUse],
+    after: &[IdentityHeaderUse],
 ) -> Result<(), DiffError> {
-    Err(not_ported_yet("compareIdentityHeaders"))
+    for (index, header) in after.iter().enumerate() {
+        if before
+            .iter()
+            .any(|candidate| candidate.header == header.header)
+        {
+            continue;
+        }
+
+        let case_name = if header.required {
+            "headerAddedRequired"
+        } else {
+            "headerAddedOptional"
+        };
+
+        emit_at(
+            context,
+            site,
+            RawChange::new(
+                DiffKind::Identity,
+                case_name,
+                pointer_join(pointer, &[&index.to_string()]),
+            )
+            .between(None, Some(text_value(header.header.as_str()))),
+        );
+    }
+
+    for (index, header) in before.iter().enumerate() {
+        let Some((kept, after_header)) = after
+            .iter()
+            .position(|candidate| candidate.header == header.header)
+            .and_then(|kept| after.get(kept).map(|found| (kept, found)))
+        else {
+            emit_at(
+                context,
+                site,
+                RawChange::new(
+                    DiffKind::Identity,
+                    "headerRemoved",
+                    pointer_join(pointer, &[&index.to_string()]),
+                )
+                .between(Some(text_value(header.header.as_str())), None),
+            );
+
+            continue;
+        };
+        let (before_use, after_use) = (json_of(header)?, json_of(after_header)?);
+
+        if is_same_json(Some(&before_use), Some(&after_use)) {
+            continue;
+        }
+
+        let origin_only = is_same_json(
+            Some(&without_origin(before_use)),
+            Some(&without_origin(after_use)),
+        );
+        let (kind, case_name) = if origin_only {
+            (DiffKind::Annotation, "origin")
+        } else {
+            (DiffKind::Identity, "headerChanged")
+        };
+
+        emit_at(
+            context,
+            site,
+            RawChange::new(kind, case_name, pointer_join(pointer, &[&kept.to_string()]))
+                .between(None, Some(text_value(after_header.header.as_str()))),
+        );
+    }
+
+    Ok(())
+}
+
+/// The value without its `origin` member, when it is an object.
+fn without_origin(mut value: JsonValue) -> JsonValue {
+    if let JsonValue::Object(members) = &mut value {
+        members.remove("origin");
+    }
+
+    value
 }
 
 /// The `layer` of the origin of an entry, when the entry and its origin are objects.
@@ -708,6 +802,8 @@ pub(crate) fn definition_of(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::sample_ir::sample_ir;
+    use crate::test_walk::{changes_of, ir_value};
 
     fn object(text: &str) -> JsonValue {
         seampact_json::JsonValue::try_from(
@@ -769,6 +865,115 @@ mod tests {
                 &entry(r#"{"kind":"unheard"}"#)
             ),
             MemberDefinition::Table(IrDefinition::ErrorDecl)
+        );
+    }
+
+    fn declaration_changes(
+        walk: impl FnOnce(&mut WalkContext<'_>, &ChangeSite<'_>) -> Result<(), DiffError>,
+    ) -> Vec<String> {
+        let ir = sample_ir();
+
+        changes_of(&ir, &ir, walk).unwrap_or_else(|error| panic!("{error}"))
+    }
+
+    fn reason() -> Reason {
+        ir_value(serde_json::json!("A guest may read."))
+    }
+
+    #[test]
+    fn a_guest_added_or_removed_moves_the_right_and_a_changed_one_is_an_annotation() {
+        let (first, second) = (reason(), ir_value(serde_json::json!("Another reason.")));
+
+        for (before, after, expected) in [
+            (None, Some(&first), "Right:guestAdded@/guest"),
+            (Some(&first), None, "Right:guestRemoved@/guest"),
+            (Some(&first), Some(&second), "Annotation:guest@/guest"),
+        ] {
+            assert_eq!(
+                declaration_changes(|context, site| {
+                    compare_guest(context, site, "/guest", before, after);
+
+                    Ok(())
+                }),
+                vec![expected.to_owned()],
+            );
+        }
+    }
+
+    fn principal(json: serde_json::Value) -> Principal {
+        ir_value(json)
+    }
+
+    #[test]
+    fn two_schema_principals_compare_their_schema_and_any_other_pair_is_an_identity_change() {
+        let schema_of = |id: &str| principal(serde_json::json!({"kind": "schema", "schema": id}));
+        let variants = principal(serde_json::json!({"kind": "variants", "variants": {}}));
+
+        assert_eq!(
+            declaration_changes(|context, site| compare_principal(
+                context,
+                site,
+                "/principal",
+                &schema_of("Event"),
+                &schema_of("Absent"),
+            )),
+            vec!["TypeChanged:ref@/principal/schema".to_owned()],
+        );
+        assert_eq!(
+            declaration_changes(|context, site| compare_principal(
+                context,
+                site,
+                "/principal",
+                &schema_of("Event"),
+                &variants,
+            )),
+            vec!["Identity:principal@/principal".to_owned()],
+        );
+    }
+
+    fn header(name: &str, required: bool, layer: &str) -> IdentityHeaderUse {
+        ir_value(serde_json::json!({
+            "header": name,
+            "for": "all",
+            "required": required,
+            "origin": {"layer": layer, "pointer": "/identities/a/headers/0"},
+        }))
+    }
+
+    #[test]
+    fn identity_headers_are_added_removed_or_changed_by_header_name() {
+        let before = [header("X-Kept", true, "api"), header("X-Gone", true, "api")];
+        let after = [
+            header("X-New", true, "api"),
+            header("X-Kept", false, "api"),
+            header("X-Opt", false, "api"),
+        ];
+
+        assert_eq!(
+            declaration_changes(|context, site| compare_identity_headers(
+                context, site, "/headers", &before, &after,
+            )),
+            vec![
+                "Identity:headerAddedRequired@/headers/0".to_owned(),
+                "Identity:headerChanged@/headers/1".to_owned(),
+                "Identity:headerRemoved@/headers/1".to_owned(),
+                "Identity:headerAddedOptional@/headers/2".to_owned(),
+            ],
+        );
+    }
+
+    #[test]
+    fn a_header_that_moves_only_its_origin_is_an_annotation() {
+        let (before, after) = (
+            [header("X-A", true, "api")],
+            [header("X-A", true, "shared")],
+        );
+
+        assert_eq!(
+            declaration_changes(|context, site| compare_identity_headers(
+                context, site, "/headers", &before, &after,
+            )),
+            vec!["Annotation:origin@/headers/0".to_owned()],
         );
     }
 }
