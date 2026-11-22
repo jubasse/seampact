@@ -132,7 +132,7 @@ fn api_key_scheme(place: &str, name: &str) -> JsonObject {
     ])
 }
 
-/// The scheme object of a bearer scheme: OAuth 2, OpenID Connect, or plain HTTP bearer.
+/// The scheme object of a bearer scheme: OAuth 2, `OpenID` Connect, or plain HTTP bearer.
 fn bearer_scheme(
     context: &mut EmitContext<'_>,
     facts: Option<&BearerFacts>,

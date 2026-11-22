@@ -611,8 +611,8 @@ fn enum_component(context: &mut EmitContext<'_>, declared: &Enum) -> JsonObject 
 
 /// The reference to an enum component, closed to its narrowed values or, under strict input, to
 /// all its values.
-fn enum_use_schema<'ir>(
-    context: &mut EmitContext<'ir>,
+fn enum_use_schema(
+    context: &mut EmitContext<'_>,
     use_: &EnumTypeUse,
     variant: SchemaVariant,
     location: &IrLocation,

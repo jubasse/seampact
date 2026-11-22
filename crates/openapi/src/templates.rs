@@ -359,12 +359,26 @@ fn object_template_schema(
         schema.insert("required".to_owned(), JsonValue::Array(required));
     }
 
+    Ok(Some(merge_object_schema(
+        context, template, schema, presence, slots, location,
+    )))
+}
+
+/// The object schema with the template's `merge` slot folded in under `allOf`.
+fn merge_object_schema(
+    context: &mut EmitContext<'_>,
+    template: &ObjectTemplate,
+    schema: JsonObject,
+    presence: SlotPresence,
+    slots: &SlotSchemas,
+    location: &IrLocation,
+) -> SlotValue {
     let Some(merge) = &template.merge else {
-        return Ok(Some(SlotValue {
+        return SlotValue {
             schema,
             presence,
             element: None,
-        }));
+        };
     };
     let merged = slot_schema(
         context,
@@ -386,17 +400,17 @@ fn object_template_schema(
                 presence
             };
 
-            Ok(Some(SlotValue {
+            SlotValue {
                 schema: JsonObject::from_members([("allOf", all_of)]),
                 presence: merged_presence,
                 element: None,
-            }))
+            }
         }
-        Some(_) | None => Ok(Some(SlotValue {
+        Some(_) | None => SlotValue {
             schema,
             presence,
             element: None,
-        })),
+        },
     }
 }
 

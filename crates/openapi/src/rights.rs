@@ -107,55 +107,7 @@ pub(crate) fn write_operation_rights(
     }
 
     if !operation.field_rights.is_empty() {
-        let field_rights = operation
-            .field_rights
-            .iter()
-            .enumerate()
-            .map(|(index, field_right)| {
-                let mut item = JsonObject::from_members([
-                    ("schema", JsonValue::text(field_right.schema.as_str())),
-                    ("pointer", JsonValue::text(&field_right.pointer)),
-                    ("right", JsonValue::text(field_right.right.as_str())),
-                ]);
-                let subject_location =
-                    location.below(&["fieldRights", &index.to_string(), "subject", "source"]);
-
-                set_defined(
-                    &mut item,
-                    "params",
-                    copy_optional(field_right.params.as_ref()),
-                );
-                set_defined(
-                    &mut item,
-                    "subject",
-                    field_right
-                        .subject
-                        .as_ref()
-                        .map(|subject| source_value(context, &subject.source, &subject_location)),
-                );
-                item.insert(
-                    "direction".to_owned(),
-                    JsonValue::text(field_right.direction.as_str()),
-                );
-                set_defined(
-                    &mut item,
-                    "input",
-                    optional_text(
-                        field_right
-                            .input_policy
-                            .as_ref()
-                            .map(|policy| policy.as_str()),
-                    ),
-                );
-                set_defined(
-                    &mut item,
-                    "always",
-                    optional_text(field_right.always.as_ref().map(|always| always.as_str())),
-                );
-
-                JsonValue::Object(item)
-            })
-            .collect();
+        let field_rights = field_right_items(context, operation, location);
 
         write_extension(
             context,
@@ -173,6 +125,68 @@ pub(crate) fn write_operation_rights(
             JsonValue::text(filtered_by.as_str()),
         );
     }
+}
+
+/// The `restricted-to` items of the field rights of an operation.
+fn field_right_items(
+    context: &mut EmitContext<'_>,
+    operation: &Operation,
+    location: &IrLocation,
+) -> Vec<JsonValue> {
+    operation
+        .field_rights
+        .iter()
+        .enumerate()
+        .map(|(index, field_right)| {
+            let mut item = JsonObject::from_members([
+                ("schema", JsonValue::text(field_right.schema.as_str())),
+                ("pointer", JsonValue::text(&field_right.pointer)),
+                ("right", JsonValue::text(field_right.right.as_str())),
+            ]);
+            let subject_location =
+                location.below(&["fieldRights", &index.to_string(), "subject", "source"]);
+
+            set_defined(
+                &mut item,
+                "params",
+                copy_optional(field_right.params.as_ref()),
+            );
+            set_defined(
+                &mut item,
+                "subject",
+                field_right
+                    .subject
+                    .as_ref()
+                    .map(|subject| source_value(context, &subject.source, &subject_location)),
+            );
+            item.insert(
+                "direction".to_owned(),
+                JsonValue::text(field_right.direction.as_str()),
+            );
+            set_defined(
+                &mut item,
+                "input",
+                optional_text(
+                    field_right
+                        .input_policy
+                        .as_ref()
+                        .map(seampact_ir::InputPolicy::as_str),
+                ),
+            );
+            set_defined(
+                &mut item,
+                "always",
+                optional_text(
+                    field_right
+                        .always
+                        .as_ref()
+                        .map(seampact_ir::FieldRightAlways::as_str),
+                ),
+            );
+
+            JsonValue::Object(item)
+        })
+        .collect()
 }
 
 /// One scope an operation requires, with the consumer extensions of its declaration.
@@ -241,7 +255,7 @@ fn requirement_item(
             set_defined(
                 &mut item,
                 "bucket",
-                optional_text(rule.bucket.as_ref().map(|bucket| bucket.as_str())),
+                optional_text(rule.bucket.as_ref().map(seampact_ir::BucketId::as_str)),
             );
             set_defined(&mut item, "entry", optional_text(rule.entry.as_deref()));
 
