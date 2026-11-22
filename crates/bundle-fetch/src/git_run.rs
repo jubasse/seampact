@@ -197,8 +197,8 @@ pub(crate) fn git_failed(source: &GitBundleSource, failure: &GitFailure) -> Bund
     BundleSourceFailure::new(
         BundleSourceFailureCode::GitFailed,
         format!(
-            "Fetching tag '{}' of {} with git failed: {}.",
-            source.tag,
+            "Fetching tag {} of {} with git failed: {}.",
+            quote_text(&source.tag),
             quote_text(&printable_url(&source.url)),
             quote_text(&with_printable_url(
                 &git_failure_reason(failure),
@@ -211,6 +211,8 @@ pub(crate) fn git_failed(source: &GitBundleSource, failure: &GitFailure) -> Bund
 
 #[cfg(test)]
 mod tests {
+    use seampact_diagnostics::diagnostic_inert;
+
     use super::*;
 
     fn environment(entries: &[(&str, &str)]) -> Environment {
@@ -324,5 +326,17 @@ mod tests {
             matches!(failure, GitFailure::Stderr(ref stderr) if !stderr.is_empty()),
             "{failure:?}"
         );
+    }
+
+    #[test]
+    fn a_hostile_tag_is_inert_in_the_failure() {
+        let source = GitBundleSource {
+            url: "https://github.com/o/r.git".to_owned(),
+            tag: "a\u{1b}[2J\u{202e}b".to_owned(),
+            directory: None,
+        };
+        let failure = git_failed(&source, &GitFailure::Message("boom".to_owned()));
+
+        assert_eq!(failure.message, diagnostic_inert(&failure.message));
     }
 }

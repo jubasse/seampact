@@ -1,6 +1,7 @@
 //! The failures of fetching a bundle source before the pinned-bundle check reads it.
 
 use seampact_bundle::{BundleFailure, BundleFailureCode, BundleSource, BundleSourceForm};
+use seampact_diagnostics::{diagnostic_inert, quote_text};
 
 use crate::printable_url::printable_url;
 
@@ -131,24 +132,30 @@ impl From<BundleFailure> for BundleSourceFailure {
 pub fn bundle_source_text(source: &BundleSource) -> String {
     match &source.form {
         BundleSourceForm::Package(package) => {
-            format!("package '{}' version {}", package.package, package.version)
+            format!(
+                "package {} version {}",
+                quote_text(&package.package),
+                diagnostic_inert(&package.version)
+            )
         }
         BundleSourceForm::Release(release) => {
             format!("release '{}'", printable_url(&release.url))
         }
-        BundleSourceForm::Maven(coordinate) => format!("Maven artefact '{coordinate}'"),
+        BundleSourceForm::Maven(coordinate) => {
+            format!("Maven artefact {}", quote_text(coordinate))
+        }
         BundleSourceForm::Git(git) => {
             let directory = git
                 .directory
                 .as_ref()
                 .map_or_else(String::new, |directory| {
-                    format!(", directory '{directory}'")
+                    format!(", directory {}", quote_text(directory))
                 });
 
             format!(
-                "git '{}' tag '{}'{directory}",
+                "git '{}' tag {}{directory}",
                 printable_url(&git.url),
-                git.tag
+                quote_text(&git.tag)
             )
         }
     }
@@ -156,7 +163,8 @@ pub fn bundle_source_text(source: &BundleSource) -> String {
 
 #[cfg(test)]
 mod tests {
-    use seampact_bundle::{GitBundleSource, ReleaseBundleSource};
+    use seampact_bundle::{GitBundleSource, PackageBundleSource, ReleaseBundleSource};
+    use seampact_diagnostics::diagnostic_inert;
 
     use super::*;
 
@@ -186,5 +194,31 @@ mod tests {
             bundle_source_text(&release),
             "release 'https://github.com/o/r.git'"
         );
+    }
+
+    #[test]
+    fn authored_parts_of_a_source_text_are_inert() {
+        let hostile = "a\u{1b}[2J\u{202e}b";
+        let sources = [
+            BundleSourceForm::Package(PackageBundleSource {
+                package: hostile.to_owned(),
+                version: hostile.to_owned(),
+            }),
+            BundleSourceForm::Maven(hostile.to_owned()),
+            BundleSourceForm::Git(GitBundleSource {
+                url: "https://github.com/o/r.git".to_owned(),
+                tag: hostile.to_owned(),
+                directory: Some(hostile.to_owned()),
+            }),
+        ];
+
+        for form in sources {
+            let text = bundle_source_text(&BundleSource {
+                form,
+                integrity: None,
+            });
+
+            assert_eq!(text, diagnostic_inert(&text), "source text {text:?}");
+        }
     }
 }

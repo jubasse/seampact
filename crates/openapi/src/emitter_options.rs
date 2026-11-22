@@ -2,6 +2,7 @@
 //! whether it keeps their reasons, whether request bodies point at strict input schemas, and the
 //! `servers` it lists.
 
+use seampact_diagnostics::diagnostic_inert;
 use seampact_ir::bounded_unknown_text;
 use seampact_json::{JsonObject, JsonValue, js_text_of};
 use seampact_target::Refusal;
@@ -377,7 +378,7 @@ fn refused_with(refusals: Vec<Refusal>) -> ParsedEmitterOptions {
 /// How a message names a refused value: a string quoted and bounded, any other value by its kind.
 fn option_value_text(value: &JsonValue) -> String {
     match value {
-        JsonValue::String(text) => format!("'{}'", bounded_unknown_text(text)),
+        JsonValue::String(text) => format!("'{}'", diagnostic_inert(&bounded_unknown_text(text))),
         JsonValue::Null => "Null".to_owned(),
         JsonValue::Array(_) => "An array".to_owned(),
         JsonValue::Object(_) => "An object".to_owned(),
@@ -704,6 +705,18 @@ mod tests {
         assert_eq!(
             messages(&refused(r#"{"reason": "omit"}"#)?),
             ["'reason' is not an OpenAPI option."]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn a_refused_string_is_inert_in_the_message() -> TestResult {
+        let refusals = refused(r#"{"reasons": "a\u001b[2J\u202eb"}"#)?;
+
+        assert_eq!(
+            messages(&refusals),
+            ["'a\\u001B[2J\\u202Eb' is not a value of 'reasons'."]
         );
 
         Ok(())
