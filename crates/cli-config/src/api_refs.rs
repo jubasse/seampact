@@ -8,13 +8,16 @@ const SOURCE_SEPARATOR: char = '/';
 
 /// An entry's `api` or `apis` item split into its source and api.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct ApiRef<'text> {
-    pub(crate) source: Option<&'text str>,
-    pub(crate) api: &'text str,
+pub struct ApiRef<'text> {
+    /// The source, when the reference writes one.
+    pub source: Option<&'text str>,
+    /// The api name.
+    pub api: &'text str,
 }
 
 /// The api name alone, or `<source>/<api>` split at its first separator.
-pub(crate) fn parse_api_ref(text: &str) -> ApiRef<'_> {
+#[must_use]
+pub fn parse_api_ref(text: &str) -> ApiRef<'_> {
     match text.split_once(SOURCE_SEPARATOR) {
         Some((source, api)) => ApiRef {
             source: Some(source),
@@ -28,7 +31,8 @@ pub(crate) fn parse_api_ref(text: &str) -> ApiRef<'_> {
 }
 
 /// The `apis` of `entry`, else its `api` as a one-item list, else none.
-pub(crate) fn api_refs_of(entry: &JsonValue) -> Vec<&str> {
+#[must_use]
+pub fn api_refs_of(entry: &JsonValue) -> Vec<&str> {
     let object = record(Some(entry));
 
     if let Some(apis) = object.and_then(|object| object.get("apis")) {

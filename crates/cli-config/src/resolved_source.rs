@@ -2,17 +2,16 @@
 
 use camino::{Utf8Path, Utf8PathBuf};
 use indexmap::IndexMap;
+use seampact_bundle::BundleSource;
 use seampact_diagnostics::InternalError;
 use seampact_js::js_key_order;
 use seampact_json::JsonValue;
 
+use crate::bundle_source::bundle_source_of;
 use crate::json_access::{record, text};
 use crate::node_path::resolved_path;
 
-/// A bundle source as the config writes it, until the bundle crate declares its type.
-pub type UnportedBundleSource = JsonValue;
-
-/// A `path` source with its absolute workspace directory, or a bundle source as the config writes it.
+/// A `path` source with its absolute workspace directory, or a bundle source read from the config.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ResolvedSource {
     /// A contract workspace directory.
@@ -20,11 +19,11 @@ pub enum ResolvedSource {
         /// The absolute directory.
         directory: Utf8PathBuf,
     },
-    /// A pinned bundle: the `package`, `release`, `git` or `maven` member as written.
-    Bundle(UnportedBundleSource),
+    /// A pinned bundle: the `package`, `release`, `git` or `maven` member of the entry.
+    Bundle(BundleSource),
 }
 
-/// A `path` source resolved against `directory`, or a copy of the bundle source.
+/// A `path` source resolved against `directory`, or the bundle source the entry writes.
 fn resolved_source(
     directory: &Utf8Path,
     source: &JsonValue,
@@ -45,7 +44,7 @@ fn resolved_source(
         });
     }
 
-    Ok(ResolvedSource::Bundle(source.clone()))
+    Ok(ResolvedSource::Bundle(bundle_source_of(source)?))
 }
 
 /// Each source of `sources` resolved, in JavaScript key order.

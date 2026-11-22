@@ -1,6 +1,19 @@
-//! `seampact explain`: the target a command line names.
+//! `seampact explain`: prints one operation of a compiled api as commented YAML.
 
-use crate::api_refs::{ApiRef, parse_api_ref};
+use indexmap::IndexMap;
+use seampact_cli_config::{
+    ApiRef, CliProblem, ReadAppConfigOutcome, parse_api_ref, read_app_config,
+};
+use seampact_js::cmp_utf16;
+use seampact_span::Location;
+
+use crate::api_refs::sources_holding_refs;
+use crate::cli_problem::unlocated_problem;
+use crate::compile_sources::{CompiledApi, compile_sources};
+use crate::config_location::ConfigLocation;
+use crate::explain_view::explain_operation_text;
+use crate::local_bundle::LocalBundles;
+use crate::{CliError, CliIo, EXIT_SUCCESS, refuse};
 
 /// Separates the api from the operation id in `<api>.<operationId>`.
 const OPERATION_SEPARATOR: char = '.';
@@ -27,6 +40,141 @@ pub(crate) fn explain_target(text: &str) -> ExplainTarget<'_> {
             operation_id,
         },
     }
+}
+
+/// Prints the operation `operation_text` (`<api>.<operationId>`, or the id alone when the sources
+/// hold one api) of the apis the app config's sources compile to; answers the exit code.
+///
+/// # Errors
+///
+/// [`CliError::Io`], [`CliError::Fetch`] or [`CliError::Internal`] when a source cannot be read.
+pub(crate) fn explain_command(
+    location: &ConfigLocation,
+    operation_text: &str,
+    io: &mut dyn CliIo,
+) -> Result<i32, CliError> {
+    let target = explain_target(operation_text);
+    let config = match read_app_config(&location.file, &location.display_name, None)? {
+        ReadAppConfigOutcome::Refused(problems) => return Ok(refuse(io, &problems)),
+        ReadAppConfigOutcome::Read(config) => config,
+    };
+    let names: Vec<String> = match target.api_text {
+        None => config.sources.keys().cloned().collect(),
+        Some(api_text) => sources_holding_refs(&config, &[api_text]),
+    };
+    let compiled = compile_sources(&config, &names, &LocalBundles::new(), io)?;
+
+    if compiled.failed {
+        return Ok(refuse(io, &compiled.problems));
+    }
+
+    let chosen = match chosen_api(&compiled.apis, &target) {
+        Ok(chosen) => chosen,
+        Err(problem) => return Ok(refuse(io, &[*problem])),
+    };
+    let ir = &chosen.ir;
+    let Some(operation) = ir
+        .operations
+        .iter()
+        .find(|each| each.id.as_str() == target.operation_id)
+    else {
+        let mut known: Vec<&str> = ir.operations.iter().map(|each| each.id.as_str()).collect();
+
+        known.sort_by(|left, right| cmp_utf16(left, right));
+
+        let listed = if known.is_empty() {
+            "none".to_owned()
+        } else {
+            known.join(", ")
+        };
+
+        return Ok(refuse(
+            io,
+            &[unlocated_problem(
+                "explain.operation.unknown",
+                format!(
+                    "The api '{}' has no operation '{}' ({listed}).",
+                    chosen.api, target.operation_id
+                ),
+                "Name one of its operation ids, as the IR and the OpenAPI document spell it.",
+            )],
+        ));
+    };
+    let no_locations = IndexMap::<String, Location>::new();
+    let locations = chosen
+        .lint_input
+        .as_ref()
+        .map_or(&no_locations, |input| &input.located);
+
+    io.stdout(&explain_operation_text(ir, operation, locations)?);
+
+    Ok(EXIT_SUCCESS)
+}
+
+/// The one api the target names, or the problem of none, several without a name, or several
+/// sources holding the name.
+fn chosen_api<'compiled>(
+    apis: &'compiled [CompiledApi],
+    target: &ExplainTarget<'_>,
+) -> Result<&'compiled CompiledApi, Box<CliProblem>> {
+    let candidates: Vec<&CompiledApi> = apis
+        .iter()
+        .filter(|each| match &target.api {
+            None => true,
+            Some(reference) => {
+                each.api == reference.api
+                    && reference.source.is_none_or(|source| each.source == source)
+            }
+        })
+        .collect();
+
+    if let [only] = candidates.as_slice() {
+        return Ok(only);
+    }
+
+    let held: Vec<String> = apis
+        .iter()
+        .map(|each| format!("'{}/{}'", each.source, each.api))
+        .collect();
+    let held = if held.is_empty() {
+        "none".to_owned()
+    } else {
+        held.join(", ")
+    };
+
+    let problem = match (&target.api, candidates.is_empty()) {
+        (_, true) => unlocated_problem(
+            "explain.api.unknown",
+            match target.api_text {
+                None => "The sources of the app config hold no api.".to_owned(),
+                Some(api_text) => format!("No source of the app config holds an api '{api_text}'."),
+            },
+            "Name an api of a source, as `<api>.<operationId>` or `<source>/<api>.<operationId>`.",
+        ),
+        (None, false) => unlocated_problem(
+            "explain.api.needed",
+            format!(
+                "The sources hold several apis ({held}), so the operation id alone does not name one."
+            ),
+            &format!(
+                "Name the api: `seampact explain <api>.{}`.",
+                target.operation_id
+            ),
+        ),
+        (Some(reference), false) => unlocated_problem(
+            "explain.api.ambiguous",
+            format!(
+                "The api '{}' exists in several sources ({held}).",
+                reference.api
+            ),
+            &format!(
+                "Name it as `<source>/{}.{}`.",
+                reference.api, target.operation_id
+            ),
+        ),
+    };
+
+    Err(Box::new(problem))
 }
 
 #[cfg(test)]

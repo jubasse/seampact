@@ -14,12 +14,14 @@ const REPOSITORY_MARKER: &str = ".git";
 
 /// What the search above an app found.
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) enum RootDiscovery {
+pub enum RootDiscovery {
     /// No root config applies.
     None,
     /// A root config; `listed` says whether its `apps` lists the app.
     Found {
+        /// The root config.
         root: Box<LoadedRootConfig>,
+        /// Whether the root's `apps` lists the app.
         listed: bool,
     },
     /// The root config is refused.
@@ -30,7 +32,11 @@ pub(crate) enum RootDiscovery {
 ///
 /// Stops at a directory holding `.git`, or at the file system root; a root that does not list
 /// the app is kept as the fallback while the search goes on.
-pub(crate) fn find_root_config(
+///
+/// # Errors
+///
+/// [`CliConfigError`] when a candidate config file cannot be read.
+pub fn find_root_config(
     app_file: &Utf8Path,
     app_display_name: &str,
 ) -> Result<RootDiscovery, CliConfigError> {

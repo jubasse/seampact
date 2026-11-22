@@ -2,22 +2,18 @@
 
 use std::collections::HashSet;
 
-use seampact_cli_config::{CliProblem, LoadedAppConfig, ResolvedSource};
+use seampact_cli_config::{
+    ApiRef, CliProblem, LoadedAppConfig, ResolvedSource, api_refs_of, parse_api_ref,
+};
 use seampact_diagnostics::InternalError;
 use seampact_json::JsonValue;
 
 use crate::cli_problem::{entry_where, located_problem};
+use crate::compile_sources::CompiledApi;
 use crate::workspace_api_names::workspace_api_names;
 
 /// Separates the source from the api in `<source>/<api>`.
 const SOURCE_SEPARATOR: char = '/';
-
-/// An api reference, split into its source (when written) and its api.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct ApiRef<'text> {
-    pub(crate) source: Option<&'text str>,
-    pub(crate) api: &'text str,
-}
 
 /// The sources a command reads: all of them named, or why the config refuses.
 #[derive(Debug, Clone, PartialEq)]
@@ -28,39 +24,95 @@ pub(crate) enum UsedSources {
     Refused(Vec<CliProblem>),
 }
 
-/// The api alone, or `<source>/<api>` split at its first separator.
-pub(crate) fn parse_api_ref(text: &str) -> ApiRef<'_> {
-    match text.split_once(SOURCE_SEPARATOR) {
-        Some((source, api)) => ApiRef {
-            source: Some(source),
-            api,
-        },
-        None => ApiRef {
-            source: None,
-            api: text,
-        },
-    }
+/// The apis one target entry names, or the problems of the names that hold none or several.
+#[derive(Debug, Clone)]
+pub(crate) enum EntryApisOutcome<'compiled> {
+    /// Each named api, in the entry's order.
+    Resolved(Vec<&'compiled CompiledApi>),
+    /// What is wrong with the names.
+    Refused(Vec<CliProblem>),
 }
 
-/// The `apis` of a target entry, else its `api` as a one-item list, else none.
-pub(crate) fn api_refs_of(entry: &JsonValue) -> Vec<&str> {
-    let JsonValue::Object(object) = entry else {
-        return Vec::new();
-    };
+/// The problem of an api an entry names twice: `text` is the reference that repeats `found`.
+fn duplicate_api_problem(
+    entry_id: &str,
+    entry: &JsonValue,
+    text: &str,
+    found: &CompiledApi,
+) -> CliProblem {
+    let items: Vec<String> = api_refs_of(entry)
+        .into_iter()
+        .filter(|each| parse_api_ref(each).api == found.api)
+        .map(|each| format!("'{each}'"))
+        .collect();
 
-    if let Some(JsonValue::Array(apis)) = object.get("apis") {
-        return apis
+    located_problem(
+        "config.api.duplicate",
+        format!(
+            "The entry '{entry_id}' names the api '{}' more than once ({}); '{text}' is one of them.",
+            found.api,
+            items.join(", ")
+        ),
+        "Keep one of them, or give the sources' apis different names.",
+        entry_where(entry_id, Some(&found.api)),
+    )
+}
+
+/// Each api of the entry `entry_id` found among the `compiled` ones, or why a name does not
+/// resolve to exactly one.
+pub(crate) fn resolve_entry_apis<'compiled>(
+    entry_id: &str,
+    entry: &JsonValue,
+    compiled: &'compiled [CompiledApi],
+) -> EntryApisOutcome<'compiled> {
+    let mut apis: Vec<&CompiledApi> = Vec::new();
+    let mut problems = Vec::new();
+
+    for text in api_refs_of(entry) {
+        let reference = parse_api_ref(text);
+        let candidates: Vec<&CompiledApi> = compiled
             .iter()
-            .filter_map(|api| match api {
-                JsonValue::String(text) => Some(text.as_str()),
-                _ => None,
+            .filter(|each| {
+                each.api == reference.api
+                    && reference.source.is_none_or(|source| each.source == source)
             })
             .collect();
+
+        match candidates.as_slice() {
+            [] => problems.push(located_problem(
+                "config.api.unknown",
+                format!("No source of the app config holds an api '{text}'."),
+                "Name an api of a source's `workspace.yaml`, as `<api>` or `<source>/<api>`.",
+                entry_where(entry_id, Some(reference.api)),
+            )),
+            [found] if apis.iter().any(|each| each.api == found.api) => {
+                problems.push(duplicate_api_problem(entry_id, entry, text, found));
+            }
+            [found] => apis.push(found),
+            several => {
+                let sources: Vec<String> = several
+                    .iter()
+                    .map(|each| format!("'{}'", each.source))
+                    .collect();
+
+                problems.push(located_problem(
+                    "config.api.ambiguous",
+                    format!(
+                        "The api '{}' exists in the sources {}.",
+                        reference.api,
+                        sources.join(", ")
+                    ),
+                    &format!("Name it as `<source>/{}`.", reference.api),
+                    entry_where(entry_id, Some(reference.api)),
+                ));
+            }
+        }
     }
 
-    match object.get("api") {
-        Some(JsonValue::String(api)) => vec![api.as_str()],
-        _ => Vec::new(),
+    if problems.is_empty() {
+        EntryApisOutcome::Resolved(apis)
+    } else {
+        EntryApisOutcome::Refused(problems)
     }
 }
 

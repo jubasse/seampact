@@ -12,6 +12,9 @@ use crate::command::Command;
 use crate::compile_command::{CompileOutputs, EditorSchemasMode, compile_command};
 use crate::config_location::config_location;
 use crate::diff_command::diff_command;
+use crate::explain_command::explain_command;
+use crate::init_command::{EditorSchemasPolicy, InitOptions, InitWrite, init_command};
+use crate::init_starter::StarterContent;
 use crate::lint_command::lint_command;
 use crate::not_ported::not_ported_yet;
 use crate::{
@@ -69,13 +72,13 @@ pub fn run_command(argv: &[OsString], io: &mut dyn CliIo) -> Result<i32, CliErro
 
     // Each command lane replaces its arm with the port of its `run<Command>` function.
     match command {
-        Command::Init => Err(not_ported_yet("runInit")),
+        Command::Init => run_init(rest, io),
         Command::Compile => run_compile(rest, io),
         Command::Generate => Err(not_ported_yet("runGenerate")),
         Command::Check => Err(not_ported_yet("runCheck")),
         Command::Lint => run_lint(rest, io),
         Command::Diff => run_diff(rest, io),
-        Command::Explain => Err(not_ported_yet("runExplain")),
+        Command::Explain => run_explain(rest, io),
         Command::Bundle => run_bundle(rest, io),
     }
 }
@@ -164,6 +167,124 @@ fn run_diff(args: &[String], io: &mut dyn CliIo) -> Result<i32, CliError> {
     diff_command(&config_location_of(&parsed, io), against, io)
 }
 
+/// A bare `--editor-schemas` asks for the default policy.
+const EDITOR_SCHEMAS_FLAG: &str = "--editor-schemas";
+
+fn run_init(args: &[String], io: &mut dyn CliIo) -> Result<i32, CliError> {
+    let with_policy: Vec<String> = args
+        .iter()
+        .map(|argument| {
+            if argument == EDITOR_SCHEMAS_FLAG {
+                format!(
+                    "{EDITOR_SCHEMAS_FLAG}={}",
+                    EditorSchemasPolicy::Ignore.as_str()
+                )
+            } else {
+                argument.clone()
+            }
+        })
+        .collect();
+    let parsed = match parse_command_args(
+        &with_policy,
+        &[
+            text_option("config"),
+            flag_option("blank"),
+            flag_option("modelines"),
+            text_option("editor-schemas"),
+            flag_option("no-modelines"),
+            flag_option("no-ignore-files"),
+        ],
+        Positionals::Refused,
+    ) {
+        Ok(parsed) => parsed,
+        Err(error) => return Ok(usage_error(io, error.message())),
+    };
+    let policy = parsed
+        .text("editor-schemas")
+        .unwrap_or(EditorSchemasPolicy::Ignore.as_str());
+    let Some(editor_schemas) = EditorSchemasPolicy::ALL
+        .into_iter()
+        .find(|each| each.as_str() == policy)
+    else {
+        let policies: Vec<&str> = EditorSchemasPolicy::ALL
+            .into_iter()
+            .map(EditorSchemasPolicy::as_str)
+            .collect();
+
+        return Ok(usage_error(
+            io,
+            &format!(
+                "`--editor-schemas` takes {}, not '{policy}'.",
+                policies.join(", ")
+            ),
+        ));
+    };
+    let ignore_files = if parsed.flag("no-ignore-files") {
+        InitWrite::Skip
+    } else {
+        InitWrite::Write
+    };
+
+    if parsed.flag("modelines") {
+        if parsed.flag("blank") || parsed.flag("no-modelines") {
+            return Ok(usage_error(
+                io,
+                "`init --modelines` writes no new project: drop `--blank` and `--no-modelines`.",
+            ));
+        }
+
+        return init_command(
+            &InitOptions::Modelines {
+                location: config_location_of(&parsed, io),
+                editor_schemas,
+                ignore_files,
+            },
+            io,
+        );
+    }
+
+    if parsed.text("config").is_some() {
+        return Ok(usage_error(
+            io,
+            "`init` writes its config in the working directory; `--config` goes with `--modelines`.",
+        ));
+    }
+
+    init_command(
+        &InitOptions::NewProject {
+            content: if parsed.flag("blank") {
+                StarterContent::Blank
+            } else {
+                StarterContent::Example
+            },
+            editor_schemas,
+            modelines: if parsed.flag("no-modelines") {
+                InitWrite::Skip
+            } else {
+                InitWrite::Write
+            },
+            ignore_files,
+        },
+        io,
+    )
+}
+
+fn run_explain(args: &[String], io: &mut dyn CliIo) -> Result<i32, CliError> {
+    let parsed = match parse_command_args(args, &[text_option("config")], Positionals::Allowed) {
+        Ok(parsed) => parsed,
+        Err(error) => return Ok(usage_error(io, error.message())),
+    };
+
+    let [operation] = parsed.positionals() else {
+        return Ok(usage_error(
+            io,
+            "`explain` takes one operation, as `<api>.<operationId>`.",
+        ));
+    };
+
+    explain_command(&config_location_of(&parsed, io), operation, io)
+}
+
 fn run_bundle(args: &[String], io: &mut dyn CliIo) -> Result<i32, CliError> {
     let parsed = match parse_command_args(
         args,
@@ -202,6 +323,13 @@ fn run_bundle(args: &[String], io: &mut dyn CliIo) -> Result<i32, CliError> {
     };
 
     bundle_command(&config_location_of(&parsed, io), &options, io)
+}
+
+fn flag_option(name: &'static str) -> OptionSpec {
+    OptionSpec {
+        name,
+        kind: OptionKind::Flag,
+    }
 }
 
 fn text_option(name: &'static str) -> OptionSpec {

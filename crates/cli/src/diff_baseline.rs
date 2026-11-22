@@ -7,15 +7,17 @@ use indexmap::IndexMap;
 use seampact_cli_config::CliProblem;
 use seampact_diagnostics::InternalError;
 use seampact_ir::ContractIr;
-use seampact_ir_check::{IrOpenReport, check_open_ir};
+use seampact_ir_check::{IrCheckFailure, IrOpenReport, check_open_ir};
 use seampact_js::cmp_utf16;
 use seampact_json::{JsonValue, stringify_json};
 
 use crate::CliError;
 use crate::cli_problem::unlocated_problem;
 use crate::compile_command::IR_FILE_SUFFIX;
-use crate::not_ported::not_ported_yet;
 use crate::step::Step;
+
+/// How many schema problems a message lists.
+const LISTED_PROBLEM_LIMIT: usize = 5;
 
 const AGAINST_FIX: &str = "Pass `--against` an IR file, or a directory of `<api>.ir.json` files as `seampact compile --out` writes them.";
 
@@ -105,7 +107,7 @@ fn read_ir_file(file: &Utf8Path) -> Result<Step<ContractIr>, CliError> {
     let report = check_open_ir(&document).map_err(|error| InternalError::new(error.to_string()))?;
 
     if !report.valid {
-        return Ok(refused(invalid_message(file, &report)?));
+        return Ok(refused(invalid_message(file, &report)));
     }
 
     let ir = ContractIr::from_json_text(&stringify_json(&document))
@@ -114,9 +116,38 @@ fn read_ir_file(file: &Utf8Path) -> Result<Step<ContractIr>, CliError> {
     Ok(Step::Done(ir))
 }
 
-/// What the open IR schema found wrong in `file`.
-fn invalid_message(_file: &Utf8Path, _report: &IrOpenReport) -> Result<String, CliError> {
-    Err(not_ported_yet("invalidMessage"))
+/// What the open IR schema found wrong in `file`: its schema problems, the first few listed.
+fn invalid_message(file: &Utf8Path, report: &IrOpenReport) -> String {
+    let problems: Vec<String> = report
+        .failures
+        .iter()
+        .filter_map(|failure| match failure {
+            IrCheckFailure::Schema {
+                pointer, message, ..
+            } => Some(format!("at '{pointer}' {message}")),
+            IrCheckFailure::UnknownMember { .. }
+            | IrCheckFailure::UnknownKind { .. }
+            | IrCheckFailure::UnknownValue { .. } => None,
+        })
+        .collect();
+    let listed: Vec<&String> = problems.iter().take(LISTED_PROBLEM_LIMIT).collect();
+    let more = problems.len() - listed.len();
+    let detail = if listed.is_empty() {
+        "it holds a value the IR does not know".to_owned()
+    } else {
+        listed
+            .iter()
+            .map(|problem| problem.as_str())
+            .collect::<Vec<_>>()
+            .join("; ")
+    };
+    let rest = if more > 0 {
+        format!("; and {more} more")
+    } else {
+        String::new()
+    };
+
+    format!("'{file}' is not valid under the IR JSON Schema: {detail}{rest}.")
 }
 
 fn refused<Value>(message: String) -> Step<Value> {

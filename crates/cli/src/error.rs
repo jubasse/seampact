@@ -44,18 +44,9 @@ pub enum CliError {
     /// The editor schemas could not be planned or written.
     #[error(transparent)]
     EditorSchemas(#[from] EditorSchemasError),
-    /// The diff stopped; never a function not ported yet, which converts to [`Self::NotPortedYet`].
+    /// The diff stopped.
     #[error(transparent)]
-    Diff(DiffError),
-}
-
-impl From<DiffError> for CliError {
-    fn from(error: DiffError) -> Self {
-        match error {
-            DiffError::NotPortedYet { function } => Self::NotPortedYet { function },
-            DiffError::Options(_) | DiffError::Internal(_) => Self::Diff(error),
-        }
-    }
+    Diff(#[from] DiffError),
 }
 
 impl CliError {

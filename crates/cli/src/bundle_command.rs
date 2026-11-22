@@ -14,7 +14,6 @@ use seampact_cli_config::{
 use crate::cli_problem::unlocated_problem;
 use crate::compile_sources::{bundle_problem, no_workspace_problem, print_source_diagnostics};
 use crate::config_location::ConfigLocation;
-use crate::not_ported::not_ported_yet;
 use crate::source_reader::source_reader;
 use crate::workspace_api_names::source_entry_file;
 use crate::{CliError, CliIo, EXIT_SUCCESS, refuse};
@@ -92,7 +91,7 @@ pub(crate) fn bundle_command(
         ReadAppConfigOutcome::Refused(problems) => return Ok(refuse(io, &problems)),
         ReadAppConfigOutcome::Read(config) => config,
     };
-    let source = match chosen_source(&config, options.source.as_deref())? {
+    let source = match chosen_source(&config, options.source.as_deref()) {
         SourceChoice::Refused(problem) => return Ok(refuse(io, &[problem])),
         SourceChoice::Chosen(source) => source,
     };
@@ -148,7 +147,7 @@ pub(crate) fn bundle_command(
 }
 
 /// The only `path` source, or the one `named`; a problem when there is none or several.
-fn chosen_source(config: &LoadedAppConfig, named: Option<&str>) -> Result<SourceChoice, CliError> {
+fn chosen_source(config: &LoadedAppConfig, named: Option<&str>) -> SourceChoice {
     let path_sources: Vec<PathSource> = config
         .sources
         .iter()
@@ -189,19 +188,44 @@ fn chosen_source(config: &LoadedAppConfig, named: Option<&str>) -> Result<Source
             )
         };
 
-        return Ok(SourceChoice::Refused(problem));
+        return SourceChoice::Refused(problem);
     };
 
-    Ok(SourceChoice::Chosen(only.clone()))
+    SourceChoice::Chosen(only.clone())
 }
 
 /// The `path` source `--source` names, or why it cannot be bundled.
 fn named_source(
-    _config: &LoadedAppConfig,
-    _named: &str,
-    _path_sources: &[PathSource],
-) -> Result<SourceChoice, CliError> {
-    Err(not_ported_yet("namedSource"))
+    config: &LoadedAppConfig,
+    named: &str,
+    path_sources: &[PathSource],
+) -> SourceChoice {
+    if let Some(found) = path_sources.iter().find(|each| each.name == named) {
+        return SourceChoice::Chosen(found.clone());
+    }
+
+    if config.sources.contains_key(named) {
+        return SourceChoice::Refused(unlocated_problem(
+            "bundle.source.not-local",
+            format!(
+                "The source '{named}' is a bundle source; only a `path` source holds a workspace to bundle."
+            ),
+            "Name a `path` source with `--source`, or bundle in the repository that holds that contract.",
+        ));
+    }
+
+    let known: Vec<&str> = config.sources.keys().map(String::as_str).collect();
+    let listed = if known.is_empty() {
+        "none".to_owned()
+    } else {
+        known.join(", ")
+    };
+
+    SourceChoice::Refused(unlocated_problem(
+        "bundle.source.unknown",
+        format!("The app config has no source '{named}' ({listed})."),
+        "Name one of the app config's `path` sources with `--source`.",
+    ))
 }
 
 fn resolved_output(cwd: &Utf8Path, output: &BundleOutput) -> BundleOutput {

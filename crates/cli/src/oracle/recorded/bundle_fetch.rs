@@ -12,6 +12,7 @@ use seampact_bundle_fetch::{
     ReleaseGetError, ReleaseResponse, Url, WorkspaceImportFailure, WorkspaceImportsOptions,
     WorkspaceImportsResult, compile_workspace_with_imports, fetch_bundle,
 };
+use seampact_cli_config::bundle_source_of;
 use seampact_compiler::{PipelineApiResult, PipelineOptions, PipelineResult};
 use seampact_diagnostics::diagnostic_list_json;
 use seampact_ir::SourceMap;
@@ -20,8 +21,6 @@ use seampact_load::{FsReader, LoadOptions};
 use seampact_oracle::{ROOT_TOKEN, RecordedAnswer, RecordedToolCall, SubjectAnswer};
 use seampact_pipeline::PipelineDeclared;
 use seampact_span::{Location, SourceFiles};
-
-use crate::bundle_source::bundle_source_of;
 
 const FETCH_BUNDLE: &str = "fetchBundle";
 const COMPILE_WORKSPACE_WITH_IMPORTS: &str = "compileWorkspaceWithImports";
