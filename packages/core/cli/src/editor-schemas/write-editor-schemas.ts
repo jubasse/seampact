@@ -23,7 +23,7 @@ export interface EditorSchemasSource {
   readonly declarations: readonly EditorDeclaration[];
 }
 
-/** A checked write: the directory is inside the workspace root by real path, and no target file is a symlink. */
+/** A checked write: the directory is inside the workspace root by real path, and no target or temporary file is a symlink. */
 export interface EditorSchemasPlan {
   readonly directory: string;
   readonly files: readonly EditorSchemaFile[];
@@ -59,11 +59,15 @@ export async function planEditorSchemas(
   const files = editorSchemaFiles(editorNames(source.declarations));
 
   for (const file of files) {
-    if (await isSymbolicLink(join(directory, file.fileName)))
-      return refused(
-        source,
-        `The editor schema ${join(directory, file.fileName)} is a symbolic link, and writing it would overwrite its target.`,
-      );
+    const target = join(directory, file.fileName);
+
+    for (const written of [target, `${target}${TEMPORARY_SUFFIX}`]) {
+      if (await isSymbolicLink(written))
+        return refused(
+          source,
+          `The editor schema ${written} is a symbolic link, and writing it would overwrite its target.`,
+        );
+    }
   }
 
   return { status: "planned", plan: { directory, files } };
