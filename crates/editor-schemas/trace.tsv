@@ -1,0 +1,23 @@
+src/editor_names.rs#editor_declarations	packages/core/cli/src/editor-schemas/editor-names.ts#editorDeclarations
+src/editor_names.rs#editor_names	packages/core/cli/src/editor-schemas/editor-names.ts#editorNames
+src/editor_names.rs#add_core_error_codes	packages/core/cli/src/editor-schemas/editor-names.ts#addCoreErrorCodes
+-	packages/core/cli/src/editor-schemas/editor-names.ts#compareText	merged: ../js/src/utf16_order.rs#cmp_utf16
+src/editor_names.rs#sorted_by_name	packages/core/cli/src/editor-schemas/editor-names.ts#sortedByName
+src/specialise.rs#editor_schema_files	packages/core/cli/src/editor-schemas/specialise.ts#editorSchemaFiles
+src/specialise.rs#name_position_node	packages/core/cli/src/editor-schemas/specialise.ts#namePositionNode
+src/specialise.rs#holds_name	packages/core/cli/src/editor-schemas/specialise.ts#holdsName
+src/specialise.rs#specialise	packages/core/cli/src/editor-schemas/specialise.ts#specialise
+-	packages/core/cli/src/editor-schemas/specialise.ts#isSchemaObject	skip: the match on JsonValue::Object states it
+src/write_editor_schemas.rs#write_editor_schemas	packages/core/cli/src/editor-schemas/write-editor-schemas.ts#writeEditorSchemas
+src/editor_catalogue.rs#from_name	packages/core/cli/src/editor-schemas/editor-names.ts#isEditorCatalogue
+src/editor_names.rs#site_description	packages/core/cli/src/editor-schemas/editor-names.ts#siteDescription
+src/editor_names.rs#declared_sentence	packages/core/cli/src/editor-schemas/editor-names.ts#declaredSentence
+src/name_position.rs#identity	packages/core/cli/src/editor-schemas/name-positions.ts#identity
+src/name_position.rs#right	packages/core/cli/src/editor-schemas/name-positions.ts#right
+src/name_position.rs#enum_name	packages/core/cli/src/editor-schemas/name-positions.ts#enumName
+src/name_position.rs#error_code	packages/core/cli/src/editor-schemas/name-positions.ts#errorCode
+src/name_position.rs#error_codes	packages/core/cli/src/editor-schemas/name-positions.ts#errorCodes
+-	packages/core/cli/src/editor-schemas/write-editor-schemas.ts#planEditorSchemas	skip: deferred, needs the path helpers of seampact-cli-config public and the symbolic-link helper
+-	packages/core/cli/src/editor-schemas/write-editor-schemas.ts#realTargetDirectory	skip: deferred with planEditorSchemas, its only caller
+-	packages/core/cli/src/editor-schemas/write-editor-schemas.ts#isNotFound	skip: deferred with planEditorSchemas, its only caller
+-	packages/core/cli/src/editor-schemas/write-editor-schemas.ts#refused	skip: deferred with planEditorSchemas, its only caller

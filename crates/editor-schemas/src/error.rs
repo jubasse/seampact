@@ -1,16 +1,10 @@
-//! The error of the editor schemas: a function not ported yet, a bug, or the environment.
+//! The error of the editor schemas: a bug or the environment.
 
 use seampact_diagnostics::InternalError;
 
-/// What stops the editor schemas: a stub reached, a bug, or the environment.
+/// What stops the editor schemas: a bug, or the environment.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum EditorSchemasError {
-    /// A stub was reached: the TypeScript function `function` is not ported yet.
-    #[error("not ported yet: {function}")]
-    NotPortedYet {
-        /// The TypeScript function name.
-        function: &'static str,
-    },
     /// A bug.
     #[error(transparent)]
     Internal(#[from] InternalError),
