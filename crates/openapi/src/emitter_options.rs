@@ -535,3 +535,177 @@ fn has_other_member(record: &JsonObject) -> bool {
         .keys()
         .any(|key| key != "url" && key != "description")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::json_value::json_of;
+
+    type TestResult = Result<(), Box<dyn std::error::Error>>;
+
+    fn refused(raw: &str) -> Result<Vec<Refusal>, Box<dyn std::error::Error>> {
+        match parse_emitter_options(Some(&json_of(raw)?))? {
+            ParsedEmitterOptions::Refused(refusals) => Ok(refusals),
+            ParsedEmitterOptions::Parsed(options) => Err(format!("parsed: {options:?}").into()),
+        }
+    }
+
+    fn messages(refusals: &[Refusal]) -> Vec<&str> {
+        refusals
+            .iter()
+            .map(|refusal| refusal.message.as_str())
+            .collect()
+    }
+
+    #[test]
+    fn absent_options_are_the_defaults() -> TestResult {
+        assert_eq!(
+            parse_emitter_options(None)?,
+            ParsedEmitterOptions::Parsed(EmitterOptions::default())
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn extension_names_round_trip_and_name_their_schema_file() {
+        for name in ExtensionName::ALL {
+            assert_eq!(ExtensionName::from_text(name.as_str()), Some(name));
+        }
+
+        assert_eq!(ExtensionName::from_text("Access"), None);
+        assert_eq!(
+            ExtensionName::Access.schema_path(),
+            "schemas/extensions/access.schema.json"
+        );
+    }
+
+    #[test]
+    fn a_listed_extension_is_kept_once_and_an_unknown_one_is_refused_by_index() -> TestResult {
+        let parsed = parse_emitter_options(Some(&json_of(
+            r#"{"extensions": ["access", "access", "paging"]}"#,
+        )?))?;
+
+        assert_eq!(
+            parsed,
+            ParsedEmitterOptions::Parsed(EmitterOptions {
+                extensions: ExtensionSelection::Named(vec![
+                    ExtensionName::Access,
+                    ExtensionName::Paging
+                ]),
+                ..EmitterOptions::default()
+            })
+        );
+
+        let refusals = refused(r#"{"extensions": ["access", 3, "nope"]}"#)?;
+        let members: Vec<Option<&str>> = refusals
+            .iter()
+            .map(|refusal| refusal.member.as_deref())
+            .collect();
+
+        assert_eq!(members, [Some("/extensions/1"), Some("/extensions/2")]);
+        assert_eq!(
+            messages(&refusals),
+            [
+                "The number 3 is not an x-seampact extension name.",
+                "'nope' is not an x-seampact extension name."
+            ]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn a_refused_value_is_shown_bounded_in_utf16_units_or_by_its_kind() -> TestResult {
+        let long = "\u{1F600}".repeat(40);
+        let refusals = refused(&format!(r#"{{"reasons": "{long}"}}"#))?;
+        let expected = format!(
+            "'{}...' is not a value of 'reasons'.",
+            "\u{1F600}".repeat(32)
+        );
+
+        assert_eq!(messages(&refusals), [expected.as_str()]);
+
+        for (raw, text) in [
+            (r#"{"reasons": null}"#, "Null is not a value of 'reasons'."),
+            (
+                r#"{"reasons": []}"#,
+                "An array is not a value of 'reasons'.",
+            ),
+            (
+                r#"{"reasons": {}}"#,
+                "An object is not a value of 'reasons'.",
+            ),
+            (
+                r#"{"reasons": true}"#,
+                "The boolean true is not a value of 'reasons'.",
+            ),
+            (
+                r#"{"reasons": 1e21}"#,
+                "The number 1e+21 is not a value of 'reasons'.",
+            ),
+            (
+                r#"{"reasons": -0}"#,
+                "The number 0 is not a value of 'reasons'.",
+            ),
+        ] {
+            assert_eq!(messages(&refused(raw)?), [text], "options {raw}");
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn a_server_is_a_url_with_an_optional_description_and_nothing_else() -> TestResult {
+        for raw in [
+            r#"{"servers": [{"url": ""}]}"#,
+            r#"{"servers": [{"url": "https://a", "name": "x"}]}"#,
+            r#"{"servers": [{"url": "https://a", "description": null}]}"#,
+            r#"{"servers": [{"description": "d"}]}"#,
+            r#"{"servers": ["https://a"]}"#,
+        ] {
+            let refusals = refused(raw)?;
+
+            assert_eq!(
+                messages(&refusals),
+                ["A server must be { url, description? } with string values."],
+                "options {raw}"
+            );
+            assert_eq!(
+                refusals
+                    .first()
+                    .and_then(|refusal| refusal.member.as_deref()),
+                Some("/servers/0")
+            );
+        }
+
+        assert_eq!(
+            messages(&refused(r#"{"servers": {}}"#)?),
+            ["'servers' must be a list."]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn options_that_are_no_mapping_or_name_an_unknown_member_are_refused() -> TestResult {
+        let refusals = refused("[]")?;
+
+        assert_eq!(
+            messages(&refusals),
+            ["The OpenAPI options must be a mapping."]
+        );
+        assert_eq!(
+            refusals
+                .first()
+                .and_then(|refusal| refusal.member.as_deref()),
+            Some("")
+        );
+        assert_eq!(
+            messages(&refused(r#"{"reason": "omit"}"#)?),
+            ["'reason' is not an OpenAPI option."]
+        );
+
+        Ok(())
+    }
+}

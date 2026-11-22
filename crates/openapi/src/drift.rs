@@ -45,3 +45,44 @@ pub fn find_document_drift(committed: &str, emitted: &str) -> Option<DocumentDri
         emitted: None,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const COMMITTED: &str = "openapi: 3.1.0\ninfo:\n  title: tasks\n";
+
+    fn drift(line: usize, committed: Option<&str>, emitted: Option<&str>) -> Option<DocumentDrift> {
+        Some(DocumentDrift {
+            line,
+            committed: committed.map(str::to_owned),
+            emitted: emitted.map(str::to_owned),
+        })
+    }
+
+    #[test]
+    fn an_equal_pair_has_no_drift() {
+        assert_eq!(find_document_drift(COMMITTED, COMMITTED), None);
+    }
+
+    #[test]
+    fn a_one_byte_change_names_its_line_with_both_texts() {
+        assert_eq!(
+            find_document_drift(COMMITTED, "openapi: 3.1.0\ninfo:\n  title: tasKs\n"),
+            drift(3, Some("  title: tasks"), Some("  title: tasKs")),
+        );
+    }
+
+    #[test]
+    fn the_first_line_one_document_lacks_is_named() {
+        assert_eq!(
+            find_document_drift("a\n", "a\nb\n"),
+            drift(2, Some(""), Some("b"))
+        );
+        assert_eq!(
+            find_document_drift("a\nb", "a\n"),
+            drift(2, Some("b"), Some(""))
+        );
+        assert_eq!(find_document_drift("a", "a\nb"), drift(2, None, Some("b")));
+    }
+}

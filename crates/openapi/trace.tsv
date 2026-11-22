@@ -51,24 +51,24 @@ src/operation_marks.rs#write_deprecation	packages/core/openapi/src/operation-mar
 src/operation_marks.rs#write_unknown_query	packages/core/openapi/src/operation-marks.ts#writeUnknownQuery
 src/bodies.rs#body_media	packages/core/openapi/src/bodies.ts#bodyMedia
 src/documents.rs#unsupported_ir_refusals	packages/core/openapi/src/documents.ts#unsupportedIrRefusals
-src/documents.rs#servers_array	packages/core/openapi/src/documents.ts#serversArray	pending: brief 4
+src/documents.rs#servers_array	packages/core/openapi/src/documents.ts#serversArray
 src/documents.rs#method_rank	packages/core/openapi/src/documents.ts#methodRank
 src/documents.rs#operation_object	packages/core/openapi/src/documents.ts#operationObject
 src/documents.rs#responses_object	packages/core/openapi/src/documents.ts#responsesObject
 src/emit_context.rs#refuse_unknown	packages/core/openapi/src/emit-context.ts#refuseUnknown
 src/emit_context.rs#refuse_not_emitted	packages/core/openapi/src/emit-context.ts#refuseNotEmitted
 src/emit_context.rs#refuse_inconsistent	packages/core/openapi/src/emit-context.ts#refuseInconsistent
-src/emitter_options.rs#parse_extensions	packages/core/openapi/src/emitter-options.ts#parseExtensions	pending: brief 4
-src/emitter_options.rs#parse_choice	packages/core/openapi/src/emitter-options.ts#parseChoice	pending: brief 4
-src/emitter_options.rs#parse_servers	packages/core/openapi/src/emitter-options.ts#parseServers	pending: brief 4
--	packages/core/openapi/src/emitter-options.ts#parseServer	pending: brief 4
--	packages/core/openapi/src/emitter-options.ts#isRecord	pending: brief 4
-src/emitter_options.rs#option_refusal	packages/core/openapi/src/emitter-options.ts#optionRefusal	pending: brief 4
-src/emitter_options.rs#refused_with	packages/core/openapi/src/emitter-options.ts#refusedWith	pending: brief 4
-src/emitter_options.rs#option_value_text	packages/core/openapi/src/emitter-options.ts#optionValueText	pending: brief 4
+src/emitter_options.rs#parse_extensions	packages/core/openapi/src/emitter-options.ts#parseExtensions
+src/emitter_options.rs#parse_choice	packages/core/openapi/src/emitter-options.ts#parseChoice
+src/emitter_options.rs#parse_servers	packages/core/openapi/src/emitter-options.ts#parseServers
+src/emitter_options.rs#parse_server	packages/core/openapi/src/emitter-options.ts#parseServer
+-	packages/core/openapi/src/emitter-options.ts#isRecord	merged: src/emitter_options.rs#parse_server
+src/emitter_options.rs#option_refusal	packages/core/openapi/src/emitter-options.ts#optionRefusal
+src/emitter_options.rs#refused_with	packages/core/openapi/src/emitter-options.ts#refusedWith
+src/emitter_options.rs#option_value_text	packages/core/openapi/src/emitter-options.ts#optionValueText
 -	packages/core/openapi/src/json-value.ts#copyJsonValue	merged: src/json_value.rs#copy_optional
 -	packages/core/openapi/src/json-value.ts#isJsonObject	merged: src/responses.rs#has_body
--	packages/core/openapi/src/json-value.ts#objectMember	pending: brief 4
+src/json_value.rs#object_member	packages/core/openapi/src/json-value.ts#objectMember
 src/security.rs#write_operation_security	packages/core/openapi/src/security.ts#writeOperationSecurity
 src/security.rs#optional_read_schemes	packages/core/openapi/src/security.ts#optionalReadSchemes
 src/security.rs#requirements_of	packages/core/openapi/src/security.ts#requirementsOf
@@ -76,28 +76,28 @@ src/security.rs#security_scheme	packages/core/openapi/src/security.ts#securitySc
 src/security.rs#bearer_scheme	packages/core/openapi/src/security.ts#bearerScheme
 src/security.rs#signature_scheme	packages/core/openapi/src/security.ts#signatureScheme
 src/security.rs#scheme_key_value	packages/core/openapi/src/security.ts#schemeKeyValue
-src/merge_documents.rs#prefix_refusals	packages/core/openapi/src/merge/merge-documents.ts#prefixRefusals	pending: brief 4
-src/merge_documents.rs#build_input_document	packages/core/openapi/src/merge/merge-documents.ts#buildInputDocument	pending: brief 4
--	packages/core/openapi/src/merge/merge-documents.ts#inputSelection	pending: brief 4
+src/merge_documents.rs#prefix_refusals	packages/core/openapi/src/merge/merge-documents.ts#prefixRefusals
+src/merge_documents.rs#build_input_document	packages/core/openapi/src/merge/merge-documents.ts#buildInputDocument
+src/merge_documents.rs#input_selection	packages/core/openapi/src/merge/merge-documents.ts#inputSelection
 src/schemas.rs#known_use_schema	packages/core/openapi/src/schemas.ts#knownUseSchema
-src/schemas.rs#file_schema	packages/core/openapi/src/schemas.ts#fileSchema	pending: brief 4
+src/schemas.rs#file_schema	packages/core/openapi/src/schemas.ts#fileSchema
 src/schemas.rs#ref_schema	packages/core/openapi/src/schemas.ts#refSchema
 src/schemas.rs#schema_reference	packages/core/openapi/src/schemas.ts#schemaReference
 src/schemas.rs#enum_use_schema	packages/core/openapi/src/schemas.ts#enumUseSchema
 src/schemas.rs#is_open_enum	packages/core/openapi/src/schemas.ts#isOpenEnum
 src/schemas.rs#enum_component	packages/core/openapi/src/schemas.ts#enumComponent
 src/schemas.rs#scalar_schema	packages/core/openapi/src/schemas.ts#scalarSchema
-src/schemas.rs#string_number_schema	packages/core/openapi/src/schemas.ts#stringNumberSchema	pending: brief 4
-src/schemas.rs#wire_value	packages/core/openapi/src/schemas.ts#wireValue	pending: brief 4
+src/schemas.rs#string_number_schema	packages/core/openapi/src/schemas.ts#stringNumberSchema
+src/schemas.rs#wire_value	packages/core/openapi/src/schemas.ts#wireValue
 src/schemas.rs#nullable_schema	packages/core/openapi/src/schemas.ts#nullableSchema
 src/schemas.rs#accepts_any_value	packages/core/openapi/src/schemas.ts#acceptsAnyValue
 src/schemas.rs#named_schema_component	packages/core/openapi/src/schemas.ts#namedSchemaComponent
 src/schemas.rs#object_schema	packages/core/openapi/src/schemas.ts#objectSchema
 src/schemas.rs#property_schema	packages/core/openapi/src/schemas.ts#propertySchema
 src/schemas.rs#mark_sensitive	packages/core/openapi/src/schemas.ts#markSensitive
-src/schemas.rs#map_schema	packages/core/openapi/src/schemas.ts#mapSchema	pending: brief 4
+src/schemas.rs#map_schema	packages/core/openapi/src/schemas.ts#mapSchema
 src/schemas.rs#union_schema	packages/core/openapi/src/schemas.ts#unionSchema
-src/schemas.rs#body_tagged_branch	packages/core/openapi/src/schemas.ts#bodyTaggedBranch	pending: brief 4
+src/schemas.rs#body_tagged_branch	packages/core/openapi/src/schemas.ts#bodyTaggedBranch
 src/body_slots.rs#success_slots	packages/core/openapi/src/body-slots.ts#successSlots
 src/body_slots.rs#add_meta_slot	packages/core/openapi/src/body-slots.ts#addMetaSlot
 src/parameters.rs#operation_parameters	packages/core/openapi/src/parameters.ts#operationParameters
@@ -114,22 +114,22 @@ src/errors.rs#error_code_component	packages/core/openapi/src/errors.ts#errorCode
 src/templates.rs#template_schema	packages/core/openapi/src/templates.ts#templateSchema
 src/templates.rs#text_template_schema	packages/core/openapi/src/templates.ts#textTemplateSchema
 src/templates.rs#constant_text	packages/core/openapi/src/templates.ts#constantText
-src/templates.rs#each_schema	packages/core/openapi/src/templates.ts#eachSchema	pending: brief 4
+src/templates.rs#each_schema	packages/core/openapi/src/templates.ts#eachSchema
 src/templates.rs#slot_schema	packages/core/openapi/src/templates.ts#slotSchema
 src/templates.rs#object_template_schema	packages/core/openapi/src/templates.ts#objectTemplateSchema
 src/templates.rs#render_template	packages/core/openapi/src/templates.ts#renderTemplate
-src/templates.rs#render_object_template	packages/core/openapi/src/templates.ts#renderObjectTemplate	pending: brief 4
+src/templates.rs#render_object_template	packages/core/openapi/src/templates.ts#renderObjectTemplate
 src/operation_marks.rs#write_operation_marks	packages/core/openapi/src/operation-marks.ts#writeOperationMarks
 src/operation_marks.rs#write_idempotency	packages/core/openapi/src/operation-marks.ts#writeIdempotency
 src/bodies.rs#request_body	packages/core/openapi/src/bodies.ts#requestBody
-src/bodies.rs#write_unknown_keys	packages/core/openapi/src/bodies.ts#writeUnknownKeys	pending: brief 4
+src/bodies.rs#write_unknown_keys	packages/core/openapi/src/bodies.ts#writeUnknownKeys
 src/bodies.rs#body_schema	packages/core/openapi/src/bodies.ts#bodySchema
-src/bodies.rs#input_top_level	packages/core/openapi/src/bodies.ts#inputTopLevel	pending: brief 4
+src/bodies.rs#input_top_level	packages/core/openapi/src/bodies.ts#inputTopLevel
 src/bodies.rs#proofs_schema	packages/core/openapi/src/bodies.ts#proofsSchema
 src/bodies.rs#body_encoding	packages/core/openapi/src/bodies.ts#bodyEncoding
-src/bodies.rs#form_field_encoding	packages/core/openapi/src/bodies.ts#formFieldEncoding	pending: brief 4
-src/bodies.rs#proof_field	packages/core/openapi/src/bodies.ts#proofField	pending: brief 4
-src/bodies.rs#file_field_media	packages/core/openapi/src/bodies.ts#fileFieldMedia	pending: brief 4
+src/bodies.rs#form_field_encoding	packages/core/openapi/src/bodies.ts#formFieldEncoding
+src/bodies.rs#proof_field	packages/core/openapi/src/bodies.ts#proofField
+src/bodies.rs#file_field_media	packages/core/openapi/src/bodies.ts#fileFieldMedia
 src/paging.rs#write_paging	packages/core/openapi/src/paging.ts#writePaging
 src/paging.rs#paging_limit_default	packages/core/openapi/src/paging.ts#pagingLimitDefault
 src/paging.rs#page_body_schema	packages/core/openapi/src/paging.ts#pageBodySchema
@@ -142,33 +142,33 @@ src/rights.rs#requirement_item	packages/core/openapi/src/rights.ts#requirementIt
 src/ir_text.rs#value_source_text	packages/core/openapi/src/ir-text.ts#valueSourceText
 src/ir_text.rs#origin_key	packages/core/openapi/src/ir-text.ts#originKey
 src/ir_text.rs#derived_from_value	packages/core/openapi/src/ir-text.ts#derivedFromValue
--	packages/core/openapi/src/extension-names.ts#isExtensionName	pending: brief 4
--	packages/core/openapi/src/extension-names.ts#extensionSchemaPath	pending: brief 4
--	packages/core/openapi/src/merge/prefix-document.ts#isValidPrefix	pending: brief 4
--	packages/core/openapi/src/merge/prefix-document.ts#prefixDocument	pending: brief 4
--	packages/core/openapi/src/merge/prefix-document.ts#withSchemaReferences	pending: brief 4
--	packages/core/openapi/src/merge/prefix-document.ts#renamedMember	pending: brief 4
--	packages/core/openapi/src/merge/prefix-document.ts#prefixedReference	pending: brief 4
--	packages/core/openapi/src/merge/prefix-document.ts#prefixedSchemaKey	pending: brief 4
--	packages/core/openapi/src/merge/prefix-document.ts#withPrefixedKeyMember	pending: brief 4
--	packages/core/openapi/src/merge/prefix-document.ts#prefixedDiscriminator	pending: brief 4
--	packages/core/openapi/src/merge/prefix-document.ts#prefixedComponents	pending: brief 4
--	packages/core/openapi/src/merge/prefix-document.ts#prefixedKeys	pending: brief 4
--	packages/core/openapi/src/merge/prefix-document.ts#prefixOperation	pending: brief 4
-src/merge_documents.rs#assemble_merged_document	packages/core/openapi/src/merge/merged-document.ts#assembleMergedDocument	pending: brief 4
--	packages/core/openapi/src/merge/merged-document.ts#placeSource	pending: brief 4
--	packages/core/openapi/src/merge/merged-document.ts#placeComponents	pending: brief 4
--	packages/core/openapi/src/merge/merged-document.ts#placeOperations	pending: brief 4
--	packages/core/openapi/src/merge/merged-document.ts#place	pending: brief 4
--	packages/core/openapi/src/merge/merged-document.ts#clashRefusal	pending: brief 4
--	packages/core/openapi/src/merge/merged-document.ts#mergedDocument	pending: brief 4
--	packages/core/openapi/src/merge/merged-document.ts#mergedVersion	pending: brief 4
--	packages/core/openapi/src/merge/merged-document.ts#apiHeader	pending: brief 4
--	packages/core/openapi/src/merge/merged-document.ts#mergedPaths	pending: brief 4
--	packages/core/openapi/src/merge/merged-document.ts#mergedOperation	pending: brief 4
--	packages/core/openapi/src/merge/merged-document.ts#sortedEntries	pending: brief 4
--	packages/core/openapi/src/merge/merged-document.ts#sortedValues	pending: brief 4
--	packages/core/openapi/src/merge/merged-document.ts#isConsumerExtension	pending: brief 4
--	packages/core/openapi/src/merge/merged-document.ts#arrayMember	pending: brief 4
--	packages/core/openapi/src/merge/merged-document.ts#stringMember	pending: brief 4
--	packages/core/openapi/src/drift.ts#findDocumentDrift	pending: brief 4
+src/emitter_options.rs#from_text	packages/core/openapi/src/extension-names.ts#isExtensionName
+src/emitter_options.rs#schema_path	packages/core/openapi/src/extension-names.ts#extensionSchemaPath
+src/prefix_document.rs#is_valid_prefix	packages/core/openapi/src/merge/prefix-document.ts#isValidPrefix
+src/prefix_document.rs#prefix_document	packages/core/openapi/src/merge/prefix-document.ts#prefixDocument
+src/prefix_document.rs#with_schema_references	packages/core/openapi/src/merge/prefix-document.ts#withSchemaReferences
+src/prefix_document.rs#renamed_member	packages/core/openapi/src/merge/prefix-document.ts#renamedMember
+src/prefix_document.rs#prefixed_reference	packages/core/openapi/src/merge/prefix-document.ts#prefixedReference
+src/prefix_document.rs#prefixed_schema_key	packages/core/openapi/src/merge/prefix-document.ts#prefixedSchemaKey
+src/prefix_document.rs#with_prefixed_key_member	packages/core/openapi/src/merge/prefix-document.ts#withPrefixedKeyMember
+src/prefix_document.rs#prefixed_discriminator	packages/core/openapi/src/merge/prefix-document.ts#prefixedDiscriminator
+src/prefix_document.rs#prefixed_components	packages/core/openapi/src/merge/prefix-document.ts#prefixedComponents
+src/prefix_document.rs#prefixed_keys	packages/core/openapi/src/merge/prefix-document.ts#prefixedKeys
+src/prefix_document.rs#prefix_operation	packages/core/openapi/src/merge/prefix-document.ts#prefixOperation
+src/merge_documents.rs#assemble_merged_document	packages/core/openapi/src/merge/merged-document.ts#assembleMergedDocument
+src/merged_document.rs#place_source	packages/core/openapi/src/merge/merged-document.ts#placeSource
+src/merged_document.rs#place_components	packages/core/openapi/src/merge/merged-document.ts#placeComponents
+src/merged_document.rs#place_operations	packages/core/openapi/src/merge/merged-document.ts#placeOperations
+src/merged_document.rs#place	packages/core/openapi/src/merge/merged-document.ts#place
+src/merged_document.rs#clash_refusal	packages/core/openapi/src/merge/merged-document.ts#clashRefusal
+src/merged_document.rs#merged_document	packages/core/openapi/src/merge/merged-document.ts#mergedDocument
+src/merged_document.rs#merged_version	packages/core/openapi/src/merge/merged-document.ts#mergedVersion
+src/merged_document.rs#api_header	packages/core/openapi/src/merge/merged-document.ts#apiHeader
+src/merged_document.rs#merged_paths	packages/core/openapi/src/merge/merged-document.ts#mergedPaths
+src/merged_document.rs#merged_operation	packages/core/openapi/src/merge/merged-document.ts#mergedOperation
+src/merged_document.rs#sorted_entries	packages/core/openapi/src/merge/merged-document.ts#sortedEntries
+src/merged_document.rs#sorted_values	packages/core/openapi/src/merge/merged-document.ts#sortedValues
+src/merged_document.rs#is_consumer_extension	packages/core/openapi/src/merge/merged-document.ts#isConsumerExtension
+src/json_value.rs#array_member	packages/core/openapi/src/merge/merged-document.ts#arrayMember
+src/merged_document.rs#string_member	packages/core/openapi/src/merge/merged-document.ts#stringMember
+src/drift.rs#find_document_drift	packages/core/openapi/src/drift.ts#findDocumentDrift

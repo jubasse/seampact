@@ -300,3 +300,85 @@ fn with_mapping(discriminator: &JsonObject, mapping: JsonObject) -> JsonObject {
 
     written
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::json_value::object_of;
+
+    type TestResult = Result<(), Box<dyn std::error::Error>>;
+
+    #[test]
+    fn references_and_keys_are_renamed_and_a_data_string_naming_a_component_stays() -> TestResult {
+        let document = object_of(
+            r##"{"openapi": "3.1.0", "paths": {}, "components": {"schemas": {
+                "Task": {"type": "string", "examples": ["#/components/schemas/Task"], "default": "#/components/schemas/Task"},
+                "Holder": {"$ref": "#/components/schemas/Task", "description": "#/components/schemas/Task"}}}}"##,
+        )?;
+        let expected = object_of(
+            r##"{"openapi": "3.1.0", "paths": {}, "components": {"schemas": {
+                "p.Task": {"type": "string", "examples": ["#/components/schemas/Task"], "default": "#/components/schemas/Task"},
+                "p.Holder": {"$ref": "#/components/schemas/p.Task", "description": "#/components/schemas/Task"}}}}"##,
+        )?;
+
+        assert_eq!(prefix_document(&document, "p"), expected);
+
+        Ok(())
+    }
+
+    #[test]
+    fn operation_ids_and_the_schemes_of_security_requirements_take_the_prefix() -> TestResult {
+        let document = object_of(
+            r#"{"paths": {"/a": {"get": {"operationId": "list", "security": [{"bearer": [], "other": ["x"]}, {}]}, "parameters": []}},
+                "components": {"securitySchemes": {"bearer": {"type": "http"}}}}"#,
+        )?;
+        let expected = object_of(
+            r#"{"paths": {"/a": {"get": {"operationId": "p.list", "security": [{"p.bearer": [], "other": ["x"]}, {}]}, "parameters": []}},
+                "components": {"securitySchemes": {"p.bearer": {"type": "http"}}}}"#,
+        )?;
+
+        assert_eq!(prefix_document(&document, "p"), expected);
+
+        Ok(())
+    }
+
+    #[test]
+    fn a_discriminator_without_a_mapping_is_written_from_its_branches() -> TestResult {
+        let document = object_of(
+            r##"{"components": {"schemas": {"A": {}, "Pet": {"oneOf": [{"$ref": "#/components/schemas/A"}, {"type": "string"}], "discriminator": {"propertyName": "kind"}}}}}"##,
+        )?;
+        let expected = object_of(
+            r##"{"components": {"schemas": {"p.A": {}, "p.Pet": {"oneOf": [{"$ref": "#/components/schemas/p.A"}, {"type": "string"}], "discriminator": {"propertyName": "kind", "mapping": {"A": "#/components/schemas/p.A"}}}}}}"##,
+        )?;
+
+        assert_eq!(prefix_document(&document, "p"), expected);
+
+        Ok(())
+    }
+
+    #[test]
+    fn a_restricted_to_item_names_its_schema_under_the_prefix() -> TestResult {
+        let document = object_of(
+            r#"{"components": {"schemas": {"Role": {}, "T": {"x-seampact-restricted-to": [{"schema": "Role"}, {"schema": "Gone"}]}}}}"#,
+        )?;
+        let expected = object_of(
+            r#"{"components": {"schemas": {"p.Role": {}, "p.T": {"x-seampact-restricted-to": [{"schema": "p.Role"}, {"schema": "Gone"}]}}}}"#,
+        )?;
+
+        assert_eq!(prefix_document(&document, "p"), expected);
+
+        Ok(())
+    }
+
+    #[test]
+    fn a_prefix_is_ascii_letters_digits_dot_dash_and_underscore_only() {
+        for valid in ["billing", "a.b-c_d", "0", "A"] {
+            assert!(is_valid_prefix(valid), "prefix {valid:?}");
+        }
+
+        // The ECMAScript `$` does not match before a final newline, and `[A-Za-z]` is ASCII.
+        for invalid in ["", "a\n", "caf\u{e9}", "a b", "a/b", "\u{ff21}"] {
+            assert!(!is_valid_prefix(invalid), "prefix {invalid:?}");
+        }
+    }
+}

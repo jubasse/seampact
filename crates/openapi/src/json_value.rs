@@ -50,3 +50,20 @@ pub(crate) fn integer_value(value: i64) -> JsonValue {
 pub(crate) fn optional_integer(value: Option<i64>) -> Option<JsonValue> {
     value.map(integer_value)
 }
+
+/// A JSON value read from text, for the tests.
+#[cfg(test)]
+pub(crate) fn json_of(text: &str) -> Result<JsonValue, Box<dyn std::error::Error>> {
+    let parsed: serde_json::Value = serde_json::from_str(text)?;
+
+    Ok(JsonValue::try_from(parsed)?)
+}
+
+/// A JSON object read from text, for the tests.
+#[cfg(test)]
+pub(crate) fn object_of(text: &str) -> Result<JsonObject, Box<dyn std::error::Error>> {
+    match json_of(text)? {
+        JsonValue::Object(object) => Ok(object),
+        other => Err(format!("not an object: {other:?}").into()),
+    }
+}

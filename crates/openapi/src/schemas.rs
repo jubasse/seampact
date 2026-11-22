@@ -1073,4 +1073,48 @@ mod tests {
             Err(OpenApiError::Internal(_))
         ));
     }
+
+    fn int64_use() -> Result<TypeUse, serde_json::Error> {
+        serde_json::from_str(r#"{"kind": "scalar", "type": "string", "format": "int64", "refinements": {}}"#)
+    }
+
+    #[test]
+    fn an_int64_text_is_a_number_under_the_number_wire_and_stays_text_otherwise()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let mut ir = crate::emit_context::fixture_ir()?;
+        let options = crate::EmitterOptions::default();
+        let use_ = int64_use()?;
+        let text = JsonValue::text("9007199254740993");
+
+        ir.api.wire.int64 = Int64Wire::String;
+
+        let kept = wire_value(
+            &crate::emit_context::create_emit_context(&ir, &options),
+            &use_,
+            &text,
+        )?;
+
+        assert_eq!(kept, text);
+
+        ir.api.wire.int64 = Int64Wire::Number;
+
+        let context = crate::emit_context::create_emit_context(&ir, &options);
+        let number = wire_value(&context, &use_, &text)?;
+
+        assert!(
+            matches!(&number, JsonValue::Number(exact) if exact.to_string() == "9007199254740993")
+        );
+
+        for not_an_integer in ["1.5", "", "-", "0x10"] {
+            let value = JsonValue::text(not_an_integer);
+
+            assert_eq!(
+                wire_value(&context, &use_, &value)?,
+                value,
+                "text {not_an_integer:?}"
+            );
+        }
+
+        Ok(())
+    }
 }

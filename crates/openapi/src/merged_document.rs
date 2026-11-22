@@ -619,3 +619,168 @@ fn string_member(value: &JsonValue, member: &str, holder: &str) -> Result<String
     ))
     .into())
 }
+
+#[cfg(test)]
+mod tests {
+    use indexmap::IndexMap;
+
+    use super::*;
+    use crate::EmitterOptions;
+    use crate::json_value::object_of;
+
+    type TestResult = Result<(), Box<dyn std::error::Error>>;
+
+    fn source(api: &str, document: &str) -> Result<ApiSource, Box<dyn std::error::Error>> {
+        let mut document = object_of(document)?;
+        let info = object_of(r#"{"title": "t", "version": "1"}"#)?;
+
+        if !document.contains_key("info") {
+            document.insert("info".to_owned(), JsonValue::Object(info));
+        }
+
+        Ok(ApiSource {
+            api: api.to_owned(),
+            api_value: object_of(r#"{"kind": "http"}"#)?,
+            document,
+        })
+    }
+
+    fn assemble(sources: &[ApiSource]) -> Result<AssembledDocument, OpenApiError> {
+        let options = MergeOptions {
+            name: "platform".to_owned(),
+            prefix: IndexMap::new(),
+            emitter: EmitterOptions::default(),
+        };
+
+        assemble_merged_document(sources, &options)
+    }
+
+    fn codes(assembled: &AssembledDocument) -> Vec<&str> {
+        assembled
+            .refusals
+            .iter()
+            .map(|refusal| refusal.code.as_str())
+            .collect()
+    }
+
+    const ONE_SCHEMA: &str = r#"{"components": {"schemas": {"Task": {"type": "string"}}}}"#;
+    const OTHER_SCHEMA: &str = r#"{"components": {"schemas": {"Task": {"type": "integer"}}}}"#;
+
+    #[test]
+    fn an_element_two_apis_write_identically_is_kept_once() -> TestResult {
+        let assembled = assemble(&[source("a", ONE_SCHEMA)?, source("b", ONE_SCHEMA)?])?;
+
+        assert!(assembled.refusals.is_empty());
+
+        Ok(())
+    }
+
+    #[test]
+    fn two_different_elements_under_one_name_are_a_name_clash_naming_both_apis() -> TestResult {
+        let assembled = assemble(&[source("a", ONE_SCHEMA)?, source("b", OTHER_SCHEMA)?])?;
+
+        assert_eq!(codes(&assembled), ["openapi.merge.name-clash"]);
+        assert_eq!(
+            assembled
+                .refusals
+                .first()
+                .map(|refusal| refusal.message.as_str()),
+            Some(
+                "the component 'schemas.Task' of the api 'a' and the component 'schemas.Task' of the api 'b' are different elements under one name."
+            )
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn one_api_in_two_versions_is_an_api_versions_refusal() -> TestResult {
+        let assembled = assemble(&[source("a", ONE_SCHEMA)?, source("a", OTHER_SCHEMA)?])?;
+
+        assert_eq!(codes(&assembled), ["openapi.merge.api-versions"]);
+
+        Ok(())
+    }
+
+    const GET_TASKS: &str = r#"{"paths": {"/tasks/{id}": {"get": {"operationId": "getTask"}}}}"#;
+
+    #[test]
+    fn two_apis_answering_one_method_and_path_clash_even_when_identical() -> TestResult {
+        let assembled = assemble(&[source("a", GET_TASKS)?, source("b", GET_TASKS)?])?;
+
+        assert!(codes(&assembled).contains(&"openapi.merge.route-clash"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn one_path_under_different_parameter_names_is_a_route_clash() -> TestResult {
+        let other = r#"{"paths": {"/tasks/{taskId}": {"get": {"operationId": "other"}}}}"#;
+        let assembled = assemble(&[source("a", GET_TASKS)?, source("b", other)?])?;
+
+        assert!(assembled.refusals.iter().any(|refusal| {
+            refusal
+                .message
+                .ends_with("are one path under different parameter names.")
+        }));
+
+        Ok(())
+    }
+
+    #[test]
+    fn the_bytes_do_not_depend_on_the_order_of_the_inputs() -> TestResult {
+        let first = source("a", ONE_SCHEMA)?;
+        let second = source(
+            "b",
+            r#"{"components": {"schemas": {"Other": {"type": "string"}}}}"#,
+        )?;
+        let forward = assemble(&[first.clone(), second.clone()])?;
+        let backward = assemble(&[second, first])?;
+
+        assert_eq!(forward.document, backward.document);
+
+        Ok(())
+    }
+
+    #[test]
+    fn a_document_member_the_merge_has_no_rule_for_is_an_internal_error() -> TestResult {
+        let result = assemble(&[source("a", r#"{"webhooks": {}}"#)?]);
+
+        assert!(matches!(result, Err(OpenApiError::Internal(_))));
+
+        Ok(())
+    }
+
+    #[test]
+    fn path_parameter_names_are_blanked_like_the_regular_expression_does() {
+        for (path, shape) in [
+            ("/tasks/{id}", "/tasks/{}"),
+            ("/a/{x}/b/{yy}", "/a/{}/b/{}"),
+            ("/a/{}", "/a/{}"),
+            ("/{a{b}", "/{a{}"),
+            ("/{open", "/{open"),
+            ("/a}{", "/a}{"),
+            ("/\u{1F600}/{\u{e9}}", "/\u{1F600}/{}"),
+        ] {
+            assert_eq!(blank_path_parameters(path), shape, "path {path:?}");
+        }
+    }
+
+    #[test]
+    fn components_are_sorted_in_utf16_order_then_written_in_key_order() -> TestResult {
+        let document = r#"{"components": {"schemas": {"\uff5e": {}, "\ud83d\ude00": {}, "10": {}, "9": {}, "b": {}}}}"#;
+        let assembled = assemble(&[source("a", document)?])?;
+        let Some(JsonValue::Object(components)) = assembled.document.get("components") else {
+            return Err("no components".into());
+        };
+        let Some(JsonValue::Object(schemas)) = components.get("schemas") else {
+            return Err("no schemas".into());
+        };
+        let keys: Vec<&str> = schemas.keys().map(String::as_str).collect();
+
+        // The astral character sorts before U+FF5E in UTF-16, after it by bytes; array-index keys go first.
+        assert_eq!(keys, ["9", "10", "b", "\u{1F600}", "\u{ff5e}"]);
+
+        Ok(())
+    }
+}
