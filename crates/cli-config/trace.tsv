@@ -92,3 +92,4 @@ src/artefact_switches.rs#framework_routes_switch_of	packages/core/cli/src/config
 -	packages/core/cli/src/config/artefact-switches.ts#neededArtefactProblems	skip: reached only by generate and check, ported with the generator layer
 -	packages/core/cli/src/config/artefact-switches.ts#noArtefactProblem	skip: reached only by generate and check, ported with the generator layer
 -	packages/core/cli/src/config/artefact-switches.ts#quotedList	skip: reached only by generate and check, ported with the generator layer
+src/symbolic_link.rs#is_symbolic_link	packages/core/cli/src/symbolic-link.ts#isSymbolicLink

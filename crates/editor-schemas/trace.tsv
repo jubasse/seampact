@@ -17,7 +17,7 @@ src/name_position.rs#right	packages/core/cli/src/editor-schemas/name-positions.t
 src/name_position.rs#enum_name	packages/core/cli/src/editor-schemas/name-positions.ts#enumName
 src/name_position.rs#error_code	packages/core/cli/src/editor-schemas/name-positions.ts#errorCode
 src/name_position.rs#error_codes	packages/core/cli/src/editor-schemas/name-positions.ts#errorCodes
--	packages/core/cli/src/editor-schemas/write-editor-schemas.ts#planEditorSchemas	skip: deferred, needs the path helpers of seampact-cli-config public and the symbolic-link helper
--	packages/core/cli/src/editor-schemas/write-editor-schemas.ts#realTargetDirectory	skip: deferred with planEditorSchemas, its only caller
--	packages/core/cli/src/editor-schemas/write-editor-schemas.ts#isNotFound	skip: deferred with planEditorSchemas, its only caller
--	packages/core/cli/src/editor-schemas/write-editor-schemas.ts#refused	skip: deferred with planEditorSchemas, its only caller
+src/plan_editor_schemas.rs#plan_editor_schemas	packages/core/cli/src/editor-schemas/write-editor-schemas.ts#planEditorSchemas
+src/plan_editor_schemas.rs#real_target_directory	packages/core/cli/src/editor-schemas/write-editor-schemas.ts#realTargetDirectory
+-	packages/core/cli/src/editor-schemas/write-editor-schemas.ts#isNotFound	skip: the NotFound kind of the io error states it
+src/plan_editor_schemas.rs#refused	packages/core/cli/src/editor-schemas/write-editor-schemas.ts#refused

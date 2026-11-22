@@ -39,7 +39,7 @@ pub fn write_editor_schemas(plan: &EditorSchemasPlan) -> Result<usize, EditorSch
     Ok(plan.files.len())
 }
 
-fn io_error(path: &Utf8Path, error: &io::Error) -> EditorSchemasError {
+pub(crate) fn io_error(path: &Utf8Path, error: &io::Error) -> EditorSchemasError {
     EditorSchemasError::Io {
         path: path.to_string(),
         message: error.to_string(),
