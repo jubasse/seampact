@@ -3,11 +3,11 @@
 
 use std::collections::{HashMap, HashSet};
 use std::io::Read as _;
-use std::sync::atomic::{AtomicU64, Ordering};
 
-use camino::Utf8PathBuf;
+use camino::{Utf8Path, Utf8PathBuf};
 use flate2::read::GzDecoder;
 use seampact_diagnostics::quote_text;
+use tempfile::{Builder, TempDir};
 
 use crate::contents::BundleEntry;
 use crate::limits::{BUNDLE_ARCHIVE_BYTES_MAX, BUNDLE_ENTRIES_MAX, BUNDLE_EXTRACTED_BYTES_MAX};
@@ -26,6 +26,8 @@ use crate::{
 const BUNDLE_TOP_DIRECTORIES: [&str; 2] = [BUNDLE_SOURCES_DIRECTORY, BUNDLE_IR_DIRECTORY];
 const TEMPORARY_PREFIX: &str = "seampact-bundle-";
 const FILE_MODE: u32 = 0o644;
+/// The extraction directory is the user's alone: tempfile's default follows the umask.
+const DIRECTORY_MODE: u32 = 0o700;
 const FIX_DOWNLOAD: &str = "Download the bundle again, or rebuild it with `seampact bundle`.";
 const FIX_TOO_LARGE: &str =
     "Check that the source names a seampact bundle; a bundle this large is not one.";
@@ -45,17 +47,29 @@ pub enum BundleArchiveRead {
     Refused(Vec<BundleFailure>),
 }
 
-/// A tarball extracted into a new directory, or the failures that refuse it whole.
-#[derive(Debug, Clone, PartialEq)]
-pub enum BundleArchiveExtraction {
-    /// The new temporary directory the caller removes.
-    Extracted(Utf8PathBuf),
-    /// Why the tarball is refused.
-    Refused(Vec<BundleFailure>),
+/// A private temporary directory holding an extracted bundle, removed when the value drops.
+#[derive(Debug)]
+pub struct ExtractedBundle {
+    /// Removes the directory when it drops.
+    _removal: TempDir,
+    path: Utf8PathBuf,
 }
 
-fn refuse(failure: BundleFailure) -> BundleArchiveRead {
-    BundleArchiveRead::Refused(vec![failure])
+impl ExtractedBundle {
+    /// The directory the entries were written into.
+    #[must_use]
+    pub fn path(&self) -> &Utf8Path {
+        &self.path
+    }
+}
+
+/// A tarball extracted into a new directory, or the failures that refuse it whole.
+#[derive(Debug)]
+pub enum BundleArchiveExtraction {
+    /// The entries, written into a directory removed with the guard.
+    Extracted(ExtractedBundle),
+    /// Why the tarball is refused.
+    Refused(Vec<BundleFailure>),
 }
 
 fn invalid(reason: &str, file: Option<&str>) -> BundleFailure {
@@ -71,68 +85,50 @@ fn invalid(reason: &str, file: Option<&str>) -> BundleFailure {
     }
 }
 
-/// Extracts a bundle tarball into a new temporary directory the caller removes, or refuses it
-/// whole.
+/// Extracts a bundle tarball into a new private temporary directory, or refuses it whole.
 ///
 /// # Errors
 ///
-/// [`BundleError::Io`] when the checked entries cannot be written.
+/// [`BundleError::Io`] when the temporary directory cannot be made or the checked entries cannot
+/// be written.
 pub fn extract_bundle_tarball(tarball: &[u8]) -> Result<BundleArchiveExtraction, BundleError> {
-    let entries = match read_bundle_tarball(tarball) {
-        BundleArchiveRead::Entries(entries) => entries,
-        BundleArchiveRead::Refused(failures) => {
-            return Ok(BundleArchiveExtraction::Refused(failures));
-        }
-    };
-    let directory = temporary_directory()?;
+    let written = with_archive_files(tarball, write_to_temporary_directory);
 
-    if let Err(error) = write_entries(&directory, &entries) {
-        let removal = std::fs::remove_dir_all(&directory);
-
-        return Err(BundleError::Io {
-            path: directory.to_string(),
-            message: format!(
-                "writing the checked tarball entries failed: {error}{}",
-                removal.err().map_or_else(String::new, |removal| format!(
-                    " (and removing it: {removal})"
-                ))
-            ),
-        });
+    match written {
+        Ok(extracted) => Ok(BundleArchiveExtraction::Extracted(extracted?)),
+        Err(failures) => Ok(BundleArchiveExtraction::Refused(failures)),
     }
-
-    Ok(BundleArchiveExtraction::Extracted(directory))
 }
 
-fn temporary_directory() -> Result<Utf8PathBuf, BundleError> {
-    static COUNTER: AtomicU64 = AtomicU64::new(0);
+fn write_to_temporary_directory(files: &[ArchiveFile<'_>]) -> Result<ExtractedBundle, BundleError> {
+    let mut builder = Builder::new();
 
-    let base =
-        Utf8PathBuf::from_path_buf(std::env::temp_dir()).map_err(|path| BundleError::Io {
+    builder.prefix(TEMPORARY_PREFIX);
+    set_directory_mode(&mut builder);
+
+    let directory = builder.tempdir().map_err(|error| BundleError::Io {
+        path: TEMPORARY_PREFIX.to_owned(),
+        message: error.to_string(),
+    })?;
+    let path = Utf8PathBuf::from_path_buf(directory.path().to_path_buf()).map_err(|path| {
+        BundleError::Io {
             path: path.display().to_string(),
             message: "the temporary directory is not UTF-8".to_owned(),
-        })?;
-
-    loop {
-        let attempt = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let directory = base.join(format!(
-            "{TEMPORARY_PREFIX}{}-{attempt}",
-            std::process::id()
-        ));
-
-        match std::fs::create_dir(&directory) {
-            Ok(()) => return Ok(directory),
-            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {}
-            Err(error) => {
-                return Err(BundleError::Io {
-                    path: directory.to_string(),
-                    message: error.to_string(),
-                });
-            }
         }
-    }
+    })?;
+
+    write_entries(&path, files).map_err(|error| BundleError::Io {
+        path: path.to_string(),
+        message: format!("writing the checked tarball entries failed: {error}"),
+    })?;
+
+    Ok(ExtractedBundle {
+        _removal: directory,
+        path,
+    })
 }
 
-fn write_entries(directory: &Utf8PathBuf, entries: &[BundleEntry]) -> std::io::Result<()> {
+fn write_entries(directory: &Utf8Path, entries: &[ArchiveFile<'_>]) -> std::io::Result<()> {
     for entry in entries {
         let target = directory.join(&entry.path);
 
@@ -145,11 +141,21 @@ fn write_entries(directory: &Utf8PathBuf, entries: &[BundleEntry]) -> std::io::R
         options.write(true).create_new(true);
         set_file_mode(&mut options);
 
-        std::io::Write::write_all(&mut options.open(&target)?, &entry.bytes)?;
+        std::io::Write::write_all(&mut options.open(&target)?, entry.bytes)?;
     }
 
     Ok(())
 }
+
+#[cfg(unix)]
+fn set_directory_mode(builder: &mut Builder<'_, '_>) {
+    use std::os::unix::fs::PermissionsExt as _;
+
+    builder.permissions(std::fs::Permissions::from_mode(DIRECTORY_MODE));
+}
+
+#[cfg(not(unix))]
+fn set_directory_mode(_builder: &mut Builder<'_, '_>) {}
 
 #[cfg(unix)]
 fn set_file_mode(options: &mut std::fs::OpenOptions) {
@@ -164,8 +170,36 @@ fn set_file_mode(_options: &mut std::fs::OpenOptions) {}
 /// The entries of a bundle tarball, or why it is refused.
 #[must_use]
 pub fn read_bundle_tarball(tarball: &[u8]) -> BundleArchiveRead {
+    let read = with_archive_files(tarball, |files| {
+        files
+            .iter()
+            .map(|file| BundleEntry {
+                path: file.path.clone(),
+                bytes: file.bytes.to_vec(),
+            })
+            .collect()
+    });
+
+    match read {
+        Ok(entries) => BundleArchiveRead::Entries(entries),
+        Err(failures) => BundleArchiveRead::Refused(failures),
+    }
+}
+
+/// A checked file of an inflated archive, its bytes borrowed from it.
+struct ArchiveFile<'archive> {
+    path: String,
+    bytes: &'archive [u8],
+}
+
+/// Inflates and checks `tarball`, then hands the borrowed files to `use_files`: the bytes are
+/// never copied out of the inflated archive.
+fn with_archive_files<T>(
+    tarball: &[u8],
+    use_files: impl FnOnce(&[ArchiveFile<'_>]) -> T,
+) -> Result<T, Vec<BundleFailure>> {
     if tarball.len() > BUNDLE_ARCHIVE_BYTES_MAX {
-        return refuse(
+        return Err(vec![
             BundleFailure::new(
                 BundleFailureCode::ArchiveTooLarge,
                 format!(
@@ -176,13 +210,15 @@ pub fn read_bundle_tarball(tarball: &[u8]) -> BundleArchiveRead {
             )
             .expecting(BUNDLE_ARCHIVE_BYTES_MAX.to_string())
             .finding(tarball.len().to_string()),
-        );
+        ]);
     }
 
-    match gunzipped(tarball) {
-        Ok(archive) => UstarParser::new(&archive).parse(),
-        Err(failure) => refuse(*failure),
-    }
+    let archive = gunzipped(tarball).map_err(|failure| vec![*failure])?;
+    let files = UstarParser::new(&archive)
+        .parse()
+        .map_err(|failure| vec![*failure])?;
+
+    Ok(use_files(&files))
 }
 
 fn gunzipped(tarball: &[u8]) -> Result<Vec<u8>, Box<BundleFailure>> {
@@ -217,7 +253,7 @@ struct UstarParser<'archive> {
     offset: usize,
     entry_count: usize,
     pax: PaxOverrides,
-    files: Vec<BundleEntry>,
+    files: Vec<ArchiveFile<'archive>>,
     /// Paths folded to ASCII lower case: of the files, and of every directory.
     file_by_fold: HashMap<String, String>,
     directory_folds: HashSet<String>,
@@ -236,19 +272,22 @@ impl<'archive> UstarParser<'archive> {
         }
     }
 
-    fn parse(mut self) -> BundleArchiveRead {
+    fn parse(mut self) -> Result<Vec<ArchiveFile<'archive>>, Box<BundleFailure>> {
         loop {
             let end = self.offset.saturating_add(USTAR_BLOCK_BYTES);
             let Some(header) = self.archive.get(self.offset..end) else {
-                return refuse(invalid("it ends before its end-of-archive block", None));
+                return Err(Box::new(invalid(
+                    "it ends before its end-of-archive block",
+                    None,
+                )));
             };
 
             if header.iter().all(|byte| *byte == 0) {
-                return BundleArchiveRead::Entries(self.files);
+                return Ok(self.files);
             }
 
             if let Some(failure) = self.entry(header) {
-                return refuse(failure);
+                return Err(Box::new(failure));
             }
         }
     }
@@ -290,7 +329,12 @@ impl<'archive> UstarParser<'archive> {
         self.typed(&entry_type, &path, data)
     }
 
-    fn typed(&mut self, entry_type: &str, path: &str, data: &[u8]) -> Option<BundleFailure> {
+    fn typed(
+        &mut self,
+        entry_type: &str,
+        path: &str,
+        data: &'archive [u8],
+    ) -> Option<BundleFailure> {
         if entry_type == PAX_TYPE_GLOBAL {
             return None;
         }
@@ -347,7 +391,7 @@ impl<'archive> UstarParser<'archive> {
         None
     }
 
-    fn file(&mut self, path: &str, data: &[u8]) -> Option<BundleFailure> {
+    fn file(&mut self, path: &str, data: &'archive [u8]) -> Option<BundleFailure> {
         if let Some(problem) = file_path_problem(path) {
             return Some(unsafe_path(path, &problem));
         }
@@ -368,9 +412,9 @@ impl<'archive> UstarParser<'archive> {
 
         self.file_by_fold.insert(folded, path.to_owned());
         self.add_parent_directories(path);
-        self.files.push(BundleEntry {
+        self.files.push(ArchiveFile {
             path: path.to_owned(),
-            bytes: data.to_vec(),
+            bytes: data,
         });
 
         None

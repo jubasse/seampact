@@ -100,9 +100,13 @@ fn declaration_failure(api: &BundleApi, document: &JsonValue) -> Option<BundleFa
 }
 
 /// `===` of a declared member against an integer of the manifest, which is within 2^53.
+#[expect(
+    clippy::float_cmp,
+    reason = "`===` on two numbers is exact equality, as in the TypeScript"
+)]
 fn is_integer(declared: Option<&JsonValue>, expected: i64) -> bool {
     matches!(declared, Some(JsonValue::Number(number))
-        if (number.to_f64() - JsonNumber::from_i64(expected).to_f64()).abs() < f64::EPSILON)
+        if number.to_f64() == JsonNumber::from_i64(expected).to_f64())
 }
 
 /// `quote`'s text of a value: a string as it is, any other value as `JSON.stringify` writes it.

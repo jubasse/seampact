@@ -1265,8 +1265,10 @@ dependencies = [
  "seampact-json",
  "seampact-load",
  "seampact-oracle",
+ "serde",
  "serde_json",
  "sha2",
+ "tempfile",
  "thiserror",
 ]
 
@@ -1339,7 +1341,6 @@ dependencies = [
  "seampact-span",
  "seampact-target",
  "seampact-validate",
- "serde",
  "serde_json",
  "tempfile",
  "thiserror",

@@ -10,7 +10,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 use seampact_bundle::{
     PackageBundleSource, UntrustedJson, installed_package_directory, parse_untrusted_json,
 };
-use seampact_diagnostics::quote_text;
+use seampact_diagnostics::{diagnostic_inert, quote_text};
 use seampact_json::JsonValue;
 
 use crate::{BundleFetchError, BundleSourceFailure, BundleSourceFailureCode};
@@ -40,12 +40,12 @@ pub(crate) fn installed_bundle_package(
         return Ok(InstalledPackage::Failed(BundleSourceFailure::new(
             BundleSourceFailureCode::PackageMissing,
             format!(
-                "The bundle package '{}' is not installed in the project of {base_directory}.",
-                source.package
+                "The bundle package {} is not installed in the project of {base_directory}.",
+                quote_text(&source.package)
             ),
             &format!(
                 "Install it with your package manager, at version {}.",
-                source.version
+                diagnostic_inert(&source.version)
             ),
         )));
     };
@@ -61,12 +61,13 @@ pub(crate) fn installed_bundle_package(
     let failure = BundleSourceFailure::new(
         BundleSourceFailureCode::PackageVersion,
         format!(
-            "The installed bundle package '{}' is at version {installed}; the source names {}.",
-            source.package, source.version
+            "The installed bundle package {} is at version {installed}; the source names {}.",
+            quote_text(&source.package),
+            diagnostic_inert(&source.version)
         ),
         &format!(
             "Install version {}, or name the installed version in the source and pin its integrity.",
-            source.version
+            diagnostic_inert(&source.version)
         ),
     )
     .about(directory.join(PACKAGE_MANIFEST).as_str())
@@ -95,6 +96,8 @@ fn installed_version(directory: &Utf8Path) -> Result<Option<String>, BundleFetch
 
 #[cfg(test)]
 mod tests {
+    use seampact_diagnostics::diagnostic_inert;
+
     use super::*;
 
     fn installed(manifest: Option<&str>, version: &str) -> InstalledPackage {
@@ -195,5 +198,23 @@ mod tests {
             installed(Some(r#"{"version":"1.0.0"}"#), "1.0.0"),
             InstalledPackage::Directory(directory) if directory.ends_with("node_modules/@scope/notes")
         ));
+    }
+
+    #[test]
+    fn the_names_of_a_failure_are_inert() {
+        let project = tempfile::tempdir().unwrap();
+        let root = Utf8Path::from_path(project.path()).unwrap();
+        let source = PackageBundleSource {
+            package: "a\u{1b}[2J\u{202e}b".to_owned(),
+            version: "1\u{1b}[2J".to_owned(),
+        };
+        let failure = failure_of(installed_bundle_package(&source, root).unwrap());
+
+        assert_eq!(
+            failure.message,
+            diagnostic_inert(&failure.message),
+            "message"
+        );
+        assert_eq!(failure.fix, diagnostic_inert(&failure.fix), "fix");
     }
 }

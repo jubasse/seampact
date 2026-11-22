@@ -1,0 +1,12 @@
+{
+  "name": "error-codes-prefixed",
+  "prefix": {
+    "tasks": "p"
+  },
+  "inputs": [
+    {
+      "fixture": "reference",
+      "api": "tasks"
+    }
+  ]
+}

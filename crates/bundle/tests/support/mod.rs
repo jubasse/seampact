@@ -27,3 +27,13 @@ pub fn scratch_directory(name: &str) -> Utf8PathBuf {
 
     directory
 }
+
+/// The bytes of standard base64 text.
+#[allow(
+    dead_code,
+    clippy::unwrap_used,
+    reason = "each test file uses its own helpers; a bad vector is the failed test"
+)]
+pub fn base64_decoded(text: &str) -> Vec<u8> {
+    seampact_bundle::bundle_base64_decoded(text).unwrap()
+}

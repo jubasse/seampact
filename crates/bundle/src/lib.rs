@@ -38,7 +38,9 @@ pub use error::BundleError;
 pub use failure::{BundleFailure, BundleFailureCode};
 pub use file_list::{canonical_bundle_file_list, compare_bundle_paths};
 pub use installed_package::{installed_package_directory, resolve_directory};
-pub use integrity::{bundle_integrity, bundle_sha256_hex};
+pub use integrity::{
+    BUNDLE_INTEGRITY_PREFIX, bundle_base64_decoded, bundle_hex, bundle_integrity, bundle_sha256_hex,
+};
 pub use label::bundle_label_problem;
 pub use limits::{
     BUNDLE_ARCHIVE_BYTES_MAX, BUNDLE_ENTRIES_MAX, BUNDLE_EXTRACTED_BYTES_MAX,
@@ -54,9 +56,11 @@ pub use manifest_rules::{BundleManifestProblem, bundle_manifest_rule_problems};
 pub use path::{BUNDLE_PATH_MAX_LENGTH, bundle_path_fold, bundle_path_problem};
 pub use source::{
     BundleSource, BundleSourceForm, GitBundleSource, PackageBundleSource, ReleaseBundleSource,
+    written_bundle_source,
 };
 pub use tarball_read::{
-    BundleArchiveExtraction, BundleArchiveRead, extract_bundle_tarball, read_bundle_tarball,
+    BundleArchiveExtraction, BundleArchiveRead, ExtractedBundle, extract_bundle_tarball,
+    read_bundle_tarball,
 };
 pub use tarball_write::bundle_tarball;
 pub use untrusted_json::{UntrustedJson, duplicate_key_pointer, parse_untrusted_json, utf8_text};

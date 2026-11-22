@@ -11,17 +11,16 @@ use seampact_bundle::{
     BundleSourceForm, BundleVerifyResult, ReleaseBundleSource, extract_bundle_tarball,
     verify_bundle,
 };
-use seampact_diagnostics::InternalError;
+use seampact_diagnostics::{InternalError, quote_text};
 use seampact_ir::ContractIr;
 
 use crate::cache::{bundle_cache_entry, process_cache_directory, store_bundle_cache_entry};
 use crate::fetch_git::fetch_git_bundle;
 use crate::fetch_package::{InstalledPackage, installed_bundle_package};
 use crate::fetch_release::{ReleaseTarball, download_release_tarball, release_source_problem};
-use crate::fetched::Fetched;
+use crate::fetched::{Fetched, FetchedRemoval};
 use crate::git_source::git_source_problem;
 use crate::release_get::ReleaseGet;
-use crate::removed_on_drop::RemovedOnDrop;
 use crate::{BundleFetchError, BundleSourceFailure, BundleSourceFailureCode, LocalSourcePolicy};
 
 /// The codes of the pinned-bundle check's IR step (`bundle.ir-version`, `bundle.ir-revision`...).
@@ -198,7 +197,8 @@ fn maven_jvm_only(coordinate: &str) -> BundleSourceFailure {
     BundleSourceFailure::new(
         BundleSourceFailureCode::MavenJvmOnly,
         format!(
-            "The bundle source Maven artefact '{coordinate}' is read by the Gradle and Maven plugins only; the Node CLI does not resolve Maven artefacts."
+            "The bundle source Maven artefact {} is read by the Gradle and Maven plugins only; the Node CLI does not resolve Maven artefacts.",
+            quote_text(coordinate)
         ),
         "Point this source at the same bundle as a release URL (`release: { url }`), a git tag (`git: { url, tag, directory }`) or an npm package (`package`, `version`), with the same integrity.",
     )
@@ -215,9 +215,9 @@ fn fetch_release(
 
     match extract_bundle_tarball(&tarball)? {
         BundleArchiveExtraction::Refused(failures) => Ok(Fetched::Failed(first_failure(failures)?)),
-        BundleArchiveExtraction::Extracted(directory) => Ok(Fetched::Directory {
-            removal: RemovedOnDrop::new(directory.clone()),
-            directory,
+        BundleArchiveExtraction::Extracted(extracted) => Ok(Fetched::Directory {
+            directory: extracted.path().to_owned(),
+            removal: FetchedRemoval::Extracted(extracted),
         }),
     }
 }
@@ -282,6 +282,7 @@ mod tests {
     use std::time::Duration;
 
     use seampact_bundle::BundleFailureCode;
+    use seampact_diagnostics::diagnostic_inert;
     use url::Url;
 
     use super::*;
@@ -413,5 +414,12 @@ mod tests {
             failures.first().and_then(|failure| failure.file.as_deref()),
             Some(entry.as_str())
         );
+    }
+
+    #[test]
+    fn a_hostile_maven_coordinate_is_inert_in_the_failure() {
+        let failure = maven_jvm_only("a\u{1b}[2J\u{202e}b");
+
+        assert_eq!(failure.message, diagnostic_inert(&failure.message));
     }
 }

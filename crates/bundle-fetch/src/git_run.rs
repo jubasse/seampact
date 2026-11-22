@@ -1,11 +1,12 @@
 //! Running `git` against the temporary bare repository, and what its failure says.
 
+use std::fs;
 use std::io::Read;
 use std::process::{Command, Stdio};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
-use camino::Utf8PathBuf;
+use camino::{Utf8Path, Utf8PathBuf};
 use seampact_bundle::{BUNDLE_EXTRACTED_BYTES_MAX, GitBundleSource};
 use seampact_diagnostics::quote_text;
 use seampact_js::is_ecmascript_white_space;
@@ -20,7 +21,10 @@ const GIT_OUTPUT_BYTES_MAX: usize = BUNDLE_EXTRACTED_BYTES_MAX;
 const READ_CHUNK_BYTES: usize = 64 * 1024;
 const POLL_INTERVAL: Duration = Duration::from_millis(10);
 
-/// How long a `git fetch` may run.
+/// How often the size of the repository is measured while a fetch runs.
+const SIZE_CHECK_INTERVAL: Duration = Duration::from_millis(100);
+
+/// How long a `git fetch` may run, and the whole of the `git cat-file` calls that read its tree.
 pub(crate) const FETCH_TIMEOUT: Duration = Duration::from_millis(60_000);
 
 /// ssh would otherwise ask for a host key or a passphrase on the terminal, which
@@ -42,6 +46,8 @@ const REPOSITORY_LOCATING_VARIABLES: [&str; 8] = [
 pub(crate) enum GitFailure {
     /// The command ran past its timeout and was killed.
     TimedOut,
+    /// The repository grew past the cap on what a fetch may download, and the command was killed.
+    TooLarge,
     /// The command failed; what it wrote on its error stream.
     Stderr(String),
     /// The command could not run, or a file could not be written; what the system answered.
@@ -78,19 +84,38 @@ pub(crate) fn git_environment(
     env
 }
 
+/// Whether the size of the repository is measured while a command runs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RepositoryWatch {
+    /// The command is not expected to grow the repository.
+    Unwatched,
+    /// The command is killed once the repository holds more than the cap.
+    Watched,
+}
+
 /// Runs `git` commands against one repository, in the environment [`git_environment`] builds.
 #[derive(Debug)]
 pub(crate) struct GitRunner {
     repository: Utf8PathBuf,
     env: Environment,
+    repository_bytes_max: u64,
 }
 
 impl GitRunner {
     /// Runs commands against the bare repository `repository`.
     pub(crate) fn new(repository: Utf8PathBuf, local_sources: LocalSourcePolicy) -> Self {
+        Self::with_limit(
+            repository,
+            git_environment(&process_environment(), local_sources),
+            u64::try_from(BUNDLE_EXTRACTED_BYTES_MAX).unwrap_or(u64::MAX),
+        )
+    }
+
+    fn with_limit(repository: Utf8PathBuf, env: Environment, repository_bytes_max: u64) -> Self {
         Self {
             repository,
-            env: git_environment(&process_environment(), local_sources),
+            env,
+            repository_bytes_max,
         }
     }
 
@@ -99,6 +124,21 @@ impl GitRunner {
         &self,
         args: &[&str],
         timeout: Option<Duration>,
+    ) -> Result<Vec<u8>, GitFailure> {
+        self.run_watching(args, timeout, RepositoryWatch::Unwatched)
+    }
+
+    /// Runs a `git fetch`: killed past `timeout`, and past the cap on the bytes the repository holds,
+    /// which bounds a pack the remote streams without end.
+    pub(crate) fn fetch(&self, args: &[&str], timeout: Duration) -> Result<Vec<u8>, GitFailure> {
+        self.run_watching(args, Some(timeout), RepositoryWatch::Watched)
+    }
+
+    fn run_watching(
+        &self,
+        args: &[&str],
+        timeout: Option<Duration>,
+        watch: RepositoryWatch,
     ) -> Result<Vec<u8>, GitFailure> {
         let mut child = Command::new(GIT)
             .args(["-c", "protocol.ext.allow=never"])
@@ -119,6 +159,7 @@ impl GitRunner {
         let stdout = read_capped(stdout);
         let stderr = read_capped(stderr);
         let started = Instant::now();
+        let mut last_measured = started;
         let status = loop {
             match child.try_wait() {
                 Ok(Some(status)) => break status,
@@ -134,8 +175,25 @@ impl GitRunner {
                     .and(Err(GitFailure::TimedOut));
             }
 
+            if watch == RepositoryWatch::Watched && last_measured.elapsed() >= SIZE_CHECK_INTERVAL {
+                last_measured = Instant::now();
+
+                if self.repository_exceeds_cap()? {
+                    let killed = child.kill().and_then(|()| child.wait());
+
+                    return killed
+                        .map_err(|error| GitFailure::Message(error.to_string()))
+                        .and(Err(GitFailure::TooLarge));
+                }
+            }
+
             thread::sleep(POLL_INTERVAL);
         };
+
+        if watch == RepositoryWatch::Watched && self.repository_exceeds_cap()? {
+            return Err(GitFailure::TooLarge);
+        }
+
         let stdout = joined(stdout)?;
         let stderr_text = String::from_utf8_lossy(&joined(stderr)?.bytes).into_owned();
 
@@ -145,6 +203,51 @@ impl GitRunner {
 
         Ok(stdout.bytes)
     }
+}
+
+impl GitRunner {
+    fn repository_exceeds_cap(&self) -> Result<bool, GitFailure> {
+        directory_bytes(&self.repository)
+            .map(|bytes| bytes > self.repository_bytes_max)
+            .map_err(|error| GitFailure::Message(error.to_string()))
+    }
+}
+
+/// The bytes of the files below `directory`; a file that disappears while git renames it counts
+/// as nothing.
+fn directory_bytes(directory: &Utf8Path) -> std::io::Result<u64> {
+    let entries = match fs::read_dir(directory) {
+        Ok(entries) => entries,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(0),
+        Err(error) => return Err(error),
+    };
+    let mut total: u64 = 0;
+
+    for entry in entries {
+        let entry = entry?;
+        let metadata = match entry.metadata() {
+            Ok(metadata) => metadata,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(error) => return Err(error),
+        };
+        let size = if metadata.is_dir() {
+            match Utf8PathBuf::from_path_buf(entry.path()) {
+                Ok(path) => directory_bytes(&path)?,
+                Err(path) => {
+                    return Err(std::io::Error::other(format!(
+                        "{} is not UTF-8",
+                        path.display()
+                    )));
+                }
+            }
+        } else {
+            metadata.len()
+        };
+
+        total = total.saturating_add(size);
+    }
+
+    Ok(total)
 }
 
 /// What a reader thread kept of a stream.
@@ -187,6 +290,9 @@ fn joined(handle: JoinHandle<std::io::Result<CappedBytes>>) -> Result<CappedByte
 pub(crate) fn git_failure_reason(failure: &GitFailure) -> String {
     match failure {
         GitFailure::TimedOut => format!("it took over {} ms", FETCH_TIMEOUT.as_millis()),
+        GitFailure::TooLarge => format!(
+            "the repository grew past {BUNDLE_EXTRACTED_BYTES_MAX} bytes, which no bundle reaches"
+        ),
         GitFailure::Stderr(stderr) => stderr.trim_matches(is_ecmascript_white_space).to_owned(),
         GitFailure::Message(message) => message.clone(),
     }
@@ -197,8 +303,8 @@ pub(crate) fn git_failed(source: &GitBundleSource, failure: &GitFailure) -> Bund
     BundleSourceFailure::new(
         BundleSourceFailureCode::GitFailed,
         format!(
-            "Fetching tag '{}' of {} with git failed: {}.",
-            source.tag,
+            "Fetching tag {} of {} with git failed: {}.",
+            quote_text(&source.tag),
             quote_text(&printable_url(&source.url)),
             quote_text(&with_printable_url(
                 &git_failure_reason(failure),
@@ -211,6 +317,8 @@ pub(crate) fn git_failed(source: &GitBundleSource, failure: &GitFailure) -> Bund
 
 #[cfg(test)]
 mod tests {
+    use seampact_diagnostics::diagnostic_inert;
+
     use super::*;
 
     fn environment(entries: &[(&str, &str)]) -> Environment {
@@ -324,5 +432,42 @@ mod tests {
             matches!(failure, GitFailure::Stderr(ref stderr) if !stderr.is_empty()),
             "{failure:?}"
         );
+    }
+
+    #[test]
+    fn a_hostile_tag_is_inert_in_the_failure() {
+        let source = GitBundleSource {
+            url: "https://github.com/o/r.git".to_owned(),
+            tag: "a\u{1b}[2J\u{202e}b".to_owned(),
+            directory: None,
+        };
+        let failure = git_failed(&source, &GitFailure::Message("boom".to_owned()));
+
+        assert_eq!(failure.message, diagnostic_inert(&failure.message));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_fetch_that_grows_the_repository_past_the_cap_is_killed() {
+        use std::os::unix::fs::PermissionsExt as _;
+
+        let directory = tempfile::tempdir().unwrap();
+        let root = camino::Utf8Path::from_path(directory.path()).unwrap();
+        let script = root.join("git");
+
+        fs::write(
+            &script,
+            "#!/bin/sh\nfor a in \"$@\"; do case \"$a\" in --git-dir=*) dir=\"${a#--git-dir=}\";; esac; done\nmkdir -p \"$dir\"\nhead -c 4096 /dev/zero > \"$dir/pack\"\nexec sleep 30\n",
+        )
+        .unwrap();
+        fs::set_permissions(&script, fs::Permissions::from_mode(0o755)).unwrap();
+
+        let env = environment(&[("PATH", &format!("{root}:/usr/bin:/bin"))]);
+        let runner = GitRunner::with_limit(root.join("repository"), env, 1024);
+        let failure = runner
+            .fetch(&["fetch"], Duration::from_secs(20))
+            .unwrap_err();
+
+        assert_eq!(failure, GitFailure::TooLarge);
     }
 }

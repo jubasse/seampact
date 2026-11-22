@@ -3,7 +3,6 @@ src/local_sources.rs#local_source_refusal_reason	packages/core/compiler/src/bund
 src/imports.rs#compile_workspace_with_imports	packages/core/compiler/src/bundle/imports.ts#compileWorkspaceWithImports
 src/imports.rs#imported_ir	packages/core/compiler/src/bundle/imports.ts#importedIr
 src/imports.rs#declared_imports	packages/core/compiler/src/bundle/imports.ts#declaredImports
-src/imports.rs#bundle_source_of	packages/core/compiler/src/bundle/imports.ts#bundleSourceOf
 src/fetch_package.rs#installed_bundle_package	packages/core/compiler/src/bundle/fetch-package.ts#installedBundlePackage
 src/fetch_package.rs#installed_version	packages/core/compiler/src/bundle/fetch-package.ts#installedVersion
 src/fetch.rs#fetch_bundle	packages/core/compiler/src/bundle/fetch.ts#fetchBundle
@@ -44,3 +43,5 @@ src/fetch_release.rs#redirected	packages/core/compiler/src/bundle/fetch-release.
 src/fetch_release.rs#release_failed	packages/core/compiler/src/bundle/fetch-release.ts#releaseFailed
 src/fetch_release.rs#too_large	packages/core/compiler/src/bundle/fetch-release.ts#tooLarge
 -	packages/core/compiler/src/bundle/fetch-package.ts#installedPackageDirectory	merged: ../bundle/src/installed_package.rs#installed_package_directory
+-	packages/core/compiler/src/bundle/imports.ts#bundleSourceOf	merged: ../bundle/src/source.rs#written_bundle_source
+src/git_run.rs#directory_bytes	packages/core/compiler/src/bundle/fetch-git.ts#directoryBytes

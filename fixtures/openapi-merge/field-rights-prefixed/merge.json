@@ -1,0 +1,17 @@
+{
+  "name": "field-rights-prefixed",
+  "prefix": {
+    "tasks": "p",
+    "tasksDevices": "n"
+  },
+  "inputs": [
+    {
+      "fixture": "reference",
+      "api": "tasks"
+    },
+    {
+      "fixture": "reference/tasks-devices",
+      "api": "tasksDevices"
+    }
+  ]
+}

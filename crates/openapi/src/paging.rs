@@ -8,9 +8,7 @@ use seampact_json::{JsonObject, JsonValue};
 use seampact_target::{IrLocation, NotGeneratedForm};
 
 use crate::body_slots::{add_meta_slot, success_slots, url_schema};
-use crate::emit_context::{
-    EmitContext, refuse_inconsistent, refuse_not_emitted, refuse_unknown, write_extension,
-};
+use crate::emit_context::{EmitContext, refuse_inconsistent, refuse_not_emitted, write_extension};
 use crate::ir_text::value_source_text;
 use crate::json_value::{copy_optional, optional_integer, optional_text, set_defined};
 use crate::parameters::ParameterPlace;
@@ -90,17 +88,19 @@ pub(crate) fn write_paging(
 
     for (index, role) in style.request.iter().enumerate() {
         let role_location = style_location.below(&["request", &index.to_string()]);
-        let Some(source_place) = value_source_place(&role.r#in) else {
-            refuse_unknown(context, &role_location.below(&["in"]), role.r#in.as_str());
+        // An unknown placement is written as `<in>.<name>`, as the TypeScript writes any placement.
+        let text = match value_source_place(&role.r#in) {
+            Some(source_place) => {
+                let source = ValueSource {
+                    r#in: source_place,
+                    name: Some(role.name.clone()),
+                    prefix_bits: None,
+                };
 
-            continue;
+                value_source_text(context, &source, &role_location)
+            }
+            None => format!("{}.{}", role.r#in.as_str(), role.name),
         };
-        let source = ValueSource {
-            r#in: source_place,
-            name: Some(role.name.clone()),
-            prefix_bits: None,
-        };
-        let text = value_source_text(context, &source, &role_location);
 
         roles.insert(role.role.as_str().to_owned(), JsonValue::text(&text));
     }
@@ -322,4 +322,41 @@ pub(crate) fn page_body_schema(
         template_schema(context, template, &slots, absent, &template_location)?
             .map(|value| value.schema),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::emit_context::fixture_ir;
+    use crate::{EmitOutcome, EmitterOptions, emit_documents};
+
+    #[test]
+    fn an_unknown_placement_is_written_as_in_dot_name() -> Result<(), Box<dyn std::error::Error>> {
+        let mut ir = fixture_ir()?;
+        let style = ir
+            .pagings
+            .values_mut()
+            .find(|style| !style.request.is_empty())
+            .ok_or("the fixture has no paging style with a request role")?;
+        let role = style
+            .request
+            .first_mut()
+            .ok_or("the paging style has no request role")?;
+
+        role.r#in = serde_json::from_value(serde_json::json!("cookie"))?;
+
+        let expected = format!("cookie.{}", role.name);
+        let EmitOutcome::Emitted(documents) = emit_documents(&ir, &EmitterOptions::default())?
+        else {
+            return Err("the emitter refused the document".into());
+        };
+
+        assert!(
+            documents
+                .iter()
+                .any(|document| document.text.contains(&expected)),
+            "no document writes {expected}"
+        );
+
+        Ok(())
+    }
 }

@@ -10,6 +10,7 @@ use seampact_bundle::GitBundleSource;
 use tempfile::Builder;
 
 use crate::fetched::Fetched;
+use crate::fetched::FetchedRemoval;
 use crate::git_run::{FETCH_TIMEOUT, GitFailure, GitRunner, git_failed};
 use crate::git_source::{bundle_directory_prefix, git_source_problem, repository_url};
 use crate::git_tree::write_tree;
@@ -54,7 +55,10 @@ pub(crate) fn fetch_git_bundle(
     let directory = removal.path().join(FILES);
 
     match fetch_tree(&git, &url, &source.tag, &prefix, &directory) {
-        Ok(None) => Ok(Fetched::Directory { directory, removal }),
+        Ok(None) => Ok(Fetched::Directory {
+            directory,
+            removal: FetchedRemoval::Made(removal),
+        }),
         Ok(Some(failure)) => Ok(Fetched::Failed(failure)),
         Err(failure) => Ok(Fetched::Failed(git_failed(source, &failure))),
     }
@@ -68,7 +72,7 @@ fn fetch_tree(
     directory: &Utf8Path,
 ) -> Result<Option<BundleSourceFailure>, GitFailure> {
     git.run(&["init", "--quiet", "--bare"], None)?;
-    git.run(
+    git.fetch(
         &[
             "fetch",
             "--quiet",
@@ -79,7 +83,7 @@ fn fetch_tree(
             url,
             &format!("refs/tags/{tag}"),
         ],
-        Some(FETCH_TIMEOUT),
+        FETCH_TIMEOUT,
     )?;
 
     write_tree(git, prefix, directory)

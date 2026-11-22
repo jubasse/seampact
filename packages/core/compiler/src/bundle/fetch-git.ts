@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { lstatSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -41,6 +41,8 @@ const SCP_LIKE = /^[^/:]{2,}:/u;
 const REMOTE_PROTOCOLS = "https:ssh";
 const LOCAL_PROTOCOL = "file";
 const FETCH_TIMEOUT_MILLISECONDS = 60_000;
+const SIZE_CHECK_MILLISECONDS = 100;
+const TOO_LARGE_REASON = `the repository grew past ${BUNDLE_EXTRACTED_BYTES_MAX} bytes, which no bundle reaches`;
 // ssh would otherwise ask for a host key or a passphrase on the terminal, which `GIT_TERMINAL_PROMPT` does not cover.
 const NON_INTERACTIVE_SSH = "ssh -o BatchMode=yes";
 const REPOSITORY_LOCATING_VARIABLES: readonly string[] = [
@@ -166,13 +168,30 @@ function gitRunner(repository: string, localSources: LocalSourcePolicy): GitRunn
 
   return {
     run: async (args, timeout) => {
-      const done = await run(
+      const pending = run(
         GIT,
         ["-c", "protocol.ext.allow=never", `--git-dir=${repository}`, ...args],
         { env, maxBuffer: GIT_OUTPUT_BYTES_MAX, encoding: "buffer", timeout },
       );
+      let tooLarge = false;
+      // `maxBuffer` bounds the output only: a fetch is killed once the repository it fills is past the cap.
+      const watch =
+        args[0] === "fetch"
+          ? setInterval(() => {
+              if (directoryBytes(repository) <= BUNDLE_EXTRACTED_BYTES_MAX) return;
 
-      return done.stdout;
+              tooLarge = true;
+              pending.child.kill();
+            }, SIZE_CHECK_MILLISECONDS)
+          : undefined;
+
+      try {
+        return (await pending).stdout;
+      } catch (error) {
+        throw tooLarge ? new Error(TOO_LARGE_REASON) : error;
+      } finally {
+        clearInterval(watch);
+      }
     },
   };
 }
@@ -195,6 +214,32 @@ function gitEnvironment(
   };
 }
 
+// The bytes of the files below `directory`; a file that vanishes while git renames it counts as nothing.
+function directoryBytes(directory: string): number {
+  let total = 0;
+  let names: string[];
+
+  try {
+    names = readdirSync(directory);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return 0;
+
+    throw error;
+  }
+
+  for (const name of names) {
+    try {
+      const stat = lstatSync(join(directory, name));
+
+      total += stat.isDirectory() ? directoryBytes(join(directory, name)) : stat.size;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+  }
+
+  return total;
+}
+
 interface TreeFile {
   readonly path: string;
   readonly object: string;
@@ -213,9 +258,14 @@ async function writeTree(
 
   mkdirSync(target);
   let total = 0;
+  const deadline = Date.now() + FETCH_TIMEOUT_MILLISECONDS;
 
   for (const file of files) {
-    const bytes = await git.run(["cat-file", "blob", file.object]);
+    const remaining = deadline - Date.now();
+
+    if (remaining <= 0) throw new Error(`it took over ${FETCH_TIMEOUT_MILLISECONDS} ms`);
+
+    const bytes = await git.run(["cat-file", "blob", file.object], remaining);
 
     total += bytes.length;
 
@@ -319,6 +369,8 @@ function gitFailed(source: GitBundleSource, error: unknown): BundleSourceFailure
 
 function gitFailureReason(error: unknown): string {
   if (!(error instanceof Error)) return String(error);
+
+  if (error.message === TOO_LARGE_REASON) return TOO_LARGE_REASON;
 
   // `execFile` kills a command past its timeout and marks the error `killed`.
   if ("killed" in error && error.killed === true)

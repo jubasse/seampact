@@ -13,6 +13,9 @@ import { parseUntrustedJson } from "./untrusted-json.js";
 
 const PACKAGE_MANIFEST = "package.json";
 
+// An npm package name: a name with `..` or an absolute path would climb out of `node_modules`.
+const NPM_PACKAGE_NAME = /^(?:@[a-z0-9~-][a-z0-9._~-]*\/)?[a-z0-9~-][a-z0-9._~-]*$/u;
+
 /** The installed package's real directory, or the failure naming what is missing or which version is installed. */
 export function installedBundlePackage(
   source: PackageBundleSource,
@@ -44,6 +47,8 @@ export function installedBundlePackage(
 
 /** The real directory of the package `name` as Node finds it from `baseDirectory`, or undefined when none. */
 export function installedPackageDirectory(name: string, baseDirectory: string): string | undefined {
+  if (!NPM_PACKAGE_NAME.test(name)) return undefined;
+
   for (let directory = resolve(baseDirectory); ; directory = dirname(directory)) {
     const candidate = join(directory, "node_modules", ...name.split("/"));
 
