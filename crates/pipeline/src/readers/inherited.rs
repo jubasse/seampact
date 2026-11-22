@@ -15,9 +15,9 @@ use indexmap::IndexMap;
 use seampact_authoring::RawApi;
 use seampact_diagnostics::InternalError;
 use seampact_ir::Origin;
-use seampact_json::{JsonValue, canonical_json, json_at_object};
+use seampact_json::{JsonValue, canonical_json, json_at_object, pointer_below};
 
-use super::pointer::{pipeline_origin, pointer_below};
+use super::pointer::pipeline_origin;
 use super::tree::{TreeNodeId, TreeNodes, pipeline_tree_nodes};
 
 /// The prefix of an extension setting (`x-owner-team`).

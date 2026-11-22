@@ -11,6 +11,20 @@ pub fn escape_pointer(segment: &str) -> String {
     segment.replace('~', "~0").replace('/', "~1")
 }
 
+/// The pointer below `base` through `segments`, each escaped; an index is passed as its decimal
+/// text.
+#[must_use]
+pub fn pointer_below(base: &str, segments: &[&str]) -> String {
+    let mut pointer = String::from(base);
+
+    for segment in segments {
+        pointer.push('/');
+        pointer.push_str(&escape_pointer(segment));
+    }
+
+    pointer
+}
+
 /// The segments of a pointer, unescaped; `None` for a pointer that is neither empty nor starts
 /// with `/`.
 #[must_use]

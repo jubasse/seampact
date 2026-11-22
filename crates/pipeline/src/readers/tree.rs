@@ -6,9 +6,9 @@ use std::sync::LazyLock;
 use seampact_authoring::{JsonObjectExt, RawApi};
 use seampact_diagnostics::InternalError;
 use seampact_ir::{Layer, Origin};
-use seampact_json::{JsonObject, JsonValue};
+use seampact_json::{JsonObject, JsonValue, pointer_below};
 
-use super::pointer::{pipeline_origin, pointer_below};
+use super::pointer::pipeline_origin;
 
 /// The kind of a tree node.
 ///

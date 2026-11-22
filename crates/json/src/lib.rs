@@ -5,8 +5,11 @@
 //! [`canonical_document`] writes the IR and source-map bytes, [`canonical_json`] the compact key
 //! of a value, [`indented_json`] the `JSON.stringify(value, null, 2)` text. [`js_integer`] reads an IR integer member with JavaScript semantics, [`present`]
 //! an optional opaque member that keeps a present `null`, [`escape_pointer`] escapes a JSON
-//! Pointer segment and [`json_at_pointer`] reads the value a pointer names. [`js_text_of`] is `String(value)`.
+//! Pointer segment, [`pointer_below`] extends a pointer and [`json_at_pointer`] reads the value a
+//! pointer names. [`object_of`], [`items_of`], [`text_of`] and [`is_text`] read an optional value
+//! by its kind, and `JsonObject`'s `object_member`, `array_member` and `text_member` read a member. [`js_text_of`] is `String(value)`.
 
+mod access;
 mod canonical;
 mod error;
 mod js_integer;
@@ -16,6 +19,7 @@ mod object;
 mod pointer;
 mod value;
 
+pub use access::{is_text, items_of, object_of, text_of};
 pub use canonical::{
     canonical_document, canonical_json, indented_json, stringify_json, write_json_string,
 };
@@ -26,5 +30,7 @@ pub use js_integer::{
 pub use js_text::js_text_of;
 pub use number::JsonNumber;
 pub use object::JsonObject;
-pub use pointer::{escape_pointer, json_at, json_at_object, json_at_pointer, pointer_segments};
+pub use pointer::{
+    escape_pointer, json_at, json_at_object, json_at_pointer, pointer_below, pointer_segments,
+};
 pub use value::{JsonValue, present};
