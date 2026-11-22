@@ -844,7 +844,7 @@ mod tests {
     }
 
     fn bound_cases(
-        side: BoundSide,
+        bound_side: BoundSide,
         before: Option<&JsonValue>,
         after: Option<&JsonValue>,
     ) -> Result<Vec<String>, DiffError> {
@@ -861,7 +861,7 @@ mod tests {
             origin: None,
         };
 
-        compare_bound(&mut context, &site, "/bound", side, before, after)?;
+        compare_bound(&mut context, &site, "/bound", bound_side, before, after)?;
 
         Ok(context
             .sink
