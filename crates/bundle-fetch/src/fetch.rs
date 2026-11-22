@@ -1,29 +1,31 @@
-//! A bundle fetched from its source and verified.
+//! A bundle source fetched from its channel and put through the pinned-bundle check.
+//!
+//! The IR is read with no compiler run. A release or git bundle is cached by its pinned integrity
+//! once it passed, and the check runs again on every cache read; an installed package is read
+//! where it is, checked every time.
 
-use camino::Utf8PathBuf;
+use camino::{Utf8Path, Utf8PathBuf};
 use indexmap::IndexMap;
-use seampact_bundle::{BundleManifest, BundleSource};
+use seampact_bundle::{
+    BundleArchiveExtraction, BundleChannel, BundleFailure, BundleManifest, BundleSource,
+    BundleSourceForm, BundleVerifyResult, ReleaseBundleSource, extract_bundle_tarball,
+    verify_bundle,
+};
+use seampact_diagnostics::InternalError;
 use seampact_ir::ContractIr;
 
-use crate::BundleFetchError;
-use crate::not_ported::not_ported_yet;
+use crate::cache::{bundle_cache_entry, process_cache_directory, store_bundle_cache_entry};
+use crate::fetch_git::fetch_git_bundle;
+use crate::fetch_package::{InstalledPackage, installed_bundle_package};
+use crate::fetch_release::{ReleaseTarball, download_release_tarball, release_source_problem};
+use crate::fetched::Fetched;
+use crate::git_source::git_source_problem;
+use crate::release_get::ReleaseGet;
+use crate::removed_on_drop::RemovedOnDrop;
+use crate::{BundleFetchError, BundleSourceFailure, BundleSourceFailureCode, LocalSourcePolicy};
 
-/// Whether a local git repository (`file:` or a path) may be fetched.
-///
-/// Declared by the brief that ports `local-sources.ts`; uninhabited until then.
-#[derive(Debug, Clone, PartialEq)]
-pub enum LocalSourcePolicy {}
-
-/// Why a bundle source cannot be fetched or verified.
-///
-/// Declared by the brief that ports `fetch-failure.ts`; uninhabited until then.
-#[derive(Debug, Clone, PartialEq)]
-pub enum BundleSourceFailure {}
-
-/// The HTTPS get of the release channel; production answers through `ureq`, tests from records.
-///
-/// The brief that ports `fetch-release.ts` declares its method.
-pub trait ReleaseGet {}
+/// The codes of the pinned-bundle check's IR step (`bundle.ir-version`, `bundle.ir-revision`...).
+const IR_CHECK_CODE_PREFIX: &str = "bundle.ir-";
 
 /// How bundles are fetched.
 pub struct BundleFetchOptions<'run> {
@@ -69,14 +71,206 @@ pub enum BundleFetchResult {
     },
 }
 
+impl BundleFetchResult {
+    fn refused(failure: BundleSourceFailure) -> Self {
+        Self::Failed {
+            failures: vec![failure],
+            integrity: None,
+        }
+    }
+}
+
+impl From<BundleVerifyResult> for BundleFetchResult {
+    fn from(result: BundleVerifyResult) -> Self {
+        match result {
+            BundleVerifyResult::Verified {
+                manifest,
+                integrity,
+                irs,
+            } => Self::Fetched {
+                manifest,
+                integrity,
+                irs,
+            },
+            BundleVerifyResult::Failed {
+                failures,
+                integrity,
+            } => Self::Failed {
+                failures: failures
+                    .into_iter()
+                    .map(BundleSourceFailure::from)
+                    .collect(),
+                integrity,
+            },
+        }
+    }
+}
+
 /// Fetches the bundle `source` names, through the cache, and verifies it.
 ///
 /// # Errors
 ///
-/// [`BundleFetchError::NotPortedYet`] until the function is ported.
+/// [`BundleFetchError::Io`] when a file, a directory or the cache cannot be read or written;
+/// [`BundleFetchError::Internal`] for a bug.
 pub fn fetch_bundle(
-    _source: &BundleSource,
-    _options: &BundleFetchOptions<'_>,
+    source: &BundleSource,
+    options: &BundleFetchOptions<'_>,
 ) -> Result<BundleFetchResult, BundleFetchError> {
-    Err(not_ported_yet("fetchBundle"))
+    let integrity = source.integrity.as_deref();
+
+    let (channel, problem) = match &source.form {
+        BundleSourceForm::Maven(coordinate) => {
+            return Ok(BundleFetchResult::refused(maven_jvm_only(coordinate)));
+        }
+        BundleSourceForm::Package(package) => {
+            return match installed_bundle_package(package, &options.base_directory)? {
+                InstalledPackage::Failed(failure) => Ok(BundleFetchResult::refused(failure)),
+                InstalledPackage::Directory(directory) => {
+                    verified(&directory, integrity, BundleChannel::Package)
+                }
+            };
+        }
+        BundleSourceForm::Release(release) => {
+            (BundleChannel::Release, release_source_problem(release))
+        }
+        BundleSourceForm::Git(git) => (
+            BundleChannel::Git,
+            git_source_problem(git, options.local_sources),
+        ),
+    };
+
+    if let Some(problem) = problem {
+        return Ok(BundleFetchResult::refused(problem));
+    }
+
+    let cache_entry = match integrity {
+        None => None,
+        Some(pinned) => {
+            let cache_directory = match &options.cache_directory {
+                Some(configured) => configured.clone(),
+                None => process_cache_directory()?,
+            };
+
+            bundle_cache_entry(&cache_directory, pinned)
+        }
+    };
+
+    if let Some(entry) = cache_entry.as_deref().filter(|entry| entry.exists()) {
+        return read_cache_entry(entry, integrity, channel);
+    }
+
+    let fetched = match &source.form {
+        BundleSourceForm::Release(release) => fetch_release(release, options.release_get)?,
+        BundleSourceForm::Git(git) => {
+            fetch_git_bundle(git, &options.base_directory, options.local_sources)?
+        }
+        BundleSourceForm::Package(_) | BundleSourceForm::Maven(_) => {
+            return Err(InternalError::new(
+                "bundle: a package or Maven source reached the release and git channels."
+                    .to_owned(),
+            )
+            .into());
+        }
+    };
+    let (directory, _removal) = match fetched {
+        Fetched::Failed(failure) => return Ok(BundleFetchResult::refused(failure)),
+        Fetched::Directory { directory, removal } => (directory, removal),
+    };
+    let result = verified(&directory, integrity, channel)?;
+
+    if let (BundleFetchResult::Fetched { .. }, Some(entry)) = (&result, &cache_entry) {
+        store_bundle_cache_entry(&directory, entry)?;
+    }
+
+    Ok(result)
+}
+
+fn verified(
+    directory: &Utf8Path,
+    integrity: Option<&str>,
+    channel: BundleChannel,
+) -> Result<BundleFetchResult, BundleFetchError> {
+    Ok(verify_bundle(directory, integrity, Some(channel))?.into())
+}
+
+/// A Maven artefact is resolved through a JVM build's own repositories, which the Node CLI has not.
+fn maven_jvm_only(coordinate: &str) -> BundleSourceFailure {
+    BundleSourceFailure::new(
+        BundleSourceFailureCode::MavenJvmOnly,
+        format!(
+            "The bundle source Maven artefact '{coordinate}' is read by the Gradle and Maven plugins only; the Node CLI does not resolve Maven artefacts."
+        ),
+        "Point this source at the same bundle as a release URL (`release: { url }`), a git tag (`git: { url, tag, directory }`) or an npm package (`package`, `version`), with the same integrity.",
+    )
+}
+
+fn fetch_release(
+    source: &ReleaseBundleSource,
+    get: &dyn ReleaseGet,
+) -> Result<Fetched, BundleFetchError> {
+    let tarball = match download_release_tarball(source, get) {
+        ReleaseTarball::Failed(failure) => return Ok(Fetched::Failed(failure)),
+        ReleaseTarball::Bytes(bytes) => bytes,
+    };
+
+    match extract_bundle_tarball(&tarball)? {
+        BundleArchiveExtraction::Refused(failures) => Ok(Fetched::Failed(first_failure(failures)?)),
+        BundleArchiveExtraction::Extracted(directory) => Ok(Fetched::Directory {
+            removal: RemovedOnDrop::new(directory.clone()),
+            directory,
+        }),
+    }
+}
+
+fn first_failure(failures: Vec<BundleFailure>) -> Result<BundleSourceFailure, InternalError> {
+    failures
+        .into_iter()
+        .next()
+        .map(BundleSourceFailure::from)
+        .ok_or_else(|| {
+            InternalError::new(
+                "bundle: the archive reader refused a tarball without a failure.".to_owned(),
+            )
+        })
+}
+
+/// Verifies a cached bundle again; a failure other than the IR step's means it was changed after
+/// it was cached.
+fn read_cache_entry(
+    entry: &Utf8Path,
+    integrity: Option<&str>,
+    channel: BundleChannel,
+) -> Result<BundleFetchResult, BundleFetchError> {
+    let verified = verified(entry, integrity, channel)?;
+    let BundleFetchResult::Failed {
+        failures,
+        integrity,
+    } = verified
+    else {
+        return Ok(verified);
+    };
+
+    if failures
+        .iter()
+        .all(|failure| failure.code.as_str().starts_with(IR_CHECK_CODE_PREFIX))
+    {
+        return Ok(BundleFetchResult::Failed {
+            failures,
+            integrity,
+        });
+    }
+
+    let invalid = BundleSourceFailure::new(
+        BundleSourceFailureCode::CacheInvalid,
+        format!(
+            "The cached bundle at {entry} fails the pinned-bundle check; it was changed after it was cached."
+        ),
+        &format!("Remove {entry}, then run again to fetch the bundle afresh."),
+    )
+    .about(entry.as_str());
+
+    Ok(BundleFetchResult::Failed {
+        failures: std::iter::once(invalid).chain(failures).collect(),
+        integrity,
+    })
 }
