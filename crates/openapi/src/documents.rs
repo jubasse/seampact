@@ -505,8 +505,8 @@ fn operation_object<'ir>(
 
     object.insert("responses".to_owned(), JsonValue::Object(responses));
     write_operation_security(context, operation, &mut object, &location);
-    write_operation_rights(context, operation, &mut object, &location)?;
-    write_paging(context, operation, &mut object, &location)?;
+    write_operation_rights(context, operation, &mut object, &location);
+    write_paging(context, operation, &mut object, &location);
     write_operation_marks(context, operation, document_format, &mut object, &location);
     write_consumer_extensions(&mut object, &operation.extensions);
 

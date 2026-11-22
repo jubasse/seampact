@@ -1,15 +1,28 @@
 //! The request and response bodies of an operation.
 
-use seampact_ir::{Operation, OperationInput, TypeUse, UnknownKeys};
+use seampact_ir::{
+    FieldWire, FieldWireKind, InputProof, Operation, OperationInput, TypeUse, UnknownKeys,
+};
 use seampact_json::{JsonObject, JsonValue};
 use seampact_target::{IrLocation, NotGeneratedForm};
 
-use crate::emit_context::{EmitContext, refuse_not_emitted, write_extension};
+use crate::emit_context::{EmitContext, SchemaVariant, refuse_not_emitted, write_extension};
+use crate::ir_text::derived_from_value;
 use crate::not_ported::not_ported_yet;
-use crate::{ExtensionName, OpenApiError};
+use crate::schemas::{mark_sensitive, refuses_unknown_keys, type_use_schema};
+use crate::{ExtensionName, InputSchemasOption, OpenApiError};
 
 /// The media type of the JSON bodies an input declares.
 const JSON_MEDIA: &str = "application/json";
+
+/// The media type of a form body.
+const FORM_MEDIA: &str = "application/x-www-form-urlencoded";
+
+/// The media type of a multipart body.
+const MULTIPART_MEDIA: &str = "multipart/form-data";
+
+/// The schema of an input with no member of its own, which only proofs fill.
+const EMPTY_BODY_SCHEMA_ID: &str = "ApiEmptyBody";
 
 /// The media type an input is written with: the format's own when the input says plain JSON.
 fn body_media<'borrow>(
@@ -97,20 +110,217 @@ pub(crate) fn request_body(
     Ok(Some(body))
 }
 
-fn body_schema(
-    _context: &mut EmitContext<'_>,
-    _input: &OperationInput,
-    _location: &IrLocation,
-) -> Result<JsonObject, OpenApiError> {
-    Err(not_ported_yet("bodySchema"))
+/// How the top level of an input with proofs reads its object schema.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum InputTopLevel {
+    /// The shared component.
+    Shared,
+    /// The object written in place, without its own `additionalProperties: false`.
+    Strict,
 }
 
-fn body_encoding(
+/// The schema of a request body: the input's own, or the input and its proofs under `allOf`.
+///
+/// # Errors
+///
+/// As the writers of the type use schema and of the top level of an input.
+fn body_schema(
+    context: &mut EmitContext<'_>,
+    input: &OperationInput,
+    location: &IrLocation,
+) -> Result<JsonObject, OpenApiError> {
+    let proofs = input.proofs.as_deref().unwrap_or_default();
+
+    if proofs.is_empty() {
+        return type_use_schema(
+            context,
+            &input.schema,
+            SchemaVariant::Input,
+            &location.below(&["schema"]),
+        );
+    }
+
+    // An input that ignores or keeps unknown keys reads the shared top level even under strict input.
+    let strict = context.options.input_schemas == InputSchemasOption::Strict
+        && refuses_unknown_keys(&input.schema);
+    let mut proof_object = proofs_schema(context, proofs, &location.below(&["proofs"]))?;
+    let input_schema_id = match &input.schema {
+        TypeUse::Ref(reference) => Some(reference.schema.as_str()),
+        _ => None,
+    };
+
+    if input_schema_id == Some(EMPTY_BODY_SCHEMA_ID) {
+        if strict {
+            proof_object.insert("unevaluatedProperties".to_owned(), JsonValue::Bool(false));
+        }
+
+        return Ok(proof_object);
+    }
+
+    let top_level = if strict {
+        InputTopLevel::Strict
+    } else {
+        InputTopLevel::Shared
+    };
+    let top = input_top_level(context, input, input_schema_id, top_level, location)?;
+    let mut wrapper = JsonObject::from_members([(
+        "allOf",
+        JsonValue::Array(vec![
+            JsonValue::Object(top),
+            JsonValue::Object(proof_object),
+        ]),
+    )]);
+
+    if strict {
+        wrapper.insert("unevaluatedProperties".to_owned(), JsonValue::Bool(false));
+    }
+
+    Ok(wrapper)
+}
+
+/// The object schema of the body proofs, each sensitive and marked with where it derives from.
+///
+/// # Errors
+///
+/// As the writer of the type use schema.
+fn proofs_schema(
+    context: &mut EmitContext<'_>,
+    proofs: &[InputProof],
+    location: &IrLocation,
+) -> Result<JsonObject, OpenApiError> {
+    let mut properties = JsonObject::new();
+
+    for (index, proof) in proofs.iter().enumerate() {
+        let schema_location = location.below(&[&index.to_string(), "schema"]);
+        let mut schema = type_use_schema(
+            context,
+            &proof.schema,
+            SchemaVariant::Input,
+            &schema_location,
+        )?;
+
+        // Every proof is sensitive (ADR 0002 section 9).
+        mark_sensitive(context, &mut schema, &schema_location);
+        write_extension(
+            context,
+            &mut schema,
+            ExtensionName::DerivedFrom,
+            JsonValue::Object(derived_from_value(&proof.derived_from)),
+        );
+        properties.insert(proof.name.clone(), JsonValue::Object(schema));
+    }
+
+    let required = proofs
+        .iter()
+        .map(|proof| JsonValue::text(&proof.name))
+        .collect();
+
+    Ok(JsonObject::from_members([
+        ("type", JsonValue::text("object")),
+        ("properties", JsonValue::Object(properties)),
+        ("required", JsonValue::Array(required)),
+    ]))
+}
+
+fn input_top_level(
     _context: &mut EmitContext<'_>,
     _input: &OperationInput,
+    _input_schema_id: Option<&str>,
+    _top_level: InputTopLevel,
     _location: &IrLocation,
 ) -> Result<JsonObject, OpenApiError> {
-    Err(not_ported_yet("bodyEncoding"))
+    Err(not_ported_yet("inputTopLevel"))
+}
+
+/// The `encoding` of a form or multipart body: styles of form lists and objects, media of files.
+///
+/// # Errors
+///
+/// As the writers of a form field encoding and of a file field media.
+fn body_encoding(
+    context: &mut EmitContext<'_>,
+    input: &OperationInput,
+    location: &IrLocation,
+) -> Result<JsonObject, OpenApiError> {
+    let mut encoding = JsonObject::new();
+
+    if input.media.as_str() == FORM_MEDIA {
+        let mut fields: Vec<(&str, &FieldWire, IrLocation)> = Vec::new();
+
+        for (index, field) in input
+            .fields
+            .as_deref()
+            .unwrap_or_default()
+            .iter()
+            .enumerate()
+        {
+            fields.push((
+                &field.name,
+                &field.wire,
+                location.below(&["fields", &index.to_string()]),
+            ));
+        }
+
+        for (index, proof) in input
+            .proofs
+            .as_deref()
+            .unwrap_or_default()
+            .iter()
+            .enumerate()
+        {
+            for (name, wire) in proof_field(proof)? {
+                fields.push((name, wire, location.below(&["proofs", &index.to_string()])));
+            }
+        }
+
+        for (name, wire, field_location) in fields {
+            if let Some(field_encoding) = form_field_encoding(context, name, wire, &field_location)?
+            {
+                encoding.insert(name.to_owned(), JsonValue::Object(field_encoding));
+            }
+        }
+    }
+
+    if input.media.as_str() == MULTIPART_MEDIA {
+        for field in input.fields.as_deref().unwrap_or_default() {
+            if field.wire.kind != FieldWireKind::File {
+                continue;
+            }
+
+            let media = file_field_media(context, input, &field.name, location)?;
+
+            if let Some(media) = media.filter(|media| !media.is_empty()) {
+                let content_type =
+                    JsonObject::from_members([("contentType", JsonValue::text(&media.join(", ")))]);
+
+                encoding.insert(field.name.clone(), JsonValue::Object(content_type));
+            }
+        }
+    }
+
+    Ok(encoding)
+}
+
+fn proof_field(_proof: &InputProof) -> Result<Vec<(&str, &FieldWire)>, OpenApiError> {
+    Err(not_ported_yet("proofField"))
+}
+
+fn form_field_encoding(
+    _context: &mut EmitContext<'_>,
+    _name: &str,
+    _wire: &FieldWire,
+    _location: &IrLocation,
+) -> Result<Option<JsonObject>, OpenApiError> {
+    Err(not_ported_yet("formFieldEncoding"))
+}
+
+fn file_field_media(
+    _context: &mut EmitContext<'_>,
+    _input: &OperationInput,
+    _field_name: &str,
+    _location: &IrLocation,
+) -> Result<Option<Vec<String>>, OpenApiError> {
+    Err(not_ported_yet("fileFieldMedia"))
 }
 
 fn write_unknown_keys(
