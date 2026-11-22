@@ -1341,7 +1341,6 @@ dependencies = [
  "seampact-span",
  "seampact-target",
  "seampact-validate",
- "serde",
  "serde_json",
  "tempfile",
  "thiserror",
