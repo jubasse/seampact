@@ -4,14 +4,16 @@ use indexmap::IndexMap;
 use seampact_compiler::{PipelineOptions, compile_workspace};
 use seampact_diff::{DiffError, diff_contract_sets, diff_contracts, format_diff_report};
 use seampact_diff_table::{
-    DeprecationEntry, DiffChange, DiffComparison, DiffExemption, DiffGateScope, DiffOptions,
-    DiffRefusal, DiffResult, DiffValue, GateFailure, diff_table_json,
+    DeprecationEntry, DiffChange, DiffComparison, DiffExemption, DiffOptions, DiffRefusal,
+    DiffResult, DiffValue, GateFailure, diff_table_json,
 };
 use seampact_ir::{ApiVersion, CompatPolicy, ContractIr, PackRef};
 use seampact_json::{JsonValue, canonical_document};
 use seampact_load::{FsReader, LoadOptions};
 use seampact_oracle::{DiffAnswer, DiffCase, DiffSide, Fixture, SubjectAnswer};
 use serde::{Serialize, Serializer};
+
+use crate::diff_command::diff_options;
 
 /// The diff codes and table, `{ "codes", "table" }`.
 pub(crate) fn diff_table_answer() -> SubjectAnswer<JsonValue> {
@@ -26,7 +28,7 @@ pub(crate) fn diff_answer(case: &DiffCase) -> SubjectAnswer<DiffAnswer> {
             return SubjectAnswer::InternalError { message };
         }
     };
-    let options = match diff_options(&case.options) {
+    let options = match case_options(&case.options) {
         Ok(options) => options,
         Err(message) => return SubjectAnswer::InternalError { message },
     };
@@ -123,51 +125,17 @@ fn fixture_irs(fixture: &Fixture) -> Result<IndexMap<String, ContractIr>, String
     Ok(irs)
 }
 
-/// The options of `diff.options.json`: `today`, and optionally `gate` and `exempt`.
-fn diff_options(raw: &JsonValue) -> Result<DiffOptions, String> {
+/// The options of `diff.options.json`: `today`, and optionally `gate` and `exempt`, read by the
+/// reader of the `diff` command.
+fn case_options(raw: &JsonValue) -> Result<DiffOptions, String> {
     let JsonValue::Object(members) = raw else {
         return Err("the diff options are not a JSON object".to_owned());
     };
     let Some(JsonValue::String(today)) = members.get("today") else {
         return Err("the diff options have no `today` text".to_owned());
     };
-    let gate = match members.get("gate") {
-        None => None,
-        Some(JsonValue::String(text)) if text == DiffGateScope::Clients.as_str() => {
-            Some(DiffGateScope::Clients)
-        }
-        Some(JsonValue::String(text)) if text == DiffGateScope::Both.as_str() => {
-            Some(DiffGateScope::Both)
-        }
-        Some(other) => {
-            return Err(format!(
-                "the diff option gate is not a gate scope: {other:?}"
-            ));
-        }
-    };
-    let exempt = match members.get("exempt") {
-        None => None,
-        Some(JsonValue::Array(items)) => Some(
-            items
-                .iter()
-                .map(exemption_of)
-                .collect::<Result<Vec<DiffExemption>, String>>()?,
-        ),
-        Some(other) => return Err(format!("the diff option exempt is not a list: {other:?}")),
-    };
 
-    Ok(DiffOptions {
-        today: today.clone(),
-        gate,
-        exempt,
-    })
-}
-
-fn exemption_of(item: &JsonValue) -> Result<DiffExemption, String> {
-    [DiffExemption::Experimental, DiffExemption::SunsetPassed]
-        .into_iter()
-        .find(|exemption| matches!(item, JsonValue::String(text) if text == exemption.as_str()))
-        .ok_or_else(|| format!("the diff option exempt holds {item:?}, not an exemption"))
+    diff_options(today.clone(), Some(raw)).map_err(|error| error.to_string())
 }
 
 fn result_json(result: &DiffResult) -> Result<JsonValue, DiffCaseError> {

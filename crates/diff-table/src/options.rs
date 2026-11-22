@@ -25,6 +25,14 @@ impl DiffGateScope {
             Self::Both => "both",
         }
     }
+
+    /// The scope a config text names; none for any other text.
+    #[must_use]
+    pub fn from_text(text: &str) -> Option<Self> {
+        [Self::Clients, Self::Both]
+            .into_iter()
+            .find(|scope| scope.as_str() == text)
+    }
 }
 
 /// A breaking change reported but not gated.
@@ -44,6 +52,14 @@ impl DiffExemption {
             Self::Experimental => "experimental",
             Self::SunsetPassed => "sunsetPassed",
         }
+    }
+
+    /// The exemption a config text names; none for any other text.
+    #[must_use]
+    pub fn from_text(text: &str) -> Option<Self> {
+        [Self::Experimental, Self::SunsetPassed]
+            .into_iter()
+            .find(|exemption| exemption.as_str() == text)
     }
 }
 

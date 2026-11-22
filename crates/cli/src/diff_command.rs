@@ -88,7 +88,10 @@ pub(crate) fn diff_command(
 
 /// The diff options of `today` and the `gate` and `exempt` members of the config's `diff`
 /// settings, as the config schema allows them.
-fn diff_options(today: String, settings: Option<&JsonValue>) -> Result<DiffOptions, InternalError> {
+pub(crate) fn diff_options(
+    today: String,
+    settings: Option<&JsonValue>,
+) -> Result<DiffOptions, InternalError> {
     let members = match settings {
         Some(JsonValue::Object(members)) => Some(members),
         Some(_) => {
@@ -100,14 +103,9 @@ fn diff_options(today: String, settings: Option<&JsonValue>) -> Result<DiffOptio
     };
     let gate = match members.and_then(|members| members.get("gate")) {
         None => None,
-        Some(JsonValue::String(text)) => Some(
-            [DiffGateScope::Clients, DiffGateScope::Both]
-                .into_iter()
-                .find(|scope| scope.as_str() == text)
-                .ok_or_else(|| {
-                    InternalError::new(format!("a diff gate '{text}' passed the schema"))
-                })?,
-        ),
+        Some(JsonValue::String(text)) => Some(DiffGateScope::from_text(text).ok_or_else(|| {
+            InternalError::new(format!("a diff gate '{text}' passed the schema"))
+        })?),
         Some(_) => {
             return Err(InternalError::new(
                 "a diff gate that is no text passed the schema",
@@ -137,8 +135,9 @@ fn diff_options(today: String, settings: Option<&JsonValue>) -> Result<DiffOptio
 }
 
 fn exemption_of(item: &JsonValue) -> Result<DiffExemption, InternalError> {
-    [DiffExemption::Experimental, DiffExemption::SunsetPassed]
-        .into_iter()
-        .find(|exemption| matches!(item, JsonValue::String(text) if text == exemption.as_str()))
-        .ok_or_else(|| InternalError::new("a diff exemption outside the schema's passed it"))
+    match item {
+        JsonValue::String(text) => DiffExemption::from_text(text),
+        _ => None,
+    }
+    .ok_or_else(|| InternalError::new("a diff exemption outside the schema's passed it"))
 }
