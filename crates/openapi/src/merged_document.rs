@@ -670,7 +670,7 @@ mod tests {
     fn an_element_two_apis_write_identically_is_kept_once() -> TestResult {
         let assembled = assemble(&[source("a", ONE_SCHEMA)?, source("b", ONE_SCHEMA)?])?;
 
-        assert!(assembled.refusals.is_empty());
+        assert_eq!(codes(&assembled), Vec::<&str>::new());
 
         Ok(())
     }

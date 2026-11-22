@@ -1075,7 +1075,9 @@ mod tests {
     }
 
     fn int64_use() -> Result<TypeUse, serde_json::Error> {
-        serde_json::from_str(r#"{"kind": "scalar", "type": "string", "format": "int64", "refinements": {}}"#)
+        serde_json::from_str(
+            r#"{"kind": "scalar", "type": "string", "format": "int64", "refinements": {}}"#,
+        )
     }
 
     #[test]
