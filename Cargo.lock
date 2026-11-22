@@ -1094,6 +1094,8 @@ dependencies = [
  "seampact-ir",
  "seampact-js",
  "seampact-json",
+ "serde",
+ "serde_json",
  "thiserror",
 ]
 
