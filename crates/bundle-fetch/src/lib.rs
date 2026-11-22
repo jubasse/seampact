@@ -39,6 +39,7 @@ pub use local_sources::{
 };
 pub use printable_url::{printable_url, with_printable_url};
 pub use release_get::{ReleaseGet, ReleaseGetError, ReleaseResponse, UreqReleaseGet};
+pub use url::Url;
 
 /// Every rule id the crate reports, read by the oracle's rule id registry.
 pub const RULE_IDS: &[RuleId] = &[];
