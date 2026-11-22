@@ -111,3 +111,21 @@ fn a_symlinked_schema_file_is_refused() -> TestResult {
 
     Ok(())
 }
+
+#[test]
+fn a_symlinked_temporary_schema_file_is_refused_and_its_target_left_alone() -> TestResult {
+    let (_keep, root) = workspace("")?;
+    let directory = root.join(".seampact/schemas");
+    let precious = root.join("precious.txt");
+
+    fs::create_dir_all(&directory)?;
+    fs::write(&precious, "PRECIOUS")?;
+    symlink(&precious, directory.join("api.schema.json.tmp"))?;
+
+    let message = refusal_message(plan(&root)?)?;
+
+    assert!(message.contains("is a symbolic link"), "{message}");
+    assert_eq!(fs::read_to_string(&precious)?, "PRECIOUS");
+
+    Ok(())
+}
