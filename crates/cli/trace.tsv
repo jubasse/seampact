@@ -1,75 +1,75 @@
 src/cli_problem.rs#format_problem	packages/core/cli/src/cli-problem.ts#formatProblem
 src/cli_io.rs#print_problems	packages/core/cli/src/cli-io.ts#printProblems
 src/cli_io.rs#print_warnings	packages/core/cli/src/cli-io.ts#printWarnings
--	packages/core/cli/src/cli-problem.ts#entryWhere	pending: brief 2
+src/cli_problem.rs#entry_where	packages/core/cli/src/cli-problem.ts#entryWhere
 -	packages/core/cli/src/cli-problem.ts#namesPointer	pending: brief 2
 -	packages/core/cli/src/cli-problem.ts#inApp	pending: brief 2
 -	packages/core/cli/src/cli-problem.ts#appEntryWhere	pending: brief 2
 -	packages/core/cli/src/cli-problem.ts#problemFromRefusal	pending: brief 2
--	packages/core/cli/src/run-cli.ts#runCli	pending: brief 1
+src/run_cli.rs#run_command	packages/core/cli/src/run-cli.ts#runCli
 -	packages/core/cli/src/run-cli.ts#runInit	pending: brief 2
--	packages/core/cli/src/run-cli.ts#runCompile	pending: brief 1
+src/run_cli.rs#run_compile	packages/core/cli/src/run-cli.ts#runCompile
 -	packages/core/cli/src/run-cli.ts#runGenerate	skip: generate and check are layer 3.3 commands
 -	packages/core/cli/src/run-cli.ts#runCheck	skip: generate and check are layer 3.3 commands
 -	packages/core/cli/src/run-cli.ts#pluginRunOf	pending: brief 2
 -	packages/core/cli/src/run-cli.ts#nativeEntryPolicy	pending: brief 2
--	packages/core/cli/src/run-cli.ts#runLint	pending: brief 1
--	packages/core/cli/src/run-cli.ts#runDiff	pending: brief 1
+src/run_cli.rs#run_lint	packages/core/cli/src/run-cli.ts#runLint
+src/run_cli.rs#run_diff	packages/core/cli/src/run-cli.ts#runDiff
 -	packages/core/cli/src/run-cli.ts#runExplain	pending: brief 2
--	packages/core/cli/src/run-cli.ts#runBundle	pending: brief 1
--	packages/core/cli/src/run-cli.ts#bundleOutput	pending: brief 1
--	packages/core/cli/src/run-cli.ts#parseCommandArgs	pending: brief 1
--	packages/core/cli/src/run-cli.ts#stringOption	pending: brief 1
+src/run_cli.rs#run_bundle	packages/core/cli/src/run-cli.ts#runBundle
+src/bundle_command.rs#output	packages/core/cli/src/run-cli.ts#bundleOutput
+src/args.rs#parse_command_args	packages/core/cli/src/run-cli.ts#parseCommandArgs
+src/args.rs#text	packages/core/cli/src/run-cli.ts#stringOption
 -	packages/core/cli/src/run-cli.ts#listOption	pending: brief 2
--	packages/core/cli/src/run-cli.ts#usageError	pending: brief 1
--	packages/core/cli/src/run-cli.ts#notAvailable	pending: brief 1
--	packages/core/cli/src/run-cli.ts#usageText	pending: brief 1
--	packages/core/cli/src/run-cli.ts#quotedCommands	pending: brief 1
--	packages/core/cli/src/run-cli.ts#listed	pending: brief 1
--	packages/core/cli/src/error-code.ts#errorCode	pending: brief 1
--	packages/core/cli/src/is-record.ts#isRecord	pending: brief 1
--	packages/core/cli/src/commands/config-location.ts#configLocation	pending: brief 1
--	packages/core/cli/src/commands/config-location.ts#displayPath	pending: brief 1
--	packages/core/cli/src/commands/workspace-api-names.ts#sourceEntryFile	pending: brief 1
--	packages/core/cli/src/commands/workspace-api-names.ts#workspaceApiNames	pending: brief 1
--	packages/core/cli/src/commands/workspace-api-names.ts#singleApiName	pending: brief 1
--	packages/core/cli/src/commands/workspace-api-names.ts#parseOrUndefined	pending: brief 1
--	packages/core/cli/src/commands/lint-command.ts#lintCommand	pending: brief 1
--	packages/core/cli/src/commands/lint-command.ts#isError	pending: brief 3
--	packages/core/cli/src/commands/lint-command.ts#refuse	pending: brief 1
--	packages/core/cli/src/commands/compile-sources.ts#compileSources	pending: brief 1
--	packages/core/cli/src/commands/compile-sources.ts#takeBundle	pending: brief 1
--	packages/core/cli/src/commands/compile-sources.ts#compileSource	pending: brief 1
--	packages/core/cli/src/commands/compile-sources.ts#fetchOptions	pending: brief 1
--	packages/core/cli/src/commands/compile-sources.ts#noWorkspaceProblem	pending: brief 2
--	packages/core/cli/src/commands/compile-sources.ts#printSourceDiagnostics	pending: brief 1
--	packages/core/cli/src/commands/compile-sources.ts#bundleProblem	pending: brief 1
--	packages/core/cli/src/commands/compile-sources.ts#printedDiagnostics	pending: brief 1
--	packages/core/cli/src/commands/compile-sources.ts#labelledLocations	pending: brief 1
--	packages/core/cli/src/commands/api-refs.ts#parseApiRef	pending: brief 1
--	packages/core/cli/src/commands/api-refs.ts#apiRefsOf	pending: brief 1
--	packages/core/cli/src/commands/api-refs.ts#usedSources	pending: brief 1
--	packages/core/cli/src/commands/api-refs.ts#unknownSourceProblems	pending: brief 1
--	packages/core/cli/src/commands/api-refs.ts#entryApiRefs	pending: brief 1
--	packages/core/cli/src/commands/api-refs.ts#sourcesHoldingRefs	pending: brief 1
--	packages/core/cli/src/commands/api-refs.ts#mayHoldAny	pending: brief 1
+src/run_cli.rs#usage_error	packages/core/cli/src/run-cli.ts#usageError
+src/run_cli.rs#not_available	packages/core/cli/src/run-cli.ts#notAvailable
+src/run_cli.rs#usage_text	packages/core/cli/src/run-cli.ts#usageText
+src/run_cli.rs#quoted_commands	packages/core/cli/src/run-cli.ts#quotedCommands
+src/run_cli.rs#listed	packages/core/cli/src/run-cli.ts#listed
+-	packages/core/cli/src/error-code.ts#errorCode	skip: the Rust readers match std::io::ErrorKind
+-	packages/core/cli/src/is-record.ts#isRecord	skip: the Rust readers match JsonValue::Object and YamlKind::Mapping
+src/config_location.rs#config_location	packages/core/cli/src/commands/config-location.ts#configLocation
+src/config_location.rs#display_path	packages/core/cli/src/commands/config-location.ts#displayPath
+src/workspace_api_names.rs#source_entry_file	packages/core/cli/src/commands/workspace-api-names.ts#sourceEntryFile
+src/workspace_api_names.rs#workspace_api_names	packages/core/cli/src/commands/workspace-api-names.ts#workspaceApiNames
+src/workspace_api_names.rs#single_api_name	packages/core/cli/src/commands/workspace-api-names.ts#singleApiName
+src/workspace_api_names.rs#parsed_root	packages/core/cli/src/commands/workspace-api-names.ts#parseOrUndefined
+src/lint_command.rs#lint_command	packages/core/cli/src/commands/lint-command.ts#lintCommand
+src/lint_command.rs#is_error	packages/core/cli/src/commands/lint-command.ts#isError
+src/cli_io.rs#refuse	packages/core/cli/src/commands/lint-command.ts#refuse
+src/compile_sources.rs#compile_sources	packages/core/cli/src/commands/compile-sources.ts#compileSources
+src/compile_sources.rs#take_bundle	packages/core/cli/src/commands/compile-sources.ts#takeBundle
+src/compile_sources.rs#compile_source	packages/core/cli/src/commands/compile-sources.ts#compileSource
+src/compile_sources.rs#fetch_options	packages/core/cli/src/commands/compile-sources.ts#fetchOptions
+src/compile_sources.rs#no_workspace_problem	packages/core/cli/src/commands/compile-sources.ts#noWorkspaceProblem
+src/compile_sources.rs#print_source_diagnostics	packages/core/cli/src/commands/compile-sources.ts#printSourceDiagnostics
+src/compile_sources.rs#bundle_problem	packages/core/cli/src/commands/compile-sources.ts#bundleProblem
+src/compile_sources.rs#printed_diagnostics	packages/core/cli/src/commands/compile-sources.ts#printedDiagnostics
+-	packages/core/cli/src/commands/compile-sources.ts#labelledLocations	skip: the hooks diagnosticFileLabel and sourceReader serve the embedded binary of the TypeScript package, which the Rust binary does not have
+src/api_refs.rs#parse_api_ref	packages/core/cli/src/commands/api-refs.ts#parseApiRef
+src/api_refs.rs#api_refs_of	packages/core/cli/src/commands/api-refs.ts#apiRefsOf
+src/api_refs.rs#used_sources	packages/core/cli/src/commands/api-refs.ts#usedSources
+src/api_refs.rs#unknown_source_problems	packages/core/cli/src/commands/api-refs.ts#unknownSourceProblems
+src/api_refs.rs#entry_api_refs	packages/core/cli/src/commands/api-refs.ts#entryApiRefs
+src/api_refs.rs#sources_holding_refs	packages/core/cli/src/commands/api-refs.ts#sourcesHoldingRefs
+src/api_refs.rs#may_hold_any	packages/core/cli/src/commands/api-refs.ts#mayHoldAny
 -	packages/core/cli/src/commands/api-refs.ts#duplicateApiProblem	pending: brief 2
 -	packages/core/cli/src/commands/api-refs.ts#resolveEntryApis	pending: brief 2
--	packages/core/cli/src/commands/api-refs.ts#addQualifyFix	pending: brief 1
--	packages/core/cli/src/commands/compile-command.ts#compileCommand	pending: brief 1
--	packages/core/cli/src/commands/compile-command.ts#writeIrFiles	pending: brief 1
--	packages/core/cli/src/commands/compile-command.ts#planSourcesEditorSchemas	pending: brief 1
--	packages/core/cli/src/commands/compile-command.ts#sameNameProblems	pending: brief 1
--	packages/core/cli/src/commands/compile-command.ts#refuse	pending: brief 1
--	packages/core/cli/src/symbolic-link.ts#isSymbolicLink	pending: brief 1
--	packages/core/cli/src/symbolic-link.ts#isPathTaken	pending: brief 1
--	packages/core/cli/src/commands/bundle-command.ts#bundleCommand	pending: brief 1
--	packages/core/cli/src/commands/bundle-command.ts#chosenSource	pending: brief 1
--	packages/core/cli/src/commands/bundle-command.ts#namedSource	pending: brief 3
--	packages/core/cli/src/commands/bundle-command.ts#resolvedOutput	pending: brief 1
--	packages/core/cli/src/commands/bundle-command.ts#outputPath	pending: brief 1
--	packages/core/cli/src/commands/bundle-command.ts#refuse	pending: brief 1
--	packages/core/cli/src/commands/init-command.ts#initCommand	pending: brief 1
+src/api_refs.rs#add_qualify_fix	packages/core/cli/src/commands/api-refs.ts#addQualifyFix
+src/compile_command.rs#compile_command	packages/core/cli/src/commands/compile-command.ts#compileCommand
+src/compile_command.rs#write_ir_files	packages/core/cli/src/commands/compile-command.ts#writeIrFiles
+src/compile_command.rs#plan_sources_editor_schemas	packages/core/cli/src/commands/compile-command.ts#planSourcesEditorSchemas
+src/compile_command.rs#same_name_problems	packages/core/cli/src/commands/compile-command.ts#sameNameProblems
+src/cli_io.rs#refuse	packages/core/cli/src/commands/compile-command.ts#refuse
+-	packages/core/cli/src/symbolic-link.ts#isSymbolicLink	merged: ../cli-config/src/symbolic_link.rs#is_symbolic_link
+-	packages/core/cli/src/symbolic-link.ts#isPathTaken	merged: ../cli-config/src/symbolic_link.rs#is_path_taken
+src/bundle_command.rs#bundle_command	packages/core/cli/src/commands/bundle-command.ts#bundleCommand
+src/bundle_command.rs#chosen_source	packages/core/cli/src/commands/bundle-command.ts#chosenSource
+src/bundle_command.rs#named_source	packages/core/cli/src/commands/bundle-command.ts#namedSource	pending: brief 3
+src/bundle_command.rs#resolved_output	packages/core/cli/src/commands/bundle-command.ts#resolvedOutput
+src/bundle_command.rs#output_path	packages/core/cli/src/commands/bundle-command.ts#outputPath
+src/cli_io.rs#refuse	packages/core/cli/src/commands/bundle-command.ts#refuse
+-	packages/core/cli/src/commands/init-command.ts#initCommand	pending: brief 2
 -	packages/core/cli/src/commands/init-command.ts#initNewProject	pending: brief 2
 -	packages/core/cli/src/commands/init-command.ts#writeStarter	pending: brief 2
 -	packages/core/cli/src/commands/init-command.ts#localSourcesRefusal	pending: brief 2
@@ -79,23 +79,23 @@ src/cli_io.rs#print_warnings	packages/core/cli/src/cli-io.ts#printWarnings
 -	packages/core/cli/src/commands/init-command.ts#posixRelative	pending: brief 2
 -	packages/core/cli/src/commands/init-command.ts#plannedIgnore	pending: brief 2
 -	packages/core/cli/src/commands/init-command.ts#writeIgnore	pending: brief 2
--	packages/core/cli/src/commands/init-command.ts#fileExistsProblem	pending: brief 1
+src/init_command.rs#file_exists_problem	packages/core/cli/src/commands/init-command.ts#fileExistsProblem
 -	packages/core/cli/src/commands/init-command.ts#ignoreFileLinkProblem	pending: brief 3
 -	packages/core/cli/src/commands/init-command.ts#noPathSourceProblem	pending: brief 3
--	packages/core/cli/src/commands/init-command.ts#refuse	pending: brief 1
--	packages/core/cli/src/commands/diff-baseline.ts#validator	pending: brief 1
--	packages/core/cli/src/commands/diff-baseline.ts#readBaseline	pending: brief 1
--	packages/core/cli/src/commands/diff-baseline.ts#baselineFiles	pending: brief 1
--	packages/core/cli/src/commands/diff-baseline.ts#readIrFile	pending: brief 1
--	packages/core/cli/src/commands/diff-baseline.ts#invalidMessage	pending: brief 3
--	packages/core/cli/src/commands/diff-baseline.ts#refused	pending: brief 1
--	packages/core/cli/src/commands/diff-baseline.ts#statIfPresent	pending: brief 1
--	packages/core/cli/src/commands/diff-command.ts#diffCommand	pending: brief 1
--	packages/core/cli/src/commands/diff-command.ts#refuse	pending: brief 1
+src/cli_io.rs#refuse	packages/core/cli/src/commands/init-command.ts#refuse
+-	packages/core/cli/src/commands/diff-baseline.ts#validator	skip: check_open_ir builds its validators once
+src/diff_baseline.rs#read_baseline	packages/core/cli/src/commands/diff-baseline.ts#readBaseline
+src/diff_baseline.rs#baseline_files	packages/core/cli/src/commands/diff-baseline.ts#baselineFiles
+src/diff_baseline.rs#read_ir_file	packages/core/cli/src/commands/diff-baseline.ts#readIrFile
+src/diff_baseline.rs#invalid_message	packages/core/cli/src/commands/diff-baseline.ts#invalidMessage	pending: brief 3
+src/diff_baseline.rs#refused	packages/core/cli/src/commands/diff-baseline.ts#refused
+src/diff_baseline.rs#stat_if_present	packages/core/cli/src/commands/diff-baseline.ts#statIfPresent
+src/diff_command.rs#diff_command	packages/core/cli/src/commands/diff-command.ts#diffCommand
+src/cli_io.rs#refuse	packages/core/cli/src/commands/diff-command.ts#refuse
 -	packages/core/cli/src/commands/explain-command.ts#explainCommand	pending: brief 2
--	packages/core/cli/src/commands/explain-command.ts#explainTarget	pending: brief 1
+src/explain_command.rs#explain_target	packages/core/cli/src/commands/explain-command.ts#explainTarget
 -	packages/core/cli/src/commands/explain-command.ts#chosenApi	pending: brief 2
--	packages/core/cli/src/commands/explain-command.ts#refuse	pending: brief 1
+src/cli_io.rs#refuse	packages/core/cli/src/commands/explain-command.ts#refuse
 -	packages/core/cli/src/commands/git-ignore.ts#gitIgnoreWithEntries	pending: brief 2
 -	packages/core/cli/src/commands/git-ignore.ts#withoutTrailingSlash	pending: brief 2
 -	packages/core/cli/src/commands/init-starter.ts#starterConfig	pending: brief 2
@@ -138,4 +138,4 @@ src/cli_io.rs#print_warnings	packages/core/cli/src/cli-io.ts#printWarnings
 -	packages/core/cli/src/commands/contract-position.ts#childOf	pending: brief 3
 -	packages/core/cli/src/commands/contract-position.ts#locatedOrigin	pending: brief 3
 -	packages/core/cli/src/commands/contract-position.ts#originPosition	pending: brief 2
--	packages/core/cli/src/commands/local-bundle.ts#verifyLocalBundle	pending: brief 2
+src/local_bundle.rs#verify_local_bundle	packages/core/cli/src/commands/local-bundle.ts#verifyLocalBundle	pending: brief 2

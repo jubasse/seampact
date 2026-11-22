@@ -26,6 +26,39 @@ pub fn format_problem(problem: &CliProblem) -> String {
     )
 }
 
+/// A problem with no position, no docs link and no location.
+pub(crate) fn unlocated_problem(code: &str, message: String, fix: &str) -> CliProblem {
+    CliProblem {
+        code: code.to_owned(),
+        message,
+        fix: fix.to_owned(),
+        location: None,
+        position: None,
+        docs: None,
+    }
+}
+
+/// A problem that names where it belongs (`location`: a source, an entry, an api).
+pub(crate) fn located_problem(
+    code: &str,
+    message: String,
+    fix: &str,
+    location: String,
+) -> CliProblem {
+    CliProblem {
+        location: Some(location),
+        ..unlocated_problem(code, message, fix)
+    }
+}
+
+/// The location of a target entry, and of one of its apis when given.
+pub(crate) fn entry_where(entry_id: &str, api: Option<&str>) -> String {
+    match api {
+        Some(api) => format!("entry '{entry_id}', api '{api}'"),
+        None => format!("entry '{entry_id}'"),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

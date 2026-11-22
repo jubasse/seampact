@@ -3,11 +3,21 @@
 
 use std::ffi::OsString;
 
+use seampact_bundle::BundleNamedVersionOverride;
 use seampact_cli_config::CliProblem;
 
+use crate::bundle_command::{BundleCommandOptions, BundleOutputFlag, bundle_command};
+use crate::cli_problem::unlocated_problem;
 use crate::command::Command;
+use crate::compile_command::{CompileOutputs, EditorSchemasMode, compile_command};
+use crate::config_location::config_location;
+use crate::diff_command::diff_command;
+use crate::lint_command::lint_command;
 use crate::not_ported::not_ported_yet;
-use crate::{CliError, CliIo, EXIT_REFUSED, EXIT_SUCCESS, EXIT_USAGE, print_problems};
+use crate::{
+    CliError, CliIo, EXIT_REFUSED, EXIT_SUCCESS, EXIT_USAGE, OptionKind, OptionSpec, ParsedArgs,
+    Positionals, parse_command_args, print_problems,
+};
 
 /// The flags of the CLI design that are not available yet; each answers with exit code 2.
 const WAITING_FLAGS: [&str; 3] = ["--watch", "--strict", "--source-map"];
@@ -60,13 +70,13 @@ pub fn run_command(argv: &[OsString], io: &mut dyn CliIo) -> Result<i32, CliErro
     // Each command lane replaces its arm with the port of its `run<Command>` function.
     match command {
         Command::Init => Err(not_ported_yet("runInit")),
-        Command::Compile => Err(not_ported_yet("runCompile")),
+        Command::Compile => run_compile(rest, io),
         Command::Generate => Err(not_ported_yet("runGenerate")),
         Command::Check => Err(not_ported_yet("runCheck")),
-        Command::Lint => Err(not_ported_yet("runLint")),
-        Command::Diff => Err(not_ported_yet("runDiff")),
+        Command::Lint => run_lint(rest, io),
+        Command::Diff => run_diff(rest, io),
         Command::Explain => Err(not_ported_yet("runExplain")),
-        Command::Bundle => Err(not_ported_yet("runBundle")),
+        Command::Bundle => run_bundle(rest, io),
     }
 }
 
@@ -84,7 +94,7 @@ pub fn run_cli(argv: &[OsString], io: &mut dyn CliIo) -> i32 {
 
             EXIT_USAGE
         }
-        Err(CliError::Internal(error)) => {
+        Err(error) => {
             io.stderr(&format!("{error}\n"));
 
             EXIT_REFUSED
@@ -93,26 +103,128 @@ pub fn run_cli(argv: &[OsString], io: &mut dyn CliIo) -> i32 {
 }
 
 fn not_ported_problem(command: &str, function: &str) -> CliProblem {
-    CliProblem {
-        code: "cli.not-ported".to_owned(),
-        message: format!("`seampact {command}` is not ported to this build yet ({function})."),
-        fix: format!("Use the 1.x CLI for `{command}` until the generator layer lands."),
-        location: None,
-        position: None,
-        docs: None,
+    unlocated_problem(
+        "cli.not-ported",
+        format!("`seampact {command}` is not ported to this build yet ({function})."),
+        &format!("Use the 1.x CLI for `{command}` until the generator layer lands."),
+    )
+}
+
+fn run_compile(args: &[String], io: &mut dyn CliIo) -> Result<i32, CliError> {
+    let parsed = match parse_command_args(
+        args,
+        &[
+            text_option("config"),
+            text_option("out"),
+            OptionSpec {
+                name: "editor-schemas",
+                kind: OptionKind::Flag,
+            },
+        ],
+        Positionals::Refused,
+    ) {
+        Ok(parsed) => parsed,
+        Err(error) => return Ok(usage_error(io, error.message())),
+    };
+    let outputs = CompileOutputs {
+        ir_out_dir: parsed.text("out").map(str::to_owned),
+        editor_schemas: if parsed.flag("editor-schemas") {
+            EditorSchemasMode::Write
+        } else {
+            EditorSchemasMode::Skip
+        },
+    };
+
+    compile_command(&config_location_of(&parsed, io), &outputs, io)
+}
+
+fn run_lint(args: &[String], io: &mut dyn CliIo) -> Result<i32, CliError> {
+    let parsed = match parse_command_args(args, &[text_option("config")], Positionals::Refused) {
+        Ok(parsed) => parsed,
+        Err(error) => return Ok(usage_error(io, error.message())),
+    };
+
+    lint_command(&config_location_of(&parsed, io), io)
+}
+
+fn run_diff(args: &[String], io: &mut dyn CliIo) -> Result<i32, CliError> {
+    let parsed = match parse_command_args(
+        args,
+        &[text_option("config"), text_option("against")],
+        Positionals::Refused,
+    ) {
+        Ok(parsed) => parsed,
+        Err(error) => return Ok(usage_error(io, error.message())),
+    };
+
+    let Some(against) = parsed.text("against") else {
+        return Ok(usage_error(io, "`diff` needs `--against <path>`."));
+    };
+
+    diff_command(&config_location_of(&parsed, io), against, io)
+}
+
+fn run_bundle(args: &[String], io: &mut dyn CliIo) -> Result<i32, CliError> {
+    let parsed = match parse_command_args(
+        args,
+        &[
+            text_option("config"),
+            text_option("source"),
+            text_option("out"),
+            text_option("tarball"),
+            text_option("npm-package"),
+            text_option("name"),
+            text_option("version"),
+        ],
+        Positionals::Refused,
+    ) {
+        Ok(parsed) => parsed,
+        Err(error) => return Ok(usage_error(io, error.message())),
+    };
+    let given: Vec<_> = BundleOutputFlag::ALL
+        .into_iter()
+        .filter_map(|flag| parsed.text(flag.as_str()).map(|path| flag.output(path)))
+        .collect();
+
+    let [output] = given.as_slice() else {
+        return Ok(usage_error(
+            io,
+            "`bundle` needs exactly one of `--out`, `--tarball` and `--npm-package`.",
+        ));
+    };
+    let options = BundleCommandOptions {
+        output: output.clone(),
+        contract: BundleNamedVersionOverride {
+            name: parsed.text("name").map(str::to_owned),
+            version: parsed.text("version").map(str::to_owned),
+        },
+        source: parsed.text("source").map(str::to_owned),
+    };
+
+    bundle_command(&config_location_of(&parsed, io), &options, io)
+}
+
+fn text_option(name: &'static str) -> OptionSpec {
+    OptionSpec {
+        name,
+        kind: OptionKind::Text,
     }
+}
+
+fn config_location_of(
+    parsed: &ParsedArgs,
+    io: &dyn CliIo,
+) -> crate::config_location::ConfigLocation {
+    config_location(io.cwd(), parsed.text("config"))
 }
 
 /// Prints a `cli.usage` problem and the usage text, and answers the usage exit code.
 pub(crate) fn usage_error(io: &mut dyn CliIo, message: &str) -> i32 {
-    let problem = CliProblem {
-        code: "cli.usage".to_owned(),
-        message: message.to_owned(),
-        fix: "Run `seampact help` for the commands and their options.".to_owned(),
-        location: None,
-        position: None,
-        docs: None,
-    };
+    let problem = unlocated_problem(
+        "cli.usage",
+        message.to_owned(),
+        "Run `seampact help` for the commands and their options.",
+    );
 
     print_problems(io, &[problem]);
     io.stderr(&usage_text());
@@ -121,14 +233,11 @@ pub(crate) fn usage_error(io: &mut dyn CliIo, message: &str) -> i32 {
 }
 
 fn not_available(io: &mut dyn CliIo, subject: &str) -> i32 {
-    let problem = CliProblem {
-        code: "cli.not-available".to_owned(),
-        message: format!("{subject} is not available yet."),
-        fix: format!("Use {}.", listed(&quoted_commands())),
-        location: None,
-        position: None,
-        docs: None,
-    };
+    let problem = unlocated_problem(
+        "cli.not-available",
+        format!("{subject} is not available yet."),
+        &format!("Use {}.", listed(&quoted_commands())),
+    );
 
     print_problems(io, &[problem]);
 

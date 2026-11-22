@@ -1307,7 +1307,10 @@ dependencies = [
  "seampact-diff",
  "seampact-diff-table",
  "seampact-editor-schemas",
+ "seampact-finalize",
  "seampact-ir",
+ "seampact-ir-check",
+ "seampact-js",
  "seampact-json",
  "seampact-lint",
  "seampact-load",
@@ -1318,6 +1321,7 @@ dependencies = [
  "seampact-target",
  "serde",
  "serde_json",
+ "tempfile",
  "thiserror",
 ]
 

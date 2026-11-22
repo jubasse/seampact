@@ -28,7 +28,10 @@ seampact-diagnostics.workspace = true
 seampact-diff.workspace = true
 seampact-diff-table.workspace = true
 seampact-editor-schemas.workspace = true
+seampact-finalize.workspace = true
 seampact-ir.workspace = true
+seampact-ir-check.workspace = true
+seampact-js.workspace = true
 seampact-json.workspace = true
 seampact-load.workspace = true
 seampact-lint.workspace = true
@@ -40,6 +43,9 @@ seampact-target.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
 
 [lints]
 workspace = true

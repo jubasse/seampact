@@ -6,9 +6,7 @@ use std::time::Duration;
 
 use camino::{Utf8Path, Utf8PathBuf};
 use indexmap::IndexMap;
-use seampact_bundle::{
-    BundleSource, BundleSourceForm, GitBundleSource, PackageBundleSource, ReleaseBundleSource,
-};
+use seampact_bundle::BundleSource;
 use seampact_bundle_fetch::{
     BundleFetchOptions, BundleFetchResult, BundleSourceFailure, LocalSourcePolicy, ReleaseGet,
     ReleaseGetError, ReleaseResponse, Url, WorkspaceImportFailure, WorkspaceImportsOptions,
@@ -22,6 +20,8 @@ use seampact_load::{FsReader, LoadOptions};
 use seampact_oracle::{ROOT_TOKEN, RecordedAnswer, RecordedToolCall, SubjectAnswer};
 use seampact_pipeline::PipelineDeclared;
 use seampact_span::{Location, SourceFiles};
+
+use crate::bundle_source::bundle_source_of;
 
 const FETCH_BUNDLE: &str = "fetchBundle";
 const COMPILE_WORKSPACE_WITH_IMPORTS: &str = "compileWorkspaceWithImports";
@@ -168,32 +168,7 @@ fn optional_text<'object>(object: &'object JsonObject, key: &str) -> Option<&'ob
 }
 
 fn source_of(value: &JsonValue) -> Result<BundleSource, String> {
-    let JsonValue::Object(entry) = value else {
-        return Err("a recorded bundle source is an object".to_owned());
-    };
-    let integrity = optional_text(entry, "integrity").map(str::to_owned);
-    let form = if let Some(coordinate) = optional_text(entry, "maven") {
-        BundleSourceForm::Maven(coordinate.to_owned())
-    } else if entry.contains_key("package") {
-        BundleSourceForm::Package(PackageBundleSource {
-            package: member_text(entry, "package")?.to_owned(),
-            version: member_text(entry, "version")?.to_owned(),
-        })
-    } else if entry.contains_key("release") {
-        BundleSourceForm::Release(ReleaseBundleSource {
-            url: member_text(object_member(entry, "release")?, "url")?.to_owned(),
-        })
-    } else {
-        let git = object_member(entry, "git")?;
-
-        BundleSourceForm::Git(GitBundleSource {
-            url: member_text(git, "url")?.to_owned(),
-            tag: member_text(git, "tag")?.to_owned(),
-            directory: optional_text(git, "directory").map(str::to_owned),
-        })
-    };
-
-    Ok(BundleSource { form, integrity })
+    bundle_source_of(value).map_err(|error| error.to_string())
 }
 
 fn fetch_options_of<'run>(
