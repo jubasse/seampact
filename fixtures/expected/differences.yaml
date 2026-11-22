@@ -76,3 +76,21 @@ differences:
       output: cli-stderr
       pointer: /stderr/0
     change: value
+  - id: cli-config-yaml-syntax-message
+    reason: The Rust CLI parses a config with saphyr-parser, so the recorded read of a config with a YAML syntax error has its wording, where the TS reader has the yaml package's.
+    decision: docs/adr/0031-rust-core.md#bytes-that-change-once
+    applies:
+      fixtures: ["cli/config-yaml-tab", "cli/config-yaml-flow"]
+      output: cli-config
+      pointer: /result/problems/0/message
+    change: message
+  - id: cli-config-yaml-tab-column
+    reason: The Rust CLI reports the column of a tab used as indentation where saphyr-parser finds it, the second, where the yaml package reports the first.
+    decision: docs/adr/0031-rust-core.md#bytes-that-change-once
+    applies:
+      fixtures: ["cli/config-yaml-tab"]
+      output: cli-config
+      pointer: /result/problems/0/where
+    change: value
+    from: "broken.config.txt:2:1"
+    to: "broken.config.txt:2:2"
