@@ -4,6 +4,7 @@
 //! The tree is untrusted: a link, a submodule, an unportable path or a case-fold duplicate is
 //! refused before anything is written.
 
+use std::collections::HashSet;
 use std::fs::{self, OpenOptions};
 use std::io::Write;
 
@@ -108,7 +109,7 @@ fn write_failure(error: &std::io::Error) -> GitFailure {
 /// that is no bundle file.
 fn tree_files(listing: &str, prefix: &str) -> TreeFiles {
     let mut files: Vec<TreeFile> = Vec::new();
-    let mut folded: Vec<String> = Vec::new();
+    let mut folded: HashSet<String> = HashSet::new();
 
     for line in listing.split('\0') {
         if line.is_empty() {
@@ -160,9 +161,7 @@ fn tree_files(listing: &str, prefix: &str) -> TreeFiles {
             );
         }
 
-        let fold = bundle_path_fold(path);
-
-        if folded.contains(&fold) {
+        if !folded.insert(bundle_path_fold(path)) {
             return TreeFiles::Refused(
                 archive_failure(
                     BundleFailureCode::ArchiveEntryDuplicate,
@@ -176,7 +175,6 @@ fn tree_files(listing: &str, prefix: &str) -> TreeFiles {
             );
         }
 
-        folded.push(fold);
         files.push(TreeFile {
             path: path.to_owned(),
             object: object.to_owned(),

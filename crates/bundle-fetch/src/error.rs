@@ -18,20 +18,6 @@ pub enum BundleFetchError {
         /// What the system answered.
         message: String,
     },
-    /// An HTTPS request of the release channel failed below the channel's own checks.
-    #[error("{url}: {message}")]
-    Https {
-        /// The URL, printable (no credentials).
-        url: String,
-        /// What the client answered.
-        message: String,
-    },
-    /// The `git` process could not run.
-    #[error("git: {message}")]
-    Git {
-        /// What the system answered.
-        message: String,
-    },
 }
 
 impl BundleFetchError {
