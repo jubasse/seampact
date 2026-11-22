@@ -43,7 +43,7 @@ fn flags_that_do_not_go_together_are_usage_errors() -> TestResult {
         );
     }
 
-    assert!(names_in(&app)?.is_empty());
+    assert_eq!(names_in(&app)?, Vec::<String>::new());
 
     Ok(())
 }
@@ -100,7 +100,7 @@ fn a_dangling_link_where_the_config_goes_is_refused_and_nothing_is_written_throu
 
     assert_eq!(exit, EXIT_REFUSED);
     assert!(io.stderr.starts_with("init.file-exists: "), "{}", io.stderr);
-    assert!(names_in(&elsewhere)?.is_empty());
+    assert_eq!(names_in(&elsewhere)?, Vec::<String>::new());
     assert_eq!(names_in(&app)?, ["seampact.config.yaml"]);
 
     Ok(())
@@ -122,7 +122,7 @@ fn init_is_refused_where_local_sources_are_refused_and_writes_nothing() -> TestR
         "{}",
         io.stderr
     );
-    assert!(names_in(&app)?.is_empty());
+    assert_eq!(names_in(&app)?, Vec::<String>::new());
 
     Ok(())
 }
@@ -203,7 +203,7 @@ fn a_failure_after_the_first_write_removes_what_init_wrote() -> TestResult {
         "{}",
         io.stderr
     );
-    assert!(names_in(&app)?.is_empty());
+    assert_eq!(names_in(&app)?, Vec::<String>::new());
 
     Ok(())
 }

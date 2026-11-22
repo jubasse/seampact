@@ -70,7 +70,7 @@ pub(crate) fn explain_command(
 
     let chosen = match chosen_api(&compiled.apis, &target) {
         Ok(chosen) => chosen,
-        Err(problem) => return Ok(refuse(io, &[problem])),
+        Err(problem) => return Ok(refuse(io, &[*problem])),
     };
     let ir = &chosen.ir;
     let Some(operation) = ir
@@ -116,7 +116,7 @@ pub(crate) fn explain_command(
 fn chosen_api<'compiled>(
     apis: &'compiled [CompiledApi],
     target: &ExplainTarget<'_>,
-) -> Result<&'compiled CompiledApi, CliProblem> {
+) -> Result<&'compiled CompiledApi, Box<CliProblem>> {
     let candidates: Vec<&CompiledApi> = apis
         .iter()
         .filter(|each| match &target.api {
@@ -174,7 +174,7 @@ fn chosen_api<'compiled>(
         ),
     };
 
-    Err(problem)
+    Err(Box::new(problem))
 }
 
 #[cfg(test)]

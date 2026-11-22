@@ -351,14 +351,26 @@ fn operation_id_comment(operation: &JsonValue, provenance_of: &Where<'_>) -> Str
     parts.join(", ")
 }
 
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "member_line takes a renderer that may reach a stub"
+)]
 fn identity_member(value: &JsonValue) -> Result<JsonValue, CliError> {
     Ok(value.clone())
 }
 
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "member_line takes a renderer that may reach a stub"
+)]
 fn plain_member(value: &JsonValue) -> Result<JsonValue, CliError> {
     Ok(without_provenance(value))
 }
 
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "member_line takes a renderer that may reach a stub"
+)]
 fn relay_member(relay: &JsonValue) -> Result<JsonValue, CliError> {
     let member = |name: &str| object_of(Some(relay)).and_then(|object| object.get(name));
 
@@ -369,45 +381,14 @@ fn relay_member(relay: &JsonValue) -> Result<JsonValue, CliError> {
     )))
 }
 
-/// The view of `operation` of `ir`: the lines of its members, then what the view leaves out.
-///
-/// # Errors
-///
-/// [`CliError::Internal`] when the operation does not encode.
-///
-/// A member another brief renders (`csrf`, `scopes`, `requires`, `idempotency`, `concurrency`,
-/// `paging`, `deprecated`) reaches that function's stub.
-pub(crate) fn explain_operation_text(
+/// The lines from `csrf` to `relays`: the members that carry rules and their provenance.
+fn member_lines(
     ir: &ContractIr,
-    operation: &Operation,
-    locations: &IndexMap<String, Location>,
-) -> Result<String, CliError> {
-    let operation_value =
-        to_json_value(operation).map_err(|error| InternalError::new(error.to_string()))?;
-    let JsonValue::Object(members) = &operation_value else {
-        return Err(InternalError::new("an operation that is not a mapping").into());
-    };
-    let provenance_of = &Where { locations };
+    members: &JsonObject,
+    provenance_of: &Where<'_>,
+) -> Result<Vec<ViewLine>, CliError> {
     let get = |name: &str| members.get(name);
-    let text_of = |name: &str| js_text_of(get(name));
-    let mut lines = vec![
-        ViewLine::plain(format!(
-            "# seampact explain {}.{}",
-            ir.api.id,
-            text_of("id")
-        )),
-        ViewLine::commented(
-            format!("operationId: {}", text_of("id")),
-            operation_id_comment(&operation_value, provenance_of),
-        ),
-        ViewLine::plain(format!("surface: {}", text_of("surface"))),
-        ViewLine::plain(format!("method: {}", text_of("method"))),
-        ViewLine::plain(format!("path: {}", text_of("path"))),
-    ];
-
-    if let Some(access) = get("access") {
-        lines.extend(access_lines(access, provenance_of));
-    }
+    let mut lines = Vec::new();
 
     lines.extend(member_line("csrf", get("csrf"), csrf_value, provenance_of)?);
     lines.extend(block("scopes", scope_lines(members, provenance_of)?));
@@ -496,6 +477,14 @@ pub(crate) fn explain_operation_text(
         provenance_of,
     )?);
 
+    Ok(lines)
+}
+
+/// The lines from `upstream` to the members the view leaves out.
+fn tail_lines(members: &JsonObject, provenance_of: &Where<'_>) -> Vec<ViewLine> {
+    let get = |name: &str| members.get(name);
+    let mut lines = Vec::new();
+
     let upstream = items_of(get("upstream"));
 
     if !upstream.is_empty() {
@@ -516,7 +505,10 @@ pub(crate) fn explain_operation_text(
         lines.push(ViewLine::plain("internal: true".to_owned()));
     }
 
-    lines.push(ViewLine::plain(format!("format: {}", text_of("format"))));
+    lines.push(ViewLine::plain(format!(
+        "format: {}",
+        js_text_of(get("format"))
+    )));
 
     let tags = items_of(get("tags"));
 
@@ -528,6 +520,53 @@ pub(crate) fn explain_operation_text(
     }
 
     lines.extend(not_shown_line(members).map(ViewLine::plain));
+
+    lines
+}
+
+/// The view of `operation` of `ir`: the lines of its members, then what the view leaves out.
+///
+/// # Errors
+///
+/// [`CliError::Internal`] when the operation does not encode.
+///
+/// A member another brief renders (`csrf`, `scopes`, `requires`, `idempotency`, `concurrency`,
+/// `paging`, `deprecated`) reaches that function's stub.
+pub(crate) fn explain_operation_text(
+    ir: &ContractIr,
+    operation: &Operation,
+    locations: &IndexMap<String, Location>,
+) -> Result<String, CliError> {
+    let operation_value =
+        to_json_value(operation).map_err(|error| InternalError::new(error.to_string()))?;
+    let JsonValue::Object(members) = &operation_value else {
+        return Err(InternalError::new("an operation that is not a mapping").into());
+    };
+    let provenance_of = &Where { locations };
+    let get = |name: &str| members.get(name);
+    let text_of = |name: &str| js_text_of(get(name));
+    let mut lines = vec![
+        ViewLine::plain(format!(
+            "# seampact explain {}.{}",
+            ir.api.id,
+            text_of("id")
+        )),
+        ViewLine::commented(
+            format!("operationId: {}", text_of("id")),
+            operation_id_comment(&operation_value, provenance_of),
+        ),
+        ViewLine::plain(format!("surface: {}", text_of("surface"))),
+        ViewLine::plain(format!("method: {}", text_of("method"))),
+        ViewLine::plain(format!("path: {}", text_of("path"))),
+    ];
+
+    if let Some(access) = get("access") {
+        lines.extend(access_lines(access, provenance_of));
+    }
+
+    lines.extend(member_lines(ir, members, provenance_of)?);
+
+    lines.extend(tail_lines(members, provenance_of));
 
     let written: Vec<String> = lines.iter().map(ViewLine::written).collect();
 

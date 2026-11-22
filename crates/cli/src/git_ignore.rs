@@ -68,10 +68,12 @@ pub(crate) fn git_ignore_with_entries(
     }
 
     let line_end = first_line_end(existing_text).map_or("\n", |(_, end)| end);
-    let added: String = missing
-        .iter()
-        .map(|entry| format!("{entry}{line_end}"))
-        .collect();
+    let mut added = String::new();
+
+    for entry in &missing {
+        added.push_str(entry);
+        added.push_str(line_end);
+    }
 
     let Some(existing) = existing else {
         return Ok(GitIgnoreChange::Created { file, text: added });
@@ -94,4 +96,106 @@ pub(crate) fn git_ignore_with_entries(
         file,
         text: format!("{existing}{separator}{added}"),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const ENTRY: &str = ".seampact/";
+
+    fn change_for(existing: Option<&str>) -> Result<GitIgnoreChange, Box<dyn std::error::Error>> {
+        let directory = tempfile::tempdir()?;
+        let path = Utf8PathBuf::from_path_buf(directory.path().to_path_buf())
+            .map_err(|path| format!("not UTF-8: {}", path.display()))?;
+
+        if let Some(existing) = existing {
+            fs::write(path.join(GIT_IGNORE_FILE), existing)?;
+        }
+
+        let change = git_ignore_with_entries(&path, &[ENTRY])?;
+
+        Ok(match change {
+            GitIgnoreChange::Created { text, .. } => GitIgnoreChange::Created {
+                file: Utf8PathBuf::new(),
+                text,
+            },
+            GitIgnoreChange::Appended { text, .. } => GitIgnoreChange::Appended {
+                file: Utf8PathBuf::new(),
+                text,
+            },
+            GitIgnoreChange::Unchanged { text, .. } => GitIgnoreChange::Unchanged {
+                file: Utf8PathBuf::new(),
+                text,
+            },
+            GitIgnoreChange::Link { .. } => GitIgnoreChange::Link {
+                file: Utf8PathBuf::new(),
+            },
+        })
+    }
+
+    fn text_of(change: GitIgnoreChange) -> Option<String> {
+        match change {
+            GitIgnoreChange::Created { text, .. }
+            | GitIgnoreChange::Appended { text, .. }
+            | GitIgnoreChange::Unchanged { text, .. } => Some(text),
+            GitIgnoreChange::Link { .. } => None,
+        }
+    }
+
+    #[test]
+    fn the_entry_is_added_after_the_file_ending_it_already_has()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let cases = [
+            (None, ".seampact/\n", "created"),
+            (
+                Some("node_modules"),
+                "node_modules\n.seampact/\n",
+                "appended",
+            ),
+            (Some("a\r\nb\r\n"), "a\r\nb\r\n.seampact/\r\n", "appended"),
+            (Some(""), ".seampact/\n", "appended"),
+            (
+                Some("/.seampact/\n"),
+                "/.seampact/\n.seampact/\n",
+                "appended",
+            ),
+            (Some(".seampact\n"), ".seampact\n", "unchanged"),
+            (Some("  .seampact/ \n"), "  .seampact/ \n", "unchanged"),
+        ];
+
+        for (existing, expected, kind) in cases {
+            let change = change_for(existing)?;
+            let actual_kind = match &change {
+                GitIgnoreChange::Created { .. } => "created",
+                GitIgnoreChange::Appended { .. } => "appended",
+                GitIgnoreChange::Unchanged { .. } => "unchanged",
+                GitIgnoreChange::Link { .. } => "link",
+            };
+
+            assert_eq!(actual_kind, kind, "existing {existing:?}");
+            assert_eq!(
+                text_of(change).as_deref(),
+                Some(expected),
+                "existing {existing:?}"
+            );
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn a_symbolic_link_is_reported_and_not_read() -> Result<(), Box<dyn std::error::Error>> {
+        let directory = tempfile::tempdir()?;
+        let path = Utf8PathBuf::from_path_buf(directory.path().to_path_buf())
+            .map_err(|path| format!("not UTF-8: {}", path.display()))?;
+
+        std::os::unix::fs::symlink(path.join("elsewhere"), path.join(GIT_IGNORE_FILE))?;
+
+        let change = git_ignore_with_entries(&path, &[ENTRY])?;
+
+        assert!(matches!(change, GitIgnoreChange::Link { .. }), "{change:?}");
+
+        Ok(())
+    }
 }

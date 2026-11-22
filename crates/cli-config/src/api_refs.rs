@@ -16,6 +16,7 @@ pub struct ApiRef<'text> {
 }
 
 /// The api name alone, or `<source>/<api>` split at its first separator.
+#[must_use]
 pub fn parse_api_ref(text: &str) -> ApiRef<'_> {
     match text.split_once(SOURCE_SEPARATOR) {
         Some((source, api)) => ApiRef {
@@ -30,6 +31,7 @@ pub fn parse_api_ref(text: &str) -> ApiRef<'_> {
 }
 
 /// The `apis` of `entry`, else its `api` as a one-item list, else none.
+#[must_use]
 pub fn api_refs_of(entry: &JsonValue) -> Vec<&str> {
     let object = record(Some(entry));
 

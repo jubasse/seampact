@@ -86,6 +86,10 @@ fn layer_file_kind(layer: &ApiLayer) -> AuthoringFile {
 }
 
 /// The kind `file` gets, or why it gets none.
+#[expect(
+    clippy::case_sensitive_file_extension_comparisons,
+    reason = "the TypeScript tests /\\.ya?ml$/, which is case-sensitive"
+)]
 fn single_kind(
     file: &str,
     kinds: Option<&Vec<Option<AuthoringFile>>>,
