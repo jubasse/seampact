@@ -107,6 +107,51 @@ fn a_dangling_link_where_the_config_goes_is_refused_and_nothing_is_written_throu
 }
 
 #[test]
+fn a_gitignore_that_is_a_symbolic_link_is_refused_before_any_write() -> TestResult {
+    let (_guard, app) = empty_directory()?;
+    let (_elsewhere_guard, elsewhere) = empty_directory()?;
+    let target = elsewhere.join("ignored");
+
+    fs::write(&target, "dist\n")?;
+    std::os::unix::fs::symlink(&target, app.join(".gitignore"))?;
+
+    let (exit, io) = run(&app, &["init"])?;
+
+    assert_eq!(exit, EXIT_REFUSED);
+    assert!(
+        io.stderr.starts_with("init.ignore-file-link: "),
+        "{}",
+        io.stderr
+    );
+    assert_eq!(fs::read_to_string(&target)?, "dist\n");
+    assert_eq!(names_in(&app)?, [".gitignore"]);
+    assert!(fs::symlink_metadata(app.join(".gitignore"))?.is_symlink());
+
+    Ok(())
+}
+
+#[test]
+fn modelines_are_refused_for_an_app_config_without_a_path_source() -> TestResult {
+    let (_guard, app) = empty_directory()?;
+
+    fs::write(
+        app.join("seampact.config.yaml"),
+        "sources:\n  notes: { package: '@acme/notes', version: 1.0.0 }\n",
+    )?;
+
+    let (exit, io) = run(&app, &["init", "--modelines"])?;
+
+    assert_eq!(exit, EXIT_REFUSED);
+    assert!(
+        io.stderr.starts_with("init.modelines.no-source: "),
+        "{}",
+        io.stderr
+    );
+
+    Ok(())
+}
+
+#[test]
 fn init_is_refused_where_local_sources_are_refused_and_writes_nothing() -> TestResult {
     let (_guard, app) = empty_directory()?;
     let (exit, io) = run_with_environment(&app, &[("SEAMPACT_ALLOW_LOCAL", "false")], &["init"])?;
