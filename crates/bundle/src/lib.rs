@@ -37,6 +37,7 @@ pub use contents::{BundleContents, BundleEntry, bundle_entries, bundle_manifest_
 pub use error::BundleError;
 pub use failure::{BundleFailure, BundleFailureCode};
 pub use file_list::{canonical_bundle_file_list, compare_bundle_paths};
+pub use installed_package::{installed_package_directory, resolve_directory};
 pub use integrity::{bundle_integrity, bundle_sha256_hex};
 pub use label::bundle_label_problem;
 pub use limits::{
@@ -51,7 +52,9 @@ pub use manifest::{
 pub use manifest_read::{BundleManifestRead, manifest_too_large, read_bundle_manifest};
 pub use manifest_rules::{BundleManifestProblem, bundle_manifest_rule_problems};
 pub use path::{BUNDLE_PATH_MAX_LENGTH, bundle_path_fold, bundle_path_problem};
-pub use source::BundleSource;
+pub use source::{
+    BundleSource, BundleSourceForm, GitBundleSource, PackageBundleSource, ReleaseBundleSource,
+};
 pub use tarball_read::{
     BundleArchiveExtraction, BundleArchiveRead, extract_bundle_tarball, read_bundle_tarball,
 };
