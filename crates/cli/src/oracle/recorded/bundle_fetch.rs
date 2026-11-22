@@ -372,11 +372,16 @@ fn api_json(api: &PipelineApiResult, files: &SourceFiles) -> Result<JsonValue, S
     ];
 
     if let Some(ir) = &api.ir {
-        entries.push(("ir", ir.to_json_value().map_err(|error| error.to_string())?));
+        let document = ir.to_json_value().map_err(|error| error.to_string())?;
+
+        entries.push(("ir", in_document_order(&document)?));
     }
 
     if let Some(source_map) = &api.source_map {
-        entries.push(("sourceMap", source_map_json(source_map)));
+        entries.push((
+            "sourceMap",
+            in_document_order(&source_map_json(source_map))?,
+        ));
     }
 
     if let Some(declared) = &api.declared {
