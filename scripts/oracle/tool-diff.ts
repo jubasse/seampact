@@ -10,7 +10,11 @@ export const DEFAULT_DIFF_OPTIONS = { today: "2026-01-01" };
 export type SideIrs = ReadonlyMap<string, object>;
 
 export function diffTableText(tools: OracleTools): string {
-  return jsonText({ codes: tools.diffTable.codes, table: tools.diffTable.table });
+  return jsonText({
+    codes: tools.diffTable.codes,
+    table: tools.diffTable.table,
+    memberRows: tools.diffTable.memberRows,
+  });
 }
 
 /** `diffContracts` when each side holds one api, else `diffContractSets` with one report per api. */
