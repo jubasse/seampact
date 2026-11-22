@@ -25,7 +25,7 @@ impl JsonObject {
     ///
     /// A repeated name keeps its first place and takes the last value, as assignment does.
     #[must_use]
-    pub fn from_members<const COUNT: usize>(members: [(&str, JsonValue); COUNT]) -> Self {
+    pub fn from_members<'name>(members: impl IntoIterator<Item = (&'name str, JsonValue)>) -> Self {
         members
             .into_iter()
             .map(|(name, value)| (name.to_owned(), value))

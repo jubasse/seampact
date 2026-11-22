@@ -8,7 +8,7 @@ use seampact_ir::{
     JsonContent, KnownTypeUseRef, OutputEnumForm, Pattern, RefTypeUse, Refinements, ScalarTypeUse,
     SchemaId, TypeUse, UnknownKeys,
 };
-use seampact_json::{JsonValue, js_text_of};
+use seampact_json::{JsonValue, js_text_of, pointer_below};
 
 use crate::DiffError;
 use crate::change_sink::RawChange;
@@ -17,7 +17,7 @@ use crate::walk_context::{
     compare_members, emit_at, refuse_unknown_value,
 };
 use crate::walk_decimal::{compare_decimals, is_decimal_multiple};
-use crate::walk_json::{object_members, pointer_join, text_value};
+use crate::walk_json::{object_members, text_value};
 use crate::walk_same_wire::{is_same_wire_enum, is_same_wire_schema};
 
 /// Which end of a range a bound limits.
@@ -131,7 +131,7 @@ pub(crate) fn compare_type_use(
         refuse_unknown_value(
             context,
             site,
-            &pointer_join(pointer, &["kind"]),
+            &pointer_below(pointer, &["kind"]),
             before.tag(),
         );
 
@@ -141,7 +141,7 @@ pub(crate) fn compare_type_use(
         refuse_unknown_value(
             context,
             site,
-            &pointer_join(pointer, &["kind"]),
+            &pointer_below(pointer, &["kind"]),
             after.tag(),
         );
 
@@ -329,7 +329,7 @@ fn compare_unknown_keys(
             refuse_unknown_value(
                 context,
                 &reach_site,
-                &pointer_join(pointer, &["policy"]),
+                &pointer_below(pointer, &["policy"]),
                 after_policy,
             );
 
@@ -722,7 +722,7 @@ fn compare_enum_use(
             compare_enum_values(
                 context,
                 site,
-                &pointer_join(member_pointer, &["values"]),
+                &pointer_below(member_pointer, &["values"]),
                 before_values,
                 after_values,
             );
@@ -1019,7 +1019,7 @@ pub(crate) fn compare_enum_values(
             RawChange::new(
                 DiffKind::EnumValue,
                 "added",
-                pointer_join(pointer, &[&index.to_string()]),
+                pointer_below(pointer, &[&index.to_string()]),
             )
             .between(None, Some(text_value(value)))
             .with_facts(facts.clone()),
@@ -1037,7 +1037,7 @@ pub(crate) fn compare_enum_values(
             RawChange::new(
                 DiffKind::EnumValue,
                 "removed",
-                pointer_join(pointer, &[&index.to_string()]),
+                pointer_below(pointer, &[&index.to_string()]),
             )
             .between(Some(text_value(value)), None)
             .with_facts(facts.clone()),

@@ -1,8 +1,8 @@
 //! The value each member of an operation shows as in `seampact explain`.
 
-use seampact_json::{JsonObject, JsonValue, js_text_of};
+use seampact_json::{JsonObject, JsonValue, is_text, items_of, js_text_of, object_of};
 
-use crate::explain_flow::{is_text, items_of, object_of, object_of_present, type_text};
+use crate::explain_flow::{object_of_present, type_text};
 
 const JSON_MEDIA: &str = "application/json";
 

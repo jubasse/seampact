@@ -10,7 +10,6 @@ use seampact_target::Refusal;
 
 use crate::documents::{OPENAPI_VERSION, Route, most_used_format, paths_by_route, servers_array};
 use crate::emit_context::{EXTENSION_PREFIX, extension_member, is_extension_selected};
-use crate::json_value::{array_member, object_member};
 use crate::merge_documents::MergeOptions;
 use crate::{ExtensionName, OpenApiError};
 
@@ -149,7 +148,7 @@ fn place_source(assembly: &mut Assembly, source: &ApiSource) -> Result<(), OpenA
         ClashKind::Name,
     );
 
-    for tag in array_member(document, "tags") {
+    for tag in document.array_member("tags") {
         let name = string_member(tag, "name", &format!("a tag of the api {api}"))?;
         let placed_tag = Placed {
             api: api.clone(),
@@ -166,7 +165,7 @@ fn place_source(assembly: &mut Assembly, source: &ApiSource) -> Result<(), OpenA
         );
     }
 
-    if let Some(components) = object_member(document, COMPONENTS_MEMBER) {
+    if let Some(components) = document.object_member(COMPONENTS_MEMBER) {
         place_components(assembly, api, components)?;
     }
 
@@ -225,7 +224,7 @@ fn place_operations(
     let format_member = extension_member(ExtensionName::Format);
     let document_format = document.get(&format_member);
 
-    for (path, path_item) in object_member(document, "paths").into_iter().flatten() {
+    for (path, path_item) in document.object_member("paths").into_iter().flatten() {
         let JsonValue::Object(operations) = path_item else {
             continue;
         };
@@ -508,7 +507,7 @@ fn api_header(source: &ApiSource) -> Result<JsonObject, OpenApiError> {
         api_value,
         document,
     } = source;
-    let info = object_member(document, "info");
+    let info = document.object_member("info");
     let mut header = JsonObject::from_members([("name", JsonValue::text(api))]);
 
     for (member, value) in api_value {
@@ -626,13 +625,13 @@ mod tests {
 
     use super::*;
     use crate::EmitterOptions;
-    use crate::json_value::object_of;
+    use crate::json_value::object_from_text;
 
     type TestResult = Result<(), Box<dyn std::error::Error>>;
 
     fn source(api: &str, document: &str) -> Result<ApiSource, Box<dyn std::error::Error>> {
-        let mut document = object_of(document)?;
-        let info = object_of(r#"{"title": "t", "version": "1"}"#)?;
+        let mut document = object_from_text(document)?;
+        let info = object_from_text(r#"{"title": "t", "version": "1"}"#)?;
 
         if !document.contains_key("info") {
             document.insert("info".to_owned(), JsonValue::Object(info));
@@ -640,7 +639,7 @@ mod tests {
 
         Ok(ApiSource {
             api: api.to_owned(),
-            api_value: object_of(r#"{"kind": "http"}"#)?,
+            api_value: object_from_text(r#"{"kind": "http"}"#)?,
             document,
         })
     }

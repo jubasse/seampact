@@ -7,7 +7,6 @@ use seampact_json::{JsonObject, JsonValue};
 
 use crate::ExtensionName;
 use crate::emit_context::{COMPONENT_SCHEMA_PREFIX, EXTENSION_PREFIX};
-use crate::json_value::object_member;
 
 /// The item member of the `restricted-to` extension that names a schema component key.
 const RESTRICTED_TO_KEY_MEMBER: &str = "schema";
@@ -28,7 +27,7 @@ pub(crate) fn is_valid_prefix(prefix: &str) -> bool {
 
 /// A copy of the document with `prefix` applied; the document itself is left as it is.
 pub(crate) fn prefix_document(document: &JsonObject, prefix: &str) -> JsonObject {
-    let components = object_member(document, "components");
+    let components = document.object_member("components");
     let renaming = SchemaRenaming {
         prefix: prefix.to_owned(),
         schema_keys: keys_of_member(components, "schemas"),
@@ -49,7 +48,7 @@ pub(crate) fn prefix_document(document: &JsonObject, prefix: &str) -> JsonObject
 
 fn keys_of_member(object: Option<&JsonObject>, member: &str) -> HashSet<String> {
     object
-        .and_then(|found| object_member(found, member))
+        .and_then(|found| found.object_member(member))
         .map(|members| members.keys().cloned().collect())
         .unwrap_or_default()
 }
@@ -252,10 +251,7 @@ fn prefixed_discriminator(
     if discriminator.get("mapping").is_some() {
         let mut renamed = JsonObject::new();
 
-        for (value, reference) in object_member(discriminator, "mapping")
-            .into_iter()
-            .flatten()
-        {
+        for (value, reference) in discriminator.object_member("mapping").into_iter().flatten() {
             let written = match reference {
                 JsonValue::String(text) => JsonValue::String(prefixed_reference(text, renaming)),
                 other => other.clone(),
@@ -304,18 +300,18 @@ fn with_mapping(discriminator: &JsonObject, mapping: JsonObject) -> JsonObject {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::json_value::object_of;
+    use crate::json_value::object_from_text;
 
     type TestResult = Result<(), Box<dyn std::error::Error>>;
 
     #[test]
     fn references_and_keys_are_renamed_and_a_data_string_naming_a_component_stays() -> TestResult {
-        let document = object_of(
+        let document = object_from_text(
             r##"{"openapi": "3.1.0", "paths": {}, "components": {"schemas": {
                 "Task": {"type": "string", "examples": ["#/components/schemas/Task"], "default": "#/components/schemas/Task"},
                 "Holder": {"$ref": "#/components/schemas/Task", "description": "#/components/schemas/Task"}}}}"##,
         )?;
-        let expected = object_of(
+        let expected = object_from_text(
             r##"{"openapi": "3.1.0", "paths": {}, "components": {"schemas": {
                 "p.Task": {"type": "string", "examples": ["#/components/schemas/Task"], "default": "#/components/schemas/Task"},
                 "p.Holder": {"$ref": "#/components/schemas/p.Task", "description": "#/components/schemas/Task"}}}}"##,
@@ -328,11 +324,11 @@ mod tests {
 
     #[test]
     fn operation_ids_and_the_schemes_of_security_requirements_take_the_prefix() -> TestResult {
-        let document = object_of(
+        let document = object_from_text(
             r#"{"paths": {"/a": {"get": {"operationId": "list", "security": [{"bearer": [], "other": ["x"]}, {}]}, "parameters": []}},
                 "components": {"securitySchemes": {"bearer": {"type": "http"}}}}"#,
         )?;
-        let expected = object_of(
+        let expected = object_from_text(
             r#"{"paths": {"/a": {"get": {"operationId": "p.list", "security": [{"p.bearer": [], "other": ["x"]}, {}]}, "parameters": []}},
                 "components": {"securitySchemes": {"p.bearer": {"type": "http"}}}}"#,
         )?;
@@ -344,10 +340,10 @@ mod tests {
 
     #[test]
     fn a_discriminator_without_a_mapping_is_written_from_its_branches() -> TestResult {
-        let document = object_of(
+        let document = object_from_text(
             r##"{"components": {"schemas": {"A": {}, "Pet": {"oneOf": [{"$ref": "#/components/schemas/A"}, {"type": "string"}], "discriminator": {"propertyName": "kind"}}}}}"##,
         )?;
-        let expected = object_of(
+        let expected = object_from_text(
             r##"{"components": {"schemas": {"p.A": {}, "p.Pet": {"oneOf": [{"$ref": "#/components/schemas/p.A"}, {"type": "string"}], "discriminator": {"propertyName": "kind", "mapping": {"A": "#/components/schemas/p.A"}}}}}}"##,
         )?;
 
@@ -358,10 +354,10 @@ mod tests {
 
     #[test]
     fn a_restricted_to_item_names_its_schema_under_the_prefix() -> TestResult {
-        let document = object_of(
+        let document = object_from_text(
             r#"{"components": {"schemas": {"Role": {}, "T": {"x-seampact-restricted-to": [{"schema": "Role"}, {"schema": "Gone"}]}}}}"#,
         )?;
-        let expected = object_of(
+        let expected = object_from_text(
             r#"{"components": {"schemas": {"p.Role": {}, "p.T": {"x-seampact-restricted-to": [{"schema": "p.Role"}, {"schema": "Gone"}]}}}}"#,
         )?;
 

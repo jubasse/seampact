@@ -8,10 +8,9 @@ use seampact_diagnostics::InternalError;
 use seampact_diff_table::{DeprecationEntry, OperationDeprecationStatus, SchemaDeprecationStatus};
 use seampact_ir::{ContractIr, Deprecation, KnownSchemaRef, Operation, Schema};
 use seampact_js::cmp_utf16;
-use seampact_json::JsonValue;
+use seampact_json::{JsonValue, pointer_below};
 
 use crate::DiffError;
-use crate::walk_json::pointer_join;
 
 /// The deprecation entries of the two contracts, sorted by operation then pointer.
 ///
@@ -109,7 +108,7 @@ fn operation_entries(
 }
 
 fn deprecated_pointer(position: usize) -> String {
-    pointer_join("", &["operations", &position.to_string(), "deprecated"])
+    pointer_below("", &["operations", &position.to_string(), "deprecated"])
 }
 
 /// What became of an operation deprecated in `after`.
@@ -201,7 +200,7 @@ fn schema_entries(before: &ContractIr, after: &ContractIr) -> Vec<DeprecationEnt
         let Some(previous) = before.schemas.get(id.as_str()) else {
             continue;
         };
-        let pointer = pointer_join("", &["schemas", id.as_str()]);
+        let pointer = pointer_below("", &["schemas", id.as_str()]);
 
         if flag_of(previous) != flag_of(schema) {
             entries.push(DeprecationEntry::Schema {
@@ -266,7 +265,7 @@ fn property_entries(
         }
 
         entries.push(DeprecationEntry::Property {
-            pointer: pointer_join(pointer, &["properties", &position.to_string()]),
+            pointer: pointer_below(pointer, &["properties", &position.to_string()]),
             schema: id.to_owned(),
             property: property.name.clone(),
             status: status_of(property.deprecated),

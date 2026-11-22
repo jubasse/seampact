@@ -9,7 +9,7 @@ use seampact_ir::{
     UnionVariant,
 };
 use seampact_js::cmp_utf16;
-use seampact_json::JsonValue;
+use seampact_json::{JsonValue, pointer_below};
 
 use crate::DiffError;
 use crate::change_sink::{ChangeReach, ElementOrigin, RawChange};
@@ -17,7 +17,7 @@ use crate::walk_context::{
     ChangeSite, MemberComparisons, WalkContext, compare_kept_order, compare_members, emit_at,
     refuse_unknown_value, without_position,
 };
-use crate::walk_json::{flag_value, object_members, pointer_join, text_value};
+use crate::walk_json::{flag_value, object_members, text_value};
 use crate::walk_reach::{common_reaches, enum_reach_key, scalar_reach_key, schema_reach_key};
 use crate::walk_same_wire::is_same_wire_schema;
 use crate::walk_type_use::{compare_enum_values, compare_nullable, compare_type_use};
@@ -63,8 +63,8 @@ pub(crate) fn compare_schema_catalogue(context: &mut WalkContext<'_>) -> Result<
             &context.after_reach,
             &schema_reach_key(&id),
         );
-        let pointer = pointer_join("", &["schemas", &id]);
-        let kind_pointer = pointer_join(&pointer, &["kind"]);
+        let pointer = pointer_below("", &["schemas", &id]);
+        let kind_pointer = pointer_below(&pointer, &["kind"]);
         let Ok(known_before) = KnownSchemaRef::try_from(before) else {
             let site = ChangeSite {
                 reaches: &reaches,
@@ -275,7 +275,7 @@ fn compare_properties(
             RawChange::new(
                 DiffKind::PropertyAdded,
                 optional_case(property),
-                pointer_join(pointer, &[&index.to_string()]),
+                pointer_below(pointer, &[&index.to_string()]),
             )
             .between(None, Some(text_value(&property.name))),
         );
@@ -298,7 +298,7 @@ fn compare_properties(
                 RawChange::new(
                     DiffKind::PropertyRemoved,
                     optional_case(property),
-                    pointer_join(pointer, &[&index.to_string()]),
+                    pointer_below(pointer, &[&index.to_string()]),
                 )
                 .between(Some(text_value(&property.name)), None),
             );
@@ -313,7 +313,7 @@ fn compare_properties(
         compare_property(
             context,
             &property_site,
-            &pointer_join(pointer, &[&kept.to_string()]),
+            &pointer_below(pointer, &[&kept.to_string()]),
             property,
             after_property,
         )?;
@@ -517,7 +517,7 @@ fn compare_union_schema(
     comparisons.insert(
         "tag",
         Box::new(|context, member_pointer, _before_value, _after_value| {
-            let place = pointer_join(member_pointer, &["in"]);
+            let place = pointer_below(member_pointer, &["in"]);
 
             if KnownUnionTagRef::try_from(&before.tag).is_err() {
                 refuse_unknown_value(context, site, &place, before.tag.tag());
@@ -581,7 +581,7 @@ fn compare_variants(
             RawChange::new(
                 DiffKind::UnionVariant,
                 "added",
-                pointer_join(pointer, &[&index.to_string()]),
+                pointer_below(pointer, &[&index.to_string()]),
             )
             .between(None, Some(text_value(&variant.tag))),
         );
@@ -600,7 +600,7 @@ fn compare_variants(
                 RawChange::new(
                     DiffKind::UnionVariant,
                     "removed",
-                    pointer_join(pointer, &[&index.to_string()]),
+                    pointer_below(pointer, &[&index.to_string()]),
                 )
                 .between(Some(text_value(&variant.tag)), None),
             );
@@ -611,7 +611,7 @@ fn compare_variants(
         compare_kept_variant(
             context,
             site,
-            &pointer_join(pointer, &[&kept.to_string()]),
+            &pointer_below(pointer, &[&kept.to_string()]),
             variant,
             after_variant,
         )?;
@@ -772,7 +772,7 @@ pub(crate) fn compare_scalar_catalogue(context: &mut WalkContext<'_>) -> Result<
             context,
             &site,
             IrDefinition::Scalar,
-            &pointer_join("", &["scalars", &id]),
+            &pointer_below("", &["scalars", &id]),
             Some(&object_members(before)?),
             Some(&object_members(after)?),
             &comparisons,
@@ -802,7 +802,7 @@ pub(crate) fn compare_enum_catalogue(context: &mut WalkContext<'_>) -> Result<()
             reaches: &reaches,
             origin: Some(ElementOrigin::from(&after.origin)),
         };
-        let pointer = pointer_join("", &["enums", &id]);
+        let pointer = pointer_below("", &["enums", &id]);
         let mut comparisons = MemberComparisons::new();
 
         comparisons.insert(

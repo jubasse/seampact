@@ -1,10 +1,9 @@
 //! A `maven` source must name one release: a dynamic or snapshot version cannot be pinned.
 
 use seampact_diagnostics::InternalError;
-use seampact_json::JsonValue;
+use seampact_json::{JsonValue, object_of, text_of};
 
 use crate::config_position::ParsedConfig;
-use crate::json_access::{record, text};
 use crate::key_path::KeyPathSegment;
 use crate::{CliConfigError, CliProblem};
 
@@ -20,11 +19,14 @@ pub(crate) fn unpinned_maven_problems(
 ) -> Result<Vec<CliProblem>, CliConfigError> {
     let mut problems = Vec::new();
 
-    for (name, source) in record(sources).into_iter().flat_map(|object| object.iter()) {
-        let Some(maven) = record(Some(source)).and_then(|object| object.get("maven")) else {
+    for (name, source) in object_of(sources)
+        .into_iter()
+        .flat_map(|object| object.iter())
+    {
+        let Some(maven) = object_of(Some(source)).and_then(|object| object.get("maven")) else {
             continue;
         };
-        let coordinate = text(Some(maven)).ok_or_else(|| {
+        let coordinate = text_of(Some(maven)).ok_or_else(|| {
             InternalError::new("a maven source that is not text passed the schema")
         })?;
         let version = coordinate.split(':').nth(VERSION_FIELD_INDEX).unwrap_or("");

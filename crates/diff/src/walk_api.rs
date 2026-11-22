@@ -5,14 +5,14 @@ use std::collections::{HashMap, HashSet};
 use seampact_diff_table::{DiffKind, DiffPosition, IrDefinition};
 use seampact_ir::{Api, ContractIr, PackRef, Surface, SurfaceId};
 use seampact_js::cmp_utf16;
-use seampact_json::JsonValue;
+use seampact_json::{JsonValue, pointer_below};
 
 use crate::DiffError;
 use crate::change_sink::{ChangeReach, ElementOrigin, NO_POSITION, RawChange};
 use crate::walk_context::{
     ChangeSite, MemberComparisons, WalkContext, compare_kept_order, compare_members, emit_at,
 };
-use crate::walk_json::{object_members, pointer_join, text_value};
+use crate::walk_json::{object_members, text_value};
 use crate::walk_maturity::compare_maturity_level;
 use crate::walk_reach::{INT64_REACH_KEY, OUTPUT_ENUMS_REACH_KEY, common_reaches};
 
@@ -371,7 +371,7 @@ fn compare_surfaces(
     surface_ids.dedup();
 
     for id in surface_ids {
-        let surface_pointer = pointer_join(pointer, &[id]);
+        let surface_pointer = pointer_below(pointer, &[id]);
 
         // A surface holds no wire of its own: its operations are added or removed with it.
         let (Some(before_surface), Some(after_surface)) =
@@ -476,7 +476,7 @@ pub(crate) fn compare_packs(context: &mut WalkContext<'_>, before: &[PackRef], a
     };
 
     for (index, pack) in after.iter().enumerate() {
-        let pointer = pointer_join("", &["packs", &index.to_string()]);
+        let pointer = pointer_below("", &["packs", &index.to_string()]);
         let Some(before_pack) = before.iter().find(|candidate| candidate.name == pack.name) else {
             emit_at(
                 context,
@@ -511,7 +511,7 @@ pub(crate) fn compare_packs(context: &mut WalkContext<'_>, before: &[PackRef], a
             RawChange::new(
                 DiffKind::PackUpgraded,
                 "removed",
-                pointer_join("", &["packs", &index.to_string()]),
+                pointer_below("", &["packs", &index.to_string()]),
             )
             .between(Some(text_value(&pack.name)), None),
         );

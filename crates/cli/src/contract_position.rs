@@ -2,10 +2,8 @@
 
 use indexmap::IndexMap;
 use seampact_js::js_number_of_text;
-use seampact_json::{JsonValue, js_text_of};
+use seampact_json::{JsonValue, is_text, items_of, js_text_of, object_of};
 use seampact_span::Location;
-
-use crate::explain_flow::{is_text, items_of, object_of};
 
 /// The `layer` value of an origin that no contract file declares.
 const CORE_LAYER: &str = "core";

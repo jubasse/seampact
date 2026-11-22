@@ -68,7 +68,7 @@ src/emitter_options.rs#refused_with	packages/core/openapi/src/emitter-options.ts
 src/emitter_options.rs#option_value_text	packages/core/openapi/src/emitter-options.ts#optionValueText
 -	packages/core/openapi/src/json-value.ts#copyJsonValue	merged: src/json_value.rs#copy_optional
 -	packages/core/openapi/src/json-value.ts#isJsonObject	merged: src/responses.rs#has_body
-src/json_value.rs#object_member	packages/core/openapi/src/json-value.ts#objectMember
+-	packages/core/openapi/src/json-value.ts#objectMember	merged: ../json/src/object.rs#object_member
 src/security.rs#write_operation_security	packages/core/openapi/src/security.ts#writeOperationSecurity
 src/security.rs#optional_read_schemes	packages/core/openapi/src/security.ts#optionalReadSchemes
 src/security.rs#requirements_of	packages/core/openapi/src/security.ts#requirementsOf
@@ -169,6 +169,6 @@ src/merged_document.rs#merged_operation	packages/core/openapi/src/merge/merged-d
 src/merged_document.rs#sorted_entries	packages/core/openapi/src/merge/merged-document.ts#sortedEntries
 src/merged_document.rs#sorted_values	packages/core/openapi/src/merge/merged-document.ts#sortedValues
 src/merged_document.rs#is_consumer_extension	packages/core/openapi/src/merge/merged-document.ts#isConsumerExtension
-src/json_value.rs#array_member	packages/core/openapi/src/merge/merged-document.ts#arrayMember
+-	packages/core/openapi/src/merge/merged-document.ts#arrayMember	merged: ../json/src/object.rs#array_member
 src/merged_document.rs#string_member	packages/core/openapi/src/merge/merged-document.ts#stringMember
 src/drift.rs#find_document_drift	packages/core/openapi/src/drift.ts#findDocumentDrift

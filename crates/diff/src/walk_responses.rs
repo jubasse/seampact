@@ -2,7 +2,7 @@
 
 use seampact_diff_table::{DiffKind, DiffPosition, IrDefinition};
 use seampact_ir::{Operation, Response, ResponseHeader};
-use seampact_json::{JsonNumber, JsonValue};
+use seampact_json::{JsonNumber, JsonValue, pointer_below};
 
 use crate::DiffError;
 use crate::change_sink::RawChange;
@@ -10,7 +10,7 @@ use crate::walk_context::{
     ChangeSite, KeyedListComparison, MemberComparisons, WalkContext, compare_keyed_list,
     compare_members, emit_at,
 };
-use crate::walk_json::{flag_value, object_members, pointer_join, text_value};
+use crate::walk_json::{flag_value, object_members, text_value};
 use crate::walk_operations::operation_site_with_origin;
 use crate::walk_type_use::compare_type_use;
 
@@ -67,7 +67,7 @@ pub(crate) fn compare_responses(
     if let ([(_, removed_only)], [(added_index, added_only)]) =
         (removed.as_slice(), added.as_slice())
     {
-        let response_pointer = pointer_join(pointer, &[&added_index.to_string()]);
+        let response_pointer = pointer_below(pointer, &[&added_index.to_string()]);
         let changed_operation_site =
             operation_site_with_origin(operation, DiffPosition::Output, added_only.origin.as_ref());
 
@@ -98,7 +98,7 @@ pub(crate) fn compare_responses(
                 context,
                 &response_site.site(),
                 "added",
-                pointer_join(pointer, &[&index.to_string()]),
+                pointer_below(pointer, &[&index.to_string()]),
                 None,
                 Some(status_value(response)),
             );
@@ -115,7 +115,7 @@ pub(crate) fn compare_responses(
                 context,
                 &response_site.site(),
                 "removed",
-                pointer_join(pointer, &[&index.to_string()]),
+                pointer_below(pointer, &[&index.to_string()]),
                 Some(status_value(response)),
                 None,
             );
@@ -133,7 +133,7 @@ pub(crate) fn compare_responses(
         compare_response(
             context,
             operation,
-            &pointer_join(pointer, &[&index.to_string()]),
+            &pointer_below(pointer, &[&index.to_string()]),
             before_response,
             response,
         )?;

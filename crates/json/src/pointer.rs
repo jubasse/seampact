@@ -105,6 +105,12 @@ mod tests {
     }
 
     #[test]
+    fn a_pointer_below_appends_escaped_segments() {
+        assert_eq!(pointer_below("", &["a/b", "c~d", "0"]), "/a~1b/c~0d/0");
+        assert_eq!(pointer_below("/base", &[]), "/base");
+    }
+
+    #[test]
     fn other_text_is_kept() {
         assert_eq!(escape_pointer(""), "");
         assert_eq!(escape_pointer("200"), "200");

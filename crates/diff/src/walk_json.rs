@@ -4,7 +4,7 @@ use seampact_diagnostics::InternalError;
 use seampact_diff_table::DiffValue;
 use seampact_ir::to_json_value;
 use seampact_js::cmp_utf16;
-use seampact_json::{JsonObject, JsonValue, canonical_json, escape_pointer};
+use seampact_json::{JsonObject, JsonValue, canonical_json};
 use serde::Serialize;
 
 use crate::DiffError;
@@ -18,13 +18,6 @@ pub(crate) fn is_same_json(left: Option<&JsonValue>, right: Option<&JsonValue>) 
         }
         (None, Some(_)) | (Some(_), None) => false,
     }
-}
-
-/// `base` extended by the escaped segments (RFC 6901); an index is passed as its decimal text.
-pub(crate) fn pointer_join(base: &str, segments: &[&str]) -> String {
-    segments.iter().fold(base.to_owned(), |pointer, segment| {
-        format!("{pointer}/{}", escape_pointer(segment))
-    })
 }
 
 /// The sorted union of the member names of two objects, in UTF-16 code unit order.
@@ -42,11 +35,6 @@ pub(crate) fn member_names<'members>(
     names.dedup();
 
     names
-}
-
-/// Whether the value is a JSON object (an array is not).
-pub(crate) fn is_record(value: Option<&JsonValue>) -> bool {
-    matches!(value, Some(JsonValue::Object(_)))
 }
 
 /// The JSON of an IR value, as the TypeScript walk reads it.
@@ -113,12 +101,6 @@ mod tests {
     }
 
     #[test]
-    fn a_pointer_segment_escapes_tilde_then_slash() {
-        assert_eq!(pointer_join("", &["a/b", "c~d", "0"]), "/a~1b/c~0d/0");
-        assert_eq!(pointer_join("/base", &[]), "/base");
-    }
-
-    #[test]
     fn only_a_scalar_is_a_report_value() {
         assert_eq!(scalar_value(Some(&JsonValue::Null)), Some(DiffValue::Null));
         assert_eq!(
@@ -145,13 +127,5 @@ mod tests {
             vec!["b", "\u{10000}", "\u{FF5E}"]
         );
         assert_eq!(member_names(None, None), Vec::<&str>::new());
-    }
-
-    #[test]
-    fn an_array_is_no_record() {
-        assert!(is_record(Some(&object(&[]))));
-        assert!(!is_record(Some(&JsonValue::Array(Vec::new()))));
-        assert!(!is_record(Some(&JsonValue::Null)));
-        assert!(!is_record(None));
     }
 }

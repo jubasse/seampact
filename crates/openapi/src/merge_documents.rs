@@ -237,7 +237,6 @@ mod tests {
 
     use super::*;
     use crate::emit_context::COMPONENT_SCHEMA_PREFIX;
-    use crate::json_value::object_member;
 
     type TestResult = Result<(), Box<dyn std::error::Error>>;
 
@@ -284,8 +283,9 @@ mod tests {
     }
 
     fn schema_keys(document: &JsonObject) -> Vec<String> {
-        object_member(document, "components")
-            .and_then(|components| object_member(components, "schemas"))
+        document
+            .object_member("components")
+            .and_then(|components| components.object_member("schemas"))
             .map(|schemas| schemas.keys().cloned().collect())
             .unwrap_or_default()
     }
@@ -329,12 +329,13 @@ mod tests {
     fn each_error_code_of_a_prefixed_api_maps_to_its_prefixed_component() -> TestResult {
         let document = merged_document_of(&[golden_input("reference/tasks")?], &[("tasks", "p")])?;
         let keys = schema_keys(&document);
-        let forbidden = object_member(&document, "paths")
-            .and_then(|paths| object_member(paths, "/v1/channels/{channelId}/tasks"))
-            .and_then(|path_item| object_member(path_item, "post"))
-            .and_then(|operation| object_member(operation, "responses"))
-            .and_then(|responses| object_member(responses, "403"))
-            .and_then(|response| object_member(response, "content"))
+        let forbidden = document
+            .object_member("paths")
+            .and_then(|paths| paths.object_member("/v1/channels/{channelId}/tasks"))
+            .and_then(|path_item| path_item.object_member("post"))
+            .and_then(|operation| operation.object_member("responses"))
+            .and_then(|responses| responses.object_member("403"))
+            .and_then(|response| response.object_member("content"))
             .map(|content| JsonValue::Object(content.clone()));
         let forbidden_text = forbidden.map(|content| seampact_json::stringify_json(&content));
 
@@ -354,13 +355,13 @@ mod tests {
             let mapping: Vec<&JsonValue> = schema
                 .get("discriminator")
                 .and_then(|discriminator| match discriminator {
-                    JsonValue::Object(object) => object_member(object, "mapping"),
+                    JsonValue::Object(object) => object.object_member("mapping"),
                     _ => None,
                 })
                 .map(|mapping| mapping.values().collect())
                 .unwrap_or_default();
 
-            for branch in crate::json_value::array_member(schema, "oneOf") {
+            for branch in schema.array_member("oneOf") {
                 if let JsonValue::Object(branch_object) = branch
                     && let Some(reference @ JsonValue::String(_)) = branch_object.get("$ref")
                 {
@@ -401,7 +402,7 @@ mod tests {
         let mut named = Vec::new();
 
         for holder in holders(&document, member_name) {
-            for item in crate::json_value::array_member(holder, member_name) {
+            for item in holder.array_member(member_name) {
                 if let JsonValue::Object(item_object) = item
                     && let Some(JsonValue::String(schema)) = item_object.get("schema")
                 {

@@ -3,7 +3,7 @@
 use camino::{Utf8Path, Utf8PathBuf};
 use indexmap::IndexMap;
 use seampact_diagnostics::InternalError;
-use seampact_json::JsonValue;
+use seampact_json::{JsonValue, items_of, object_of, text_of};
 use seampact_target::case_folded;
 use unicode_normalization::UnicodeNormalization;
 
@@ -16,7 +16,6 @@ use crate::config_position::ParsedConfig;
 use crate::config_schema::{ConfigSchema, ValidateConfigOutcome, validate_config};
 use crate::config_waits::{find_config_waits, wait_problems};
 use crate::find_root_config::{RootDiscovery, find_root_config};
-use crate::json_access::{items, record, text};
 use crate::key_path::KeyPathSegment;
 use crate::maven_source::unpinned_maven_problems;
 use crate::node_path::{directory_of, resolved_path};
@@ -146,7 +145,7 @@ fn read_app_config_alone(
     let key_problems = wait_problems(&parsed, find_config_waits(&value))?;
 
     // A root config is not read as an app's: a command that runs on a root reads it with `readRunConfig`.
-    if record(Some(&value)).is_some_and(|object| object.contains_key(ROOT_CONFIG_MARKER_KEY)) {
+    if object_of(Some(&value)).is_some_and(|object| object.contains_key(ROOT_CONFIG_MARKER_KEY)) {
         return Ok(ReadAloneOutcome::Refused(vec![root_config_problem(
             &parsed,
         )?]));
@@ -174,15 +173,15 @@ fn resolve_app_config(
     parsed: ParsedConfig,
     config: JsonValue,
 ) -> Result<ReadAloneOutcome, CliConfigError> {
-    let object = record(Some(&config)).ok_or_else(|| {
+    let object = object_of(Some(&config)).ok_or_else(|| {
         InternalError::new("an app config that is not a mapping passed the schema")
     })?;
     let directory = directory_of(file);
     let out_dir = resolved_path(
         &directory,
-        text(object.get("outDir")).unwrap_or(DEFAULT_OUT_DIR),
+        text_of(object.get("outDir")).unwrap_or(DEFAULT_OUT_DIR),
     );
-    let targets = items(object.get("targets"));
+    let targets = items_of(object.get("targets"));
     let entries = targets
         .iter()
         .map(|entry| entry_with_root(entry, &out_dir))
@@ -224,11 +223,11 @@ fn resolve_app_config(
 }
 
 fn entry_with_root(entry: &JsonValue, out_dir: &Utf8Path) -> Result<AppConfigEntry, InternalError> {
-    let object = record(Some(entry)).ok_or_else(|| {
+    let object = object_of(Some(entry)).ok_or_else(|| {
         InternalError::new("a target entry that is not a mapping passed the schema")
     })?;
-    let directory_name = text(object.get("out"))
-        .or_else(|| text(object.get("id")))
+    let directory_name = text_of(object.get("out"))
+        .or_else(|| text_of(object.get("id")))
         .ok_or_else(|| InternalError::new("a target entry without an id passed the schema"))?;
 
     Ok(AppConfigEntry {
@@ -238,7 +237,7 @@ fn entry_with_root(entry: &JsonValue, out_dir: &Utf8Path) -> Result<AppConfigEnt
 }
 
 fn entry_id(entry: &JsonValue) -> Result<&str, InternalError> {
-    text(record(Some(entry)).and_then(|object| object.get("id")))
+    text_of(object_of(Some(entry)).and_then(|object| object.get("id")))
         .ok_or_else(|| InternalError::new("a target entry without an id passed the schema"))
 }
 
@@ -251,7 +250,7 @@ fn entry_path(index: usize, key: &str) -> [KeyPathSegment; 3] {
 }
 
 fn foldable_artefacts(entry: &JsonValue) -> Option<&JsonValue> {
-    record(Some(entry)).and_then(|object| object.get("artefacts"))
+    object_of(Some(entry)).and_then(|object| object.get("artefacts"))
 }
 
 fn duplicate_id_problems(
@@ -288,7 +287,7 @@ fn switched_off_allow_list_problems(
 
     for (index, entry) in targets.iter().enumerate() {
         let has_routes =
-            record(Some(entry)).is_some_and(|object| object.contains_key("frameworkRoutes"));
+            object_of(Some(entry)).is_some_and(|object| object.contains_key("frameworkRoutes"));
 
         if !has_routes || !is_framework_route_check_off(foldable_artefacts(entry)) {
             continue;
@@ -310,7 +309,8 @@ fn switched_off_allow_list_problems(
 }
 
 fn switch_off_key(entry: &JsonValue) -> &'static str {
-    let boot_check = record(foldable_artefacts(entry)).and_then(|object| object.get("bootCheck"));
+    let boot_check =
+        object_of(foldable_artefacts(entry)).and_then(|object| object.get("bootCheck"));
 
     if boot_check == Some(&JsonValue::Bool(false)) {
         return "artefacts.bootCheck";
@@ -327,8 +327,9 @@ fn framework_docs_conflict_problems(
 
     for (index, entry) in targets.iter().enumerate() {
         let docs_off =
-            text(record(Some(entry)).and_then(|object| object.get("frameworkDocs"))) == Some("off");
-        let native_docs = record(foldable_artefacts(entry))
+            text_of(object_of(Some(entry)).and_then(|object| object.get("frameworkDocs")))
+                == Some("off");
+        let native_docs = object_of(foldable_artefacts(entry))
             .and_then(|object| object.get("nativeDocs"))
             == Some(&JsonValue::Bool(true));
 
@@ -454,7 +455,7 @@ fn fold_root_config(
     }
 
     let app_allow_local =
-        match record(Some(&app.config)).and_then(|object| object.get("allowLocal")) {
+        match object_of(Some(&app.config)).and_then(|object| object.get("allowLocal")) {
             Some(JsonValue::Bool(flag)) => Some(*flag),
             _ => None,
         };
@@ -479,7 +480,7 @@ fn unlisted_app_outcome(
         .keys()
         .filter(|name| !app.loaded.sources.contains_key(*name))
         .collect();
-    let targets = items(record(Some(&app.config)).and_then(|object| object.get("targets")));
+    let targets = items_of(object_of(Some(&app.config)).and_then(|object| object.get("targets")));
     let mut problems = Vec::new();
 
     for (index, entry) in targets.iter().enumerate() {

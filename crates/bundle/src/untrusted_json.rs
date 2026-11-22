@@ -4,9 +4,8 @@ use std::collections::HashSet;
 
 use seampact_diagnostics::{InternalError, quote_text};
 use seampact_js::json_parse_error_message;
-use seampact_json::JsonValue;
+use seampact_json::{JsonValue, pointer_below};
 use seampact_load::is_reserved_key;
-use seampact_pipeline::pointer_below as pipeline_pointer_below;
 
 const BYTE_ORDER_MARK: char = '\u{feff}';
 
@@ -55,10 +54,6 @@ pub fn parse_untrusted_json(text: &str) -> UntrustedJson {
     }
 }
 
-fn pointer_below(pointer: &str, key: &str) -> String {
-    pipeline_pointer_below(pointer, &[key])
-}
-
 /// The pointer of the first reserved key, walking the document with a stack so that a deep one
 /// does not exhaust the call stack.
 fn reserved_key_pointer(root: &JsonValue) -> Option<String> {
@@ -68,7 +63,7 @@ fn reserved_key_pointer(root: &JsonValue) -> Option<String> {
         match value {
             JsonValue::Object(members) => {
                 for (key, member) in members {
-                    let at = pointer_below(&pointer, key);
+                    let at = pointer_below(&pointer, &[key]);
 
                     if is_reserved_key(key) {
                         return Some(at);
@@ -79,7 +74,7 @@ fn reserved_key_pointer(root: &JsonValue) -> Option<String> {
             }
             JsonValue::Array(items) => {
                 for (index, member) in items.iter().enumerate() {
-                    pending.push((member, pointer_below(&pointer, &index.to_string())));
+                    pending.push((member, pointer_below(&pointer, &[&index.to_string()])));
                 }
             }
             JsonValue::Null | JsonValue::Bool(_) | JsonValue::Number(_) | JsonValue::String(_) => {}
@@ -101,8 +96,8 @@ struct ScanFrame {
 impl ScanFrame {
     fn child_pointer(&self) -> String {
         match &self.keys {
-            None => pointer_below(&self.pointer, &self.index.to_string()),
-            Some(_) => pointer_below(&self.pointer, self.key.as_deref().unwrap_or("")),
+            None => pointer_below(&self.pointer, &[&self.index.to_string()]),
+            Some(_) => pointer_below(&self.pointer, &[self.key.as_deref().unwrap_or("")]),
         }
     }
 }
@@ -180,7 +175,7 @@ fn register_key(
     let keys = top.keys.as_mut()?;
 
     if keys.contains(&decoded) {
-        return Some(pointer_below(&top.pointer, &decoded));
+        return Some(pointer_below(&top.pointer, &[&decoded]));
     }
 
     keys.insert(decoded.clone());

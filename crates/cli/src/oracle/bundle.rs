@@ -4,7 +4,7 @@ use seampact_bundle::{
     BundleBuildOptions, BundleBuildResult, BundleError, BundleFailure, BundleFile,
     BundleNamedVersionOverride, build_bundle, bundle_manifest_bytes, bundle_tarball,
 };
-use seampact_json::{JsonNumber, JsonObject, JsonValue};
+use seampact_json::{JsonNumber, JsonValue};
 use seampact_load::FsReader;
 use seampact_oracle::{BundleAnswer, BundleCase, SubjectAnswer, gunzipped_ustar_entries};
 
@@ -75,23 +75,9 @@ fn answer_of(case: &BundleCase) -> Result<BundleAnswer, CaseError> {
     })
 }
 
-fn members(entries: Vec<(&str, JsonValue)>) -> JsonValue {
-    let mut object = JsonObject::new();
-
-    for (key, value) in entries {
-        object.insert(key.to_owned(), value);
-    }
-
-    JsonValue::Object(object)
-}
-
-fn text(value: &str) -> JsonValue {
-    JsonValue::String(value.to_owned())
-}
-
 fn file_json(file: &BundleFile) -> JsonValue {
-    members(vec![
-        ("path", text(&file.path)),
+    JsonValue::object(vec![
+        ("path", JsonValue::text(&file.path)),
         (
             "size",
             // A size past i64 is no file a bundle holds; null makes the oracle report it.
@@ -99,15 +85,15 @@ fn file_json(file: &BundleFile) -> JsonValue {
                 JsonValue::Number(JsonNumber::from_i64(size))
             }),
         ),
-        ("sha256", text(&file.sha256)),
+        ("sha256", JsonValue::text(&file.sha256)),
     ])
 }
 
 fn failure_json(failure: &BundleFailure) -> JsonValue {
     let mut entries = vec![
-        ("code", text(failure.code.as_str())),
-        ("message", text(&failure.message)),
-        ("fix", text(&failure.fix)),
+        ("code", JsonValue::text(failure.code.as_str())),
+        ("message", JsonValue::text(&failure.message)),
+        ("fix", JsonValue::text(&failure.fix)),
     ];
 
     for (key, value) in [
@@ -116,9 +102,9 @@ fn failure_json(failure: &BundleFailure) -> JsonValue {
         ("actual", &failure.actual),
     ] {
         if let Some(found) = value {
-            entries.push((key, text(found)));
+            entries.push((key, JsonValue::text(found)));
         }
     }
 
-    members(entries)
+    JsonValue::object(entries)
 }

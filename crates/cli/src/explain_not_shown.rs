@@ -1,9 +1,7 @@
 //! The `# not shown yet` line: the members of an operation the explain view does not render.
 
 use seampact_js::cmp_utf16;
-use seampact_json::{JsonObject, JsonValue};
-
-use crate::explain_flow::{items_of, object_of};
+use seampact_json::{JsonObject, JsonValue, items_of, object_of};
 
 /// Members the view shows through others, or that only name the operation.
 const SHOWN_THROUGH_OTHERS: [&str; 10] = [
